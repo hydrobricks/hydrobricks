@@ -7,6 +7,10 @@ void SubCatchment::AddHydroUnit(HydroUnit* unit) {
     m_hydroUnits.push_back(unit);
 }
 
+int SubCatchment::GetHydroUnitsCount() {
+    return (int)m_hydroUnits.size();
+}
+
 bool SubCatchment::HasIncomingFlow() {
     return !m_inConnectors.empty();
 }

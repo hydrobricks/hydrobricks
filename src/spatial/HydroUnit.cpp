@@ -1,7 +1,7 @@
 
 #include "HydroUnit.h"
 
-HydroUnit::HydroUnit(float area, Types type = Undefined)
+HydroUnit::HydroUnit(float area, Types type)
     : m_area(area),
       m_type(type)
 {}

@@ -14,6 +14,8 @@ class SubCatchment : public wxObject {
 
     void AddHydroUnit(HydroUnit* unit);
 
+    int GetHydroUnitsCount();
+
     bool HasIncomingFlow();
 
     void AddInputConnector(Connector* connector);

@@ -19,7 +19,11 @@ list(APPEND src_core ${src_base_cpp} ${src_spatial_cpp})
 list(REMOVE_DUPLICATES src_core)
 
 # Include source directories
-list(APPEND inc_dirs "${PROJECT_SOURCE_DIR}/")
+list(APPEND inc_dirs
+        "${CMAKE_SOURCE_DIR}/src/base"
+        "${CMAKE_SOURCE_DIR}/src/processes"
+        "${CMAKE_SOURCE_DIR}/src/spatial"
+        )
 include_directories(${inc_dirs})
 
 

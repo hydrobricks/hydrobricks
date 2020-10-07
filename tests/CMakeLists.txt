@@ -13,10 +13,6 @@ file(GLOB_RECURSE src_tests_h src/*.h)
 file(GLOB_RECURSE src_tests_cpp src/*.cpp)
 list(APPEND src_tests ${src_tests_h})
 list(APPEND src_tests ${src_tests_cpp})
-file(GLOB_RECURSE src_base_h ${CMAKE_SOURCE_DIR}/src/*.h)
-file(GLOB_RECURSE src_base_cpp ${CMAKE_SOURCE_DIR}/src/*.cpp)
-list(APPEND src_tests ${src_base_h})
-list(APPEND src_tests ${src_base_cpp})
 
 # Remove eventual duplicates
 list(REMOVE_DUPLICATES src_tests)
@@ -68,9 +64,9 @@ endif()
 
 ##### LINKING
 
-add_dependencies(flhy-tests base)
+add_dependencies(flhy-tests core)
 add_dependencies(flhy-tests gtest)
-target_link_libraries(flhy-tests base)
+target_link_libraries(flhy-tests core)
 target_link_libraries(flhy-tests gtest gtest_main)
 if (UNIX)
     target_link_libraries(flhy-tests pthread)

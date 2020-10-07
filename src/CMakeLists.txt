@@ -1,18 +1,22 @@
 
 # Project name
-project(base)
+project(core)
 
 
 ##### SOURCE FILES
 
 # List source files
-file(GLOB_RECURSE src_base_h *.h)
-file(GLOB_RECURSE src_base_cpp *.cpp)
-list(APPEND src_base ${src_base_h})
-list(APPEND src_base ${src_base_cpp})
+file(GLOB_RECURSE src_base_h base/*.h)
+file(GLOB_RECURSE src_base_cpp base/*.cpp)
+file(GLOB_RECURSE src_processes_h processes/*.h)
+file(GLOB_RECURSE src_processes_cpp processes/*.cpp)
+file(GLOB_RECURSE src_spatial_h spatial/*.h)
+file(GLOB_RECURSE src_spatial_cpp spatial/*.cpp)
+list(APPEND src_core ${src_base_h} ${src_spatial_h})
+list(APPEND src_core ${src_base_cpp} ${src_spatial_cpp})
 
 # Remove eventual duplicates
-list(REMOVE_DUPLICATES src_base)
+list(REMOVE_DUPLICATES src_core)
 
 # Include source directories
 list(APPEND inc_dirs "${PROJECT_SOURCE_DIR}/")
@@ -24,10 +28,10 @@ include_directories(${inc_dirs})
 include(define_common_libraries)
 
 # Own libraries
-add_library(base STATIC ${src_base})
+add_library(core STATIC ${src_core})
 
 
 ##### DEFINITIONS
 
 # Specific definitions
-set_target_properties(base PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
+set_target_properties(core PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")

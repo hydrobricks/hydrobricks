@@ -1,17 +1,29 @@
 
-#ifndef HYDRO_UNIT_H
-#define HYDRO_UNIT_H
+#ifndef FLHY_HYDRO_UNIT_H
+#define FLHY_HYDRO_UNIT_H
 
 #include "Includes.h"
+#include "HydroUnitProperty.h"
 
 class HydroUnit : public wxObject {
   public:
-    HydroUnit(float area);
+    enum Types {
+        Distributed,
+        SemiDistributed,
+        Lumped,
+        Undefined
+    };
+
+    HydroUnit(float area, Types type);
 
     ~HydroUnit() override = default;
 
+    void AddProperty(HydroUnitProperty* property);
+
   protected:
+    Types m_type;
     float m_area;
+    std::vector<HydroUnitProperty*> m_properties;
 
   private:
 };

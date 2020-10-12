@@ -96,7 +96,7 @@ endif (USE_VLD)
 if (USE_CODECOV)
     include(CodeCoverage)
     append_coverage_compiler_flags()
-    set(COVERAGE_EXCLUDES '/usr/.*' '_deps/.*' '.*/_deps/.*' 'tests/.*' '.*/tests/.*' 'tests/src/*' '.*/tests/src/*' '.*/libs/.*')
+    set(COVERAGE_EXCLUDES '/usr/.*' '_deps/.*' '.*/_deps/.*' 'tests/.*' '.*/tests/.*' 'tests/src/.*' '.*/tests/src/.*' '.*/libs/.*')
     setup_target_for_coverage(NAME flhy-coverage EXECUTABLE flhy-tests DEPENDENCIES flhy-tests)
 endif (USE_CODECOV)
 

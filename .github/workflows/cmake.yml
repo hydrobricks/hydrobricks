@@ -74,7 +74,7 @@ jobs:
         working-directory: ${{runner.workspace}}/bin
         run: |
           lcov --directory . --capture --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' '_deps/*' '*/_deps/*' '*/tests/*' --output-file coverage.info --quiet
+          lcov --remove coverage.info '/usr/*' '_deps/*' 'bin/_deps/*' '*/tests/*' --output-file coverage.info --quiet
           lcov --list coverage.info
 
       - name: List directory content
@@ -82,5 +82,5 @@ jobs:
         run: tree .
 
       - name: Sending to Codecov
-        working-directory: ${{runner.workspace}}
+        working-directory: ${{runner.workspace}}/flhy
         run: bash <(curl -s https://codecov.io/bash) -v || echo "Codecov did not collect coverage reports"

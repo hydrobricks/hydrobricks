@@ -2,10 +2,6 @@ name: CMake
 
 on: [push]
 
-env:
-  BUILD_TYPE_TEST: Release
-  BUILD_TYPE_COVERAGE: RelWithDebInfo
-
 defaults:
   run:
     shell: bash
@@ -13,6 +9,9 @@ defaults:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    env:
+      BUILD_TYPE: Release
 
     steps:
     - uses: actions/checkout@v2
@@ -25,11 +24,15 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{runner.workspace}}/bin
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE_TEST
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
       working-directory: ${{runner.workspace}}/bin
-      run: cmake --build . --config $BUILD_TYPE_TEST
+      run: cmake --build . --config $BUILD_TYPE
+
+    - name: List directory content
+      working-directory: ${{runner.workspace}}
+      run: tree .
 
     - name: Copy test files
       working-directory: ${{runner.workspace}}
@@ -46,6 +49,9 @@ jobs:
   code-coverage:
     runs-on: ubuntu-latest
 
+    env:
+      BUILD_TYPE: RelWithDebInfo
+
     steps:
       - uses: actions/checkout@v2
 
@@ -57,11 +63,11 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{runner.workspace}}/bin
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE_COVERAGE -DUSE_CODECOV=1
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_CODECOV=1
 
       - name: Build
         working-directory: ${{runner.workspace}}/bin
-        run: cmake --build . --config $BUILD_TYPE_COVERAGE --target flhy-coverage
+        run: cmake --build . --config $BUILD_TYPE --target flhy-coverage
 
       - name: Code coverage
         working-directory: ${{runner.workspace}}/bin

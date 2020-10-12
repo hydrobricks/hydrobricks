@@ -62,13 +62,13 @@ jobs:
         working-directory: ${{runner.workspace}}/bin
         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_CODECOV=1
 
-      - name: Build
-        working-directory: ${{runner.workspace}}/bin
-        run: cmake --build . --config $BUILD_TYPE --target flhy-coverage
-
       - name: Copy test files
         working-directory: ${{runner.workspace}}
         run: cp -R flhy/tests/files/ bin/tests
+        
+      - name: Build
+        working-directory: ${{runner.workspace}}/bin
+        run: cmake --build . --config $BUILD_TYPE --target flhy-coverage
 
       - name: Code coverage
         working-directory: ${{runner.workspace}}/bin

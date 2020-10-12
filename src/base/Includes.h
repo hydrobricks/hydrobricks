@@ -73,5 +73,6 @@
 //---------------------------------
 
 #include "Enums.h"
+#include "Utilities.h"
 
 #endif  // INCLUDES_H

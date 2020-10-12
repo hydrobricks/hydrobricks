@@ -8,16 +8,3 @@ coverage:
         target: 80
         threshold: 1
         base: auto
-ignore:
-  - "/usr/.*"
-  - "_deps/.*"
-  - ".*/_deps/.*"
-  - "bin/_deps/.*"
-  - "tests/.*"
-  - ".*/tests/.*"
-  - "tests/src/.*"
-  - ".*/tests/src/.*"
-  - ".*/libs/.*"
-  - '/home/runner/work/flhy/flhy/tests/src/*'
-  - '/home/runner/work/flhy/flhy/bin/tests/src/*'
-  - '*Test.cpp'

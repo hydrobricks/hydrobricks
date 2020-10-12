@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install libraries
-      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev
+      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/bin

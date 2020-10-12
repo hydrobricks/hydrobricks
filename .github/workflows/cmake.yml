@@ -79,4 +79,4 @@ jobs:
 
       - name: Sending to Codecov
         working-directory: ${{github.workspace}}/bin
-        run: bash <(curl -s https://codecov.io/bash) &> /dev/null || echo "Codecov did not collect coverage reports"
+        run: bash <(curl -s https://codecov.io/bash) -f coverage.info || echo "Codecov did not collect coverage reports"

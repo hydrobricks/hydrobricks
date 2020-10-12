@@ -8,17 +8,3 @@ coverage:
         target: 80
         threshold: 1
         base: auto
-ignore:
-  - "**/tests/src/*"
-  - "*/tests/src/*"
-  - "/tests/src/*"
-  - "tests/src/*"
-  - "**/tests/src"
-  - "*/tests/src"
-  - "/tests/src"
-  - "tests/src"
-  - "**/tests/src/*Test.cpp"
-  - "*/tests/src/*Test.cpp"
-  - "/tests/src/*Test.cpp"
-  - "tests/src/*Test.cpp"
-  - "**/*Test.cpp"

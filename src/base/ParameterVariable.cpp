@@ -65,7 +65,7 @@ bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
 void ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
     wxASSERT(month != wxDateTime::Inv_Month);
 
-    m_value = m_values[month + 1];
+    m_value = m_values[month];
 }
 
 

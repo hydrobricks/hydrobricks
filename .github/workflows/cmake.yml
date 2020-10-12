@@ -74,7 +74,7 @@ jobs:
         working-directory: ${{runner.workspace}}/bin
         run: |
           lcov --directory . --capture --output-file coverage.info &> /dev/null
-          lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/tests/*' --output-file coverage.info --quiet
+          lcov --remove coverage.info '/usr/*' '_deps/*' '*/_deps/*' '*/tests/*' --output-file coverage.info --quiet
           lcov --list coverage.info
 
       - name: Sending to Codecov

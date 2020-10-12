@@ -74,10 +74,6 @@ jobs:
         working-directory: ${{github.workspace}}/bin
         run: |
           lcov --directory . --capture --output-file coverage.info &> /dev/null
-          lcov --remove coverage.info  --output-file coverage.info --quiet \
-            "/usr/*" "_deps/*" "bin/_deps/*" "bin/tests/*" "*/tests/*" "tests/*" \
-            "tests/src/*" "/home/runner/work/flhy/flhy/tests/src/*" \
-            "/home/runner/work/flhy/flhy/bin/tests/src/*" "*Test.cpp" "*/*Test.cpp"
           lcov --list coverage.info
 
       - name: Sending to Codecov

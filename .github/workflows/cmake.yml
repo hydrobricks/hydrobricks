@@ -65,7 +65,7 @@ jobs:
       - name: Copy test files
         working-directory: ${{runner.workspace}}
         run: cp -R flhy/tests/files/ bin/tests
-        
+
       - name: Build
         working-directory: ${{runner.workspace}}/bin
         run: cmake --build . --config $BUILD_TYPE --target flhy-coverage

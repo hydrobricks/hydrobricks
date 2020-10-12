@@ -8,8 +8,11 @@ ParametersUpdater::ParametersUpdater()
 void ParametersUpdater::DateUpdate(const wxDateTime &date) {
     if (m_previousDate.GetYear() != date.GetYear()) {
         ChangingYear(date.GetYear());
+        ChangingMonth(date.GetMonth());
+        ChangingDate(date.GetJulianDayNumber());
     } else if (m_previousDate.GetMonth() != date.GetMonth()) {
         ChangingMonth(date.GetMonth());
+        ChangingDate(date.GetJulianDayNumber());
     } else {
         ChangingDate(date.GetJulianDayNumber());
     }

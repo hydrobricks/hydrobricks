@@ -78,9 +78,9 @@ jobs:
           lcov --list coverage.info
 
       - name: List directory content
-        working-directory: ${{runner.workspace}}/bin
+        working-directory: ${{runner.workspace}}
         run: tree .
 
       - name: Sending to Codecov
-        working-directory: ${{runner.workspace}}/bin
+        working-directory: ${{runner.workspace}}
         run: bash <(curl -s https://codecov.io/bash) -v || echo "Codecov did not collect coverage reports"

@@ -47,6 +47,7 @@ jobs:
 
     env:
       BUILD_TYPE: RelWithDebInfo
+      CODECOV_TOKEN="7e5ffe21-e668-4910-a2ed-bd6477933127"
 
     steps:
       - uses: actions/checkout@v2
@@ -64,6 +65,10 @@ jobs:
       - name: Build
         working-directory: ${{runner.workspace}}/bin
         run: cmake --build . --config $BUILD_TYPE --target flhy-coverage
+
+      - name: Copy test files
+        working-directory: ${{runner.workspace}}
+        run: cp -R flhy/tests/files/ bin/tests
 
       - name: Code coverage
         working-directory: ${{runner.workspace}}/bin

@@ -12,20 +12,23 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install libraries
+      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev
+
     - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/build
+      run: cmake -E make_directory ${{runner.workspace}}/bin
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/bin
       run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/bin
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
     - name: Test
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/bin
       shell: bash
       run: ctest -C $BUILD_TYPE

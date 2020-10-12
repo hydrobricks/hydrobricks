@@ -9,4 +9,9 @@ coverage:
         threshold: 1
         base: auto
 ignore:
-  - "**/tests/**/*"
+  - "**/**/tests/src/*"
+  - "**/tests/src/*"
+  - "*/tests/src/*"
+  - "/tests/src/*"
+  - "tests/src/*"
+  - "**/*Test.cpp"

@@ -28,6 +28,11 @@ jobs:
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
+    - name: List directory content
+      working-directory: ${{runner.workspace}}/bin
+      shell: bash
+      run: tree .
+
     - name: Test
       working-directory: ${{runner.workspace}}/bin/tests
       shell: bash

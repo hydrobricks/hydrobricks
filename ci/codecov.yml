@@ -19,4 +19,5 @@ ignore:
   - ".*/tests/src/.*"
   - ".*/libs/.*"
   - '/home/runner/work/flhy/flhy/tests/src/*'
+  - '/home/runner/work/flhy/flhy/bin/tests/src/*'
   - '*Test.cpp'

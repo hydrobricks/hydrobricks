@@ -2,8 +2,8 @@
 #include "HydroUnit.h"
 
 HydroUnit::HydroUnit(float area, Types type)
-    : m_area(area),
-      m_type(type)
+    : m_type(type),
+      m_area(area)
 {}
 
 void HydroUnit::AddProperty(HydroUnitProperty* property) {

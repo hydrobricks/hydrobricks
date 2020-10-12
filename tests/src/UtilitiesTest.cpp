@@ -101,19 +101,19 @@ TEST(Utilities, SearchIntDescendingWithToleranceLast) {
 
 TEST(Utilities, SearchIntUniqueVal) {
     int array[] = {9};
-    int result = Find(&array[0], &array[9], 9);
+    int result = Find(&array[0], &array[0], 9);
     EXPECT_EQ(0, result);
 }
 
 TEST(Utilities, SearchIntUniqueValWithTolerance) {
     int array[] = {9};
-    int result = Find(&array[0], &array[9], 8, 1);
+    int result = Find(&array[0], &array[0], 8, 1);
     EXPECT_EQ(0, result);
 }
 
 TEST(Utilities, SearchIntUniqueValOutOfRange) {
     int array[] = {9};
-    int result = Find(&array[0], &array[9], 11, 1, false);
+    int result = Find(&array[0], &array[0], 11, 1, false);
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
 

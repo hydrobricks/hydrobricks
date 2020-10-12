@@ -29,6 +29,6 @@ jobs:
       run: cmake --build . --config $BUILD_TYPE
 
     - name: Test
-      working-directory: ${{runner.workspace}}/bin
+      working-directory: ${{runner.workspace}}/bin/tests
       shell: bash
-      run: ctest -C $BUILD_TYPE
+      run: ./flhy-tests

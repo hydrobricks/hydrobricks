@@ -9,7 +9,7 @@ env:
 defaults:
   run:
     shell: bash
-    working-directory: ${{runner.workspace}}/bin
+    working-directory: bin
 
 jobs:
   build-and-test:

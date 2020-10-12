@@ -9,4 +9,4 @@ coverage:
         threshold: 1
         base: auto
 ignore:
-  - "**/tests/*"
+  - "**/tests/**/*"

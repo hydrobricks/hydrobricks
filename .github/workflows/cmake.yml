@@ -77,6 +77,10 @@ jobs:
           lcov --remove coverage.info '/usr/*' '_deps/*' '*/_deps/*' '*/tests/*' --output-file coverage.info --quiet
           lcov --list coverage.info
 
+      - name: List directory content
+        working-directory: ${{runner.workspace}}/bin
+        run: tree .
+
       - name: Sending to Codecov
         working-directory: ${{runner.workspace}}/bin
         run: bash <(curl -s https://codecov.io/bash) > /dev/null || echo "Codecov did not collect coverage reports"

@@ -1,0 +1,19 @@
+coverage:
+  precision: 2
+  round: nearest
+  range: "20...100"
+  status:
+    project:
+      default:
+        target: 80
+        threshold: 1
+        base: auto
+ignore:
+  - "/usr/.*"
+  - "_deps/.*"
+  - ".*/_deps/.*"
+  - "tests/.*"
+  - ".*/tests/.*"
+  - "tests/src/*"
+  - ".*/tests/src/*"
+  - ".*/libs/.*"

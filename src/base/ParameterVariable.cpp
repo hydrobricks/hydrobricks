@@ -77,7 +77,7 @@ ParameterVariableDates::ParameterVariableDates()
     : ParameterVariable()
 {}
 
-bool ParameterVariableDates::SetTimeAndValues(const std::vector<float>& time, const std::vector<float>& values) {
+bool ParameterVariableDates::SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values) {
     m_reference = time;
     m_values = values;
 
@@ -89,7 +89,7 @@ bool ParameterVariableDates::SetTimeAndValues(const std::vector<float>& time, co
     return true;
 }
 
-void ParameterVariableDates::UpdateParameter(float timeReference) {
+void ParameterVariableDates::UpdateParameter(double timeReference) {
     wxASSERT(!m_reference.empty());
 
     int i = Find(&m_reference.front(), &m_reference.back(), timeReference);

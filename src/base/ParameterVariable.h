@@ -54,13 +54,13 @@ class ParameterVariableDates : public ParameterVariable {
 
     ~ParameterVariableDates() override = default;
 
-    bool SetTimeAndValues(const std::vector<float>& time, const std::vector<float>& values);
+    bool SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values);
 
-    void UpdateParameter(float timeReference);
+    void UpdateParameter(double timeReference);
 
   protected:
     std::vector<float> m_values;
-    std::vector<float> m_reference;
+    std::vector<double> m_reference;
 
   private:
 };

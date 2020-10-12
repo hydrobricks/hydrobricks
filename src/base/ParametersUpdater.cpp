@@ -1,10 +1,18 @@
 
 #include "ParametersUpdater.h"
 
-ParametersUpdater::ParametersUpdater() {}
+ParametersUpdater::ParametersUpdater()
+    : m_previousDate(1, wxDateTime::Jan, 0)
+{}
 
-void ParametersUpdater::DateUpdate(float date) {
-
+void ParametersUpdater::DateUpdate(const wxDateTime &date) {
+    if (m_previousDate.GetYear() != date.GetYear()) {
+        ChangingYear(date.GetYear());
+    } else if (m_previousDate.GetMonth() != date.GetMonth()) {
+        ChangingMonth(date.GetMonth());
+    } else {
+        ChangingDate(date.GetJulianDayNumber());
+    }
 }
 
 void ParametersUpdater::ChangingYear(int year) {
@@ -19,7 +27,7 @@ void ParametersUpdater::ChangingMonth(wxDateTime::Month month) {
     }
 }
 
-void ParametersUpdater::ChangingDate(float date) {
+void ParametersUpdater::ChangingDate(double date) {
     for (auto & parameter : m_parametersDates) {
         parameter->UpdateParameter(date);
     }

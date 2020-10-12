@@ -11,4 +11,14 @@ enum {
     NOT_VALID = -6
 };
 
+enum TimeUnit {
+    Year,
+    Month,
+    Week,
+    Day,
+    Hour,
+    Minute,
+    Second
+};
+
 #endif  // FLHY_ENUMS_H

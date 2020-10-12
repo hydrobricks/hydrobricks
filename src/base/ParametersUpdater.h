@@ -13,17 +13,18 @@ class ParametersUpdater : public wxObject {
 
     ~ParametersUpdater() override = default;
 
-    void DateUpdate(float date);
+    void DateUpdate(const wxDateTime &date);
 
     void ChangingYear(int year);
 
     void ChangingMonth(wxDateTime::Month month);
 
-    void ChangingDate(float date);
+    void ChangingDate(double date);
 
   protected:
 
   private:
+    wxDateTime m_previousDate;
     std::vector<ParameterVariableYearly*> m_parametersYearly;
     std::vector<ParameterVariableMonthly*> m_parametersMonthly;
     std::vector<ParameterVariableDates*> m_parametersDates;

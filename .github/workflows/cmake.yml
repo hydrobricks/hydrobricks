@@ -9,7 +9,6 @@ env:
 defaults:
   run:
     shell: bash
-    working-directory: bin
 
 jobs:
   build-and-test:
@@ -19,23 +18,25 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install libraries
-      working-directory: ${{runner.workspace}}
       run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree
 
     - name: Create Build Environment
-      working-directory: ${{runner.workspace}}
       run: cmake -E make_directory ${{runner.workspace}}/bin
 
     - name: Configure CMake
+      working-directory: ${{runner.workspace}}/bin
       run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE_TEST
 
     - name: Build
+      working-directory: ${{runner.workspace}}/bin
       run: cmake --build . --config $BUILD_TYPE_TEST
 
     - name: List directory content
+      working-directory: ${{runner.workspace}}/bin
       run: tree .
 
     - name: Test
+      working-directory: ${{runner.workspace}}/bin
       run: tests/flhy-tests
 
   code-coverage:
@@ -45,24 +46,26 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install libraries
-        working-directory: ${{runner.workspace}}
         run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov
 
       - name: Create Build Environment
-        working-directory: ${{runner.workspace}}
         run: cmake -E make_directory ${{runner.workspace}}/bin
 
       - name: Configure CMake
+        working-directory: ${{runner.workspace}}/bin
         run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE_COVERAGE -DUSE_CODECOV=1
 
       - name: Build
+        working-directory: ${{runner.workspace}}/bin
         run: cmake --build . --config $BUILD_TYPE_COVERAGE --target=flhy-coverage
 
       - name: Code coverage
+        working-directory: ${{runner.workspace}}/bin
         run: |
           lcov --directory . --capture --output-file coverage.info &> /dev/null
           lcov --remove coverage.info '/usr/*' '*/external/*' '*/tests/*' --output-file coverage.info --quiet
           lcov --list coverage.info
 
       - name: Sending to Codecov
+        working-directory: ${{runner.workspace}}/bin
         run: bash <(curl -s https://codecov.io/bash) > /dev/null || echo "Codecov did not collect coverage reports"

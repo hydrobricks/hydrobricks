@@ -53,3 +53,52 @@ TEST(ParameterVariableMonthly, UpdateParameter) {
 
     EXPECT_EQ(3, parameter.GetValue());
 }
+
+
+TEST(ParameterVariableDates, SetValues) {
+    ParameterVariableDates parameter;
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<double> dates;
+
+    wxDateTime date(1, wxDateTime::Jan, 2010);
+    for (int i = 0; i < 10; ++i) {
+        dates.push_back(date.GetJDN());
+        date = date.Add(wxDateSpan(0, 0, 0, 1));
+    }
+
+    EXPECT_TRUE(parameter.SetTimeAndValues(dates, values));
+}
+
+TEST(ParameterVariableDates, SetValuesWrongSize) {
+    ParameterVariableDates parameter;
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<double> dates;
+
+    wxDateTime date(1, wxDateTime::Jan, 2010);
+    for (int i = 0; i < 10; ++i) {
+        dates.push_back(date.GetJDN());
+        date = date.Add(wxDateSpan(0, 0, 0, 1));
+    }
+    wxLogNull logNo;
+
+    EXPECT_FALSE(parameter.SetTimeAndValues(dates, values));
+}
+
+TEST(ParameterVariableDates, UpdateParameter) {
+    ParameterVariableDates parameter;
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<double> dates;
+
+    wxDateTime date(1, wxDateTime::Jan, 2010);
+    for (int i = 0; i < 10; ++i) {
+        dates.push_back(date.GetJDN());
+        date = date.Add(wxDateSpan(0, 0, 0, 1));
+    }
+
+    parameter.SetTimeAndValues(dates, values);
+
+    wxDateTime dateExtract(4, wxDateTime::Jan, 2010);
+    parameter.UpdateParameter(dateExtract.GetJDN());
+
+    EXPECT_EQ(4, parameter.GetValue());
+}

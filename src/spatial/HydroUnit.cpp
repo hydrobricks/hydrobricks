@@ -9,3 +9,7 @@ HydroUnit::HydroUnit(float area, Types type)
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
     m_properties.push_back(property);
 }
+
+void HydroUnit::AddContainer(Container* container) {
+    m_containers.push_back(container);
+}

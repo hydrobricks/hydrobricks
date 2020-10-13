@@ -8,6 +8,8 @@ project(core)
 # List source files
 file(GLOB_RECURSE src_base_h base/*.h)
 file(GLOB_RECURSE src_base_cpp base/*.cpp)
+file(GLOB_RECURSE src_components_h components/*.h)
+file(GLOB_RECURSE src_components_cpp components/*.cpp)
 file(GLOB_RECURSE src_processes_h processes/*.h)
 file(GLOB_RECURSE src_processes_cpp processes/*.cpp)
 file(GLOB_RECURSE src_spatial_h spatial/*.h)
@@ -21,6 +23,7 @@ list(REMOVE_DUPLICATES src_core)
 # Include source directories
 list(APPEND inc_dirs
         "${CMAKE_SOURCE_DIR}/src/base"
+        "${CMAKE_SOURCE_DIR}/src/components"
         "${CMAKE_SOURCE_DIR}/src/processes"
         "${CMAKE_SOURCE_DIR}/src/spatial"
         )

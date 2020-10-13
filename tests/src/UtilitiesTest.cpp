@@ -3,6 +3,30 @@
 
 #include "Utilities.h"
 
+TEST(Utilities, ZeroIsNotNaN) {
+    int value = 0;
+
+    EXPECT_FALSE(IsNaN((float)value));
+}
+
+TEST(Utilities, IsNaNIntTrue) {
+    int value = NaNi;
+
+    EXPECT_TRUE(IsNaN(value));
+}
+
+TEST(Utilities, IsNaNFloatTrue) {
+    float value = NaNf;
+
+    EXPECT_TRUE(IsNaN(value));
+}
+
+TEST(Utilities, IsNaNDoubleTrue) {
+    double value = NaNd;
+
+    EXPECT_TRUE(IsNaN(value));
+}
+
 TEST(Utilities, SearchIntAscendingFirst) {
     int array[] = {0, 1, 2, 3, 5, 7, 8, 9, 10, 100};
     int result = Find(&array[0], &array[9], 0);
@@ -26,14 +50,16 @@ TEST(Utilities, SearchIntAscendingLast) {
 
 TEST(Utilities, SearchIntAscendingOutOfRange) {
     int array[] = {0, 1, 2, 3, 5, 7, 8, 9, 10, 100};
-    int result = Find(&array[0], &array[9], 1000, 0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 1000, 0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
 
 TEST(Utilities, SearchIntAscendingNotFound) {
     int array[] = {0, 1, 2, 3, 5, 7, 8, 9, 10, 100};
-    int result = Find(&array[0], &array[9], 6, 0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 6, 0);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -82,14 +108,16 @@ TEST(Utilities, SearchIntDescendingLast) {
 
 TEST(Utilities, SearchIntDescendingOutOfRange) {
     int array[] = {100, 10, 9, 8, 7, 5, 3, 2, 1, 0};
-    int result = Find(&array[0], &array[9], -1, 0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], -1, 0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
 
 TEST(Utilities, SearchIntDescendingNotFound) {
     int array[] = {100, 10, 9, 8, 7, 5, 3, 2, 1, 0};
-    int result = Find(&array[0], &array[9], 6, 0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 6, 0);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -131,7 +159,8 @@ TEST(Utilities, SearchIntUniqueValWithTolerance) {
 
 TEST(Utilities, SearchIntUniqueValOutOfRange) {
     int array[] = {9};
-    int result = Find(&array[0], &array[0], 11, 1, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[0], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -159,9 +188,17 @@ TEST(Utilities, SearchIntArraySameValueWithToleranceUp) {
 
 TEST(Utilities, SearchIntArraySameValueOutOfRange) {
     int array[] = {9, 9, 9, 9};
-    int result = Find(&array[0], &array[3], 11, 1, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[3], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
+}
+
+TEST(Utilities, SearchFloatAscendingFirst) {
+    float array[] = {0.354f, 1.932f, 2.7f, 3.56f, 5.021f, 5.75f, 8.2f, 9.65f, 10.45f, 100.0f};
+    int result = Find(&array[0], &array[9], 0.354f);
+
+    EXPECT_EQ(0, result);
 }
 
 TEST(Utilities, SearchDoubleAscendingFirst) {
@@ -187,14 +224,16 @@ TEST(Utilities, SearchDoubleAscendingLast) {
 
 TEST(Utilities, SearchDoubleAscendingOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    int result = Find(&array[0], &array[9], 1000, 0.0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 1000, 0.0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
 
 TEST(Utilities, SearchDoubleAscendingNotFound) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    int result = Find(&array[0], &array[9], 6, 0.0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 6, 0.0);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -215,7 +254,8 @@ TEST(Utilities, SearchDoubleAscendingWithToleranceFirstLimit) {
 
 TEST(Utilities, SearchDoubleAscendingWithToleranceFirstOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    int result = Find(&array[0], &array[9], -1, 1.353, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], -1, 1.353);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -236,7 +276,8 @@ TEST(Utilities, SearchDoubleAscendingWithToleranceMidLimit) {
 
 TEST(Utilities, SearchDoubleAscendingWithToleranceMidNotFound) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    int result = Find(&array[0], &array[9], 11.45, 0.99, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 11.45, 0.99);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -257,7 +298,8 @@ TEST(Utilities, SearchDoubleAscendingWithToleranceLastLimit) {
 
 TEST(Utilities, SearchDoubleAscendingWithToleranceLastOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    int result = Find(&array[0], &array[9], 101.5, 1.499, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 101.5, 1.499);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -285,14 +327,16 @@ TEST(Utilities, SearchDoubleDescendingLast) {
 
 TEST(Utilities, SearchDoubleDescendingOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    int result = Find(&array[0], &array[9], -1.23, 0.0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], -1.23, 0.0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
 
 TEST(Utilities, SearchDoubleDescendingNotFound) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    int result = Find(&array[0], &array[9], 6.2, 0.0, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 6.2, 0.0);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -313,7 +357,8 @@ TEST(Utilities, SearchDoubleDescendingWithToleranceFirstLimit) {
 
 TEST(Utilities, SearchDoubleDescendingWithToleranceFirstOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    int result = Find(&array[0], &array[9], -1, 1.353, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], -1, 1.353);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -334,7 +379,8 @@ TEST(Utilities, SearchDoubleDescendingWithToleranceMidLimit) {
 
 TEST(Utilities, SearchDoubleDescendingWithToleranceMidOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    int result = Find(&array[0], &array[9], 11.45, 0.999, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 11.45, 0.999);
 
     EXPECT_EQ(NOT_FOUND, result);
 }
@@ -355,7 +401,8 @@ TEST(Utilities, SearchDoubleDescendingWithToleranceLastLimit) {
 
 TEST(Utilities, SearchDoubleDescendingWithToleranceLastOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    int result = Find(&array[0], &array[9], 102.21, 2.2, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[9], 102.21, 2.2);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -376,7 +423,8 @@ TEST(Utilities, SearchDoubleUniqueValWithTolerance) {
 
 TEST(Utilities, SearchDoubleUniqueValOutOfRange) {
     double array[] = {9.3401};
-    int result = Find(&array[0], &array[0], 11, 1, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[0], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }
@@ -404,7 +452,8 @@ TEST(Utilities, SearchDoubleArraySameValueWithToleranceUp) {
 
 TEST(Utilities, SearchDoubleArraySameValueOutOfRange) {
     double array[] = {9.34, 9.34, 9.34, 9.34};
-    int result = Find(&array[0], &array[3], 11, 1, false);
+    wxLogNull logNo;
+    int result = Find(&array[0], &array[3], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
 }

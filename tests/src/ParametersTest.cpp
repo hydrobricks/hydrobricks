@@ -125,6 +125,7 @@ TEST(ParametersUpdater, DateUpdateDay) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableDates(&parameter);
+    updater.DateUpdate(wxDateTime(1, wxDateTime::Jan, 2010));
     updater.DateUpdate(wxDateTime(4, wxDateTime::Jan, 2010));
 
     EXPECT_EQ(4, parameter.GetValue());
@@ -137,6 +138,7 @@ TEST(ParametersUpdater, DateUpdateMonth) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableMonthly(&parameter);
+    updater.DateUpdate(wxDateTime(1, wxDateTime::Feb, 2010));
     updater.DateUpdate(wxDateTime(1, wxDateTime::Mar, 2010));
 
     EXPECT_EQ(3, parameter.GetValue());
@@ -149,6 +151,7 @@ TEST(ParametersUpdater, DateUpdateYear) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableYearly(&parameter);
+    updater.DateUpdate(wxDateTime(1, wxDateTime::Jan, 2014));
     updater.DateUpdate(wxDateTime(13, wxDateTime::Mar, 2015));
 
     EXPECT_EQ(5, parameter.GetValue());

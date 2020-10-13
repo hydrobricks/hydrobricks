@@ -21,17 +21,16 @@ class ParametersUpdater : public wxObject {
 
     void DateUpdate(const wxDateTime &date);
 
-    void ChangingYear(int year);
-
-    void ChangingMonth(wxDateTime::Month month);
-
-    void ChangingDate(double date);
-
     wxDateTime GetPreviousDate() {
         return m_previousDate;
     }
 
   protected:
+    void ChangingYear(int year);
+
+    void ChangingMonth(wxDateTime::Month month);
+
+    void ChangingDate(double date);
 
   private:
     wxDateTime m_previousDate;

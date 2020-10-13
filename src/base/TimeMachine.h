@@ -15,6 +15,10 @@ class TimeMachine : public wxObject {
         m_parametersUpdater = updater;
     }
 
+    wxDateTime GetDate() {
+        return m_date;
+    }
+
     bool IsOver();
 
     void IncrementTime();

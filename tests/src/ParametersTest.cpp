@@ -29,6 +29,16 @@ TEST(ParameterVariableYearly, UpdateParameter) {
     EXPECT_EQ(6, parameter.GetValue());
 }
 
+TEST(ParameterVariableYearly, UpdateParameterNotFound) {
+    ParameterVariableYearly parameter;
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    parameter.SetValues(2000, 2010, values);
+    wxLogNull logNo;
+
+    EXPECT_FALSE(parameter.UpdateParameter(2015));
+    EXPECT_TRUE(IsNaN(parameter.GetValue()));
+}
+
 TEST(ParameterVariableMonthly, SetValues) {
     ParameterVariableMonthly parameter;
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -53,7 +63,6 @@ TEST(ParameterVariableMonthly, UpdateParameter) {
 
     EXPECT_EQ(3, parameter.GetValue());
 }
-
 
 TEST(ParameterVariableDates, SetValues) {
     ParameterVariableDates parameter;
@@ -101,4 +110,24 @@ TEST(ParameterVariableDates, UpdateParameter) {
     parameter.UpdateParameter(dateExtract.GetJDN());
 
     EXPECT_EQ(4, parameter.GetValue());
+}
+
+TEST(ParameterVariableDates, UpdateParameterNotFound) {
+    ParameterVariableDates parameter;
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<double> dates;
+
+    wxDateTime date(1, wxDateTime::Jan, 2010);
+    for (int i = 0; i < 10; ++i) {
+        dates.push_back(date.GetJDN());
+        date = date.Add(wxDateSpan(0, 0, 0, 1));
+    }
+
+    parameter.SetTimeAndValues(dates, values);
+
+    wxLogNull logNo;
+    wxDateTime dateExtract(20, wxDateTime::Jan, 2010);
+
+    EXPECT_FALSE(parameter.UpdateParameter(dateExtract.GetJDN()));
+    EXPECT_TRUE(IsNaN(parameter.GetValue()));
 }

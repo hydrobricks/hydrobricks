@@ -29,17 +29,20 @@ bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const std::v
     return true;
 }
 
-void ParameterVariableYearly::UpdateParameter(int year) {
+bool ParameterVariableYearly::UpdateParameter(int year) {
     wxASSERT(!m_reference.empty());
 
     int i = Find(&m_reference.front(), &m_reference.back(), year);
 
     if (i < 0) {
         wxLogError(_("The given year was not found in the reference years of the parameter."));
-        return;
+        m_value = NaNf;
+        return false;
     }
 
     m_value = m_values[i];
+
+    return false;
 }
 
 
@@ -62,10 +65,12 @@ bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
     return true;
 }
 
-void ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
+bool ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
     wxASSERT(month != wxDateTime::Inv_Month);
 
     m_value = m_values[month];
+
+    return true;
 }
 
 
@@ -89,15 +94,18 @@ bool ParameterVariableDates::SetTimeAndValues(const std::vector<double>& time, c
     return true;
 }
 
-void ParameterVariableDates::UpdateParameter(double timeReference) {
+bool ParameterVariableDates::UpdateParameter(double timeReference) {
     wxASSERT(!m_reference.empty());
 
     int i = Find(&m_reference.front(), &m_reference.back(), timeReference);
 
     if (i < 0) {
         wxLogError(_("The given time was not found in the reference time array of the parameter."));
-        return;
+        m_value = NaNf;
+        return false;
     }
 
     m_value = m_values[i];
+
+    return true;
 }

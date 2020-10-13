@@ -1,6 +1,18 @@
 
 #include "Utilities.h"
 
+bool IsNaN(const int value) {
+    return value == NaNi;
+}
+
+bool IsNaN(const float value) {
+    return value != value;
+}
+
+bool IsNaN(const double value) {
+    return value != value;
+}
+
 int Find(const int *start, const int *end, int value, int tolerance, bool showWarning) {
     return FindT<int>(start, end, value, tolerance, showWarning);
 }

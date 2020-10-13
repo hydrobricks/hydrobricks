@@ -72,6 +72,7 @@
 // Own classes
 //---------------------------------
 
+#include "TypeDefs.h"
 #include "Enums.h"
 #include "Utilities.h"
 

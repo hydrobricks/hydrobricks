@@ -26,7 +26,7 @@ class ParameterVariableYearly : public ParameterVariable {
 
     bool SetValues(int yearStart, int yearEnd, const std::vector<float>& values);
 
-    void UpdateParameter(int year);
+    bool UpdateParameter(int year);
 
   protected:
     std::vector<int> m_reference;
@@ -42,7 +42,7 @@ class ParameterVariableMonthly : public ParameterVariable {
 
     bool SetValues(const std::vector<float>& values);
 
-    void UpdateParameter(wxDateTime::Month month);
+    bool UpdateParameter(wxDateTime::Month month);
 
   protected:
   private:
@@ -56,7 +56,7 @@ class ParameterVariableDates : public ParameterVariable {
 
     bool SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values);
 
-    void UpdateParameter(double timeReference);
+    bool UpdateParameter(double timeReference);
 
   protected:
     std::vector<float> m_values;

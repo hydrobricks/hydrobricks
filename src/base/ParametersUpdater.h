@@ -21,6 +21,10 @@ class ParametersUpdater : public wxObject {
 
     void ChangingDate(double date);
 
+    wxDateTime GetPreviousDate() {
+        return m_previousDate;
+    }
+
   protected:
 
   private:

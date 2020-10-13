@@ -4,6 +4,12 @@
 
 #include "Includes.h"
 
+bool IsNaN(int value);
+
+bool IsNaN(float value);
+
+bool IsNaN(double value);
+
 int Find(const int *start, const int *end, int value, int tolerance = 0, bool showWarning = true);
 
 int Find(const float *start, const float *end, float value, float tolerance = 0.0, bool showWarning = true);

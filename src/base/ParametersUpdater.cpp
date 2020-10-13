@@ -16,6 +16,8 @@ void ParametersUpdater::DateUpdate(const wxDateTime &date) {
     } else {
         ChangingDate(date.GetJulianDayNumber());
     }
+
+    m_previousDate = date;
 }
 
 void ParametersUpdater::ChangingYear(int year) {

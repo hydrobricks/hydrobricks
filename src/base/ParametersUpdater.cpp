@@ -5,6 +5,18 @@ ParametersUpdater::ParametersUpdater()
     : m_previousDate(1, wxDateTime::Jan, 0)
 {}
 
+void ParametersUpdater::AddParameterVariableYearly(ParameterVariableYearly* parameter) {
+    m_parametersYearly.push_back(parameter);
+}
+
+void ParametersUpdater::AddParameterVariableMonthly(ParameterVariableMonthly* parameter) {
+    m_parametersMonthly.push_back(parameter);
+}
+
+void ParametersUpdater::AddParameterVariableDates(ParameterVariableDates* parameter) {
+    m_parametersDates.push_back(parameter);
+}
+
 void ParametersUpdater::DateUpdate(const wxDateTime &date) {
     if (m_previousDate.GetYear() != date.GetYear()) {
         ChangingYear(date.GetYear());

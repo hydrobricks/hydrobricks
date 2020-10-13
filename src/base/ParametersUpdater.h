@@ -13,6 +13,12 @@ class ParametersUpdater : public wxObject {
 
     ~ParametersUpdater() override = default;
 
+    void AddParameterVariableYearly(ParameterVariableYearly* parameter);
+
+    void AddParameterVariableMonthly(ParameterVariableMonthly* parameter);
+
+    void AddParameterVariableDates(ParameterVariableDates* parameter);
+
     void DateUpdate(const wxDateTime &date);
 
     void ChangingYear(int year);

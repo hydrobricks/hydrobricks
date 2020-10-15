@@ -18,7 +18,8 @@ enum TimeUnit {
     Day,
     Hour,
     Minute,
-    Second
+    Second,
+    Variable
 };
 
 #endif  // FLHY_ENUMS_H

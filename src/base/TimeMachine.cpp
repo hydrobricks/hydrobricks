@@ -16,6 +16,10 @@ bool TimeMachine::IsOver() {
 
 void TimeMachine::IncrementTime() {
     switch (m_timeStepUnit) {
+        case Variable:
+            wxLogError(_("Variable time step is not yet implemented."));
+            wxFAIL;
+            break;
         case Month:
             m_date.Add(wxDateSpan(0, m_timeStep));
             break;

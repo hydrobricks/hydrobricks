@@ -12,6 +12,7 @@ class TimeSeriesDistributed : public TimeSeries {
     ~TimeSeriesDistributed() override = default;
 
   protected:
+    std::vector<TimeSeriesData*> m_data;
 
   private:
 };

@@ -17,7 +17,6 @@ class TimeSeries : public wxObject {
 
   protected:
     VariableType m_type;
-    TimeSeriesData m_data;
 
   private:
 };

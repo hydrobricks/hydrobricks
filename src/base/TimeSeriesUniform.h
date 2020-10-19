@@ -12,6 +12,7 @@ class TimeSeriesUniform : public TimeSeries {
     ~TimeSeriesUniform() override = default;
 
   protected:
+    TimeSeriesData* m_data;
 
   private:
 };

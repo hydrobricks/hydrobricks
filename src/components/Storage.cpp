@@ -1,6 +1,7 @@
 
 #include "Storage.h"
 
-Storage::Storage()
-    : Container()
+Storage::Storage(HydroUnit *hydroUnit)
+    : Container(hydroUnit),
+      m_capacity(-1)
 {}

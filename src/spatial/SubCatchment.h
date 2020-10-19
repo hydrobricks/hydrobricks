@@ -3,8 +3,9 @@
 #define FLHY_SUBCATCHMENT_H
 
 #include "Includes.h"
-#include "HydroUnit.h"
 #include "Connector.h"
+#include "HydroUnit.h"
+#include "TimeMachine.h"
 
 class SubCatchment : public wxObject {
   public:

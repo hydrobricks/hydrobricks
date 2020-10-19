@@ -7,7 +7,7 @@
 
 class Storage : public Container {
   public:
-    Storage();
+    Storage(HydroUnit *hydroUnit);
 
     ~Storage() override = default;
 

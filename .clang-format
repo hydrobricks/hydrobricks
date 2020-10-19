@@ -8,5 +8,3 @@ BreakInheritanceList: BeforeColon
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 AllowAllConstructorInitializersOnNextLine: false
 AllowShortFunctionsOnASingleLine: Empty
-
-

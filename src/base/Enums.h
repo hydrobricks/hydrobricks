@@ -22,4 +22,11 @@ enum TimeUnit {
     Variable
 };
 
+enum VariableType {
+    Precipitation,
+    Temperature,
+    ETP,
+    MAX_VAR_TYPES
+};
+
 #endif  // FLHY_ENUMS_H

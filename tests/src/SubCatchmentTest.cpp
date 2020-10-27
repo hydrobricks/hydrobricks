@@ -1,11 +1,11 @@
 
 #include <gtest/gtest.h>
 
-#include "SubCatchment.h"
+#include "SubBasin.h"
 
 TEST(SubCatchment, HasIncomingFlow) {
-    SubCatchment subCatchmentIn;
-    SubCatchment subCatchmentOut;
+    SubBasin subCatchmentIn;
+    SubBasin subCatchmentOut;
     Connector connector;
     connector.Connect(&subCatchmentIn, &subCatchmentOut);
 
@@ -14,7 +14,7 @@ TEST(SubCatchment, HasIncomingFlow) {
 }
 
 TEST(SubCatchment, GetHydroUnitsCount1) {
-    SubCatchment subCatchment;
+    SubBasin subCatchment;
     HydroUnit unit(100);
     subCatchment.AddHydroUnit(&unit);
 
@@ -22,7 +22,7 @@ TEST(SubCatchment, GetHydroUnitsCount1) {
 }
 
 TEST(SubCatchment, GetHydroUnitsCount3) {
-    SubCatchment subCatchment;
+    SubBasin subCatchment;
     HydroUnit unit1(100);
     subCatchment.AddHydroUnit(&unit1);
     HydroUnit unit2(100);

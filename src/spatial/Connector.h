@@ -4,7 +4,7 @@
 
 #include "Includes.h"
 
-class SubCatchment;
+class SubBasin;
 
 class Connector : public wxObject {
   public:
@@ -12,11 +12,11 @@ class Connector : public wxObject {
 
     ~Connector() override = default;
 
-    void Connect(SubCatchment* in, SubCatchment* out);
+    void Connect(SubBasin* in, SubBasin* out);
 
   protected:
-    SubCatchment* m_in;
-    SubCatchment* m_out;
+    SubBasin* m_in;
+    SubBasin* m_out;
 
   private:
 };

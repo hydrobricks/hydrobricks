@@ -1,17 +1,17 @@
 
-#ifndef FLHY_SUBCATCHMENT_H
-#define FLHY_SUBCATCHMENT_H
+#ifndef FLHY_SUBBASIN_H
+#define FLHY_SUBBASIN_H
 
 #include "Includes.h"
 #include "Connector.h"
 #include "HydroUnit.h"
 #include "TimeMachine.h"
 
-class SubCatchment : public wxObject {
+class SubBasin : public wxObject {
   public:
-    SubCatchment();
+    SubBasin();
 
-    ~SubCatchment() override = default;
+    ~SubBasin() override = default;
 
     void AddHydroUnit(HydroUnit* unit);
 

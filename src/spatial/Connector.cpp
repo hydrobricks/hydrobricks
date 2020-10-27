@@ -1,10 +1,11 @@
 
 #include "Connector.h"
-#include "SubCatchment.h"
+
+#include "SubBasin.h"
 
 Connector::Connector() {}
 
-void Connector::Connect(SubCatchment* in, SubCatchment* out) {
+void Connector::Connect(SubBasin* in, SubBasin* out) {
     wxASSERT(in);
     wxASSERT(out);
     m_in = in;

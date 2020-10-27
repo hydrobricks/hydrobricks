@@ -3,12 +3,12 @@
 #define FLHY_MODEL_HYDRO_H
 
 #include "Includes.h"
-#include "SubCatchment.h"
+#include "SubBasin.h"
 #include "TimeSeries.h"
 
 class ModelHydro : public wxObject {
   public:
-    ModelHydro(SubCatchment* subCatchment, const TimeMachine& timer);
+    ModelHydro(SubBasin* subBasin, const TimeMachine& timer);
 
     ~ModelHydro() override = default;
 
@@ -17,7 +17,7 @@ class ModelHydro : public wxObject {
     void SetTimeSeries(TimeSeries* timeSeries);
 
   protected:
-    SubCatchment* m_subCatchment;
+    SubBasin* m_subBasin;
     TimeMachine m_timer;
     TimeSeries* m_timeSeries[MAX_VAR_TYPES];
 

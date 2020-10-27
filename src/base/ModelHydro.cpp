@@ -1,8 +1,8 @@
 
 #include "ModelHydro.h"
 
-ModelHydro::ModelHydro(SubCatchment* subCatchment, const TimeMachine& timer)
-    : m_subCatchment(subCatchment),
+ModelHydro::ModelHydro(SubBasin* subBasin, const TimeMachine& timer)
+    : m_subBasin(subBasin),
       m_timer(timer)
 {}
 

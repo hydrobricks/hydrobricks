@@ -23,8 +23,17 @@ class HydroUnit : public wxObject {
 
     void AddContainer(Container* container);
 
+    void SetId(long id) {
+        m_id = id;
+    }
+
+    long GetId() const {
+        return m_id;
+    }
+
   protected:
     Types m_type;
+    long m_id;
     float m_area;
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Container*> m_containers;

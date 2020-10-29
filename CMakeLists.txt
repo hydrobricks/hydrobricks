@@ -99,7 +99,7 @@ if (USE_CODECOV)
     setup_target_for_coverage_lcov(
             NAME flhy-coverage
             EXECUTABLE flhy-tests
-            EXCLUDES '/usr/*' '${PROJECT_SOURCE_DIR}/tests/src/*' '${CMAKE_BINARY_DIR}/_deps/*'
+            EXCLUDES "/usr/*" "${PROJECT_SOURCE_DIR}/tests/src/*" "tests/*" "${CMAKE_BINARY_DIR}/_deps/*" "bin/*"
             DEPENDENCIES flhy-tests)
 endif (USE_CODECOV)
 

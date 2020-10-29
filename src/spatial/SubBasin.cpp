@@ -3,6 +3,12 @@
 
 SubBasin::SubBasin() {}
 
+bool SubBasin::IsOk() {
+    if (m_hydroUnits.empty()) return false;
+
+    return true;
+}
+
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
     m_hydroUnits.push_back(unit);
 }

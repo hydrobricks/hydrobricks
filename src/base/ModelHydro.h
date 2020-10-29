@@ -12,6 +12,8 @@ class ModelHydro : public wxObject {
 
     ~ModelHydro() override = default;
 
+    bool IsOk();
+
     void StartModelling();
 
     void SetTimeSeries(TimeSeries* timeSeries);

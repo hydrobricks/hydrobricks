@@ -32,3 +32,17 @@ TEST(SubBasin, GetHydroUnitsCount3) {
 
     EXPECT_EQ(3, subBasin.GetHydroUnitsCount());
 }
+
+TEST(SubBasin, EmptySubBasinIsNotOk) {
+    SubBasin subBasin;
+
+    EXPECT_FALSE(subBasin.IsOk());
+}
+
+TEST(SubBasin, SubBasinIsNotOk) {
+    SubBasin subBasin;
+    HydroUnit unit1(100);
+    subBasin.AddHydroUnit(&unit1);
+
+    EXPECT_TRUE(subBasin.IsOk());
+}

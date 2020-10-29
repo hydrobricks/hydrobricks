@@ -13,6 +13,8 @@ class SubBasin : public wxObject {
 
     ~SubBasin() override = default;
 
+    bool IsOk();
+
     void AddHydroUnit(HydroUnit* unit);
 
     int GetHydroUnitsCount();

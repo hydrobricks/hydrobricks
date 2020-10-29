@@ -472,3 +472,52 @@ TEST(Utilities, SearchStdVectorWithTolerance) {
 
     EXPECT_EQ(62, result);
 }
+
+TEST(Utilities, IncrementDateBy1Day) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 1, Day);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(2, wxDateTime::Jan, 2020)));
+}
+
+TEST(Utilities, IncrementDateBy5Days) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 5, Day);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(6, wxDateTime::Jan, 2020)));
+}
+
+TEST(Utilities, IncrementDateBy2Years) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 2, Year);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2022)));
+}
+
+TEST(Utilities, IncrementDateBy2Months) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 2, Month);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Mar, 2020)));
+}
+
+TEST(Utilities, IncrementDateBy2Weeks) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 2, Week);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(15, wxDateTime::Jan, 2020)));
+}
+
+TEST(Utilities, IncrementDateBy2Hours) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 2, Hour);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2020, 2)));
+}
+
+TEST(Utilities, IncrementDateBy2Minutes) {
+    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
+    wxDateTime newDate = IncrementDateBy(date, 2, Minute);
+
+    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2020, 0, 2)));
+}

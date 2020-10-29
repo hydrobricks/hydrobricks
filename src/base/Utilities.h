@@ -19,4 +19,6 @@ int Find(const double *start, const double *end, double value, double tolerance 
 template <class T>
 int FindT(const T *start, const T *end, T value, T tolerance = 0, bool showWarning = true);
 
+wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit);
+
 #endif  // FLHY_UTILITIES_H

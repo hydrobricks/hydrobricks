@@ -170,3 +170,32 @@ int FindT(const T *start, const T *end, T value, T tolerance, bool showWarning) 
         }
     }
 }
+
+wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit) {
+    wxDateTime newDate;
+    switch (unit) {
+        case Year:
+            newDate = date.Add(wxDateSpan(amount));
+            break;
+        case Month:
+            newDate = date.Add(wxDateSpan(0, amount));
+            break;
+        case Week:
+            newDate = date.Add(wxDateSpan(0, 0, amount));
+            break;
+        case Day:
+            newDate = date.Add(wxDateSpan(0, 0, 0, amount));
+            break;
+        case Hour:
+            newDate = date.Add(wxTimeSpan(amount));
+            break;
+        case Minute:
+            newDate = date.Add(wxTimeSpan(0, amount));
+            break;
+        default:
+            wxLogError(_("The provided time step unit is not allowed."));
+    }
+
+    return newDate;
+}
+

@@ -96,10 +96,11 @@ endif (USE_VLD)
 if (USE_CODECOV)
     include(CodeCoverage)
     append_coverage_compiler_flags()
-    set(COVERAGE_EXCLUDES '/usr/*'
-        '${PROJECT_SOURCE_DIR}/tests/src/*'
-        '${CMAKE_BINARY_DIR}/_deps/*')
-    setup_target_for_coverage_lcov(NAME flhy-coverage EXECUTABLE flhy-tests DEPENDENCIES flhy-tests)
+    setup_target_for_coverage_lcov(
+            NAME flhy-coverage
+            EXECUTABLE flhy-tests
+            EXCLUDES '/usr/*' 'tests/src/*' 'bin/_deps/*'
+            DEPENDENCIES flhy-tests)
 endif (USE_CODECOV)
 
 

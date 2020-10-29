@@ -3,32 +3,32 @@
 
 #include "SubBasin.h"
 
-TEST(SubCatchment, HasIncomingFlow) {
-    SubBasin subCatchmentIn;
-    SubBasin subCatchmentOut;
+TEST(SubBasin, HasIncomingFlow) {
+    SubBasin subBasinIn;
+    SubBasin subBasinOut;
     Connector connector;
-    connector.Connect(&subCatchmentIn, &subCatchmentOut);
+    connector.Connect(&subBasinIn, &subBasinOut);
 
-    EXPECT_TRUE(subCatchmentOut.HasIncomingFlow());
-    EXPECT_FALSE(subCatchmentIn.HasIncomingFlow());
+    EXPECT_TRUE(subBasinOut.HasIncomingFlow());
+    EXPECT_FALSE(subBasinIn.HasIncomingFlow());
 }
 
-TEST(SubCatchment, GetHydroUnitsCount1) {
-    SubBasin subCatchment;
+TEST(SubBasin, GetHydroUnitsCount1) {
+    SubBasin subBasin;
     HydroUnit unit(100);
-    subCatchment.AddHydroUnit(&unit);
+    subBasin.AddHydroUnit(&unit);
 
-    EXPECT_EQ(1, subCatchment.GetHydroUnitsCount());
+    EXPECT_EQ(1, subBasin.GetHydroUnitsCount());
 }
 
-TEST(SubCatchment, GetHydroUnitsCount3) {
-    SubBasin subCatchment;
+TEST(SubBasin, GetHydroUnitsCount3) {
+    SubBasin subBasin;
     HydroUnit unit1(100);
-    subCatchment.AddHydroUnit(&unit1);
+    subBasin.AddHydroUnit(&unit1);
     HydroUnit unit2(100);
-    subCatchment.AddHydroUnit(&unit2);
+    subBasin.AddHydroUnit(&unit2);
     HydroUnit unit3(100);
-    subCatchment.AddHydroUnit(&unit3);
+    subBasin.AddHydroUnit(&unit3);
 
-    EXPECT_EQ(3, subCatchment.GetHydroUnitsCount());
+    EXPECT_EQ(3, subBasin.GetHydroUnitsCount());
 }

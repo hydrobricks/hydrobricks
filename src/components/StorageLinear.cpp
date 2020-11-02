@@ -6,5 +6,5 @@ StorageLinear::StorageLinear(HydroUnit *hydroUnit)
 {}
 
 double StorageLinear::GetOutput() {
-    return m_responseFactor * m_waterContent;
+    return (*m_responseFactor) * m_waterContent;
 }

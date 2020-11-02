@@ -1,4 +1,6 @@
 
 #include "Parameter.h"
 
-Parameter::Parameter() {}
+Parameter::Parameter(float val)
+    : m_value(val)
+{}

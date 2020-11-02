@@ -8,18 +8,22 @@
 
 class StorageLinear : public Storage {
   public:
-    StorageLinear(HydroUnit *hydroUnit);
+    explicit StorageLinear(HydroUnit *hydroUnit);
 
     ~StorageLinear() override = default;
 
     double GetOutput();
 
-    void SetResponseFactor(double value) {
+    void SetResponseFactor(float *value) {
         m_responseFactor = value;
     }
 
+    float GetResponseFactor() {
+        return *m_responseFactor;
+    }
+
   protected:
-    double m_responseFactor; // [1/t]
+    float *m_responseFactor;  // [1/t]
 
   private:
 };

@@ -25,10 +25,17 @@ class SubBasin : public wxObject {
 
     void AddOutputConnector(Connector* connector);
 
+    void AddContainer(Container* container);
+
+    void AddFlux(Flux* flux);
+
   protected:
+    float m_area; // m2
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;
+    std::vector<Container*> m_lumpedContainers;
+    std::vector<Flux*> m_lumpedFluxes;
 
   private:
 };

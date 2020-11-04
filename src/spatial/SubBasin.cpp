@@ -1,7 +1,9 @@
 
 #include "SubBasin.h"
 
-SubBasin::SubBasin() {}
+SubBasin::SubBasin()
+    : m_area(UNDEFINED)
+{}
 
 bool SubBasin::IsOk() {
     if (m_hydroUnits.empty()) return false;
@@ -29,4 +31,14 @@ void SubBasin::AddInputConnector(Connector* connector) {
 void SubBasin::AddOutputConnector(Connector* connector) {
     wxASSERT(connector);
     m_outConnectors.push_back(connector);
+}
+
+void SubBasin::AddContainer(Container* container) {
+    wxASSERT(container);
+    m_lumpedContainers.push_back(container);
+}
+
+void SubBasin::AddFlux(Flux* flux) {
+    wxASSERT(flux);
+    m_lumpedFluxes.push_back(flux);
 }

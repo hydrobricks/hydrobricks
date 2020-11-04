@@ -5,13 +5,14 @@
 #include "Includes.h"
 #include "Connector.h"
 #include "HydroUnit.h"
+#include "Behaviour.h"
 #include "TimeMachine.h"
 
 class SubBasin : public wxObject {
   public:
     SubBasin();
 
-    ~SubBasin() override = default;
+    ~SubBasin() override;
 
     bool IsOk();
 
@@ -27,6 +28,8 @@ class SubBasin : public wxObject {
 
     void AddContainer(Container* container);
 
+    void AddBehaviour(Behaviour* behaviour);
+
     void AddFlux(Flux* flux);
 
   protected:
@@ -36,6 +39,7 @@ class SubBasin : public wxObject {
     std::vector<Connector*> m_outConnectors;
     std::vector<Container*> m_lumpedContainers;
     std::vector<Flux*> m_lumpedFluxes;
+    std::vector<Behaviour*> m_behaviours;
 
   private:
 };

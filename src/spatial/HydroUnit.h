@@ -17,7 +17,7 @@ class HydroUnit : public wxObject {
 
     HydroUnit(float area = UNDEFINED, Types type = Undefined);
 
-    ~HydroUnit() override = default;
+    ~HydroUnit() override;
 
     void AddProperty(HydroUnitProperty* property);
 

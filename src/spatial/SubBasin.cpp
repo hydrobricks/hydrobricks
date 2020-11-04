@@ -5,6 +5,27 @@ SubBasin::SubBasin()
     : m_area(UNDEFINED)
 {}
 
+SubBasin::~SubBasin() {
+    for (auto& hydroUnit : m_hydroUnits) {
+        wxDELETE(hydroUnit);
+    }
+    for (auto& inConnector : m_inConnectors) {
+        wxDELETE(inConnector);
+    }
+    for (auto& outConnector : m_outConnectors) {
+        wxDELETE(outConnector);
+    }
+    for (auto& lumpedContainer : m_lumpedContainers) {
+        wxDELETE(lumpedContainer);
+    }
+    for (auto& lumpedFlux : m_lumpedFluxes) {
+        wxDELETE(lumpedFlux);
+    }
+    for (auto& behaviour : m_behaviours) {
+        wxDELETE(behaviour);
+    }
+}
+
 bool SubBasin::IsOk() {
     if (m_hydroUnits.empty()) return false;
 
@@ -36,6 +57,11 @@ void SubBasin::AddOutputConnector(Connector* connector) {
 void SubBasin::AddContainer(Container* container) {
     wxASSERT(container);
     m_lumpedContainers.push_back(container);
+}
+
+void SubBasin::AddBehaviour(Behaviour* behaviour) {
+    wxASSERT(behaviour);
+    m_behaviours.push_back(behaviour);
 }
 
 void SubBasin::AddFlux(Flux* flux) {

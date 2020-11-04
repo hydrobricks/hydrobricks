@@ -9,10 +9,8 @@ SubBasin::~SubBasin() {
     for (auto& hydroUnit : m_hydroUnits) {
         wxDELETE(hydroUnit);
     }
-    for (auto& inConnector : m_inConnectors) {
-        wxDELETE(inConnector);
-    }
     for (auto& outConnector : m_outConnectors) {
+        // Only delete "out" connectors, "in" connectors will be deleted by the source sub basin.
         wxDELETE(outConnector);
     }
     for (auto& lumpedContainer : m_lumpedContainers) {

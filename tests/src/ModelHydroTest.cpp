@@ -6,10 +6,10 @@
 
 TEST(ModelHydro, BuildsCorrectly) {
     TimeMachine timer = GenerateTimeMachineDaily();
-    SubBasin subBasin;
-    HydroUnit unit;
-    subBasin.AddHydroUnit(&unit);
-    ModelHydro model(&subBasin, timer);
+    auto* subBasin = new SubBasin();
+    auto* unit = new HydroUnit();
+    subBasin->AddHydroUnit(unit);
+    ModelHydro model(subBasin, timer);
 
     EXPECT_TRUE(model.IsOk());
 }

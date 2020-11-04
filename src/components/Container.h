@@ -3,9 +3,9 @@
 #define FLHY_CONTAINER_H
 
 #include "Includes.h"
+#include "Flux.h"
 
 class HydroUnit;
-class Flux;
 
 class Container : public wxObject {
   public:

@@ -3,5 +3,5 @@
 
 Storage::Storage(HydroUnit *hydroUnit)
     : Container(hydroUnit),
-      m_capacity(-1)
+      m_capacity(UNDEFINED)
 {}

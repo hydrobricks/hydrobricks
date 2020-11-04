@@ -1,6 +1,7 @@
 
 #include "Container.h"
 #include "HydroUnit.h"
+#include "Flux.h"
 
 Container::Container(HydroUnit *hydroUnit)
     : m_hydroUnit(hydroUnit)

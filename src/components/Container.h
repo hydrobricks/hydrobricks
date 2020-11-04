@@ -5,6 +5,7 @@
 #include "Includes.h"
 
 class HydroUnit;
+class Flux;
 
 class Container : public wxObject {
   public:
@@ -16,8 +17,8 @@ class Container : public wxObject {
         return m_waterContent;
     }
 
-    bool HasHorizontalTransfer() {
-        return !m_horizontalOutputs.empty();
+    bool HasLateralTransfer() {
+        return !m_lateralOutputs.empty();
     }
 
     void TransferVertically(double &volume, double &rejected);
@@ -27,8 +28,8 @@ class Container : public wxObject {
   protected:
     double m_waterContent; // [mm]
     HydroUnit* m_hydroUnit;
-    std::vector<Container*> m_verticalOutputs;
-    std::vector<Container*> m_horizontalOutputs;
+    std::vector<Flux*> m_verticalOutputs;
+    std::vector<Flux*> m_lateralOutputs;
 
   private:
 };

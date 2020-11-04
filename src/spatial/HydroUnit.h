@@ -15,13 +15,15 @@ class HydroUnit : public wxObject {
         Undefined
     };
 
-    HydroUnit(float area = -1, Types type = Undefined);
+    HydroUnit(float area = UNDEFINED, Types type = Undefined);
 
     ~HydroUnit() override = default;
 
     void AddProperty(HydroUnitProperty* property);
 
     void AddContainer(Container* container);
+
+    void AddFlux(Flux* flux);
 
     Types GetType() {
         return m_type;
@@ -45,6 +47,7 @@ class HydroUnit : public wxObject {
     float m_area; // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Container*> m_containers;
+    std::vector<Flux*> m_fluxes;
 
   private:
 };

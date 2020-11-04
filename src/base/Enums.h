@@ -8,7 +8,8 @@ enum {
     NOT_FOUND = -3,
     EMPTY = -4,
     NONE = -5,
-    NOT_VALID = -6
+    NOT_VALID = -6,
+    UNDEFINED = -7
 };
 
 enum TimeUnit {

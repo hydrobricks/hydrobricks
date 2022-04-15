@@ -3,7 +3,8 @@
 #include "HydroUnit.h"
 
 Container::Container(HydroUnit *hydroUnit)
-    : m_hydroUnit(hydroUnit)
+    : m_waterContent(0.0),
+      m_hydroUnit(hydroUnit)
 {}
 
 void Container::TransferVertically(double &volume, double &rejected) {

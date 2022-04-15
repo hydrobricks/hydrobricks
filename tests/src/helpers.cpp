@@ -1,4 +1,3 @@
-
 #include "helpers.h"
 
 TimeMachine GenerateTimeMachineDaily() {

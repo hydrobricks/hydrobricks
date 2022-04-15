@@ -1,4 +1,3 @@
-
 #include "TimeSeriesData.h"
 
 /*

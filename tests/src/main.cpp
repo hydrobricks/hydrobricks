@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <wx/fileconf.h>
 #include <wx/stdpaths.h>

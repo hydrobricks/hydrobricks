@@ -1,4 +1,3 @@
-
 #include "HydroUnit.h"
 
 HydroUnit::HydroUnit(float area, Types type)

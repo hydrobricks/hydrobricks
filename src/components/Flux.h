@@ -1,4 +1,3 @@
-
 #ifndef HYDROBRICKS_FLUX_H
 #define HYDROBRICKS_FLUX_H
 

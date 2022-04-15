@@ -1,4 +1,3 @@
-
 #include "TimeMachine.h"
 
 TimeMachine::TimeMachine(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit)

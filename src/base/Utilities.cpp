@@ -1,4 +1,3 @@
-
 #include "Utilities.h"
 
 bool IsNaN(const int value) {

@@ -1,4 +1,3 @@
-
 #include "ModelHydro.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin, const TimeMachine& timer)

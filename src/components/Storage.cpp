@@ -1,4 +1,3 @@
-
 #include "Storage.h"
 
 Storage::Storage(HydroUnit *hydroUnit)

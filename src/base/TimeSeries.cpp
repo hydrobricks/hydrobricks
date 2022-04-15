@@ -1,4 +1,3 @@
-
 #include "TimeSeries.h"
 
 TimeSeries::TimeSeries(VariableType type)

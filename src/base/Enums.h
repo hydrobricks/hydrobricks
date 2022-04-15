@@ -1,4 +1,3 @@
-
 #ifndef HYDROBRICKS_ENUMS_H
 #define HYDROBRICKS_ENUMS_H
 

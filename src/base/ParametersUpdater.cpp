@@ -1,4 +1,3 @@
-
 #include "ParametersUpdater.h"
 
 ParametersUpdater::ParametersUpdater()

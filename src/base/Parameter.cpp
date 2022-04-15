@@ -1,4 +1,3 @@
-
 #include "Parameter.h"
 
 Parameter::Parameter(float val)

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_GLACIER_H
-#define FLHY_GLACIER_H
+#ifndef HYDROBRICKS_GLACIER_H
+#define HYDROBRICKS_GLACIER_H
 
 #include "Includes.h"
 #include "Container.h"
@@ -16,4 +16,4 @@ class Glacier : public Container {
   private:
 };
 
-#endif  // FLHY_GLACIER_H
+#endif  // HYDROBRICKS_GLACIER_H

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_SURFACE_H
-#define FLHY_SURFACE_H
+#ifndef HYDROBRICKS_SURFACE_H
+#define HYDROBRICKS_SURFACE_H
 
 #include "Includes.h"
 #include "Container.h"
@@ -17,4 +17,4 @@ class Surface : public Container {
   private:
 };
 
-#endif  // FLHY_SURFACE_H
+#endif  // HYDROBRICKS_SURFACE_H

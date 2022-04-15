@@ -1,6 +1,6 @@
 
-#ifndef FLHY_PROCESS_H
-#define FLHY_PROCESS_H
+#ifndef HYDROBRICKS_PROCESS_H
+#define HYDROBRICKS_PROCESS_H
 
 #include "Includes.h"
 
@@ -14,4 +14,4 @@ class Process : public wxObject {
   private:
 };
 
-#endif  // FLHY_PROCESS_H
+#endif  // HYDROBRICKS_PROCESS_H

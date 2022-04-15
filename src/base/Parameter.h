@@ -1,6 +1,6 @@
 
-#ifndef FLHY_PARAMETER_H
-#define FLHY_PARAMETER_H
+#ifndef HYDROBRICKS_PARAMETER_H
+#define HYDROBRICKS_PARAMETER_H
 
 #include "Includes.h"
 
@@ -33,4 +33,4 @@ class Parameter : public wxObject {
   private:
 };
 
-#endif  // FLHY_PARAMETER_H
+#endif  // HYDROBRICKS_PARAMETER_H

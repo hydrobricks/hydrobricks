@@ -1,6 +1,6 @@
 
-#ifndef FLHY_BEHAVIOUR_H
-#define FLHY_BEHAVIOUR_H
+#ifndef HYDROBRICKS_BEHAVIOUR_H
+#define HYDROBRICKS_BEHAVIOUR_H
 
 #include "Includes.h"
 
@@ -14,4 +14,4 @@ class Behaviour : public wxObject {
   private:
 };
 
-#endif  // FLHY_BEHAVIOUR_H
+#endif  // HYDROBRICKS_BEHAVIOUR_H

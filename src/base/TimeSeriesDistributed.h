@@ -1,6 +1,6 @@
 
-#ifndef FLHY_TIME_SERIES_DISTRIBUTED_H
-#define FLHY_TIME_SERIES_DISTRIBUTED_H
+#ifndef HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
+#define HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
 
 #include "Includes.h"
 #include "TimeSeries.h"
@@ -17,4 +17,4 @@ class TimeSeriesDistributed : public TimeSeries {
   private:
 };
 
-#endif  // FLHY_TIME_SERIES_DISTRIBUTED_H
+#endif  // HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H

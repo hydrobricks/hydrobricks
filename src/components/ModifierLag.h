@@ -1,6 +1,6 @@
 
-#ifndef FLHY_MODIFIER_LAG_H
-#define FLHY_MODIFIER_LAG_H
+#ifndef HYDROBRICKS_MODIFIER_LAG_H
+#define HYDROBRICKS_MODIFIER_LAG_H
 
 #include "Includes.h"
 #include "Modifier.h"
@@ -16,4 +16,4 @@ class ModifierLag : public Modifier {
   private:
 };
 
-#endif  // FLHY_MODIFIER_LAG_H
+#endif  // HYDROBRICKS_MODIFIER_LAG_H

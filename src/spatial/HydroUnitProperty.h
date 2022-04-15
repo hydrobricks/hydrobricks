@@ -1,6 +1,6 @@
 
-#ifndef FLHY_HYDRO_UNIT_PROPERTY_H
-#define FLHY_HYDRO_UNIT_PROPERTY_H
+#ifndef HYDROBRICKS_HYDRO_UNIT_PROPERTY_H
+#define HYDROBRICKS_HYDRO_UNIT_PROPERTY_H
 
 #include "Includes.h"
 
@@ -15,4 +15,4 @@ class HydroUnitProperty : public wxObject {
   private:
 };
 
-#endif  // FLHY_HYDRO_UNIT_PROPERTY_H
+#endif  // HYDROBRICKS_HYDRO_UNIT_PROPERTY_H

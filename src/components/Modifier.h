@@ -1,6 +1,6 @@
 
-#ifndef FLHY_MODIFIER_H
-#define FLHY_MODIFIER_H
+#ifndef HYDROBRICKS_MODIFIER_H
+#define HYDROBRICKS_MODIFIER_H
 
 #include "Includes.h"
 
@@ -15,4 +15,4 @@ class Modifier : public wxObject {
   private:
 };
 
-#endif  // FLHY_MODIFIER_H
+#endif  // HYDROBRICKS_MODIFIER_H

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_FLUX_H
-#define FLHY_FLUX_H
+#ifndef HYDROBRICKS_FLUX_H
+#define HYDROBRICKS_FLUX_H
 
 #include "Includes.h"
 
@@ -21,4 +21,4 @@ class Flux : public wxObject {
   private:
 };
 
-#endif  // FLHY_FLUX_H
+#endif  // HYDROBRICKS_FLUX_H

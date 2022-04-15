@@ -1,6 +1,6 @@
 
-#ifndef FLHY_MODEL_HYDRO_H
-#define FLHY_MODEL_HYDRO_H
+#ifndef HYDROBRICKS_MODEL_HYDRO_H
+#define HYDROBRICKS_MODEL_HYDRO_H
 
 #include "Includes.h"
 #include "SubBasin.h"
@@ -26,4 +26,4 @@ class ModelHydro : public wxObject {
   private:
 };
 
-#endif  // FLHY_MODEL_HYDRO_H
+#endif  // HYDROBRICKS_MODEL_HYDRO_H

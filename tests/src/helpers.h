@@ -1,10 +1,10 @@
 
-#ifndef FLHY_HELPERS_H
-#define FLHY_HELPERS_H
+#ifndef HYDROBRICKS_HELPERS_H
+#define HYDROBRICKS_HELPERS_H
 
 #include "TimeMachine.h"
 
 
 TimeMachine GenerateTimeMachineDaily();
 
-#endif  // FLHY_HELPERS_H
+#endif  // HYDROBRICKS_HELPERS_H

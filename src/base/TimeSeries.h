@@ -1,6 +1,6 @@
 
-#ifndef FLHY_TIME_SERIES_H
-#define FLHY_TIME_SERIES_H
+#ifndef HYDROBRICKS_TIME_SERIES_H
+#define HYDROBRICKS_TIME_SERIES_H
 
 #include "Includes.h"
 #include "TimeSeriesData.h"
@@ -21,4 +21,4 @@ class TimeSeries : public wxObject {
   private:
 };
 
-#endif  // FLHY_TIME_SERIES_H
+#endif  // HYDROBRICKS_TIME_SERIES_H

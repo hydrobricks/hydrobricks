@@ -1,6 +1,6 @@
 
-#ifndef FLHY_STORAGE_LINEAR_H
-#define FLHY_STORAGE_LINEAR_H
+#ifndef HYDROBRICKS_STORAGE_LINEAR_H
+#define HYDROBRICKS_STORAGE_LINEAR_H
 
 #include "Includes.h"
 #include "HydroUnit.h"
@@ -28,4 +28,4 @@ class StorageLinear : public Storage {
   private:
 };
 
-#endif  // FLHY_STORAGE_LINEAR_H
+#endif  // HYDROBRICKS_STORAGE_LINEAR_H

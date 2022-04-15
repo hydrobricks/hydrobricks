@@ -1,6 +1,6 @@
 
-#ifndef FLHY_PARAMETER_VARIABLE_H
-#define FLHY_PARAMETER_VARIABLE_H
+#ifndef HYDROBRICKS_PARAMETER_VARIABLE_H
+#define HYDROBRICKS_PARAMETER_VARIABLE_H
 
 #include <wx/datetime.h>
 
@@ -65,4 +65,4 @@ class ParameterVariableDates : public ParameterVariable {
   private:
 };
 
-#endif  // FLHY_PARAMETER_VARIABLE_H
+#endif  // HYDROBRICKS_PARAMETER_VARIABLE_H

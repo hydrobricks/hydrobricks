@@ -1,6 +1,6 @@
 
-#ifndef FLHY_SUBBASIN_H
-#define FLHY_SUBBASIN_H
+#ifndef HYDROBRICKS_SUBBASIN_H
+#define HYDROBRICKS_SUBBASIN_H
 
 #include "Includes.h"
 #include "Connector.h"

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_PARAMETERS_UPDATER_H
-#define FLHY_PARAMETERS_UPDATER_H
+#ifndef HYDROBRICKS_PARAMETERS_UPDATER_H
+#define HYDROBRICKS_PARAMETERS_UPDATER_H
 
 #include <wx/datetime.h>
 
@@ -39,4 +39,4 @@ class ParametersUpdater : public wxObject {
     std::vector<ParameterVariableDates*> m_parametersDates;
 };
 
-#endif  // FLHY_PARAMETERS_UPDATER_H
+#endif  // HYDROBRICKS_PARAMETERS_UPDATER_H

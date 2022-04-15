@@ -1,6 +1,6 @@
 
-#ifndef FLHY_CONTAINER_H
-#define FLHY_CONTAINER_H
+#ifndef HYDROBRICKS_CONTAINER_H
+#define HYDROBRICKS_CONTAINER_H
 
 #include "Includes.h"
 #include "Flux.h"
@@ -34,4 +34,4 @@ class Container : public wxObject {
   private:
 };
 
-#endif  // FLHY_CONTAINER_H
+#endif  // HYDROBRICKS_CONTAINER_H

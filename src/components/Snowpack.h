@@ -1,6 +1,6 @@
 
-#ifndef FLHY_SNOWPACK_H
-#define FLHY_SNOWPACK_H
+#ifndef HYDROBRICKS_SNOWPACK_H
+#define HYDROBRICKS_SNOWPACK_H
 
 #include "Includes.h"
 #include "Container.h"
@@ -16,4 +16,4 @@ class Snowpack : public Container {
   private:
 };
 
-#endif  // FLHY_SNOWPACK_H
+#endif  // HYDROBRICKS_SNOWPACK_H

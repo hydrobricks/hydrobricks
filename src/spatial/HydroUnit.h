@@ -1,6 +1,6 @@
 
-#ifndef FLHY_HYDRO_UNIT_H
-#define FLHY_HYDRO_UNIT_H
+#ifndef HYDROBRICKS_HYDRO_UNIT_H
+#define HYDROBRICKS_HYDRO_UNIT_H
 
 #include "Includes.h"
 #include "Container.h"

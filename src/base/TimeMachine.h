@@ -1,6 +1,6 @@
 
-#ifndef FLHY_TIME_MACHINE_H
-#define FLHY_TIME_MACHINE_H
+#ifndef HYDROBRICKS_TIME_MACHINE_H
+#define HYDROBRICKS_TIME_MACHINE_H
 
 #include "Includes.h"
 #include "ParametersUpdater.h"
@@ -34,4 +34,4 @@ class TimeMachine : public wxObject {
     ParametersUpdater* m_parametersUpdater;
 };
 
-#endif  // FLHY_TIME_MACHINE_H
+#endif  // HYDROBRICKS_TIME_MACHINE_H

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_STORAGE_H
-#define FLHY_STORAGE_H
+#ifndef HYDROBRICKS_STORAGE_H
+#define HYDROBRICKS_STORAGE_H
 
 #include "Includes.h"
 #include "Container.h"
@@ -25,4 +25,4 @@ class Storage : public Container {
   private:
 };
 
-#endif  // FLHY_STORAGE_H
+#endif  // HYDROBRICKS_STORAGE_H

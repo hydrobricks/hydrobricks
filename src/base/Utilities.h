@@ -1,6 +1,6 @@
 
-#ifndef FLHY_UTILITIES_H
-#define FLHY_UTILITIES_H
+#ifndef HYDROBRICKS_UTILITIES_H
+#define HYDROBRICKS_UTILITIES_H
 
 #include "Includes.h"
 
@@ -21,4 +21,4 @@ int FindT(const T *start, const T *end, T value, T tolerance = 0, bool showWarni
 
 wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit);
 
-#endif  // FLHY_UTILITIES_H
+#endif  // HYDROBRICKS_UTILITIES_H

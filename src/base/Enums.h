@@ -1,6 +1,6 @@
 
-#ifndef FLHY_ENUMS_H
-#define FLHY_ENUMS_H
+#ifndef HYDROBRICKS_ENUMS_H
+#define HYDROBRICKS_ENUMS_H
 
 enum {
     FAILED = -1,
@@ -30,4 +30,4 @@ enum VariableType {
     MAX_VAR_TYPES
 };
 
-#endif  // FLHY_ENUMS_H
+#endif  // HYDROBRICKS_ENUMS_H

@@ -1,6 +1,6 @@
 
-#ifndef FLHY_TIME_SERIES_DATA_H
-#define FLHY_TIME_SERIES_DATA_H
+#ifndef HYDROBRICKS_TIME_SERIES_DATA_H
+#define HYDROBRICKS_TIME_SERIES_DATA_H
 
 #include "Includes.h"
 
@@ -58,4 +58,4 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
   private:
 };
 
-#endif  // FLHY_TIME_SERIES_DATA_H
+#endif  // HYDROBRICKS_TIME_SERIES_DATA_H

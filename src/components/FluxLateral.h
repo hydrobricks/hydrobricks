@@ -1,6 +1,6 @@
 
-#ifndef FLHY_FLUX_LATERAL_H
-#define FLHY_FLUX_LATERAL_H
+#ifndef HYDROBRICKS_FLUX_LATERAL_H
+#define HYDROBRICKS_FLUX_LATERAL_H
 
 #include "Includes.h"
 #include "Flux.h"
@@ -16,4 +16,4 @@ class FluxLateral : public Flux {
   private:
 };
 
-#endif  // FLHY_FLUX_LATERAL_H
+#endif  // HYDROBRICKS_FLUX_LATERAL_H

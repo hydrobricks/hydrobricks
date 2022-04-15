@@ -1,6 +1,6 @@
 
-#ifndef FLHY_CONNECTOR_H
-#define FLHY_CONNECTOR_H
+#ifndef HYDROBRICKS_CONNECTOR_H
+#define HYDROBRICKS_CONNECTOR_H
 
 #include "Includes.h"
 
@@ -21,4 +21,4 @@ class Connector : public wxObject {
   private:
 };
 
-#endif  // FLHY_CONNECTOR_H
+#endif  // HYDROBRICKS_CONNECTOR_H

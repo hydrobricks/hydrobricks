@@ -32,8 +32,6 @@ include_directories(${inc_dirs})
 
 ##### LIBRARIES
 
-include(define_common_libraries)
-
 # Own libraries
 add_library(core STATIC ${src_core})
 

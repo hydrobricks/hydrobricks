@@ -28,20 +28,6 @@ list(APPEND inc_dirs
 include_directories(${inc_dirs})
 
 
-##### LIBRARIES
-
-include(define_common_libraries)
-
-# Google Test
-if (MINGW OR MSYS)
-    set(gtest_disable_pthreads ON CACHE BOOL "" FORCE)
-endif ()
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-include_directories(${googletest_SOURCE_DIR}/googletest/include)
-
 ##### DECLARE EXECUTABLE
 
 if (WIN32)
@@ -68,9 +54,8 @@ endif()
 ##### LINKING
 
 add_dependencies(hydrobricks-tests core)
-add_dependencies(hydrobricks-tests gtest)
 target_link_libraries(hydrobricks-tests core)
-target_link_libraries(hydrobricks-tests gtest gtest_main)
+target_link_libraries(hydrobricks-tests ${CONAN_LIBS})
 if (UNIX)
     target_link_libraries(hydrobricks-tests pthread)
 endif ()

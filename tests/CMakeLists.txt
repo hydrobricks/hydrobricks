@@ -45,37 +45,37 @@ include_directories(${googletest_SOURCE_DIR}/googletest/include)
 ##### DECLARE EXECUTABLE
 
 if (WIN32)
-    add_executable(flhy-tests WIN32 ${src_tests})
+    add_executable(hydrobricks-tests WIN32 ${src_tests})
 elseif (UNIX AND NOT APPLE)
-    add_executable(flhy-tests ${src_tests})
+    add_executable(hydrobricks-tests ${src_tests})
 elseif (APPLE)
-    add_executable(flhy-tests MACOSX_BUNDLE ${src_tests})
+    add_executable(hydrobricks-tests MACOSX_BUNDLE ${src_tests})
 else ()
-    add_executable(flhy-tests ${src_tests})
+    add_executable(hydrobricks-tests ${src_tests})
 endif ()
 
 
 ##### DEFINITIONS
 
 if(WIN32)
-    set_target_properties(flhy-tests PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-    set_target_properties(flhy-tests PROPERTIES COMPILE_DEFINITIONS "UNIT_TESTING; wxUSE_GUI=0; _CONSOLE")
+    set_target_properties(hydrobricks-tests PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
+    set_target_properties(hydrobricks-tests PROPERTIES COMPILE_DEFINITIONS "UNIT_TESTING; wxUSE_GUI=0; _CONSOLE")
 else()
-    set_target_properties(flhy-tests PROPERTIES COMPILE_DEFINITIONS "UNIT_TESTING; wxUSE_GUI=0")
+    set_target_properties(hydrobricks-tests PROPERTIES COMPILE_DEFINITIONS "UNIT_TESTING; wxUSE_GUI=0")
 endif()
 
 
 ##### LINKING
 
-add_dependencies(flhy-tests core)
-add_dependencies(flhy-tests gtest)
-target_link_libraries(flhy-tests core)
-target_link_libraries(flhy-tests gtest gtest_main)
+add_dependencies(hydrobricks-tests core)
+add_dependencies(hydrobricks-tests gtest)
+target_link_libraries(hydrobricks-tests core)
+target_link_libraries(hydrobricks-tests gtest gtest_main)
 if (UNIX)
-    target_link_libraries(flhy-tests pthread)
+    target_link_libraries(hydrobricks-tests pthread)
 endif ()
 if (USE_VLD)
-    target_link_libraries(flhy-tests ${VLD_LIBRARIES})
+    target_link_libraries(hydrobricks-tests ${VLD_LIBRARIES})
 endif ()
 
 
@@ -84,6 +84,6 @@ endif ()
 set(CTEST_TEST_TIMEOUT 3600)
 set(DART_TESTING_TIMEOUT 3600)
 set(CTEST_OUTPUT_ON_FAILURE TRUE)
-add_test(FlHy-tests flhy-tests)
+add_test(HydroBricks-tests hydrobricks-tests)
 include(CTest)
 enable_testing()

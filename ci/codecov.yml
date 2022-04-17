@@ -9,4 +9,4 @@ coverage:
         threshold: 1
         base: auto
 fixes:
-  - "/home/runner/work/flhy/flhy/::"
+  - "/home/runner/work/hydrobricks/hydrobricks/::"

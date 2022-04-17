@@ -12,9 +12,9 @@ endif ()
 
 # Project name
 if (UNIX)
-    project(flhy)
+    project(hydrobricks)
 else (UNIX)
-    project(FlHy)
+    project(HydroBricks)
 endif (UNIX)
 
 
@@ -97,10 +97,10 @@ if (USE_CODECOV)
     include(CodeCoverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
-            NAME flhy-coverage
-            EXECUTABLE flhy-tests
+            NAME hydrobricks-coverage
+            EXECUTABLE hydrobricks-tests
             EXCLUDE "/usr/*" "${PROJECT_SOURCE_DIR}/tests/src/*" "tests/*" "${CMAKE_BINARY_DIR}/_deps/*" "bin/*"
-            DEPENDENCIES flhy-tests)
+            DEPENDENCIES hydrobricks-tests)
 endif (USE_CODECOV)
 
 

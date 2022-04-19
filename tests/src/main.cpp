@@ -4,9 +4,6 @@
 
 #include "Includes.h"
 
-#ifndef UNIT_TESTING
-#define UNIT_TESTING
-#endif
 
 int main(int argc, char **argv) {
     int resultTest = -2;

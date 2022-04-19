@@ -25,7 +25,7 @@ class SubBasin : public wxObject {
 
     void AddOutputConnector(Connector* connector);
 
-    void AddContainer(Container* container);
+    void AddContainer(Brick* container);
 
     void AddBehaviour(Behaviour* behaviour);
 
@@ -36,7 +36,7 @@ class SubBasin : public wxObject {
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;
-    std::vector<Container*> m_lumpedContainers;
+    std::vector<Brick*> m_lumpedContainers;
     std::vector<Flux*> m_lumpedFluxes;
     std::vector<Behaviour*> m_behaviours;
 

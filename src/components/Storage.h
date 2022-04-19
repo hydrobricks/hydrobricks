@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_STORAGE_H
 #define HYDROBRICKS_STORAGE_H
 
+#include "Brick.h"
 #include "Includes.h"
-#include "Container.h"
 
-class Storage : public Container {
+class Storage : public Brick {
   public:
     Storage(HydroUnit *hydroUnit);
 

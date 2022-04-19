@@ -1,5 +1,6 @@
 #include "Flux.h"
-#include "Container.h"
+
+#include "Brick.h"
 #include "Modifier.h"
 
 Flux::Flux()

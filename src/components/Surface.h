@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_SURFACE_H
 #define HYDROBRICKS_SURFACE_H
 
+#include "Brick.h"
 #include "Includes.h"
-#include "Container.h"
 
-class Surface : public Container {
+class Surface : public Brick {
   public:
     Surface(HydroUnit *hydroUnit);
 

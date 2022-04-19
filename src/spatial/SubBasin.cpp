@@ -51,7 +51,7 @@ void SubBasin::AddOutputConnector(Connector* connector) {
     m_outConnectors.push_back(connector);
 }
 
-void SubBasin::AddContainer(Container* container) {
+void SubBasin::AddContainer(Brick* container) {
     wxASSERT(container);
     m_lumpedContainers.push_back(container);
 }

@@ -23,7 +23,7 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
     m_properties.push_back(property);
 }
 
-void HydroUnit::AddContainer(Container* container) {
+void HydroUnit::AddContainer(Brick* container) {
     wxASSERT(container);
     m_containers.push_back(container);
 }

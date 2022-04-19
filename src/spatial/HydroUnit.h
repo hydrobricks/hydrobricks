@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_HYDRO_UNIT_H
 #define HYDROBRICKS_HYDRO_UNIT_H
 
-#include "Includes.h"
-#include "Container.h"
+#include "Brick.h"
 #include "HydroUnitProperty.h"
+#include "Includes.h"
 
 class HydroUnit : public wxObject {
   public:
@@ -20,7 +20,7 @@ class HydroUnit : public wxObject {
 
     void AddProperty(HydroUnitProperty* property);
 
-    void AddContainer(Container* container);
+    void AddContainer(Brick* container);
 
     void AddFlux(Flux* flux);
 
@@ -45,7 +45,7 @@ class HydroUnit : public wxObject {
     long m_id;
     float m_area; // m2
     std::vector<HydroUnitProperty*> m_properties;
-    std::vector<Container*> m_containers;
+    std::vector<Brick*> m_containers;
     std::vector<Flux*> m_fluxes;
 
   private:

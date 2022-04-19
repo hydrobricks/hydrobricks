@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include "Brick.h"
 #include "Includes.h"
-#include "Container.h"
 
-class Glacier : public Container {
+class Glacier : public Brick {
   public:
     Glacier(HydroUnit *hydroUnit);
 

@@ -1,6 +1,6 @@
 #include "Storage.h"
 
 Storage::Storage(HydroUnit *hydroUnit)
-    : Container(hydroUnit),
+    : Brick(hydroUnit),
       m_capacity(UNDEFINED)
 {}

@@ -1,6 +1,6 @@
 #include "Surface.h"
 
 Surface::Surface(HydroUnit *hydroUnit)
-    : Container(hydroUnit),
+    : Brick(hydroUnit),
       m_waterHeight(0)
 {}

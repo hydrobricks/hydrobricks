@@ -3,7 +3,7 @@
 
 #include "Includes.h"
 
-class Container;
+class Brick;
 class Modifier;
 
 class Flux : public wxObject {
@@ -13,8 +13,8 @@ class Flux : public wxObject {
     ~Flux() override = default;
 
   protected:
-    Container* m_in;
-    Container* m_out;
+    Brick* m_in;
+    Brick* m_out;
     Modifier* m_modifier;
 
   private:

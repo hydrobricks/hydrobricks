@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_SNOWPACK_H
 #define HYDROBRICKS_SNOWPACK_H
 
+#include "Brick.h"
 #include "Includes.h"
-#include "Container.h"
 
-class Snowpack : public Container {
+class Snowpack : public Brick {
   public:
     Snowpack(HydroUnit *hydroUnit);
 

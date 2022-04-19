@@ -2,9 +2,12 @@
 
 StorageLinear::StorageLinear(HydroUnit *hydroUnit)
     : Storage(hydroUnit),
-      m_responseFactor(0)
+      m_responseFactor(nullptr)
 {}
 
-double StorageLinear::GetOutput() {
-    return (*m_responseFactor) * m_waterContent;
+bool StorageLinear::Compute() {
+
+    double Qout = (*m_responseFactor) * m_waterContent;
+
+    return false;
 }

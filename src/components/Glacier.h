@@ -8,7 +8,15 @@ class Glacier : public Brick {
   public:
     Glacier(HydroUnit *hydroUnit);
 
-    ~Glacier() override = default;
+    /**
+     * @copydoc Brick::IsOk()
+     */
+    bool IsOk() override;
+
+    /**
+     * @copydoc Brick::Compute()
+     */
+    bool Compute() override;
 
   protected:
 

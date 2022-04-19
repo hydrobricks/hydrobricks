@@ -8,7 +8,15 @@ class Storage : public Brick {
   public:
     Storage(HydroUnit *hydroUnit);
 
-    ~Storage() override = default;
+    /**
+     * @copydoc Brick::IsOk()
+     */
+    bool IsOk() override;
+
+    /**
+     * @copydoc Brick::Compute()
+     */
+    bool Compute() override;
 
     void SetCapacity(double capacity) {
         m_capacity = capacity;

@@ -8,7 +8,15 @@ class Surface : public Brick {
   public:
     Surface(HydroUnit *hydroUnit);
 
-    ~Surface() override = default;
+    /**
+     * @copydoc Brick::IsOk()
+     */
+    bool IsOk() override;
+
+    /**
+     * @copydoc Brick::Compute()
+     */
+    bool Compute() override;
 
   protected:
     double m_waterHeight;

@@ -8,7 +8,15 @@ class Snowpack : public Brick {
   public:
     Snowpack(HydroUnit *hydroUnit);
 
-    ~Snowpack() override = default;
+    /**
+     * @copydoc Brick::IsOk()
+     */
+    bool IsOk() override;
+
+    /**
+     * @copydoc Brick::Compute()
+     */
+    bool Compute() override;
 
   protected:
 

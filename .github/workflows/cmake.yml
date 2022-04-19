@@ -17,10 +17,17 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install libraries
-      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree
+      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree python
+
+    - name: Install conan
+      run: pip install conan
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/bin
+
+    - name: Get dependencies
+      working-directory: ${{github.workspace}}/bin
+      run: conan install .. --build=missing
 
     - name: Configure CMake
       working-directory: ${{github.workspace}}/bin
@@ -53,10 +60,17 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install libraries
-        run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov
+        run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov python
+
+      - name: Install conan
+        run: pip install conan
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin
+
+      - name: Get dependencies
+        working-directory: ${{github.workspace}}/bin
+        run: conan install .. --build=missing
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/bin

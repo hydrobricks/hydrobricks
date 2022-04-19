@@ -1,5 +1,15 @@
+#include "FluxDirect.h"
 
-#include "FluxLateral.h"
-
-FluxLateral::FluxLateral()
+FluxDirect::FluxDirect()
 {}
+
+bool FluxDirect::IsOk() {
+    if (m_in == nullptr) return false;
+    if (m_out == nullptr) return false;
+
+    return true;
+}
+
+double FluxDirect::GetWaterAmount() {
+    return m_waterAmount;
+}

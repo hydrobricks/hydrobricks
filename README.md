@@ -11,12 +11,12 @@ Get or build release libraries:
 ```
 mkdir cmake-build-release
 cd cmake-build-release
-conan install .. -o build_tests=True --build=missing
+conan install .. --build=missing
 ```
 
 Get or build debug libraries (the option ``-s compiler.runtime=MDd`` is for Windows only):
 ```
 mkdir cmake-build-debug
 cd cmake-build-debug
-conan install .. -o build_tests=True -s build_type=Debug -s compiler.runtime=MDd --build=missing  
+conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing  
 ```

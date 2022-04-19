@@ -1,0 +1,21 @@
+[requires]
+wxwidgets/3.1.4@terranum-conan+wxwidgets/stable
+gdal/3.4.1@terranum-conan+gdal/stable
+netcdf/4.7.4
+proj/9.0.0
+libcurl/7.80.0
+libdeflate/1.10
+zlib/1.2.12
+gtest/1.11.0
+
+[generators]
+cmake
+
+[options]
+gdal:with_curl = True
+gdal:shared = True
+wxwidgets:webview = False
+
+[imports]
+bin, *.dll -> ./bin # Copies all dll files from packages bin folder to my "bin" folder
+lib, *.dylib* -> ./bin # Copies all dylib files from packages lib folder to my "bin" folder

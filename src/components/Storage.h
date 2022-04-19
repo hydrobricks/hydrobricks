@@ -18,6 +18,13 @@ class Storage : public Brick {
      */
     bool Compute() override;
 
+    /**
+     * Sums the water amount from the different fluxes.
+     *
+     * @return sum of the water amount [mm]
+     */
+    double SumIncomingFluxes();
+
     void SetCapacity(double capacity) {
         m_capacity = capacity;
     }

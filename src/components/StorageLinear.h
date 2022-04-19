@@ -16,6 +16,11 @@ class StorageLinear : public Storage {
     explicit StorageLinear(HydroUnit *hydroUnit);
 
     /**
+     * @copydoc Brick::IsOk()
+     */
+    bool IsOk() override;
+
+    /**
      * @copydoc Brick::Compute()
      */
     bool Compute() override;

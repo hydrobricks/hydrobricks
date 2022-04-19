@@ -3,19 +3,11 @@
 HydroUnit::HydroUnit(float area, Types type)
     : m_type(type),
       m_id(UNDEFINED),
-      m_area(area)
+      m_area(area),
+      m_fluxInput(nullptr)
 {}
 
 HydroUnit::~HydroUnit() {
-    for (auto& property : m_properties) {
-        wxDELETE(property);
-    }
-    for (auto& container : m_containers) {
-        wxDELETE(container);
-    }
-    for (auto& flux : m_fluxes) {
-        wxDELETE(flux);
-    }
 }
 
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
@@ -23,12 +15,26 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
     m_properties.push_back(property);
 }
 
-void HydroUnit::AddContainer(Brick* container) {
-    wxASSERT(container);
-    m_containers.push_back(container);
+void HydroUnit::AddBrick(Brick* brick) {
+    wxASSERT(brick);
+    m_bricks.push_back(brick);
 }
 
-void HydroUnit::AddFlux(Flux* flux) {
+void HydroUnit::SetInputFlux(Flux* flux) {
     wxASSERT(flux);
-    m_fluxes.push_back(flux);
+    m_fluxInput = flux;
+}
+
+bool HydroUnit::IsOk() {
+    if (m_fluxInput == nullptr) {
+        wxLogError(_("The unit input flux is not defined."));
+        return false;
+    }
+    if (m_bricks.empty()) {
+        wxLogError(_("The unit has no bricks attached."));
+        return false;
+    }
+    for (auto brick : m_bricks) {
+        if (!brick->IsOk()) return false;
+    }
 }

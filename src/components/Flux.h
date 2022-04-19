@@ -22,21 +22,21 @@ class Flux : public wxObject {
      *
      * @return the water amount of the flux.
      */
-    virtual double GetWaterAmount() = 0;
+    virtual double GetAmount() = 0;
 
     /**
      * Set the water amount of the flux.
      *
      * @param amount the water amount of the flux.
      */
-    virtual void SetWaterAmount(double amount) {
-        m_waterAmount = amount;
+    virtual void SetAmount(double amount) {
+        m_amount = amount;
     }
 
   protected:
     Brick* m_in;
     Brick* m_out;
-    double m_waterAmount;
+    double m_amount;
     Modifier* m_modifier;
 
   private:

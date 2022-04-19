@@ -1,12 +1,14 @@
 #include <gtest/gtest.h>
 
 #include "SubBasin.h"
+#include "StorageLinear.h"
+#include "FluxDirect.h"
 
 TEST(SubBasin, HasIncomingFlow) {
     SubBasin subBasinIn;
     SubBasin subBasinOut;
-    auto* connector = new Connector();
-    connector->Connect(&subBasinIn, &subBasinOut);
+    Connector connector;
+    connector.Connect(&subBasinIn, &subBasinOut);
 
     EXPECT_TRUE(subBasinOut.HasIncomingFlow());
     EXPECT_FALSE(subBasinIn.HasIncomingFlow());
@@ -14,20 +16,20 @@ TEST(SubBasin, HasIncomingFlow) {
 
 TEST(SubBasin, GetHydroUnitsCount1) {
     SubBasin subBasin;
-    auto* unit = new HydroUnit(100);
-    subBasin.AddHydroUnit(unit);
+    HydroUnit unit(100);
+    subBasin.AddHydroUnit(&unit);
 
     EXPECT_EQ(1, subBasin.GetHydroUnitsCount());
 }
 
 TEST(SubBasin, GetHydroUnitsCount3) {
     SubBasin subBasin;
-    auto* unit1 = new HydroUnit(100);
-    subBasin.AddHydroUnit(unit1);
-    auto* unit2 = new HydroUnit(100);
-    subBasin.AddHydroUnit(unit2);
-    auto* unit3 = new HydroUnit(100);
-    subBasin.AddHydroUnit(unit3);
+    HydroUnit unit1(100);
+    subBasin.AddHydroUnit(&unit1);
+    HydroUnit unit2(100);
+    subBasin.AddHydroUnit(&unit2);
+    HydroUnit unit3(100);
+    subBasin.AddHydroUnit(&unit3);
 
     EXPECT_EQ(3, subBasin.GetHydroUnitsCount());
 }
@@ -38,10 +40,17 @@ TEST(SubBasin, EmptySubBasinIsNotOk) {
     EXPECT_FALSE(subBasin.IsOk());
 }
 
-TEST(SubBasin, SubBasinIsNotOk) {
+TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
-    auto* unit1 = new HydroUnit(100);
-    subBasin.AddHydroUnit(unit1);
+    HydroUnit unit(100);
+    subBasin.AddHydroUnit(&unit);
+
+    StorageLinear storage(&unit);
+    FluxDirect inFlux, outFlux;
+    storage.AttachFluxIn(&inFlux);
+    storage.AttachFluxOut(&outFlux);
+
+    unit.SetInputFlux(&inFlux);
 
     EXPECT_TRUE(subBasin.IsOk());
 }

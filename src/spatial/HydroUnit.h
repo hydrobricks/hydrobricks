@@ -20,9 +20,11 @@ class HydroUnit : public wxObject {
 
     void AddProperty(HydroUnitProperty* property);
 
-    void AddContainer(Brick* container);
+    void AddBrick(Brick* brick);
 
-    void AddFlux(Flux* flux);
+    void SetInputFlux(Flux* flux);
+
+    bool IsOk();
 
     Types GetType() {
         return m_type;
@@ -44,9 +46,9 @@ class HydroUnit : public wxObject {
     Types m_type;
     long m_id;
     float m_area; // m2
+    Flux* m_fluxInput;
     std::vector<HydroUnitProperty*> m_properties;
-    std::vector<Brick*> m_containers;
-    std::vector<Flux*> m_fluxes;
+    std::vector<Brick*> m_bricks;
 
   private:
 };

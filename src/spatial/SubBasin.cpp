@@ -4,27 +4,16 @@ SubBasin::SubBasin()
     : m_area(UNDEFINED)
 {}
 
-SubBasin::~SubBasin() {
-    for (auto& hydroUnit : m_hydroUnits) {
-        wxDELETE(hydroUnit);
-    }
-    for (auto& outConnector : m_outConnectors) {
-        // Only delete "out" connectors, "in" connectors will be deleted by the source sub basin.
-        wxDELETE(outConnector);
-    }
-    for (auto& lumpedContainer : m_lumpedContainers) {
-        wxDELETE(lumpedContainer);
-    }
-    for (auto& lumpedFlux : m_lumpedFluxes) {
-        wxDELETE(lumpedFlux);
-    }
-    for (auto& behaviour : m_behaviours) {
-        wxDELETE(behaviour);
-    }
-}
+SubBasin::~SubBasin() {}
 
 bool SubBasin::IsOk() {
-    if (m_hydroUnits.empty()) return false;
+    if (m_hydroUnits.empty()) {
+        wxLogError(_("The sub basin has no hydro unit attached."));
+        return false;
+    }
+    for (auto unit : m_hydroUnits) {
+        if (!unit->IsOk()) return false;
+    }
 
     return true;
 }

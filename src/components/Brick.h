@@ -58,6 +58,7 @@ class Brick : public wxObject {
 
   protected:
     double m_waterContent; // [mm]
+    double m_dsIteration[4];
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;

@@ -37,6 +37,7 @@ class Flux : public wxObject {
     Brick* m_in;
     Brick* m_out;
     double m_amount;
+    double m_amountIteration[4];
     Modifier* m_modifier;
 
   private:

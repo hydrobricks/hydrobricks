@@ -25,7 +25,14 @@ bool ModelHydro::IsOk() {
 }
 
 bool ModelHydro::Run() {
-    //
+    while (!m_timer->IsOver()) {
+        if (!m_processor->ProcessTimeStep()) {
+            wxLogError(_("Failed running the model."));
+            return false;
+        }
+        m_timer->IncrementTime();
+    }
+    return false;
 }
 
 void ModelHydro::SetTimeSeries(TimeSeries* timeSeries) {

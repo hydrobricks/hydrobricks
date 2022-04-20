@@ -16,8 +16,11 @@ bool StorageLinear::IsOk() {
 }
 
 bool StorageLinear::Compute() {
+    double qIn = SumIncomingFluxes();
+    double qOut = (*m_responseFactor) * m_waterContent;
+    double dS = qIn - qOut;
+    m_waterContent += dS;
+    m_outputs[0]->SetAmount(qOut);
 
-    double Qout = (*m_responseFactor) * m_waterContent;
-
-    return false;
+    return true;
 }

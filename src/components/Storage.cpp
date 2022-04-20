@@ -10,11 +10,11 @@ bool Storage::IsOk() {
         wxLogError(_("The storage is not attached to a hydro unit."));
         return false;
     }
-    if (m_Inputs.empty()) {
+    if (m_inputs.empty()) {
         wxLogError(_("The storage is not attached to inputs."));
         return false;
     }
-    if (m_Outputs.empty()) {
+    if (m_outputs.empty()) {
         wxLogError(_("The storage is not attached to outputs."));
         return false;
     }
@@ -27,13 +27,13 @@ bool Storage::Compute() {
 }
 
 double Storage::SumIncomingFluxes() {
-    wxASSERT(!m_Inputs.empty());
+    wxASSERT(!m_inputs.empty());
 
-    if (m_Inputs.size() == 1) {
-        return m_Inputs[0]->GetAmount();
+    if (m_inputs.size() == 1) {
+        return m_inputs[0]->GetAmount();
     } else {
         double sum = 0;
-        for (auto & input : m_Inputs) {
+        for (auto & input : m_inputs) {
             sum += input->GetAmount();
         }
         return sum;

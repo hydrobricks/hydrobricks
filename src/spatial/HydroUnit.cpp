@@ -20,6 +20,17 @@ void HydroUnit::AddBrick(Brick* brick) {
     m_bricks.push_back(brick);
 }
 
+int HydroUnit::GetBricksCount() {
+    return m_bricks.size();
+}
+
+Brick* GetBrick(int index) {
+    wxASSERT(m_bricks.size() > index);
+    wxASSERT(m_bricks[index]);
+
+    return m_bricks[index];
+}
+
 void HydroUnit::SetInputFlux(Flux* flux) {
     wxASSERT(flux);
     m_fluxInput = flux;

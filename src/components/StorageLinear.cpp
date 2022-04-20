@@ -7,7 +7,7 @@ StorageLinear::StorageLinear(HydroUnit *hydroUnit)
 
 bool StorageLinear::IsOk() {
     if (!Storage::IsOk()) return false;
-    if (m_Outputs.size() != 1) {
+    if (m_outputs.size() != 1) {
         wxLogError(_("The linear storage should have a single output."));
         return false;
     }

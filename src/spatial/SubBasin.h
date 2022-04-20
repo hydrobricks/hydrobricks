@@ -19,6 +19,8 @@ class SubBasin : public wxObject {
 
     int GetHydroUnitsCount();
 
+    HydroUnit* SubBasin::GetHydroUnit(int index);
+
     bool HasIncomingFlow();
 
     void AddInputConnector(Connector* connector);

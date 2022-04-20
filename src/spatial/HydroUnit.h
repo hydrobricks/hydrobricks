@@ -22,6 +22,10 @@ class HydroUnit : public wxObject {
 
     void AddBrick(Brick* brick);
 
+    int GetBricksCount();
+
+    Brick* GetBrick(int index);
+
     void SetInputFlux(Flux* flux);
 
     bool IsOk();

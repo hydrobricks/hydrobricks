@@ -26,6 +26,13 @@ int SubBasin::GetHydroUnitsCount() {
     return (int)m_hydroUnits.size();
 }
 
+HydroUnit* SubBasin::GetHydroUnit(int index) {
+    wxASSERT(m_hydroUnits.size() > index);
+    wxASSERT(m_hydroUnits[index]);
+
+    return m_hydroUnits[index];
+}
+
 bool SubBasin::HasIncomingFlow() {
     return !m_inConnectors.empty();
 }

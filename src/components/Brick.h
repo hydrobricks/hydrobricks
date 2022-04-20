@@ -3,6 +3,7 @@
 
 #include "Includes.h"
 #include "Flux.h"
+#include "Process.h"
 
 class HydroUnit;
 
@@ -28,7 +29,7 @@ class Brick : public wxObject {
      */
     void AttachFluxIn(Flux* flux) {
         wxASSERT(flux);
-        m_Inputs.push_back(flux);
+        m_inputs.push_back(flux);
     }
 
     /**
@@ -38,7 +39,7 @@ class Brick : public wxObject {
      */
     void AttachFluxOut(Flux* flux) {
         wxASSERT(flux);
-        m_Outputs.push_back(flux);
+        m_outputs.push_back(flux);
     }
 
     /**
@@ -58,8 +59,9 @@ class Brick : public wxObject {
   protected:
     double m_waterContent; // [mm]
     HydroUnit* m_hydroUnit;
-    std::vector<Flux*> m_Inputs;
-    std::vector<Flux*> m_Outputs;
+    std::vector<Flux*> m_inputs;
+    std::vector<Flux*> m_outputs;
+    std::vector<Process*> m_processes;
 
   private:
 };

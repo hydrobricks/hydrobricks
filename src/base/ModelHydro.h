@@ -14,9 +14,13 @@ class ModelHydro : public wxObject {
 
     bool IsOk();
 
-    void StartModelling();
+    bool Run();
 
     void SetTimeSeries(TimeSeries* timeSeries);
+
+    SubBasin* GetSubBasin() {
+        return m_subBasin;
+    }
 
   protected:
     Processor* m_processor;

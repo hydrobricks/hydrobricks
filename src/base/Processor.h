@@ -4,15 +4,20 @@
 #include "Includes.h"
 #include "Solver.h"
 
+class ModelHydro;
+
 class Processor : public wxObject {
   public:
     explicit Processor(Solver* solver);
 
-    bool Process();
+    void SetModel(ModelHydro* model);
+
+    bool ProcessTimeStep();
 
 
   protected:
     Solver* m_solver;
+    ModelHydro* m_model;
 
   private:
 };

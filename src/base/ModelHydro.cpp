@@ -4,7 +4,11 @@ ModelHydro::ModelHydro(Processor* processor, SubBasin* subBasin, TimeMachine* ti
     : m_processor(processor),
       m_subBasin(subBasin),
       m_timer(timer)
-{}
+{
+    if (processor) {
+        processor->SetModel(this);
+    }
+}
 
 bool ModelHydro::IsOk() {
     if (!m_subBasin->IsOk()) return false;
@@ -20,7 +24,7 @@ bool ModelHydro::IsOk() {
     return true;
 }
 
-void ModelHydro::StartModelling() {
+bool ModelHydro::Run() {
     //
 }
 

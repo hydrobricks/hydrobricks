@@ -9,6 +9,10 @@ class Process : public wxObject {
 
     ~Process() override = default;
 
+    virtual double GetWaterExtraction();
+
+    virtual double GetWaterAddition();
+
   protected:
   private:
 };

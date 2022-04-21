@@ -22,10 +22,9 @@ jobs:
     - name: Install conan
       run: |
         pip install conan
-        conan config set general.revisions_enabled=1
         conan profile new default --detect
         conan profile update settings.compiler.libcxx=libstdc++11 default
-        # GitLab support (wxwidgets, mysql, gdal)
+        conan config set general.revisions_enabled=1
         conan remote add gitlab https://gitlab.com/api/v4/packages/conan
 
     - name: Create Build Environment
@@ -71,10 +70,10 @@ jobs:
       - name: Install conan
         run: |
           pip install conan
+          conan profile new default --detect
+          conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1
-          # GitLab support (wxwidgets, mysql, gdal)
           conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-          conan user gitlab+deploy-token-653038 -r gitlab -p sBwmejFz5Pn-gZPSNFMy
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin

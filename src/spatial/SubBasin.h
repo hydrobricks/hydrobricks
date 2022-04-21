@@ -19,7 +19,7 @@ class SubBasin : public wxObject {
 
     int GetHydroUnitsCount();
 
-    HydroUnit* SubBasin::GetHydroUnit(int index);
+    HydroUnit* GetHydroUnit(int index);
 
     bool HasIncomingFlow();
 

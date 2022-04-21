@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install libraries
-      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree python
+      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree python gtk+2.0
 
     - name: Install conan
       run: |
@@ -65,14 +65,15 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install libraries
-        run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov python
+        run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov python gtk+2.0
 
       - name: Install conan
         run: |
           pip install conan
+          conan profile new default --detect
+          conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1
           conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-          conan profile update settings.compiler.libcxx=libstdc++11 default
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin

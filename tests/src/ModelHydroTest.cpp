@@ -43,5 +43,5 @@ TEST(ModelHydro, RunsCorrectly) {
     subBasin.AddHydroUnit(&unit);
     ModelHydro model(&processor, &subBasin, &timer);
 
-    EXPECT_TRUE(model.Run());
+    EXPECT_FALSE(model.Run());
 }

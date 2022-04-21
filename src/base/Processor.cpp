@@ -25,7 +25,7 @@ bool Processor::ProcessTimeStep() {
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
 
-            m_solver->Solve(brick);
+//            m_solver->Solve(brick);
         }
     }
 

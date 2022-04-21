@@ -7,6 +7,18 @@ Modular Hydrological Modelling Framework
 > :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**
 
 ## Dependencies
+
+Get conan (requires Python 3) and setup the default profile:
+```
+pip install conan
+conan profile new default --detect
+```
+
+Add GitLab as a remote:
+```
+conan remote add gitlab https://gitlab.com/api/v4/packages/conan
+```
+
 Get or build release libraries:
 ```
 mkdir cmake-build-release

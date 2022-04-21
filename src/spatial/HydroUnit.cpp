@@ -24,7 +24,7 @@ int HydroUnit::GetBricksCount() {
     return m_bricks.size();
 }
 
-Brick* GetBrick(int index) {
+Brick* HydroUnit::GetBrick(int index) {
     wxASSERT(m_bricks.size() > index);
     wxASSERT(m_bricks[index]);
 

@@ -50,9 +50,13 @@ jobs:
       working-directory: ${{github.workspace}}/bin
       run: tree .
 
+    - name: List current directory content
+      working-directory: ${{github.workspace}}/bin
+      run: ls
+
     - name: Test
       working-directory: ${{github.workspace}}/bin
-      run: ./hydrobricks-tests
+      run: hydrobricks-tests
 
   code-coverage:
     runs-on: ubuntu-latest

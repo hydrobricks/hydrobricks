@@ -5,7 +5,7 @@
 #include "SolverRungeKuttaMethod.h"
 #include "StorageLinear.h"
 #include "FluxDirect.h"
-
+/*
 TEST(ModelHydro, BuildsCorrectly) {
     SolverRungeKuttaMethod solver;
     Processor processor(&solver);
@@ -45,3 +45,4 @@ TEST(ModelHydro, RunsCorrectly) {
 
     EXPECT_FALSE(model.Run());
 }
+ */

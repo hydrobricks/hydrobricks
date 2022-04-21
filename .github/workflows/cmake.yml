@@ -23,9 +23,9 @@ jobs:
       run: |
         pip install conan
         conan config set general.revisions_enabled=1
+        conan profile update settings.compiler.libcxx=libstdc++11 default
         # GitLab support (wxwidgets, mysql, gdal)
         conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-        conan user gitlab+deploy-token-653038 -r gitlab -p sBwmejFz5Pn-gZPSNFMy
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/bin

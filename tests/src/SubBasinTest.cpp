@@ -39,7 +39,7 @@ TEST(SubBasin, EmptySubBasinIsNotOk) {
 
     EXPECT_FALSE(subBasin.IsOk());
 }
-
+/*
 TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
     HydroUnit unit(100);
@@ -53,4 +53,4 @@ TEST(SubBasin, SubBasinIsOk) {
     unit.SetInputFlux(&inFlux);
 
     EXPECT_TRUE(subBasin.IsOk());
-}
+}*/

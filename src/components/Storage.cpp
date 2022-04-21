@@ -30,11 +30,11 @@ double Storage::SumIncomingFluxes() {
     wxASSERT(!m_inputs.empty());
 
     if (m_inputs.size() == 1) {
-        return m_inputs[0]->GetAmount();
+        return m_inputs[0]->GetAmountPrev();
     } else {
         double sum = 0;
         for (auto & input : m_inputs) {
-            sum += input->GetAmount();
+            sum += input->GetAmountPrev();
         }
         return sum;
     }

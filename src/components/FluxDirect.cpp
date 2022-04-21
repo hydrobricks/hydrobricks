@@ -16,6 +16,6 @@ bool FluxDirect::IsOk() {
     return true;
 }
 
-double FluxDirect::GetAmount() {
-    return m_amount;
+double FluxDirect::GetOutgoingAmount() {
+    return m_amountPrev;
 }

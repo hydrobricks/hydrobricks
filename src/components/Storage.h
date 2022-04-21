@@ -30,7 +30,7 @@ class Storage : public Brick {
     }
 
     bool IsFull() {
-        return m_waterContent >= m_capacity;
+        return m_contentPrev >= m_capacity;
     }
 
   protected:

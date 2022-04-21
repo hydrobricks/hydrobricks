@@ -18,26 +18,67 @@ class Flux : public wxObject {
     virtual bool IsOk() = 0;
 
     /**
-     * Get the water amount of the flux.
+     * Get the amount of water outgoing the flux.
      *
-     * @return the water amount of the flux.
+     * @return the amount of water outgoing the flux
      */
-    virtual double GetAmount() = 0;
+    virtual double GetOutgoingAmount() = 0;
 
     /**
-     * Set the water amount of the flux.
-     *
-     * @param amount the water amount of the flux.
+     * Finalize the computing and copy the "next" values to "previous".
      */
-    virtual void SetAmount(double amount) {
-        m_amount = amount;
+    void Finalize();
+
+    /**
+     * Get the previous water amount of the flux.
+     *
+     * @return the previous water amount of the flux.
+     */
+    double GetAmountPrev() {
+        return m_amountPrev;
+    }
+
+    /**
+     * Set the previous water amount of the flux.
+     *
+     * @param amount the previous water amount of the flux.
+     */
+    void SetAmountPrev(double amount) {
+        m_amountPrev = amount;
+    }
+
+    /**
+     * Get the next water amount of the flux.
+     *
+     * @return the next water amount of the flux.
+     */
+    double GetAmountNext() {
+        return m_amountNext;
+    }
+
+    /**
+     * Set the next water amount of the flux.
+     *
+     * @param amount the next water amount of the flux.
+     */
+    void SetAmountNext(double amount) {
+        m_amountNext = amount;
+    }
+
+    /**
+     * Get pointers to the values that need to be iterated.
+     *
+     * @return vector of pointers to the values that need to be iterated.
+     */
+    virtual std::vector<double*> GetIterableElements() {
+        return std::vector<double*> {&m_amountNext};
     }
 
   protected:
     Brick* m_in;
     Brick* m_out;
-    double m_amount;
-    double m_amountIteration[4];
+    double m_amountPrev;
+    double m_amountNext;
     Modifier* m_modifier;
 
   private:

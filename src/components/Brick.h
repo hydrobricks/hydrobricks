@@ -14,15 +14,6 @@ class Brick : public wxObject {
     ~Brick() override = default;
 
     /**
-     * Get the water content of the current object.
-     *
-     * @return water content [mm]
-     */
-    double GetWaterContent() {
-        return m_waterContent;
-    }
-
-    /**
      * Attach incoming flux.
      *
      * @param flux incoming flux
@@ -56,9 +47,41 @@ class Brick : public wxObject {
      */
     virtual bool Compute() = 0;
 
+    /**
+     * Finalize the computing and copy the "next" values to "previous".
+     */
+    void Finalize();
+
+    /**
+     * Get the previous water content of the current object.
+     *
+     * @return water content [mm]
+     */
+    double GetContentPrev() const {
+        return m_contentPrev;
+    }
+
+    /**
+     * Get the next water content of the current object.
+     *
+     * @return water content [mm]
+     */
+    double GetContentNext() const {
+        return m_contentNext;
+    }
+
+    /**
+     * Get pointers to the values that need to be iterated.
+     *
+     * @return vector of pointers to the values that need to be iterated.
+     */
+    virtual std::vector<double*> GetIterableElements() {
+        return std::vector<double*> {&m_contentNext};
+    }
+
   protected:
-    double m_waterContent; // [mm]
-    double m_dsIteration[4];
+    double m_contentPrev; // [mm]
+    double m_contentNext; // [mm]
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;

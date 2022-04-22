@@ -25,6 +25,7 @@ bool ModelHydro::IsOk() {
 }
 
 bool ModelHydro::Run() {
+    m_processor->ConnectToIterableElements();
     while (!m_timer->IsOver()) {
         if (!m_processor->ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));

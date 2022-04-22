@@ -75,9 +75,11 @@ class Brick : public wxObject {
      *
      * @return vector of pointers to the values that need to be iterated.
      */
-    virtual std::vector<double*> GetIterableElements() {
-        return std::vector<double*> {&m_contentNext};
-    }
+    virtual std::vector<double*> GetIterableElements();
+
+    std::vector<double*> GetIterableElementsFromProcesses();
+
+    std::vector<double*> GetIterableElementsFromOutgoingFluxes();
 
   protected:
     double m_contentPrev; // [mm]

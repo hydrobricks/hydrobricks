@@ -12,14 +12,17 @@ class Processor : public wxObject {
 
     void SetModel(ModelHydro* model);
 
-    bool ProcessTimeStep();
+    void ConnectToIterableElements();
 
+    bool ProcessTimeStep();
 
   protected:
     Solver* m_solver;
     ModelHydro* m_model;
+    std::vector<double*> m_iterableElements;
 
   private:
+    void StoreIterableElements(std::vector<double*>& elements);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

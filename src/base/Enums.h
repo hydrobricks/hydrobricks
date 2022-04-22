@@ -26,6 +26,9 @@ enum VariableType {
     Precipitation,
     Temperature,
     ETP,
+    Custom1,
+    Custom2,
+    Custom3,
     MAX_VAR_TYPES
 };
 

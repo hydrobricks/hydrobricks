@@ -13,6 +13,15 @@ class Process : public wxObject {
 
     virtual double GetWaterAddition();
 
+    /**
+     * Get pointers to the values that need to be iterated.
+     *
+     * @return vector of pointers to the values that need to be iterated.
+     */
+    virtual std::vector<double*> GetIterableElements() {
+        return std::vector<double*> {};
+    }
+
   protected:
   private:
 };

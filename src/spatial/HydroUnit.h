@@ -3,6 +3,7 @@
 
 #include "Brick.h"
 #include "HydroUnitProperty.h"
+#include "HydroUnitForcing.h"
 #include "Includes.h"
 
 class HydroUnit : public wxObject {
@@ -52,6 +53,7 @@ class HydroUnit : public wxObject {
     float m_area; // m2
     Flux* m_fluxInput;
     std::vector<HydroUnitProperty*> m_properties;
+    std::vector<HydroUnitForcing*> m_forcing;
     std::vector<Brick*> m_bricks;
 
   private:

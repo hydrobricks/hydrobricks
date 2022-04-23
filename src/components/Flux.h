@@ -70,7 +70,7 @@ class Flux : public wxObject {
      *
      * @return vector of pointers to the values that need to be iterated.
      */
-    virtual std::vector<double*> GetIterableElements() {
+    virtual std::vector<double*> GetIterableValues() {
         return std::vector<double*> {&m_amountNext};
     }
 

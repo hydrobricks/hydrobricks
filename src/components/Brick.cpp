@@ -16,38 +16,38 @@ void Brick::Finalize() {
     m_contentPrev = m_contentNext;
 }
 
-std::vector<double*> Brick::GetIterableElements() {
+std::vector<double*> Brick::GetIterableValues() {
     return std::vector<double*> {&m_contentNext};
 }
 
-std::vector<double*> Brick::GetIterableElementsFromProcesses() {
-    std::vector<double*> elements;
+std::vector<double*> Brick::GetIterableValuesFromProcesses() {
+    std::vector<double*> values;
     for (auto const &process: m_processes) {
-        std::vector<double*> processElements = process->GetIterableElements();
+        std::vector<double*> processValues = process->GetIterableValues();
 
-        if (processElements.empty()) {
+        if (processValues.empty()) {
             continue;
         }
-        for (auto const &element: processElements) {
-            elements.push_back(element);
+        for (auto const &value : processValues) {
+            values.push_back(value);
         }
     }
 
-    return elements;
+    return values;
 }
 
-std::vector<double*> Brick::GetIterableElementsFromOutgoingFluxes() {
-    std::vector<double*> elements;
+std::vector<double*> Brick::GetIterableValuesFromOutgoingFluxes() {
+    std::vector<double*> values;
     for (auto const &flux: m_outputs) {
-        std::vector<double*> fluxElements = flux->GetIterableElements();
+        std::vector<double*> fluxValues = flux->GetIterableValues();
 
-        if (fluxElements.empty()) {
+        if (fluxValues.empty()) {
             continue;
         }
-        for (auto const &element: fluxElements) {
-            elements.push_back(element);
+        for (auto const &value : fluxValues) {
+            values.push_back(value);
         }
     }
 
-    return elements;
+    return values;
 }

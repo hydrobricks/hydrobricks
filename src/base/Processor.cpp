@@ -12,7 +12,7 @@ void Processor::SetModel(ModelHydro* model) {
     m_model = model;
 }
 
-void Processor::ConnectToIterableElements() {
+void Processor::ConnectToIterableValues() {
     SubBasin* basin = m_model->GetSubBasin();
 
     int nUnits = basin->GetHydroUnitsCount();
@@ -22,26 +22,26 @@ void Processor::ConnectToIterableElements() {
         int nBricks = unit->GetBricksCount();
 
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
-            // Get iterable elements from bricks
+            // Get iterable values from bricks
             Brick* brick = unit->GetBrick(iBrick);
-            std::vector<double*> bricksElements = brick->GetIterableElements();
-            StoreIterableElements(bricksElements);
+            std::vector<double*> bricksValues = brick->GetIterableValues();
+            StoreIterableValues(bricksValues);
 
-            // Get iterable elements from processes
-            std::vector<double*> processElements = brick->GetIterableElementsFromProcesses();
-            StoreIterableElements(processElements);
+            // Get iterable values from processes
+            std::vector<double*> processValues = brick->GetIterableValuesFromProcesses();
+            StoreIterableValues(processValues);
 
-            // Get iterable elements from fluxes
-            std::vector<double*> fluxElements = brick->GetIterableElementsFromOutgoingFluxes();
-            StoreIterableElements(fluxElements);
+            // Get iterable values from fluxes
+            std::vector<double*> fluxValues = brick->GetIterableValuesFromOutgoingFluxes();
+            StoreIterableValues(fluxValues);
         }
     }
 }
 
-void Processor::StoreIterableElements(std::vector<double*>& elements) {
-    if (!elements.empty()) {
-        for (auto const& element : elements) {
-            m_iterableElements.push_back(element);
+void Processor::StoreIterableValues(std::vector<double*>& values) {
+    if (!values.empty()) {
+        for (auto const& value : values) {
+            m_iterableValues.push_back(value);
         }
     }
 }

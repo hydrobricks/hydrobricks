@@ -2,8 +2,8 @@
 #define HYDROBRICKS_HYDRO_UNIT_H
 
 #include "Brick.h"
+#include "Forcing.h"
 #include "HydroUnitProperty.h"
-#include "HydroUnitForcing.h"
 #include "Includes.h"
 
 class HydroUnit : public wxObject {
@@ -27,8 +27,6 @@ class HydroUnit : public wxObject {
 
     Brick* GetBrick(int index);
 
-    void SetInputFlux(Flux* flux);
-
     bool IsOk();
 
     Types GetType() {
@@ -51,10 +49,9 @@ class HydroUnit : public wxObject {
     Types m_type;
     long m_id;
     float m_area; // m2
-    Flux* m_fluxInput;
     std::vector<HydroUnitProperty*> m_properties;
-    std::vector<HydroUnitForcing*> m_forcing;
     std::vector<Brick*> m_bricks;
+    std::vector<Forcing*> m_forcing;
 
   private:
 };

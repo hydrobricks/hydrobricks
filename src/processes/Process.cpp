@@ -1,6 +1,10 @@
 #include "Process.h"
 
-Process::Process() {}
+#include "Brick.h"
+
+Process::Process(Brick* brick)
+    : m_brick(brick)
+{}
 
 double Process::GetWaterExtraction() {
     return 0;

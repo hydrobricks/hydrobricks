@@ -3,12 +3,10 @@
 HydroUnit::HydroUnit(float area, Types type)
     : m_type(type),
       m_id(UNDEFINED),
-      m_area(area),
-      m_fluxInput(nullptr)
+      m_area(area)
 {}
 
-HydroUnit::~HydroUnit() {
-}
+HydroUnit::~HydroUnit() = default;
 
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
     wxASSERT(property);
@@ -21,7 +19,7 @@ void HydroUnit::AddBrick(Brick* brick) {
 }
 
 int HydroUnit::GetBricksCount() {
-    return m_bricks.size();
+    return int(m_bricks.size());
 }
 
 Brick* HydroUnit::GetBrick(int index) {
@@ -31,16 +29,7 @@ Brick* HydroUnit::GetBrick(int index) {
     return m_bricks[index];
 }
 
-void HydroUnit::SetInputFlux(Flux* flux) {
-    wxASSERT(flux);
-    m_fluxInput = flux;
-}
-
 bool HydroUnit::IsOk() {
-    if (m_fluxInput == nullptr) {
-        wxLogError(_("The unit input flux is not defined."));
-        return false;
-    }
     if (m_bricks.empty()) {
         wxLogError(_("The unit has no bricks attached."));
         return false;
@@ -48,4 +37,6 @@ bool HydroUnit::IsOk() {
     for (auto brick : m_bricks) {
         if (!brick->IsOk()) return false;
     }
+
+    return true;
 }

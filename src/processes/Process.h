@@ -3,9 +3,11 @@
 
 #include "Includes.h"
 
+class Brick;
+
 class Process : public wxObject {
   public:
-    Process();
+    Process(Brick* brick);
 
     ~Process() override = default;
 
@@ -23,6 +25,8 @@ class Process : public wxObject {
     }
 
   protected:
+    Brick* m_brick;
+
   private:
 };
 

@@ -3,12 +3,13 @@
 
 #include "Includes.h"
 #include "Solver.h"
+#include "SubBasin.h"
 
 class SolverRungeKuttaMethod : public Solver {
   public:
     explicit SolverRungeKuttaMethod();
 
-    bool Solve() override;
+    bool Solve(SubBasin* basin) override;
 
   protected:
 

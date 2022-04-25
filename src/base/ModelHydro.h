@@ -14,6 +14,8 @@ class ModelHydro : public wxObject {
 
     bool IsOk();
 
+    bool UpdateForcing();
+
     bool Run();
 
     void SetTimeSeries(TimeSeries* timeSeries);

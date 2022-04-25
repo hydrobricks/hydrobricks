@@ -24,9 +24,17 @@ bool ModelHydro::IsOk() {
     return true;
 }
 
+bool ModelHydro::UpdateForcing() {
+    return false;
+}
+
 bool ModelHydro::Run() {
-    m_processor->ConnectToIterableValues();
+    m_processor->Initialize();
     while (!m_timer->IsOver()) {
+        if (!UpdateForcing()) {
+            wxLogError(_("Failed updating the forcing data."));
+            return false;
+        }
         if (!m_processor->ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
             return false;

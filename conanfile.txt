@@ -6,6 +6,7 @@ proj/9.0.0
 libcurl/7.80.0
 libdeflate/1.10
 zlib/1.2.12
+eigen/3.4.0
 gtest/1.11.0
 
 [generators]

@@ -6,10 +6,18 @@
 Processor::Processor(Solver* solver)
     : m_solver(solver),
       m_model(nullptr)
-{}
+{
+    m_solver->Connect(this);
+}
 
 void Processor::SetModel(ModelHydro* model) {
     m_model = model;
+}
+
+void Processor::Initialize() {
+    ConnectToIterableBricks();
+    ConnectToIterableValues();
+    m_solver->InitializeContainers();
 }
 
 void Processor::ConnectToIterableBricks() {
@@ -20,11 +28,15 @@ void Processor::ConnectToIterableBricks() {
     for (int iUnit = 0; iUnit < nUnits; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         int nBricks = unit->GetBricksCount();
+        bool solverRequired = false;
 
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
-            if (brick->NeedsSolver()) {
+
+            // Add the bricks that need a solver and all their children
+            if (brick->NeedsSolver() || solverRequired) {
                 m_iterableBricks.push_back(brick);
+                solverRequired = true;
             }
         }
     }
@@ -64,6 +76,10 @@ void Processor::StoreIterableValues(std::vector<double*>& values) {
     }
 }
 
+int Processor::GetNbIterableValues() {
+    return int(m_iterableValues.size());
+}
+
 bool Processor::ProcessTimeStep() {
     wxASSERT(m_model);
 
@@ -71,16 +87,19 @@ bool Processor::ProcessTimeStep() {
 
     int nUnits = basin->GetHydroUnitsCount();
 
+    // Process the bricks that do not need a solver.
     for (int iUnit = 0; iUnit < nUnits; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         int nBricks = unit->GetBricksCount();
 
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
-
-//            m_solver->Solve(brick);
+            brick->Compute();
         }
     }
+
+    // Process the bricks that need a solver
+    m_solver->Solve(basin);
 
     return false;
 }

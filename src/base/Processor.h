@@ -13,9 +13,13 @@ class Processor : public wxObject {
 
     void SetModel(ModelHydro* model);
 
+    void Initialize();
+
     void ConnectToIterableBricks();
 
     void ConnectToIterableValues();
+
+    int GetNbIterableValues();
 
     bool ProcessTimeStep();
 

@@ -22,6 +22,10 @@ bool Storage::IsOk() {
     return true;
 }
 
+bool Storage::NeedsSolver() {
+    return true;
+}
+
 bool Storage::Compute() {
     return false;
 }

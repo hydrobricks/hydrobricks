@@ -21,6 +21,10 @@ bool Snowpack::IsOk() {
     return true;
 }
 
+bool Snowpack::NeedsSolver() {
+    return false;
+}
+
 bool Snowpack::Compute() {
     return false;
 }

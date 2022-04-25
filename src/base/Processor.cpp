@@ -12,6 +12,24 @@ void Processor::SetModel(ModelHydro* model) {
     m_model = model;
 }
 
+void Processor::ConnectToIterableBricks() {
+    SubBasin* basin = m_model->GetSubBasin();
+
+    int nUnits = basin->GetHydroUnitsCount();
+
+    for (int iUnit = 0; iUnit < nUnits; ++iUnit) {
+        HydroUnit* unit = basin->GetHydroUnit(iUnit);
+        int nBricks = unit->GetBricksCount();
+
+        for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
+            Brick* brick = unit->GetBrick(iBrick);
+            if (brick->NeedsSolver()) {
+                m_iterableBricks.push_back(brick);
+            }
+        }
+    }
+}
+
 void Processor::ConnectToIterableValues() {
     SubBasin* basin = m_model->GetSubBasin();
 

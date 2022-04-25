@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "helpers.h"
+#include "FluxDirect.h"
+#include "ForcingFluxConnector.h"
 #include "ModelHydro.h"
 #include "SolverRungeKuttaMethod.h"
 #include "StorageLinear.h"
-#include "FluxDirect.h"
+#include "helpers.h"
 /*
 TEST(ModelHydro, BuildsCorrectly) {
     SolverRungeKuttaMethod solver;

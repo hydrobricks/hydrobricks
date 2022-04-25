@@ -21,6 +21,10 @@ bool Glacier::IsOk() {
     return true;
 }
 
+bool Glacier::NeedsSolver() {
+    return false;
+}
+
 bool Glacier::Compute() {
     return false;
 }

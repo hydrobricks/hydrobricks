@@ -14,6 +14,11 @@ class Glacier : public Brick {
     bool IsOk() override;
 
     /**
+     * @copydoc Brick::NeedsSolver()
+     */
+    bool NeedsSolver() override;
+
+    /**
      * @copydoc Brick::Compute()
      */
     bool Compute() override;

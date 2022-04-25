@@ -50,7 +50,5 @@ TEST(SubBasin, SubBasinIsOk) {
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 
-    unit.SetInputFlux(&inFlux);
-
     EXPECT_TRUE(subBasin.IsOk());
 }

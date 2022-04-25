@@ -41,6 +41,13 @@ class Brick : public wxObject {
     virtual bool IsOk() = 0;
 
     /**
+     * Define if the brick needs to be handled by the solver.
+     *
+     * @return true if the brick needs to be handled by the solver.
+     */
+    virtual bool NeedsSolver() = 0;
+
+    /**
      * Compute the behaviour of the element.
      *
      * @return true is there is no error.
@@ -85,8 +92,8 @@ class Brick : public wxObject {
     double m_contentPrev; // [mm]
     double m_contentNext; // [mm]
     HydroUnit* m_hydroUnit;
-    std::vector<FluxConnector*> m_inputs;
-    std::vector<FluxConnector*> m_outputs;
+    std::vector<Flux*> m_inputs;
+    std::vector<Flux*> m_outputs;
     std::vector<Process*> m_processes;
 
   private:

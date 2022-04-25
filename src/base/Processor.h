@@ -3,6 +3,7 @@
 
 #include "Includes.h"
 #include "Solver.h"
+#include "Brick.h"
 
 class ModelHydro;
 
@@ -12,6 +13,8 @@ class Processor : public wxObject {
 
     void SetModel(ModelHydro* model);
 
+    void ConnectToIterableBricks();
+
     void ConnectToIterableValues();
 
     bool ProcessTimeStep();
@@ -20,6 +23,7 @@ class Processor : public wxObject {
     Solver* m_solver;
     ModelHydro* m_model;
     std::vector<double*> m_iterableValues;
+    std::vector<Brick*> m_iterableBricks;
 
   private:
     void StoreIterableValues(std::vector<double*>& values);

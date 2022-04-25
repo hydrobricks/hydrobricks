@@ -21,6 +21,11 @@ class StorageLinear : public Storage {
     bool IsOk() override;
 
     /**
+     * @copydoc Brick::NeedsSolver()
+     */
+    bool NeedsSolver() override;
+
+    /**
      * @copydoc Brick::Compute()
      */
     bool Compute() override;

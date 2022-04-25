@@ -22,6 +22,10 @@ bool Surface::IsOk() {
     return true;
 }
 
+bool Surface::NeedsSolver() {
+    return true;
+}
+
 bool Surface::Compute() {
     return false;
 }

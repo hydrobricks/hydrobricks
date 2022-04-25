@@ -15,6 +15,10 @@ bool StorageLinear::IsOk() {
     return true;
 }
 
+bool StorageLinear::NeedsSolver() {
+    return true;
+}
+
 bool StorageLinear::Compute() {
     double qIn = SumIncomingFluxes();
     double qOut = (*m_responseFactor) * m_contentPrev;

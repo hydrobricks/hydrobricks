@@ -85,8 +85,8 @@ class Brick : public wxObject {
     double m_contentPrev; // [mm]
     double m_contentNext; // [mm]
     HydroUnit* m_hydroUnit;
-    std::vector<Flux*> m_inputs;
-    std::vector<Flux*> m_outputs;
+    std::vector<FluxConnector*> m_inputs;
+    std::vector<FluxConnector*> m_outputs;
     std::vector<Process*> m_processes;
 
   private:

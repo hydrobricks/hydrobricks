@@ -1,7 +1,6 @@
 #ifndef HYDROBRICKS_FLUX_H
 #define HYDROBRICKS_FLUX_H
 
-#include "FluxConnector.h"
 #include "Includes.h"
 
 class Modifier;
@@ -75,8 +74,6 @@ class Flux : public wxObject {
     }
 
   protected:
-    FluxConnector* m_in;
-    FluxConnector* m_out;
     double m_amountPrev;
     double m_amountNext;
     Modifier* m_modifier;

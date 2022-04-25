@@ -18,6 +18,11 @@ void HydroUnit::AddBrick(Brick* brick) {
     m_bricks.push_back(brick);
 }
 
+void HydroUnit::AddForcing(Forcing* forcing) {
+    wxASSERT(forcing);
+    m_forcing.push_back(forcing);
+}
+
 int HydroUnit::GetBricksCount() {
     return int(m_bricks.size());
 }

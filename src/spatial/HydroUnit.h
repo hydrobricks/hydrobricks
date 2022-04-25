@@ -23,6 +23,8 @@ class HydroUnit : public wxObject {
 
     void AddBrick(Brick* brick);
 
+    void AddForcing(Forcing* forcing);
+
     int GetBricksCount();
 
     Brick* GetBrick(int index);

@@ -13,17 +13,12 @@ class Snowpack : public Brick {
      */
     bool IsOk() override;
 
-    /**
-     * @copydoc Brick::NeedsSolver()
-     */
-    bool NeedsSolver() override;
-
-    /**
-     * @copydoc Brick::Compute()
-     */
-    bool Compute() override;
-
   protected:
+
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

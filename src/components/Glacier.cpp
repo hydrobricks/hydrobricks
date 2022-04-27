@@ -2,7 +2,9 @@
 
 Glacier::Glacier(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{}
+{
+    m_needsSolver = false;
+}
 
 bool Glacier::IsOk() {
     if (m_hydroUnit == nullptr) {
@@ -21,10 +23,6 @@ bool Glacier::IsOk() {
     return true;
 }
 
-bool Glacier::NeedsSolver() {
-    return false;
-}
-
-bool Glacier::Compute() {
-    return false;
+std::vector<double> Glacier::ComputeOutputs() {
+    return {};
 }

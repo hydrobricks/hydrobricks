@@ -3,7 +3,9 @@
 StorageLinear::StorageLinear(HydroUnit *hydroUnit)
     : Storage(hydroUnit),
       m_responseFactor(nullptr)
-{}
+{
+    m_needsSolver = true;
+}
 
 bool StorageLinear::IsOk() {
     if (!Storage::IsOk()) return false;
@@ -15,16 +17,8 @@ bool StorageLinear::IsOk() {
     return true;
 }
 
-bool StorageLinear::NeedsSolver() {
-    return true;
-}
+std::vector<double> StorageLinear::ComputeOutputs() {
+    double qOut = (*m_responseFactor) * m_content;
 
-bool StorageLinear::Compute() {
-    double qIn = SumIncomingFluxes();
-    double qOut = (*m_responseFactor) * m_contentPrev;
-    double dS = qIn - qOut;
-    m_contentPrev += dS;
-    m_outputs[0]->SetAmountPrev(qOut);
-
-    return true;
+    return {qOut};
 }

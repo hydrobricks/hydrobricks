@@ -5,9 +5,9 @@
 #include "Solver.h"
 #include "SubBasin.h"
 
-class SolverRungeKuttaMethod : public Solver {
+class SolverRK4 : public Solver {
   public:
-    explicit SolverRungeKuttaMethod();
+    explicit SolverRK4();
 
     bool Solve(SubBasin* basin) override;
 

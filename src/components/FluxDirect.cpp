@@ -8,5 +8,5 @@ bool FluxDirect::IsOk() {
 }
 
 double FluxDirect::GetOutgoingAmount() {
-    return m_amountPrev;
+    return m_amount;
 }

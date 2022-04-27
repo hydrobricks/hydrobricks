@@ -3,7 +3,7 @@
 #include "FluxDirect.h"
 #include "ForcingFluxConnector.h"
 #include "ModelHydro.h"
-#include "SolverRungeKuttaMethod.h"
+#include "SolverRK4.h"
 #include "StorageLinear.h"
 #include "helpers.h"
 /*
@@ -26,24 +26,28 @@ TEST(ModelHydro, BuildsCorrectly) {
 
     EXPECT_TRUE(model.IsOk());
 }
-
+*/
 TEST(ModelHydro, RunsCorrectly) {
-    SolverRungeKuttaMethod solver;
+    SolverRK4 solver;
     Processor processor(&solver);
     TimeMachine timer = GenerateTimeMachineDaily();
     SubBasin subBasin;
     HydroUnit unit;
 
+    Forcing precipitation(Precipitation);
+    unit.AddForcing(&precipitation);
+    FluxDirect precipFlux;
+    precipFlux.SetAsConstant();
+    ForcingFluxConnector connector(&precipitation, &precipFlux);
+
     StorageLinear storage(&unit);
-    FluxDirect inFlux, outFlux;
-    storage.AttachFluxIn(&inFlux);
+    storage.AttachFluxIn(&precipFlux);
+    FluxDirect outFlux;
     storage.AttachFluxOut(&outFlux);
 
-    unit.SetInputFlux(&inFlux);
 
     subBasin.AddHydroUnit(&unit);
     ModelHydro model(&processor, &subBasin, &timer);
 
     EXPECT_FALSE(model.Run());
 }
- */

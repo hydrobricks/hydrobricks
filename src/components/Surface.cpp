@@ -3,7 +3,9 @@
 Surface::Surface(HydroUnit *hydroUnit)
     : Brick(hydroUnit),
       m_waterHeight(0)
-{}
+{
+    m_needsSolver = true;
+}
 
 bool Surface::IsOk() {
     if (m_hydroUnit == nullptr) {
@@ -22,10 +24,6 @@ bool Surface::IsOk() {
     return true;
 }
 
-bool Surface::NeedsSolver() {
-    return true;
-}
-
-bool Surface::Compute() {
-    return false;
+std::vector<double> Surface::ComputeOutputs() {
+    return {};
 }

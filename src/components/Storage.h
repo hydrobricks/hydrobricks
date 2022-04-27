@@ -13,33 +13,11 @@ class Storage : public Brick {
      */
     bool IsOk() override;
 
-    /**
-     * @copydoc Brick::NeedsSolver()
-     */
-    bool NeedsSolver() override;
-
-    /**
-     * @copydoc Brick::Compute()
-     */
-    bool Compute() override;
-
-    /**
-     * Sums the water amount from the different fluxes.
-     *
-     * @return sum of the water amount [mm]
-     */
-    double SumIncomingFluxes();
-
-    void SetCapacity(double capacity) {
-        m_capacity = capacity;
-    }
-
-    bool IsFull() {
-        return m_contentPrev >= m_capacity;
-    }
-
   protected:
-    double m_capacity;
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

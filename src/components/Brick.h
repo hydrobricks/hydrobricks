@@ -45,14 +45,13 @@ class Brick : public wxObject {
      *
      * @return true if the brick needs to be handled by the solver.
      */
-    virtual bool NeedsSolver() = 0;
+    bool NeedsSolver() {
+        return m_needsSolver;
+    }
 
-    /**
-     * Compute the behaviour of the element.
-     *
-     * @return true is there is no error.
-     */
-    virtual bool Compute() = 0;
+    bool Compute();
+
+    double getOutputsSum(std::vector<double> &qOuts);
 
     /**
      * Finalize the computing and copy the "next" values to "previous".
@@ -60,21 +59,31 @@ class Brick : public wxObject {
     void Finalize();
 
     /**
-     * Get the previous water content of the current object.
+     * Get the water content of the current object.
      *
      * @return water content [mm]
      */
-    double GetContentPrev() const {
-        return m_contentPrev;
+    double GetContent() const {
+        return m_content;
     }
 
     /**
-     * Get the next water content of the current object.
+     * Set the water content of the current object.
      *
-     * @return water content [mm]
+     * @param timeStepFraction fraction of the time step
      */
-    double GetContentNext() const {
-        return m_contentNext;
+    void SetContentFor(float timeStepFraction);
+
+    void SetCapacity(double capacity) {
+        m_capacity = capacity;
+    }
+
+    bool HasMaximumCapacity() const {
+        return m_capacity != UNDEFINED;
+    }
+
+    bool IsFull() const {
+        return m_content >= m_capacity;
     }
 
     /**
@@ -89,12 +98,30 @@ class Brick : public wxObject {
     std::vector<double*> GetIterableValuesFromOutgoingFluxes();
 
   protected:
+    bool m_needsSolver;
+    double m_content; // [mm]
     double m_contentPrev; // [mm]
-    double m_contentNext; // [mm]
+    double m_contentChangeRate; // [mm/T]
+    double m_capacity;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;
     std::vector<Process*> m_processes;
+
+    /**
+     * Sums the water amount from the different fluxes.
+     *
+     * @return sum of the water amount [mm]
+     */
+    double SumIncomingFluxes();
+
+    /**
+     * Compute outputs of the element.
+     *
+     * @param timeStepFraction fraction of the time step
+     * @return output values.
+     */
+    virtual std::vector<double> ComputeOutputs() = 0;
 
   private:
 };

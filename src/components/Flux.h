@@ -28,22 +28,30 @@ class Flux : public wxObject {
      */
     void Finalize();
 
-    /**
-     * Get the previous water amount of the flux.
-     *
-     * @return the previous water amount of the flux.
-     */
-    double GetAmountPrev() {
-        return m_amountPrev;
+    void SetAsConstant() {
+        m_isConstant = true;
+    }
+
+    bool IsConstant() {
+        return m_isConstant;
     }
 
     /**
-     * Set the previous water amount of the flux.
+     * Get the water amount of the flux.
      *
-     * @param amount the previous water amount of the flux.
+     * @return the water amount of the flux.
      */
-    void SetAmountPrev(double amount) {
-        m_amountPrev = amount;
+    double GetAmount() {
+        return m_amount;
+    }
+
+    /**
+     * Set the water amount of the flux.
+     *
+     * @param amount the water amount of the flux.
+     */
+    void SetAmount(double amount) {
+        m_amount = amount;
     }
 
     /**
@@ -74,7 +82,8 @@ class Flux : public wxObject {
     }
 
   protected:
-    double m_amountPrev;
+    bool m_isConstant;
+    double m_amount;
     double m_amountNext;
     Modifier* m_modifier;
 

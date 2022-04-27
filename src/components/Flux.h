@@ -24,19 +24,6 @@ class Flux : public wxObject {
     virtual double GetOutgoingAmount() = 0;
 
     /**
-     * Finalize the computing and copy the "next" values to "previous".
-     */
-    void Finalize();
-
-    void SetAsConstant() {
-        m_isConstant = true;
-    }
-
-    bool IsConstant() {
-        return m_isConstant;
-    }
-
-    /**
      * Get the water amount of the flux.
      *
      * @return the water amount of the flux.
@@ -55,36 +42,17 @@ class Flux : public wxObject {
     }
 
     /**
-     * Get the next water amount of the flux.
-     *
-     * @return the next water amount of the flux.
-     */
-    double GetAmountNext() {
-        return m_amountNext;
-    }
-
-    /**
-     * Set the next water amount of the flux.
-     *
-     * @param amount the next water amount of the flux.
-     */
-    void SetAmountNext(double amount) {
-        m_amountNext = amount;
-    }
-
-    /**
      * Get pointers to the values that need to be iterated.
      *
      * @return vector of pointers to the values that need to be iterated.
      */
     virtual std::vector<double*> GetIterableValues() {
-        return std::vector<double*> {&m_amountNext};
+        return {};
     }
 
   protected:
     bool m_isConstant;
     double m_amount;
-    double m_amountNext;
     Modifier* m_modifier;
 
   private:

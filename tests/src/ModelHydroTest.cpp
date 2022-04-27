@@ -37,7 +37,6 @@ TEST(ModelHydro, RunsCorrectly) {
     Forcing precipitation(Precipitation);
     unit.AddForcing(&precipitation);
     FluxDirect precipFlux;
-    precipFlux.SetAsConstant();
     ForcingFluxConnector connector(&precipitation, &precipFlux);
 
     StorageLinear storage(&unit);

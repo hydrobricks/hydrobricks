@@ -47,7 +47,7 @@ bool Brick::Compute() {
     }
 
     for (int i = 0; i < qOuts.size(); ++i) {
-        m_outputs[i]->SetAmountNext(qOuts[i]);
+        m_outputs[i]->SetAmount(qOuts[i]);
     }
 
     return true;

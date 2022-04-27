@@ -99,7 +99,7 @@ bool Processor::ProcessTimeStep() {
     }
 
     // Process the bricks that need a solver
-    m_solver->Solve(basin);
+    m_solver->Solve();
 
     return false;
 }

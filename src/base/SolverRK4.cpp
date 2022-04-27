@@ -7,7 +7,7 @@ SolverRK4::SolverRK4()
     m_nIterations = 4;
 }
 
-bool SolverRK4::Solve(SubBasin* basin) {
+bool SolverRK4::Solve() {
 
     std::vector<double*>* iterableValues = m_processor->GetIterableValuesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();

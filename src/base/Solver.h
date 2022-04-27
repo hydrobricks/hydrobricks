@@ -10,7 +10,7 @@ class Solver : public wxObject {
   public:
     explicit Solver();
 
-    virtual bool Solve(SubBasin* basin) = 0;
+    virtual bool Solve() = 0;
 
     void Connect(Processor* processor) {
         wxASSERT(processor);

@@ -9,7 +9,7 @@ class SolverRK4 : public Solver {
   public:
     explicit SolverRK4();
 
-    bool Solve(SubBasin* basin) override;
+    bool Solve() override;
 
   protected:
 

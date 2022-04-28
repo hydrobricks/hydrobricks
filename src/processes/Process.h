@@ -3,9 +3,11 @@
 
 #include "Includes.h"
 
+class Brick;
+
 class Process : public wxObject {
   public:
-    Process();
+    Process(Brick* brick);
 
     ~Process() override = default;
 
@@ -13,7 +15,18 @@ class Process : public wxObject {
 
     virtual double GetWaterAddition();
 
+    /**
+     * Get pointers to the values that need to be iterated.
+     *
+     * @return vector of pointers to the values that need to be iterated.
+     */
+    virtual std::vector<double*> GetIterableValues() {
+        return std::vector<double*> {};
+    }
+
   protected:
+    Brick* m_brick;
+
   private:
 };
 

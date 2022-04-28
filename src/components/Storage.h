@@ -14,27 +14,15 @@ class Storage : public Brick {
     bool IsOk() override;
 
     /**
-     * @copydoc Brick::Compute()
+     * @copydoc Brick::AssignParameters()
      */
-    bool Compute() override;
-
-    /**
-     * Sums the water amount from the different fluxes.
-     *
-     * @return sum of the water amount [mm]
-     */
-    double SumIncomingFluxes();
-
-    void SetCapacity(double capacity) {
-        m_capacity = capacity;
-    }
-
-    bool IsFull() {
-        return m_waterContent >= m_capacity;
-    }
+    void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
-    double m_capacity;
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

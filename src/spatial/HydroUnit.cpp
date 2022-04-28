@@ -3,11 +3,13 @@
 HydroUnit::HydroUnit(float area, Types type)
     : m_type(type),
       m_id(UNDEFINED),
-      m_area(area),
-      m_fluxInput(nullptr)
+      m_area(area)
 {}
 
 HydroUnit::~HydroUnit() {
+    for (auto forcing: m_forcing) {
+        wxDELETE(forcing);
+    }
 }
 
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
@@ -20,27 +22,53 @@ void HydroUnit::AddBrick(Brick* brick) {
     m_bricks.push_back(brick);
 }
 
-int HydroUnit::GetBricksCount() {
-    return m_bricks.size();
+bool HydroUnit::HasForcing(VariableType type) {
+    for (auto forcing: m_forcing) {
+        if (forcing->GetType() == type) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-Brick* GetBrick(int index) {
+void HydroUnit::AddForcing(Forcing* forcing) {
+    wxASSERT(forcing);
+    m_forcing.push_back(forcing);
+}
+
+Forcing* HydroUnit::GetForcing(VariableType type) {
+    for (auto forcing: m_forcing) {
+        if (forcing->GetType() == type) {
+            return forcing;
+        }
+    }
+
+    return nullptr;
+}
+
+int HydroUnit::GetBricksCount() {
+    return int(m_bricks.size());
+}
+
+Brick* HydroUnit::GetBrick(int index) {
     wxASSERT(m_bricks.size() > index);
     wxASSERT(m_bricks[index]);
 
     return m_bricks[index];
 }
 
-void HydroUnit::SetInputFlux(Flux* flux) {
-    wxASSERT(flux);
-    m_fluxInput = flux;
+Brick* HydroUnit::GetBrick(const wxString &name) {
+    for (auto brick: m_bricks) {
+        if (brick->GetName().IsSameAs(name, false)) {
+            return brick;
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
 bool HydroUnit::IsOk() {
-    if (m_fluxInput == nullptr) {
-        wxLogError(_("The unit input flux is not defined."));
-        return false;
-    }
     if (m_bricks.empty()) {
         wxLogError(_("The unit has no bricks attached."));
         return false;
@@ -48,4 +76,6 @@ bool HydroUnit::IsOk() {
     for (auto brick : m_bricks) {
         if (!brick->IsOk()) return false;
     }
+
+    return true;
 }

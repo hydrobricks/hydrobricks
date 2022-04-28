@@ -14,9 +14,9 @@ class FluxDirect : public Flux {
     bool IsOk() override;
 
     /**
-     * @copydoc Flux::GetAmount()
+     * @copydoc Flux::GetOutgoingAmount()
      */
-    double GetAmount() override;
+    double GetOutgoingAmount() override;
 
   protected:
 

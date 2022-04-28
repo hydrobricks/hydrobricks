@@ -1,4 +1,4 @@
-name: CMake
+name: Linux-Tests
 
 on: [push]
 
@@ -22,10 +22,10 @@ jobs:
     - name: Install conan
       run: |
         pip install conan
+        conan profile new default --detect
+        conan profile update settings.compiler.libcxx=libstdc++11 default
         conan config set general.revisions_enabled=1
-        # GitLab support (wxwidgets, mysql, gdal)
         conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-        conan user gitlab+deploy-token-653038 -r gitlab -p sBwmejFz5Pn-gZPSNFMy
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/bin
@@ -44,15 +44,15 @@ jobs:
 
     - name: Copy test files
       working-directory: ${{github.workspace}}
-      run: cp -R tests/files/ bin/tests
+      run: cp -R tests/files/ bin/bin/
 
     - name: List directory content
-      working-directory: ${{github.workspace}}/bin
+      working-directory: ${{github.workspace}}
       run: tree .
 
     - name: Test
       working-directory: ${{github.workspace}}/bin
-      run: tests/hydrobricks-tests
+      run: bin/hydrobricks-tests
 
   code-coverage:
     runs-on: ubuntu-latest
@@ -70,10 +70,10 @@ jobs:
       - name: Install conan
         run: |
           pip install conan
+          conan profile new default --detect
+          conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1
-          # GitLab support (wxwidgets, mysql, gdal)
           conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-          conan user gitlab+deploy-token-653038 -r gitlab -p sBwmejFz5Pn-gZPSNFMy
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin

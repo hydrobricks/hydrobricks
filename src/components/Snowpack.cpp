@@ -2,7 +2,13 @@
 
 Snowpack::Snowpack(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{}
+{
+    m_needsSolver = false;
+}
+
+void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
 
 bool Snowpack::IsOk() {
     if (m_hydroUnit == nullptr) {
@@ -21,6 +27,6 @@ bool Snowpack::IsOk() {
     return true;
 }
 
-bool Snowpack::Compute() {
-    return false;
+std::vector<double> Snowpack::ComputeOutputs() {
+    return {};
 }

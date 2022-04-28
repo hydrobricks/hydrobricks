@@ -3,7 +3,6 @@
 
 #include "Includes.h"
 
-class Brick;
 class Modifier;
 
 class Flux : public wxObject {
@@ -18,24 +17,32 @@ class Flux : public wxObject {
     virtual bool IsOk() = 0;
 
     /**
+     * Get the amount of water outgoing the flux.
+     *
+     * @return the amount of water outgoing the flux
+     */
+    virtual double GetOutgoingAmount() = 0;
+
+    /**
      * Get the water amount of the flux.
      *
      * @return the water amount of the flux.
      */
-    virtual double GetAmount() = 0;
+    double GetAmount() {
+        return m_amount;
+    }
 
     /**
      * Set the water amount of the flux.
      *
      * @param amount the water amount of the flux.
      */
-    virtual void SetAmount(double amount) {
+    void SetAmount(double amount) {
         m_amount = amount;
     }
 
   protected:
-    Brick* m_in;
-    Brick* m_out;
+    bool m_isConstant;
     double m_amount;
     Modifier* m_modifier;
 

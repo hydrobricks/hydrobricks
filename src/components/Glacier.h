@@ -9,16 +9,21 @@ class Glacier : public Brick {
     Glacier(HydroUnit *hydroUnit);
 
     /**
+     * @copydoc Brick::AssignParameters()
+     */
+    void AssignParameters(const BrickSettings &brickSettings) override;
+
+    /**
      * @copydoc Brick::IsOk()
      */
     bool IsOk() override;
 
-    /**
-     * @copydoc Brick::Compute()
-     */
-    bool Compute() override;
-
   protected:
+
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

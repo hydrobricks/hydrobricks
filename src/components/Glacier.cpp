@@ -2,7 +2,13 @@
 
 Glacier::Glacier(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{}
+{
+    m_needsSolver = false;
+}
+
+void Glacier::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
 
 bool Glacier::IsOk() {
     if (m_hydroUnit == nullptr) {
@@ -21,6 +27,6 @@ bool Glacier::IsOk() {
     return true;
 }
 
-bool Glacier::Compute() {
-    return false;
+std::vector<double> Glacier::ComputeOutputs() {
+    return {};
 }

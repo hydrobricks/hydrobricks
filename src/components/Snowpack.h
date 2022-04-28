@@ -14,11 +14,16 @@ class Snowpack : public Brick {
     bool IsOk() override;
 
     /**
-     * @copydoc Brick::Compute()
+     * @copydoc Brick::AssignParameters()
      */
-    bool Compute() override;
+    void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
+
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

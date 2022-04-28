@@ -18,6 +18,12 @@
 #endif
 
 //---------------------------------
+// Eigen library
+//---------------------------------
+
+#include <Eigen/Dense>
+
+//---------------------------------
 // wxWidgets library - frequently used classes
 //---------------------------------
 
@@ -67,6 +73,34 @@
 #endif
 
 #endif
+
+//---------------------------------
+// Own exceptions
+//---------------------------------
+
+class NotImplemented : public std::logic_error
+{
+  public:
+    NotImplemented() : std::logic_error("Function not yet implemented") { };
+};
+
+class InvalidArgument : public std::invalid_argument
+{
+  public:
+    explicit InvalidArgument(const wxString &msg) : std::invalid_argument(msg) { };
+};
+
+class MissingParameter : public std::logic_error
+{
+  public:
+    explicit MissingParameter(const wxString &msg) : std::logic_error(msg) { };
+};
+
+class NotFound : public std::logic_error
+{
+  public:
+    explicit NotFound(const wxString &msg) : std::logic_error(msg) { };
+};
 
 //---------------------------------
 // Own classes

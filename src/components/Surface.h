@@ -9,17 +9,22 @@ class Surface : public Brick {
     Surface(HydroUnit *hydroUnit);
 
     /**
+     * @copydoc Brick::AssignParameters()
+     */
+    void AssignParameters(const BrickSettings &brickSettings) override;
+
+    /**
      * @copydoc Brick::IsOk()
      */
     bool IsOk() override;
 
-    /**
-     * @copydoc Brick::Compute()
-     */
-    bool Compute() override;
-
   protected:
     double m_waterHeight;
+
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
 
   private:
 };

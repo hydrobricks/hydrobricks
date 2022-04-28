@@ -16,14 +16,14 @@ class StorageLinear : public Storage {
     explicit StorageLinear(HydroUnit *hydroUnit);
 
     /**
+     * @copydoc Brick::AssignParameters()
+     */
+    void AssignParameters(const BrickSettings &brickSettings) override;
+
+    /**
      * @copydoc Brick::IsOk()
      */
     bool IsOk() override;
-
-    /**
-     * @copydoc Brick::Compute()
-     */
-    bool Compute() override;
 
     /**
      * Set the response factor value
@@ -46,7 +46,13 @@ class StorageLinear : public Storage {
   protected:
     float *m_responseFactor;  // [1/T]
 
+    /**
+     * @copydoc Brick::ComputeOutputs()
+     */
+    std::vector<double> ComputeOutputs() override;
+
   private:
+    double getOutputsSum(std::vector<double> &qOuts);
 };
 
 #endif  // HYDROBRICKS_STORAGE_LINEAR_H

@@ -1,7 +1,7 @@
 #include "ParameterVariable.h"
 
-ParameterVariable::ParameterVariable()
-    : Parameter()
+ParameterVariable::ParameterVariable(const wxString &name, float value)
+    : Parameter(name, value)
 {}
 
 
@@ -9,8 +9,8 @@ ParameterVariable::ParameterVariable()
  * Class ParameterVariableYearly
  */
 
-ParameterVariableYearly::ParameterVariableYearly()
-    : ParameterVariable()
+ParameterVariableYearly::ParameterVariableYearly(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
 bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const std::vector<float>& values) {
@@ -49,8 +49,8 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
  * Class ParameterVariableMonthly
  */
 
-ParameterVariableMonthly::ParameterVariableMonthly()
-    : ParameterVariable()
+ParameterVariableMonthly::ParameterVariableMonthly(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
 bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
@@ -77,8 +77,8 @@ bool ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
  * Class ParameterVariableDates
  */
 
-ParameterVariableDates::ParameterVariableDates()
-    : ParameterVariable()
+ParameterVariableDates::ParameterVariableDates(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
 bool ParameterVariableDates::SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values) {

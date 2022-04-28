@@ -3,7 +3,14 @@
 StorageLinear::StorageLinear(HydroUnit *hydroUnit)
     : Storage(hydroUnit),
       m_responseFactor(nullptr)
-{}
+{
+    m_needsSolver = true;
+}
+
+void StorageLinear::AssignParameters(const BrickSettings &brickSettings) {
+    Storage::AssignParameters(brickSettings);
+    m_responseFactor = GetParameterValuePointer(brickSettings, "responseFactor");
+}
 
 bool StorageLinear::IsOk() {
     if (!Storage::IsOk()) return false;
@@ -15,9 +22,8 @@ bool StorageLinear::IsOk() {
     return true;
 }
 
-bool StorageLinear::Compute() {
+std::vector<double> StorageLinear::ComputeOutputs() {
+    double qOut = (*m_responseFactor) * m_content;
 
-    double Qout = (*m_responseFactor) * m_waterContent;
-
-    return false;
+    return {qOut};
 }

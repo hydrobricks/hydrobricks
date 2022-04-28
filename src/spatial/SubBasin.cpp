@@ -1,7 +1,8 @@
 #include "SubBasin.h"
 
 SubBasin::SubBasin()
-    : m_area(UNDEFINED)
+    : m_area(UNDEFINED),
+      m_elevation(UNDEFINED)
 {}
 
 SubBasin::~SubBasin() {}
@@ -22,8 +23,8 @@ void SubBasin::AddHydroUnit(HydroUnit* unit) {
     m_hydroUnits.push_back(unit);
 }
 
-int SubBasin::GetHydroUnitsCount() {
-    return (int)m_hydroUnits.size();
+int SubBasin::GetHydroUnitsNb() {
+    return int(m_hydroUnits.size());
 }
 
 HydroUnit* SubBasin::GetHydroUnit(int index) {
@@ -47,17 +48,12 @@ void SubBasin::AddOutputConnector(Connector* connector) {
     m_outConnectors.push_back(connector);
 }
 
-void SubBasin::AddContainer(Brick* container) {
-    wxASSERT(container);
-    m_lumpedContainers.push_back(container);
-}
-
 void SubBasin::AddBehaviour(Behaviour* behaviour) {
     wxASSERT(behaviour);
     m_behaviours.push_back(behaviour);
 }
 
-void SubBasin::AddFlux(Flux* flux) {
+void SubBasin::AttachOutletFlux(Flux* flux) {
     wxASSERT(flux);
-    m_lumpedFluxes.push_back(flux);
+    m_outletFluxes.push_back(flux);
 }

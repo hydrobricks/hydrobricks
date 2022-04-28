@@ -1,9 +1,14 @@
 #include "Storage.h"
 
 Storage::Storage(HydroUnit *hydroUnit)
-    : Brick(hydroUnit),
-      m_capacity(UNDEFINED)
-{}
+    : Brick(hydroUnit)
+{
+    m_needsSolver = false;
+}
+
+void Storage::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
 
 bool Storage::IsOk() {
     if (m_hydroUnit == nullptr) {
@@ -22,20 +27,6 @@ bool Storage::IsOk() {
     return true;
 }
 
-bool Storage::Compute() {
-    return false;
-}
-
-double Storage::SumIncomingFluxes() {
-    wxASSERT(!m_inputs.empty());
-
-    if (m_inputs.size() == 1) {
-        return m_inputs[0]->GetAmount();
-    } else {
-        double sum = 0;
-        for (auto & input : m_inputs) {
-            sum += input->GetAmount();
-        }
-        return sum;
-    }
+std::vector<double> Storage::ComputeOutputs() {
+    return {};
 }

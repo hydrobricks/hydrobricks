@@ -13,7 +13,7 @@ class ModelHydro : public wxObject {
 
     ~ModelHydro() override;
 
-    static ModelHydro* ModelHydro::Factory(ParameterSet &parameterSet, SubBasin* subBasin);
+    static ModelHydro* Factory(ParameterSet &parameterSet, SubBasin* subBasin);
 
     bool IsOk();
 
@@ -34,7 +34,7 @@ class ModelHydro : public wxObject {
     TimeSeries* m_timeSeries[MAX_VAR_TYPES];
 
   private:
-    static void ModelHydro::BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBasin);
+    static void BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBasin);
 
     static void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 

@@ -60,10 +60,6 @@ void Processor::ConnectToIterableValues() {
             // Get iterable values from processes
             std::vector<double*> processValues = brick->GetIterableValuesFromProcesses();
             StoreIterableValues(processValues);
-
-            // Get iterable values from fluxes
-            std::vector<double*> fluxValues = brick->GetIterableValuesFromOutgoingFluxes();
-            StoreIterableValues(fluxValues);
         }
     }
 }

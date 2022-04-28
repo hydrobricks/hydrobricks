@@ -41,15 +41,6 @@ class Flux : public wxObject {
         m_amount = amount;
     }
 
-    /**
-     * Get pointers to the values that need to be iterated.
-     *
-     * @return vector of pointers to the values that need to be iterated.
-     */
-    virtual std::vector<double*> GetIterableValues() {
-        return {};
-    }
-
   protected:
     bool m_isConstant;
     double m_amount;

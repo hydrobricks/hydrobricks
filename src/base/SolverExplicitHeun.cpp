@@ -1,13 +1,13 @@
 #include "Processor.h"
-#include "SolverRK4.h"
+#include "SolverExplicitHeun.h"
 
-SolverRK4::SolverRK4()
+SolverExplicitHeun::SolverExplicitHeun()
     : Solver()
 {
-    m_nIterations = 4;
+    m_nIterations = 2;
 }
 
-bool SolverRK4::Solve() {
+bool SolverExplicitHeun::Solve() {
 
     std::vector<double*>* iterableValues = m_processor->GetIterableValuesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
@@ -26,9 +26,9 @@ bool SolverRK4::Solve() {
         counter++;
     }
 
-    // k2 = f(tn + h/2, Sn + k1 h / 2)
+    // k2 = f(tn + h, Sn + k1 h)
     for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.5);
+        brick->SetStateVariablesFor(1.0);
         if (!brick->Compute()) {
             return false;
         }
@@ -40,37 +40,8 @@ bool SolverRK4::Solve() {
         counter++;
     }
 
-    // k3 = f(tn + h/2, Sn + k2 h / 2)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.5);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
-
-    counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 2) = *value;
-        counter++;
-    }
-
-    // k4 = f(tn + h, Sn + k3 h)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(1.0);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
-
-    counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 3) = *value;
-        counter++;
-    }
-
     // Final change rate
-    Eigen::ArrayXd rkValues = (m_container.col(0) + 2 * m_container.col(1) +
-                               2 * m_container.col(2) + m_container.col(3)) / 6;
+    Eigen::ArrayXd rkValues = (m_container.col(0) + m_container.col(1)) / 2;
 
     // Update the state variable values
     for (int i = 0; i < (*iterableValues).size(); ++i) {
@@ -79,7 +50,7 @@ bool SolverRK4::Solve() {
 
     // Compute final values
     for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(1.0);
+        brick->SetStateVariablesFor(0.0);
         if (!brick->Compute()) {
             return false;
         }

@@ -15,7 +15,7 @@ Brick::Brick(HydroUnit *hydroUnit)
     }
 }
 
-void Brick::SetContentFor(float timeStepFraction) {
+void Brick::SetStateVariablesFor(float timeStepFraction) {
     m_content = m_contentPrev + m_contentChangeRate * timeStepFraction;
 }
 
@@ -90,22 +90,6 @@ std::vector<double*> Brick::GetIterableValuesFromProcesses() {
             continue;
         }
         for (auto const &value : processValues) {
-            values.push_back(value);
-        }
-    }
-
-    return values;
-}
-
-std::vector<double*> Brick::GetIterableValuesFromOutgoingFluxes() {
-    std::vector<double*> values;
-    for (auto const &flux: m_outputs) {
-        std::vector<double*> fluxValues = flux->GetIterableValues();
-
-        if (fluxValues.empty()) {
-            continue;
-        }
-        for (auto const &value : fluxValues) {
             values.push_back(value);
         }
     }

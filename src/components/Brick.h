@@ -72,7 +72,7 @@ class Brick : public wxObject {
      *
      * @param timeStepFraction fraction of the time step
      */
-    void SetContentFor(float timeStepFraction);
+    void SetStateVariablesFor(float timeStepFraction);
 
     void SetCapacity(double capacity) {
         m_capacity = capacity;
@@ -94,8 +94,6 @@ class Brick : public wxObject {
     virtual std::vector<double*> GetIterableValues();
 
     std::vector<double*> GetIterableValuesFromProcesses();
-
-    std::vector<double*> GetIterableValuesFromOutgoingFluxes();
 
   protected:
     bool m_needsSolver;

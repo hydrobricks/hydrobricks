@@ -23,11 +23,17 @@ class HydroUnit : public wxObject {
 
     void AddBrick(Brick* brick);
 
+    bool HasForcing(VariableType type);
+
     void AddForcing(Forcing* forcing);
+
+    Forcing* GetForcing(VariableType type);
 
     int GetBricksCount();
 
     Brick* GetBrick(int index);
+
+    Brick* GetBrick(const wxString &name);
 
     bool IsOk();
 

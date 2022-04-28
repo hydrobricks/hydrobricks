@@ -1,11 +1,31 @@
 #include <gtest/gtest.h>
 
-#include "FluxDirect.h"
-#include "ForcingFluxConnector.h"
 #include "ModelHydro.h"
-#include "SolverRK4.h"
-#include "StorageLinear.h"
+#include "ParameterSet.h"
 #include "helpers.h"
+
+TEST(ModelHydro, BuildsCorrectly) {
+    ParameterSet parameterSet;
+    parameterSet.SetSolver("ExplicitEuler");
+    parameterSet.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+    parameterSet.AddBrick("linear-storage", "StorageLinear");
+    parameterSet.AddParameterToCurrentBrick("responseFactor", 0.1);
+    parameterSet.AddForcingToCurrentBrick("Precipitation");
+    parameterSet.AddOutputToCurrentBrick("outlet");
+
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    ModelHydro* model = ModelHydro::Factory(parameterSet, &subBasin);
+
+
+    EXPECT_FALSE(model->Run());
+
+    wxDELETE(model);
+}
+
+
 /*
 TEST(ModelHydro, BuildsCorrectly) {
     SolverRungeKuttaMethod solver;
@@ -27,6 +47,7 @@ TEST(ModelHydro, BuildsCorrectly) {
     EXPECT_TRUE(model.IsOk());
 }
 */
+/*
 TEST(ModelHydro, RunsCorrectly) {
     SolverRK4 solver;
     Processor processor(&solver);
@@ -50,3 +71,4 @@ TEST(ModelHydro, RunsCorrectly) {
 
     EXPECT_FALSE(model.Run());
 }
+*/

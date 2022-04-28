@@ -9,6 +9,11 @@ class Surface : public Brick {
     Surface(HydroUnit *hydroUnit);
 
     /**
+     * @copydoc Brick::AssignParameters()
+     */
+    void AssignParameters(const BrickSettings &brickSettings) override;
+
+    /**
      * @copydoc Brick::IsOk()
      */
     bool IsOk() override;

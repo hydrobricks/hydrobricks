@@ -10,6 +10,10 @@ Processor::Processor(Solver* solver)
     m_solver->Connect(this);
 }
 
+Processor::~Processor() {
+    wxDELETE(m_solver);
+}
+
 void Processor::SetModel(ModelHydro* model) {
     m_model = model;
 }
@@ -23,7 +27,7 @@ void Processor::Initialize() {
 void Processor::ConnectToIterableBricks() {
     SubBasin* basin = m_model->GetSubBasin();
 
-    int nUnits = basin->GetHydroUnitsCount();
+    int nUnits = basin->GetHydroUnitsNb();
 
     for (int iUnit = 0; iUnit < nUnits; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
@@ -45,7 +49,7 @@ void Processor::ConnectToIterableBricks() {
 void Processor::ConnectToIterableValues() {
     SubBasin* basin = m_model->GetSubBasin();
 
-    int nUnits = basin->GetHydroUnitsCount();
+    int nUnits = basin->GetHydroUnitsNb();
 
     for (int iUnit = 0; iUnit < nUnits; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
@@ -81,7 +85,7 @@ bool Processor::ProcessTimeStep() {
 
     SubBasin* basin = m_model->GetSubBasin();
 
-    int nUnits = basin->GetHydroUnitsCount();
+    int nUnits = basin->GetHydroUnitsNb();
 
     // Process the bricks that do not need a solver.
     for (int iUnit = 0; iUnit < nUnits; ++iUnit) {

@@ -5,11 +5,27 @@
 
 class Parameter : public wxObject {
   public:
-    explicit Parameter(float val = NaNf);
+    explicit Parameter(const wxString &name, float val = NaNf);
 
     ~Parameter() override = default;
 
-    float GetValue() {
+    bool IsLinked() const {
+        return m_linked;
+    }
+
+    void SetAsLinked(bool value = true) {
+        m_linked = value;
+    }
+
+    wxString GetName() const {
+        return m_name;
+    }
+
+    void SetName(const wxString& name) {
+        m_name = name;
+    }
+
+    float GetValue() const {
         return m_value;
     }
 
@@ -21,13 +37,10 @@ class Parameter : public wxObject {
         m_value = val;
     }
 
-    void SetName(const wxString& name) {
-        m_name = name;
-    }
-
   protected:
-    float m_value;
+    bool m_linked;
     wxString m_name;
+    float m_value;
 
   private:
 };

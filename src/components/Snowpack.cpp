@@ -6,6 +6,10 @@ Snowpack::Snowpack(HydroUnit *hydroUnit)
     m_needsSolver = false;
 }
 
+void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
+
 bool Snowpack::IsOk() {
     if (m_hydroUnit == nullptr) {
         wxLogError(_("The snowpack is not attached to a hydro unit."));

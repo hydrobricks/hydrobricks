@@ -3,10 +3,13 @@
 
 #include "Includes.h"
 #include "ParametersUpdater.h"
+#include "ParameterSet.h"
 
 class TimeMachine : public wxObject {
   public:
     TimeMachine(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit);
+
+    TimeMachine(const TimerSettings &settings);
 
     ~TimeMachine() override = default;
 

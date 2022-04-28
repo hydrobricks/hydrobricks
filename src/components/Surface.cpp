@@ -7,6 +7,10 @@ Surface::Surface(HydroUnit *hydroUnit)
     m_needsSolver = true;
 }
 
+void Surface::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
+
 bool Surface::IsOk() {
     if (m_hydroUnit == nullptr) {
         wxLogError(_("The surface is not attached to a hydro unit."));

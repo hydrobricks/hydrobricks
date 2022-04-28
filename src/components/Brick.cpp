@@ -1,18 +1,74 @@
 #include "Brick.h"
 
+#include "Glacier.h"
 #include "HydroUnit.h"
+#include "Snowpack.h"
+#include "StorageLinear.h"
+#include "Surface.h"
 
 Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_content(0),
       m_contentPrev(0),
       m_contentChangeRate(0),
-      m_capacity(UNDEFINED),
+      m_capacity(nullptr),
       m_hydroUnit(hydroUnit)
 {
     if (hydroUnit) {
         hydroUnit->AddBrick(this);
     }
+}
+
+Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
+    if (brickSettings.type.IsSameAs("StorageLinear")) {
+        auto brick = new StorageLinear(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("Surface")) {
+        auto brick = new Surface(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("Glacier")) {
+        auto brick = new Glacier(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("Snowpack")) {
+        auto brick = new Snowpack(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else {
+        wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
+    }
+
+    return nullptr;
+}
+
+void Brick::AssignParameters(const BrickSettings &brickSettings) {
+    if (HasParameter(brickSettings, "capacity")) {
+        m_capacity = GetParameterValuePointer(brickSettings, "capacity");
+    }
+}
+
+bool Brick::HasParameter(const BrickSettings &brickSettings, const wxString &name) {
+    for (auto parameter: brickSettings.parameters) {
+        if (parameter->GetName().IsSameAs(name, false)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const wxString &name) {
+    for (auto parameter: brickSettings.parameters) {
+        if (parameter->GetName().IsSameAs(name, false)) {
+            wxASSERT(parameter->GetValuePointer());
+            parameter->SetAsLinked();
+            return parameter->GetValuePointer();
+        }
+    }
+
+    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
 void Brick::SetStateVariablesFor(float timeStepFraction) {
@@ -41,7 +97,7 @@ bool Brick::Compute() {
     }
 
     // In case of a maximum capacity, check that it does not get topped out
-    if (HasMaximumCapacity() && m_content + m_contentChangeRate > m_capacity) {
+    if (HasMaximumCapacity() && m_content + m_contentChangeRate > *m_capacity) {
         wxLogError(_("Content capacity of the storage exceeded. It has to be handled before."));
         return false;
     }

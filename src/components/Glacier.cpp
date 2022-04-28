@@ -6,6 +6,10 @@ Glacier::Glacier(HydroUnit *hydroUnit)
     m_needsSolver = false;
 }
 
+void Glacier::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
+
 bool Glacier::IsOk() {
     if (m_hydroUnit == nullptr) {
         wxLogError(_("The glacier is not attached to a hydro unit."));

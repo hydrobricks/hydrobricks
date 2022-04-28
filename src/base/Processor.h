@@ -11,6 +11,8 @@ class Processor : public wxObject {
   public:
     explicit Processor(Solver* solver);
 
+    ~Processor();
+
     void SetModel(ModelHydro* model);
 
     void Initialize();

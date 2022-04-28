@@ -6,6 +6,10 @@ Storage::Storage(HydroUnit *hydroUnit)
     m_needsSolver = false;
 }
 
+void Storage::AssignParameters(const BrickSettings &brickSettings) {
+    Brick::AssignParameters(brickSettings);
+}
+
 bool Storage::IsOk() {
     if (m_hydroUnit == nullptr) {
         wxLogError(_("The storage is not attached to a hydro unit."));

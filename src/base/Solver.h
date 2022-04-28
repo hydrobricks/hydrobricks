@@ -2,7 +2,7 @@
 #define HYDROBRICKS_SOLVER_H
 
 #include "Includes.h"
-#include "SubBasin.h"
+#include "ParameterSet.h"
 
 class Processor;
 
@@ -11,6 +11,8 @@ class Solver : public wxObject {
     explicit Solver();
 
     virtual bool Solve() = 0;
+
+    static Solver* Factory(const SolverSettings &solverSettings);
 
     void Connect(Processor* processor) {
         wxASSERT(processor);

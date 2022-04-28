@@ -7,6 +7,11 @@ StorageLinear::StorageLinear(HydroUnit *hydroUnit)
     m_needsSolver = true;
 }
 
+void StorageLinear::AssignParameters(const BrickSettings &brickSettings) {
+    Storage::AssignParameters(brickSettings);
+    m_responseFactor = GetParameterValuePointer(brickSettings, "responseFactor");
+}
+
 bool StorageLinear::IsOk() {
     if (!Storage::IsOk()) return false;
     if (m_outputs.size() != 1) {

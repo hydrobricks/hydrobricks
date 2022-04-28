@@ -13,6 +13,11 @@ class Snowpack : public Brick {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Brick::AssignParameters()
+     */
+    void AssignParameters(const BrickSettings &brickSettings) override;
+
   protected:
 
     /**

@@ -3,6 +3,7 @@
 
 #include "Includes.h"
 #include "Flux.h"
+#include "ParameterSet.h"
 #include "Process.h"
 
 class HydroUnit;
@@ -12,6 +13,19 @@ class Brick : public wxObject {
     explicit Brick(HydroUnit* hydroUnit);
 
     ~Brick() override = default;
+
+    static Brick* Factory(const BrickSettings &brickSettings, HydroUnit* unit);
+
+    static bool HasParameter(const BrickSettings &brickSettings, const wxString &name);
+
+    static float* GetParameterValuePointer(const BrickSettings &brickSettings, const wxString &name);
+
+    /**
+     * Assign the parameters to the brick element.
+     *
+     * @param brickSettings settings of the brick containing the parameters.
+     */
+    virtual void AssignParameters(const BrickSettings &brickSettings);
 
     /**
      * Attach incoming flux.
@@ -74,16 +88,24 @@ class Brick : public wxObject {
      */
     void SetStateVariablesFor(float timeStepFraction);
 
-    void SetCapacity(double capacity) {
+    wxString GetName() {
+        return m_name;
+    }
+
+    void SetName(const wxString &name) {
+        m_name = name;
+    }
+
+    void SetCapacity(float* capacity) {
         m_capacity = capacity;
     }
 
     bool HasMaximumCapacity() const {
-        return m_capacity != UNDEFINED;
+        return m_capacity != nullptr;
     }
 
     bool IsFull() const {
-        return m_content >= m_capacity;
+        return m_content >= *m_capacity;
     }
 
     /**
@@ -96,11 +118,12 @@ class Brick : public wxObject {
     std::vector<double*> GetIterableValuesFromProcesses();
 
   protected:
+    wxString m_name;
     bool m_needsSolver;
     double m_content; // [mm]
     double m_contentPrev; // [mm]
     double m_contentChangeRate; // [mm/T]
-    double m_capacity;
+    float* m_capacity;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;

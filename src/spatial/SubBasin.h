@@ -33,7 +33,7 @@ class SubBasin : public wxObject {
 
   protected:
     float m_area; // m2
-    float m_elevation; // masl
+    float m_elevation; // m.a.s.l.
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;

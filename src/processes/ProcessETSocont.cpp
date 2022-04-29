@@ -9,5 +9,5 @@ ProcessETSocont::ProcessETSocont(Brick* brick)
 {}
 
 double ProcessETSocont::GetWaterExtraction() {
-    return *m_pet * pow(*m_stock / m_stockMax, m_exponent);
+    return m_pet->GetValue() * pow(*m_stock / m_stockMax, m_exponent);
 }

@@ -107,12 +107,11 @@ bool ModelHydro::IsOk() {
     return true;
 }
 
-bool ModelHydro::UpdateForcing() {
-    return false;
-}
-
 bool ModelHydro::Run() {
     m_processor->Initialize();
+    if (!InitializeTimeSeries()) {
+        return false;
+    }
     while (!m_timer->IsOver()) {
         if (!UpdateForcing()) {
             wxLogError(_("Failed updating the forcing data."));
@@ -127,7 +126,51 @@ bool ModelHydro::Run() {
     return false;
 }
 
-void ModelHydro::SetTimeSeries(TimeSeries* timeSeries) {
-    wxASSERT(m_timeSeries[timeSeries->GetVariableType()] == nullptr);
-    m_timeSeries[timeSeries->GetVariableType()] = timeSeries;
+bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
+    for (auto ts: m_timeSeries) {
+        if (ts->GetVariableType() == timeSeries->GetVariableType()) {
+            wxLogError(_("The data variable is already linked to the model."));
+            return false;
+        }
+    }
+
+    m_timeSeries.push_back(timeSeries);
+}
+
+bool ModelHydro::AttachTimeSeriesToHydroUnits() {
+    wxASSERT(m_subBasin);
+
+    for (auto timeSeries: m_timeSeries) {
+        VariableType type = timeSeries->GetVariableType();
+
+        for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+            HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+            if (unit->HasForcing(type)) {
+                Forcing* forcing = unit->GetForcing(type);
+                forcing->AttachTimeSeriesData(timeSeries->GetDataPointer(unit->GetId()));
+            }
+        }
+    }
+
+    return true;
+}
+
+bool ModelHydro::InitializeTimeSeries() {
+    for (auto timeSeries: m_timeSeries) {
+        if (!timeSeries->SetCursorToDate(m_timer->GetDate())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ModelHydro::UpdateForcing() {
+    for (auto timeSeries: m_timeSeries) {
+        if (!timeSeries->AdvanceOneTimeStep()) {
+            return false;
+        }
+    }
+
+    return true;
 }

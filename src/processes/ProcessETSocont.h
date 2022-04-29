@@ -14,7 +14,7 @@ class ProcessETSocont : public Process {
     double GetWaterExtraction() override;
 
     void SetPetForcing(Forcing* pet) {
-        m_pet = pet->GetValuePointer();
+        m_pet = pet;
     }
 
     void SetStockState(double* stock) {
@@ -30,7 +30,7 @@ class ProcessETSocont : public Process {
     }
 
   protected:
-    double* m_pet;
+    Forcing* m_pet;
     double* m_stock;
     double m_stockMax;
     float m_exponent;

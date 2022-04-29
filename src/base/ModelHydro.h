@@ -17,11 +17,11 @@ class ModelHydro : public wxObject {
 
     bool IsOk();
 
-    bool UpdateForcing();
-
     bool Run();
 
-    void SetTimeSeries(TimeSeries* timeSeries);
+    bool AddTimeSeries(TimeSeries* timeSeries);
+
+    bool AttachTimeSeriesToHydroUnits();
 
     SubBasin* GetSubBasin() {
         return m_subBasin;
@@ -31,7 +31,7 @@ class ModelHydro : public wxObject {
     Processor* m_processor;
     SubBasin* m_subBasin;
     TimeMachine* m_timer;
-    TimeSeries* m_timeSeries[MAX_VAR_TYPES];
+    std::vector<TimeSeries*> m_timeSeries;
 
   private:
     static void BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBasin);
@@ -39,6 +39,10 @@ class ModelHydro : public wxObject {
     static void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
     static void BuildFluxes(const ParameterSet& parameterSet, SubBasin* subBasin, HydroUnit* unit);
+
+    bool InitializeTimeSeries();
+
+    bool UpdateForcing();
 };
 
 #endif  // HYDROBRICKS_MODEL_HYDRO_H

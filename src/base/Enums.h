@@ -28,8 +28,7 @@ enum VariableType {
     ETP,
     Custom1,
     Custom2,
-    Custom3,
-    MAX_VAR_TYPES
+    Custom3
 };
 
 #endif  // HYDROBRICKS_ENUMS_H

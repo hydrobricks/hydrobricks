@@ -70,7 +70,7 @@ TEST(StorageLinear, ComputesCorrectly) {
 
     EXPECT_FLOAT_EQ(0.2f, storage.GetResponseFactor());
 
-    responseFactor.SetValue(0.3);
+    responseFactor.SetValue(0.3f);
 
     EXPECT_FLOAT_EQ(0.3f, storage.GetResponseFactor());
 }

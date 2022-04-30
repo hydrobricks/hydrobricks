@@ -22,7 +22,7 @@ bool StorageLinear::IsOk() {
     return true;
 }
 
-std::vector<double> StorageLinear::ComputeOutputs() {
+vecDouble StorageLinear::ComputeOutputs() {
     double qOut = (*m_responseFactor) * m_content;
 
     return {qOut};

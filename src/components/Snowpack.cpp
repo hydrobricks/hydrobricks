@@ -27,6 +27,6 @@ bool Snowpack::IsOk() {
     return true;
 }
 
-std::vector<double> Snowpack::ComputeOutputs() {
+vecDouble Snowpack::ComputeOutputs() {
     return {};
 }

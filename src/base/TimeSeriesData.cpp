@@ -8,7 +8,7 @@ TimeSeriesData::TimeSeriesData()
     : m_cursor(0)
 {}
 
-bool TimeSeriesData::SetValues(const std::vector<double> &values) {
+bool TimeSeriesData::SetValues(const vecDouble &values) {
     m_values = values;
     return true;
 }
@@ -37,7 +37,7 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(const wxDateTime &start, const wxDa
       m_timeStepUnit(timeStepUnit)
 {}
 
-bool TimeSeriesDataRegular::SetValues(const std::vector<double> &values) {
+bool TimeSeriesDataRegular::SetValues(const vecDouble &values) {
     wxDateTime calcEnd = IncrementDateBy(m_start, m_timeStep * int(values.size() - 1), m_timeStepUnit);
     if (!calcEnd.IsEqualTo(m_end)) {
         wxLogError(_("The size of the time series data does not match the time properties."));
@@ -104,12 +104,12 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
  * TimeSeriesDataIrregular
  */
 
-TimeSeriesDataIrregular::TimeSeriesDataIrregular(std::vector<double> &dates)
+TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble &dates)
     : TimeSeriesData(),
       m_dates(dates)
 {}
 
-bool TimeSeriesDataIrregular::SetValues(const std::vector<double> &values) {
+bool TimeSeriesDataIrregular::SetValues(const vecDouble &values) {
     if (m_dates.size() != values.size()) {
         wxLogError(_("The size of the time series data does not match the dates array."));
         return false;

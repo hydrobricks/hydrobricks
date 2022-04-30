@@ -20,8 +20,8 @@ class Process : public wxObject {
      *
      * @return vector of pointers to the values that need to be iterated.
      */
-    virtual std::vector<double*> GetIterableValues() {
-        return std::vector<double*> {};
+    virtual vecDoublePt GetIterableValues() {
+        return vecDoublePt {};
     }
 
   protected:

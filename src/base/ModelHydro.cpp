@@ -123,7 +123,7 @@ bool ModelHydro::Run() {
         }
         m_timer->IncrementTime();
     }
-    return false;
+    return true;
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {

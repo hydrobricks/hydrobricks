@@ -27,6 +27,6 @@ bool Storage::IsOk() {
     return true;
 }
 
-std::vector<double> Storage::ComputeOutputs() {
+vecDouble Storage::ComputeOutputs() {
     return {};
 }

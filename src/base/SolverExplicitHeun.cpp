@@ -9,7 +9,7 @@ SolverExplicitHeun::SolverExplicitHeun()
 
 bool SolverExplicitHeun::Solve() {
 
-    std::vector<double*>* iterableValues = m_processor->GetIterableValuesVectorPt();
+    vecDoublePt* iterableValues = m_processor->GetIterableValuesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
 
     // k1 = f(tn, Sn)
@@ -41,7 +41,7 @@ bool SolverExplicitHeun::Solve() {
     }
 
     // Final change rate
-    Eigen::ArrayXd rkValues = (m_container.col(0) + m_container.col(1)) / 2;
+    axd rkValues = (m_container.col(0) + m_container.col(1)) / 2;
 
     // Update the state variable values
     for (int i = 0; i < (*iterableValues).size(); ++i) {

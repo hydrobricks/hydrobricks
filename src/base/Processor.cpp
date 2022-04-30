@@ -58,17 +58,17 @@ void Processor::ConnectToIterableValues() {
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             // Get iterable values from bricks
             Brick* brick = unit->GetBrick(iBrick);
-            std::vector<double*> bricksValues = brick->GetIterableValues();
+            vecDoublePt bricksValues = brick->GetIterableValues();
             StoreIterableValues(bricksValues);
 
             // Get iterable values from processes
-            std::vector<double*> processValues = brick->GetIterableValuesFromProcesses();
+            vecDoublePt processValues = brick->GetIterableValuesFromProcesses();
             StoreIterableValues(processValues);
         }
     }
 }
 
-void Processor::StoreIterableValues(std::vector<double*>& values) {
+void Processor::StoreIterableValues(vecDoublePt& values) {
     if (!values.empty()) {
         for (auto const& value : values) {
             m_iterableValues.push_back(value);
@@ -94,12 +94,16 @@ bool Processor::ProcessTimeStep() {
 
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
-            brick->Compute();
+            if (!brick->Compute()) {
+                return false;
+            }
         }
     }
 
     // Process the bricks that need a solver
-    m_solver->Solve();
+    if (!m_solver->Solve()) {
+        return false;
+    }
 
-    return false;
+    return true;
 }

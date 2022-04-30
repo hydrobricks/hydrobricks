@@ -27,6 +27,6 @@ bool Glacier::IsOk() {
     return true;
 }
 
-std::vector<double> Glacier::ComputeOutputs() {
+vecDouble Glacier::ComputeOutputs() {
     return {};
 }

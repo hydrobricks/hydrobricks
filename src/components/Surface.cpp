@@ -28,6 +28,6 @@ bool Surface::IsOk() {
     return true;
 }
 
-std::vector<double> Surface::ComputeOutputs() {
+vecDouble Surface::ComputeOutputs() {
     return {};
 }

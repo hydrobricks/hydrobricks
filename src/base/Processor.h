@@ -25,7 +25,7 @@ class Processor : public wxObject {
 
     bool ProcessTimeStep();
 
-    std::vector<double*>* GetIterableValuesVectorPt() {
+    vecDoublePt* GetIterableValuesVectorPt() {
         return &m_iterableValues;
     }
 
@@ -36,11 +36,11 @@ class Processor : public wxObject {
   protected:
     Solver* m_solver;
     ModelHydro* m_model;
-    std::vector<double*> m_iterableValues;
+    vecDoublePt m_iterableValues;
     std::vector<Brick*> m_iterableBricks;
 
   private:
-    void StoreIterableValues(std::vector<double*>& values);
+    void StoreIterableValues(vecDoublePt& values);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

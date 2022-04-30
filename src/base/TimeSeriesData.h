@@ -9,7 +9,7 @@ class TimeSeriesData : public wxObject {
 
     ~TimeSeriesData() override = default;
 
-    virtual bool SetValues(const std::vector<double> &values);
+    virtual bool SetValues(const vecDouble &values);
 
     virtual double GetValueFor(const wxDateTime &date);
 
@@ -20,7 +20,7 @@ class TimeSeriesData : public wxObject {
     virtual bool AdvanceOneTimeStep() = 0;
 
   protected:
-    std::vector<double> m_values;
+    vecDouble m_values;
     int m_cursor;
 
   private:
@@ -33,7 +33,7 @@ class TimeSeriesDataRegular : public TimeSeriesData {
 
     ~TimeSeriesDataRegular() override = default;
 
-    bool SetValues(const std::vector<double> &values) override;
+    bool SetValues(const vecDouble &values) override;
 
     double GetValueFor(const wxDateTime &date) override;
 
@@ -55,11 +55,11 @@ class TimeSeriesDataRegular : public TimeSeriesData {
 
 class TimeSeriesDataIrregular : public TimeSeriesData {
   public:
-    explicit TimeSeriesDataIrregular(std::vector<double> &dates);
+    explicit TimeSeriesDataIrregular(vecDouble &dates);
 
     ~TimeSeriesDataIrregular() override = default;
 
-    bool SetValues(const std::vector<double> &values) override;
+    bool SetValues(const vecDouble &values) override;
 
     double GetValueFor(const wxDateTime &date) override;
 
@@ -70,7 +70,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     bool AdvanceOneTimeStep() override;
 
   protected:
-    std::vector<double> m_dates;
+    vecDouble m_dates;
 
   private:
 };

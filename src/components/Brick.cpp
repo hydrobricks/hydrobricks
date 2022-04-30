@@ -80,7 +80,7 @@ bool Brick::Compute() {
     double qIn = SumIncomingFluxes();
 
     // Compute outputs and sum
-    std::vector<double> qOuts = ComputeOutputs();
+    vecDouble qOuts = ComputeOutputs();
     double qOutTotal = getOutputsSum(qOuts);
 
     // Compute change rate
@@ -120,7 +120,7 @@ double Brick::SumIncomingFluxes() {
     return sum;
 }
 
-double Brick::getOutputsSum(std::vector<double> &qOuts) {
+double Brick::getOutputsSum(vecDouble &qOuts) {
     double qOutTotal = 0;
     for (auto &qOut : qOuts) {
         qOutTotal += qOut;
@@ -133,14 +133,14 @@ void Brick::Finalize() {
     m_content = m_contentChangeRate;
 }
 
-std::vector<double*> Brick::GetIterableValues() {
-    return std::vector<double*> {&m_contentChangeRate};
+vecDoublePt Brick::GetIterableValues() {
+    return vecDoublePt {&m_contentChangeRate};
 }
 
-std::vector<double*> Brick::GetIterableValuesFromProcesses() {
-    std::vector<double*> values;
+vecDoublePt Brick::GetIterableValuesFromProcesses() {
+    vecDoublePt values;
     for (auto const &process: m_processes) {
-        std::vector<double*> processValues = process->GetIterableValues();
+        vecDoublePt processValues = process->GetIterableValues();
 
         if (processValues.empty()) {
             continue;

@@ -23,7 +23,7 @@ class Solver : public wxObject {
 
   protected:
     Processor* m_processor;
-    Eigen::ArrayXXd m_container;
+    axxd m_container;
     int m_nIterations;
 
   private:

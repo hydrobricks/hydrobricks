@@ -75,6 +75,21 @@
 #endif
 
 //---------------------------------
+// Typedefs
+//---------------------------------
+
+typedef std::vector<wxString> vecStr;
+typedef std::vector<int> vecInt;
+typedef std::vector<float> vecFloat;
+typedef std::vector<double> vecDouble;
+typedef std::vector<double*> vecDoublePt;
+typedef Eigen::ArrayXd axd;
+typedef Eigen::ArrayXXd axxd;
+typedef std::vector<Eigen::ArrayXd> vecAxd;
+typedef std::vector<Eigen::ArrayXXd> vecAxxd;
+
+
+//---------------------------------
 // Own exceptions
 //---------------------------------
 

@@ -9,7 +9,7 @@ SolverRK4::SolverRK4()
 
 bool SolverRK4::Solve() {
 
-    std::vector<double*>* iterableValues = m_processor->GetIterableValuesVectorPt();
+    vecDoublePt* iterableValues = m_processor->GetIterableValuesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
 
     // k1 = f(tn, Sn)
@@ -69,7 +69,7 @@ bool SolverRK4::Solve() {
     }
 
     // Final change rate
-    Eigen::ArrayXd rkValues = (m_container.col(0) + 2 * m_container.col(1) +
+    axd rkValues = (m_container.col(0) + 2 * m_container.col(1) +
                                2 * m_container.col(2) + m_container.col(3)) / 6;
 
     // Update the state variable values

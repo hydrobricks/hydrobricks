@@ -23,7 +23,7 @@ class TimeSeriesDistributed : public TimeSeries {
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
-    std::vector<int> m_unitIds;
+    vecInt m_unitIds;
     std::vector<TimeSeriesData*> m_data;
 
   private:

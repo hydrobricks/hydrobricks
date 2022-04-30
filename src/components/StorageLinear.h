@@ -49,10 +49,10 @@ class StorageLinear : public Storage {
     /**
      * @copydoc Brick::ComputeOutputs()
      */
-    std::vector<double> ComputeOutputs() override;
+    vecDouble ComputeOutputs() override;
 
   private:
-    double getOutputsSum(std::vector<double> &qOuts);
+    double getOutputsSum(vecDouble &qOuts);
 };
 
 #endif  // HYDROBRICKS_STORAGE_LINEAR_H

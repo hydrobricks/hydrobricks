@@ -55,7 +55,7 @@ TEST_F(ModelHydroSingleLinearStorage, RunsCorrectly) {
 
 
 
-    EXPECT_FALSE(model->Run());
+    EXPECT_TRUE(model->Run());
 
     wxDELETE(model);
 }

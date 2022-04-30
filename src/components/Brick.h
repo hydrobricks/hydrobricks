@@ -65,7 +65,7 @@ class Brick : public wxObject {
 
     bool Compute();
 
-    double getOutputsSum(std::vector<double> &qOuts);
+    double getOutputsSum(vecDouble &qOuts);
 
     /**
      * Finalize the computing and copy the "next" values to "previous".
@@ -113,9 +113,9 @@ class Brick : public wxObject {
      *
      * @return vector of pointers to the values that need to be iterated.
      */
-    virtual std::vector<double*> GetIterableValues();
+    virtual vecDoublePt GetIterableValues();
 
-    std::vector<double*> GetIterableValuesFromProcesses();
+    vecDoublePt GetIterableValuesFromProcesses();
 
   protected:
     wxString m_name;
@@ -142,7 +142,7 @@ class Brick : public wxObject {
      * @param timeStepFraction fraction of the time step
      * @return output values.
      */
-    virtual std::vector<double> ComputeOutputs() = 0;
+    virtual vecDouble ComputeOutputs() = 0;
 
   private:
 };

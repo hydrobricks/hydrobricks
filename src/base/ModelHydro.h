@@ -2,6 +2,7 @@
 #define HYDROBRICKS_MODEL_HYDRO_H
 
 #include "Includes.h"
+#include "Logger.h"
 #include "ParameterSet.h"
 #include "Processor.h"
 #include "SubBasin.h"
@@ -9,7 +10,7 @@
 
 class ModelHydro : public wxObject {
   public:
-    ModelHydro(Processor* processor, SubBasin* subBasin, TimeMachine* timer);
+    ModelHydro(SubBasin* subBasin);
 
     ~ModelHydro() override;
 
@@ -27,10 +28,19 @@ class ModelHydro : public wxObject {
         return m_subBasin;
     }
 
+    TimeMachine* GetTimeMachine() {
+        return &m_timer;
+    }
+
+    Processor* GetProcessor() {
+        return &m_processor;
+    }
+
   protected:
-    Processor* m_processor;
+    Processor m_processor;
     SubBasin* m_subBasin;
-    TimeMachine* m_timer;
+    TimeMachine m_timer;
+    Logger m_logger;
     std::vector<TimeSeries*> m_timeSeries;
 
   private:

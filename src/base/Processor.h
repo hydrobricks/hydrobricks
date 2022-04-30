@@ -9,11 +9,13 @@ class ModelHydro;
 
 class Processor : public wxObject {
   public:
-    explicit Processor(Solver* solver);
+    explicit Processor();
 
     ~Processor();
 
     void SetModel(ModelHydro* model);
+
+    void SetSolver(Solver* solver);
 
     void Initialize();
 

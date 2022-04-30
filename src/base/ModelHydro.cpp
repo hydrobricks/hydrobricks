@@ -4,26 +4,20 @@
 #include "FluxForcing.h"
 #include "StorageLinear.h"
 
-ModelHydro::ModelHydro(Processor* processor, SubBasin* subBasin, TimeMachine* timer)
-    : m_processor(processor),
-      m_subBasin(subBasin),
-      m_timer(timer)
+ModelHydro::ModelHydro(SubBasin* subBasin)
+    : m_subBasin(subBasin)
 {
-    if (processor) {
-        processor->SetModel(this);
-    }
+    m_processor.SetModel(this);
 }
 
 ModelHydro::~ModelHydro() {
-    wxDELETE(m_processor);
-    wxDELETE(m_timer);
 }
 
 ModelHydro* ModelHydro::Factory(ParameterSet &parameterSet, SubBasin* subBasin) {
     Solver* solver = Solver::Factory(parameterSet.GetSolverSettings());
-    auto processor = new Processor(solver);
-    auto timer = new TimeMachine(parameterSet.GetTimerSettings());
-    auto model = new ModelHydro(processor, subBasin, timer);
+    auto model = new ModelHydro(subBasin);
+    model->GetTimeMachine()->Initialize(parameterSet.GetTimerSettings());
+    model->GetProcessor()->SetSolver(solver);
 
     BuildModelStructure(parameterSet, subBasin);
 
@@ -95,33 +89,25 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
 
 bool ModelHydro::IsOk() {
     if (!m_subBasin->IsOk()) return false;
-    if (m_processor == nullptr) {
-        wxLogError(_("The processor was not created."));
-        return false;
-    }
-    if (m_timer == nullptr) {
-        wxLogError(_("The timer was not created."));
-        return false;
-    }
 
     return true;
 }
 
 bool ModelHydro::Run() {
-    m_processor->Initialize();
+    m_processor.Initialize();
     if (!InitializeTimeSeries()) {
         return false;
     }
-    while (!m_timer->IsOver()) {
+    while (!m_timer.IsOver()) {
         if (!UpdateForcing()) {
             wxLogError(_("Failed updating the forcing data."));
             return false;
         }
-        if (!m_processor->ProcessTimeStep()) {
+        if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
             return false;
         }
-        m_timer->IncrementTime();
+        m_timer.IncrementTime();
     }
     return true;
 }
@@ -157,7 +143,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 
 bool ModelHydro::InitializeTimeSeries() {
     for (auto timeSeries: m_timeSeries) {
-        if (!timeSeries->SetCursorToDate(m_timer->GetDate())) {
+        if (!timeSeries->SetCursorToDate(m_timer.GetDate())) {
             return false;
         }
     }

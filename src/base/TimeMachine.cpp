@@ -1,17 +1,20 @@
 #include "TimeMachine.h"
 
-TimeMachine::TimeMachine(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit)
-    : m_date(start),
-      m_start(start),
-      m_end(end),
-      m_timeStep(timeStep),
-      m_timeStepUnit(timeStepUnit),
+TimeMachine::TimeMachine()
+    : m_timeStep(0),
+      m_timeStepUnit(Day),
       m_parametersUpdater(nullptr)
 {}
 
-TimeMachine::TimeMachine(const TimerSettings &settings)
-    : m_parametersUpdater(nullptr)
-{
+void TimeMachine::Initialize(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit){
+    m_date = start;
+    m_start = start;
+    m_end = end;
+    m_timeStep = timeStep;
+    m_timeStepUnit = timeStepUnit;
+}
+
+void TimeMachine::Initialize(const TimerSettings &settings) {
     if (settings.start.Len() == 10) {
         // Format: YYYY-MM-DD
         if (!m_start.ParseISODate(settings.start)) {

@@ -3,11 +3,10 @@
 #include "ModelHydro.h"
 #include "SubBasin.h"
 
-Processor::Processor(Solver* solver)
-    : m_solver(solver),
+Processor::Processor()
+    : m_solver(nullptr),
       m_model(nullptr)
 {
-    m_solver->Connect(this);
 }
 
 Processor::~Processor() {
@@ -16,6 +15,11 @@ Processor::~Processor() {
 
 void Processor::SetModel(ModelHydro* model) {
     m_model = model;
+}
+
+void Processor::SetSolver(Solver* solver) {
+    m_solver = solver;
+    m_solver->Connect(this);
 }
 
 void Processor::Initialize() {

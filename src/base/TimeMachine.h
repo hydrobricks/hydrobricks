@@ -7,11 +7,13 @@
 
 class TimeMachine : public wxObject {
   public:
-    TimeMachine(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit);
-
-    TimeMachine(const TimerSettings &settings);
+    TimeMachine();
 
     ~TimeMachine() override = default;
+
+    void Initialize(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit);
+
+    void Initialize(const TimerSettings &settings);
 
     void AttachParametersUpdater(ParametersUpdater* updater) {
         m_parametersUpdater = updater;

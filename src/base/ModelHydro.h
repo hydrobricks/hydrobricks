@@ -14,7 +14,7 @@ class ModelHydro : public wxObject {
 
     ~ModelHydro() override;
 
-    static ModelHydro* Factory(ParameterSet &parameterSet, SubBasin* subBasin);
+    bool Initialize(ParameterSet &parameterSet);
 
     bool IsOk();
 
@@ -44,11 +44,11 @@ class ModelHydro : public wxObject {
     std::vector<TimeSeries*> m_timeSeries;
 
   private:
-    static void BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBasin);
+    void BuildModelStructure(ParameterSet &parameterSet);
 
-    static void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
+    void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    static void BuildFluxes(const ParameterSet& parameterSet, SubBasin* subBasin, HydroUnit* unit);
+    void BuildFluxes(const ParameterSet& parameterSet, SubBasin* subBasin, HydroUnit* unit);
 
     bool InitializeTimeSeries();
 

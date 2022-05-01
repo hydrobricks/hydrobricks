@@ -13,11 +13,9 @@ class Processor : public wxObject {
 
     ~Processor();
 
+    void Initialize(const SolverSettings &solverSettings);
+
     void SetModel(ModelHydro* model);
-
-    void SetSolver(Solver* solver);
-
-    void Initialize();
 
     void ConnectToIterableBricks();
 

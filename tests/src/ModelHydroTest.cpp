@@ -33,11 +33,10 @@ TEST_F(ModelHydroSingleLinearStorage, BuildsCorrectly) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    ModelHydro* model = ModelHydro::Factory(m_parameterSet, &subBasin);
+    ModelHydro model(&subBasin);
+    model.Initialize(m_parameterSet);
 
-    EXPECT_TRUE(model->IsOk());
-
-    wxDELETE(model);
+    EXPECT_TRUE(model.IsOk());
 }
 
 TEST_F(ModelHydroSingleLinearStorage, RunsCorrectly) {
@@ -45,17 +44,11 @@ TEST_F(ModelHydroSingleLinearStorage, RunsCorrectly) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    ModelHydro* model = ModelHydro::Factory(m_parameterSet, &subBasin);
+    ModelHydro model(&subBasin);
+    model.Initialize(m_parameterSet);
 
-    ASSERT_TRUE(model->AddTimeSeries(m_tsPrecipSingleRainyDay));
-    ASSERT_TRUE(model->AttachTimeSeriesToHydroUnits());
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecipSingleRainyDay));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-
-
-
-
-
-    EXPECT_TRUE(model->Run());
-
-    wxDELETE(model);
+    EXPECT_TRUE(model.Run());
 }

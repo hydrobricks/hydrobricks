@@ -13,19 +13,16 @@ Processor::~Processor() {
     wxDELETE(m_solver);
 }
 
-void Processor::SetModel(ModelHydro* model) {
-    m_model = model;
-}
-
-void Processor::SetSolver(Solver* solver) {
-    m_solver = solver;
+void Processor::Initialize(const SolverSettings &solverSettings) {
+    m_solver = Solver::Factory(solverSettings);
     m_solver->Connect(this);
-}
-
-void Processor::Initialize() {
     ConnectToIterableBricks();
     ConnectToIterableValues();
     m_solver->InitializeContainers();
+}
+
+void Processor::SetModel(ModelHydro* model) {
+    m_model = model;
 }
 
 void Processor::ConnectToIterableBricks() {

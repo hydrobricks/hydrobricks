@@ -13,18 +13,17 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() {
 }
 
-ModelHydro* ModelHydro::Factory(ParameterSet &parameterSet, SubBasin* subBasin) {
-    Solver* solver = Solver::Factory(parameterSet.GetSolverSettings());
-    auto model = new ModelHydro(subBasin);
-    model->GetTimeMachine()->Initialize(parameterSet.GetTimerSettings());
-    model->GetProcessor()->SetSolver(solver);
+bool ModelHydro::Initialize(ParameterSet &parameterSet) {
 
-    BuildModelStructure(parameterSet, subBasin);
+    BuildModelStructure(parameterSet);
 
-    return model;
+    m_timer.Initialize(parameterSet.GetTimerSettings());
+    m_processor.Initialize(parameterSet.GetSolverSettings());
+
+    return true;
 }
 
-void ModelHydro::BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBasin) {
+void ModelHydro::BuildModelStructure(ParameterSet &parameterSet) {
 
     if (parameterSet.GetStructuresNb() > 1) {
         throw NotImplemented();
@@ -32,8 +31,8 @@ void ModelHydro::BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBa
 
     parameterSet.SelectStructure(1);
 
-    for (int iUnit = 0; iUnit < subBasin->GetHydroUnitsNb(); ++iUnit) {
-        HydroUnit* unit = subBasin->GetHydroUnit(iUnit);
+    for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+        HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
 
         for (int iBrick = 0; iBrick < parameterSet.GetBricksNb(); ++iBrick) {
             BrickSettings brickSettings = parameterSet.GetBrickSettings(iBrick);
@@ -44,7 +43,7 @@ void ModelHydro::BuildModelStructure(ParameterSet &parameterSet, SubBasin* subBa
             BuildForcingConnections(brickSettings, unit, brick);
         }
 
-        BuildFluxes(parameterSet, subBasin, unit);
+        BuildFluxes(parameterSet, m_subBasin, unit);
     }
 }
 
@@ -94,7 +93,6 @@ bool ModelHydro::IsOk() {
 }
 
 bool ModelHydro::Run() {
-    m_processor.Initialize();
     if (!InitializeTimeSeries()) {
         return false;
     }

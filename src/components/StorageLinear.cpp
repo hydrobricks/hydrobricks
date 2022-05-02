@@ -27,3 +27,11 @@ vecDouble StorageLinear::ComputeOutputs() {
 
     return {qOut};
 }
+
+double* StorageLinear::GetValuePointer(const wxString& name) {
+    if (name.IsSameAs("output")) {
+        return m_outputs[0]->GetAmountPointer();
+    }
+
+    return nullptr;
+}

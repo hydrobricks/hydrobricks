@@ -1,4 +1,4 @@
-# HydroBricks
+# hydrobricks
 Modular Hydrological Modelling Framework
 
 ![Linux](https://github.com/hydrobricks/hydrobricks/workflows/CMake/badge.svg)

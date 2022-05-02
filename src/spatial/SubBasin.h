@@ -31,9 +31,14 @@ class SubBasin : public wxObject {
 
     void AttachOutletFlux(Flux* pFlux);
 
+    double* GetValuePointer(const wxString& name);
+
+    bool ComputeAggregatedValues();
+
   protected:
     float m_area; // m2
     float m_elevation; // m.a.s.l.
+    double m_outletTotal;
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;

@@ -74,8 +74,7 @@ void SettingsModel::AddOutputToCurrentBrick(const wxString &target, const wxStri
 }
 
 void SettingsModel::AddLoggingToCurrentBrick(const wxString& itemName) {
-    m_selectedBrick->log = true;
-    m_selectedBrick->logName = itemName;
+    m_selectedBrick->logItems.push_back(itemName);
 }
 
 void SettingsModel::AddLoggingToItem(const wxString& itemName) {
@@ -98,10 +97,24 @@ bool SettingsModel::SelectStructure(int id) {
     return false;
 }
 
-const vecStr &SettingsModel::GetHydroUnitLogLabels() {
-    return m_selectedStructure;
+vecStr SettingsModel::GetHydroUnitLogLabels() {
+    wxASSERT(m_selectedStructure);
+    wxASSERT(m_modelStructures.size() == 1);
+
+    vecStr logNames;
+
+    for (auto &modelStructure : m_modelStructures) {
+        for (auto &brick : modelStructure.bricks) {
+            logNames.insert(logNames.end(), brick.logItems.begin(), brick.logItems.end());
+        }
+    }
+
+    return logNames;
 }
 
-const vecStr &SettingsModel::GetAggregatedLogLabels() {
+vecStr SettingsModel::GetAggregatedLogLabels() {
+    wxASSERT(m_selectedStructure);
+    wxASSERT(m_modelStructures.size() == 1);
+
     return m_selectedStructure->logItems;
 }

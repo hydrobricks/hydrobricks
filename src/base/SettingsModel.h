@@ -23,8 +23,7 @@ struct BrickOutputSettings {
 struct BrickSettings {
     wxString name;
     wxString type;
-    bool log = false;
-    wxString logName;
+    vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
     std::vector<BrickOutputSettings> outputs;
@@ -82,9 +81,9 @@ class SettingsModel : public wxObject {
         return m_selectedStructure->bricks[index];
     }
 
-    const vecStr &GetAggregatedLogLabels();
+    vecStr GetAggregatedLogLabels();
 
-    const vecStr &GetHydroUnitLogLabels();
+    vecStr GetHydroUnitLogLabels();
 
   protected:
     std::vector<ModelStructure> m_modelStructures;

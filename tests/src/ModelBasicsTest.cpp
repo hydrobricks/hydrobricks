@@ -7,7 +7,7 @@
 class ModelHydroSingleLinearStorage : public ::testing::Test {
   protected:
     SettingsModel m_modelSettings;
-    TimeSeriesUniform* m_tsPrecipSingleRainyDay;
+    TimeSeriesUniform* m_tsPrecipSingleRainyDay{};
 
     virtual void SetUp() {
         m_modelSettings.SetSolver("ExplicitEuler");
@@ -15,7 +15,8 @@ class ModelHydroSingleLinearStorage : public ::testing::Test {
         m_modelSettings.AddBrick("linear-storage", "StorageLinear");
         m_modelSettings.AddParameterToCurrentBrick("responseFactor", 0.1f);
         m_modelSettings.AddForcingToCurrentBrick("Precipitation");
-        m_modelSettings.AddLoggingToCurrentBrick("linear-storage-content");
+        m_modelSettings.AddLoggingToCurrentBrick("content");
+        m_modelSettings.AddLoggingToCurrentBrick("output");
         m_modelSettings.AddOutputToCurrentBrick("outlet");
         m_modelSettings.AddLoggingToItem("outlet");
 

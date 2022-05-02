@@ -25,6 +25,8 @@ class StorageLinear : public Storage {
      */
     bool IsOk() override;
 
+    double* GetValuePointer(const wxString& name) override;
+
     /**
      * Set the response factor value
      *
@@ -52,7 +54,7 @@ class StorageLinear : public Storage {
     vecDouble ComputeOutputs() override;
 
   private:
-    double getOutputsSum(vecDouble &qOuts);
+    double GetOutputsSum(vecDouble &qOuts);
 };
 
 #endif  // HYDROBRICKS_STORAGE_LINEAR_H

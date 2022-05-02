@@ -48,7 +48,9 @@ class ModelHydro : public wxObject {
 
     void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    void BuildFluxes(const SettingsModel& modelSettings, SubBasin* subBasin, HydroUnit* unit);
+    void BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit);
+
+    void ConnectLoggerToValues(SettingsModel& modelSettings);
 
     bool InitializeTimeSeries();
 

@@ -65,7 +65,7 @@ class Brick : public wxObject {
 
     bool Compute();
 
-    double getOutputsSum(vecDouble &qOuts);
+    double GetOutputsSum(vecDouble &qOuts);
 
     /**
      * Finalize the computing and copy the "next" values to "previous".
@@ -116,6 +116,10 @@ class Brick : public wxObject {
     virtual vecDoublePt GetIterableValues();
 
     vecDoublePt GetIterableValuesFromProcesses();
+
+    double* GetBaseValuePointer(const wxString& name);
+
+    virtual double* GetValuePointer(const wxString& name);
 
   protected:
     wxString m_name;

@@ -81,7 +81,7 @@ bool Brick::Compute() {
 
     // Compute outputs and sum
     vecDouble qOuts = ComputeOutputs();
-    double qOutTotal = getOutputsSum(qOuts);
+    double qOutTotal = GetOutputsSum(qOuts);
 
     // Compute change rate
     m_contentChangeRate = qIn - qOutTotal;
@@ -92,7 +92,7 @@ bool Brick::Compute() {
         for (double &qOut : qOuts) {
             qOut -= diff * (qOut / qOutTotal);
         }
-        qOutTotal = getOutputsSum(qOuts);
+        qOutTotal = GetOutputsSum(qOuts);
         m_contentChangeRate = qIn - qOutTotal;
     }
 
@@ -120,7 +120,7 @@ double Brick::SumIncomingFluxes() {
     return sum;
 }
 
-double Brick::getOutputsSum(vecDouble &qOuts) {
+double Brick::GetOutputsSum(vecDouble &qOuts) {
     double qOutTotal = 0;
     for (auto &qOut : qOuts) {
         qOutTotal += qOut;
@@ -151,4 +151,16 @@ vecDoublePt Brick::GetIterableValuesFromProcesses() {
     }
 
     return values;
+}
+
+double* Brick::GetBaseValuePointer(const wxString& name) {
+    if (name.IsSameAs("content")) {
+        return &m_content;
+    }
+
+    return nullptr;
+}
+
+double* Brick::GetValuePointer(const wxString& name) {
+    return nullptr;
 }

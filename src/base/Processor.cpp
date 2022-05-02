@@ -106,5 +106,9 @@ bool Processor::ProcessTimeStep() {
         return false;
     }
 
+    if (!basin->ComputeAggregatedValues()) {
+        return false;
+    }
+
     return true;
 }

@@ -11,6 +11,24 @@ class Logger : public wxObject {
 
     void InitContainer(int timeSize, int hydroUnitsNb, const vecStr &aggregatedLabels, const vecStr &hydroUnitLabels);
 
+    void SetAggregatedValuePointer(int iLabel, double* valPt);
+
+    void SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt);
+
+    void SetDateTime(double date);
+
+    void Record();
+
+    void Increment();
+
+    const vecAxd& GetAggregatedValues() {
+        return m_aggregatedValues;
+    }
+
+    const vecAxxd& GetHydroUnitValues() {
+        return m_hydroUnitValues;
+    }
+
   protected:
     int m_cursor;
     axd m_time;

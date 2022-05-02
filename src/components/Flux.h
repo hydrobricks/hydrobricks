@@ -41,6 +41,10 @@ class Flux : public wxObject {
         m_amount = amount;
     }
 
+    double* GetAmountPointer() {
+        return &m_amount;
+    }
+
   protected:
     bool m_isConstant;
     double m_amount;

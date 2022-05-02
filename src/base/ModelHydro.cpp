@@ -22,7 +22,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
                            m_subBasin->GetHydroUnitsNb(),
                            modelSettings.GetAggregatedLogLabels(),
                            modelSettings.GetHydroUnitLogLabels());
-    //m_logger.ConnectToValues();
+    ConnectLoggerToValues(modelSettings);
 
     return true;
 }
@@ -46,11 +46,11 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
             BuildForcingConnections(brickSettings, unit, brick);
         }
 
-        BuildFluxes(modelSettings, m_subBasin, unit);
+        BuildFluxes(modelSettings, unit);
     }
 }
 
-void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, SubBasin* subBasin, HydroUnit* unit) {
+void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
         BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
@@ -66,7 +66,7 @@ void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, SubBasin* subBa
             brickOut->AttachFluxOut(flux);
 
             if (output.target.IsSameAs("outlet", false)) {
-                subBasin->AttachOutletFlux(flux);
+                m_subBasin->AttachOutletFlux(flux);
             } else {
                 Brick* brickIn = unit->GetBrick(output.target);
                 brickIn->AttachFluxIn(flux);
@@ -89,6 +89,46 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
     }
 }
 
+void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
+    if (modelSettings.GetStructuresNb() > 1) {
+        throw NotImplemented();
+    }
+
+    double* valPt = nullptr;
+
+    // Aggregated values
+    vecStr commonLogLabels = modelSettings.GetAggregatedLogLabels();
+    for (int iLabel = 0; iLabel < commonLogLabels.size(); ++iLabel) {
+        valPt = m_subBasin->GetValuePointer(commonLogLabels[iLabel]);
+        if (valPt == nullptr) {
+            throw ShouldNotHappen();
+        }
+        m_logger.SetAggregatedValuePointer(iLabel, valPt);
+    }
+
+    // Hydro units values
+    int iLabel = 0;
+    for (int iBrickType = 0; iBrickType < modelSettings.GetBricksNb(); ++iBrickType) {
+        BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrickType);
+
+        for (const auto& logItem :brickSettings.logItems) {
+            for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+                HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+                valPt = unit->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
+                if (valPt == nullptr) {
+                    valPt = unit->GetBrick(iBrickType)->GetValuePointer(logItem);
+                }
+                if (valPt == nullptr) {
+                    throw ShouldNotHappen();
+                }
+                m_logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+
+                iLabel++;
+            }
+        }
+    }
+}
+
 bool ModelHydro::IsOk() {
     if (!m_subBasin->IsOk()) return false;
 
@@ -108,7 +148,10 @@ bool ModelHydro::Run() {
             wxLogError(_("Failed running the model."));
             return false;
         }
+        m_logger.SetDateTime(m_timer.GetDate().GetMJD());
+        m_logger.Record();
         m_timer.IncrementTime();
+        m_logger.Increment();
     }
     return true;
 }

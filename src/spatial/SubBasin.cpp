@@ -71,7 +71,7 @@ double* SubBasin::GetValuePointer(const wxString& name) {
 bool SubBasin::ComputeAggregatedValues() {
     m_outletTotal = 0;
     for (auto flux: m_outletFluxes) {
-        m_outletTotal += flux->GetOutgoingAmount();
+        m_outletTotal += flux->GetAmount();
     }
 
     return true;

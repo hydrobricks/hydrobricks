@@ -36,6 +36,10 @@ class ModelHydro : public wxObject {
         return &m_processor;
     }
 
+    Logger* GetLogger() {
+        return &m_logger;
+    }
+
   protected:
     Processor m_processor;
     SubBasin* m_subBasin;

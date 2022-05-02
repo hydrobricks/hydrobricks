@@ -15,9 +15,9 @@ class FluxForcing : public Flux {
     bool IsOk() override;
 
     /**
-     * @copydoc Flux::GetOutgoingAmount()
+     * @copydoc Flux::GetAmount()
      */
-    double GetOutgoingAmount() override;
+    double GetAmount() override;
 
     void AttachForcing(Forcing* forcing);
 

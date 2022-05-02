@@ -161,6 +161,6 @@ double* Brick::GetBaseValuePointer(const wxString& name) {
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const wxString& name) {
+double* Brick::GetValuePointer(const wxString&) {
     return nullptr;
 }

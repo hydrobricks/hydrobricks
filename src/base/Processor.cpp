@@ -95,6 +95,9 @@ bool Processor::ProcessTimeStep() {
 
         for (int iBrick = 0; iBrick < nBricks; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
+            if (brick->NeedsSolver()) {
+                continue;
+            }
             if (!brick->Compute()) {
                 return false;
             }

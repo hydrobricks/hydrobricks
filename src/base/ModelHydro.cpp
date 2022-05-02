@@ -140,10 +140,6 @@ bool ModelHydro::Run() {
         return false;
     }
     while (!m_timer.IsOver()) {
-        if (!UpdateForcing()) {
-            wxLogError(_("Failed updating the forcing data."));
-            return false;
-        }
         if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
             return false;
@@ -152,6 +148,10 @@ bool ModelHydro::Run() {
         m_logger.Record();
         m_timer.IncrementTime();
         m_logger.Increment();
+        if (!UpdateForcing()) {
+            wxLogError(_("Failed updating the forcing data."));
+            return false;
+        }
     }
     return true;
 }

@@ -13,29 +13,31 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() {
 }
 
-bool ModelHydro::Initialize(ParameterSet &parameterSet) {
+bool ModelHydro::Initialize(SettingsModel& modelSettings) {
+    BuildModelStructure(modelSettings);
 
-    BuildModelStructure(parameterSet);
-
-    m_timer.Initialize(parameterSet.GetTimerSettings());
-    m_processor.Initialize(parameterSet.GetSolverSettings());
-
+    m_timer.Initialize(modelSettings.GetTimerSettings());
+    m_processor.Initialize(modelSettings.GetSolverSettings());
+    /*
+    m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitsNb(),
+                           modelSettings.GetAggregatedLabels(), modelSettings.GetHydroUnitLabels());
+    m_logger.ConnectToValues();
+*/
     return true;
 }
 
-void ModelHydro::BuildModelStructure(ParameterSet &parameterSet) {
-
-    if (parameterSet.GetStructuresNb() > 1) {
+void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
+    if (modelSettings.GetStructuresNb() > 1) {
         throw NotImplemented();
     }
 
-    parameterSet.SelectStructure(1);
+    modelSettings.SelectStructure(1);
 
     for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
 
-        for (int iBrick = 0; iBrick < parameterSet.GetBricksNb(); ++iBrick) {
-            BrickSettings brickSettings = parameterSet.GetBrickSettings(iBrick);
+        for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+            BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
             Brick* brick = Brick::Factory(brickSettings, unit);
             brick->SetName(brickSettings.name);
@@ -43,13 +45,13 @@ void ModelHydro::BuildModelStructure(ParameterSet &parameterSet) {
             BuildForcingConnections(brickSettings, unit, brick);
         }
 
-        BuildFluxes(parameterSet, m_subBasin, unit);
+        BuildFluxes(modelSettings, m_subBasin, unit);
     }
 }
 
-void ModelHydro::BuildFluxes(const ParameterSet& parameterSet, SubBasin* subBasin, HydroUnit* unit) {
-    for (int iBrick = 0; iBrick < parameterSet.GetBricksNb(); ++iBrick) {
-        BrickSettings brickSettings = parameterSet.GetBrickSettings(iBrick);
+void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, SubBasin* subBasin, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+        BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
         for (const auto& output: brickSettings.outputs)  {
             Flux* flux;
@@ -119,6 +121,8 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     }
 
     m_timeSeries.push_back(timeSeries);
+
+    return true;
 }
 
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {

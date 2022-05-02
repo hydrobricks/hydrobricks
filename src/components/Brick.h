@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_BRICK_H
 #define HYDROBRICKS_BRICK_H
 
-#include "Includes.h"
 #include "Flux.h"
-#include "ParameterSet.h"
+#include "Includes.h"
 #include "Process.h"
+#include "SettingsModel.h"
 
 class HydroUnit;
 

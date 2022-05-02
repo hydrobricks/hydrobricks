@@ -1,5 +1,5 @@
-#ifndef HYDROBRICKS_PARAMETER_SET_H
-#define HYDROBRICKS_PARAMETER_SET_H
+#ifndef HYDROBRICKS_SETTINGS_MODEL_H
+#define HYDROBRICKS_SETTINGS_MODEL_H
 
 #include "Includes.h"
 #include "Parameter.h"
@@ -33,11 +33,11 @@ struct ModelStructure {
     std::vector<BrickSettings> bricks;
 };
 
-class ParameterSet : public wxObject {
+class SettingsModel : public wxObject {
   public:
-    explicit ParameterSet();
+    explicit SettingsModel();
 
-    ~ParameterSet() override;
+    ~SettingsModel() override;
 
     void SetSolver(const wxString &solverName);
 
@@ -85,4 +85,4 @@ class ParameterSet : public wxObject {
   private:
 };
 
-#endif  // HYDROBRICKS_PARAMETER_SET_H
+#endif  // HYDROBRICKS_SETTINGS_MODEL_H

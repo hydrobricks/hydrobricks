@@ -2,7 +2,7 @@
 #define HYDROBRICKS_SOLVER_H
 
 #include "Includes.h"
-#include "ParameterSet.h"
+#include "SettingsModel.h"
 
 class Processor;
 

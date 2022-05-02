@@ -1,8 +1,7 @@
-#include "ParameterSet.h"
-
 #include "Parameter.h"
+#include "SettingsModel.h"
 
-ParameterSet::ParameterSet()
+SettingsModel::SettingsModel()
     : m_selectedStructure(nullptr),
       m_selectedBrick(nullptr)
 {
@@ -12,7 +11,7 @@ ParameterSet::ParameterSet()
     m_selectedStructure = &m_modelStructures[0];
 }
 
-ParameterSet::~ParameterSet() {
+SettingsModel::~SettingsModel() {
     for (auto &modelStructure : m_modelStructures) {
         for (auto &brick : modelStructure.bricks) {
             for (int k = 0; k < brick.parameters.size(); ++k) {
@@ -22,18 +21,18 @@ ParameterSet::~ParameterSet() {
     }
 }
 
-void ParameterSet::SetSolver(const wxString &solverName) {
+void SettingsModel::SetSolver(const wxString &solverName) {
     m_solver.name = solverName;
 }
 
-void ParameterSet::SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit) {
+void SettingsModel::SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit) {
     m_timer.start = start;
     m_timer.end = end;
     m_timer.timeStep = timeStep;
     m_timer.timeStepUnit = timeStepUnit;
 }
 
-void ParameterSet::AddBrick(const wxString &name, const wxString &type) {
+void SettingsModel::AddBrick(const wxString &name, const wxString &type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -44,7 +43,7 @@ void ParameterSet::AddBrick(const wxString &name, const wxString &type) {
     m_selectedBrick = &m_selectedStructure->bricks[m_selectedStructure->bricks.size()-1];
 }
 
-void ParameterSet::AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type) {
     wxASSERT(m_selectedBrick);
 
     if (!type.IsSameAs("Constant")) {
@@ -56,7 +55,7 @@ void ParameterSet::AddParameterToCurrentBrick(const wxString &name, float value,
     m_selectedBrick->parameters.push_back(parameter);
 }
 
-void ParameterSet::AddForcingToCurrentBrick(const wxString &name) {
+void SettingsModel::AddForcingToCurrentBrick(const wxString &name) {
     wxASSERT(m_selectedBrick);
 
     if (name.IsSameAs("Precipitation", false)) {
@@ -66,7 +65,7 @@ void ParameterSet::AddForcingToCurrentBrick(const wxString &name) {
     }
 }
 
-void ParameterSet::AddOutputToCurrentBrick(const wxString &target, const wxString &type) {
+void SettingsModel::AddOutputToCurrentBrick(const wxString &target, const wxString &type) {
     wxASSERT(m_selectedBrick);
     BrickOutputSettings outputSettings;
     outputSettings.target = target;
@@ -74,7 +73,7 @@ void ParameterSet::AddOutputToCurrentBrick(const wxString &target, const wxStrin
     m_selectedBrick->outputs.push_back(outputSettings);
 }
 
-bool ParameterSet::SelectStructure(int id) {
+bool SettingsModel::SelectStructure(int id) {
     for (auto &modelStructure : m_modelStructures) {
         if (modelStructure.id == id) {
             m_selectedStructure = &modelStructure;

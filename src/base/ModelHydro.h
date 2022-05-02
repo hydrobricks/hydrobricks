@@ -3,8 +3,8 @@
 
 #include "Includes.h"
 #include "Logger.h"
-#include "ParameterSet.h"
 #include "Processor.h"
+#include "SettingsModel.h"
 #include "SubBasin.h"
 #include "TimeSeries.h"
 
@@ -14,7 +14,7 @@ class ModelHydro : public wxObject {
 
     ~ModelHydro() override;
 
-    bool Initialize(ParameterSet &parameterSet);
+    bool Initialize(SettingsModel& modelSettings);
 
     bool IsOk();
 
@@ -44,11 +44,11 @@ class ModelHydro : public wxObject {
     std::vector<TimeSeries*> m_timeSeries;
 
   private:
-    void BuildModelStructure(ParameterSet &parameterSet);
+    void BuildModelStructure(SettingsModel& modelSettings);
 
     void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    void BuildFluxes(const ParameterSet& parameterSet, SubBasin* subBasin, HydroUnit* unit);
+    void BuildFluxes(const SettingsModel& modelSettings, SubBasin* subBasin, HydroUnit* unit);
 
     bool InitializeTimeSeries();
 

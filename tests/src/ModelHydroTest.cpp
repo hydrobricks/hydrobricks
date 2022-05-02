@@ -1,21 +1,22 @@
 #include <gtest/gtest.h>
 
 #include "ModelHydro.h"
-#include "ParameterSet.h"
+#include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 
 class ModelHydroSingleLinearStorage : public ::testing::Test {
   protected:
-    ParameterSet m_parameterSet;
+    SettingsModel m_modelSettings;
     TimeSeriesUniform* m_tsPrecipSingleRainyDay;
 
     virtual void SetUp() {
-        m_parameterSet.SetSolver("ExplicitEuler");
-        m_parameterSet.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
-        m_parameterSet.AddBrick("linear-storage", "StorageLinear");
-        m_parameterSet.AddParameterToCurrentBrick("responseFactor", 0.1f);
-        m_parameterSet.AddForcingToCurrentBrick("Precipitation");
-        m_parameterSet.AddOutputToCurrentBrick("outlet");
+        m_modelSettings.SetSolver("ExplicitEuler");
+        m_modelSettings.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_modelSettings.AddBrick("linear-storage", "StorageLinear");
+        m_modelSettings.AddParameterToCurrentBrick("responseFactor", 0.1f);
+        m_modelSettings.AddForcingToCurrentBrick("Precipitation");
+//        m_modelSettings.AddLoggingToCurrentBrick();
+        m_modelSettings.AddOutputToCurrentBrick("outlet");
 
         auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
                                               wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
@@ -34,7 +35,7 @@ TEST_F(ModelHydroSingleLinearStorage, BuildsCorrectly) {
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_parameterSet);
+    model.Initialize(m_modelSettings);
 
     EXPECT_TRUE(model.IsOk());
 }
@@ -45,7 +46,7 @@ TEST_F(ModelHydroSingleLinearStorage, RunsCorrectly) {
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_parameterSet);
+    model.Initialize(m_modelSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecipSingleRainyDay));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());

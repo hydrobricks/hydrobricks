@@ -35,6 +35,8 @@ TEST(SubBasin, GetHydroUnitsCount3) {
 }
 
 TEST(SubBasin, EmptySubBasinIsNotOk) {
+    wxLogNull logNo;
+    
     SubBasin subBasin;
 
     EXPECT_FALSE(subBasin.IsOk());

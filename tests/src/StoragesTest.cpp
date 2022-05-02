@@ -16,6 +16,8 @@ TEST(StorageLinear, BuildsCorrectly) {
 }
 
 TEST(StorageLinear, MissingHydroUnit) {
+    wxLogNull logNo;
+
     StorageLinear storage(nullptr);
     FluxDirect inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
@@ -25,6 +27,8 @@ TEST(StorageLinear, MissingHydroUnit) {
 }
 
 TEST(StorageLinear, MissingInFlux) {
+    wxLogNull logNo;
+
     HydroUnit unit;
     StorageLinear storage(&unit);
     Parameter responseFactor("responseFactor", 0.2f);
@@ -36,6 +40,8 @@ TEST(StorageLinear, MissingInFlux) {
 }
 
 TEST(StorageLinear, MissingOutFlux) {
+    wxLogNull logNo;
+
     HydroUnit unit;
     StorageLinear storage(&unit);
     Parameter responseFactor("responseFactor", 0.2f);

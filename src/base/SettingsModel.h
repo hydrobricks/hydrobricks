@@ -11,7 +11,7 @@ struct SolverSettings {
 struct TimerSettings {
     wxString start;
     wxString end;
-    int timeStep;
+    int timeStep = 1;
     wxString timeStepUnit;
 };
 
@@ -23,6 +23,8 @@ struct BrickOutputSettings {
 struct BrickSettings {
     wxString name;
     wxString type;
+    bool log = false;
+    wxString logName;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
     std::vector<BrickOutputSettings> outputs;
@@ -30,6 +32,7 @@ struct BrickSettings {
 
 struct ModelStructure {
     int id;
+    vecStr logItems;
     std::vector<BrickSettings> bricks;
 };
 
@@ -50,6 +53,10 @@ class SettingsModel : public wxObject {
     void AddForcingToCurrentBrick(const wxString &name);
 
     void AddOutputToCurrentBrick(const wxString &target, const wxString &type = "Direct");
+
+    void AddLoggingToCurrentBrick(const wxString& itemName);
+
+    void AddLoggingToItem(const wxString& itemName);
 
     bool SelectStructure(int id);
 
@@ -75,14 +82,16 @@ class SettingsModel : public wxObject {
         return m_selectedStructure->bricks[index];
     }
 
+    const vecStr &GetAggregatedLogLabels();
+
+    const vecStr &GetHydroUnitLogLabels();
+
   protected:
     std::vector<ModelStructure> m_modelStructures;
     SolverSettings m_solver;
     TimerSettings m_timer;
     ModelStructure* m_selectedStructure;
     BrickSettings* m_selectedBrick;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_SETTINGS_MODEL_H

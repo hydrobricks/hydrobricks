@@ -3,7 +3,7 @@
 
 #include "Includes.h"
 #include "ParametersUpdater.h"
-#include "ParameterSet.h"
+#include "SettingsModel.h"
 
 class TimeMachine : public wxObject {
   public:
@@ -26,6 +26,8 @@ class TimeMachine : public wxObject {
     bool IsOver();
 
     void IncrementTime();
+
+    int GetTimeStepsNb();
 
   protected:
 

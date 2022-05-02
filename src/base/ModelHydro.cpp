@@ -18,11 +18,12 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
 
     m_timer.Initialize(modelSettings.GetTimerSettings());
     m_processor.Initialize(modelSettings.GetSolverSettings());
-    /*
-    m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitsNb(),
-                           modelSettings.GetAggregatedLabels(), modelSettings.GetHydroUnitLabels());
-    m_logger.ConnectToValues();
-*/
+    m_logger.InitContainer(m_timer.GetTimeStepsNb(),
+                           m_subBasin->GetHydroUnitsNb(),
+                           modelSettings.GetAggregatedLogLabels(),
+                           modelSettings.GetHydroUnitLogLabels());
+    //m_logger.ConnectToValues();
+
     return true;
 }
 

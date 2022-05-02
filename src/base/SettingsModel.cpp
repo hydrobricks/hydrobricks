@@ -14,8 +14,8 @@ SettingsModel::SettingsModel()
 SettingsModel::~SettingsModel() {
     for (auto &modelStructure : m_modelStructures) {
         for (auto &brick : modelStructure.bricks) {
-            for (int k = 0; k < brick.parameters.size(); ++k) {
-                wxDELETE(brick.parameters[k]);
+            for (auto &parameter : brick.parameters) {
+                wxDELETE(parameter);
             }
         }
     }
@@ -73,6 +73,15 @@ void SettingsModel::AddOutputToCurrentBrick(const wxString &target, const wxStri
     m_selectedBrick->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::AddLoggingToCurrentBrick(const wxString& itemName) {
+    m_selectedBrick->log = true;
+    m_selectedBrick->logName = itemName;
+}
+
+void SettingsModel::AddLoggingToItem(const wxString& itemName) {
+    m_selectedStructure->logItems.push_back(itemName);
+}
+
 bool SettingsModel::SelectStructure(int id) {
     for (auto &modelStructure : m_modelStructures) {
         if (modelStructure.id == id) {
@@ -87,4 +96,12 @@ bool SettingsModel::SelectStructure(int id) {
     }
 
     return false;
+}
+
+const vecStr &SettingsModel::GetHydroUnitLogLabels() {
+    return m_selectedStructure;
+}
+
+const vecStr &SettingsModel::GetAggregatedLogLabels() {
+    return m_selectedStructure->logItems;
 }

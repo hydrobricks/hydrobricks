@@ -96,3 +96,22 @@ void TimeMachine::IncrementTime() {
         m_parametersUpdater->DateUpdate(m_date);
     }
 }
+
+int TimeMachine::GetTimeStepsNb() {
+    wxTimeSpan span = m_end.Subtract(m_start);
+    switch (m_timeStepUnit) {
+        case Variable:
+        case Month:
+            throw NotImplemented();
+        case Week:
+            return 1 + span.GetWeeks() / m_timeStep;
+        case Day:
+            return 1 + span.GetDays() / m_timeStep;
+        case Hour:
+            return 1 + span.GetHours() / m_timeStep;
+        case Minute:
+            return 1 + span.GetMinutes() / m_timeStep;
+        default:
+            throw ShouldNotHappen();
+    }
+}

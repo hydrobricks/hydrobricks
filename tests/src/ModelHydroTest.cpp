@@ -15,8 +15,9 @@ class ModelHydroSingleLinearStorage : public ::testing::Test {
         m_modelSettings.AddBrick("linear-storage", "StorageLinear");
         m_modelSettings.AddParameterToCurrentBrick("responseFactor", 0.1f);
         m_modelSettings.AddForcingToCurrentBrick("Precipitation");
-//        m_modelSettings.AddLoggingToCurrentBrick();
+        m_modelSettings.AddLoggingToCurrentBrick("linear-storage-content");
         m_modelSettings.AddOutputToCurrentBrick("outlet");
+        m_modelSettings.AddLoggingToItem("outlet");
 
         auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
                                               wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);

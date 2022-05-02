@@ -16,9 +16,11 @@ class Logger : public wxObject {
     axd m_time;
     vecStr m_aggregatedLabels;
     vecAxd m_aggregatedValues;
+    vecDoublePt m_aggregatedValuesPt;
     vecInt m_hydroUnitIds;
     vecStr m_hydroUnitLabels;
     vecAxxd m_hydroUnitValues;
+    std::vector<vecDoublePt> m_hydroUnitValuesPt;
 
   private:
 };

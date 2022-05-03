@@ -73,9 +73,6 @@ void TimeMachine::IncrementTime() {
             wxLogError(_("Variable time step is not yet implemented."));
             wxFAIL;
             break;
-        case Month:
-            m_date.Add(wxDateSpan(0, m_timeStep));
-            break;
         case Week:
             m_date.Add(wxDateSpan(0, 0, m_timeStep));
             break;
@@ -101,7 +98,6 @@ int TimeMachine::GetTimeStepsNb() {
     wxTimeSpan span = m_end.Subtract(m_start);
     switch (m_timeStepUnit) {
         case Variable:
-        case Month:
             throw NotImplemented();
         case Week:
             return 1 + span.GetWeeks() / m_timeStep;

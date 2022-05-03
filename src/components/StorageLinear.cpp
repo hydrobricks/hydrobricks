@@ -23,7 +23,7 @@ bool StorageLinear::IsOk() {
 }
 
 vecDouble StorageLinear::ComputeOutputs() {
-    double qOut = (*m_responseFactor) * m_content;
+    double qOut = (*m_responseFactor) * m_content * (*m_timeStepInDays);
 
     return {qOut};
 }

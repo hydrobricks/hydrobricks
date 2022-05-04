@@ -22,5 +22,6 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
 }
 
 void Solver::InitializeContainers() {
-    m_container.resize(m_processor->GetNbIterableValues(), m_nIterations);
+    m_stateVariables.resize(m_processor->GetNbIterableValues(), m_nIterations);
+    m_changeRates.resize(m_processor->GetNbIterableValues(), m_nIterations);
 }

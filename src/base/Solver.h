@@ -23,7 +23,8 @@ class Solver : public wxObject {
 
   protected:
     Processor* m_processor;
-    axxd m_container;
+    axxd m_stateVariables;
+    axxd m_changeRates;
     int m_nIterations;
 
   private:

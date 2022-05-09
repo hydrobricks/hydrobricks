@@ -38,16 +38,6 @@ class Brick : public wxObject {
     }
 
     /**
-     * Attach outgoing flux.
-     *
-     * @param flux outgoing flux
-     */
-    void AttachFluxOut(Flux* flux) {
-        wxASSERT(flux);
-        m_outputs.push_back(flux);
-    }
-
-    /**
      * Check that everything is correctly defined.
      *
      * @return true is everything is correctly defined.
@@ -88,6 +78,8 @@ class Brick : public wxObject {
      */
     void SetStateVariablesFor(float timeStepFraction);
 
+    Process* GetProcess(int index);
+
     wxString GetName() {
         return m_name;
     }
@@ -98,6 +90,10 @@ class Brick : public wxObject {
 
     void SetCapacity(float* capacity) {
         m_capacity = capacity;
+    }
+
+    double* GetTimeStepPointer() {
+        return m_timeStepInDays;
     }
 
     void SetTimeStepPointer(double* value) {
@@ -135,7 +131,6 @@ class Brick : public wxObject {
     double* m_timeStepInDays; // [d]
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
-    std::vector<Flux*> m_outputs;
     std::vector<Process*> m_processes;
 
     /**

@@ -3,7 +3,8 @@
 
 SettingsModel::SettingsModel()
     : m_selectedStructure(nullptr),
-      m_selectedBrick(nullptr)
+      m_selectedBrick(nullptr),
+      m_selectedProcess(nullptr)
 {
     ModelStructure initialStructure;
     initialStructure.id = 1;
@@ -40,7 +41,7 @@ void SettingsModel::AddBrick(const wxString &name, const wxString &type) {
     brick.type = type;
 
     m_selectedStructure->bricks.push_back(brick);
-    m_selectedBrick = &m_selectedStructure->bricks[m_selectedStructure->bricks.size()-1];
+    m_selectedBrick = &m_selectedStructure->bricks[m_selectedStructure->bricks.size() - 1];
 }
 
 void SettingsModel::AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type) {
@@ -65,20 +66,65 @@ void SettingsModel::AddForcingToCurrentBrick(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentBrick(const wxString &target, const wxString &type) {
+void SettingsModel::AddProcessToCurrentBrick(const wxString &name, const wxString &type) {
     wxASSERT(m_selectedBrick);
-    BrickOutputSettings outputSettings;
-    outputSettings.target = target;
-    outputSettings.type = type;
-    m_selectedBrick->outputs.push_back(outputSettings);
+
+    ProcessSettings processSettings;
+    processSettings.name = name;
+    processSettings.type = type;
+    m_selectedBrick->processes.push_back(processSettings);
+
+    m_selectedProcess = &m_selectedBrick->processes[m_selectedBrick->processes.size() - 1];
 }
 
-void SettingsModel::AddLoggingToCurrentBrick(const wxString& itemName) {
-    m_selectedBrick->logItems.push_back(itemName);
+void SettingsModel::AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type) {
+    wxASSERT(m_selectedProcess);
+
+    if (!type.IsSameAs("Constant")) {
+        throw NotImplemented();
+    }
+
+    auto parameter = new Parameter(name, value);
+
+    m_selectedProcess->parameters.push_back(parameter);
+}
+
+void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
+    wxASSERT(m_selectedProcess);
+
+    if (name.IsSameAs("Precipitation", false)) {
+        m_selectedProcess->forcing.push_back(Precipitation);
+    } else if (name.IsSameAs("Temperature", false)) {
+        m_selectedProcess->forcing.push_back(PET);
+    } else if (name.IsSameAs("ETP", false)) {
+        m_selectedProcess->forcing.push_back(Temperature);
+    } else {
+        throw InvalidArgument(_("The provided forcing is not yet supported."));
+    }
+}
+
+void SettingsModel::AddOutputToCurrentProcess(const wxString &target, const wxString &type) {
+    wxASSERT(m_selectedProcess);
+
+    ProcessOutputSettings outputSettings;
+    outputSettings.target = target;
+    outputSettings.type = type;
+    m_selectedProcess->outputs.push_back(outputSettings);
 }
 
 void SettingsModel::AddLoggingToItem(const wxString& itemName) {
+    wxASSERT(m_selectedStructure);
     m_selectedStructure->logItems.push_back(itemName);
+}
+
+void SettingsModel::AddLoggingToCurrentBrick(const wxString& itemName) {
+    wxASSERT(m_selectedBrick);
+    m_selectedBrick->logItems.push_back(itemName);
+}
+
+void SettingsModel::AddLoggingToCurrentProcess(const wxString& itemName) {
+    wxASSERT(m_selectedProcess);
+    m_selectedProcess->logItems.push_back(itemName);
 }
 
 bool SettingsModel::SelectStructure(int id) {

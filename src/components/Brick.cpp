@@ -3,7 +3,7 @@
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
-#include "StorageLinear.h"
+#include "Storage.h"
 #include "Surface.h"
 
 Brick::Brick(HydroUnit *hydroUnit)
@@ -20,8 +20,8 @@ Brick::Brick(HydroUnit *hydroUnit)
 }
 
 Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
-    if (brickSettings.type.IsSameAs("StorageLinear")) {
-        auto brick = new StorageLinear(unit);
+    if (brickSettings.type.IsSameAs("Storage")) {
+        auto brick = new Storage(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else if (brickSettings.type.IsSameAs("Surface")) {
@@ -75,6 +75,13 @@ void Brick::SetStateVariablesFor(float timeStepFraction) {
     m_content = m_contentPrev + m_contentChangeRate * timeStepFraction;
 }
 
+Process* Brick::GetProcess(int index) {
+    wxASSERT(m_processes.size() > index);
+    wxASSERT(m_processes[index]);
+
+    return m_processes[index];
+}
+
 bool Brick::Compute() {
     // Sum inputs
     double qIn = SumIncomingFluxes();
@@ -101,11 +108,11 @@ bool Brick::Compute() {
         wxLogError(_("Content capacity of the storage exceeded. It has to be handled before."));
         return false;
     }
-
+/*
     for (int i = 0; i < qOuts.size(); ++i) {
         m_outputs[i]->SetAmount(qOuts[i]);
     }
-
+*/
     return true;
 }
 

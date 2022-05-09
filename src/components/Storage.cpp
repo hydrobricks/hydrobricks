@@ -19,10 +19,6 @@ bool Storage::IsOk() {
         wxLogError(_("The storage is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The storage is not attached to outputs."));
-        return false;
-    }
 
     return true;
 }

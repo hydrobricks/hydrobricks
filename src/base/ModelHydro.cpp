@@ -2,7 +2,6 @@
 
 #include "FluxDirect.h"
 #include "FluxForcing.h"
-#include "StorageLinear.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -45,6 +44,15 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
             brick->SetTimeStepPointer(m_timer.GetTimeStepPointer());
 
             BuildForcingConnections(brickSettings, unit, brick);
+
+            for (int iProcess = 0; iProcess < modelSettings.GetBricksNb(); ++iProcess) {
+                ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+
+                Process* process = Process::Factory(processSettings, brick);
+                process->SetName(processSettings.name);
+
+                BuildForcingConnections(processSettings, unit, process);
+            }
         }
 
         BuildFluxes(modelSettings, unit);
@@ -53,24 +61,27 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
 void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
-        BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetBricksNb(); ++iProcess) {
+            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-        for (const auto& output: brickSettings.outputs)  {
-            Flux* flux;
-            if (output.type.IsSameAs("Direct", false)) {
-                flux = new FluxDirect();
-            } else {
-                throw NotImplemented();
-            }
+            for (const auto& output: processSettings.outputs)  {
+                Flux* flux;
+                if (output.type.IsSameAs("Direct", false)) {
+                    flux = new FluxDirect();
+                } else {
+                    throw NotImplemented();
+                }
 
-            Brick* brickOut = unit->GetBrick(iBrick);
-            brickOut->AttachFluxOut(flux);
+                Brick* brick = unit->GetBrick(iBrick);
+                Process* process = brick->GetProcess(iProcess);
+                process->AttachFluxOut(flux);
 
-            if (output.target.IsSameAs("outlet", false)) {
-                m_subBasin->AttachOutletFlux(flux);
-            } else {
-                Brick* brickIn = unit->GetBrick(output.target);
-                brickIn->AttachFluxIn(flux);
+                if (output.target.IsSameAs("outlet", false)) {
+                    m_subBasin->AttachOutletFlux(flux);
+                } else {
+                    Brick* brickIn = unit->GetBrick(output.target);
+                    brickIn->AttachFluxIn(flux);
+                }
             }
         }
     }
@@ -87,6 +98,18 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
         auto forcingFlux = new FluxForcing();
         forcingFlux->AttachForcing(forcing);
         brick->AttachFluxIn(forcingFlux);
+    }
+}
+
+void ModelHydro::BuildForcingConnections(ProcessSettings &processSettings, HydroUnit* unit, Process* process) {
+    for (auto forcingType : processSettings.forcing) {
+        if (!unit->HasForcing(forcingType)) {
+            auto newForcing = new Forcing(forcingType);
+            unit->AddForcing(newForcing);
+        }
+
+        auto forcing = unit->GetForcing(forcingType);
+        process->AttachForcing(forcing);
     }
 }
 

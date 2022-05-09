@@ -20,10 +20,6 @@ bool Surface::IsOk() {
         wxLogError(_("The surface is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The surface is not attached to outputs."));
-        return false;
-    }
 
     return true;
 }

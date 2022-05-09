@@ -7,15 +7,23 @@
 
 class ProcessETSocont : public Process {
   public:
-    ProcessETSocont(Brick* brick);
+    explicit ProcessETSocont(Brick* brick);
 
     ~ProcessETSocont() override = default;
 
-    double GetWaterExtraction() override;
+    /**
+     * @copydoc Process::IsOk()
+     */
+    bool IsOk() override;
 
-    void SetPetForcing(Forcing* pet) {
-        m_pet = pet;
-    }
+    /**
+     * @copydoc Process::AssignParameters()
+     */
+    void AssignParameters(const ProcessSettings &processSettings) override;
+
+    void AttachForcing(Forcing* forcing) override;
+
+    double GetWaterExtraction() override;
 
     void SetStockState(double* stock) {
         m_stock = stock;

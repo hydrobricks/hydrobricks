@@ -15,9 +15,18 @@ struct TimerSettings {
     wxString timeStepUnit;
 };
 
-struct BrickOutputSettings {
+struct ProcessOutputSettings {
     wxString target;
     wxString type;
+};
+
+struct ProcessSettings {
+    wxString name;
+    wxString type;
+    vecStr logItems;
+    std::vector<Parameter*> parameters;
+    std::vector<VariableType> forcing;
+    std::vector<ProcessOutputSettings> outputs;
 };
 
 struct BrickSettings {
@@ -26,7 +35,7 @@ struct BrickSettings {
     vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
-    std::vector<BrickOutputSettings> outputs;
+    std::vector<ProcessSettings> processes;
 };
 
 struct ModelStructure {
@@ -51,11 +60,19 @@ class SettingsModel : public wxObject {
 
     void AddForcingToCurrentBrick(const wxString &name);
 
-    void AddOutputToCurrentBrick(const wxString &target, const wxString &type = "Direct");
+    void AddProcessToCurrentBrick(const wxString &name, const wxString &type);
+
+    void AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type = "Constant");
+
+    void AddForcingToCurrentProcess(const wxString &name);
+
+    void AddOutputToCurrentProcess(const wxString &target, const wxString &type = "Direct");
+
+    void AddLoggingToItem(const wxString& itemName);
 
     void AddLoggingToCurrentBrick(const wxString& itemName);
 
-    void AddLoggingToItem(const wxString& itemName);
+    void AddLoggingToCurrentProcess(const wxString& itemName);
 
     bool SelectStructure(int id);
 
@@ -81,6 +98,11 @@ class SettingsModel : public wxObject {
         return m_selectedStructure->bricks[index];
     }
 
+    ProcessSettings GetProcessSettings(int index) const {
+        wxASSERT(m_selectedBrick);
+        return m_selectedBrick->processes[index];
+    }
+
     vecStr GetAggregatedLogLabels();
 
     vecStr GetHydroUnitLogLabels();
@@ -91,6 +113,7 @@ class SettingsModel : public wxObject {
     TimerSettings m_timer;
     ModelStructure* m_selectedStructure;
     BrickSettings* m_selectedBrick;
+    ProcessSettings* m_selectedProcess;
 };
 
 #endif  // HYDROBRICKS_SETTINGS_MODEL_H

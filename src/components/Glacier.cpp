@@ -19,10 +19,6 @@ bool Glacier::IsOk() {
         wxLogError(_("The glacier is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The glacier is not attached to outputs."));
-        return false;
-    }
 
     return true;
 }

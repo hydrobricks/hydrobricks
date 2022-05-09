@@ -1,13 +1,13 @@
 #include "Processor.h"
-#include "SolverExplicitEuler.h"
+#include "SolverEulerExplicit.h"
 
-SolverExplicitEuler::SolverExplicitEuler()
+SolverEulerExplicit::SolverEulerExplicit()
     : Solver()
 {
     m_nIterations = 1;
 }
 
-bool SolverExplicitEuler::Solve() {
+bool SolverEulerExplicit::Solve() {
 
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
 

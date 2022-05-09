@@ -52,9 +52,9 @@ TEST_F(SingleLinearStorage, UsingEulerExplicit) {
                                  1.535737, 1.144124, 0.852372, 0.635017, 0.473088, 0.352450, 0.262576, 0.195619,
                                  0.145736, 0.108573, 0.080887, 0.060261};
 
-    for (int i = 0; i < basinOutputs.size(); ++i) {
-        for (int j = 0; j < basinOutputs[i].size(); ++j) {
-            EXPECT_EQ(basinOutputs[i][j], expectedOutputs[j]);
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_EQ(basinOutput[j], expectedOutputs[j]);
         }
     }
 }

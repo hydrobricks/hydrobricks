@@ -1,7 +1,7 @@
 #include "Solver.h"
 
 #include "Processor.h"
-#include "SolverExplicitEuler.h"
+#include "SolverEulerExplicit.h"
 #include "SolverExplicitHeun.h"
 #include "SolverRK4.h"
 
@@ -13,8 +13,8 @@ Solver::Solver()
 Solver* Solver::Factory(const SolverSettings &solverSettings) {
     if (solverSettings.name.IsSameAs("RK4", false)) {
         return new SolverRK4();
-    } else if (solverSettings.name.IsSameAs("ExplicitEuler", false)) {
-        return new SolverExplicitEuler();
+    } else if (solverSettings.name.IsSameAs("EulerExplicit", false)) {
+        return new SolverEulerExplicit();
     } else if (solverSettings.name.IsSameAs("ExplicitHeun", false)) {
         return new SolverExplicitHeun();
     }

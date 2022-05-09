@@ -5,9 +5,9 @@
 #include "Solver.h"
 #include "SubBasin.h"
 
-class SolverExplicitEuler : public Solver {
+class SolverEulerExplicit : public Solver {
   public:
-    explicit SolverExplicitEuler();
+    explicit SolverEulerExplicit();
 
     bool Solve() override;
 

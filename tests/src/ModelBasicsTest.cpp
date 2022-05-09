@@ -10,7 +10,7 @@ class ModelHydroSingleLinearStorage : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecipSingleRainyDay{};
 
     virtual void SetUp() {
-        m_modelSettings.SetSolver("ExplicitEuler");
+        m_modelSettings.SetSolver("EulerExplicit");
         m_modelSettings.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
         m_modelSettings.AddBrick("linear-storage", "StorageLinear");
         m_modelSettings.AddParameterToCurrentBrick("responseFactor", 0.1f);

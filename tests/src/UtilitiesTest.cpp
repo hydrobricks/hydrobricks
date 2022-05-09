@@ -486,20 +486,6 @@ TEST(Utilities, IncrementDateBy5Days) {
     EXPECT_TRUE(newDate.IsSameDate(wxDateTime(6, wxDateTime::Jan, 2020)));
 }
 
-TEST(Utilities, IncrementDateBy2Years) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 2, Year);
-
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2022)));
-}
-
-TEST(Utilities, IncrementDateBy2Months) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 2, Month);
-
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Mar, 2020)));
-}
-
 TEST(Utilities, IncrementDateBy2Weeks) {
     wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
     wxDateTime newDate = IncrementDateBy(date, 2, Week);

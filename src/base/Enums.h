@@ -12,13 +12,10 @@ enum {
 };
 
 enum TimeUnit {
-    Year,
-    Month,
     Week,
     Day,
     Hour,
     Minute,
-    Second,
     Variable
 };
 

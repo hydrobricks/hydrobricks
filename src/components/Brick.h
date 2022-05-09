@@ -100,6 +100,10 @@ class Brick : public wxObject {
         m_capacity = capacity;
     }
 
+    void SetTimeStepPointer(double* value) {
+        m_timeStepInDays = value;
+    }
+
     bool HasMaximumCapacity() const {
         return m_capacity != nullptr;
     }
@@ -126,8 +130,9 @@ class Brick : public wxObject {
     bool m_needsSolver;
     double m_content; // [mm]
     double m_contentPrev; // [mm]
-    double m_contentChangeRate; // [mm/T]
+    double m_contentChangeRate; // [mm/d]
     float* m_capacity;
+    double* m_timeStepInDays; // [d]
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;

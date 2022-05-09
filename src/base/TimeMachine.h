@@ -19,15 +19,21 @@ class TimeMachine : public wxObject {
         m_parametersUpdater = updater;
     }
 
-    wxDateTime GetDate() {
-        return m_date;
-    }
-
     bool IsOver();
 
     void IncrementTime();
 
     int GetTimeStepsNb();
+
+    void UpdateTimeStepInDays();
+
+    wxDateTime GetDate() {
+        return m_date;
+    }
+
+    double* GetTimeStepPointer() {
+        return &m_timeStepInDays;
+    }
 
   protected:
 
@@ -37,6 +43,7 @@ class TimeMachine : public wxObject {
     wxDateTime m_end;
     int m_timeStep;
     TimeUnit m_timeStepUnit;
+    double m_timeStepInDays;
     ParametersUpdater* m_parametersUpdater;
 };
 

@@ -42,6 +42,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
             Brick* brick = Brick::Factory(brickSettings, unit);
             brick->SetName(brickSettings.name);
+            brick->SetTimeStepPointer(m_timer.GetTimeStepPointer());
 
             BuildForcingConnections(brickSettings, unit, brick);
         }

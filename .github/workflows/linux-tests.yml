@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install libraries
-      run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree python
+      run: sudo apt-get install tree python
 
     - name: Install conan
       run: |
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install libraries
-        run: sudo apt-get install libwxbase3.0-dev libnetcdf-dev tree lcov python
+        run: sudo apt-get install tree lcov python
 
       - name: Install conan
         run: |

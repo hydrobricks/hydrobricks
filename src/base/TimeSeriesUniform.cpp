@@ -27,7 +27,7 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
-TimeSeriesData* TimeSeriesUniform::GetDataPointer(int unitId) {
+TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
     wxASSERT(m_data);
     return m_data;
 }

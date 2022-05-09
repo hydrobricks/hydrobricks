@@ -11,7 +11,7 @@ bool SolverExplicitHeun::Solve() {
 
     vecDoublePt* iterableValues = m_processor->GetIterableValuesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
-
+/*
     // k1 = f(tn, Sn)
     for (auto brick: *iterableBricks) {
         brick->SetStateVariablesFor(0.0);
@@ -57,4 +57,6 @@ bool SolverExplicitHeun::Solve() {
     }
 
     return true;
+    */
+    return false;
 }

@@ -13,14 +13,12 @@ bool TimeSeriesData::SetValues(const vecDouble &values) {
     return true;
 }
 
-double TimeSeriesData::GetValueFor(const wxDateTime &date) {
+double TimeSeriesData::GetValueFor(const wxDateTime &) {
     throw NotImplemented();
-    return 0;
 }
 
 double TimeSeriesData::GetCurrentValue() {
     throw NotImplemented();
-    return 0;
 }
 
 
@@ -50,9 +48,8 @@ bool TimeSeriesDataRegular::SetValues(const vecDouble &values) {
     return true;
 }
 
-double TimeSeriesDataRegular::GetValueFor(const wxDateTime &date) {
+double TimeSeriesDataRegular::GetValueFor(const wxDateTime &) {
     throw NotImplemented();
-    return 0;
 }
 
 double TimeSeriesDataRegular::GetCurrentValue() {
@@ -119,9 +116,8 @@ bool TimeSeriesDataIrregular::SetValues(const vecDouble &values) {
     return true;
 }
 
-double TimeSeriesDataIrregular::GetValueFor(const wxDateTime &date) {
+double TimeSeriesDataIrregular::GetValueFor(const wxDateTime &) {
     throw NotImplemented();
-    return 0;
 }
 
 double TimeSeriesDataIrregular::GetCurrentValue() {
@@ -129,7 +125,7 @@ double TimeSeriesDataIrregular::GetCurrentValue() {
     return m_values[m_cursor];
 }
 
-bool TimeSeriesDataIrregular::SetCursorToDate(const wxDateTime &dateTime) {
+bool TimeSeriesDataIrregular::SetCursorToDate(const wxDateTime &) {
     throw NotImplemented();
 }
 

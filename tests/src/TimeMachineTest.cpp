@@ -2,14 +2,6 @@
 
 #include "TimeMachine.h"
 
-TEST(TimeMachine, IncrementMonth) {
-    TimeMachine timer;
-    timer.Initialize(wxDateTime(1, wxDateTime::Jan, 2020), wxDateTime(1, wxDateTime::Mar, 2020), 1, Month);
-    timer.IncrementTime();
-
-    EXPECT_TRUE(timer.GetDate().IsEqualTo(wxDateTime(1, wxDateTime::Feb, 2020)));
-}
-
 TEST(TimeMachine, IncrementWeek) {
     TimeMachine timer;
     timer.Initialize(wxDateTime(1, wxDateTime::Jan, 2020), wxDateTime(1, wxDateTime::Mar, 2020), 1, Week);
@@ -40,15 +32,6 @@ TEST(TimeMachine, IncrementMinute) {
     timer.IncrementTime();
 
     EXPECT_TRUE(timer.GetDate().IsEqualTo(wxDateTime(1, wxDateTime::Jan, 2020, 0, 1)));
-}
-
-TEST(TimeMachine, IncrementWrongTimeUnit) {
-    TimeMachine timer;
-    timer.Initialize(wxDateTime(1, wxDateTime::Jan, 2020), wxDateTime(1, wxDateTime::Jan, 2022), 1, Year);
-    wxLogNull logNo;
-    timer.IncrementTime();
-
-    EXPECT_TRUE(timer.GetDate().IsEqualTo(wxDateTime(1, wxDateTime::Jan, 2020)));
 }
 
 TEST(TimeMachine, ParametersUpdaterIsTriggered) {

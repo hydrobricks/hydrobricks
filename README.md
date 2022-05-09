@@ -1,7 +1,7 @@
 # hydrobricks
 Modular Hydrological Modelling Framework
 
-![Linux](https://github.com/hydrobricks/hydrobricks/workflows/CMake/badge.svg)
+[![Linux-Tests](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml)
 [![codecov](https://codecov.io/gh/hydrobricks/hydrobricks/branch/main/graph/badge.svg?token=G1PBSK8EG2)](https://codecov.io/gh/hydrobricks/hydrobricks)
 
 > :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**

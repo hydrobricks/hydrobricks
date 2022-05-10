@@ -2,7 +2,8 @@
 
 SubBasin::SubBasin()
     : m_area(UNDEFINED),
-      m_elevation(UNDEFINED)
+      m_elevation(UNDEFINED),
+      m_outletTotal(0)
 {}
 
 SubBasin::~SubBasin() {}
@@ -56,4 +57,22 @@ void SubBasin::AddBehaviour(Behaviour* behaviour) {
 void SubBasin::AttachOutletFlux(Flux* flux) {
     wxASSERT(flux);
     m_outletFluxes.push_back(flux);
+}
+
+double* SubBasin::GetValuePointer(const wxString& name) {
+    if (name.IsSameAs("outlet")) {
+        return &m_outletTotal;
+    }
+    wxLogError(_("Element '%s' not found"), name);
+
+    return nullptr;
+}
+
+bool SubBasin::ComputeAggregatedValues() {
+    m_outletTotal = 0;
+    for (auto flux: m_outletFluxes) {
+        m_outletTotal += flux->GetAmount();
+    }
+
+    return true;
 }

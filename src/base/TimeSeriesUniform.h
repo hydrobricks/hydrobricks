@@ -8,7 +8,26 @@ class TimeSeriesUniform : public TimeSeries {
   public:
     TimeSeriesUniform(VariableType type);
 
-    ~TimeSeriesUniform() override = default;
+    ~TimeSeriesUniform() override;
+
+    void SetData(TimeSeriesData* data) {
+        wxASSERT(data);
+        m_data = data;
+    }
+
+    bool SetCursorToDate(const wxDateTime &dateTime) override;
+
+    bool AdvanceOneTimeStep() override;
+
+    bool IsDistributed() override {
+        return false;
+    }
+
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
+
+    TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
     TimeSeriesData* m_data;

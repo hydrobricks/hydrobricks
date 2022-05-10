@@ -2,9 +2,7 @@
 
 Snowpack::Snowpack(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
@@ -19,14 +17,15 @@ bool Snowpack::IsOk() {
         wxLogError(_("The snowpack is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The snowpack is not attached to outputs."));
-        return false;
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-std::vector<double> Snowpack::ComputeOutputs() {
+vecDouble Snowpack::ComputeOutputs() {
     return {};
 }

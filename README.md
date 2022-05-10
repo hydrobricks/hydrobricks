@@ -1,4 +1,4 @@
-# HydroBricks
+# hydrobricks
 Modular Hydrological Modelling Framework
 
 [![Linux-Tests](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml)

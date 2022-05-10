@@ -23,7 +23,7 @@ class Glacier : public Brick {
     /**
      * @copydoc Brick::ComputeOutputs()
      */
-    std::vector<double> ComputeOutputs() override;
+    vecDouble ComputeOutputs() override;
 
   private:
 };

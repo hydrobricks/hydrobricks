@@ -1,13 +1,15 @@
 #include "FluxForcing.h"
 
 FluxForcing::FluxForcing()
+    : Flux()
 {}
 
 bool FluxForcing::IsOk() {
     return true;
 }
 
-double FluxForcing::GetOutgoingAmount() {
+double FluxForcing::GetAmount() {
+    m_amount = m_forcing->GetValue();
     return m_amount;
 }
 

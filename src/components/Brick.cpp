@@ -3,14 +3,12 @@
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
-#include "StorageLinear.h"
+#include "Storage.h"
 #include "Surface.h"
 
 Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_content(0),
-      m_contentPrev(0),
-      m_contentChangeRate(0),
       m_capacity(nullptr),
       m_hydroUnit(hydroUnit)
 {
@@ -20,8 +18,8 @@ Brick::Brick(HydroUnit *hydroUnit)
 }
 
 Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
-    if (brickSettings.type.IsSameAs("StorageLinear")) {
-        auto brick = new StorageLinear(unit);
+    if (brickSettings.type.IsSameAs("Storage")) {
+        auto brick = new Storage(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else if (brickSettings.type.IsSameAs("Surface")) {
@@ -71,17 +69,31 @@ float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
-void Brick::SetStateVariablesFor(float timeStepFraction) {
-    m_content = m_contentPrev + m_contentChangeRate * timeStepFraction;
+Process* Brick::GetProcess(int index) {
+    wxASSERT(m_processes.size() > index);
+    wxASSERT(m_processes[index]);
+
+    return m_processes[index];
+}
+
+void Brick::SubtractAmount(double change) {
+    m_content -= change;
+    wxASSERT(m_content >= 0);
+}
+
+void Brick::AddAmount(double change) {
+    m_content += change;
+    wxASSERT(m_content >= 0);
 }
 
 bool Brick::Compute() {
+    /*
     // Sum inputs
     double qIn = SumIncomingFluxes();
 
     // Compute outputs and sum
-    std::vector<double> qOuts = ComputeOutputs();
-    double qOutTotal = getOutputsSum(qOuts);
+    vecDouble qOuts = ComputeOutputs();
+    double qOutTotal = GetOutputsSum(qOuts);
 
     // Compute change rate
     m_contentChangeRate = qIn - qOutTotal;
@@ -92,7 +104,7 @@ bool Brick::Compute() {
         for (double &qOut : qOuts) {
             qOut -= diff * (qOut / qOutTotal);
         }
-        qOutTotal = getOutputsSum(qOuts);
+        qOutTotal = GetOutputsSum(qOuts);
         m_contentChangeRate = qIn - qOutTotal;
     }
 
@@ -105,7 +117,7 @@ bool Brick::Compute() {
     for (int i = 0; i < qOuts.size(); ++i) {
         m_outputs[i]->SetAmount(qOuts[i]);
     }
-
+*/
     return true;
 }
 
@@ -120,7 +132,11 @@ double Brick::SumIncomingFluxes() {
     return sum;
 }
 
-double Brick::getOutputsSum(std::vector<double> &qOuts) {
+void Brick::UpdateContentFromInputs() {
+    m_content += SumIncomingFluxes();
+}
+
+double Brick::GetOutputsSum(vecDouble &qOuts) {
     double qOutTotal = 0;
     for (auto &qOut : qOuts) {
         qOutTotal += qOut;
@@ -129,18 +145,14 @@ double Brick::getOutputsSum(std::vector<double> &qOuts) {
     return qOutTotal;
 }
 
-void Brick::Finalize() {
-    m_content = m_contentChangeRate;
+vecDoublePt Brick::GetStateVariables() {
+    return vecDoublePt {&m_content};
 }
 
-std::vector<double*> Brick::GetIterableValues() {
-    return std::vector<double*> {&m_contentChangeRate};
-}
-
-std::vector<double*> Brick::GetIterableValuesFromProcesses() {
-    std::vector<double*> values;
+vecDoublePt Brick::GetStateVariablesFromProcesses() {
+    vecDoublePt values;
     for (auto const &process: m_processes) {
-        std::vector<double*> processValues = process->GetIterableValues();
+        vecDoublePt processValues = process->GetStateVariables();
 
         if (processValues.empty()) {
             continue;
@@ -151,4 +163,26 @@ std::vector<double*> Brick::GetIterableValuesFromProcesses() {
     }
 
     return values;
+}
+
+int Brick::GetProcessesConnectionsNb() {
+    int counter = 0;
+
+    for (auto const &process: m_processes) {
+        counter += process->GetConnectionsNb();
+    }
+
+    return counter;
+}
+
+double* Brick::GetBaseValuePointer(const wxString& name) {
+    if (name.IsSameAs("content")) {
+        return &m_content;
+    }
+
+    return nullptr;
+}
+
+double* Brick::GetValuePointer(const wxString&) {
+    return nullptr;
 }

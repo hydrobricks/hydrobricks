@@ -3,9 +3,7 @@
 Surface::Surface(HydroUnit *hydroUnit)
     : Brick(hydroUnit),
       m_waterHeight(0)
-{
-    m_needsSolver = true;
-}
+{}
 
 void Surface::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
@@ -20,14 +18,15 @@ bool Surface::IsOk() {
         wxLogError(_("The surface is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The surface is not attached to outputs."));
-        return false;
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-std::vector<double> Surface::ComputeOutputs() {
+vecDouble Surface::ComputeOutputs() {
     return {};
 }

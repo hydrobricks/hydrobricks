@@ -6,9 +6,21 @@
 
 class TimeSeries : public wxObject {
   public:
-    TimeSeries(VariableType type);
+    explicit TimeSeries(VariableType type);
 
     ~TimeSeries() override = default;
+
+    virtual bool SetCursorToDate(const wxDateTime &dateTime) = 0;
+
+    virtual bool AdvanceOneTimeStep() = 0;
+
+    virtual bool IsDistributed() = 0;
+
+    virtual wxDateTime GetStart() = 0;
+
+    virtual wxDateTime GetEnd() = 0;
+
+    virtual TimeSeriesData* GetDataPointer(int unitId) = 0;
 
     VariableType GetVariableType() {
         return m_type;

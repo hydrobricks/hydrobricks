@@ -12,7 +12,7 @@ class ParameterVariable : public Parameter {
     ~ParameterVariable() override = default;
 
   protected:
-    std::vector<float> m_values;
+    vecFloat m_values;
 
   private:
 };
@@ -23,12 +23,12 @@ class ParameterVariableYearly : public ParameterVariable {
 
     ~ParameterVariableYearly() override = default;
 
-    bool SetValues(int yearStart, int yearEnd, const std::vector<float>& values);
+    bool SetValues(int yearStart, int yearEnd, const vecFloat& values);
 
     bool UpdateParameter(int year);
 
   protected:
-    std::vector<int> m_reference;
+    vecInt m_reference;
 
   private:
 };
@@ -39,7 +39,7 @@ class ParameterVariableMonthly : public ParameterVariable {
 
     ~ParameterVariableMonthly() override = default;
 
-    bool SetValues(const std::vector<float>& values);
+    bool SetValues(const vecFloat& values);
 
     bool UpdateParameter(wxDateTime::Month month);
 
@@ -53,13 +53,13 @@ class ParameterVariableDates : public ParameterVariable {
 
     ~ParameterVariableDates() override = default;
 
-    bool SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values);
+    bool SetTimeAndValues(const vecDouble& time, const vecFloat& values);
 
     bool UpdateParameter(double timeReference);
 
   protected:
-    std::vector<float> m_values;
-    std::vector<double> m_reference;
+    vecFloat m_values;
+    vecDouble m_reference;
 
   private:
 };

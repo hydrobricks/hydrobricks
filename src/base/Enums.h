@@ -12,24 +12,20 @@ enum {
 };
 
 enum TimeUnit {
-    Year,
-    Month,
     Week,
     Day,
     Hour,
     Minute,
-    Second,
     Variable
 };
 
 enum VariableType {
     Precipitation,
     Temperature,
-    ETP,
+    PET,
     Custom1,
     Custom2,
-    Custom3,
-    MAX_VAR_TYPES
+    Custom3
 };
 
 #endif  // HYDROBRICKS_ENUMS_H

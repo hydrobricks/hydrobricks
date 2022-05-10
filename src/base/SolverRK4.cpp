@@ -9,81 +9,68 @@ SolverRK4::SolverRK4()
 
 bool SolverRK4::Solve() {
 
-    std::vector<double*>* iterableValues = m_processor->GetIterableValuesVectorPt();
-    std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
+    // Save the original state variables
+    SaveStateVariables(0);
 
-    // k1 = f(tn, Sn)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.0);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    // Compute the change rates for k1 = f(tn, Sn)
+    ComputeChangeRates(0);
 
-    int counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 0) = *value;
-        counter++;
-    }
+    // Restore original state variables
+    SetStateVariablesToIteration(0);
 
-    // k2 = f(tn + h/2, Sn + k1 h / 2)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.5);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    // Apply the changes
+    ApplyProcesses(0);
 
-    counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 1) = *value;
-        counter++;
-    }
+    // Save the new state variables
+    SaveStateVariables(1);
 
-    // k3 = f(tn + h/2, Sn + k2 h / 2)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.5);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    // Apply state variables for k1 at tn + h/2
+    SetStateVariablesToAvgOf(0, 1);
 
-    counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 2) = *value;
-        counter++;
-    }
+    // Compute the change rates for k2 = f(tn + h/2, Sn + k1 h/2)
+    ComputeChangeRates(1);
 
-    // k4 = f(tn + h, Sn + k3 h)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(1.0);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    // Restore original state variables
+    SetStateVariablesToIteration(0);
 
-    counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 3) = *value;
-        counter++;
-    }
+    // Apply the changes
+    ApplyProcesses(1);
+
+    // Save the new state variables
+    SaveStateVariables(2);
+
+    // Apply state variables for k2 at tn + h/2
+    SetStateVariablesToAvgOf(0, 2);
+
+    // Compute the change rates for k3 = f(tn + h/2, Sn + k2 h/2)
+    ComputeChangeRates(2);
+
+    // Restore original state variables
+    SetStateVariablesToIteration(0);
+
+    // Apply the changes
+    ApplyProcesses(2);
+
+    // Save the new state variables
+    SaveStateVariables(3);
+
+    // Apply state variables for k3 at tn + h
+    SetStateVariablesToIteration(3);
+
+    // Compute the change rates for k4 = f(tn + h, Sn + k3 h)
+    ComputeChangeRates(3);
+
+    // Restore original state variables
+    SetStateVariablesToIteration(0);
 
     // Final change rate
-    Eigen::ArrayXd rkValues = (m_container.col(0) + 2 * m_container.col(1) +
-                               2 * m_container.col(2) + m_container.col(3)) / 6;
+    axd rkValues = (m_changeRates.col(0) + 2 * m_changeRates.col(1) +
+                    2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
 
-    // Update the state variable values
-    for (int i = 0; i < (*iterableValues).size(); ++i) {
-        *(*iterableValues)[i] = rkValues[i];
-    }
-
-    // Compute final values
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(1.0);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    // Apply the final rates
+    ApplyProcesses(rkValues);
 
     return true;
 }
+
+

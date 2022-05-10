@@ -2,9 +2,7 @@
 
 Glacier::Glacier(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Glacier::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
@@ -19,14 +17,15 @@ bool Glacier::IsOk() {
         wxLogError(_("The glacier is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The glacier is not attached to outputs."));
-        return false;
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-std::vector<double> Glacier::ComputeOutputs() {
+vecDouble Glacier::ComputeOutputs() {
     return {};
 }

@@ -9,13 +9,23 @@ class TimeSeriesData : public wxObject {
 
     ~TimeSeriesData() override = default;
 
-    virtual bool SetValues(std::vector<double> &values);
+    virtual bool SetValues(const vecDouble &values);
 
     virtual double GetValueFor(const wxDateTime &date);
 
+    virtual double GetCurrentValue();
+
+    virtual bool SetCursorToDate(const wxDateTime &dateTime) = 0;
+
+    virtual bool AdvanceOneTimeStep() = 0;
+
+    virtual wxDateTime GetStart() = 0;
+
+    virtual wxDateTime GetEnd() = 0;
+
   protected:
-    std::vector<double> m_values;
-    size_t m_index;
+    vecDouble m_values;
+    int m_cursor;
 
   private:
 };
@@ -27,9 +37,19 @@ class TimeSeriesDataRegular : public TimeSeriesData {
 
     ~TimeSeriesDataRegular() override = default;
 
-    bool SetValues(std::vector<double> &values) override;
+    bool SetValues(const vecDouble &values) override;
 
     double GetValueFor(const wxDateTime &date) override;
+
+    double GetCurrentValue() override;
+
+    bool SetCursorToDate(const wxDateTime &dateTime) override;
+
+    bool AdvanceOneTimeStep() override;
+
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
 
   protected:
     wxDateTime m_start;
@@ -43,16 +63,26 @@ class TimeSeriesDataRegular : public TimeSeriesData {
 
 class TimeSeriesDataIrregular : public TimeSeriesData {
   public:
-    TimeSeriesDataIrregular(std::vector<double> &dates);
+    explicit TimeSeriesDataIrregular(vecDouble &dates);
 
     ~TimeSeriesDataIrregular() override = default;
 
-    bool SetValues(std::vector<double> &values) override;
+    bool SetValues(const vecDouble &values) override;
 
     double GetValueFor(const wxDateTime &date) override;
 
+    double GetCurrentValue() override;
+
+    bool SetCursorToDate(const wxDateTime &dateTime) override;
+
+    bool AdvanceOneTimeStep() override;
+
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
+
   protected:
-    std::vector<double> m_dates;
+    vecDouble m_dates;
 
   private:
 };

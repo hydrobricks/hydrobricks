@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
+#include "FluxToBrick.h"
+#include "Storage.h"
 #include "SubBasin.h"
-#include "StorageLinear.h"
-#include "FluxDirect.h"
 
 TEST(SubBasin, HasIncomingFlow) {
     SubBasin subBasinIn;
@@ -35,20 +35,22 @@ TEST(SubBasin, GetHydroUnitsCount3) {
 }
 
 TEST(SubBasin, EmptySubBasinIsNotOk) {
+    wxLogNull logNo;
+
     SubBasin subBasin;
 
     EXPECT_FALSE(subBasin.IsOk());
 }
-
+/*
 TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
     HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
-    StorageLinear storage(&unit);
-    FluxDirect inFlux, outFlux;
+    Storage storage(&unit);
+    FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 
     EXPECT_TRUE(subBasin.IsOk());
-}
+}*/

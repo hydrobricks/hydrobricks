@@ -21,24 +21,19 @@ class Flux : public wxObject {
      *
      * @return the amount of water outgoing the flux
      */
-    virtual double GetOutgoingAmount() = 0;
-
-    /**
-     * Get the water amount of the flux.
-     *
-     * @return the water amount of the flux.
-     */
-    double GetAmount() {
-        return m_amount;
-    }
+    virtual double GetAmount() = 0;
 
     /**
      * Set the water amount of the flux.
      *
      * @param amount the water amount of the flux.
      */
-    void SetAmount(double amount) {
+    virtual void UpdateFlux(double amount) {
         m_amount = amount;
+    }
+
+    double* GetAmountPointer() {
+        return &m_amount;
     }
 
   protected:

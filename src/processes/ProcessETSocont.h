@@ -3,19 +3,27 @@
 
 #include "Forcing.h"
 #include "Includes.h"
-#include "Process.h"
+#include "ProcessET.h"
 
-class ProcessETSocont : public Process {
+class ProcessETSocont : public ProcessET {
   public:
-    ProcessETSocont(Brick* brick);
+    explicit ProcessETSocont(Brick* brick);
 
     ~ProcessETSocont() override = default;
 
-    double GetWaterExtraction() override;
+    /**
+     * @copydoc Process::IsOk()
+     */
+    bool IsOk() override;
 
-    void SetPetForcing(Forcing* pet) {
-        m_pet = pet->GetValuePointer();
-    }
+    /**
+     * @copydoc Process::AssignParameters()
+     */
+    void AssignParameters(const ProcessSettings &processSettings) override;
+
+    void AttachForcing(Forcing* forcing) override;
+
+    vecDouble GetChangeRates() override;
 
     void SetStockState(double* stock) {
         m_stock = stock;
@@ -30,7 +38,7 @@ class ProcessETSocont : public Process {
     }
 
   protected:
-    double* m_pet;
+    Forcing* m_pet;
     double* m_stock;
     double m_stockMax;
     float m_exponent;

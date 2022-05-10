@@ -13,7 +13,7 @@ ParameterVariableYearly::ParameterVariableYearly(const wxString &name, float val
     : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const std::vector<float>& values) {
+bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const vecFloat& values) {
     m_values = values;
     m_reference.reserve(yearEnd - yearStart + 1);
     for (int i = yearStart; i <= yearEnd; ++i) {
@@ -53,7 +53,7 @@ ParameterVariableMonthly::ParameterVariableMonthly(const wxString &name, float v
     : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
+bool ParameterVariableMonthly::SetValues(const vecFloat& values) {
     m_values = values;
 
     if (m_values.size() != 12) {
@@ -81,7 +81,7 @@ ParameterVariableDates::ParameterVariableDates(const wxString &name, float value
     : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableDates::SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values) {
+bool ParameterVariableDates::SetTimeAndValues(const vecDouble& time, const vecFloat& values) {
     m_reference = time;
     m_values = values;
 

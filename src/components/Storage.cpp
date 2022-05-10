@@ -2,9 +2,7 @@
 
 Storage::Storage(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Storage::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
@@ -19,14 +17,15 @@ bool Storage::IsOk() {
         wxLogError(_("The storage is not attached to inputs."));
         return false;
     }
-    if (m_outputs.empty()) {
-        wxLogError(_("The storage is not attached to outputs."));
-        return false;
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-std::vector<double> Storage::ComputeOutputs() {
+vecDouble Storage::ComputeOutputs() {
     return {};
 }

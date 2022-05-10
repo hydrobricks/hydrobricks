@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_BRICK_H
 #define HYDROBRICKS_BRICK_H
 
-#include "Includes.h"
 #include "Flux.h"
-#include "ParameterSet.h"
+#include "Includes.h"
 #include "Process.h"
+#include "SettingsModel.h"
 
 class HydroUnit;
 
@@ -37,14 +37,9 @@ class Brick : public wxObject {
         m_inputs.push_back(flux);
     }
 
-    /**
-     * Attach outgoing flux.
-     *
-     * @param flux outgoing flux
-     */
-    void AttachFluxOut(Flux* flux) {
-        wxASSERT(flux);
-        m_outputs.push_back(flux);
+    void AddProcess(Process* process) {
+        wxASSERT(process);
+        m_processes.push_back(process);
     }
 
     /**
@@ -63,14 +58,19 @@ class Brick : public wxObject {
         return m_needsSolver;
     }
 
+    void SubtractAmount(double change);
+
+    void AddAmount(double change);
+
+    void UpdateContentFromInputs();
+
     bool Compute();
 
-    double getOutputsSum(std::vector<double> &qOuts);
+    double GetOutputsSum(vecDouble &qOuts);
 
-    /**
-     * Finalize the computing and copy the "next" values to "previous".
-     */
-    void Finalize();
+    int GetInputsNb() {
+        return int(m_inputs.size());
+    }
 
     /**
      * Get the water content of the current object.
@@ -81,12 +81,11 @@ class Brick : public wxObject {
         return m_content;
     }
 
-    /**
-     * Set the water content of the current object.
-     *
-     * @param timeStepFraction fraction of the time step
-     */
-    void SetStateVariablesFor(float timeStepFraction);
+    Process* GetProcess(int index);
+
+    std::vector<Process*> GetProcesses() {
+        return m_processes;
+    }
 
     wxString GetName() {
         return m_name;
@@ -109,24 +108,27 @@ class Brick : public wxObject {
     }
 
     /**
-     * Get pointers to the values that need to be iterated.
+     * Get pointers to the state variables.
      *
-     * @return vector of pointers to the values that need to be iterated.
+     * @return vector of pointers to the state variables.
      */
-    virtual std::vector<double*> GetIterableValues();
+    virtual vecDoublePt GetStateVariables();
 
-    std::vector<double*> GetIterableValuesFromProcesses();
+    vecDoublePt GetStateVariablesFromProcesses();
+
+    int GetProcessesConnectionsNb();
+
+    double* GetBaseValuePointer(const wxString& name);
+
+    virtual double* GetValuePointer(const wxString& name);
 
   protected:
     wxString m_name;
     bool m_needsSolver;
     double m_content; // [mm]
-    double m_contentPrev; // [mm]
-    double m_contentChangeRate; // [mm/T]
     float* m_capacity;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
-    std::vector<Flux*> m_outputs;
     std::vector<Process*> m_processes;
 
     /**
@@ -142,7 +144,7 @@ class Brick : public wxObject {
      * @param timeStepFraction fraction of the time step
      * @return output values.
      */
-    virtual std::vector<double> ComputeOutputs() = 0;
+    virtual vecDouble ComputeOutputs() = 0;
 
   private:
 };

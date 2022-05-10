@@ -1,5 +1,5 @@
-#ifndef HYDROBRICKS_PARAMETER_SET_H
-#define HYDROBRICKS_PARAMETER_SET_H
+#ifndef HYDROBRICKS_SETTINGS_MODEL_H
+#define HYDROBRICKS_SETTINGS_MODEL_H
 
 #include "Includes.h"
 #include "Parameter.h"
@@ -11,33 +11,43 @@ struct SolverSettings {
 struct TimerSettings {
     wxString start;
     wxString end;
-    int timeStep;
+    int timeStep = 1;
     wxString timeStepUnit;
 };
 
-struct BrickOutputSettings {
+struct ProcessOutputSettings {
     wxString target;
+};
+
+struct ProcessSettings {
+    wxString name;
     wxString type;
+    vecStr logItems;
+    std::vector<Parameter*> parameters;
+    std::vector<VariableType> forcing;
+    std::vector<ProcessOutputSettings> outputs;
 };
 
 struct BrickSettings {
     wxString name;
     wxString type;
+    vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
-    std::vector<BrickOutputSettings> outputs;
+    std::vector<ProcessSettings> processes;
 };
 
 struct ModelStructure {
     int id;
+    vecStr logItems;
     std::vector<BrickSettings> bricks;
 };
 
-class ParameterSet : public wxObject {
+class SettingsModel : public wxObject {
   public:
-    explicit ParameterSet();
+    explicit SettingsModel();
 
-    ~ParameterSet() override;
+    ~SettingsModel() override;
 
     void SetSolver(const wxString &solverName);
 
@@ -49,9 +59,23 @@ class ParameterSet : public wxObject {
 
     void AddForcingToCurrentBrick(const wxString &name);
 
-    void AddOutputToCurrentBrick(const wxString &target, const wxString &type = "Direct");
+    void AddProcessToCurrentBrick(const wxString &name, const wxString &type);
+
+    void AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type = "Constant");
+
+    void AddForcingToCurrentProcess(const wxString &name);
+
+    void AddOutputToCurrentProcess(const wxString &target);
+
+    void AddLoggingToItem(const wxString& itemName);
+
+    void AddLoggingToCurrentBrick(const wxString& itemName);
+
+    void AddLoggingToCurrentProcess(const wxString& itemName);
 
     bool SelectStructure(int id);
+
+    void SelectBrick(int index);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
@@ -60,6 +84,11 @@ class ParameterSet : public wxObject {
     int GetBricksNb() const {
         wxASSERT(m_selectedStructure);
         return int(m_selectedStructure->bricks.size());
+    }
+
+    int GetProcessesNb() const {
+        wxASSERT(m_selectedBrick);
+        return int(m_selectedBrick->processes.size());
     }
 
     SolverSettings GetSolverSettings() const {
@@ -75,14 +104,22 @@ class ParameterSet : public wxObject {
         return m_selectedStructure->bricks[index];
     }
 
+    ProcessSettings GetProcessSettings(int index) const {
+        wxASSERT(m_selectedBrick);
+        return m_selectedBrick->processes[index];
+    }
+
+    vecStr GetAggregatedLogLabels();
+
+    vecStr GetHydroUnitLogLabels();
+
   protected:
     std::vector<ModelStructure> m_modelStructures;
     SolverSettings m_solver;
     TimerSettings m_timer;
     ModelStructure* m_selectedStructure;
     BrickSettings* m_selectedBrick;
-
-  private:
+    ProcessSettings* m_selectedProcess;
 };
 
-#endif  // HYDROBRICKS_PARAMETER_SET_H
+#endif  // HYDROBRICKS_SETTINGS_MODEL_H

@@ -68,6 +68,10 @@ class Brick : public wxObject {
 
     double GetOutputsSum(vecDouble &qOuts);
 
+    int GetInputsNb() {
+        return int(m_inputs.size());
+    }
+
     /**
      * Get the water content of the current object.
      *

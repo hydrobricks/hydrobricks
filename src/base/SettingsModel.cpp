@@ -142,6 +142,13 @@ bool SettingsModel::SelectStructure(int id) {
     return false;
 }
 
+void SettingsModel::SelectBrick(int index) {
+    wxASSERT(m_selectedStructure);
+    wxASSERT(m_modelStructures.size() == 1);
+
+    m_selectedBrick = &m_selectedStructure->bricks[index];
+}
+
 vecStr SettingsModel::GetHydroUnitLogLabels() {
     wxASSERT(m_selectedStructure);
     wxASSERT(m_modelStructures.size() == 1);

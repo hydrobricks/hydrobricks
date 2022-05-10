@@ -54,7 +54,7 @@ class ModelHydro : public wxObject {
 
     void BuildForcingConnections(ProcessSettings &processSettings, HydroUnit* unit, Process* process);
 
-    void BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit);
+    void BuildFluxes(SettingsModel& modelSettings, HydroUnit* unit);
 
     void ConnectLoggerToValues(SettingsModel& modelSettings);
 

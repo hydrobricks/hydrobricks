@@ -75,6 +75,8 @@ class SettingsModel : public wxObject {
 
     bool SelectStructure(int id);
 
+    void SelectBrick(int index);
+
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
     }

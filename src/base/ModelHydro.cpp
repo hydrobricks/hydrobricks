@@ -43,6 +43,8 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
         HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
 
         for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+            modelSettings.SelectBrick(iBrick);
+
             BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
             Brick* brick = Brick::Factory(brickSettings, unit);
@@ -64,8 +66,9 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
     }
 }
 
-void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit) {
+void ModelHydro::BuildFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+        modelSettings.SelectBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
@@ -135,6 +138,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     // Hydro units values
     int iLabel = 0;
     for (int iBrickType = 0; iBrickType < modelSettings.GetBricksNb(); ++iBrickType) {
+        modelSettings.SelectBrick(iBrickType);
         BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrickType);
 
         for (const auto& logItem :brickSettings.logItems) {

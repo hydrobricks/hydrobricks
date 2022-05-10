@@ -242,3 +242,134 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
         }
     }
 }
+
+/**
+ * Model: linear storage with max capacity and ET
+ */
+class SolverLinearStorageWithET : public ::testing::Test {
+  protected:
+    SettingsModel m_model;
+    TimeSeriesUniform* m_tsPrecip{};
+    TimeSeriesUniform* m_tsPET{};
+
+    virtual void SetUp() {
+        m_model.SetSolver("EulerExplicit");
+        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
+        m_model.AddBrick("storage", "Storage");
+        m_model.AddForcingToCurrentBrick("Precipitation");
+        m_model.AddLoggingToCurrentBrick("content");
+        m_model.AddParameterToCurrentBrick("capacity", 15);
+        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
+        m_model.AddParameterToCurrentProcess("responseFactor", 0.2f);
+        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddProcessToCurrentBrick("ET", "ET:Socont");
+        m_model.AddForcingToCurrentProcess("PET");
+        m_model.AddLoggingToItem("outlet");
+
+        auto dataPrec = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
+                                                  wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        dataPrec->SetValues({0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        m_tsPrecip = new TimeSeriesUniform(Precipitation);
+        m_tsPrecip->SetData(dataPrec);
+
+        auto dataPET = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
+                                                 wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        dataPET->SetValues({2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+                            2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
+        m_tsPET = new TimeSeriesUniform(PET);
+        m_tsPET->SetData(dataPET);
+    }
+    virtual void TearDown() {
+        wxDELETE(m_tsPrecip);
+        wxDELETE(m_tsPET);
+    }
+};
+
+TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    m_model.SetSolver("EulerExplicit");
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_model);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPET));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.000000, 0.000000, 3.367007, 8.000000, 3.000000, 2.000000, 1.273401, 0.758117,
+                                 0.405414, 0.177287, 0.044591, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
+                                 0.000000, 0.000000, 0.000000, 0.000000};
+
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}
+
+TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    m_model.SetSolver("HeunExplicit");
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_model);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPET));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.000000, 1.000000, 2.318350, 7.156080, 2.500000, 1.754243, 1.193078, 0.778497,
+                                 0.479776, 0.272117, 0.135535, 0.053956, 0.024801, 0.009920, 0.003968, 0.001587,
+                                 0.000635, 0.000254, 0.000102, 0.000041};
+
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}
+
+TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    m_model.SetSolver("RungeKutta");
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_model);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPET));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.000000, 0.867934, 2.260862, 7.068382, 2.541888, 1.776578, 1.201974, 0.778559,
+                                 0.474453, 0.263977, 0.126492, 0.046199, 0.014299, 0.004553, 0.001450, 0.000462,
+                                 0.000147, 0.000047, 0.000015, 0.000005};
+
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}

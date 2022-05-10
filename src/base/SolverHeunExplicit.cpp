@@ -10,54 +10,75 @@ SolverHeunExplicit::SolverHeunExplicit()
 
 bool SolverHeunExplicit::Solve() {
 
-    vecDoublePt* iterableValues = m_processor->GetStateVariablesVectorPt();
-    std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
-/*
-    // k1 = f(tn, Sn)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.0);
-        if (!brick->Compute()) {
-            return false;
-        }
-    }
+    std::vector<Brick*>* bricks = m_processor->GetIterableBricksVectorPt();
 
+    // Save the original state variables
+    vecDoublePt* stateVariables = m_processor->GetStateVariablesVectorPt();
     int counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 0) = *value;
+    for (auto value: *stateVariables) {
+        m_stateVariables(counter, 0) = *value;
         counter++;
     }
 
-    // k2 = f(tn + h, Sn + k1 h)
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(1.0);
-        if (!brick->Compute()) {
-            return false;
+    // Compute the change rates for k1 = f(tn, Sn)
+    int iRate = 0;
+    for (auto brick: *bricks) {
+        for (auto process: brick->GetProcesses()) {
+            vecDouble rates = process->GetChangeRates();
+            for (double rate: rates) {
+                wxASSERT(m_changeRates.rows() > iRate);
+                m_changeRates(iRate, 0) = rate;
+                iRate++;
+            }
         }
     }
 
+    // Apply the changes
+    iRate = 0;
+    for (auto brick: *bricks) {
+        brick->UpdateContentFromInputs();
+        for (auto process: brick->GetProcesses()) {
+            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
+                process->ApplyChange(iConnect, m_changeRates(iRate, 0), *m_timeStepInDays);
+                iRate++;
+            }
+        }
+    }
+
+    // Compute the change rates for k1 = f(tn + h, Sn + k1 h)
+    iRate = 0;
+    for (auto brick: *bricks) {
+        for (auto process: brick->GetProcesses()) {
+            vecDouble rates = process->GetChangeRates();
+            for (double rate: rates) {
+                wxASSERT(m_changeRates.rows() > iRate);
+                m_changeRates(iRate, 1) = rate;
+                iRate++;
+            }
+        }
+    }
+
+    // Restore original state variables
     counter = 0;
-    for (auto value: *iterableValues) {
-        m_container(counter, 1) = *value;
+    for (auto value: *stateVariables) {
+        *value = m_stateVariables(counter, 0);
         counter++;
     }
 
-    // Final change rate
-    axd rkValues = (m_container.col(0) + m_container.col(1)) / 2;
+    // Final change rates
+    axd rkValues = (m_changeRates.col(0) + m_changeRates.col(1)) / 2;
 
-    // Update the state variable values
-    for (int i = 0; i < (*iterableValues).size(); ++i) {
-        *(*iterableValues)[i] = rkValues[i];
-    }
-
-    // Compute final values
-    for (auto brick: *iterableBricks) {
-        brick->SetStateVariablesFor(0.0);
-        if (!brick->Compute()) {
-            return false;
+    // Apply the changes
+    iRate = 0;
+    for (auto brick: *bricks) {
+        brick->UpdateContentFromInputs();
+        for (auto process: brick->GetProcesses()) {
+            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
+                process->ApplyChange(iConnect, rkValues(iRate), *m_timeStepInDays);
+                iRate++;
+            }
         }
     }
 
     return true;
-    */
-    return false;
 }

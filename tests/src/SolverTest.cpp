@@ -60,3 +60,31 @@ TEST_F(SingleLinearStorage, UsingEulerExplicit) {
         }
     }
 }
+
+TEST_F(SingleLinearStorage, UsingHeunExplicit) {
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    m_modelSettings.SetSolver("HeunExplicit");
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_modelSettings);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecipSingleRainyDay));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.000000, 1.500000, 3.667500, 5.282288, 4.985304, 3.714052, 2.766968, 2.061392,
+                                 1.535737, 1.144124, 0.852372, 0.635017, 0.473088, 0.352450, 0.262576, 0.195619,
+                                 0.145736, 0.108573, 0.080887, 0.060261};
+
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}

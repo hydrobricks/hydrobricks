@@ -19,7 +19,6 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
         return process;
     } else if (processSettings.type.IsSameAs("ET:Socont")) {
         auto process = new ProcessETSocont(brick);
-        process->AssignParameters(processSettings);
         return process;
     } else {
         wxLogError(_("Process type '%s' not recognized."), processSettings.type);

@@ -94,9 +94,9 @@ void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
 
     if (name.IsSameAs("Precipitation", false)) {
         m_selectedProcess->forcing.push_back(Precipitation);
-    } else if (name.IsSameAs("Temperature", false)) {
+    } else if (name.IsSameAs("PET", false)) {
         m_selectedProcess->forcing.push_back(PET);
-    } else if (name.IsSameAs("ETP", false)) {
+    } else if (name.IsSameAs("Temperature", false)) {
         m_selectedProcess->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -147,6 +147,13 @@ void SettingsModel::SelectBrick(int index) {
     wxASSERT(m_modelStructures.size() == 1);
 
     m_selectedBrick = &m_selectedStructure->bricks[index];
+}
+
+void SettingsModel::SelectProcess(int index) {
+    wxASSERT(m_selectedBrick);
+    wxASSERT(m_selectedBrick->processes.size() >= 1);
+
+    m_selectedProcess = &m_selectedBrick->processes[index];
 }
 
 vecStr SettingsModel::GetHydroUnitLogLabels() {

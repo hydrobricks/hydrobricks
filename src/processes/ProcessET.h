@@ -18,6 +18,10 @@ class ProcessET : public Process {
 
     int GetConnectionsNb() override;
 
+    bool ToAtmosphere() override {
+        return true;
+    }
+
   protected:
 
   private:

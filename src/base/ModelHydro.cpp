@@ -3,6 +3,7 @@
 #include "FluxForcing.h"
 #include "FluxToBrick.h"
 #include "FluxToOutlet.h"
+#include "FluxToAtmosphere.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -44,7 +45,6 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
         for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
             modelSettings.SelectBrick(iBrick);
-
             BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
             Brick* brick = Brick::Factory(brickSettings, unit);
@@ -53,6 +53,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
             BuildForcingConnections(brickSettings, unit, brick);
 
             for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+                modelSettings.SelectProcess(iProcess);
                 ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
                 Process* process = Process::Factory(processSettings, brick);
@@ -72,11 +73,17 @@ void ModelHydro::BuildFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            for (const auto& output: processSettings.outputs)  {
-                Flux* flux;
-                Brick* brick = unit->GetBrick(iBrick);
-                Process* process = brick->GetProcess(iProcess);
+            Flux* flux;
+            Brick* brick = unit->GetBrick(iBrick);
+            Process* process = brick->GetProcess(iProcess);
 
+            if (process->ToAtmosphere()) {
+                flux = new FluxToAtmosphere();
+                process->AttachFluxOut(flux);
+                continue;
+            }
+
+            for (const auto& output: processSettings.outputs)  {
                 if (output.target.IsSameAs("outlet", false)) {
                     flux = new FluxToOutlet();
                     m_subBasin->AttachOutletFlux(flux);

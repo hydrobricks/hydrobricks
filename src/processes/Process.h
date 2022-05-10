@@ -48,6 +48,10 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
+    virtual bool ToAtmosphere() {
+        return false;
+    }
+
     virtual int GetConnectionsNb() = 0;
 
     virtual vecDouble GetChangeRates() = 0;

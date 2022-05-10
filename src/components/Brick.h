@@ -54,7 +54,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick needs to be handled by the solver.
      */
-    bool NeedsSolver() {
+    bool NeedsSolver() const {
         return m_needsSolver;
     }
 
@@ -63,10 +63,6 @@ class Brick : public wxObject {
     void AddAmount(double change);
 
     void UpdateContentFromInputs();
-
-    bool Compute();
-
-    double GetOutputsSum(vecDouble &qOuts);
 
     int GetInputsNb() {
         return int(m_inputs.size());
@@ -95,12 +91,12 @@ class Brick : public wxObject {
         m_name = name;
     }
 
-    void SetCapacity(float* capacity) {
-        m_capacity = capacity;
-    }
-
     bool HasMaximumCapacity() const {
         return m_capacity != nullptr;
+    }
+
+    double GetMaximumCapacity() {
+        return *m_capacity;
     }
 
     bool IsFull() const {

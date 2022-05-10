@@ -4,17 +4,11 @@
 ProcessETSocont::ProcessETSocont(Brick* brick)
     : ProcessET(brick),
       m_pet(nullptr),
-      m_stock(nullptr),
-      m_stockMax(0.0),
       m_exponent(0.5)
 {}
 
 bool ProcessETSocont::IsOk() {
     return ProcessET::IsOk();
-}
-
-void ProcessETSocont::AssignParameters(const ProcessSettings &processSettings) {
-    wxFAIL;
 }
 
 void ProcessETSocont::AttachForcing(Forcing* forcing) {
@@ -26,5 +20,6 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
 }
 
 vecDouble ProcessETSocont::GetChangeRates() {
-    return {m_pet->GetValue() * pow(*m_stock / m_stockMax, m_exponent)};
+    wxASSERT(m_brick->HasMaximumCapacity());
+    return {m_pet->GetValue() * pow(m_brick->GetContent() / m_brick->GetMaximumCapacity(), m_exponent)};
 }

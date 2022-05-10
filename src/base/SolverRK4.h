@@ -14,6 +14,7 @@ class SolverRK4 : public Solver {
   protected:
 
   private:
+
 };
 
 #endif  // HYDROBRICKS_SOLVER_RK4_H

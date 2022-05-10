@@ -32,6 +32,18 @@ class Solver : public wxObject {
     int m_nIterations;
     double* m_timeStepInDays;
 
+    void SaveStateVariables(int col);
+
+    void ComputeChangeRates(int col);
+
+    void SetStateVariablesToIteration(int col);
+
+    void SetStateVariablesToAvgOf(int col1, int col2);
+
+    void ApplyProcesses(int col) const;
+
+    void ApplyProcesses(const axd& changeRates) const;
+
   private:
 };
 

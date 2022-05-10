@@ -88,3 +88,31 @@ TEST_F(SingleLinearStorage, UsingHeunExplicit) {
         }
     }
 }
+
+TEST_F(SingleLinearStorage, UsingRungeKutta) {
+    SubBasin subBasin;
+    HydroUnit unit;
+    subBasin.AddHydroUnit(&unit);
+
+    m_modelSettings.SetSolver("RungeKutta");
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_modelSettings);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecipSingleRainyDay));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.000000, 1.361250, 3.600090, 5.258707, 5.126222, 3.797698, 2.813477, 2.084329,
+                                 1.544149, 1.143964, 0.847491, 0.627853, 0.465137, 0.344591, 0.255286, 0.189125,
+                                 0.140111, 0.103800, 0.076899, 0.056969};
+
+    for (auto & basinOutput : basinOutputs) {
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}

@@ -57,6 +57,7 @@ TEST(TimeMachine, IsOver) {
     timer.Initialize(wxDateTime(1, wxDateTime::Jan, 2020), wxDateTime(3, wxDateTime::Jan, 2020), 1, Day);
     timer.IncrementTime();
     timer.IncrementTime();
+    timer.IncrementTime();
 
     EXPECT_TRUE(timer.IsOver());
 }

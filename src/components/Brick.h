@@ -37,6 +37,11 @@ class Brick : public wxObject {
         m_inputs.push_back(flux);
     }
 
+    void AddProcess(Process* process) {
+        wxASSERT(process);
+        m_processes.push_back(process);
+    }
+
     /**
      * Check that everything is correctly defined.
      *

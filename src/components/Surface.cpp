@@ -20,6 +20,11 @@ bool Surface::IsOk() {
         wxLogError(_("The surface is not attached to inputs."));
         return false;
     }
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
+    }
 
     return true;
 }

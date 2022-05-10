@@ -13,15 +13,20 @@ ModelHydro::~ModelHydro() {
 }
 
 bool ModelHydro::Initialize(SettingsModel& modelSettings) {
-    BuildModelStructure(modelSettings);
+    try {
+        BuildModelStructure(modelSettings);
 
-    m_timer.Initialize(modelSettings.GetTimerSettings());
-    m_processor.Initialize(modelSettings.GetSolverSettings());
-    m_logger.InitContainer(m_timer.GetTimeStepsNb(),
-                           m_subBasin->GetHydroUnitsNb(),
-                           modelSettings.GetAggregatedLogLabels(),
-                           modelSettings.GetHydroUnitLogLabels());
-    ConnectLoggerToValues(modelSettings);
+        m_timer.Initialize(modelSettings.GetTimerSettings());
+        m_processor.Initialize(modelSettings.GetSolverSettings());
+        m_logger.InitContainer(m_timer.GetTimeStepsNb(),
+                               m_subBasin->GetHydroUnitsNb(),
+                               modelSettings.GetAggregatedLogLabels(),
+                               modelSettings.GetHydroUnitLogLabels());
+        ConnectLoggerToValues(modelSettings);
+    } catch (const std::exception& e) {
+        wxLogError(_("An exception occurred during model initialization: %s."), e.what());
+        return false;
+    }
 
     return true;
 }
@@ -45,7 +50,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
             BuildForcingConnections(brickSettings, unit, brick);
 
-            for (int iProcess = 0; iProcess < modelSettings.GetBricksNb(); ++iProcess) {
+            for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
                 ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
                 Process* process = Process::Factory(processSettings, brick);
@@ -61,7 +66,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
 void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
-        for (int iProcess = 0; iProcess < modelSettings.GetBricksNb(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& output: processSettings.outputs)  {

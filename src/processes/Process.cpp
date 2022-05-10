@@ -6,7 +6,11 @@
 
 Process::Process(Brick* brick)
     : m_brick(brick)
-{}
+{
+    if (brick) {
+        brick->AddProcess(this);
+    }
+}
 
 Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
     if (processSettings.type.IsSameAs("Outflow:linear")) {

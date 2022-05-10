@@ -85,6 +85,11 @@ class SettingsModel : public wxObject {
         return int(m_selectedStructure->bricks.size());
     }
 
+    int GetProcessesNb() const {
+        wxASSERT(m_selectedBrick);
+        return int(m_selectedBrick->processes.size());
+    }
+
     SolverSettings GetSolverSettings() const {
         return m_solver;
     }

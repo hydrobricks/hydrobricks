@@ -23,6 +23,10 @@ class TimeSeriesUniform : public TimeSeries {
         return false;
     }
 
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
+
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:

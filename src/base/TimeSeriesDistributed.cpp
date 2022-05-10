@@ -36,6 +36,16 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
     return true;
 }
 
+wxDateTime TimeSeriesDistributed::GetStart() {
+    wxASSERT(!m_data.empty());
+    return m_data[0]->GetStart();
+}
+
+wxDateTime TimeSeriesDistributed::GetEnd() {
+    wxASSERT(!m_data.empty());
+    return m_data[0]->GetEnd();
+}
+
 TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
     wxASSERT(m_data.size() == m_unitIds.size());
 

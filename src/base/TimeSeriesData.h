@@ -19,6 +19,10 @@ class TimeSeriesData : public wxObject {
 
     virtual bool AdvanceOneTimeStep() = 0;
 
+    virtual wxDateTime GetStart() = 0;
+
+    virtual wxDateTime GetEnd() = 0;
+
   protected:
     vecDouble m_values;
     int m_cursor;
@@ -42,6 +46,10 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     bool SetCursorToDate(const wxDateTime &dateTime) override;
 
     bool AdvanceOneTimeStep() override;
+
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
 
   protected:
     wxDateTime m_start;
@@ -68,6 +76,10 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     bool SetCursorToDate(const wxDateTime &dateTime) override;
 
     bool AdvanceOneTimeStep() override;
+
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
 
   protected:
     vecDouble m_dates;

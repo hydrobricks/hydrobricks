@@ -31,6 +31,14 @@ class TimeMachine : public wxObject {
         return m_date;
     }
 
+    wxDateTime GetStart() {
+        return m_start;
+    }
+
+    wxDateTime GetEnd() {
+        return m_end;
+    }
+
     double* GetTimeStepPointer() {
         return &m_timeStepInDays;
     }

@@ -20,6 +20,10 @@ class TimeSeriesDistributed : public TimeSeries {
         return true;
     }
 
+    wxDateTime GetStart() override;
+
+    wxDateTime GetEnd() override;
+
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:

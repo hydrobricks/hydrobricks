@@ -16,6 +16,10 @@ class TimeSeries : public wxObject {
 
     virtual bool IsDistributed() = 0;
 
+    virtual wxDateTime GetStart() = 0;
+
+    virtual wxDateTime GetEnd() = 0;
+
     virtual TimeSeriesData* GetDataPointer(int unitId) = 0;
 
     VariableType GetVariableType() {

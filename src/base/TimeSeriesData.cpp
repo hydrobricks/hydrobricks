@@ -96,6 +96,13 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     return true;
 }
 
+wxDateTime TimeSeriesDataRegular::GetStart() {
+    return m_start;
+}
+
+wxDateTime TimeSeriesDataRegular::GetEnd() {
+    return m_end;
+}
 
 /*
  * TimeSeriesDataIrregular
@@ -131,4 +138,14 @@ bool TimeSeriesDataIrregular::SetCursorToDate(const wxDateTime &) {
 
 bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
     throw NotImplemented();
+}
+
+wxDateTime TimeSeriesDataIrregular::GetStart() {
+    wxASSERT(!m_dates.empty());
+    return m_dates[0];
+}
+
+wxDateTime TimeSeriesDataIrregular::GetEnd() {
+    wxASSERT(!m_dates.empty());
+    return m_dates[m_dates.size()-1];
 }

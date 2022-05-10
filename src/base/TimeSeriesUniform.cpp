@@ -27,6 +27,16 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
+wxDateTime TimeSeriesUniform::GetStart() {
+    wxASSERT(m_data);
+    return m_data->GetStart();
+}
+
+wxDateTime TimeSeriesUniform::GetEnd() {
+    wxASSERT(m_data);
+    return m_data->GetEnd();
+}
+
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
     wxASSERT(m_data);
     return m_data;

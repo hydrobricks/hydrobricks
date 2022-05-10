@@ -193,6 +193,16 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
         }
     }
 
+    if (timeSeries->GetStart().IsLaterThan(m_timer.GetStart())) {
+        wxLogError(_("The data starts after the beginning of the modelling period."));
+        return false;
+    }
+
+    if (timeSeries->GetEnd().IsEarlierThan(m_timer.GetEnd())) {
+        wxLogError(_("The data ends before the end of the modelling period."));
+        return false;
+    }
+
     m_timeSeries.push_back(timeSeries);
 
     return true;

@@ -20,8 +20,8 @@ void ProcessOutflowLinear::AssignParameters(const ProcessSettings &processSettin
     m_responseFactor = GetParameterValuePointer(processSettings, "responseFactor");
 }
 
-double ProcessOutflowLinear::GetChangeRate() {
-    return (*m_responseFactor) * m_brick->GetContent();
+vecDouble ProcessOutflowLinear::GetChangeRates() {
+    return {(*m_responseFactor) * m_brick->GetContent()};
 }
 
 double* ProcessOutflowLinear::GetValuePointer(const wxString& name) {

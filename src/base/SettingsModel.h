@@ -17,7 +17,6 @@ struct TimerSettings {
 
 struct ProcessOutputSettings {
     wxString target;
-    wxString type;
 };
 
 struct ProcessSettings {
@@ -66,7 +65,7 @@ class SettingsModel : public wxObject {
 
     void AddForcingToCurrentProcess(const wxString &name);
 
-    void AddOutputToCurrentProcess(const wxString &target, const wxString &type = "Direct");
+    void AddOutputToCurrentProcess(const wxString &target);
 
     void AddLoggingToItem(const wxString& itemName);
 

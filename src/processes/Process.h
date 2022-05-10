@@ -48,14 +48,18 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
-    virtual double GetChangeRate() = 0;
+    virtual int GetConnectionsNb() = 0;
+
+    virtual vecDouble GetChangeRates() = 0;
+
+    void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
 
     /**
-     * Get pointers to the values that need to be iterated.
+     * Get pointers to the state variables.
      *
-     * @return vector of pointers to the values that need to be iterated.
+     * @return vector of pointers to the state variables.
      */
-    virtual vecDoublePt GetIterableValues() {
+    virtual vecDoublePt GetStateVariables() {
         return vecDoublePt {};
     }
 

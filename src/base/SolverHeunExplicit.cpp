@@ -1,15 +1,16 @@
-#include "Processor.h"
-#include "SolverExplicitHeun.h"
+#include "SolverHeunExplicit.h"
 
-SolverExplicitHeun::SolverExplicitHeun()
+#include "Processor.h"
+
+SolverHeunExplicit::SolverHeunExplicit()
     : Solver()
 {
     m_nIterations = 2;
 }
 
-bool SolverExplicitHeun::Solve() {
+bool SolverHeunExplicit::Solve() {
 
-    vecDoublePt* iterableValues = m_processor->GetIterableValuesVectorPt();
+    vecDoublePt* iterableValues = m_processor->GetStateVariablesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
 /*
     // k1 = f(tn, Sn)

@@ -76,7 +76,18 @@ Process* Brick::GetProcess(int index) {
     return m_processes[index];
 }
 
+void Brick::SubtractAmount(double change) {
+    m_content -= change;
+    wxASSERT(m_content >= 0);
+}
+
+void Brick::AddAmount(double change) {
+    m_content += change;
+    wxASSERT(m_content >= 0);
+}
+
 bool Brick::Compute() {
+    /*
     // Sum inputs
     double qIn = SumIncomingFluxes();
 
@@ -102,7 +113,7 @@ bool Brick::Compute() {
         wxLogError(_("Content capacity of the storage exceeded. It has to be handled before."));
         return false;
     }
-/*
+
     for (int i = 0; i < qOuts.size(); ++i) {
         m_outputs[i]->SetAmount(qOuts[i]);
     }
@@ -121,6 +132,10 @@ double Brick::SumIncomingFluxes() {
     return sum;
 }
 
+void Brick::UpdateContentFromInputs() {
+    m_content += SumIncomingFluxes();
+}
+
 double Brick::GetOutputsSum(vecDouble &qOuts) {
     double qOutTotal = 0;
     for (auto &qOut : qOuts) {
@@ -130,14 +145,14 @@ double Brick::GetOutputsSum(vecDouble &qOuts) {
     return qOutTotal;
 }
 
-vecDoublePt Brick::GetIterableValues() {
+vecDoublePt Brick::GetStateVariables() {
     return vecDoublePt {&m_content};
 }
 
-vecDoublePt Brick::GetIterableValuesFromProcesses() {
+vecDoublePt Brick::GetStateVariablesFromProcesses() {
     vecDoublePt values;
     for (auto const &process: m_processes) {
-        vecDoublePt processValues = process->GetIterableValues();
+        vecDoublePt processValues = process->GetStateVariables();
 
         if (processValues.empty()) {
             continue;
@@ -148,6 +163,16 @@ vecDoublePt Brick::GetIterableValuesFromProcesses() {
     }
 
     return values;
+}
+
+int Brick::GetProcessesConnectionsNb() {
+    int counter = 0;
+
+    for (auto const &process: m_processes) {
+        counter += process->GetConnectionsNb();
+    }
+
+    return counter;
 }
 
 double* Brick::GetBaseValuePointer(const wxString& name) {

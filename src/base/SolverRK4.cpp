@@ -9,7 +9,7 @@ SolverRK4::SolverRK4()
 
 bool SolverRK4::Solve() {
 
-    vecDoublePt* iterableValues = m_processor->GetIterableValuesVectorPt();
+    vecDoublePt* iterableValues = m_processor->GetStateVariablesVectorPt();
     std::vector<Brick*>* iterableBricks = m_processor->GetIterableBricksVectorPt();
 /*
     // k1 = f(tn, Sn)

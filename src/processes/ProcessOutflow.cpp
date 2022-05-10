@@ -14,6 +14,10 @@ bool ProcessOutflow::IsOk() {
     return true;
 }
 
+int ProcessOutflow::GetConnectionsNb() {
+    return 1;
+}
+
 double* ProcessOutflow::GetValuePointer(const wxString& name) {
     if (name.IsSameAs("output")) {
         return m_outputs[0]->GetAmountPointer();

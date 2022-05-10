@@ -17,30 +17,33 @@ class Processor : public wxObject {
 
     void SetModel(ModelHydro* model);
 
-    void ConnectToIterableBricks();
+    void ConnectToElementsToSolve();
 
-    void ConnectToIterableValues();
-
-    int GetNbIterableValues();
+    int GetNbStateVariables();
 
     bool ProcessTimeStep();
 
-    vecDoublePt* GetIterableValuesVectorPt() {
-        return &m_iterableValues;
+    vecDoublePt* GetStateVariablesVectorPt() {
+        return &m_stateVariables;
     }
 
     std::vector<Brick*>* GetIterableBricksVectorPt() {
         return &m_iterableBricks;
     }
+
+    int GetNbConnections() {
+        return m_connectionsNb;
+    }
         
   protected:
     Solver* m_solver;
     ModelHydro* m_model;
-    vecDoublePt m_iterableValues;
+    int m_connectionsNb;
+    vecDoublePt m_stateVariables;
     std::vector<Brick*> m_iterableBricks;
 
   private:
-    void StoreIterableValues(vecDoublePt& values);
+    void StoreStateVariables(vecDoublePt& values);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

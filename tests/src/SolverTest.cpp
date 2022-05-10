@@ -50,14 +50,13 @@ TEST_F(SingleLinearStorage, UsingEulerExplicit) {
 
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.000000, 1.500000, 3.667500, 5.282288, 4.985304,
-                                 3.714052, 2.766968, 2.061392, 1.535737, 1.144124,
-                                 0.852372, 0.635017, 0.473088, 0.352450, 0.262576,
-                                 0.195619, 0.145736, 0.108573, 0.080887, 0.060261};
+    vecDouble expectedOutputs = {0.000000, 0.000000, 3.000000, 5.100000, 6.570000, 4.599000, 3.219300, 2.253510,
+                                 1.577457, 1.104220, 0.772954, 0.541068, 0.378747, 0.265123, 0.185586, 0.129910,
+                                 0.090937, 0.063656, 0.044559, 0.031191};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
-            EXPECT_EQ(basinOutput[j], expectedOutputs[j]);
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
 }

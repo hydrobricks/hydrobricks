@@ -3,9 +3,9 @@
 
 #include "Forcing.h"
 #include "Includes.h"
-#include "Process.h"
+#include "ProcessET.h"
 
-class ProcessETSocont : public Process {
+class ProcessETSocont : public ProcessET {
   public:
     explicit ProcessETSocont(Brick* brick);
 
@@ -23,7 +23,7 @@ class ProcessETSocont : public Process {
 
     void AttachForcing(Forcing* forcing) override;
 
-    double GetChangeRate() override;
+    vecDouble GetChangeRates() override;
 
     void SetStockState(double* stock) {
         m_stock = stock;

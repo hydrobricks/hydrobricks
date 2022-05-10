@@ -21,7 +21,7 @@ class ProcessOutflowLinear : public ProcessOutflow {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    double GetChangeRate() override;
+    vecDouble GetChangeRates() override;
 
     double* GetValuePointer(const wxString& name) override;
 

@@ -54,6 +54,12 @@ float* Process::GetParameterValuePointer(const ProcessSettings &processSettings,
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
+void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
+    wxASSERT(m_outputs.size() > connectionIndex);
+    m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
+    m_brick->SubtractAmount(rate * timeStepInDays);
+}
+
 double* Process::GetValuePointer(const wxString&) {
     return nullptr;
 }

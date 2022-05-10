@@ -68,7 +68,7 @@ void TimeMachine::Initialize(const TimerSettings &settings) {
 }
 
 bool TimeMachine::IsOver() {
-    return !m_date.IsEarlierThan(m_end);
+    return m_date.IsLaterThan(m_end);
 }
 
 void TimeMachine::IncrementTime() {

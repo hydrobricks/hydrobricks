@@ -21,11 +21,16 @@ class Solver : public wxObject {
 
     void InitializeContainers();
 
+    void SetTimeStepInDays(double* timeStep) {
+        m_timeStepInDays = timeStep;
+    }
+
   protected:
     Processor* m_processor;
     axxd m_stateVariables;
     axxd m_changeRates;
     int m_nIterations;
+    double* m_timeStepInDays;
 
   private:
 };

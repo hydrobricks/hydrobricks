@@ -1,5 +1,5 @@
-#ifndef HYDROBRICKS_SOLVER_EXPLICIT_EULER_H
-#define HYDROBRICKS_SOLVER_EXPLICIT_EULER_H
+#ifndef HYDROBRICKS_SOLVER_EULER_EXPLICIT_H
+#define HYDROBRICKS_SOLVER_EULER_EXPLICIT_H
 
 #include "Includes.h"
 #include "Solver.h"
@@ -16,4 +16,4 @@ class SolverEulerExplicit : public Solver {
   private:
 };
 
-#endif  // HYDROBRICKS_SOLVER_EXPLICIT_EULER_H
+#endif  // HYDROBRICKS_SOLVER_EULER_EXPLICIT_H

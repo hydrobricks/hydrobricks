@@ -103,12 +103,11 @@ void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentProcess(const wxString &target, const wxString &type) {
+void SettingsModel::AddOutputToCurrentProcess(const wxString &target) {
     wxASSERT(m_selectedProcess);
 
     ProcessOutputSettings outputSettings;
     outputSettings.target = target;
-    outputSettings.type = type;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 

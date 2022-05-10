@@ -16,6 +16,8 @@ class ProcessOutflow : public Process {
      */
     bool IsOk() override;
 
+    int GetConnectionsNb() override;
+
     double* GetValuePointer(const wxString& name) override;
 
   protected:

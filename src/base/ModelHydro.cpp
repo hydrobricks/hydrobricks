@@ -1,7 +1,8 @@
 #include "ModelHydro.h"
 
-#include "FluxDirect.h"
 #include "FluxForcing.h"
+#include "FluxToBrick.h"
+#include "FluxToOutlet.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -46,7 +47,6 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
             Brick* brick = Brick::Factory(brickSettings, unit);
             brick->SetName(brickSettings.name);
-            brick->SetTimeStepPointer(m_timer.GetTimeStepPointer());
 
             BuildForcingConnections(brickSettings, unit, brick);
 
@@ -71,22 +71,19 @@ void ModelHydro::BuildFluxes(const SettingsModel& modelSettings, HydroUnit* unit
 
             for (const auto& output: processSettings.outputs)  {
                 Flux* flux;
-                if (output.type.IsSameAs("Direct", false)) {
-                    flux = new FluxDirect();
-                } else {
-                    throw NotImplemented();
-                }
-
                 Brick* brick = unit->GetBrick(iBrick);
                 Process* process = brick->GetProcess(iProcess);
-                process->AttachFluxOut(flux);
 
                 if (output.target.IsSameAs("outlet", false)) {
+                    flux = new FluxToOutlet();
                     m_subBasin->AttachOutletFlux(flux);
                 } else {
                     Brick* brickIn = unit->GetBrick(output.target);
+                    flux = new FluxToBrick(brickIn);
                     brickIn->AttachFluxIn(flux);
                 }
+
+                process->AttachFluxOut(flux);
             }
         }
     }

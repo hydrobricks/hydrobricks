@@ -1,14 +1,14 @@
 #include <gtest/gtest.h>
 
-#include "Storage.h"
-#include "Parameter.h"
-#include "FluxDirect.h"
+#include "FluxToBrick.h"
 #include "HydroUnit.h"
+#include "Parameter.h"
+#include "Storage.h"
 /*
 TEST(StorageLinear, BuildsCorrectly) {
     HydroUnit unit;
     Storage storage(&unit);
-    FluxDirect inFlux, outFlux;
+    FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 
@@ -19,7 +19,7 @@ TEST(StorageLinear, MissingHydroUnit) {
     wxLogNull logNo;
 
     Storage storage(nullptr);
-    FluxDirect inFlux, outFlux;
+    FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 
@@ -33,7 +33,7 @@ TEST(StorageLinear, MissingInFlux) {
     StorageLinear storage(&unit);
     Parameter responseFactor("responseFactor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
-    FluxDirect outFlux;
+    FluxToBrick outFlux;
     storage.AttachFluxOut(&outFlux);
 
     EXPECT_FALSE(storage.IsOk());
@@ -46,7 +46,7 @@ TEST(StorageLinear, MissingOutFlux) {
     StorageLinear storage(&unit);
     Parameter responseFactor("responseFactor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
-    FluxDirect inFlux;
+    FluxToBrick inFlux;
     storage.AttachFluxIn(&inFlux);
 
     EXPECT_FALSE(storage.IsOk());
@@ -70,7 +70,7 @@ TEST(StorageLinear, ComputesCorrectly) {
     StorageLinear storage(&unit);
     Parameter responseFactor("responseFactor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
-    FluxDirect inFlux, outFlux;
+    FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 

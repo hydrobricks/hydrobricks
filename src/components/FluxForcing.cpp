@@ -1,6 +1,7 @@
 #include "FluxForcing.h"
 
 FluxForcing::FluxForcing()
+    : Flux()
 {}
 
 bool FluxForcing::IsOk() {

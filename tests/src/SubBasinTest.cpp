@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "SubBasin.h"
+#include "FluxToBrick.h"
 #include "Storage.h"
-#include "FluxDirect.h"
+#include "SubBasin.h"
 
 TEST(SubBasin, HasIncomingFlow) {
     SubBasin subBasinIn;
@@ -48,7 +48,7 @@ TEST(SubBasin, SubBasinIsOk) {
     subBasin.AddHydroUnit(&unit);
 
     Storage storage(&unit);
-    FluxDirect inFlux, outFlux;
+    FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);
     storage.AttachFluxOut(&outFlux);
 

@@ -2,7 +2,7 @@
 #include "Brick.h"
 
 ProcessETSocont::ProcessETSocont(Brick* brick)
-    : Process(brick),
+    : ProcessET(brick),
       m_pet(nullptr),
       m_stock(nullptr),
       m_stockMax(0.0),
@@ -10,12 +10,7 @@ ProcessETSocont::ProcessETSocont(Brick* brick)
 {}
 
 bool ProcessETSocont::IsOk() {
-    if (m_outputs.size() != 1) {
-        wxLogError(_("ET should have a single output."));
-        return false;
-    }
-
-    return true;
+    return ProcessET::IsOk();
 }
 
 void ProcessETSocont::AssignParameters(const ProcessSettings &processSettings) {
@@ -30,6 +25,6 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     }
 }
 
-double ProcessETSocont::GetChangeRate() {
-    return m_pet->GetValue() * pow(*m_stock / m_stockMax, m_exponent);
+vecDouble ProcessETSocont::GetChangeRates() {
+    return {m_pet->GetValue() * pow(*m_stock / m_stockMax, m_exponent)};
 }

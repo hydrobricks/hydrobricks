@@ -58,6 +58,12 @@ class Brick : public wxObject {
         return m_needsSolver;
     }
 
+    void SubtractAmount(double change);
+
+    void AddAmount(double change);
+
+    void UpdateContentFromInputs();
+
     bool Compute();
 
     double GetOutputsSum(vecDouble &qOuts);
@@ -73,6 +79,10 @@ class Brick : public wxObject {
 
     Process* GetProcess(int index);
 
+    std::vector<Process*> GetProcesses() {
+        return m_processes;
+    }
+
     wxString GetName() {
         return m_name;
     }
@@ -85,14 +95,6 @@ class Brick : public wxObject {
         m_capacity = capacity;
     }
 
-    double* GetTimeStepPointer() {
-        return m_timeStepInDays;
-    }
-
-    void SetTimeStepPointer(double* value) {
-        m_timeStepInDays = value;
-    }
-
     bool HasMaximumCapacity() const {
         return m_capacity != nullptr;
     }
@@ -102,13 +104,15 @@ class Brick : public wxObject {
     }
 
     /**
-     * Get pointers to the values that need to be iterated.
+     * Get pointers to the state variables.
      *
-     * @return vector of pointers to the values that need to be iterated.
+     * @return vector of pointers to the state variables.
      */
-    virtual vecDoublePt GetIterableValues();
+    virtual vecDoublePt GetStateVariables();
 
-    vecDoublePt GetIterableValuesFromProcesses();
+    vecDoublePt GetStateVariablesFromProcesses();
+
+    int GetProcessesConnectionsNb();
 
     double* GetBaseValuePointer(const wxString& name);
 
@@ -119,7 +123,6 @@ class Brick : public wxObject {
     bool m_needsSolver;
     double m_content; // [mm]
     float* m_capacity;
-    double* m_timeStepInDays; // [d]
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Process*> m_processes;

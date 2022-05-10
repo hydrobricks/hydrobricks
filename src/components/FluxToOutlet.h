@@ -1,12 +1,12 @@
-#ifndef HYDROBRICKS_FLUX_DIRECT_H
-#define HYDROBRICKS_FLUX_DIRECT_H
+#ifndef HYDROBRICKS_FLUX_TO_OUTLET_H
+#define HYDROBRICKS_FLUX_TO_OUTLET_H
 
 #include "Includes.h"
 #include "Flux.h"
 
-class FluxDirect : public Flux {
+class FluxToOutlet : public Flux {
   public:
-    explicit FluxDirect();
+    explicit FluxToOutlet();
 
     /**
      * @copydoc Flux::IsOk()
@@ -23,4 +23,4 @@ class FluxDirect : public Flux {
   private:
 };
 
-#endif  // HYDROBRICKS_FLUX_DIRECT_H
+#endif  // HYDROBRICKS_FLUX_TO_OUTLET_H

@@ -2,9 +2,7 @@
 
 Storage::Storage(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Storage::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);

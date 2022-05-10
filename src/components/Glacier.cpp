@@ -2,9 +2,7 @@
 
 Glacier::Glacier(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Glacier::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);

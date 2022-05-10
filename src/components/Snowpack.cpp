@@ -2,9 +2,7 @@
 
 Snowpack::Snowpack(HydroUnit *hydroUnit)
     : Brick(hydroUnit)
-{
-    m_needsSolver = false;
-}
+{}
 
 void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);

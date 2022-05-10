@@ -48,9 +48,7 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
-    virtual double GetWaterExtraction();
-
-    virtual double GetWaterAddition();
+    virtual double GetChangeRate() = 0;
 
     /**
      * Get pointers to the values that need to be iterated.
@@ -60,6 +58,8 @@ class Process : public wxObject {
     virtual vecDoublePt GetIterableValues() {
         return vecDoublePt {};
     }
+
+    virtual double* GetValuePointer(const wxString& name);
 
     wxString GetName() {
         return m_name;

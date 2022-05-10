@@ -3,9 +3,9 @@
 
 #include "Forcing.h"
 #include "Includes.h"
-#include "Process.h"
+#include "ProcessOutflow.h"
 
-class ProcessOutflowLinear : public Process {
+class ProcessOutflowLinear : public ProcessOutflow {
   public:
     explicit ProcessOutflowLinear(Brick* brick);
 
@@ -21,9 +21,9 @@ class ProcessOutflowLinear : public Process {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    double GetWaterExtraction() override;
+    double GetChangeRate() override;
 
-    double* GetValuePointer(const wxString& name);
+    double* GetValuePointer(const wxString& name) override;
 
     /**
      * Set the response factor value

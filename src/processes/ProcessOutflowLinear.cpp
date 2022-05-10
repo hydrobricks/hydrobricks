@@ -2,7 +2,7 @@
 #include "Brick.h"
 
 ProcessOutflowLinear::ProcessOutflowLinear(Brick* brick)
-    : Process(brick),
+    : ProcessOutflow(brick),
       m_responseFactor(nullptr)
 {}
 
@@ -20,8 +20,8 @@ void ProcessOutflowLinear::AssignParameters(const ProcessSettings &processSettin
     m_responseFactor = GetParameterValuePointer(processSettings, "responseFactor");
 }
 
-double ProcessOutflowLinear::GetWaterExtraction() {
-    return (*m_responseFactor) * m_brick->GetContent() * (*m_brick->GetTimeStepPointer());
+double ProcessOutflowLinear::GetChangeRate() {
+    return (*m_responseFactor) * m_brick->GetContent();
 }
 
 double* ProcessOutflowLinear::GetValuePointer(const wxString& name) {

@@ -54,10 +54,6 @@ float* Process::GetParameterValuePointer(const ProcessSettings &processSettings,
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
-double Process::GetWaterExtraction() {
-    return 0;
-}
-
-double Process::GetWaterAddition() {
-    return 0;
+double* Process::GetValuePointer(const wxString&) {
+    return nullptr;
 }

@@ -32,7 +32,7 @@ class SingleLinearStorage : public ::testing::Test {
         wxDELETE(m_tsPrecipSingleRainyDay);
     }
 };
-/*
+
 TEST_F(SingleLinearStorage, UsingEulerExplicit) {
     SubBasin subBasin;
     HydroUnit unit;
@@ -61,4 +61,3 @@ TEST_F(SingleLinearStorage, UsingEulerExplicit) {
         }
     }
 }
-*/

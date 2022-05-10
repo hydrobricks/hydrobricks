@@ -92,26 +92,3 @@ TEST_F(ModelHydroSingleLinearStorage, RunsCorrectly) {
 
     EXPECT_TRUE(model.Run());
 }
-/*
-TEST_F(ModelHydroSingleLinearStorage, GetExpectedOutputs) {
-    SubBasin subBasin;
-    HydroUnit unit;
-    subBasin.AddHydroUnit(&unit);
-
-    ModelHydro model(&subBasin);
-    model.Initialize(m_modelSettings);
-
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecipSingleRainyDay));
-    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
-
-    EXPECT_TRUE(model.Run());
-
-    vecAxd aggregOutputs = model.GetLogger()->GetAggregatedValues();
-
-    for (int i = 0; i < aggregOutputs.size(); ++i) {
-        for (int j = 0; j < aggregOutputs[i].size(); ++j) {
-            wxPrintf("%f\n", aggregOutputs[i][j]);
-
-        }
-    }
-}*/

@@ -23,7 +23,7 @@ class ProcessETSocont : public Process {
 
     void AttachForcing(Forcing* forcing) override;
 
-    double GetWaterExtraction() override;
+    double GetChangeRate() override;
 
     void SetStockState(double* stock) {
         m_stock = stock;

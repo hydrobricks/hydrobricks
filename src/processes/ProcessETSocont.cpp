@@ -30,6 +30,6 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     }
 }
 
-double ProcessETSocont::GetWaterExtraction() {
+double ProcessETSocont::GetChangeRate() {
     return m_pet->GetValue() * pow(*m_stock / m_stockMax, m_exponent);
 }

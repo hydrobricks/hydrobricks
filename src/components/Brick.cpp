@@ -9,8 +9,6 @@
 Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_content(0),
-      m_contentPrev(0),
-      m_contentChangeRate(0),
       m_capacity(nullptr),
       m_hydroUnit(hydroUnit)
 {
@@ -69,10 +67,6 @@ float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const
     }
 
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
-}
-
-void Brick::SetStateVariablesFor(float timeStepFraction) {
-    m_content = m_contentPrev + m_contentChangeRate * timeStepFraction;
 }
 
 Process* Brick::GetProcess(int index) {
@@ -136,12 +130,8 @@ double Brick::GetOutputsSum(vecDouble &qOuts) {
     return qOutTotal;
 }
 
-void Brick::Finalize() {
-    m_content = m_contentChangeRate;
-}
-
 vecDoublePt Brick::GetIterableValues() {
-    return vecDoublePt {&m_contentChangeRate};
+    return vecDoublePt {&m_content};
 }
 
 vecDoublePt Brick::GetIterableValuesFromProcesses() {

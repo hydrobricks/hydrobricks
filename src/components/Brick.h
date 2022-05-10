@@ -63,11 +63,6 @@ class Brick : public wxObject {
     double GetOutputsSum(vecDouble &qOuts);
 
     /**
-     * Finalize the computing and copy the "next" values to "previous".
-     */
-    void Finalize();
-
-    /**
      * Get the water content of the current object.
      *
      * @return water content [mm]
@@ -75,13 +70,6 @@ class Brick : public wxObject {
     double GetContent() const {
         return m_content;
     }
-
-    /**
-     * Set the water content of the current object.
-     *
-     * @param timeStepFraction fraction of the time step
-     */
-    void SetStateVariablesFor(float timeStepFraction);
 
     Process* GetProcess(int index);
 
@@ -130,8 +118,6 @@ class Brick : public wxObject {
     wxString m_name;
     bool m_needsSolver;
     double m_content; // [mm]
-    double m_contentPrev; // [mm]
-    double m_contentChangeRate; // [mm/d]
     float* m_capacity;
     double* m_timeStepInDays; // [d]
     HydroUnit* m_hydroUnit;

@@ -60,6 +60,29 @@ void Solver::ComputeChangeRates(int col) {
     }
 }
 
+void Solver::ApplyConstraintsFor(int col) {
+    int iRate = 0;
+    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        for (auto process : brick->GetProcesses()) {
+            for (int i = 0; i < process->GetConnectionsNb(); ++i) {
+                wxASSERT(m_changeRates.rows() > iRate);
+                // Link to fluxes to enforce subsequent constraints
+                process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
+                iRate++;
+            }
+        }
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(*m_timeStepInDays);
+    }
+}
+
+void Solver::ApplyConstraints() {
+    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(*m_timeStepInDays);
+    }
+}
+
 void Solver::SetStateVariablesToIteration(int col) {
     int counter = 0;
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {

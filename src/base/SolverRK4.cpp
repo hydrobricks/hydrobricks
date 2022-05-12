@@ -34,6 +34,7 @@ bool SolverRK4::Solve() {
     SetStateVariablesToIteration(0);
 
     // Apply the changes
+    ApplyConstraints();
     ApplyProcesses(1);
 
     // Save the new state variables
@@ -49,6 +50,7 @@ bool SolverRK4::Solve() {
     SetStateVariablesToIteration(0);
 
     // Apply the changes
+    ApplyConstraints();
     ApplyProcesses(2);
 
     // Save the new state variables

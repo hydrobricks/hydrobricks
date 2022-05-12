@@ -36,6 +36,10 @@ class Solver : public wxObject {
 
     void ComputeChangeRates(int col);
 
+    void ApplyConstraintsFor(int col);
+
+    void ApplyConstraints();
+
     void SetStateVariablesToIteration(int col);
 
     void SetStateVariablesToAvgOf(int col1, int col2);

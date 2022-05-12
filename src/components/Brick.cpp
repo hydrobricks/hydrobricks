@@ -101,6 +101,61 @@ void Brick::UpdateContentFromInputs() {
     m_content += SumIncomingFluxes();
 }
 
+void Brick::ApplyConstraints(double timeStep) {
+    // Get outgoing change rates
+    vecDoublePt outgoingRates;
+    double outputs = 0;
+    for (auto process : m_processes) {
+        for (auto flux : process->GetOutputFluxes()) {
+            double* changeRate = flux->GetChangeRatePointer();
+            wxASSERT(changeRate != nullptr);
+            outgoingRates.push_back(changeRate);
+            outputs += *changeRate;
+        }
+    }
+
+    // Get incoming change rates
+    vecDoublePt incomingRates;
+    double inputs = 0;
+    double inputsForcing = 0;
+    for (auto & input : m_inputs) {
+        if (input->IsForcing()) {
+            inputsForcing += input->GetAmount();
+        } else {
+            double* changeRate = input->GetChangeRatePointer();
+            wxASSERT(changeRate != nullptr);
+            incomingRates.push_back(changeRate);
+            inputs += *changeRate;
+        }
+    }
+
+    double change = inputs - outputs;
+
+    // Avoid negative content
+    if (change < 0 && m_content + inputsForcing + change * timeStep < 0) {
+        double diff = (m_content + inputsForcing + change * timeStep) / timeStep;
+        // Limit the different rates proportionally
+        for (auto rate :outgoingRates) {
+            *rate += diff / *rate;
+        }
+    }
+
+    // Enforce maximum capacity
+    if (HasMaximumCapacity()) {
+        if (m_content + inputsForcing + change * timeStep > *m_capacity) {
+            // Check that it is not only due to forcing
+            if (m_content + inputsForcing > *m_capacity) {
+                //throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity."));
+            }
+            double diff = (*m_capacity - m_content + inputsForcing + change * timeStep) / timeStep;
+            // Limit the different rates proportionally
+            for (auto rate :incomingRates) {
+                *rate -= diff / *rate;
+            }
+        }
+    }
+}
+
 vecDoublePt Brick::GetStateVariables() {
     return vecDoublePt {&m_content};
 }

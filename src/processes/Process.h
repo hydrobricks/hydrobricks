@@ -48,6 +48,10 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
+    std::vector<Flux*> GetOutputFluxes() {
+        return m_outputs;
+    }
+
     virtual bool ToAtmosphere() {
         return false;
     }
@@ -55,6 +59,8 @@ class Process : public wxObject {
     virtual int GetConnectionsNb() = 0;
 
     virtual vecDouble GetChangeRates() = 0;
+
+    void StoreInOutgoingFlux(double* rate, int index);
 
     void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
 

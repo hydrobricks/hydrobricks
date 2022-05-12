@@ -43,13 +43,20 @@ void Solver::ComputeChangeRates(int col) {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         for (auto process : brick->GetProcesses()) {
+            // Get the change rates (per day) independently of the time step and constraints
             vecDouble rates = process->GetChangeRates();
-            for (double rate : rates) {
+
+            for (int i = 0; i < rates.size(); ++i) {
                 wxASSERT(m_changeRates.rows() > iRate);
-                m_changeRates(iRate, col) = rate;
+                m_changeRates(iRate, col) = rates[i];
+
+                // Link to fluxes to enforce subsequent constraints
+                process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
                 iRate++;
             }
         }
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(*m_timeStepInDays);
     }
 }
 

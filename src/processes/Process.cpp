@@ -53,6 +53,11 @@ float* Process::GetParameterValuePointer(const ProcessSettings &processSettings,
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
+void Process::StoreInOutgoingFlux(double* rate, int index) {
+    wxASSERT(m_outputs.size() > index);
+    m_outputs[index]->LinkChangeRate(rate);
+}
+
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
     wxASSERT(m_outputs.size() > connectionIndex);
     m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);

@@ -64,6 +64,8 @@ class Brick : public wxObject {
 
     void UpdateContentFromInputs();
 
+    void ApplyConstraints(double timeStep);
+
     int GetInputsNb() {
         return int(m_inputs.size());
     }

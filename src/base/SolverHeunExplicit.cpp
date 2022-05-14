@@ -5,7 +5,7 @@
 SolverHeunExplicit::SolverHeunExplicit()
     : Solver()
 {
-    m_nIterations = 2;
+    m_nIterations = 3;
 }
 
 bool SolverHeunExplicit::Solve() {
@@ -20,16 +20,17 @@ bool SolverHeunExplicit::Solve() {
     ApplyProcesses(0);
 
     // Compute the change rates for k1 = f(tn + h, Sn + k1 h)
-    ComputeChangeRates(1);
+    ComputeChangeRates(1, false);
 
     // Restore original state variables
     SetStateVariablesToIteration(0);
 
     // Final change rates
-    axd heunValues = (m_changeRates.col(0) + m_changeRates.col(1)) / 2;
+    m_changeRates.col(2) = (m_changeRates.col(0) + m_changeRates.col(1)) / 2;
 
     // Apply the changes
-    ApplyProcesses(heunValues);
+    ApplyConstraintsFor(2);
+    ApplyProcesses(m_changeRates.col(2));
 
     return true;
 }

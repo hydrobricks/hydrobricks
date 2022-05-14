@@ -105,6 +105,14 @@ class Brick : public wxObject {
         return m_content >= *m_capacity;
     }
 
+    bool HasOverflow() {
+        return m_overflow != nullptr;
+    }
+
+    void LinkOverflow(Process* overflow) {
+        m_overflow = overflow;
+    }
+
     /**
      * Get pointers to the state variables.
      *
@@ -128,6 +136,7 @@ class Brick : public wxObject {
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Process*> m_processes;
+    Process* m_overflow;
 
     /**
      * Sums the water amount from the different fluxes.

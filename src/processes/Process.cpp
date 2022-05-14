@@ -1,8 +1,9 @@
 #include "Process.h"
 
 #include "Brick.h"
-#include "ProcessOutflowLinear.h"
 #include "ProcessETSocont.h"
+#include "ProcessOutflowLinear.h"
+#include "ProcessOutflowOverflow.h"
 
 Process::Process(Brick* brick)
     : m_brick(brick)
@@ -16,6 +17,9 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
     if (processSettings.type.IsSameAs("Outflow:linear")) {
         auto process = new ProcessOutflowLinear(brick);
         process->AssignParameters(processSettings);
+        return process;
+    } else if (processSettings.type.IsSameAs("Overflow")) {
+        auto process = new ProcessOutflowOverflow(brick);
         return process;
     } else if (processSettings.type.IsSameAs("ET:Socont")) {
         auto process = new ProcessETSocont(brick);

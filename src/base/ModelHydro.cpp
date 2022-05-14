@@ -59,6 +59,10 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
                 Process* process = Process::Factory(processSettings, brick);
                 process->SetName(processSettings.name);
 
+                if (processSettings.type.IsSameAs("Overflow", false)) {
+                    brick->LinkOverflow(process);
+                }
+
                 BuildForcingConnections(processSettings, unit, process);
             }
         }

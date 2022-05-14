@@ -30,7 +30,6 @@ void Solver::InitializeContainers() {
     m_changeRates.resize(m_processor->GetNbConnections(), m_nIterations);
 }
 
-
 void Solver::SaveStateVariables(int col) {
     int counter = 0;
     for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
@@ -39,7 +38,7 @@ void Solver::SaveStateVariables(int col) {
     }
 }
 
-void Solver::ComputeChangeRates(int col) {
+void Solver::ComputeChangeRates(int col, bool applyConstraints) {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         for (auto process : brick->GetProcesses()) {
@@ -51,12 +50,16 @@ void Solver::ComputeChangeRates(int col) {
                 m_changeRates(iRate, col) = rates[i];
 
                 // Link to fluxes to enforce subsequent constraints
-                process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
+                if (applyConstraints) {
+                    process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
+                }
                 iRate++;
             }
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(*m_timeStepInDays);
+        if (applyConstraints) {
+            brick->ApplyConstraints(*m_timeStepInDays);
+        }
     }
 }
 

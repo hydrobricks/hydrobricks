@@ -10,7 +10,8 @@ Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_content(0),
       m_capacity(nullptr),
-      m_hydroUnit(hydroUnit)
+      m_hydroUnit(hydroUnit),
+      m_overflow(nullptr)
 {
     if (hydroUnit) {
         hydroUnit->AddBrick(this);
@@ -136,21 +137,32 @@ void Brick::ApplyConstraints(double timeStep) {
         double diff = (m_content + inputsForcing + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate :outgoingRates) {
-            *rate += diff / *rate;
+            if (*rate == 0) {
+                continue;
+            }
+            *rate += diff * std::abs((*rate) / diff);
         }
     }
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
         if (m_content + inputsForcing + change * timeStep > *m_capacity) {
+            double diff = (m_content + inputsForcing + change * timeStep - *m_capacity) / timeStep;
+            // If it has an overflow, use it
+            if (HasOverflow()) {
+                *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
+                return;
+            }
             // Check that it is not only due to forcing
             if (m_content + inputsForcing > *m_capacity) {
-                //throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity."));
+                throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
-            double diff = (*m_capacity - m_content + inputsForcing + change * timeStep) / timeStep;
             // Limit the different rates proportionally
             for (auto rate :incomingRates) {
-                *rate -= diff / *rate;
+                if (*rate == 0) {
+                    continue;
+                }
+                *rate -= diff * std::abs((*rate) / diff);
             }
         }
     }

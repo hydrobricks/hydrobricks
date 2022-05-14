@@ -60,7 +60,7 @@ class Process : public wxObject {
 
     virtual vecDouble GetChangeRates() = 0;
 
-    void StoreInOutgoingFlux(double* rate, int index);
+    virtual void StoreInOutgoingFlux(double* rate, int index);
 
     void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
 

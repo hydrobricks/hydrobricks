@@ -258,13 +258,15 @@ class SolverLinearStorageWithET : public ::testing::Test {
         m_model.AddBrick("storage", "Storage");
         m_model.AddForcingToCurrentBrick("Precipitation");
         m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddParameterToCurrentBrick("capacity", 15);
+        m_model.AddParameterToCurrentBrick("capacity", 20);
         m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.2f);
+        m_model.AddParameterToCurrentProcess("responseFactor", 0.1f);
         m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet");
         m_model.AddProcessToCurrentBrick("ET", "ET:Socont");
         m_model.AddForcingToCurrentProcess("PET");
+        m_model.AddProcessToCurrentBrick("overflow", "Overflow");
+        m_model.AddOutputToCurrentProcess("outlet");
         m_model.AddLoggingToItem("outlet");
 
         auto dataPrec = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
@@ -276,8 +278,8 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         auto dataPET = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
                                                  wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
-        dataPET->SetValues({2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
-                            2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
+        dataPET->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                            1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
         m_tsPET = new TimeSeriesUniform(PET);
         m_tsPET->SetData(dataPET);
     }
@@ -305,9 +307,9 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
 
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.000000, 0.000000, 3.367007, 8.000000, 3.000000, 2.000000, 1.273401, 0.758117,
-                                 0.405414, 0.177287, 0.044591, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-                                 0.000000, 0.000000, 0.000000, 0.000000};
+    vecDouble expectedOutputs = {0.000000, 0.000000, 1.000000, 7.336523, 2.000000, 1.700000, 1.437805, 1.209236,
+                                 1.010555, 0.838417, 0.689829, 0.562117, 0.452890, 0.360015, 0.281586, 0.215905,
+                                 0.161458, 0.116900, 0.081033, 0.052801};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
@@ -334,9 +336,9 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
 
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.000000, 1.000000, 2.318350, 7.156080, 2.500000, 1.754243, 1.193078, 0.778497,
-                                 0.479776, 0.272117, 0.135535, 0.053956, 0.024801, 0.009920, 0.003968, 0.001587,
-                                 0.000635, 0.000254, 0.000102, 0.000041};
+    vecDouble expectedOutputs = {0.000000, 0.500000, 1.335100, 6.043728, 1.850000, 1.586604, 1.354805, 1.151282,
+                                 0.973043, 0.817396, 0.681921, 0.564437, 0.462986, 0.375808, 0.301320, 0.238103,
+                                 0.184880, 0.140507, 0.103958, 0.074314};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
@@ -363,9 +365,9 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
 
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.000000, 0.867934, 2.260862, 7.068382, 2.541888, 1.776578, 1.201974, 0.778559,
-                                 0.474453, 0.263977, 0.126492, 0.046199, 0.014299, 0.004553, 0.001450, 0.000462,
-                                 0.000147, 0.000047, 0.000015, 0.000005};
+    vecDouble expectedOutputs = {0.000000, 0.467928, 1.312188, 5.989134, 1.856077, 1.591276, 1.358295, 1.153782,
+                                 0.974723, 0.818401, 0.682377, 0.564453, 0.462655, 0.375211, 0.300526, 0.237170,
+                                 0.183858, 0.139440, 0.102882, 0.073260};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {

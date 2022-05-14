@@ -89,11 +89,6 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
     EXPECT_TRUE(model.IsOk());
 
     EXPECT_EQ(model.GetSubBasin()->GetHydroUnit(0)->GetBrick("storage-2")->GetInputsNb(), 1);
-
-    auto process1 = dynamic_cast<ProcessOutflowLinear*>(model.GetSubBasin()->GetHydroUnit(0)->GetBrick("storage-1")->GetProcess(0));
-    EXPECT_EQ(process1->GetResponseFactor(), 0.5f);
-    auto process2 = dynamic_cast<ProcessOutflowLinear*>(model.GetSubBasin()->GetHydroUnit(0)->GetBrick("storage-2")->GetProcess(0));
-    EXPECT_EQ(process2->GetResponseFactor(), 0.3f);
 }
 
 TEST_F(ModelBasics, Model2RunsCorrectly) {

@@ -34,7 +34,7 @@ class Solver : public wxObject {
 
     void SaveStateVariables(int col);
 
-    void ComputeChangeRates(int col);
+    void ComputeChangeRates(int col, bool applyConstraints = true);
 
     void ApplyConstraintsFor(int col);
 

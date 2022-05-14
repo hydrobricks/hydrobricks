@@ -7,7 +7,7 @@ ProcessOutflow::ProcessOutflow(Brick* brick)
 
 bool ProcessOutflow::IsOk() {
     if (m_outputs.size() != 1) {
-        wxLogError(_("The linear storage should have a single output."));
+        wxLogError(_("An outflow should have a single output."));
         return false;
     }
 

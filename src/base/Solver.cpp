@@ -26,14 +26,14 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
 }
 
 void Solver::InitializeContainers() {
-    m_stateVariables.resize(m_processor->GetNbStateVariables(), m_nIterations);
+    m_stateVariableChanges.resize(m_processor->GetNbStateVariables(), m_nIterations);
     m_changeRates.resize(m_processor->GetNbConnections(), m_nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {
     int counter = 0;
     for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
-        m_stateVariables(counter, col) = *value;
+        m_stateVariableChanges(counter, col) = *value;
         counter++;
     }
 }
@@ -86,10 +86,16 @@ void Solver::ApplyConstraints() {
     }
 }
 
+void Solver::ResetStateVariableChanges() {
+    for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
+        *value = 0;
+    }
+}
+
 void Solver::SetStateVariablesToIteration(int col) {
     int counter = 0;
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
-        *value = m_stateVariables(counter, col);
+        *value = m_stateVariableChanges(counter, col);
         counter++;
     }
 }
@@ -97,7 +103,7 @@ void Solver::SetStateVariablesToIteration(int col) {
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
     int counter = 0;
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
-        *value = (m_stateVariables(counter, col1) + m_stateVariables(counter, col2)) / 2;
+        *value = (m_stateVariableChanges(counter, col1) + m_stateVariableChanges(counter, col2)) / 2;
         counter++;
     }
 }
@@ -124,6 +130,15 @@ void Solver::ApplyProcesses(const axd &changeRates) const {
                 process->ApplyChange(iConnect, changeRates(iRate), *m_timeStepInDays);
                 iRate++;
             }
+        }
+    }
+}
+
+void Solver::Finalize() const {
+    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        brick->Finalize();
+        for (auto process : brick->GetProcesses()) {
+            process->Finalize();
         }
     }
 }

@@ -64,6 +64,10 @@ class Process : public wxObject {
 
     void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
 
+    virtual void Finalize() {
+        // Nothing to do here.
+    }
+
     /**
      * Get pointers to the state variables.
      *

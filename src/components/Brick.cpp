@@ -9,6 +9,7 @@
 Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_content(0),
+      m_contentChange(0),
       m_capacity(nullptr),
       m_hydroUnit(hydroUnit),
       m_overflow(nullptr)
@@ -78,12 +79,16 @@ Process* Brick::GetProcess(int index) {
 }
 
 void Brick::SubtractAmount(double change) {
-    m_content -= change;
-    wxASSERT(m_content >= 0);
+    m_contentChange -= change;
 }
 
 void Brick::AddAmount(double change) {
-    m_content += change;
+    m_contentChange += change;
+}
+
+void Brick::Finalize() {
+    m_content += m_contentChange;
+    m_contentChange = 0;
     wxASSERT(m_content >= 0);
 }
 
@@ -99,7 +104,7 @@ double Brick::SumIncomingFluxes() {
 }
 
 void Brick::UpdateContentFromInputs() {
-    m_content += SumIncomingFluxes();
+    m_contentChange += SumIncomingFluxes();
 }
 
 void Brick::ApplyConstraints(double timeStep) {
@@ -133,8 +138,8 @@ void Brick::ApplyConstraints(double timeStep) {
     double change = inputs - outputs;
 
     // Avoid negative content
-    if (change < 0 && m_content + inputsForcing + change * timeStep < 0) {
-        double diff = (m_content + inputsForcing + change * timeStep) / timeStep;
+    if (change < 0 && GetContentWithChanges() + inputsForcing + change * timeStep < 0) {
+        double diff = (GetContentWithChanges() + inputsForcing + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate :outgoingRates) {
             if (*rate == 0) {
@@ -146,15 +151,15 @@ void Brick::ApplyConstraints(double timeStep) {
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
-        if (m_content + inputsForcing + change * timeStep > *m_capacity) {
-            double diff = (m_content + inputsForcing + change * timeStep - *m_capacity) / timeStep;
+        if (GetContentWithChanges() + inputsForcing + change * timeStep > *m_capacity) {
+            double diff = (GetContentWithChanges() + inputsForcing + change * timeStep - *m_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
                 *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
                 return;
             }
             // Check that it is not only due to forcing
-            if (m_content + inputsForcing > *m_capacity) {
+            if (GetContentWithChanges() + inputsForcing > *m_capacity) {
                 throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
             // Limit the different rates proportionally
@@ -168,11 +173,11 @@ void Brick::ApplyConstraints(double timeStep) {
     }
 }
 
-vecDoublePt Brick::GetStateVariables() {
-    return vecDoublePt {&m_content};
+vecDoublePt Brick::GetStateVariableChanges() {
+    return vecDoublePt {&m_contentChange};
 }
 
-vecDoublePt Brick::GetStateVariablesFromProcesses() {
+vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     vecDoublePt values;
     for (auto const &process: m_processes) {
         vecDoublePt processValues = process->GetStateVariables();

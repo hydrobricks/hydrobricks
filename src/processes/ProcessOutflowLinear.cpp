@@ -12,5 +12,5 @@ void ProcessOutflowLinear::AssignParameters(const ProcessSettings &processSettin
 }
 
 vecDouble ProcessOutflowLinear::GetChangeRates() {
-    return {(*m_responseFactor) * m_brick->GetContent()};
+    return {(*m_responseFactor) * m_brick->GetContentWithChanges()};
 }

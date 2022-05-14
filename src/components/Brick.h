@@ -62,6 +62,8 @@ class Brick : public wxObject {
 
     void AddAmount(double change);
 
+    void Finalize();
+
     void UpdateContentFromInputs();
 
     void ApplyConstraints(double timeStep);
@@ -75,8 +77,8 @@ class Brick : public wxObject {
      *
      * @return water content [mm]
      */
-    double GetContent() const {
-        return m_content;
+    double GetContentWithChanges() const {
+        return m_content + m_contentChange;
     }
 
     Process* GetProcess(int index);
@@ -101,10 +103,6 @@ class Brick : public wxObject {
         return *m_capacity;
     }
 
-    bool IsFull() const {
-        return m_content >= *m_capacity;
-    }
-
     bool HasOverflow() {
         return m_overflow != nullptr;
     }
@@ -118,9 +116,9 @@ class Brick : public wxObject {
      *
      * @return vector of pointers to the state variables.
      */
-    virtual vecDoublePt GetStateVariables();
+    virtual vecDoublePt GetStateVariableChanges();
 
-    vecDoublePt GetStateVariablesFromProcesses();
+    vecDoublePt GetStateVariableChangesFromProcesses();
 
     int GetProcessesConnectionsNb();
 
@@ -131,7 +129,6 @@ class Brick : public wxObject {
   protected:
     wxString m_name;
     bool m_needsSolver;
-    double m_content; // [mm]
     float* m_capacity;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
@@ -154,6 +151,8 @@ class Brick : public wxObject {
     virtual vecDouble ComputeOutputs() = 0;
 
   private:
+    double m_content; // [mm]
+    double m_contentChange; // [mm]
 };
 
 #endif  // HYDROBRICKS_BRICK_H

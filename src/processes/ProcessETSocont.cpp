@@ -21,5 +21,5 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
 
 vecDouble ProcessETSocont::GetChangeRates() {
     wxASSERT(m_brick->HasMaximumCapacity());
-    return {m_pet->GetValue() * pow(m_brick->GetContent() / m_brick->GetMaximumCapacity(), m_exponent)};
+    return {m_pet->GetValue() * pow(m_brick->GetContentWithChanges() / m_brick->GetMaximumCapacity(), m_exponent)};
 }

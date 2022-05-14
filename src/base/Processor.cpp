@@ -41,12 +41,12 @@ void Processor::ConnectToElementsToSolve() {
                 solverRequired = true;
 
                 // Get state variables from bricks
-                vecDoublePt bricksValues = brick->GetStateVariables();
-                StoreStateVariables(bricksValues);
+                vecDoublePt bricksValues = brick->GetStateVariableChanges();
+                StoreStateVariableChanges(bricksValues);
 
                 // Get state variables from processes
-                vecDoublePt processValues = brick->GetStateVariablesFromProcesses();
-                StoreStateVariables(processValues);
+                vecDoublePt processValues = brick->GetStateVariableChangesFromProcesses();
+                StoreStateVariableChanges(processValues);
 
                 // Count connections
                 m_connectionsNb += brick->GetProcessesConnectionsNb();
@@ -55,16 +55,16 @@ void Processor::ConnectToElementsToSolve() {
     }
 }
 
-void Processor::StoreStateVariables(vecDoublePt& values) {
+void Processor::StoreStateVariableChanges(vecDoublePt& values) {
     if (!values.empty()) {
         for (auto const& value : values) {
-            m_stateVariables.push_back(value);
+            m_stateVariableChanges.push_back(value);
         }
     }
 }
 
 int Processor::GetNbStateVariables() {
-    return int(m_stateVariables.size());
+    return int(m_stateVariableChanges.size());
 }
 
 bool Processor::ProcessTimeStep() {

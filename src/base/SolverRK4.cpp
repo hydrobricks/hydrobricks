@@ -15,9 +15,6 @@ bool SolverRK4::Solve() {
     // Compute the change rates for k1 = f(tn, Sn)
     ComputeChangeRates(0);
 
-    // Restore original state variables
-    SetStateVariablesToIteration(0);
-
     // Apply the changes
     ApplyProcesses(0);
 
@@ -30,8 +27,8 @@ bool SolverRK4::Solve() {
     // Compute the change rates for k2 = f(tn + h/2, Sn + k1 h/2)
     ComputeChangeRates(1, false);
 
-    // Restore original state variables
-    SetStateVariablesToIteration(0);
+    // Reset state variable changes to 0
+    ResetStateVariableChanges();
 
     // Apply the changes
     ApplyConstraints();
@@ -46,8 +43,8 @@ bool SolverRK4::Solve() {
     // Compute the change rates for k3 = f(tn + h/2, Sn + k2 h/2)
     ComputeChangeRates(2, false);
 
-    // Restore original state variables
-    SetStateVariablesToIteration(0);
+    // Reset state variable changes to 0
+    ResetStateVariableChanges();
 
     // Apply the changes
     ApplyConstraints();
@@ -62,8 +59,8 @@ bool SolverRK4::Solve() {
     // Compute the change rates for k4 = f(tn + h, Sn + k3 h)
     ComputeChangeRates(3, false);
 
-    // Restore original state variables
-    SetStateVariablesToIteration(0);
+    // Reset state variable changes to 0
+    ResetStateVariableChanges();
 
     // Final change rate
     m_changeRates.col(4) = (m_changeRates.col(0) + 2 * m_changeRates.col(1) +
@@ -72,6 +69,7 @@ bool SolverRK4::Solve() {
     // Apply the final rates
     ApplyConstraintsFor(4);
     ApplyProcesses(m_changeRates.col(4));
+    Finalize();
 
     return true;
 }

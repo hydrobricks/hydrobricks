@@ -9,9 +9,6 @@ SolverRK4::SolverRK4()
 
 bool SolverRK4::Solve() {
 
-    // Save the original state variables
-    SaveStateVariables(0);
-
     // Compute the change rates for k1 = f(tn, Sn)
     ComputeChangeRates(0);
 
@@ -31,7 +28,7 @@ bool SolverRK4::Solve() {
     ResetStateVariableChanges();
 
     // Apply the changes
-    ApplyConstraints();
+    ApplyConstraintsFor(1);
     ApplyProcesses(1);
 
     // Save the new state variables
@@ -47,7 +44,7 @@ bool SolverRK4::Solve() {
     ResetStateVariableChanges();
 
     // Apply the changes
-    ApplyConstraints();
+    ApplyConstraintsFor(2);
     ApplyProcesses(2);
 
     // Save the new state variables

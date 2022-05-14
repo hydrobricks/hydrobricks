@@ -26,8 +26,8 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
 }
 
 void Solver::InitializeContainers() {
-    m_stateVariableChanges.resize(m_processor->GetNbStateVariables(), m_nIterations);
-    m_changeRates.resize(m_processor->GetNbConnections(), m_nIterations);
+    m_stateVariableChanges = axxd::Zero(m_processor->GetNbStateVariables(), m_nIterations);
+    m_changeRates = axxd::Zero(m_processor->GetNbConnections(), m_nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {

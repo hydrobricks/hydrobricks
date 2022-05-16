@@ -13,11 +13,6 @@ class Glacier : public Brick {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
-    /**
-     * @copydoc Brick::IsOk()
-     */
-    bool IsOk() override;
-
   protected:
 
     /**

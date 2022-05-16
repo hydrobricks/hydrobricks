@@ -43,6 +43,24 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
     return nullptr;
 }
 
+bool Brick::IsOk() {
+    if (m_hydroUnit == nullptr) {
+        wxLogError(_("The brick is not attached to a hydro unit."));
+        return false;
+    }
+    if (m_inputs.empty()) {
+        wxLogError(_("The brick is not attached to inputs."));
+        return false;
+    }
+    for (auto process : m_processes) {
+        if (!process->IsOk()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void Brick::AssignParameters(const BrickSettings &brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
         m_capacity = GetParameterValuePointer(brickSettings, "capacity");

@@ -47,7 +47,7 @@ class Brick : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    virtual bool IsOk();
 
     /**
      * Define if the brick needs to be handled by the solver.

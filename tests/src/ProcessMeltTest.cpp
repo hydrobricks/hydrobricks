@@ -5,10 +5,10 @@
 #include "TimeSeriesUniform.h"
 
 /**
- * Model: simple model without any brick
+ * Model: simple snowpack model
  */
 
-class Splitters : public ::testing::Test {
+class SnowpackModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -18,6 +18,29 @@ class Splitters : public ::testing::Test {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
+        // Snowpack brick
+        m_model.AddBrick("snowpack", "Snowpack");
+        m_model.AddLoggingToCurrentBrick("content");
+
+        // Snowmelt process
+        m_model.AddProcessToCurrentBrick("snowmelt", "Melt:degree-day");
+        m_model.AddForcingToCurrentProcess("Temperature");
+        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
+        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
+        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddOutputToCurrentProcess("outlet");
+
+        // Rain/snow splitter
+        m_model.AddSplitter("snow-rain", "SnowRain");
+        m_model.AddForcingToCurrentSplitter("Precipitation");
+        m_model.AddForcingToCurrentSplitter("Temperature");
+        m_model.AddOutputToCurrentSplitter("outlet"); // rain
+        m_model.AddOutputToCurrentSplitter("snowpack"); // snow
+        m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
+        m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+
+        m_model.AddLoggingToItem("outlet");
+
         auto precip = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
                                                 wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -26,7 +49,7 @@ class Splitters : public ::testing::Test {
 
         auto temperature = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
                                                      wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
-        temperature->SetValues({-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0});
+        temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
@@ -36,21 +59,10 @@ class Splitters : public ::testing::Test {
     }
 };
 
-TEST_F(Splitters, SnowRain) {
+TEST_F(SnowpackModel, DegreeDay) {
     SubBasin subBasin;
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
-
-    m_model.AddSplitter("snow-rain", "SnowRain");
-    m_model.AddForcingToCurrentSplitter("Precipitation");
-    m_model.AddForcingToCurrentSplitter("Temperature");
-    m_model.AddOutputToCurrentSplitter("outlet"); // rain
-    m_model.AddOutputToCurrentSplitter("outlet"); // snow
-    m_model.AddLoggingToCurrentSplitter("rain");
-    m_model.AddLoggingToCurrentSplitter("snow");
-    m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-    m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
-    m_model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(m_model));
@@ -62,10 +74,10 @@ TEST_F(Splitters, SnowRain) {
 
     EXPECT_TRUE(model.Run());
 
-    // Check resulting sum (only the sum of rain and snow)
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0};
+    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
@@ -73,14 +85,14 @@ TEST_F(Splitters, SnowRain) {
         }
     }
 
-    // Check rain/snow splitting
+    // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedRain = {0.0, 0.0, 0.0, 0.0, 2.5, 5.0, 7.5, 10.0, 10.0, 0.0};
-    vecDouble expectedSnow = {0.0, 10.0, 10.0, 10.0, 7.5, 5.0, 2.5, 0.0, 0.0, 0.0};
+    vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
+    vecDouble expectedMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
 
-    for (int j = 0; j < expectedRain.size(); ++j) {
-        EXPECT_NEAR(unitContent[0](j, 0), expectedRain[j], 0.000001);
-        EXPECT_NEAR(unitContent[1](j, 0), expectedSnow[j], 0.000001);
+    for (int j = 0; j < expectedSWE.size(); ++j) {
+        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 0), expectedMelt[j], 0.000001);
     }
 }

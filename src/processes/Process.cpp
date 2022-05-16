@@ -4,6 +4,7 @@
 #include "ProcessETSocont.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
+#include "ProcessMeltDegreeDay.h"
 
 Process::Process(Brick* brick)
     : m_brick(brick)
@@ -14,15 +15,20 @@ Process::Process(Brick* brick)
 }
 
 Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
-    if (processSettings.type.IsSameAs("Outflow:linear")) {
+    if (processSettings.type.IsSameAs("Outflow:linear", false)) {
         auto process = new ProcessOutflowLinear(brick);
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type.IsSameAs("Overflow")) {
+    } else if (processSettings.type.IsSameAs("Overflow", false)) {
         auto process = new ProcessOutflowOverflow(brick);
         return process;
-    } else if (processSettings.type.IsSameAs("ET:Socont")) {
+    } else if (processSettings.type.IsSameAs("ET:Socont", false)) {
         auto process = new ProcessETSocont(brick);
+        return process;
+    } else if (processSettings.type.IsSameAs("Melt:degree-day", false) ||
+               processSettings.type.IsSameAs("Melt:DegreeDay", false)) {
+        auto process = new ProcessMeltDegreeDay(brick);
+        process->AssignParameters(processSettings);
         return process;
     } else {
         wxLogError(_("Process type '%s' not recognized."), processSettings.type);

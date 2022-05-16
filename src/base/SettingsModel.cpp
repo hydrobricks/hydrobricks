@@ -67,6 +67,8 @@ void SettingsModel::AddForcingToCurrentBrick(const wxString &name) {
 
     if (name.IsSameAs("Precipitation", false)) {
         m_selectedBrick->forcing.push_back(Precipitation);
+    } else if (name.IsSameAs("Temperature", false)) {
+        m_selectedBrick->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }

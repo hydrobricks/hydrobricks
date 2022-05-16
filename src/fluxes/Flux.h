@@ -49,9 +49,18 @@ class Flux : public wxObject {
         return false;
     }
 
+    void SetAsStatic() {
+        m_static = true;
+    }
+
+    bool IsStatic() {
+        return m_static;
+    }
+
   protected:
     double m_amount;
     double* m_changeRate;
+    bool m_static;
     Modifier* m_modifier;
 
   private:

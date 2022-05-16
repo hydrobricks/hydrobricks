@@ -141,10 +141,12 @@ void Brick::ApplyConstraints(double timeStep) {
     // Get incoming change rates
     vecDoublePt incomingRates;
     double inputs = 0;
-    double inputsForcing = 0;
+    double inputsStatic = 0;
     for (auto & input : m_inputs) {
         if (input->IsForcing()) {
-            inputsForcing += input->GetAmount();
+            inputsStatic += input->GetAmount();
+        } else if (input->IsStatic()) {
+            inputsStatic += input->GetAmount();
         } else {
             double* changeRate = input->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
@@ -156,28 +158,28 @@ void Brick::ApplyConstraints(double timeStep) {
     double change = inputs - outputs;
 
     // Avoid negative content
-    if (change < 0 && GetContentWithChanges() + inputsForcing + change * timeStep < 0) {
-        double diff = (GetContentWithChanges() + inputsForcing + change * timeStep) / timeStep;
+    if (change < 0 && GetContentWithChanges() + inputsStatic + change * timeStep < 0) {
+        double diff = (GetContentWithChanges() + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate :outgoingRates) {
             if (*rate == 0) {
                 continue;
             }
-            *rate += diff * std::abs((*rate) / diff);
+            *rate += diff * std::abs((*rate) / outputs);
         }
     }
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
-        if (GetContentWithChanges() + inputsForcing + change * timeStep > *m_capacity) {
-            double diff = (GetContentWithChanges() + inputsForcing + change * timeStep - *m_capacity) / timeStep;
+        if (GetContentWithChanges() + inputsStatic + change * timeStep > *m_capacity) {
+            double diff = (GetContentWithChanges() + inputsStatic + change * timeStep - *m_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
                 *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
                 return;
             }
             // Check that it is not only due to forcing
-            if (GetContentWithChanges() + inputsForcing > *m_capacity) {
+            if (GetContentWithChanges() + inputsStatic > *m_capacity) {
                 throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
             // Limit the different rates proportionally
@@ -185,7 +187,7 @@ void Brick::ApplyConstraints(double timeStep) {
                 if (*rate == 0) {
                     continue;
                 }
-                *rate -= diff * std::abs((*rate) / diff);
+                *rate -= diff * std::abs((*rate) / inputs);
             }
         }
     }

@@ -133,6 +133,7 @@ void ModelHydro::BuildSplittersFluxes(SettingsModel& modelSettings, HydroUnit* u
             } else if (unit->HasBrick(output.target)) {
                 Brick* brickIn = unit->GetBrick(output.target);
                 flux = new FluxToBrick(brickIn);
+                flux->SetAsStatic();
                 brickIn->AttachFluxIn(flux);
             } else if (unit->HasSplitter(output.target)) {
                 throw NotImplemented();

@@ -291,6 +291,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.00000000000001);
 }
 
+
 /**
  * Model: linear storage with max capacity and ET
  */

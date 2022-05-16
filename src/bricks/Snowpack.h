@@ -14,7 +14,6 @@ class Snowpack : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
-
     /**
      * @copydoc Brick::ComputeOutputs()
      */

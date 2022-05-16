@@ -31,7 +31,7 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
     return nullptr;
 }
 
-void Process::AssignParameters(const ProcessSettings &processSettings) {
+void Process::AssignParameters(const ProcessSettings &) {
     // Nothing to do...
 }
 

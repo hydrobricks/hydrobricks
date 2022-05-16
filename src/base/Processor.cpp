@@ -87,6 +87,10 @@ bool Processor::ProcessTimeStep() {
                 return false;
             }*/
         }
+        for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
+            Splitter* splitter = unit->GetSplitter(iSplitter);
+            splitter->Compute();
+        }
     }
 
     // Process the bricks that need a solver

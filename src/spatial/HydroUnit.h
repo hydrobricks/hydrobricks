@@ -3,6 +3,7 @@
 
 #include "Brick.h"
 #include "Forcing.h"
+#include "Splitter.h"
 #include "HydroUnitProperty.h"
 #include "Includes.h"
 
@@ -23,6 +24,8 @@ class HydroUnit : public wxObject {
 
     void AddBrick(Brick* brick);
 
+    void AddSplitter(Splitter* splitter);
+
     bool HasForcing(VariableType type);
 
     void AddForcing(Forcing* forcing);
@@ -31,9 +34,19 @@ class HydroUnit : public wxObject {
 
     int GetBricksCount();
 
+    int GetSplittersCount();
+
     Brick* GetBrick(int index);
 
+    bool HasBrick(const wxString &name);
+
     Brick* GetBrick(const wxString &name);
+
+    Splitter* GetSplitter(int index);
+
+    bool HasSplitter(const wxString &name);
+
+    Splitter* GetSplitter(const wxString &name);
 
     bool IsOk();
 
@@ -59,6 +72,7 @@ class HydroUnit : public wxObject {
     float m_area; // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
+    std::vector<Splitter*> m_splitters;
     std::vector<Forcing*> m_forcing;
 
   private:

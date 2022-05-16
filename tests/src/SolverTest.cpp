@@ -51,6 +51,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 3.000000, 5.100000, 6.570000, 4.599000, 3.219300, 2.253510,
@@ -62,6 +63,12 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.072780, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000000000001);
 }
 
 TEST_F(SolverLinearStorage, UsingHeunExplicit) {
@@ -79,6 +86,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 1.500000, 3.667500, 5.282288, 4.985304, 3.714052, 2.766968, 2.061392,
@@ -90,6 +98,12 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.176056, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000000000001);
 }
 
 TEST_F(SolverLinearStorage, UsingRungeKutta) {
@@ -107,6 +121,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 1.361250, 3.600090, 5.258707, 5.126222, 3.797698, 2.813477, 2.084329,
@@ -118,6 +133,12 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.162852, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000000000001);
 }
 
 
@@ -174,6 +195,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 0.000000, 1.500000, 3.300000, 4.935000, 4.767000, 3.993150,
@@ -185,6 +207,14 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double contentStorage1 = unitContent[0](19, 0);
+    EXPECT_NEAR(contentStorage1, 0.000267, 0.000001);
+    double contentStorage2 = unitContent[2](19, 0);
+    EXPECT_NEAR(contentStorage2, 0.181283, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.00000000000001);
 }
 
 TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
@@ -202,6 +232,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.200000, 2.600250, 3.959843, 3.970493, 3.595773, 3.077449,
@@ -213,6 +244,14 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double contentStorage1 = unitContent[0](19, 0);
+    EXPECT_NEAR(contentStorage1, 0.008195, 0.000001);
+    double contentStorage2 = unitContent[2](19, 0);
+    EXPECT_NEAR(contentStorage2, 0.419653, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.00000000000001);
 }
 
 TEST_F(Solver2LinearStorages, UsingRungeKutta) {
@@ -230,6 +269,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.200000, 1.158225, 2.490032, 3.654047, 3.935308, 3.660692, 3.164185,
@@ -241,6 +281,14 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double contentStorage1 = unitContent[0](19, 0);
+    EXPECT_NEAR(contentStorage1, 0.005244, 0.000001);
+    double contentStorage2 = unitContent[2](19, 0);
+    EXPECT_NEAR(contentStorage2, 0.394021, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.00000000000001);
 }
 
 /**
@@ -265,7 +313,9 @@ class SolverLinearStorageWithET : public ::testing::Test {
         m_model.AddOutputToCurrentProcess("outlet");
         m_model.AddProcessToCurrentBrick("ET", "ET:Socont");
         m_model.AddForcingToCurrentProcess("PET");
+        m_model.AddLoggingToCurrentProcess("output");
         m_model.AddProcessToCurrentBrick("overflow", "Overflow");
+        m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet");
         m_model.AddLoggingToItem("outlet");
 
@@ -305,6 +355,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.000000, 7.336523, 2.000000, 1.700000, 1.437805, 1.209236,
@@ -316,6 +367,12 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.312728, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
 }
 
 TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
@@ -334,6 +391,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.500000, 1.335100, 6.043728, 1.850000, 1.586604, 1.354805, 1.151282,
@@ -345,6 +403,12 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.627417, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
 }
 
 TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
@@ -363,6 +427,7 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
 
     EXPECT_TRUE(model.Run());
 
+    // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.000000, 0.467928, 1.312188, 5.989134, 1.856077, 1.591276, 1.358295, 1.153782,
@@ -375,4 +440,10 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, 0.605521, 0.000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
 }

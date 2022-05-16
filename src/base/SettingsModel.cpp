@@ -165,6 +165,9 @@ vecStr SettingsModel::GetHydroUnitLogLabels() {
     for (auto &modelStructure : m_modelStructures) {
         for (auto &brick : modelStructure.bricks) {
             logNames.insert(logNames.end(), brick.logItems.begin(), brick.logItems.end());
+            for (auto &process : brick.processes) {
+                logNames.insert(logNames.end(), process.logItems.begin(), process.logItems.end());
+            }
         }
     }
 

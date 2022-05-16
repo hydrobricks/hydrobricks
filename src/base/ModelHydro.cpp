@@ -152,7 +152,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         modelSettings.SelectBrick(iBrickType);
         BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrickType);
 
-        for (const auto& logItem :brickSettings.logItems) {
+        for (const auto& logItem : brickSettings.logItems) {
             for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
                 HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
                 valPt = unit->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
@@ -165,6 +165,24 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 m_logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
 
                 iLabel++;
+            }
+        }
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            for (const auto& logItem : processSettings.logItems) {
+                for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+                    HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+                    valPt = unit->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
+                    if (valPt == nullptr) {
+                        throw ShouldNotHappen();
+                    }
+                    m_logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+
+                    iLabel++;
+                }
             }
         }
     }

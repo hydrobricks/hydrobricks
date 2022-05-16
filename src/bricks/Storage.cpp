@@ -7,7 +7,3 @@ Storage::Storage(HydroUnit *hydroUnit)
 void Storage::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
-
-vecDouble Storage::ComputeOutputs() {
-    return {};
-}

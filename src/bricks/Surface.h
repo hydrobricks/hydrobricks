@@ -14,12 +14,6 @@ class Surface : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
-    double m_waterHeight;
-
-    /**
-     * @copydoc Brick::ComputeOutputs()
-     */
-    vecDouble ComputeOutputs() override;
 
   private:
 };

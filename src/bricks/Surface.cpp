@@ -8,7 +8,3 @@ Surface::Surface(HydroUnit *hydroUnit)
 void Surface::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
-
-vecDouble Surface::ComputeOutputs() {
-    return {};
-}

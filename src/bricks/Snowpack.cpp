@@ -7,7 +7,3 @@ Snowpack::Snowpack(HydroUnit *hydroUnit)
 void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
-
-vecDouble Snowpack::ComputeOutputs() {
-    return {};
-}

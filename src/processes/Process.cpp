@@ -1,8 +1,10 @@
 #include "Process.h"
 
 #include "Brick.h"
-#include "ProcessOutflowLinear.h"
 #include "ProcessETSocont.h"
+#include "ProcessOutflowLinear.h"
+#include "ProcessOutflowOverflow.h"
+#include "ProcessMeltDegreeDay.h"
 
 Process::Process(Brick* brick)
     : m_brick(brick)
@@ -13,12 +15,19 @@ Process::Process(Brick* brick)
 }
 
 Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
-    if (processSettings.type.IsSameAs("Outflow:linear")) {
+    if (processSettings.type.IsSameAs("Outflow:linear", false)) {
         auto process = new ProcessOutflowLinear(brick);
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type.IsSameAs("ET:Socont")) {
+    } else if (processSettings.type.IsSameAs("Overflow", false)) {
+        auto process = new ProcessOutflowOverflow(brick);
+        return process;
+    } else if (processSettings.type.IsSameAs("ET:Socont", false)) {
         auto process = new ProcessETSocont(brick);
+        return process;
+    } else if (processSettings.type.IsSameAs("Melt:degree-day", false) ||
+               processSettings.type.IsSameAs("Melt:DegreeDay", false)) {
+        auto process = new ProcessMeltDegreeDay(brick);
         process->AssignParameters(processSettings);
         return process;
     } else {
@@ -28,7 +37,7 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
     return nullptr;
 }
 
-void Process::AssignParameters(const ProcessSettings &processSettings) {
+void Process::AssignParameters(const ProcessSettings &) {
     // Nothing to do...
 }
 
@@ -52,6 +61,11 @@ float* Process::GetParameterValuePointer(const ProcessSettings &processSettings,
     }
 
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+}
+
+void Process::StoreInOutgoingFlux(double* rate, int index) {
+    wxASSERT(m_outputs.size() > index);
+    m_outputs[index]->LinkChangeRate(rate);
 }
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {

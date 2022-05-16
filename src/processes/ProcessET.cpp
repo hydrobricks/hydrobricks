@@ -17,3 +17,11 @@ bool ProcessET::IsOk() {
 int ProcessET::GetConnectionsNb() {
     return 1;
 }
+
+double* ProcessET::GetValuePointer(const wxString& name) {
+    if (name.IsSameAs("output")) {
+        return m_outputs[0]->GetAmountPointer();
+    }
+
+    return nullptr;
+}

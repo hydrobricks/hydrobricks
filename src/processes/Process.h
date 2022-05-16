@@ -48,11 +48,25 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
+    std::vector<Flux*> GetOutputFluxes() {
+        return m_outputs;
+    }
+
+    virtual bool ToAtmosphere() {
+        return false;
+    }
+
     virtual int GetConnectionsNb() = 0;
 
     virtual vecDouble GetChangeRates() = 0;
 
+    virtual void StoreInOutgoingFlux(double* rate, int index);
+
     void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
+
+    virtual void Finalize() {
+        // Nothing to do here.
+    }
 
     /**
      * Get pointers to the state variables.

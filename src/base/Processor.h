@@ -24,7 +24,7 @@ class Processor : public wxObject {
     bool ProcessTimeStep();
 
     vecDoublePt* GetStateVariablesVectorPt() {
-        return &m_stateVariables;
+        return &m_stateVariableChanges;
     }
 
     std::vector<Brick*>* GetIterableBricksVectorPt() {
@@ -39,11 +39,11 @@ class Processor : public wxObject {
     Solver* m_solver;
     ModelHydro* m_model;
     int m_connectionsNb;
-    vecDoublePt m_stateVariables;
+    vecDoublePt m_stateVariableChanges;
     std::vector<Brick*> m_iterableBricks;
 
   private:
-    void StoreStateVariables(vecDoublePt& values);
+    void StoreStateVariableChanges(vecDoublePt& values);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

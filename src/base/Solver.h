@@ -27,14 +27,20 @@ class Solver : public wxObject {
 
   protected:
     Processor* m_processor;
-    axxd m_stateVariables;
+    axxd m_stateVariableChanges;
     axxd m_changeRates;
     int m_nIterations;
     double* m_timeStepInDays;
 
     void SaveStateVariables(int col);
 
-    void ComputeChangeRates(int col);
+    void ComputeChangeRates(int col, bool applyConstraints = true);
+
+    void ApplyConstraintsFor(int col);
+
+    void ApplyConstraints();
+
+    void ResetStateVariableChanges();
 
     void SetStateVariablesToIteration(int col);
 
@@ -43,6 +49,8 @@ class Solver : public wxObject {
     void ApplyProcesses(int col) const;
 
     void ApplyProcesses(const axd& changeRates) const;
+
+    void Finalize() const;
 
   private:
 };

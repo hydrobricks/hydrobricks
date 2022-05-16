@@ -1,25 +1,19 @@
-#ifndef HYDROBRICKS_SURFACE_H
-#define HYDROBRICKS_SURFACE_H
+#ifndef HYDROBRICKS_GLACIER_H
+#define HYDROBRICKS_GLACIER_H
 
 #include "Brick.h"
 #include "Includes.h"
 
-class Surface : public Brick {
+class Glacier : public Brick {
   public:
-    Surface(HydroUnit *hydroUnit);
+    Glacier(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
-    /**
-     * @copydoc Brick::IsOk()
-     */
-    bool IsOk() override;
-
   protected:
-    double m_waterHeight;
 
     /**
      * @copydoc Brick::ComputeOutputs()
@@ -29,4 +23,4 @@ class Surface : public Brick {
   private:
 };
 
-#endif  // HYDROBRICKS_SURFACE_H
+#endif  // HYDROBRICKS_GLACIER_H

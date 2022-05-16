@@ -9,11 +9,6 @@ class Storage : public Brick {
     Storage(HydroUnit *hydroUnit);
 
     /**
-     * @copydoc Brick::IsOk()
-     */
-    bool IsOk() override;
-
-    /**
      * @copydoc Brick::AssignParameters()
      */
     void AssignParameters(const BrickSettings &brickSettings) override;

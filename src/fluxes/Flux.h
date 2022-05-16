@@ -32,13 +32,35 @@ class Flux : public wxObject {
         m_amount = amount;
     }
 
+    void LinkChangeRate(double* rate) {
+        m_changeRate = rate;
+    }
+
+    double* GetChangeRatePointer() {
+        wxASSERT(m_changeRate);
+        return m_changeRate;
+    }
+
     double* GetAmountPointer() {
         return &m_amount;
     }
 
+    virtual bool IsForcing() {
+        return false;
+    }
+
+    void SetAsStatic() {
+        m_static = true;
+    }
+
+    bool IsStatic() {
+        return m_static;
+    }
+
   protected:
-    bool m_isConstant;
     double m_amount;
+    double* m_changeRate;
+    bool m_static;
     Modifier* m_modifier;
 
   private:

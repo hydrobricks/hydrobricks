@@ -47,6 +47,7 @@
 #include <cmath>
 #include <exception>
 #include <vector>
+#include <numeric>
 
 //---------------------------------
 // Automatic leak detection with Microsoft VisualC++
@@ -115,6 +116,12 @@ class MissingParameter : public std::logic_error
 {
   public:
     explicit MissingParameter(const wxString &msg) : std::logic_error(msg) { };
+};
+
+class ConceptionIssue : public std::logic_error
+{
+  public:
+    explicit ConceptionIssue(const wxString &msg) : std::logic_error(msg) { };
 };
 
 class NotFound : public std::logic_error

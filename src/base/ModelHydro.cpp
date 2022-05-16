@@ -3,6 +3,7 @@
 #include "FluxForcing.h"
 #include "FluxToBrick.h"
 #include "FluxToOutlet.h"
+#include "FluxToAtmosphere.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -44,7 +45,6 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
         for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
             modelSettings.SelectBrick(iBrick);
-
             BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
 
             Brick* brick = Brick::Factory(brickSettings, unit);
@@ -53,41 +53,95 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
             BuildForcingConnections(brickSettings, unit, brick);
 
             for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+                modelSettings.SelectProcess(iProcess);
                 ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
                 Process* process = Process::Factory(processSettings, brick);
                 process->SetName(processSettings.name);
 
+                if (processSettings.type.IsSameAs("Overflow", false)) {
+                    brick->LinkOverflow(process);
+                }
+
                 BuildForcingConnections(processSettings, unit, process);
             }
         }
 
-        BuildFluxes(modelSettings, unit);
+        for (int iSplitter = 0; iSplitter < modelSettings.GetSplittersNb(); ++iSplitter) {
+            modelSettings.SelectSplitter(iSplitter);
+            SplitterSettings splitterSettings = modelSettings.GetSplitterSettings(iSplitter);
+
+            Splitter* splitter = Splitter::Factory(splitterSettings, unit);
+            splitter->SetName(splitterSettings.name);
+
+            BuildForcingConnections(splitterSettings, unit, splitter);
+        }
+
+        BuildBricksFluxes(modelSettings, unit);
+        BuildSplittersFluxes(modelSettings, unit);
     }
 }
 
-void ModelHydro::BuildFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
+void ModelHydro::BuildBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
         modelSettings.SelectBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            for (const auto& output: processSettings.outputs)  {
-                Flux* flux;
-                Brick* brick = unit->GetBrick(iBrick);
-                Process* process = brick->GetProcess(iProcess);
+            Flux* flux;
+            Brick* brick = unit->GetBrick(iBrick);
+            Process* process = brick->GetProcess(iProcess);
 
+            if (process->ToAtmosphere()) {
+                flux = new FluxToAtmosphere();
+                process->AttachFluxOut(flux);
+                continue;
+            }
+
+            for (const auto& output: processSettings.outputs)  {
                 if (output.target.IsSameAs("outlet", false)) {
                     flux = new FluxToOutlet();
                     m_subBasin->AttachOutletFlux(flux);
-                } else {
+                } else if (unit->HasBrick(output.target)) {
                     Brick* brickIn = unit->GetBrick(output.target);
                     flux = new FluxToBrick(brickIn);
                     brickIn->AttachFluxIn(flux);
+                } else if (unit->HasSplitter(output.target)) {
+                    throw NotImplemented();
+                } else {
+                    throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
 
                 process->AttachFluxOut(flux);
             }
+        }
+    }
+}
+
+void ModelHydro::BuildSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSplittersNb(); ++iSplitter) {
+        modelSettings.SelectSplitter(iSplitter);
+        SplitterSettings splitterSettings = modelSettings.GetSplitterSettings(iSplitter);
+
+        Splitter* splitter = unit->GetSplitter(iSplitter);
+
+        for (const auto& output: splitterSettings.outputs)  {
+            Flux* flux;
+            if (output.target.IsSameAs("outlet", false)) {
+                flux = new FluxToOutlet();
+                m_subBasin->AttachOutletFlux(flux);
+            } else if (unit->HasBrick(output.target)) {
+                Brick* brickIn = unit->GetBrick(output.target);
+                flux = new FluxToBrick(brickIn);
+                flux->SetAsStatic();
+                brickIn->AttachFluxIn(flux);
+            } else if (unit->HasSplitter(output.target)) {
+                throw NotImplemented();
+            } else {
+                throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+            }
+
+            splitter->AttachFluxOut(flux);
         }
     }
 }
@@ -118,6 +172,18 @@ void ModelHydro::BuildForcingConnections(ProcessSettings &processSettings, Hydro
     }
 }
 
+void ModelHydro::BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter) {
+    for (auto forcingType : splitterSettings.forcing) {
+        if (!unit->HasForcing(forcingType)) {
+            auto newForcing = new Forcing(forcingType);
+            unit->AddForcing(newForcing);
+        }
+
+        auto forcing = unit->GetForcing(forcingType);
+        splitter->AttachForcing(forcing);
+    }
+}
+
 void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     if (modelSettings.GetStructuresNb() > 1) {
         throw NotImplemented();
@@ -137,17 +203,54 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     // Hydro units values
     int iLabel = 0;
+
     for (int iBrickType = 0; iBrickType < modelSettings.GetBricksNb(); ++iBrickType) {
         modelSettings.SelectBrick(iBrickType);
         BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrickType);
 
-        for (const auto& logItem :brickSettings.logItems) {
+        for (const auto& logItem : brickSettings.logItems) {
             for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
                 HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
                 valPt = unit->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
                 if (valPt == nullptr) {
                     valPt = unit->GetBrick(iBrickType)->GetValuePointer(logItem);
                 }
+                if (valPt == nullptr) {
+                    throw ShouldNotHappen();
+                }
+                m_logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+
+                iLabel++;
+            }
+        }
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            for (const auto& logItem : processSettings.logItems) {
+                for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+                    HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+                    valPt = unit->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
+                    if (valPt == nullptr) {
+                        throw ShouldNotHappen();
+                    }
+                    m_logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+
+                    iLabel++;
+                }
+            }
+        }
+    }
+
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSplittersNb(); ++iSplitter) {
+        modelSettings.SelectSplitter(iSplitter);
+        SplitterSettings splitterSettings = modelSettings.GetSplitterSettings(iSplitter);
+
+        for (const auto& logItem : splitterSettings.logItems) {
+            for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+                HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+                valPt = unit->GetSplitter(iSplitter)->GetValuePointer(logItem);
                 if (valPt == nullptr) {
                     throw ShouldNotHappen();
                 }

@@ -1,25 +1,19 @@
-#ifndef HYDROBRICKS_GLACIER_H
-#define HYDROBRICKS_GLACIER_H
+#ifndef HYDROBRICKS_SNOWPACK_H
+#define HYDROBRICKS_SNOWPACK_H
 
 #include "Brick.h"
 #include "Includes.h"
 
-class Glacier : public Brick {
+class Snowpack : public Brick {
   public:
-    Glacier(HydroUnit *hydroUnit);
+    Snowpack(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
-    /**
-     * @copydoc Brick::IsOk()
-     */
-    bool IsOk() override;
-
   protected:
-
     /**
      * @copydoc Brick::ComputeOutputs()
      */
@@ -28,4 +22,4 @@ class Glacier : public Brick {
   private:
 };
 
-#endif  // HYDROBRICKS_GLACIER_H
+#endif  // HYDROBRICKS_SNOWPACK_H

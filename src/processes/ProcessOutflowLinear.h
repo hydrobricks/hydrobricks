@@ -12,39 +12,14 @@ class ProcessOutflowLinear : public ProcessOutflow {
     ~ProcessOutflowLinear() override = default;
 
     /**
-     * @copydoc Process::IsOk()
-     */
-    bool IsOk() override;
-
-    /**
      * @copydoc Process::AssignParameters()
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
     vecDouble GetChangeRates() override;
 
-    double* GetValuePointer(const wxString& name) override;
-
-    /**
-     * Set the response factor value
-     *
-     * @param value response factor value [1/T]
-     */
-    void SetResponseFactor(float *value) {
-        m_responseFactor = value;
-    }
-
-    /**
-     * Get the response factor value
-     *
-     * @return response factor value [1/T]
-     */
-    float GetResponseFactor() {
-        return *m_responseFactor;
-    }
-
   protected:
-    float* m_responseFactor;  // [1/T]
+    float* m_responseFactor;  // [1/d]
 
   private:
 };

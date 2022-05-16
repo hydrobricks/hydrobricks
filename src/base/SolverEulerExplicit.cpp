@@ -14,6 +14,7 @@ bool SolverEulerExplicit::Solve() {
 
     // Apply the changes
     ApplyProcesses(0);
+    Finalize();
     
     return true;
 }

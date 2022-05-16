@@ -1,17 +1,12 @@
-#ifndef HYDROBRICKS_SNOWPACK_H
-#define HYDROBRICKS_SNOWPACK_H
+#ifndef HYDROBRICKS_SURFACE_H
+#define HYDROBRICKS_SURFACE_H
 
 #include "Brick.h"
 #include "Includes.h"
 
-class Snowpack : public Brick {
+class Surface : public Brick {
   public:
-    Snowpack(HydroUnit *hydroUnit);
-
-    /**
-     * @copydoc Brick::IsOk()
-     */
-    bool IsOk() override;
+    Surface(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
@@ -19,6 +14,7 @@ class Snowpack : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
+    double m_waterHeight;
 
     /**
      * @copydoc Brick::ComputeOutputs()
@@ -28,4 +24,4 @@ class Snowpack : public Brick {
   private:
 };
 
-#endif  // HYDROBRICKS_SNOWPACK_H
+#endif  // HYDROBRICKS_SURFACE_H

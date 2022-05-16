@@ -47,14 +47,14 @@ class Brick : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    virtual bool IsOk();
 
     /**
      * Define if the brick needs to be handled by the solver.
      *
      * @return true if the brick needs to be handled by the solver.
      */
-    bool NeedsSolver() {
+    bool NeedsSolver() const {
         return m_needsSolver;
     }
 
@@ -62,11 +62,11 @@ class Brick : public wxObject {
 
     void AddAmount(double change);
 
+    void Finalize();
+
     void UpdateContentFromInputs();
 
-    bool Compute();
-
-    double GetOutputsSum(vecDouble &qOuts);
+    void ApplyConstraints(double timeStep);
 
     int GetInputsNb() {
         return int(m_inputs.size());
@@ -77,8 +77,8 @@ class Brick : public wxObject {
      *
      * @return water content [mm]
      */
-    double GetContent() const {
-        return m_content;
+    double GetContentWithChanges() const {
+        return m_content + m_contentChange;
     }
 
     Process* GetProcess(int index);
@@ -95,16 +95,20 @@ class Brick : public wxObject {
         m_name = name;
     }
 
-    void SetCapacity(float* capacity) {
-        m_capacity = capacity;
-    }
-
     bool HasMaximumCapacity() const {
         return m_capacity != nullptr;
     }
 
-    bool IsFull() const {
-        return m_content >= *m_capacity;
+    double GetMaximumCapacity() {
+        return *m_capacity;
+    }
+
+    bool HasOverflow() {
+        return m_overflow != nullptr;
+    }
+
+    void LinkOverflow(Process* overflow) {
+        m_overflow = overflow;
     }
 
     /**
@@ -112,9 +116,9 @@ class Brick : public wxObject {
      *
      * @return vector of pointers to the state variables.
      */
-    virtual vecDoublePt GetStateVariables();
+    virtual vecDoublePt GetStateVariableChanges();
 
-    vecDoublePt GetStateVariablesFromProcesses();
+    vecDoublePt GetStateVariableChangesFromProcesses();
 
     int GetProcessesConnectionsNb();
 
@@ -125,11 +129,11 @@ class Brick : public wxObject {
   protected:
     wxString m_name;
     bool m_needsSolver;
-    double m_content; // [mm]
     float* m_capacity;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Process*> m_processes;
+    Process* m_overflow;
 
     /**
      * Sums the water amount from the different fluxes.
@@ -147,6 +151,8 @@ class Brick : public wxObject {
     virtual vecDouble ComputeOutputs() = 0;
 
   private:
+    double m_content; // [mm]
+    double m_contentChange; // [mm]
 };
 
 #endif  // HYDROBRICKS_BRICK_H

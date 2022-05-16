@@ -21,6 +21,10 @@ class FluxForcing : public Flux {
 
     void AttachForcing(Forcing* forcing);
 
+    bool IsForcing() override{
+        return true;
+    }
+
   protected:
     Forcing* m_forcing;
 

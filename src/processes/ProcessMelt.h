@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_PROCESS_ET_H
-#define HYDROBRICKS_PROCESS_ET_H
+#ifndef HYDROBRICKS_PROCESS_MELT_H
+#define HYDROBRICKS_PROCESS_MELT_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "Process.h"
 
-class ProcessET : public Process {
+class ProcessMelt : public Process {
   public:
-    explicit ProcessET(Brick* brick);
+    explicit ProcessMelt(Brick* brick);
 
-    ~ProcessET() override = default;
+    ~ProcessMelt() override = default;
 
     /**
      * @copydoc Process::IsOk()
@@ -20,13 +20,9 @@ class ProcessET : public Process {
 
     double* GetValuePointer(const wxString& name) override;
 
-    bool ToAtmosphere() override {
-        return true;
-    }
-
   protected:
 
   private:
 };
 
-#endif  // HYDROBRICKS_PROCESS_ET_H
+#endif  // HYDROBRICKS_PROCESS_MELT_H

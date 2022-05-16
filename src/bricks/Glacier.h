@@ -15,11 +15,6 @@ class Glacier : public Brick {
 
   protected:
 
-    /**
-     * @copydoc Brick::ComputeOutputs()
-     */
-    vecDouble ComputeOutputs() override;
-
   private:
 };
 

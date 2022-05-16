@@ -142,14 +142,6 @@ class Brick : public wxObject {
      */
     double SumIncomingFluxes();
 
-    /**
-     * Compute outputs of the element.
-     *
-     * @param timeStepFraction fraction of the time step
-     * @return output values.
-     */
-    virtual vecDouble ComputeOutputs() = 0;
-
   private:
     double m_content; // [mm]
     double m_contentChange; // [mm]

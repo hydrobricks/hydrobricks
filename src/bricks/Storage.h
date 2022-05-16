@@ -14,10 +14,6 @@ class Storage : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
-    /**
-     * @copydoc Brick::ComputeOutputs()
-     */
-    vecDouble ComputeOutputs() override;
 
   private:
 };

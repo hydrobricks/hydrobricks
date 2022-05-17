@@ -71,6 +71,8 @@ class Brick : public wxObject {
 
     void CheckWaterContainer();
 
+    bool HasWaterContainer();
+
     WaterContainer* GetWaterContainer();
 
     int GetInputsNb() {

@@ -102,8 +102,9 @@ Process* Brick::GetProcess(int index) {
 }
 
 void Brick::SubtractAmount(double change) {
-    CheckWaterContainer();
-    m_container->SubtractAmount(change);
+    if (HasWaterContainer()) {
+        m_container->SubtractAmount(change);
+    }
 }
 
 void Brick::AddAmount(double change) {
@@ -126,8 +127,9 @@ double Brick::SumIncomingFluxes() {
 }
 
 void Brick::UpdateContentFromInputs() {
-    CheckWaterContainer();
-    m_container->AddAmount(SumIncomingFluxes());
+    if (HasWaterContainer()) {
+        m_container->AddAmount(SumIncomingFluxes());
+    }
 }
 
 void Brick::ApplyConstraints(double timeStep) {
@@ -140,6 +142,10 @@ void Brick::CheckWaterContainer() {
     if (m_container == nullptr) {
         throw ConceptionIssue(_("Trying to access the water container of a brick that has none."));
     }
+}
+
+bool Brick::HasWaterContainer() {
+    return m_container != nullptr;
 }
 
 WaterContainer* Brick::GetWaterContainer() {

@@ -18,7 +18,6 @@ class Glacier : public SurfaceComponent {
     void Finalize() override;
 
   protected:
-    bool m_unlimitedSupply;
 
   private:
 };

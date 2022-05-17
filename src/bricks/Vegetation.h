@@ -1,12 +1,12 @@
-#ifndef HYDROBRICKS_GLACIER_H
-#define HYDROBRICKS_GLACIER_H
+#ifndef HYDROBRICKS_VEGETATION_H
+#define HYDROBRICKS_VEGETATION_H
 
 #include "SurfaceComponent.h"
 #include "Includes.h"
 
-class Glacier : public SurfaceComponent {
+class Vegetation : public SurfaceComponent {
   public:
-    Glacier(HydroUnit *hydroUnit);
+    Vegetation(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
@@ -18,9 +18,8 @@ class Glacier : public SurfaceComponent {
     void Finalize() override;
 
   protected:
-    bool m_unlimitedSupply;
 
   private:
 };
 
-#endif  // HYDROBRICKS_GLACIER_H
+#endif  // HYDROBRICKS_VEGETATION_H

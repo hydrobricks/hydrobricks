@@ -1,7 +1,7 @@
 #include "Glacier.h"
 
 Glacier::Glacier(HydroUnit *hydroUnit)
-    : Brick(hydroUnit, false),
+    : SurfaceComponent(hydroUnit, false),
       m_unlimitedSupply(true)
 {}
 

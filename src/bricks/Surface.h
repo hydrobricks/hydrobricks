@@ -3,6 +3,8 @@
 
 #include "Brick.h"
 #include "Includes.h"
+#include "Snowpack.h"
+#include "SplitterSnowRain.h"
 
 class Surface : public Brick {
   public:
@@ -14,6 +16,9 @@ class Surface : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
+    std::vector<Brick*> m_components;
+    Snowpack* m_snowpack;
+    SplitterSnowRain* m_snowRainSplitter;
 
   private:
 };

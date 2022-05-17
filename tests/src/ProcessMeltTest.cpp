@@ -22,8 +22,8 @@ class SnowpackModel : public ::testing::Test {
         m_model.AddBrick("snowpack", "Snowpack");
         m_model.AddLoggingToCurrentBrick("content");
 
-        // Snowmelt process
-        m_model.AddProcessToCurrentBrick("snowmelt", "Melt:degree-day");
+        // Snow melt process
+        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
         m_model.AddForcingToCurrentProcess("Temperature");
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);

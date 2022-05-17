@@ -1,7 +1,7 @@
 #include "Surface.h"
 
 Surface::Surface(HydroUnit *hydroUnit)
-    : Brick(hydroUnit)
+    : Brick(hydroUnit, false)
 {}
 
 void Surface::AssignParameters(const BrickSettings &brickSettings) {

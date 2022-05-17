@@ -13,7 +13,12 @@ class Glacier : public Brick {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
+    void ApplyConstraints(double timeStep) override;
+
+    void Finalize() override;
+
   protected:
+    bool m_unlimitedSupply;
 
   private:
 };

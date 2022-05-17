@@ -60,7 +60,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
                 process->SetName(processSettings.name);
 
                 if (processSettings.type.IsSameAs("Overflow", false)) {
-                    brick->LinkOverflow(process);
+                    brick->GetWaterContainer()->LinkOverflow(process);
                 }
 
                 BuildForcingConnections(processSettings, unit, process);

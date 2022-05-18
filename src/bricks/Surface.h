@@ -1,24 +1,23 @@
 #ifndef HYDROBRICKS_SURFACE_H
 #define HYDROBRICKS_SURFACE_H
 
-#include "Brick.h"
+#include "Surface.h"
 #include "Includes.h"
-#include "Snowpack.h"
-#include "SplitterSnowRain.h"
 
-class Surface : public Brick {
+class Surface : public SurfaceComponent {
   public:
-    Surface(HydroUnit *hydroUnit);
+    Vegetation(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
+    void ApplyConstraints(double timeStep) override;
+
+    void Finalize() override;
+
   protected:
-    std::vector<Brick*> m_components;
-    Snowpack* m_snowpack;
-    SplitterSnowRain* m_snowRainSplitter;
 
   private:
 };

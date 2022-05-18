@@ -4,7 +4,7 @@
 #include "HydroUnit.h"
 #include "Snowpack.h"
 #include "Storage.h"
-#include "Surface.h"
+#include "SurfaceContainer.h"
 
 Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
     : m_needsSolver(true),
@@ -29,8 +29,8 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
         auto brick = new Storage(unit);
         brick->AssignParameters(brickSettings);
         return brick;
-    } else if (brickSettings.type.IsSameAs("Surface")) {
-        auto brick = new Surface(unit);
+    } else if (brickSettings.type.IsSameAs("SurfaceContainer")) {
+        auto brick = new SurfaceContainer(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else if (brickSettings.type.IsSameAs("Glacier")) {

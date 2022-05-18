@@ -1,12 +1,12 @@
 #ifndef HYDROBRICKS_SURFACE_H
 #define HYDROBRICKS_SURFACE_H
 
-#include "Surface.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class Surface : public SurfaceComponent {
   public:
-    Vegetation(HydroUnit *hydroUnit);
+    Surface(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()

@@ -1,7 +1,7 @@
 #include "Snowpack.h"
 
 Snowpack::Snowpack(HydroUnit *hydroUnit)
-    : Brick(hydroUnit, true)
+    : SurfaceComponent(hydroUnit, true)
 {}
 
 void Snowpack::AssignParameters(const BrickSettings &brickSettings) {

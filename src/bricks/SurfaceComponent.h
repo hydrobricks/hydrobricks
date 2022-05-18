@@ -2,8 +2,9 @@
 #define HYDROBRICKS_SURFACE_COMPONENT_H
 
 #include "Includes.h"
-#include "HydroUnit.h"
 #include "Brick.h"
+
+class HydroUnit;
 
 class SurfaceComponent : public Brick {
   public:

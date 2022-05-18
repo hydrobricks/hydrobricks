@@ -1,9 +1,10 @@
 #include "ModelHydro.h"
 
 #include "FluxForcing.h"
+#include "FluxSimple.h"
+#include "FluxToAtmosphere.h"
 #include "FluxToBrick.h"
 #include "FluxToOutlet.h"
-#include "FluxToAtmosphere.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -103,11 +104,14 @@ void ModelHydro::BuildBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit
                     flux = new FluxToOutlet();
                     m_subBasin->AttachOutletFlux(flux);
                 } else if (unit->HasBrick(output.target)) {
-                    Brick* brickIn = unit->GetBrick(output.target);
-                    flux = new FluxToBrick(brickIn);
-                    brickIn->AttachFluxIn(flux);
+                    Brick* targetBrick = unit->GetBrick(output.target);
+                    flux = new FluxToBrick(targetBrick);
+                    targetBrick->AttachFluxIn(flux);
                 } else if (unit->HasSplitter(output.target)) {
-                    throw NotImplemented();
+                    Splitter* targetSplitter = unit->GetSplitter(output.target);
+                    flux = new FluxSimple();
+                    flux->SetAsStatic();
+                    targetSplitter->AttachFluxIn(flux);
                 } else {
                     throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
@@ -131,12 +135,15 @@ void ModelHydro::BuildSplittersFluxes(SettingsModel& modelSettings, HydroUnit* u
                 flux = new FluxToOutlet();
                 m_subBasin->AttachOutletFlux(flux);
             } else if (unit->HasBrick(output.target)) {
-                Brick* brickIn = unit->GetBrick(output.target);
-                flux = new FluxToBrick(brickIn);
+                Brick* targetBrick = unit->GetBrick(output.target);
+                flux = new FluxToBrick(targetBrick);
                 flux->SetAsStatic();
-                brickIn->AttachFluxIn(flux);
+                targetBrick->AttachFluxIn(flux);
             } else if (unit->HasSplitter(output.target)) {
-                throw NotImplemented();
+                Splitter* targetSplitter = unit->GetSplitter(output.target);
+                flux = new FluxSimple();
+                flux->SetAsStatic();
+                targetSplitter->AttachFluxIn(flux);
             } else {
                 throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }

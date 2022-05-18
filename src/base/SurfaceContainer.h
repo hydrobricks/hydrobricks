@@ -9,9 +9,12 @@
 
 class SurfaceContainer : public wxObject {
   public:
-    SurfaceContainer(HydroUnit *hydroUnit);
+    explicit SurfaceContainer(HydroUnit* hydroUnit);
+
+    ~SurfaceContainer() override;
 
   protected:
+    HydroUnit* m_hydroUnit;
     std::vector<Brick*> m_components;
     std::vector<Surface*> m_surfaces;
     std::vector<Snowpack*> m_snowpacks;

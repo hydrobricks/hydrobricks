@@ -3,5 +3,5 @@
 
 SurfaceComponent::SurfaceComponent(HydroUnit* hydroUnit, bool withWaterContainer)
     : Brick(hydroUnit, withWaterContainer),
-      m_areaRatio(0)
+      m_areaRatio(1.0)
 {}

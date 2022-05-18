@@ -62,9 +62,6 @@ bool Brick::IsOk() {
         wxLogError(_("The brick is not attached to a hydro unit."));
         return false;
     }
-    if (m_inputs.empty()) {
-        wxLogWarning(_("The brick has no input attached."));
-    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;

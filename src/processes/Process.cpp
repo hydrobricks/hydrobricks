@@ -2,9 +2,10 @@
 
 #include "Brick.h"
 #include "ProcessETSocont.h"
+#include "ProcessMeltDegreeDay.h"
+#include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "ProcessMeltDegreeDay.h"
 
 Process::Process(Brick* brick)
     : m_brick(brick)
@@ -19,12 +20,12 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
         auto process = new ProcessOutflowLinear(brick);
         process->AssignParameters(processSettings);
         return process;
+    } else if (processSettings.type.IsSameAs("Outflow:direct", false)) {
+        return new ProcessOutflowDirect(brick);
     } else if (processSettings.type.IsSameAs("Overflow", false)) {
-        auto process = new ProcessOutflowOverflow(brick);
-        return process;
+        return new ProcessOutflowOverflow(brick);
     } else if (processSettings.type.IsSameAs("ET:Socont", false)) {
-        auto process = new ProcessETSocont(brick);
-        return process;
+        return new ProcessETSocont(brick);
     } else if (processSettings.type.IsSameAs("Melt:degree-day", false) ||
                processSettings.type.IsSameAs("Melt:DegreeDay", false)) {
         auto process = new ProcessMeltDegreeDay(brick);

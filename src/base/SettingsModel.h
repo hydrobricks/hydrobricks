@@ -17,6 +17,7 @@ struct TimerSettings {
 
 struct OutputSettings {
     wxString target;
+    bool withWeighting = false;
 };
 
 struct ProcessSettings {
@@ -80,7 +81,7 @@ class SettingsModel : public wxObject {
 
     void AddForcingToCurrentProcess(const wxString &name);
 
-    void AddOutputToCurrentProcess(const wxString &target);
+    void AddOutputToCurrentProcess(const wxString &target, bool withWeighting = false);
 
     void AddSplitter(const wxString &name, const wxString &type);
 

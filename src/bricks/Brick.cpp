@@ -1,5 +1,6 @@
 #include "Brick.h"
 
+#include "GenericSurface.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
@@ -8,7 +9,8 @@
 #include "Vegetation.h"
 
 Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
-    : m_needsSolver(true),
+    : m_ratio(1.0),
+      m_needsSolver(true),
       m_container(nullptr),
       m_hydroUnit(hydroUnit)
 {
@@ -32,6 +34,10 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
         return brick;
     } else if (brickSettings.type.IsSameAs("Surface")) {
         auto brick = new Surface(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("GenericSurface")) {
+        auto brick = new GenericSurface(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else if (brickSettings.type.IsSameAs("Glacier")) {
@@ -157,6 +163,13 @@ bool Brick::HasWaterContainer() {
 WaterContainer* Brick::GetWaterContainer() {
     CheckWaterContainer();
     return m_container;
+}
+
+void Brick::SetRatio(double value) {
+    m_ratio = value;
+    for (auto process : m_processes) {
+        process->SetOutputFluxesRatio(value);
+    }
 }
 
 vecDoublePt Brick::GetStateVariableChanges() {

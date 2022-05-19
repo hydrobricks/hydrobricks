@@ -97,6 +97,12 @@ class Brick : public wxObject {
         m_name = name;
     }
 
+    double GetRatio() {
+        return m_ratio;
+    }
+
+    void SetRatio(double value);
+
     /**
      * Get pointers to the state variables.
      *
@@ -114,6 +120,7 @@ class Brick : public wxObject {
 
   protected:
     wxString m_name;
+    double m_ratio;
     bool m_needsSolver;
     WaterContainer* m_container;
     HydroUnit* m_hydroUnit;

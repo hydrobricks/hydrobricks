@@ -5,7 +5,7 @@
 #include "TimeSeriesUniform.h"
 
 /**
- * Model: simple snowpack model
+ * Model: model with glacier and surface components
  */
 
 class SurfaceContainerModel : public ::testing::Test {
@@ -61,13 +61,13 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.SelectBrick("surface-2");
         m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddOutputToCurrentProcess("outlet", true);
 
         // Surface brick for the glacier part with a linear storage
         m_model.SelectBrick("surface-1");
         m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddOutputToCurrentProcess("outlet", true);
 
         m_model.AddLoggingToItem("outlet");
 
@@ -103,7 +103,7 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
-/*
+
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
@@ -114,7 +114,7 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
-
+    /*
     // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 

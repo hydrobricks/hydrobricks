@@ -6,12 +6,19 @@
 #include "HydroUnit.h"
 #include "Includes.h"
 #include "TimeMachine.h"
+#include "SettingsBasin.h"
 
 class SubBasin : public wxObject {
   public:
     SubBasin();
 
     ~SubBasin() override;
+
+    bool Initialize(SettingsBasin& basinSettings);
+
+    void BuildBasin(SettingsBasin& basinSettings);
+
+    bool AssignRatios(SettingsBasin& basinSettings);
 
     bool IsOk();
 
@@ -39,6 +46,7 @@ class SubBasin : public wxObject {
     float m_area; // m2
     float m_elevation; // m.a.s.l.
     double m_outletTotal;
+    bool m_needsCleanup;
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;

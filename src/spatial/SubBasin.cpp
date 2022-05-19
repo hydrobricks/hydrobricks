@@ -3,10 +3,61 @@
 SubBasin::SubBasin()
     : m_area(UNDEFINED),
       m_elevation(UNDEFINED),
-      m_outletTotal(0)
+      m_outletTotal(0),
+      m_needsCleanup(false)
 {}
 
-SubBasin::~SubBasin() {}
+SubBasin::~SubBasin() {
+    if (m_needsCleanup) {
+        for (auto& hydroUnit : m_hydroUnits) {
+            wxDELETEA(hydroUnit);
+        }
+    }
+}
+
+bool SubBasin::Initialize(SettingsBasin& basinSettings) {
+    try {
+        BuildBasin(basinSettings);
+    } catch (const std::exception& e) {
+        wxLogError(_("An exception occurred during basin initialization: %s."), e.what());
+        return false;
+    }
+
+    return true;
+}
+
+void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
+    m_needsCleanup = true;
+    for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
+        basinSettings.SelectUnit(iUnit);
+
+        HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
+        auto unit = new HydroUnit(unitSettings.area);
+        unit->SetId(unitSettings.id);
+        m_hydroUnits.push_back(unit);
+    }
+}
+
+bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
+
+    try {
+        for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
+            basinSettings.SelectUnit(iUnit);
+
+            for (int iElement = 0; iElement < basinSettings.GetSurfaceElementsNb(); ++iElement) {
+                SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
+
+                Brick* brick = m_hydroUnits[iUnit]->GetBrick(elementSettings.name);
+                brick->SetRatio(elementSettings.ratio);
+            }
+        }
+    } catch (const std::exception& e) {
+        wxLogError(_("An exception occurred while assigning the ratios: %s."), e.what());
+        return false;
+    }
+
+    return true;
+}
 
 bool SubBasin::IsOk() {
     if (m_hydroUnits.empty()) {

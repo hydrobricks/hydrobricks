@@ -17,7 +17,7 @@ class HydroUnit : public wxObject {
         Undefined
     };
 
-    HydroUnit(float area = UNDEFINED, Types type = Undefined);
+    HydroUnit(double area = UNDEFINED, Types type = Undefined);
 
     ~HydroUnit() override;
 
@@ -55,7 +55,7 @@ class HydroUnit : public wxObject {
         return m_type;
     }
 
-    void SetId(long id) {
+    void SetId(int id) {
         m_id = id;
     }
 
@@ -63,14 +63,14 @@ class HydroUnit : public wxObject {
         return m_area;
     }
 
-    long GetId() const {
+    int GetId() const {
         return m_id;
     }
 
   protected:
     Types m_type;
-    long m_id;
-    float m_area; // m2
+    int m_id;
+    double m_area; // m2
     SurfaceContainer m_surfaceContainer;
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;

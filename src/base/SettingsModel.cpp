@@ -121,11 +121,12 @@ void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentProcess(const wxString &target) {
+void SettingsModel::AddOutputToCurrentProcess(const wxString &target, bool withWeighting) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
     outputSettings.target = target;
+    outputSettings.withWeighting = withWeighting;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 

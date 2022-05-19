@@ -102,14 +102,17 @@ void ModelHydro::BuildBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit
             for (const auto& output: processSettings.outputs)  {
                 if (output.target.IsSameAs("outlet", false)) {
                     flux = new FluxToOutlet();
+                    flux->NeedsWeighting(output.withWeighting);
                     m_subBasin->AttachOutletFlux(flux);
                 } else if (unit->HasBrick(output.target)) {
                     Brick* targetBrick = unit->GetBrick(output.target);
                     flux = new FluxToBrick(targetBrick);
+                    flux->NeedsWeighting(output.withWeighting);
                     targetBrick->AttachFluxIn(flux);
                 } else if (unit->HasSplitter(output.target)) {
                     Splitter* targetSplitter = unit->GetSplitter(output.target);
                     flux = new FluxSimple();
+                    flux->NeedsWeighting(output.withWeighting);
                     flux->SetAsStatic();
                     targetSplitter->AttachFluxIn(flux);
                 } else {

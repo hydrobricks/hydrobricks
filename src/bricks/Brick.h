@@ -59,6 +59,14 @@ class Brick : public wxObject {
         return m_needsSolver;
     }
 
+    virtual bool IsSurfaceComponent() {
+        return false;
+    }
+
+    virtual bool IsNull() {
+        return false;
+    }
+
     void SubtractAmount(double change);
 
     void AddAmount(double change);
@@ -97,12 +105,6 @@ class Brick : public wxObject {
         m_name = name;
     }
 
-    double GetRatio() {
-        return m_ratio;
-    }
-
-    void SetRatio(double value);
-
     /**
      * Get pointers to the state variables.
      *
@@ -120,7 +122,6 @@ class Brick : public wxObject {
 
   protected:
     wxString m_name;
-    double m_ratio;
     bool m_needsSolver;
     WaterContainer* m_container;
     HydroUnit* m_hydroUnit;

@@ -5,6 +5,7 @@
 #include "FluxToAtmosphere.h"
 #include "FluxToBrick.h"
 #include "FluxToOutlet.h"
+#include "SurfaceComponent.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -78,8 +79,22 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
             BuildForcingConnections(splitterSettings, unit, splitter);
         }
 
+        LinkRelatedSurfaceBricks(modelSettings, unit);
         BuildBricksFluxes(modelSettings, unit);
         BuildSplittersFluxes(modelSettings, unit);
+    }
+}
+
+void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+        BrickSettings brickSettings = modelSettings.GetBrickSettings(iBrick);
+        if (!brickSettings.relatedSurfaceBricks.empty()) {
+            auto brick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(iBrick));
+            for (const auto& relatedSurfaceBrick: brickSettings.relatedSurfaceBricks) {
+                auto relatedBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
+                brick->AddToRelatedBricks(relatedBrick);
+            }
+        }
     }
 }
 

@@ -3,8 +3,7 @@
 HydroUnit::HydroUnit(double area, Types type)
     : m_type(type),
       m_id(UNDEFINED),
-      m_area(area),
-      m_surfaceContainer(this)
+      m_area(area)
 {}
 
 HydroUnit::~HydroUnit() {

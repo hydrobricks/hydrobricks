@@ -42,6 +42,7 @@ struct BrickSettings {
     wxString name;
     wxString type;
     vecStr logItems;
+    vecStr relatedSurfaceBricks;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
     std::vector<ProcessSettings> processes;
@@ -70,6 +71,8 @@ class SettingsModel : public wxObject {
     void AddBrick(const wxString &name, const wxString &type);
 
     void AddSurfaceBrick(const wxString &name, const wxString &type);
+
+    void AddToRelatedSurfaceBrick(const wxString &name);
 
     void AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type = "Constant");
 

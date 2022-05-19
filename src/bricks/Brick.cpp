@@ -5,12 +5,12 @@
 #include "HydroUnit.h"
 #include "Snowpack.h"
 #include "Storage.h"
+#include "Surface.h"
 #include "Urban.h"
 #include "Vegetation.h"
 
 Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
-    : m_ratio(1.0),
-      m_needsSolver(true),
+    : m_needsSolver(true),
       m_container(nullptr),
       m_hydroUnit(hydroUnit)
 {
@@ -163,13 +163,6 @@ bool Brick::HasWaterContainer() {
 WaterContainer* Brick::GetWaterContainer() {
     CheckWaterContainer();
     return m_container;
-}
-
-void Brick::SetRatio(double value) {
-    m_ratio = value;
-    for (auto process : m_processes) {
-        process->SetOutputFluxesRatio(value);
-    }
 }
 
 vecDoublePt Brick::GetStateVariableChanges() {

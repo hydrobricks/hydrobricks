@@ -6,7 +6,6 @@
 #include "HydroUnitProperty.h"
 #include "Includes.h"
 #include "Splitter.h"
-#include "SurfaceContainer.h"
 
 class HydroUnit : public wxObject {
   public:
@@ -71,7 +70,6 @@ class HydroUnit : public wxObject {
     Types m_type;
     int m_id;
     double m_area; // m2
-    SurfaceContainer m_surfaceContainer;
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
     std::vector<Splitter*> m_splitters;

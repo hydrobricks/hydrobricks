@@ -60,6 +60,11 @@ void SettingsModel::AddSurfaceBrick(const wxString &name, const wxString &type) 
     m_selectedStructure->surfaceBricks.push_back(brick);
 }
 
+void SettingsModel::AddToRelatedSurfaceBrick(const wxString &name) {
+    wxASSERT(m_selectedBrick);
+    m_selectedBrick->relatedSurfaceBricks.push_back(name);
+}
+
 void SettingsModel::AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type) {
     wxASSERT(m_selectedBrick);
 
@@ -202,7 +207,7 @@ void SettingsModel::EnableSnow(const wxString &meltProcess) {
 void SettingsModel::GenerateSurfaceComponents() {
     wxASSERT(m_selectedStructure);
 
-    int surfacesNb = int(m_selectedStructure->surfaceBricks.size() + 1);
+    int surfacesNb = int(m_selectedStructure->surfaceBricks.size());
 
     // Create precipitation splitters
     if (m_selectedStructure->withSnow) {
@@ -217,6 +222,12 @@ void SettingsModel::GenerateSurfaceComponents() {
         AddSplitter("snow-splitter", "MultiFluxes");
         AddSplitter("rain-splitter", "MultiFluxes");
     } else {
+        // Rain splitter (connection to forcing)
+        AddSplitter("rain", "Rain");
+        AddForcingToCurrentSplitter("Precipitation");
+        AddOutputToCurrentSplitter("rain-splitter");
+
+        // Splitter to surfaces
         AddSplitter("rain-splitter", "MultiFluxes");
     }
 
@@ -240,12 +251,22 @@ void SettingsModel::GenerateSurfaceComponents() {
     }
 
     // Create bricks
-    for (const auto& brick : m_selectedStructure->surfaceBricks) {
-        m_selectedStructure->bricks.push_back(brick);
+    for (int i = 0; i < surfacesNb; ++i) {
+        BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
+        m_selectedStructure->bricks.push_back(brickSettings);
 
-        SelectBrick(brick.name);
+        SelectBrick(brickSettings.name);
         SelectSplitter("rain-splitter");
-        AddOutputToCurrentSplitter(brick.name);
+        AddOutputToCurrentSplitter(brickSettings.name);
+
+        // Link related surface bricks
+        wxString surfaceName = wxString::Format("surface-%d", i + 1);
+        if (m_selectedStructure->withSnow) {
+            AddToRelatedSurfaceBrick("snowpack-" + surfaceName);
+        }
+        if (i < m_selectedStructure->surfaceBricks.size()) {
+            AddToRelatedSurfaceBrick(surfaceName);
+        }
     }
 
     // Create surface bricks
@@ -257,7 +278,6 @@ void SettingsModel::GenerateSurfaceComponents() {
     // Add rain connection to the last surface brick
     SelectSplitter("rain-splitter");
     AddOutputToCurrentSplitter(wxString::Format("surface-%d", surfacesNb));
-
 }
 
 bool SettingsModel::SelectStructure(int id) {

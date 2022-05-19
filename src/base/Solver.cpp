@@ -41,6 +41,9 @@ void Solver::SaveStateVariables(int col) {
 void Solver::ComputeChangeRates(int col, bool applyConstraints) {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         for (auto process : brick->GetProcesses()) {
             // Get the change rates (per day) independently of the time step and constraints
             vecDouble rates = process->GetChangeRates();

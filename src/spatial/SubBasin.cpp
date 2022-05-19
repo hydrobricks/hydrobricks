@@ -1,5 +1,7 @@
 #include "SubBasin.h"
 
+#include "SurfaceComponent.h"
+
 SubBasin::SubBasin()
     : m_area(UNDEFINED),
       m_elevation(UNDEFINED),
@@ -47,8 +49,8 @@ bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < basinSettings.GetSurfaceElementsNb(); ++iElement) {
                 SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
 
-                Brick* brick = m_hydroUnits[iUnit]->GetBrick(elementSettings.name);
-                brick->SetRatio(elementSettings.ratio);
+                auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                brick->SetAreaRatio(elementSettings.ratio);
             }
         }
     } catch (const std::exception& e) {

@@ -18,71 +18,54 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
+        // Surface elements
+        m_model.AddSurfaceBrick("glacier", "Glacier");
+        m_model.EnableSnow("Melt:degree-day");
+        m_model.GenerateSurfaceComponents();
+
         // Rain/snow splitter
-        m_model.AddSplitter("snow-rain", "SnowRain");
-        m_model.AddForcingToCurrentSplitter("Precipitation");
-        m_model.AddForcingToCurrentSplitter("Temperature");
-        m_model.AddOutputToCurrentSplitter("rain-splitter");
-        m_model.AddOutputToCurrentSplitter("snow-splitter");
+        m_model.SelectSplitter("snow-rain");
         m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
         m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
 
-        // Rain splitter
-        m_model.AddSplitter("rain-splitter", "MultiFluxes");
-        m_model.AddOutputToCurrentSplitter("surface-ground");
-        m_model.AddOutputToCurrentSplitter("surface-glacier");
-
-        // Snow splitter
-        m_model.AddSplitter("snow-splitter", "MultiFluxes");
-        m_model.AddOutputToCurrentSplitter("snowpack-ground");
-        m_model.AddOutputToCurrentSplitter("snowpack-glacier");
-
-        // Snowpack brick on the ground
-        m_model.AddBrick("snowpack-ground", "Snowpack");
+        // Snowpack brick on surface 1
+        m_model.SelectBrick("snowpack-surface-1");
         m_model.AddLoggingToCurrentBrick("content");
 
         // Snow melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
+        m_model.SelectProcess("melt");
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("surface-ground");
 
-        // Snowpack brick on glacier
-        m_model.AddBrick("snowpack-glacier", "Snowpack");
+        // Snowpack brick on surface 2
+        m_model.SelectBrick("snowpack-surface-2");
         m_model.AddLoggingToCurrentBrick("content");
 
         // Snow melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
+        m_model.SelectProcess("melt");
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("surface-glacier");
-
-        // Glacier brick
-        m_model.AddBrick("glacier", "Glacier");
 
         // Glacier melt process
+        m_model.SelectBrick("glacier");
         m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
         m_model.AddForcingToCurrentProcess("Temperature");
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("surface-glacier");
+        m_model.AddOutputToCurrentProcess("surface-1");
 
         // Surface brick for the bare ground with a linear storage
-        m_model.AddBrick("surface-ground", "Surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.1f);
+        m_model.SelectBrick("surface-2");
+        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet");
 
         // Surface brick for the glacier part with a linear storage
-        m_model.AddBrick("surface-glacier", "Surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.1f);
+        m_model.SelectBrick("surface-1");
+        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet");
 

@@ -48,7 +48,10 @@ struct BrickSettings {
 
 struct ModelStructure {
     int id;
+    bool withSnow = false;
+    wxString snowMeltProcess;
     vecStr logItems;
+    std::vector<BrickSettings> surfaceBricks;
     std::vector<BrickSettings> bricks;
     std::vector<SplitterSettings> splitters;
 };
@@ -64,6 +67,8 @@ class SettingsModel : public wxObject {
     void SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit);
 
     void AddBrick(const wxString &name, const wxString &type);
+
+    void AddSurfaceBrick(const wxString &name, const wxString &type);
 
     void AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type = "Constant");
 
@@ -85,21 +90,31 @@ class SettingsModel : public wxObject {
 
     void AddOutputToCurrentSplitter(const wxString &target);
 
-    void AddLoggingToItem(const wxString& itemName);
+    void AddLoggingToItem(const wxString &itemName);
 
-    void AddLoggingToCurrentBrick(const wxString& itemName);
+    void AddLoggingToCurrentBrick(const wxString &itemName);
 
-    void AddLoggingToCurrentProcess(const wxString& itemName);
+    void AddLoggingToCurrentProcess(const wxString &itemName);
 
-    void AddLoggingToCurrentSplitter(const wxString& itemName);
+    void AddLoggingToCurrentSplitter(const wxString &itemName);
+
+    void EnableSnow(const wxString &meltProcess);
+
+    void GenerateSurfaceComponents();
 
     bool SelectStructure(int id);
 
     void SelectBrick(int index);
 
+    void SelectBrick(const wxString &name);
+
     void SelectProcess(int index);
 
+    void SelectProcess(const wxString &name);
+
     void SelectSplitter(int index);
+
+    void SelectSplitter(const wxString &name);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());

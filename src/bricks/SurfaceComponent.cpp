@@ -4,7 +4,9 @@
 SurfaceComponent::SurfaceComponent(HydroUnit* hydroUnit, bool withWaterContainer)
     : Brick(hydroUnit, withWaterContainer),
       m_areaRatio(1.0)
-{}
+{
+    m_needsSolver = false;
+}
 
 void SurfaceComponent::SetAreaRatio(double value) {
     m_areaRatio = value;

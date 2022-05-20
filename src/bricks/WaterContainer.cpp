@@ -25,6 +25,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         for (auto flux : process->GetOutputFluxes()) {
             double* changeRate = flux->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
+            wxASSERT(*changeRate < 1000);
+            wxASSERT(*changeRate > -1000);
             outgoingRates.push_back(changeRate);
             outputs += *changeRate;
         }
@@ -42,6 +44,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         } else {
             double* changeRate = input->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
+            wxASSERT(*changeRate < 1000);
+            wxASSERT(*changeRate > -1000);
             incomingRates.push_back(changeRate);
             inputs += *changeRate;
         }
@@ -54,7 +58,10 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         double diff = (GetContentWithChanges() + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate :outgoingRates) {
-            if (*rate == 0) {
+            wxASSERT(rate != nullptr);
+            wxASSERT(*rate < 1000);
+            wxASSERT(*rate > -1000);
+            if (*rate == 0.0) {
                 continue;
             }
             *rate += diff * std::abs((*rate) / outputs);
@@ -76,7 +83,10 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             }
             // Limit the different rates proportionally
             for (auto rate :incomingRates) {
-                if (*rate == 0) {
+                wxASSERT(rate != nullptr);
+                wxASSERT(*rate < 1000);
+                wxASSERT(*rate > -1000);
+                if (*rate == 0.0) {
                     continue;
                 }
                 *rate -= diff * std::abs((*rate) / inputs);

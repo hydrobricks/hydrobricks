@@ -75,26 +75,79 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
-/*
+
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
-    for (auto & basinOutput : basinOutputs) {
-        for (int j = 0; j < basinOutput.size(); ++j) {
-            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        if (std::abs(basinOutputs[0][j] - expectedOutputs[j]) > 0.000001) {
+            int sdf = 2;
         }
+        EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
     }
-    /*
+
     // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
-    vecDouble expectedMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput4 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-    for (int j = 0; j < expectedSWE.size(); ++j) {
-        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);
-        EXPECT_NEAR(unitContent[1](j, 0), expectedMelt[j], 0.000001);
-    }*/
+    for (int j = 0; j < expectedOutput1.size(); ++j) {
+        EXPECT_NEAR(unitContent[0](j, 0), expectedOutput1[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 0), expectedOutput2[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
+        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
+    }
+}
+
+TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
+    SettingsBasin basinProp;
+    basinProp.AddHydroUnit(1, 100);
+    basinProp.AddSurfaceElementToCurrentUnit("item-1", 1.0);
+    basinProp.AddSurfaceElementToCurrentUnit("item-2", 0.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.IsOk());
+
+    EXPECT_TRUE(subBasin.AssignRatios(basinProp));
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge
+    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+
+    vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        if (std::abs(basinOutputs[0][j] - expectedOutputs[j]) > 0.000001) {
+            int sdf = 2;
+        }
+        EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
+    }
+
+    // Check melt and swe
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+
+    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput4 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for (int j = 0; j < expectedOutput1.size(); ++j) {
+        EXPECT_NEAR(unitContent[0](j, 0), expectedOutput1[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 0), expectedOutput2[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
+        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
+    }
 }

@@ -27,7 +27,7 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
 
 void Solver::InitializeContainers() {
     m_stateVariableChanges = axxd::Zero(m_processor->GetNbStateVariables(), m_nIterations);
-    m_changeRates = axxd::Zero(m_processor->GetNbConnections(), m_nIterations);
+    m_changeRates = axxd::Zero(m_processor->GetNbSolvableConnections(), m_nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {
@@ -69,6 +69,9 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
 void Solver::ApplyConstraintsFor(int col) {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         for (auto process : brick->GetProcesses()) {
             for (int i = 0; i < process->GetConnectionsNb(); ++i) {
                 wxASSERT(m_changeRates.rows() > iRate);
@@ -84,6 +87,9 @@ void Solver::ApplyConstraintsFor(int col) {
 
 void Solver::ApplyConstraints() {
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         brick->ApplyConstraints(*m_timeStepInDays);
     }
@@ -114,6 +120,9 @@ void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
 void Solver::ApplyProcesses(int col) const {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
@@ -127,6 +136,9 @@ void Solver::ApplyProcesses(int col) const {
 void Solver::ApplyProcesses(const axd &changeRates) const {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
@@ -139,6 +151,9 @@ void Solver::ApplyProcesses(const axd &changeRates) const {
 
 void Solver::Finalize() const {
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        if (brick->IsNull()) {
+            continue;
+        }
         brick->Finalize();
         for (auto process : brick->GetProcesses()) {
             process->Finalize();

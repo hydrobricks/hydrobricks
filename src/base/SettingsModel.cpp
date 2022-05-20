@@ -234,12 +234,13 @@ void SettingsModel::GenerateSurfaceComponents() {
     // Create snowpacks
     if (m_selectedStructure->withSnow) {
         for (int i = 0; i < surfacesNb; ++i) {
-            wxString surfaceName = wxString::Format("surface-%d", i + 1);
+            BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
+            wxString surfaceName = brickSettings.name + "-surface";
 
             SelectSplitter("snow-splitter");
-            AddOutputToCurrentSplitter("snowpack-" + surfaceName);
+            AddOutputToCurrentSplitter(brickSettings.name + "-snowpack");
 
-            AddBrick("snowpack-" + surfaceName, "Snowpack");
+            AddBrick(brickSettings.name + "-snowpack", "Snowpack");
             AddProcessToCurrentBrick("melt", m_selectedStructure->snowMeltProcess);
             AddOutputToCurrentProcess(surfaceName);
             if (m_selectedStructure->snowMeltProcess.IsSameAs("Melt:degree-day")) {
@@ -260,9 +261,9 @@ void SettingsModel::GenerateSurfaceComponents() {
         AddOutputToCurrentSplitter(brickSettings.name);
 
         // Link related surface bricks
-        wxString surfaceName = wxString::Format("surface-%d", i + 1);
+        wxString surfaceName = brickSettings.name + "-surface";
         if (m_selectedStructure->withSnow) {
-            AddToRelatedSurfaceBrick("snowpack-" + surfaceName);
+            AddToRelatedSurfaceBrick(brickSettings.name + "-snowpack");
         }
         if (i < m_selectedStructure->surfaceBricks.size()) {
             AddToRelatedSurfaceBrick(surfaceName);
@@ -271,13 +272,10 @@ void SettingsModel::GenerateSurfaceComponents() {
 
     // Create surface bricks
     for (int i = 0; i < surfacesNb; ++i) {
-        wxString surfaceName = wxString::Format("surface-%d", i + 1);
+        BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
+        wxString surfaceName = brickSettings.name + "-surface";
         AddBrick(surfaceName, "Surface");
     }
-
-    // Add rain connection to the last surface brick
-    SelectSplitter("rain-splitter");
-    AddOutputToCurrentSplitter(wxString::Format("surface-%d", surfacesNb));
 }
 
 bool SettingsModel::SelectStructure(int id) {
@@ -361,13 +359,19 @@ vecStr SettingsModel::GetHydroUnitLogLabels() {
 
     for (auto &modelStructure : m_modelStructures) {
         for (auto &brick : modelStructure.bricks) {
-            logNames.insert(logNames.end(), brick.logItems.begin(), brick.logItems.end());
+            for (const auto& label : brick.logItems) {
+                logNames.push_back(brick.name + ":" + label);
+            }
             for (auto &process : brick.processes) {
-                logNames.insert(logNames.end(), process.logItems.begin(), process.logItems.end());
+                for (const auto& label : process.logItems) {
+                    logNames.push_back(brick.name + ":" + process.name + ":" + label);
+                }
             }
         }
         for (auto &splitter : modelStructure.splitters) {
-            logNames.insert(logNames.end(), splitter.logItems.begin(), splitter.logItems.end());
+            for (const auto& label : splitter.logItems) {
+                logNames.push_back(splitter.name + ":" + label);
+            }
         }
     }
 

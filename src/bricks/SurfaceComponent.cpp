@@ -13,4 +13,11 @@ void SurfaceComponent::SetAreaRatio(double value) {
     for (auto brick : m_relatedBricks) {
         brick->SetAreaRatio(value);
     }
+    for (auto process : m_processes) {
+        for (auto output : process->GetOutputFluxes()) {
+            if (output->NeedsWeighting()) {
+                output->SetRatio(value);
+            }
+        }
+    }
 }

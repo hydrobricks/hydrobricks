@@ -30,7 +30,7 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
 
         // Snowpack brick on surface 1
-        m_model.SelectBrick("snowpack-surface-1");
+        m_model.SelectBrick("ground-snowpack");
         m_model.AddLoggingToCurrentBrick("content");
 
         // Snow melt process
@@ -40,7 +40,7 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddLoggingToCurrentProcess("output");
 
         // Snowpack brick on surface 2
-        m_model.SelectBrick("snowpack-surface-2");
+        m_model.SelectBrick("glacier-snowpack");
         m_model.AddLoggingToCurrentBrick("content");
 
         // Snow melt process
@@ -56,16 +56,16 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
         m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("surface-1");
+        m_model.AddOutputToCurrentProcess("glacier-surface");
 
         // Surface brick for the bare ground with a linear storage
-        m_model.SelectBrick("surface-2");
+        m_model.SelectBrick("ground-surface");
         m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet", true);
 
         // Surface brick for the glacier part with a linear storage
-        m_model.SelectBrick("surface-1");
+        m_model.SelectBrick("glacier-surface");
         m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
         m_model.AddLoggingToCurrentProcess("output");
         m_model.AddOutputToCurrentProcess("outlet", true);

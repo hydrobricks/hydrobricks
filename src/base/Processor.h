@@ -31,19 +31,27 @@ class Processor : public wxObject {
         return &m_iterableBricks;
     }
 
-    int GetNbConnections() {
-        return m_connectionsNb;
+    int GetNbSolvableConnections() {
+        return m_solvableConnectionsNb;
+    }
+
+    int GetNbDirectConnections() {
+        return m_directConnectionsNb;
     }
         
   protected:
     Solver* m_solver;
     ModelHydro* m_model;
-    int m_connectionsNb;
+    int m_solvableConnectionsNb;
+    int m_directConnectionsNb;
     vecDoublePt m_stateVariableChanges;
     std::vector<Brick*> m_iterableBricks;
+    axd m_changeRatesNoSolver;
 
   private:
     void StoreStateVariableChanges(vecDoublePt& values);
+
+    void ApplyDirectChanges(Brick* brick, int &iRate);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

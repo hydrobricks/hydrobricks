@@ -1,22 +1,30 @@
 #include "Brick.h"
 
+#include "GenericSurface.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
 #include "Storage.h"
 #include "Surface.h"
+#include "Urban.h"
+#include "Vegetation.h"
 
-Brick::Brick(HydroUnit *hydroUnit)
+Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
     : m_needsSolver(true),
-      m_content(0),
-      m_contentChange(0),
-      m_capacity(nullptr),
-      m_hydroUnit(hydroUnit),
-      m_overflow(nullptr)
+      m_container(nullptr),
+      m_hydroUnit(hydroUnit)
 {
     if (hydroUnit) {
         hydroUnit->AddBrick(this);
     }
+
+    if (withWaterContainer) {
+        m_container = new WaterContainer(this);
+    }
+}
+
+Brick::~Brick() {
+    wxDELETE(m_container);
 }
 
 Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
@@ -28,12 +36,24 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
         auto brick = new Surface(unit);
         brick->AssignParameters(brickSettings);
         return brick;
+    } else if (brickSettings.type.IsSameAs("GenericSurface")) {
+        auto brick = new GenericSurface(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
     } else if (brickSettings.type.IsSameAs("Glacier")) {
         auto brick = new Glacier(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else if (brickSettings.type.IsSameAs("Snowpack")) {
         auto brick = new Snowpack(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("Urban")) {
+        auto brick = new Urban(unit);
+        brick->AssignParameters(brickSettings);
+        return brick;
+    } else if (brickSettings.type.IsSameAs("Vegetation")) {
+        auto brick = new Vegetation(unit);
         brick->AssignParameters(brickSettings);
         return brick;
     } else {
@@ -48,10 +68,6 @@ bool Brick::IsOk() {
         wxLogError(_("The brick is not attached to a hydro unit."));
         return false;
     }
-    if (m_inputs.empty()) {
-        wxLogError(_("The brick is not attached to inputs."));
-        return false;
-    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;
@@ -63,7 +79,8 @@ bool Brick::IsOk() {
 
 void Brick::AssignParameters(const BrickSettings &brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
-        m_capacity = GetParameterValuePointer(brickSettings, "capacity");
+        CheckWaterContainer();
+        m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
 }
 
@@ -97,22 +114,22 @@ Process* Brick::GetProcess(int index) {
 }
 
 void Brick::SubtractAmount(double change) {
-    m_contentChange -= change;
+    if (HasWaterContainer()) {
+        m_container->SubtractAmount(change);
+    }
 }
 
 void Brick::AddAmount(double change) {
-    m_contentChange += change;
+    CheckWaterContainer();
+    m_container->AddAmount(change);
 }
 
 void Brick::Finalize() {
-    m_content += m_contentChange;
-    m_contentChange = 0;
-    wxASSERT(m_content >= 0);
+    CheckWaterContainer();
+    m_container->Finalize();
 }
 
 double Brick::SumIncomingFluxes() {
-    wxASSERT(!m_inputs.empty());
-
     double sum = 0;
     for (auto & input : m_inputs) {
         sum += input->GetAmount();
@@ -122,79 +139,37 @@ double Brick::SumIncomingFluxes() {
 }
 
 void Brick::UpdateContentFromInputs() {
-    m_contentChange += SumIncomingFluxes();
+    if (HasWaterContainer()) {
+        m_container->AddAmount(SumIncomingFluxes());
+    }
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    // Get outgoing change rates
-    vecDoublePt outgoingRates;
-    double outputs = 0;
-    for (auto process : m_processes) {
-        for (auto flux : process->GetOutputFluxes()) {
-            double* changeRate = flux->GetChangeRatePointer();
-            wxASSERT(changeRate != nullptr);
-            outgoingRates.push_back(changeRate);
-            outputs += *changeRate;
-        }
-    }
-
-    // Get incoming change rates
-    vecDoublePt incomingRates;
-    double inputs = 0;
-    double inputsStatic = 0;
-    for (auto & input : m_inputs) {
-        if (input->IsForcing()) {
-            inputsStatic += input->GetAmount();
-        } else if (input->IsStatic()) {
-            inputsStatic += input->GetAmount();
-        } else {
-            double* changeRate = input->GetChangeRatePointer();
-            wxASSERT(changeRate != nullptr);
-            incomingRates.push_back(changeRate);
-            inputs += *changeRate;
-        }
-    }
-
-    double change = inputs - outputs;
-
-    // Avoid negative content
-    if (change < 0 && GetContentWithChanges() + inputsStatic + change * timeStep < 0) {
-        double diff = (GetContentWithChanges() + inputsStatic + change * timeStep) / timeStep;
-        // Limit the different rates proportionally
-        for (auto rate :outgoingRates) {
-            if (*rate == 0) {
-                continue;
-            }
-            *rate += diff * std::abs((*rate) / outputs);
-        }
-    }
-
-    // Enforce maximum capacity
-    if (HasMaximumCapacity()) {
-        if (GetContentWithChanges() + inputsStatic + change * timeStep > *m_capacity) {
-            double diff = (GetContentWithChanges() + inputsStatic + change * timeStep - *m_capacity) / timeStep;
-            // If it has an overflow, use it
-            if (HasOverflow()) {
-                *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
-                return;
-            }
-            // Check that it is not only due to forcing
-            if (GetContentWithChanges() + inputsStatic > *m_capacity) {
-                throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
-            }
-            // Limit the different rates proportionally
-            for (auto rate :incomingRates) {
-                if (*rate == 0) {
-                    continue;
-                }
-                *rate -= diff * std::abs((*rate) / inputs);
-            }
-        }
+    if (m_container) {
+        m_container->ApplyConstraints(timeStep);
     }
 }
 
+void Brick::CheckWaterContainer() {
+    if (m_container == nullptr) {
+        throw ConceptionIssue(_("Trying to access the water container of a brick that has none."));
+    }
+}
+
+bool Brick::HasWaterContainer() {
+    return m_container != nullptr;
+}
+
+WaterContainer* Brick::GetWaterContainer() {
+    CheckWaterContainer();
+    return m_container;
+}
+
 vecDoublePt Brick::GetStateVariableChanges() {
-    return vecDoublePt {&m_contentChange};
+    if (m_container) {
+        return m_container->GetStateVariableChanges();
+    }
+    return vecDoublePt {};
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
@@ -224,8 +199,8 @@ int Brick::GetProcessesConnectionsNb() {
 }
 
 double* Brick::GetBaseValuePointer(const wxString& name) {
-    if (name.IsSameAs("content")) {
-        return &m_content;
+    if (name.IsSameAs("content") && m_container) {
+        return m_container->GetContentPointer();
     }
 
     return nullptr;

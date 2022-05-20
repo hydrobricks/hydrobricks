@@ -20,6 +20,8 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
 }
 
 vecDouble ProcessETSocont::GetChangeRates() {
-    wxASSERT(m_brick->HasMaximumCapacity());
-    return {m_pet->GetValue() * pow(m_brick->GetContentWithChanges() / m_brick->GetMaximumCapacity(), m_exponent)};
+    wxASSERT(m_brick->GetWaterContainer()->HasMaximumCapacity());
+    return {m_pet->GetValue() * pow(m_brick->GetWaterContainer()->GetContentWithChanges() /
+                                        m_brick->GetWaterContainer()->GetMaximumCapacity(),
+                                    m_exponent)};
 }

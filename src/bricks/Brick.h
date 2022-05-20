@@ -5,14 +5,15 @@
 #include "Includes.h"
 #include "Process.h"
 #include "SettingsModel.h"
+#include "WaterContainer.h"
 
 class HydroUnit;
 
 class Brick : public wxObject {
   public:
-    explicit Brick(HydroUnit* hydroUnit);
+    explicit Brick(HydroUnit* hydroUnit, bool withWaterContainer);
 
-    ~Brick() override = default;
+    ~Brick() override;
 
     static Brick* Factory(const BrickSettings &brickSettings, HydroUnit* unit);
 
@@ -58,32 +59,41 @@ class Brick : public wxObject {
         return m_needsSolver;
     }
 
+    virtual bool IsSurfaceComponent() {
+        return false;
+    }
+
+    virtual bool IsNull() {
+        return false;
+    }
+
     void SubtractAmount(double change);
 
     void AddAmount(double change);
 
-    void Finalize();
+    virtual void Finalize();
 
-    void UpdateContentFromInputs();
+    virtual void UpdateContentFromInputs();
 
-    void ApplyConstraints(double timeStep);
+    virtual void ApplyConstraints(double timeStep);
+
+    void CheckWaterContainer();
+
+    bool HasWaterContainer();
+
+    WaterContainer* GetWaterContainer();
 
     int GetInputsNb() {
         return int(m_inputs.size());
     }
 
-    /**
-     * Get the water content of the current object.
-     *
-     * @return water content [mm]
-     */
-    double GetContentWithChanges() const {
-        return m_content + m_contentChange;
+    std::vector<Flux*>& GetInputs() {
+        return m_inputs;
     }
 
     Process* GetProcess(int index);
 
-    std::vector<Process*> GetProcesses() {
+    std::vector<Process*>& GetProcesses() {
         return m_processes;
     }
 
@@ -93,22 +103,6 @@ class Brick : public wxObject {
 
     void SetName(const wxString &name) {
         m_name = name;
-    }
-
-    bool HasMaximumCapacity() const {
-        return m_capacity != nullptr;
-    }
-
-    double GetMaximumCapacity() {
-        return *m_capacity;
-    }
-
-    bool HasOverflow() {
-        return m_overflow != nullptr;
-    }
-
-    void LinkOverflow(Process* overflow) {
-        m_overflow = overflow;
     }
 
     /**
@@ -129,11 +123,10 @@ class Brick : public wxObject {
   protected:
     wxString m_name;
     bool m_needsSolver;
-    float* m_capacity;
+    WaterContainer* m_container;
     HydroUnit* m_hydroUnit;
     std::vector<Flux*> m_inputs;
     std::vector<Process*> m_processes;
-    Process* m_overflow;
 
     /**
      * Sums the water amount from the different fluxes.
@@ -143,8 +136,6 @@ class Brick : public wxObject {
     double SumIncomingFluxes();
 
   private:
-    double m_content; // [mm]
-    double m_contentChange; // [mm]
 };
 
 #endif  // HYDROBRICKS_BRICK_H

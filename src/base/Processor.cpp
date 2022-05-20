@@ -6,7 +6,8 @@
 Processor::Processor()
     : m_solver(nullptr),
       m_model(nullptr),
-      m_connectionsNb(0)
+      m_solvableConnectionsNb(0),
+      m_directConnectionsNb(0)
 {
 }
 
@@ -20,6 +21,7 @@ void Processor::Initialize(const SolverSettings &solverSettings) {
     ConnectToElementsToSolve();
     m_solver->InitializeContainers();
     m_solver->SetTimeStepInDays(m_model->GetTimeMachine()->GetTimeStepPointer());
+    m_changeRatesNoSolver = axd::Zero(m_directConnectionsNb);
 }
 
 void Processor::SetModel(ModelHydro* model) {
@@ -49,7 +51,10 @@ void Processor::ConnectToElementsToSolve() {
                 StoreStateVariableChanges(processValues);
 
                 // Count connections
-                m_connectionsNb += brick->GetProcessesConnectionsNb();
+                m_solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+            } else {
+                // Count connections
+                m_directConnectionsNb += brick->GetProcessesConnectionsNb();
             }
         }
     }
@@ -73,23 +78,23 @@ bool Processor::ProcessTimeStep() {
     SubBasin* basin = m_model->GetSubBasin();
 
     // Process the bricks that do not need a solver.
+    int iRate = 0;
     for (int iUnit = 0; iUnit < basin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
+        for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
+            Splitter* splitter = unit->GetSplitter(iSplitter);
+            splitter->Compute();
+        }
         for (int iBrick = 0; iBrick < unit->GetBricksCount(); ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
             if (brick->NeedsSolver()) {
                 continue;
             }
+            if (brick->IsNull()) {
+                continue;
+            }
 
-            throw NotImplemented();
-            /*
-            if (!brick->Compute()) {
-                return false;
-            }*/
-        }
-        for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
-            Splitter* splitter = unit->GetSplitter(iSplitter);
-            splitter->Compute();
+            ApplyDirectChanges(brick, iRate);
         }
     }
 
@@ -103,4 +108,31 @@ bool Processor::ProcessTimeStep() {
     }
 
     return true;
+}
+
+void Processor::ApplyDirectChanges(Brick* brick, int &iRate) {
+    brick->UpdateContentFromInputs();
+
+    for (auto process : brick->GetProcesses()) {
+        // Get the change rates (per day) independently of the time step and constraints
+        vecDouble rates = process->GetChangeRates();
+
+        for (int i = 0; i < rates.size(); ++i) {
+            wxASSERT(m_changeRatesNoSolver.rows() > iRate);
+            m_changeRatesNoSolver(iRate + i) = rates[i];
+
+            // Link to fluxes to enforce subsequent constraints
+            process->StoreInOutgoingFlux(&m_changeRatesNoSolver(iRate + i), i);
+        }
+
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(*m_model->GetTimeMachine()->GetTimeStepPointer());
+
+        for (int i = 0; i < rates.size(); ++i) {
+            process->ApplyChange(i, m_changeRatesNoSolver(iRate + i), *m_model->GetTimeMachine()->GetTimeStepPointer());
+            iRate++;
+        }
+    }
+
+    brick->Finalize();
 }

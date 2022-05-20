@@ -1,12 +1,12 @@
-#ifndef HYDROBRICKS_SURFACE_H
-#define HYDROBRICKS_SURFACE_H
+#ifndef HYDROBRICKS_GENERIC_SURFACE_H
+#define HYDROBRICKS_GENERIC_SURFACE_H
 
-#include "Includes.h"
 #include "SurfaceComponent.h"
+#include "Includes.h"
 
-class Surface : public SurfaceComponent {
+class GenericSurface : public SurfaceComponent {
   public:
-    Surface(HydroUnit *hydroUnit);
+    GenericSurface(HydroUnit *hydroUnit);
 
     /**
      * @copydoc Brick::AssignParameters()
@@ -22,4 +22,4 @@ class Surface : public SurfaceComponent {
   private:
 };
 
-#endif  // HYDROBRICKS_SURFACE_H
+#endif  // HYDROBRICKS_GENERIC_SURFACE_H

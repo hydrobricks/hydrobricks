@@ -35,6 +35,16 @@ class Splitter : public wxObject {
     }
 
     /**
+     * Attach incoming flux.
+     *
+     * @param flux incoming flux
+     */
+    void AttachFluxIn(Flux* flux) {
+        wxASSERT(flux);
+        m_inputs.push_back(flux);
+    }
+
+    /**
      * Attach outgoing flux.
      *
      * @param flux outgoing flux

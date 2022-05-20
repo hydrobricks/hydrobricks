@@ -1,5 +1,8 @@
 #include "Splitter.h"
+
 #include "HydroUnit.h"
+#include "SplitterMultiFluxes.h"
+#include "SplitterRain.h"
 #include "SplitterSnowRain.h"
 
 Splitter::Splitter(HydroUnit *hydroUnit)
@@ -14,6 +17,10 @@ Splitter* Splitter::Factory(const SplitterSettings &splitterSettings, HydroUnit*
         auto splitter = new SplitterSnowRain(unit);
         splitter->AssignParameters(splitterSettings);
         return splitter;
+    } else if (splitterSettings.type.IsSameAs("Rain")) {
+        return new SplitterRain(unit);
+    } else if (splitterSettings.type.IsSameAs("MultiFluxes")) {
+        return new SplitterMultiFluxes(unit);
     } else {
         wxLogError(_("Splitter type '%s' not recognized."), splitterSettings.type);
     }

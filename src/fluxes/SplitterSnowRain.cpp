@@ -46,8 +46,8 @@ void SplitterSnowRain::Compute() {
         m_outputs[0]->UpdateFlux(m_precipitation->GetValue());
         m_outputs[1]->UpdateFlux(0);
     } else {
-        double rainRatio = (m_temperature->GetValue() - *m_transitionStart) / (*m_transitionEnd - *m_transitionStart);
-        m_outputs[0]->UpdateFlux(m_precipitation->GetValue() * rainRatio);
-        m_outputs[1]->UpdateFlux(m_precipitation->GetValue() * (1 - rainRatio));
+        double rainFraction = (m_temperature->GetValue() - *m_transitionStart) / (*m_transitionEnd - *m_transitionStart);
+        m_outputs[0]->UpdateFlux(m_precipitation->GetValue() * rainFraction);
+        m_outputs[1]->UpdateFlux(m_precipitation->GetValue() * (1 - rainFraction));
     }
 }

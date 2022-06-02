@@ -79,10 +79,10 @@ double* Process::GetValuePointer(const wxString&) {
     return nullptr;
 }
 
-void Process::SetOutputFluxesRatio(double value) {
+void Process::SetOutputFluxesFraction(double value) {
     for (auto output : m_outputs) {
         if (output->NeedsWeighting()) {
-            output->SetRatio(value);
+            output->SetFraction(value);
         }
     }
 }

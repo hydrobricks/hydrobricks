@@ -79,7 +79,7 @@ class Process : public wxObject {
 
     virtual double* GetValuePointer(const wxString& name);
 
-    void SetOutputFluxesRatio(double value);
+    void SetOutputFluxesFraction(double value);
 
     wxString GetName() {
         return m_name;

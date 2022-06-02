@@ -18,7 +18,7 @@ class SubBasin : public wxObject {
 
     void BuildBasin(SettingsBasin& basinSettings);
 
-    bool AssignRatios(SettingsBasin& basinSettings);
+    bool AssignFractions(SettingsBasin& basinSettings);
 
     bool IsOk();
 

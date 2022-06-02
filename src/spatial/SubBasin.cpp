@@ -40,7 +40,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     }
 }
 
-bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
+bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
 
     try {
         for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
@@ -50,11 +50,11 @@ bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
                 SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
-                brick->SetAreaRatio(elementSettings.ratio);
+                brick->SetAreaFraction(elementSettings.fraction);
             }
         }
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred while assigning the ratios: %s."), e.what());
+        wxLogError(_("An exception occurred while assigning the fractions: %s."), e.what());
         return false;
     }
 

@@ -7,5 +7,5 @@ Flux::Flux()
       m_changeRate(nullptr),
       m_static(false),
       m_modifier(nullptr),
-      m_ratio(1.0)
+      m_fraction(1.0)
 {}

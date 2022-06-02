@@ -6,7 +6,7 @@
 
 struct SurfaceElementSettings {
     wxString name;
-    double ratio;
+    double fraction;
 };
 
 struct HydroUnitSettings {
@@ -23,7 +23,7 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area);
 
-    void AddSurfaceElementToCurrentUnit(const wxString& name, double ratio = 1.0);
+    void AddSurfaceElementToCurrentUnit(const wxString& name, double fraction = 1.0);
 
     void SelectUnit(int index);
 

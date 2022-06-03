@@ -1,3 +1,5 @@
+#include "yaml-cpp/yaml.h"
+
 #include "Parameter.h"
 #include "SettingsModel.h"
 
@@ -383,4 +385,25 @@ vecStr SettingsModel::GetAggregatedLogLabels() {
     wxASSERT(m_modelStructures.size() == 1);
 
     return m_selectedStructure->logItems;
+}
+
+bool SettingsModel::Parse(const wxString &path) {
+    if (!wxFile::Exists(path)) {
+        wxLogError(_("The file %s could not be found."), path);
+        return false;
+    }
+
+    try {
+        YAML::Node settings = YAML::LoadFile(std::string(path.mb_str()));
+
+        if (YAML::Node parameter = settings["base"]) {
+            const std::string base = parameter.as<std::string>();
+        }
+
+    } catch(YAML::ParserException& e) {
+        wxLogError(e.what());
+        return false;
+    }
+
+    return true;
 }

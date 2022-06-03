@@ -120,6 +120,8 @@ class SettingsModel : public wxObject {
 
     void SelectSplitter(const wxString &name);
 
+    bool Parse(const wxString &path);
+
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
     }

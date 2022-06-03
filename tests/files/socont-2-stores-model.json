@@ -1,0 +1,6 @@
+{
+  "base": "Socont",
+  "options": {
+    "soil_storage_nb": 2
+  }
+}

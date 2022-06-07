@@ -31,6 +31,8 @@ class Snowpack : public SurfaceComponent {
 
     double* GetValuePointer(const wxString& name) override;
 
+    bool HasSnow();
+
   protected:
     WaterContainer* m_snow;
 

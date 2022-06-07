@@ -24,7 +24,7 @@ class SurfaceComponent : public Brick {
         return m_areaFraction == 0.0;
     }
 
-    void AddToRelatedBricks(SurfaceComponent* brick) {
+    virtual void AddToRelatedBricks(SurfaceComponent* brick) {
         m_relatedBricks.push_back(brick);
     }
 

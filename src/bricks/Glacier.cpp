@@ -3,13 +3,20 @@
 Glacier::Glacier(HydroUnit *hydroUnit)
     : SurfaceComponent(hydroUnit),
       m_ice(nullptr),
-      m_infiniteStorage(true)
+      m_infiniteStorage(true),
+      m_noMeltWhenSnowCover(false)
 {
     m_ice = new WaterContainer(this);
 }
 
 void Glacier::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
+    if (HasParameter(brickSettings, "infiniteStorage")) {
+        m_infiniteStorage = GetParameterValuePointer(brickSettings, "infiniteStorage");
+    }
+    if (HasParameter(brickSettings, "noMeltWhenSnowCover")) {
+        m_noMeltWhenSnowCover = GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover");
+    }
 }
 
 void Glacier::AttachFluxIn(Flux* flux) {
@@ -42,8 +49,17 @@ void Glacier::UpdateContentFromInputs() {
 }
 
 void Glacier::ApplyConstraints(double timeStep) {
-    if (!m_infiniteStorage) {
-        m_ice->ApplyConstraints(timeStep);
+    if (m_noMeltWhenSnowCover) {
+        if (m_snowpack == nullptr) {
+            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
+        }
+        if (m_snowpack->HasSnow()) {
+            m_ice->SetOutgoingRatesToZero();
+        }
+    } else {
+        if (!m_infiniteStorage) {
+            m_ice->ApplyConstraints(timeStep);
+        }
     }
     m_container->ApplyConstraints(timeStep);
 }
@@ -66,4 +82,11 @@ double* Glacier::GetValuePointer(const wxString& name) {
     }
 
     return nullptr;
+}
+
+void Glacier::AddToRelatedBricks(SurfaceComponent* brick) {
+    m_relatedBricks.push_back(brick);
+    if (m_noMeltWhenSnowCover && brick->IsSnowpack()) {
+        m_snowpack = dynamic_cast<Snowpack*>(brick);
+    }
 }

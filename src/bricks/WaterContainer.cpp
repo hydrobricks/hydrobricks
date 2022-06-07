@@ -98,6 +98,19 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     }
 }
 
+void WaterContainer::SetOutgoingRatesToZero() {
+    for (auto process : m_parent->GetProcesses()) {
+        if (process->GetWaterContainer() != this) {
+            continue;
+        }
+        for (auto flux : process->GetOutputFluxes()) {
+            double* changeRate = flux->GetChangeRatePointer();
+            wxASSERT(changeRate != nullptr);
+            *changeRate = 0;
+        }
+    }
+}
+
 void WaterContainer::Finalize() {
     m_content += m_contentChange;
     m_contentChange = 0;

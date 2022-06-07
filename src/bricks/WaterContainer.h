@@ -16,6 +16,8 @@ class WaterContainer : public wxObject {
 
     void ApplyConstraints(double timeStep);
 
+    void SetOutgoingRatesToZero();
+
     void Finalize();
 
     vecDoublePt GetStateVariableChanges();
@@ -47,6 +49,10 @@ class WaterContainer : public wxObject {
 
     void UpdateContent(double value) {
         m_content = value;
+    }
+
+    bool IsNotEmpty() {
+        return GetContentWithChanges() > 0.0;
     }
 
     bool HasOverflow() {

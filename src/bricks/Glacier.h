@@ -3,6 +3,7 @@
 
 #include "SurfaceComponent.h"
 #include "Includes.h"
+#include "Snowpack.h"
 
 class Glacier : public SurfaceComponent {
   public:
@@ -31,9 +32,13 @@ class Glacier : public SurfaceComponent {
 
     double* GetValuePointer(const wxString& name) override;
 
+    void AddToRelatedBricks(SurfaceComponent* brick) override;
+
   protected:
     WaterContainer* m_ice;
     bool m_infiniteStorage;
+    bool m_noMeltWhenSnowCover;
+    Snowpack* m_snowpack;
 
   private:
 };

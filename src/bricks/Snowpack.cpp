@@ -60,3 +60,7 @@ double* Snowpack::GetValuePointer(const wxString& name) {
 
     return nullptr;
 }
+
+bool Snowpack::HasSnow() {
+    return m_snow->IsNotEmpty();
+}

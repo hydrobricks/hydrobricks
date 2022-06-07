@@ -53,8 +53,6 @@ struct BrickSettings {
 
 struct ModelStructure {
     int id;
-    bool withSnow = false;
-    wxString snowMeltProcess;
     vecStr logItems;
     std::vector<BrickSettings> surfaceBricks;
     std::vector<BrickSettings> bricks;
@@ -105,9 +103,13 @@ class SettingsModel : public wxObject {
 
     void AddLoggingToCurrentSplitter(const wxString &itemName);
 
-    void EnableSnow(const wxString &meltProcess);
+    void GeneratePrecipitationSplitters(bool withSnow);
 
-    void GenerateSurfaceComponents();
+    void GenerateSnowpacks(const wxString& snowMeltProcess);
+
+    void GenerateSurfaceComponentBricks(bool withSnow);
+
+    void GenerateSurfaceBricks();
 
     bool SelectStructure(int id);
 

@@ -21,7 +21,9 @@ class FluxWeightedModel : public ::testing::Test {
         // Surface elements
         m_model.AddSurfaceBrick("item-1", "GenericSurface");
         m_model.AddSurfaceBrick("item-2", "GenericSurface");
-        m_model.GenerateSurfaceComponents();
+        m_model.GeneratePrecipitationSplitters(false);
+        m_model.GenerateSurfaceComponentBricks(false);
+        m_model.GenerateSurfaceBricks();
 
         // Direct outflow processes
         m_model.SelectBrick("item-1");

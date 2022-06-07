@@ -199,19 +199,10 @@ void SettingsModel::AddLoggingToCurrentSplitter(const wxString& itemName) {
     m_selectedSplitter->logItems.push_back(itemName);
 }
 
-void SettingsModel::EnableSnow(const wxString &meltProcess) {
-    wxASSERT(m_selectedStructure);
-    m_selectedStructure->withSnow = true;
-    m_selectedStructure->snowMeltProcess = meltProcess;
-}
-
-void SettingsModel::GenerateSurfaceComponents() {
+void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     wxASSERT(m_selectedStructure);
 
-    int surfacesNb = int(m_selectedStructure->surfaceBricks.size());
-
-    // Create precipitation splitters
-    if (m_selectedStructure->withSnow) {
+    if (withSnow) {
         // Rain/snow splitter
         AddSplitter("snow-rain", "SnowRain");
         AddForcingToCurrentSplitter("Precipitation");
@@ -231,29 +222,32 @@ void SettingsModel::GenerateSurfaceComponents() {
         // Splitter to surfaces
         AddSplitter("rain-splitter", "MultiFluxes");
     }
+}
 
-    // Create snowpacks
-    if (m_selectedStructure->withSnow) {
-        for (int i = 0; i < surfacesNb; ++i) {
-            BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
-            wxString surfaceName = brickSettings.name + "-surface";
+void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
+    wxASSERT(m_selectedStructure);
 
-            SelectSplitter("snow-splitter");
-            AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
+    for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
+        wxString surfaceName = brickSettings.name + "-surface";
 
-            AddBrick(brickSettings.name + "-snowpack", "Snowpack");
-            AddProcessToCurrentBrick("melt", m_selectedStructure->snowMeltProcess);
-            AddOutputToCurrentProcess(surfaceName);
-            if (m_selectedStructure->snowMeltProcess.IsSameAs("Melt:degree-day")) {
-                AddForcingToCurrentProcess("Temperature");
-            } else {
-                throw NotImplemented();
-            }
+        SelectSplitter("snow-splitter");
+        AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
+
+        AddBrick(brickSettings.name + "-snowpack", "Snowpack");
+        AddProcessToCurrentBrick("melt", snowMeltProcess);
+        AddOutputToCurrentProcess(surfaceName);
+        if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
+            AddForcingToCurrentProcess("Temperature");
+        } else {
+            throw NotImplemented();
         }
     }
+}
 
-    // Create bricks
-    for (int i = 0; i < surfacesNb; ++i) {
+void SettingsModel::GenerateSurfaceComponentBricks(bool withSnow) {
+    wxASSERT(m_selectedStructure);
+
+    for (int i = 0; i < int(m_selectedStructure->surfaceBricks.size()); ++i) {
         BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
         m_selectedStructure->bricks.push_back(brickSettings);
 
@@ -262,17 +256,19 @@ void SettingsModel::GenerateSurfaceComponents() {
         AddOutputToCurrentSplitter(brickSettings.name);
 
         // Link related surface bricks
-        if (m_selectedStructure->withSnow) {
+        if (withSnow) {
             AddToRelatedSurfaceBrick(brickSettings.name + "-snowpack");
         }
         if (i < m_selectedStructure->surfaceBricks.size()) {
             AddToRelatedSurfaceBrick(brickSettings.name + "-surface");
         }
     }
+}
 
-    // Create surface bricks
-    for (int i = 0; i < surfacesNb; ++i) {
-        BrickSettings brickSettings = m_selectedStructure->surfaceBricks[i];
+void SettingsModel::GenerateSurfaceBricks() {
+    wxASSERT(m_selectedStructure);
+
+    for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
         wxString surfaceName = brickSettings.name + "-surface";
         AddBrick(surfaceName, "Surface");
     }
@@ -497,8 +493,10 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         }
     }
 
-    EnableSnow("Melt:degree-day");
-    GenerateSurfaceComponents();
+    GeneratePrecipitationSplitters(true);
+    GenerateSnowpacks("Melt:degree-day");
+    GenerateSurfaceComponentBricks(true);
+    GenerateSurfaceBricks();
 
     // Log snow processes for surface bricks
     if (logAll) {

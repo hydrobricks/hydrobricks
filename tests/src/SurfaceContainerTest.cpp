@@ -21,8 +21,10 @@ class SurfaceContainerModel : public ::testing::Test {
         // Surface elements
         m_model.AddSurfaceBrick("ground", "GenericSurface");
         m_model.AddSurfaceBrick("glacier", "Glacier");
-        m_model.EnableSnow("Melt:degree-day");
-        m_model.GenerateSurfaceComponents();
+        m_model.GeneratePrecipitationSplitters(true);
+        m_model.GenerateSnowpacks("Melt:degree-day");
+        m_model.GenerateSurfaceComponentBricks(true);
+        m_model.GenerateSurfaceBricks();
 
         // Rain/snow splitter
         m_model.SelectSplitter("snow-rain");

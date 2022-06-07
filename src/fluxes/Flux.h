@@ -73,6 +73,14 @@ class Flux : public wxObject {
         m_fraction = value;
     }
 
+    wxString GetType() {
+        return m_type;
+    }
+
+    void SetType(const wxString& type) {
+        m_type = type;
+    }
+
   protected:
     double m_amount;
     double* m_changeRate;
@@ -80,6 +88,7 @@ class Flux : public wxObject {
     bool m_needsWeighting;
     double m_fraction;
     Modifier* m_modifier;
+    wxString m_type;
 
   private:
 };

@@ -1,8 +1,9 @@
 #include "ProcessET.h"
 #include "Brick.h"
+#include "WaterContainer.h"
 
-ProcessET::ProcessET(Brick* brick)
-    : Process(brick)
+ProcessET::ProcessET(WaterContainer* container)
+    : Process(container)
 {}
 
 bool ProcessET::IsOk() {

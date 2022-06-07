@@ -9,7 +9,7 @@
 #include "Urban.h"
 #include "Vegetation.h"
 
-Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
+Brick::Brick(HydroUnit *hydroUnit)
     : m_needsSolver(true),
       m_container(nullptr),
       m_hydroUnit(hydroUnit)
@@ -18,9 +18,7 @@ Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
         hydroUnit->AddBrick(this);
     }
 
-    if (withWaterContainer) {
-        m_container = new WaterContainer(this);
-    }
+    m_container = new WaterContainer(this);
 }
 
 Brick::~Brick() {
@@ -79,9 +77,13 @@ bool Brick::IsOk() {
 
 void Brick::AssignParameters(const BrickSettings &brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
-        CheckWaterContainer();
         m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
+}
+
+void Brick::AttachFluxIn(Flux* flux) {
+    wxASSERT(flux);
+    m_container->AttachFluxIn(flux);
 }
 
 bool Brick::HasParameter(const BrickSettings &brickSettings, const wxString &name) {
@@ -113,63 +115,24 @@ Process* Brick::GetProcess(int index) {
     return m_processes[index];
 }
 
-void Brick::SubtractAmount(double change) {
-    if (HasWaterContainer()) {
-        m_container->SubtractAmount(change);
-    }
-}
-
-void Brick::AddAmount(double change) {
-    CheckWaterContainer();
-    m_container->AddAmount(change);
-}
-
 void Brick::Finalize() {
-    CheckWaterContainer();
     m_container->Finalize();
 }
 
-double Brick::SumIncomingFluxes() {
-    double sum = 0;
-    for (auto & input : m_inputs) {
-        sum += input->GetAmount();
-    }
-
-    return sum;
-}
-
 void Brick::UpdateContentFromInputs() {
-    if (HasWaterContainer()) {
-        m_container->AddAmount(SumIncomingFluxes());
-    }
+    m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    if (HasWaterContainer()) {
-        m_container->ApplyConstraints(timeStep);
-    }
-}
-
-void Brick::CheckWaterContainer() {
-    if (!HasWaterContainer()) {
-        throw ConceptionIssue(_("Trying to access the water container of a brick that has none."));
-    }
-}
-
-bool Brick::HasWaterContainer() {
-    return m_container != nullptr;
+    m_container->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {
-    CheckWaterContainer();
     return m_container;
 }
 
 vecDoublePt Brick::GetStateVariableChanges() {
-    if (HasWaterContainer()) {
-        return m_container->GetStateVariableChanges();
-    }
-    return vecDoublePt {};
+    return m_container->GetStateVariableChanges();
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {

@@ -1,7 +1,7 @@
 #include "Vegetation.h"
 
 Vegetation::Vegetation(HydroUnit *hydroUnit)
-    : SurfaceComponent(hydroUnit, true)
+    : SurfaceComponent(hydroUnit)
 {}
 
 void Vegetation::AssignParameters(const BrickSettings &brickSettings) {

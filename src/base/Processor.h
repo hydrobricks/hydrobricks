@@ -51,7 +51,7 @@ class Processor : public wxObject {
   private:
     void StoreStateVariableChanges(vecDoublePt& values);
 
-    void ApplyDirectChanges(Brick* brick, int &iRate);
+    void ApplyDirectChanges(Brick* brick);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

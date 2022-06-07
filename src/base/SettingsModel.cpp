@@ -170,11 +170,12 @@ void SettingsModel::AddForcingToCurrentSplitter(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentSplitter(const wxString &target) {
+void SettingsModel::AddOutputToCurrentSplitter(const wxString &target, const wxString &fluxType) {
     wxASSERT(m_selectedSplitter);
 
     OutputSettings outputSettings;
     outputSettings.target = target;
+    outputSettings.fluxType = fluxType;
     m_selectedSplitter->outputs.push_back(outputSettings);
 }
 
@@ -216,7 +217,7 @@ void SettingsModel::GenerateSurfaceComponents() {
         AddForcingToCurrentSplitter("Precipitation");
         AddForcingToCurrentSplitter("Temperature");
         AddOutputToCurrentSplitter("rain-splitter");
-        AddOutputToCurrentSplitter("snow-splitter");
+        AddOutputToCurrentSplitter("snow-splitter", "snow");
 
         // Splitter to surfaces
         AddSplitter("snow-splitter", "MultiFluxes");
@@ -238,7 +239,7 @@ void SettingsModel::GenerateSurfaceComponents() {
             wxString surfaceName = brickSettings.name + "-surface";
 
             SelectSplitter("snow-splitter");
-            AddOutputToCurrentSplitter(brickSettings.name + "-snowpack");
+            AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
 
             AddBrick(brickSettings.name + "-snowpack", "Snowpack");
             AddProcessToCurrentBrick("melt", m_selectedStructure->snowMeltProcess);
@@ -261,12 +262,11 @@ void SettingsModel::GenerateSurfaceComponents() {
         AddOutputToCurrentSplitter(brickSettings.name);
 
         // Link related surface bricks
-        wxString surfaceName = brickSettings.name + "-surface";
         if (m_selectedStructure->withSnow) {
             AddToRelatedSurfaceBrick(brickSettings.name + "-snowpack");
         }
         if (i < m_selectedStructure->surfaceBricks.size()) {
-            AddToRelatedSurfaceBrick(surfaceName);
+            AddToRelatedSurfaceBrick(brickSettings.name + "-surface");
         }
     }
 

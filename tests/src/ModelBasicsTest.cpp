@@ -87,8 +87,6 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
     model.Initialize(m_model2);
 
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_EQ(model.GetSubBasin()->GetHydroUnit(0)->GetBrick("storage-2")->GetInputsNb(), 1);
 }
 
 TEST_F(ModelBasics, Model2RunsCorrectly) {

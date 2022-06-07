@@ -7,7 +7,7 @@
 
 class ProcessMelt : public Process {
   public:
-    explicit ProcessMelt(Brick* brick);
+    explicit ProcessMelt(WaterContainer* container);
 
     ~ProcessMelt() override = default;
 

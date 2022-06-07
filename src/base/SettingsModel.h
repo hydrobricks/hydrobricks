@@ -19,6 +19,7 @@ struct TimerSettings {
 
 struct OutputSettings {
     wxString target;
+    wxString fluxType = "water";
     bool withWeighting = false;
 };
 
@@ -94,7 +95,7 @@ class SettingsModel : public wxObject {
 
     void AddForcingToCurrentSplitter(const wxString &name);
 
-    void AddOutputToCurrentSplitter(const wxString &target);
+    void AddOutputToCurrentSplitter(const wxString &target, const wxString &fluxType = "water");
 
     void AddLoggingToItem(const wxString &itemName);
 

@@ -7,7 +7,7 @@
 
 class ProcessOutflowDirect : public ProcessOutflow {
   public:
-    explicit ProcessOutflowDirect(Brick* brick);
+    explicit ProcessOutflowDirect(WaterContainer* container);
 
     ~ProcessOutflowDirect() override = default;
 

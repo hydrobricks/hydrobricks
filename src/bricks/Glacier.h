@@ -13,11 +13,18 @@ class Glacier : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
+    WaterContainer* GetIceContainer();
+
     void ApplyConstraints(double timeStep) override;
 
     void Finalize() override;
 
+    bool IsGlacier() override {
+        return true;
+    }
+
   protected:
+    WaterContainer* m_ice;
 
   private:
 };

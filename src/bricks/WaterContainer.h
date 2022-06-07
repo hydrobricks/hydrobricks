@@ -57,6 +57,23 @@ class WaterContainer : public wxObject {
         m_overflow = overflow;
     }
 
+    /**
+     * Attach incoming flux.
+     *
+     * @param flux incoming flux
+     */
+    void AttachFluxIn(Flux* flux) {
+        wxASSERT(flux);
+        m_inputs.push_back(flux);
+    }
+
+    /**
+     * Sums the water amount from the different fluxes.
+     *
+     * @return sum of the water amount [mm]
+     */
+    virtual double SumIncomingFluxes();
+
   protected:
 
   private:
@@ -65,6 +82,7 @@ class WaterContainer : public wxObject {
     float* m_capacity;
     Brick* m_parent;
     Process* m_overflow;
+    std::vector<Flux*> m_inputs;
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

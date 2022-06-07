@@ -11,7 +11,7 @@ class HydroUnit;
 
 class Brick : public wxObject {
   public:
-    explicit Brick(HydroUnit* hydroUnit, bool withWaterContainer);
+    explicit Brick(HydroUnit* hydroUnit);
 
     ~Brick() override;
 
@@ -33,10 +33,7 @@ class Brick : public wxObject {
      *
      * @param flux incoming flux
      */
-    void AttachFluxIn(Flux* flux) {
-        wxASSERT(flux);
-        m_inputs.push_back(flux);
-    }
+    virtual void AttachFluxIn(Flux* flux);
 
     void AddProcess(Process* process) {
         wxASSERT(process);
@@ -63,13 +60,17 @@ class Brick : public wxObject {
         return false;
     }
 
-    virtual bool IsNull() {
+    virtual bool IsSnowpack() {
         return false;
     }
 
-    void SubtractAmount(double change);
+    virtual bool IsGlacier() {
+        return false;
+    }
 
-    void AddAmount(double change);
+    virtual bool IsNull() {
+        return false;
+    }
 
     virtual void Finalize();
 
@@ -77,19 +78,7 @@ class Brick : public wxObject {
 
     virtual void ApplyConstraints(double timeStep);
 
-    void CheckWaterContainer();
-
-    bool HasWaterContainer();
-
     WaterContainer* GetWaterContainer();
-
-    int GetInputsNb() {
-        return int(m_inputs.size());
-    }
-
-    std::vector<Flux*>& GetInputs() {
-        return m_inputs;
-    }
 
     Process* GetProcess(int index);
 
@@ -125,15 +114,7 @@ class Brick : public wxObject {
     bool m_needsSolver;
     WaterContainer* m_container;
     HydroUnit* m_hydroUnit;
-    std::vector<Flux*> m_inputs;
     std::vector<Process*> m_processes;
-
-    /**
-     * Sums the water amount from the different fluxes.
-     *
-     * @return sum of the water amount [mm]
-     */
-    double SumIncomingFluxes();
 
   private:
 };

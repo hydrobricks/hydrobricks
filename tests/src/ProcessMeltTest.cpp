@@ -21,21 +21,27 @@ class SnowpackModel : public ::testing::Test {
         // Snowpack brick
         m_model.AddBrick("snowpack", "Snowpack");
         m_model.AddLoggingToCurrentBrick("content");
+        m_model.AddLoggingToCurrentBrick("snow");
 
         // Snow melt process
         m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
         m_model.AddForcingToCurrentProcess("Temperature");
         m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
         m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
+        m_model.AddOutputToCurrentProcess("snowpack");
         m_model.AddLoggingToCurrentProcess("output");
+
+        // Add process to direct meltwater to the outlet
+        m_model.AddProcessToCurrentBrick("meltwater", "Outflow:direct");
         m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddLoggingToCurrentProcess("output");
 
         // Rain/snow splitter
         m_model.AddSplitter("snow-rain", "SnowRain");
         m_model.AddForcingToCurrentSplitter("Precipitation");
         m_model.AddForcingToCurrentSplitter("Temperature");
         m_model.AddOutputToCurrentSplitter("outlet"); // rain
-        m_model.AddOutputToCurrentSplitter("snowpack"); // snow
+        m_model.AddOutputToCurrentSplitter("snowpack", "snow"); // snow
         m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
         m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
 
@@ -77,7 +83,7 @@ TEST_F(SnowpackModel, DegreeDay) {
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
+    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 10.0, 13.0, 16.0, 19.0, 7.0};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
@@ -88,12 +94,14 @@ TEST_F(SnowpackModel, DegreeDay) {
     // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
+    vecDouble expectedWaterRetention = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
     vecDouble expectedMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
 
     for (int j = 0; j < expectedSWE.size(); ++j) {
-        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);
-        EXPECT_NEAR(unitContent[1](j, 0), expectedMelt[j], 0.000001);
+        EXPECT_NEAR(unitContent[0](j, 0), expectedWaterRetention[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 0), expectedSWE[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 0), expectedMelt[j], 0.000001);
     }
 }
 

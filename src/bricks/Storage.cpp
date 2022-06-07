@@ -1,7 +1,7 @@
 #include "Storage.h"
 
 Storage::Storage(HydroUnit *hydroUnit)
-    : Brick(hydroUnit, true)
+    : Brick(hydroUnit)
 {}
 
 void Storage::AssignParameters(const BrickSettings &brickSettings) {

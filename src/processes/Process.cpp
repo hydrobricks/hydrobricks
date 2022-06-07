@@ -1,36 +1,61 @@
 #include "Process.h"
 
 #include "Brick.h"
+#include "WaterContainer.h"
 #include "ProcessETSocont.h"
 #include "ProcessMeltDegreeDay.h"
+#include "ProcessOutflowConstant.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
+#include "Snowpack.h"
+#include "Glacier.h"
 
-Process::Process(Brick* brick)
-    : m_brick(brick)
+Process::Process(WaterContainer* container)
+    : m_container(container)
 {
-    if (brick) {
-        brick->AddProcess(this);
-    }
 }
 
 Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
     if (processSettings.type.IsSameAs("Outflow:linear", false)) {
-        auto process = new ProcessOutflowLinear(brick);
+        auto process = new ProcessOutflowLinear(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
+        brick->AddProcess(process);
+        return process;
+    } else if (processSettings.type.IsSameAs("Outflow:constant", false)) {
+        auto process = new ProcessOutflowConstant(brick->GetWaterContainer());
+        process->AssignParameters(processSettings);
+        brick->AddProcess(process);
         return process;
     } else if (processSettings.type.IsSameAs("Outflow:direct", false)) {
-        return new ProcessOutflowDirect(brick);
+        auto process = new ProcessOutflowDirect(brick->GetWaterContainer());
+        brick->AddProcess(process);
+        return process;
     } else if (processSettings.type.IsSameAs("Overflow", false)) {
-        return new ProcessOutflowOverflow(brick);
+        auto process = new ProcessOutflowOverflow(brick->GetWaterContainer());
+        brick->AddProcess(process);
+        return process;
     } else if (processSettings.type.IsSameAs("ET:Socont", false)) {
-        return new ProcessETSocont(brick);
+        auto process = new ProcessETSocont(brick->GetWaterContainer());
+        brick->AddProcess(process);
+        return process;
     } else if (processSettings.type.IsSameAs("Melt:degree-day", false) ||
                processSettings.type.IsSameAs("Melt:DegreeDay", false)) {
-        auto process = new ProcessMeltDegreeDay(brick);
-        process->AssignParameters(processSettings);
-        return process;
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            auto process = new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
+            process->AssignParameters(processSettings);
+            brick->AddProcess(process);
+            return process;
+        } else if (brick->IsGlacier()) {
+            auto glacierBrick = dynamic_cast<Glacier*>(brick);
+            auto process = new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
+            process->AssignParameters(processSettings);
+            brick->AddProcess(process);
+            return process;
+        } else {
+            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+        }
     } else {
         wxLogError(_("Process type '%s' not recognized."), processSettings.type);
     }
@@ -72,7 +97,7 @@ void Process::StoreInOutgoingFlux(double* rate, int index) {
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
     wxASSERT(m_outputs.size() > connectionIndex);
     m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
-    m_brick->SubtractAmount(rate * timeStepInDays);
+    m_container->SubtractAmount(rate * timeStepInDays);
 }
 
 double* Process::GetValuePointer(const wxString&) {

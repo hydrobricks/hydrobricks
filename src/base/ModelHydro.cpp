@@ -6,6 +6,7 @@
 #include "FluxToBrick.h"
 #include "FluxToOutlet.h"
 #include "SurfaceComponent.h"
+#include "FluxToBrickInstantaneous.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin)
@@ -122,10 +123,16 @@ void ModelHydro::BuildBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit
                     m_subBasin->AttachOutletFlux(flux);
                 } else if (unit->HasBrick(output.target)) {
                     Brick* targetBrick = unit->GetBrick(output.target);
-                    flux = new FluxToBrick(targetBrick);
-                    flux->NeedsWeighting(output.withWeighting);
-                    flux->SetType(output.fluxType);
-                    targetBrick->AttachFluxIn(flux);
+                    if (output.instantaneous) {
+                        flux = new FluxToBrickInstantaneous(targetBrick);
+                        flux->SetType(output.fluxType);
+                        targetBrick->AttachFluxIn(flux);
+                    } else {
+                        flux = new FluxToBrick(targetBrick);
+                        flux->NeedsWeighting(output.withWeighting);
+                        flux->SetType(output.fluxType);
+                        targetBrick->AttachFluxIn(flux);
+                    }
                 } else if (unit->HasSplitter(output.target)) {
                     Splitter* targetSplitter = unit->GetSplitter(output.target);
                     flux = new FluxSimple();

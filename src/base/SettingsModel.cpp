@@ -135,6 +135,17 @@ void SettingsModel::AddOutputToCurrentProcess(const wxString &target, bool withW
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::OutputCurrentProcessToSameBrick() {
+    wxASSERT(m_selectedBrick);
+    wxASSERT(m_selectedProcess);
+
+    OutputSettings outputSettings;
+    outputSettings.target = m_selectedBrick->name;
+    outputSettings.withWeighting = false;
+    outputSettings.instantaneous = true;
+    m_selectedProcess->outputs.push_back(outputSettings);
+}
+
 void SettingsModel::AddSplitter(const wxString &name, const wxString &type) {
     wxASSERT(m_selectedStructure);
 

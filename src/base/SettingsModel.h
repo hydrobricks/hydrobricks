@@ -21,6 +21,7 @@ struct OutputSettings {
     wxString target;
     wxString fluxType = "water";
     bool withWeighting = false;
+    bool instantaneous = false;
 };
 
 struct ProcessSettings {
@@ -86,6 +87,8 @@ class SettingsModel : public wxObject {
     void AddForcingToCurrentProcess(const wxString &name);
 
     void AddOutputToCurrentProcess(const wxString &target, bool withWeighting = false);
+
+    void OutputCurrentProcessToSameBrick();
 
     void AddSplitter(const wxString &name, const wxString &type);
 

@@ -14,7 +14,7 @@ class Splitters : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
     TimeSeriesUniform* m_tsTemp{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
@@ -30,7 +30,7 @@ class Splitters : public ::testing::Test {
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
         wxDELETE(m_tsTemp);
     }

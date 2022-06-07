@@ -11,7 +11,7 @@ class ModelBasics : public ::testing::Test {
     SettingsModel m_model2;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         // Model 1: simple linear storage
         m_model1.SetSolver("EulerExplicit");
         m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
@@ -48,7 +48,7 @@ class ModelBasics : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };

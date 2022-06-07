@@ -12,7 +12,7 @@ class SolverLinearStorage : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
@@ -34,7 +34,7 @@ class SolverLinearStorage : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };
@@ -153,7 +153,7 @@ class Solver2LinearStorages : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
@@ -183,7 +183,7 @@ class Solver2LinearStorages : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };
@@ -309,7 +309,7 @@ class SolverLinearStorageWithET : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
     TimeSeriesUniform* m_tsPET{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
@@ -351,7 +351,7 @@ class SolverLinearStorageWithET : public ::testing::Test {
         m_tsPET = new TimeSeriesUniform(PET);
         m_tsPET->SetData(dataPET);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
         wxDELETE(m_tsPET);
     }

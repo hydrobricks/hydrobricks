@@ -14,7 +14,7 @@ class SnowpackModel : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
     TimeSeriesUniform* m_tsTemp{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
@@ -59,7 +59,7 @@ class SnowpackModel : public ::testing::Test {
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
         wxDELETE(m_tsTemp);
     }
@@ -110,7 +110,7 @@ class GlacierModel : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsTemp{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
@@ -133,7 +133,7 @@ class GlacierModel : public ::testing::Test {
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsTemp);
     }
 };

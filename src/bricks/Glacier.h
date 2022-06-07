@@ -13,18 +13,27 @@ class Glacier : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
+    void AttachFluxIn(Flux* flux);
+
     WaterContainer* GetIceContainer();
-
-    void ApplyConstraints(double timeStep) override;
-
-    void Finalize() override;
 
     bool IsGlacier() override {
         return true;
     }
 
+    void Finalize() override;
+
+    void UpdateContentFromInputs() override;
+
+    void ApplyConstraints(double timeStep) override;
+
+    vecDoublePt GetStateVariableChanges() override;
+
+    double* GetValuePointer(const wxString& name) override;
+
   protected:
     WaterContainer* m_ice;
+    bool m_infiniteStorage;
 
   private:
 };

@@ -107,6 +107,8 @@ class SettingsModel : public wxObject {
 
     void GenerateSnowpacks(const wxString& snowMeltProcess);
 
+    void GenerateSnowpacksWithWaterRetention(const wxString& snowMeltProcess, const wxString& outflowProcess);
+
     void GenerateSurfaceComponentBricks(bool withSnow);
 
     void GenerateSurfaceBricks();

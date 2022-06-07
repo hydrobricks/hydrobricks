@@ -244,6 +244,30 @@ void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
     }
 }
 
+void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMeltProcess, const wxString& outflowProcess) {
+    wxASSERT(m_selectedStructure);
+
+    for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
+        wxString surfaceName = brickSettings.name + "-surface";
+
+        SelectSplitter("snow-splitter");
+        AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
+
+        AddBrick(brickSettings.name + "-snowpack", "Snowpack");
+        AddProcessToCurrentBrick("melt", snowMeltProcess);
+        AddOutputToCurrentProcess(brickSettings.name + "-snowpack");
+
+        AddProcessToCurrentBrick("meltwater", outflowProcess);
+        AddOutputToCurrentProcess(surfaceName);
+
+        if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
+            AddForcingToCurrentProcess("Temperature");
+        } else {
+            throw NotImplemented();
+        }
+    }
+}
+
 void SettingsModel::GenerateSurfaceComponentBricks(bool withSnow) {
     wxASSERT(m_selectedStructure);
 
@@ -494,7 +518,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     }
 
     GeneratePrecipitationSplitters(true);
-    GenerateSnowpacks("Melt:degree-day");
+    GenerateSnowpacksWithWaterRetention("Melt:degree-day", "Outflow:linear");
     GenerateSurfaceComponentBricks(true);
     GenerateSurfaceBricks();
 

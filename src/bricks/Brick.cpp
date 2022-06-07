@@ -145,13 +145,13 @@ void Brick::UpdateContentFromInputs() {
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    if (m_container) {
+    if (HasWaterContainer()) {
         m_container->ApplyConstraints(timeStep);
     }
 }
 
 void Brick::CheckWaterContainer() {
-    if (m_container == nullptr) {
+    if (!HasWaterContainer()) {
         throw ConceptionIssue(_("Trying to access the water container of a brick that has none."));
     }
 }
@@ -166,7 +166,7 @@ WaterContainer* Brick::GetWaterContainer() {
 }
 
 vecDoublePt Brick::GetStateVariableChanges() {
-    if (m_container) {
+    if (HasWaterContainer()) {
         return m_container->GetStateVariableChanges();
     }
     return vecDoublePt {};

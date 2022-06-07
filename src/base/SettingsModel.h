@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
+#include "yaml-cpp/yaml.h"
+
 #include "Includes.h"
 #include "Parameter.h"
 
@@ -176,6 +178,16 @@ class SettingsModel : public wxObject {
     BrickSettings* m_selectedBrick;
     ProcessSettings* m_selectedProcess;
     SplitterSettings* m_selectedSplitter;
+
+    vecStr ParseSurfaceNames(const YAML::Node &settings);
+
+    vecStr ParseSurfaceTypes(const YAML::Node &settings);
+
+    wxString ParseSolver(const YAML::Node &settings);
+
+    bool LogAll(const YAML::Node &settings);
+
+    bool GenerateStructureSocont(const YAML::Node &settings);
 };
 
 #endif  // HYDROBRICKS_SETTINGS_MODEL_H

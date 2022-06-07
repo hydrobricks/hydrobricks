@@ -1,5 +1,3 @@
-#include "yaml-cpp/yaml.h"
-
 #include "Parameter.h"
 #include "SettingsModel.h"
 
@@ -396,14 +394,179 @@ bool SettingsModel::Parse(const wxString &path) {
     try {
         YAML::Node settings = YAML::LoadFile(std::string(path.mb_str()));
 
-        if (YAML::Node parameter = settings["base"]) {
-            const std::string base = parameter.as<std::string>();
+        if (settings["base"]) {
+            wxString base = wxString(settings["base"].as<std::string>());
+            if (base.IsSameAs("Socont", false)) {
+                return GenerateStructureSocont(settings);
+            } else {
+                wxLogError(_("Model base '%s' not recognized."));
+                return false;
+            }
         }
 
     } catch(YAML::ParserException& e) {
         wxLogError(e.what());
         return false;
     }
+
+    return true;
+}
+
+vecStr SettingsModel::ParseSurfaceNames(const YAML::Node &settings) {
+    vecStr surfaceNames;
+    if (YAML::Node surfaces = settings["surfaces"]) {
+        if (YAML::Node names = surfaces["names"]) {
+            for (auto &&name: names) {
+                surfaceNames.push_back(wxString(name.as<std::string>()));
+            }
+        }
+    }
+
+    return surfaceNames;
+}
+
+vecStr SettingsModel::ParseSurfaceTypes(const YAML::Node &settings) {
+    vecStr surfaceTypes;
+    if (YAML::Node surfaces = settings["surfaces"]) {
+        if (YAML::Node types = surfaces["types"]) {
+            for (auto &&type: types) {
+                surfaceTypes.push_back(wxString(type.as<std::string>()));
+            }
+        }
+    }
+
+    return surfaceTypes;
+}
+
+wxString SettingsModel::ParseSolver(const YAML::Node &settings) {
+    if (settings["solver"]) {
+        return wxString(settings["solver"].as<std::string>());
+    }
+
+    return "EulerExplicit";
+}
+
+bool SettingsModel::LogAll(const YAML::Node &settings) {
+    if (settings["logger"]) {
+        wxString target = wxString(settings["logger"].as<std::string>());
+        if (target.IsSameAs("all")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
+    int soilStorageNb = 1;
+    if (YAML::Node options = settings["options"]) {
+        if (YAML::Node parameter = options["soil_storage_nb"]) {
+            soilStorageNb = parameter.as<int>();
+        }
+    }
+
+    // Logger
+    bool logAll = LogAll(settings);
+
+    // Solver
+    SetSolver(ParseSolver(settings));
+
+    // Surface elements
+    vecStr surfaceNames = ParseSurfaceNames(settings);
+    vecStr surfaceTypes = ParseSurfaceTypes(settings);
+    if (surfaceNames.size() != surfaceTypes.size()) {
+        wxLogError(_("The length of the surface names and surface types do not match."));
+        return false;
+    }
+
+    // Add default ground surface
+    AddSurfaceBrick("ground", "GenericSurface");
+
+    // Add other specific surfaces
+    for (int i = 0; i < surfaceNames.size(); ++i) {
+        wxString type = surfaceTypes[i];
+        if (type.IsSameAs("ground", false)) {
+            // Nothing to do, already added.
+        } else if (type.IsSameAs("glacier", false)) {
+            AddSurfaceBrick(surfaceNames[i], "Glacier");
+        } else {
+            wxLogError(_("The surface type %s is not used in Socont"), type);
+            return false;
+        }
+    }
+
+    EnableSnow("Melt:degree-day");
+    GenerateSurfaceComponents();
+
+    // Log snow processes for surface bricks
+    if (logAll) {
+        for (const auto& name: surfaceNames) {
+            SelectBrick(name + "-snowpack");
+            AddLoggingToCurrentBrick("content");
+
+            SelectProcess("melt");
+            AddLoggingToCurrentProcess("output");
+        }
+    }
+
+    // Add surface-related processes
+    for (int i = 0; i < surfaceNames.size(); ++i) {
+        wxString type = surfaceTypes[i];
+        wxString name = surfaceNames[i];
+        SelectBrick(name);
+
+        if (type.IsSameAs("ground", false)) {
+
+        } else if (type.IsSameAs("glacier", false)) {
+            // Glacier melt process
+            AddProcessToCurrentBrick("melt", "Melt:degree-day");
+            AddForcingToCurrentProcess("Temperature");
+            AddOutputToCurrentProcess("glacier-surface");
+            if (logAll) {
+                AddLoggingToCurrentProcess("output");
+            }
+        }
+    }
+
+    // Add other bricks
+    if (soilStorageNb == 1) {
+        AddBrick("slow-reservoir", "Storage");
+        AddProcessToCurrentBrick("outflow", "Outflow:linear");
+        if (logAll) {
+            AddLoggingToCurrentBrick("content");
+            AddLoggingToCurrentProcess("output");
+        }
+    } else if (soilStorageNb == 2) {
+        AddBrick("slow-reservoir-1", "Storage");
+        AddProcessToCurrentBrick("outflow", "Outflow:linear");
+        AddOutputToCurrentProcess("outlet");
+        AddProcessToCurrentBrick("percolation", "Outflow:constant");
+        AddOutputToCurrentProcess("slow-reservoir-2");
+        AddBrick("slow-reservoir-2", "Storage");
+        AddProcessToCurrentBrick("outflow", "Outflow:linear");
+        AddOutputToCurrentProcess("outlet");
+        if (logAll) {
+            SelectBrick("slow-reservoir-1");
+            AddLoggingToCurrentBrick("content");
+            SelectProcess("outflow");
+            AddLoggingToCurrentProcess("output");
+            SelectProcess("percolation");
+            AddLoggingToCurrentProcess("output");
+            SelectBrick("slow-reservoir-2");
+            AddLoggingToCurrentBrick("content");
+            SelectProcess("outflow");
+            AddLoggingToCurrentProcess("output");
+        }
+    } else {
+        wxLogError(_("There can be only one or two groundwater storage(s)."));
+    }
+
+
+
+
+    AddLoggingToItem("outlet");
 
     return true;
 }

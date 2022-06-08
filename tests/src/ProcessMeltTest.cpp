@@ -83,7 +83,7 @@ TEST_F(SnowpackModel, DegreeDay) {
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
 
-    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 10.0, 13.0, 16.0, 19.0, 7.0};
+    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {

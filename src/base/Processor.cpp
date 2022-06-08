@@ -112,14 +112,12 @@ bool Processor::ProcessTimeStep() {
 void Processor::ApplyDirectChanges(Brick* brick) {
     brick->UpdateContentFromInputs();
 
+    // Initialize the change rates to 0 and link to fluxes
     int iRate = 0;
     for (auto process : brick->GetProcesses()) {
-        // Get the change rates (per day) independently of the time step and constraints
-        vecDouble rates = process->GetChangeRates();
-
-        for (int i = 0; i < rates.size(); ++i) {
+        for (int i = 0; i < process->GetOutputFluxesNb(); ++i) {
             wxASSERT(m_changeRatesNoSolver.rows() > iRate);
-            m_changeRatesNoSolver(iRate) = rates[i];
+            m_changeRatesNoSolver(iRate) = 0;
 
             // Link to fluxes to enforce subsequent constraints
             process->StoreInOutgoingFlux(&m_changeRatesNoSolver(iRate), i);
@@ -127,14 +125,25 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         }
     }
 
-    // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-    brick->ApplyConstraints(*m_model->GetTimeMachine()->GetTimeStepPointer());
-
-    // Apply changes
     iRate = 0;
     for (auto process : brick->GetProcesses()) {
-        for (int i = 0; i < process->GetChangeRates().size(); ++i) {
-            process->ApplyChange(i, m_changeRatesNoSolver(iRate), *m_model->GetTimeMachine()->GetTimeStepPointer());
+        // Get the change rates (per day) independently of the time step and constraints
+        vecDouble rates = process->GetChangeRates();
+
+        int iRateCopy = iRate;
+        for (double rate : rates) {
+            wxASSERT(m_changeRatesNoSolver.rows() > iRateCopy);
+            m_changeRatesNoSolver(iRateCopy) = rate;
+            iRateCopy++;
+        }
+
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(*m_model->GetTimeMachine()->GetTimeStepPointer());
+
+        // Apply changes
+        for (int i = 0; i < rates.size(); ++i) {
+            process->ApplyChange(i, m_changeRatesNoSolver(iRate),
+                                 *m_model->GetTimeMachine()->GetTimeStepPointer());
             iRate++;
         }
     }

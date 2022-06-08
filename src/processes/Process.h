@@ -53,6 +53,10 @@ class Process : public wxObject {
         return m_outputs;
     }
 
+    int GetOutputFluxesNb() {
+        return int(m_outputs.size());
+    }
+
     virtual bool ToAtmosphere() {
         return false;
     }

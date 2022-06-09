@@ -1,5 +1,6 @@
 #include "ModelHydro.h"
 
+#include "Includes.h"
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
@@ -22,6 +23,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
         BuildModelStructure(modelSettings);
 
         m_timer.Initialize(modelSettings.GetTimerSettings());
+        g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
         m_logger.InitContainer(m_timer.GetTimeStepsNb(),
                                m_subBasin->GetHydroUnitsNb(),

@@ -11,5 +11,5 @@ void ProcessInfiltrationSocont::AssignParameters(const ProcessSettings &processS
 }
 
 vecDouble ProcessInfiltrationSocont::GetChangeRates() {
-    return {m_container->GetContentWithChanges() * (1 - std::pow(GetTargetStock()/GetTargetCapacity(), 2))};
+    return {m_container->GetContentWithChanges() * (1 - pow(GetTargetStock()/GetTargetCapacity(), 2))};
 }

@@ -20,7 +20,6 @@ void Processor::Initialize(const SolverSettings &solverSettings) {
     m_solver->Connect(this);
     ConnectToElementsToSolve();
     m_solver->InitializeContainers();
-    m_solver->SetTimeStepInDays(m_model->GetTimeMachine()->GetTimeStepPointer());
     m_changeRatesNoSolver = axd::Zero(m_directConnectionsNb);
 }
 
@@ -156,12 +155,11 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(*m_model->GetTimeMachine()->GetTimeStepPointer());
+        brick->ApplyConstraints(g_timeStepInDays);
 
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {
-            process->ApplyChange(i, m_changeRatesNoSolver(iRate),
-                                 *m_model->GetTimeMachine()->GetTimeStepPointer());
+            process->ApplyChange(i, m_changeRatesNoSolver(iRate), g_timeStepInDays);
             iRate++;
         }
     }

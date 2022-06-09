@@ -28,49 +28,49 @@ class SurfaceContainerModel : public ::testing::Test {
 
         // Rain/snow splitter
         m_model.SelectSplitter("snow-rain");
-        m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-        m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+        m_model.AddSplitterParameter("transitionStart", 0.0f);
+        m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
         // Snowpack brick on surface 1
         m_model.SelectBrick("ground-snowpack");
-        m_model.AddLoggingToCurrentBrick("content");
+        m_model.AddBrickLogging("content");
 
         // Snow melt process
         m_model.SelectProcess("melt");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
+        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessLogging("output");
 
         // Snowpack brick on surface 2
         m_model.SelectBrick("glacier-snowpack");
-        m_model.AddLoggingToCurrentBrick("content");
+        m_model.AddBrickLogging("content");
 
         // Snow melt process
         m_model.SelectProcess("melt");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
+        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessLogging("output");
 
         // Glacier melt process
         m_model.SelectBrick("glacier");
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("glacier-surface");
+        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddProcessForcing("Temperature");
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
+        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("glacier-surface");
 
         // Surface brick for the bare ground with a linear storage
         m_model.SelectBrick("ground-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
 
         // Surface brick for the glacier part with a linear storage
         m_model.SelectBrick("glacier-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
 
         m_model.AddLoggingToItem("outlet");
 

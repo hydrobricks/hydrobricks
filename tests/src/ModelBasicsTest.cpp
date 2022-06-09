@@ -16,30 +16,30 @@ class ModelBasics : public ::testing::Test {
         m_model1.SetSolver("EulerExplicit");
         m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
         m_model1.AddBrick("storage", "Storage");
-        m_model1.AddForcingToCurrentBrick("Precipitation");
-        m_model1.AddLoggingToCurrentBrick("content");
-        m_model1.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model1.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model1.AddLoggingToCurrentProcess("output");
-        m_model1.AddOutputToCurrentProcess("outlet");
+        m_model1.AddBrickForcing("Precipitation");
+        m_model1.AddBrickLogging("content");
+        m_model1.AddBrickProcess("outflow", "Outflow:linear");
+        m_model1.AddProcessParameter("responseFactor", 0.3f);
+        m_model1.AddProcessLogging("output");
+        m_model1.AddProcessOutput("outlet");
         m_model1.AddLoggingToItem("outlet");
 
         // Model 2: 2 linear storages in cascade
         m_model2.SetSolver("EulerExplicit");
         m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
         m_model2.AddBrick("storage-1", "Storage");
-        m_model2.AddForcingToCurrentBrick("Precipitation");
-        m_model2.AddLoggingToCurrentBrick("content");
-        m_model2.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model2.AddParameterToCurrentProcess("responseFactor", 0.5f);
-        m_model2.AddLoggingToCurrentProcess("output");
-        m_model2.AddOutputToCurrentProcess("storage-2");
+        m_model2.AddBrickForcing("Precipitation");
+        m_model2.AddBrickLogging("content");
+        m_model2.AddBrickProcess("outflow", "Outflow:linear");
+        m_model2.AddProcessParameter("responseFactor", 0.5f);
+        m_model2.AddProcessLogging("output");
+        m_model2.AddProcessOutput("storage-2");
         m_model2.AddBrick("storage-2", "Storage");
-        m_model2.AddLoggingToCurrentBrick("content");
-        m_model2.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model2.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model2.AddLoggingToCurrentProcess("output");
-        m_model2.AddOutputToCurrentProcess("outlet");
+        m_model2.AddBrickLogging("content");
+        m_model2.AddBrickProcess("outflow", "Outflow:linear");
+        m_model2.AddProcessParameter("responseFactor", 0.3f);
+        m_model2.AddProcessLogging("output");
+        m_model2.AddProcessOutput("outlet");
         m_model2.AddLoggingToItem("outlet");
 
         auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),

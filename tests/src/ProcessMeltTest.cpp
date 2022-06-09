@@ -20,30 +20,30 @@ class SnowpackModel : public ::testing::Test {
 
         // Snowpack brick
         m_model.AddBrick("snowpack", "Snowpack");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddLoggingToCurrentBrick("snow");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickLogging("snow");
 
         // Snow melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
-        m_model.OutputCurrentProcessToSameBrick();
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddProcessForcing("Temperature");
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
+        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.OutputProcessToSameBrick();
+        m_model.AddProcessLogging("output");
 
         // Add process to direct meltwater to the outlet
-        m_model.AddProcessToCurrentBrick("meltwater", "Outflow:direct");
-        m_model.AddOutputToCurrentProcess("outlet");
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddBrickProcess("meltwater", "Outflow:direct");
+        m_model.AddProcessOutput("outlet");
+        m_model.AddProcessLogging("output");
 
         // Rain/snow splitter
         m_model.AddSplitter("snow-rain", "SnowRain");
-        m_model.AddForcingToCurrentSplitter("Precipitation");
-        m_model.AddForcingToCurrentSplitter("Temperature");
-        m_model.AddOutputToCurrentSplitter("outlet"); // rain
-        m_model.AddOutputToCurrentSplitter("snowpack", "snow"); // snow
-        m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-        m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+        m_model.AddSplitterForcing("Precipitation");
+        m_model.AddSplitterForcing("Temperature");
+        m_model.AddSplitterOutput("outlet"); // rain
+        m_model.AddSplitterOutput("snowpack", "snow"); // snow
+        m_model.AddSplitterParameter("transitionStart", 0.0f);
+        m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
         m_model.AddLoggingToItem("outlet");
 
@@ -118,12 +118,12 @@ class GlacierModel : public ::testing::Test {
         m_model.AddBrick("glacier", "Glacier");
 
         // Glacier melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 3.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 2.0f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddProcessForcing("Temperature");
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
+        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -189,39 +189,39 @@ protected:
         m_model.AddBrick("snowpack", "Snowpack");
 
         // Snow melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 2.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 0.0f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("glacier");
+        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddProcessForcing("Temperature");
+        m_model.AddProcessParameter("degreeDayFactor", 2.0f);
+        m_model.AddProcessParameter("meltingTemperature", 0.0f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("glacier");
 
         // Glacier brick
         m_model.AddBrick("glacier", "Glacier");
         m_model.AddToRelatedSurfaceBrick("snowpack");
-        m_model.AddParameterToCurrentBrick("noMeltWhenSnowCover", true);
+        m_model.AddBrickParameter("noMeltWhenSnowCover", true);
 
         // Glacier melt process
-        m_model.AddProcessToCurrentBrick("melt", "Melt:degree-day");
-        m_model.AddForcingToCurrentProcess("Temperature");
-        m_model.AddParameterToCurrentProcess("degreeDayFactor", 2.0f);
-        m_model.AddParameterToCurrentProcess("meltingTemperature", 0.0f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.OutputCurrentProcessToSameBrick();
+        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddProcessForcing("Temperature");
+        m_model.AddProcessParameter("degreeDayFactor", 2.0f);
+        m_model.AddProcessParameter("meltingTemperature", 0.0f);
+        m_model.AddProcessLogging("output");
+        m_model.OutputProcessToSameBrick();
 
         // Add process to direct meltwater to the outlet
-        m_model.AddProcessToCurrentBrick("meltwater", "Outflow:direct");
-        m_model.AddOutputToCurrentProcess("outlet");
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddBrickProcess("meltwater", "Outflow:direct");
+        m_model.AddProcessOutput("outlet");
+        m_model.AddProcessLogging("output");
 
         // Rain/snow splitter
         m_model.AddSplitter("snow-rain", "SnowRain");
-        m_model.AddForcingToCurrentSplitter("Precipitation");
-        m_model.AddForcingToCurrentSplitter("Temperature");
-        m_model.AddOutputToCurrentSplitter("outlet"); // rain
-        m_model.AddOutputToCurrentSplitter("snowpack", "snow"); // snow
-        m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-        m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+        m_model.AddSplitterForcing("Precipitation");
+        m_model.AddSplitterForcing("Temperature");
+        m_model.AddSplitterOutput("outlet"); // rain
+        m_model.AddSplitterOutput("snowpack", "snow"); // snow
+        m_model.AddSplitterParameter("transitionStart", 0.0f);
+        m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
         m_model.AddLoggingToItem("outlet");
 

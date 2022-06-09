@@ -18,12 +18,12 @@ class SolverLinearStorage : public ::testing::Test {
 
         // Main storage
         m_model.AddBrick("storage", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -159,20 +159,20 @@ class Solver2LinearStorages : public ::testing::Test {
 
         // First storage
         m_model.AddBrick("storage-1", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.5f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("storage-2");
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.5f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("storage-2");
 
         // Second storage
         m_model.AddBrick("storage-2", "Storage");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -315,25 +315,25 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         // Main storage
         m_model.AddBrick("storage", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddParameterToCurrentBrick("capacity", 20);
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickParameter("capacity", 20);
 
         // Linear outflow process
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.1f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.1f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         // ET process
-        m_model.AddProcessToCurrentBrick("ET", "ET:Socont");
-        m_model.AddForcingToCurrentProcess("PET");
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddBrickProcess("ET", "ET:Socont");
+        m_model.AddProcessForcing("PET");
+        m_model.AddProcessLogging("output");
 
         // Overflow process
-        m_model.AddProcessToCurrentBrick("overflow", "Overflow");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickProcess("overflow", "Overflow");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 

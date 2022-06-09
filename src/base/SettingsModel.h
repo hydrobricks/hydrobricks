@@ -76,35 +76,35 @@ class SettingsModel : public wxObject {
 
     void AddToRelatedSurfaceBrick(const wxString &name);
 
-    void AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type = "Constant");
+    void AddBrickParameter(const wxString &name, float value, const wxString &type = "Constant");
 
-    void AddForcingToCurrentBrick(const wxString &name);
+    void AddBrickForcing(const wxString &name);
 
-    void AddProcessToCurrentBrick(const wxString &name, const wxString &type);
+    void AddBrickProcess(const wxString &name, const wxString &type);
 
-    void AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type = "Constant");
+    void AddProcessParameter(const wxString &name, float value, const wxString &type = "Constant");
 
-    void AddForcingToCurrentProcess(const wxString &name);
+    void AddProcessForcing(const wxString &name);
 
-    void AddOutputToCurrentProcess(const wxString &target, bool withWeighting = false);
+    void AddProcessOutput(const wxString &target, bool withWeighting = false);
 
-    void OutputCurrentProcessToSameBrick();
+    void OutputProcessToSameBrick();
 
     void AddSplitter(const wxString &name, const wxString &type);
 
-    void AddParameterToCurrentSplitter(const wxString &name, float value, const wxString &type = "Constant");
+    void AddSplitterParameter(const wxString &name, float value, const wxString &type = "Constant");
 
-    void AddForcingToCurrentSplitter(const wxString &name);
+    void AddSplitterForcing(const wxString &name);
 
-    void AddOutputToCurrentSplitter(const wxString &target, const wxString &fluxType = "water");
+    void AddSplitterOutput(const wxString &target, const wxString &fluxType = "water");
 
     void AddLoggingToItem(const wxString &itemName);
 
-    void AddLoggingToCurrentBrick(const wxString &itemName);
+    void AddBrickLogging(const wxString &itemName);
 
-    void AddLoggingToCurrentProcess(const wxString &itemName);
+    void AddProcessLogging(const wxString &itemName);
 
-    void AddLoggingToCurrentSplitter(const wxString &itemName);
+    void AddSplitterLogging(const wxString &itemName);
 
     void GeneratePrecipitationSplitters(bool withSnow);
 

@@ -65,7 +65,7 @@ void SettingsModel::AddToRelatedSurfaceBrick(const wxString &name) {
     m_selectedBrick->relatedSurfaceBricks.push_back(name);
 }
 
-void SettingsModel::AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddBrickParameter(const wxString &name, float value, const wxString &type) {
     wxASSERT(m_selectedBrick);
 
     if (!type.IsSameAs("Constant")) {
@@ -77,7 +77,7 @@ void SettingsModel::AddParameterToCurrentBrick(const wxString &name, float value
     m_selectedBrick->parameters.push_back(parameter);
 }
 
-void SettingsModel::AddForcingToCurrentBrick(const wxString &name) {
+void SettingsModel::AddBrickForcing(const wxString &name) {
     wxASSERT(m_selectedBrick);
 
     if (name.IsSameAs("Precipitation", false)) {
@@ -89,7 +89,7 @@ void SettingsModel::AddForcingToCurrentBrick(const wxString &name) {
     }
 }
 
-void SettingsModel::AddProcessToCurrentBrick(const wxString &name, const wxString &type) {
+void SettingsModel::AddBrickProcess(const wxString &name, const wxString &type) {
     wxASSERT(m_selectedBrick);
 
     ProcessSettings processSettings;
@@ -100,7 +100,7 @@ void SettingsModel::AddProcessToCurrentBrick(const wxString &name, const wxStrin
     m_selectedProcess = &m_selectedBrick->processes[m_selectedBrick->processes.size() - 1];
 }
 
-void SettingsModel::AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddProcessParameter(const wxString &name, float value, const wxString &type) {
     wxASSERT(m_selectedProcess);
 
     if (!type.IsSameAs("Constant")) {
@@ -112,7 +112,7 @@ void SettingsModel::AddParameterToCurrentProcess(const wxString &name, float val
     m_selectedProcess->parameters.push_back(parameter);
 }
 
-void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
+void SettingsModel::AddProcessForcing(const wxString &name) {
     wxASSERT(m_selectedProcess);
 
     if (name.IsSameAs("Precipitation", false)) {
@@ -126,7 +126,7 @@ void SettingsModel::AddForcingToCurrentProcess(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentProcess(const wxString &target, bool withWeighting) {
+void SettingsModel::AddProcessOutput(const wxString &target, bool withWeighting) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
@@ -135,7 +135,7 @@ void SettingsModel::AddOutputToCurrentProcess(const wxString &target, bool withW
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
-void SettingsModel::OutputCurrentProcessToSameBrick() {
+void SettingsModel::OutputProcessToSameBrick() {
     wxASSERT(m_selectedBrick);
     wxASSERT(m_selectedProcess);
 
@@ -157,7 +157,7 @@ void SettingsModel::AddSplitter(const wxString &name, const wxString &type) {
     m_selectedSplitter = &m_selectedStructure->splitters[m_selectedStructure->splitters.size() - 1];
 }
 
-void SettingsModel::AddParameterToCurrentSplitter(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddSplitterParameter(const wxString &name, float value, const wxString &type) {
     wxASSERT(m_selectedSplitter);
 
     if (!type.IsSameAs("Constant")) {
@@ -169,7 +169,7 @@ void SettingsModel::AddParameterToCurrentSplitter(const wxString &name, float va
     m_selectedSplitter->parameters.push_back(parameter);
 }
 
-void SettingsModel::AddForcingToCurrentSplitter(const wxString &name) {
+void SettingsModel::AddSplitterForcing(const wxString &name) {
     wxASSERT(m_selectedSplitter);
 
     if (name.IsSameAs("Precipitation", false)) {
@@ -181,7 +181,7 @@ void SettingsModel::AddForcingToCurrentSplitter(const wxString &name) {
     }
 }
 
-void SettingsModel::AddOutputToCurrentSplitter(const wxString &target, const wxString &fluxType) {
+void SettingsModel::AddSplitterOutput(const wxString &target, const wxString &fluxType) {
     wxASSERT(m_selectedSplitter);
 
     OutputSettings outputSettings;
@@ -195,17 +195,17 @@ void SettingsModel::AddLoggingToItem(const wxString& itemName) {
     m_selectedStructure->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddLoggingToCurrentBrick(const wxString& itemName) {
+void SettingsModel::AddBrickLogging(const wxString& itemName) {
     wxASSERT(m_selectedBrick);
     m_selectedBrick->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddLoggingToCurrentProcess(const wxString& itemName) {
+void SettingsModel::AddProcessLogging(const wxString& itemName) {
     wxASSERT(m_selectedProcess);
     m_selectedProcess->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddLoggingToCurrentSplitter(const wxString& itemName) {
+void SettingsModel::AddSplitterLogging(const wxString& itemName) {
     wxASSERT(m_selectedSplitter);
     m_selectedSplitter->logItems.push_back(itemName);
 }
@@ -216,10 +216,10 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     if (withSnow) {
         // Rain/snow splitter
         AddSplitter("snow-rain", "SnowRain");
-        AddForcingToCurrentSplitter("Precipitation");
-        AddForcingToCurrentSplitter("Temperature");
-        AddOutputToCurrentSplitter("rain-splitter");
-        AddOutputToCurrentSplitter("snow-splitter", "snow");
+        AddSplitterForcing("Precipitation");
+        AddSplitterForcing("Temperature");
+        AddSplitterOutput("rain-splitter");
+        AddSplitterOutput("snow-splitter", "snow");
 
         // Splitter to surfaces
         AddSplitter("snow-splitter", "MultiFluxes");
@@ -227,8 +227,8 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     } else {
         // Rain splitter (connection to forcing)
         AddSplitter("rain", "Rain");
-        AddForcingToCurrentSplitter("Precipitation");
-        AddOutputToCurrentSplitter("rain-splitter");
+        AddSplitterForcing("Precipitation");
+        AddSplitterOutput("rain-splitter");
 
         // Splitter to surfaces
         AddSplitter("rain-splitter", "MultiFluxes");
@@ -242,13 +242,13 @@ void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
         wxString surfaceName = brickSettings.name + "-surface";
 
         SelectSplitter("snow-splitter");
-        AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
+        AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
 
         AddBrick(brickSettings.name + "-snowpack", "Snowpack");
-        AddProcessToCurrentBrick("melt", snowMeltProcess);
-        AddOutputToCurrentProcess(surfaceName);
+        AddBrickProcess("melt", snowMeltProcess);
+        AddProcessOutput(surfaceName);
         if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
-            AddForcingToCurrentProcess("Temperature");
+            AddProcessForcing("Temperature");
         } else {
             throw NotImplemented();
         }
@@ -262,17 +262,17 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMelt
         wxString surfaceName = brickSettings.name + "-surface";
 
         SelectSplitter("snow-splitter");
-        AddOutputToCurrentSplitter(brickSettings.name + "-snowpack", "snow");
+        AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
 
         AddBrick(brickSettings.name + "-snowpack", "Snowpack");
-        AddProcessToCurrentBrick("melt", snowMeltProcess);
-        AddOutputToCurrentProcess(brickSettings.name + "-snowpack");
+        AddBrickProcess("melt", snowMeltProcess);
+        AddProcessOutput(brickSettings.name + "-snowpack");
 
-        AddProcessToCurrentBrick("meltwater", outflowProcess);
-        OutputCurrentProcessToSameBrick();
+        AddBrickProcess("meltwater", outflowProcess);
+        OutputProcessToSameBrick();
 
         if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
-            AddForcingToCurrentProcess("Temperature");
+            AddProcessForcing("Temperature");
         } else {
             throw NotImplemented();
         }
@@ -288,7 +288,7 @@ void SettingsModel::GenerateSurfaceComponentBricks(bool withSnow) {
 
         SelectBrick(brickSettings.name);
         SelectSplitter("rain-splitter");
-        AddOutputToCurrentSplitter(brickSettings.name);
+        AddSplitterOutput(brickSettings.name);
 
         // Link related surface bricks
         if (withSnow) {
@@ -537,10 +537,10 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     if (logAll) {
         for (const auto& name: surfaceNames) {
             SelectBrick(name + "-snowpack");
-            AddLoggingToCurrentBrick("content");
+            AddBrickLogging("content");
 
             SelectProcess("melt");
-            AddLoggingToCurrentProcess("output");
+            AddProcessLogging("output");
         }
     }
 
@@ -553,46 +553,46 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         if (type.IsSameAs("ground", false)) {
             // Direct rain water to surface
             SelectBrick(name);
-            AddProcessToCurrentBrick("outflow-rain", "Outflow:direct");
-            AddOutputToCurrentProcess(name + "-surface");
+            AddBrickProcess("outflow-rain", "Outflow:direct");
+            AddProcessOutput(name + "-surface");
 
         } else if (type.IsSameAs("glacier", false)) {
             // Direct snow melt to linear storage
             SelectBrick(name + "-surface");
-            AddProcessToCurrentBrick("outflow-snowmelt", "Outflow:direct");
-            AddOutputToCurrentProcess("glacier-area-rain-snowmelt-storage");
+            AddBrickProcess("outflow-snowmelt", "Outflow:direct");
+            AddProcessOutput("glacier-area-rain-snowmelt-storage");
 
             // Direct rain to linear storage
             SelectBrick(name);
-            AddProcessToCurrentBrick("outflow-rain", "Outflow:direct");
-            AddOutputToCurrentProcess("glacier-area-rain-snowmelt-storage");
+            AddBrickProcess("outflow-rain", "Outflow:direct");
+            AddProcessOutput("glacier-area-rain-snowmelt-storage");
 
             // Glacier melt process
-            AddProcessToCurrentBrick("melt", "Melt:degree-day");
-            AddForcingToCurrentProcess("Temperature");
-            AddOutputToCurrentProcess("glacier-area-icemelt-storage");
+            AddBrickProcess("melt", "Melt:degree-day");
+            AddProcessForcing("Temperature");
+            AddProcessOutput("glacier-area-icemelt-storage");
             if (logAll) {
-                AddLoggingToCurrentProcess("output");
+                AddProcessLogging("output");
             }
         }
     }
 
     // Basin storages for contributions from the glacierized area
     AddBrick("glacier-area-rain-snowmelt-storage", "Storage");
-    AddProcessToCurrentBrick("outflow", "Outflow:linear");
-    AddOutputToCurrentProcess("outlet");
+    AddBrickProcess("outflow", "Outflow:linear");
+    AddProcessOutput("outlet");
     AddBrick("glacier-area-icemelt-storage", "Storage");
-    AddProcessToCurrentBrick("outflow", "Outflow:linear");
-    AddOutputToCurrentProcess("outlet");
+    AddBrickProcess("outflow", "Outflow:linear");
+    AddProcessOutput("outlet");
     if (logAll) {
         SelectBrick("glacier-area-rain-snowmelt-storage");
-        AddLoggingToCurrentBrick("content");
+        AddBrickLogging("content");
         SelectProcess("outflow");
-        AddLoggingToCurrentProcess("output");
+        AddProcessLogging("output");
         SelectBrick("glacier-area-icemelt-storage");
-        AddLoggingToCurrentBrick("content");
+        AddBrickLogging("content");
         SelectProcess("outflow");
-        AddLoggingToCurrentProcess("output");
+        AddProcessLogging("output");
     }
 
 
@@ -604,31 +604,31 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     // Add other bricks
     if (soilStorageNb == 1) {
         AddBrick("slow-reservoir", "Storage");
-        AddProcessToCurrentBrick("outflow", "Outflow:linear");
+        AddBrickProcess("outflow", "Outflow:linear");
         if (logAll) {
-            AddLoggingToCurrentBrick("content");
-            AddLoggingToCurrentProcess("output");
+            AddBrickLogging("content");
+            AddProcessLogging("output");
         }
     } else if (soilStorageNb == 2) {
         AddBrick("slow-reservoir-1", "Storage");
-        AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        AddOutputToCurrentProcess("outlet");
-        AddProcessToCurrentBrick("percolation", "Outflow:constant");
-        AddOutputToCurrentProcess("slow-reservoir-2");
+        AddBrickProcess("outflow", "Outflow:linear");
+        AddProcessOutput("outlet");
+        AddBrickProcess("percolation", "Outflow:constant");
+        AddProcessOutput("slow-reservoir-2");
         AddBrick("slow-reservoir-2", "Storage");
-        AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        AddOutputToCurrentProcess("outlet");
+        AddBrickProcess("outflow", "Outflow:linear");
+        AddProcessOutput("outlet");
         if (logAll) {
             SelectBrick("slow-reservoir-1");
-            AddLoggingToCurrentBrick("content");
+            AddBrickLogging("content");
             SelectProcess("outflow");
-            AddLoggingToCurrentProcess("output");
+            AddProcessLogging("output");
             SelectProcess("percolation");
-            AddLoggingToCurrentProcess("output");
+            AddProcessLogging("output");
             SelectBrick("slow-reservoir-2");
-            AddLoggingToCurrentBrick("content");
+            AddBrickLogging("content");
             SelectProcess("outflow");
-            AddLoggingToCurrentProcess("output");
+            AddProcessLogging("output");
         }
     } else {
         wxLogError(_("There can be only one or two groundwater storage(s)."));

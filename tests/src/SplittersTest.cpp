@@ -42,14 +42,14 @@ TEST_F(Splitters, SnowRain) {
     subBasin.AddHydroUnit(&unit);
 
     m_model.AddSplitter("snow-rain", "SnowRain");
-    m_model.AddForcingToCurrentSplitter("Precipitation");
-    m_model.AddForcingToCurrentSplitter("Temperature");
-    m_model.AddOutputToCurrentSplitter("outlet"); // rain
-    m_model.AddOutputToCurrentSplitter("outlet"); // snow
-    m_model.AddLoggingToCurrentSplitter("rain");
-    m_model.AddLoggingToCurrentSplitter("snow");
-    m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-    m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+    m_model.AddSplitterForcing("Precipitation");
+    m_model.AddSplitterForcing("Temperature");
+    m_model.AddSplitterOutput("outlet"); // rain
+    m_model.AddSplitterOutput("outlet"); // snow
+    m_model.AddSplitterLogging("rain");
+    m_model.AddSplitterLogging("snow");
+    m_model.AddSplitterParameter("transitionStart", 0.0f);
+    m_model.AddSplitterParameter("transitionEnd", 2.0f);
     m_model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);

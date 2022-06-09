@@ -27,23 +27,23 @@ class FluxWeightedModel : public ::testing::Test {
 
         // Direct outflow processes
         m_model.SelectBrick("item-1");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("item-1-surface");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("item-1-surface");
         m_model.SelectBrick("item-2");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("item-2-surface");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("item-2-surface");
 
         // Surface bricks
         m_model.SelectBrick("item-1-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
         m_model.SelectBrick("item-2-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
 
         m_model.AddLoggingToItem("outlet");
 

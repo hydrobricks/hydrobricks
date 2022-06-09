@@ -269,7 +269,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMelt
         AddOutputToCurrentProcess(brickSettings.name + "-snowpack");
 
         AddProcessToCurrentBrick("meltwater", outflowProcess);
-        AddOutputToCurrentProcess(surfaceName);
+        OutputCurrentProcessToSameBrick();
 
         if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
             AddForcingToCurrentProcess("Temperature");
@@ -529,7 +529,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     }
 
     GeneratePrecipitationSplitters(true);
-    GenerateSnowpacksWithWaterRetention("Melt:degree-day", "Outflow:linear");
+    GenerateSnowpacks("Melt:degree-day");
     GenerateSurfaceComponentBricks(true);
     GenerateSurfaceBricks();
 
@@ -551,17 +551,55 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         SelectBrick(name);
 
         if (type.IsSameAs("ground", false)) {
+            // Direct rain water to surface
+            SelectBrick(name);
+            AddProcessToCurrentBrick("outflow-rain", "Outflow:direct");
+            AddOutputToCurrentProcess(name + "-surface");
 
         } else if (type.IsSameAs("glacier", false)) {
+            // Direct snow melt to linear storage
+            SelectBrick(name + "-surface");
+            AddProcessToCurrentBrick("outflow-snowmelt", "Outflow:direct");
+            AddOutputToCurrentProcess("glacier-area-rain-snowmelt-storage");
+
+            // Direct rain to linear storage
+            SelectBrick(name);
+            AddProcessToCurrentBrick("outflow-rain", "Outflow:direct");
+            AddOutputToCurrentProcess("glacier-area-rain-snowmelt-storage");
+
             // Glacier melt process
             AddProcessToCurrentBrick("melt", "Melt:degree-day");
             AddForcingToCurrentProcess("Temperature");
-            AddOutputToCurrentProcess("glacier-surface");
+            AddOutputToCurrentProcess("glacier-area-icemelt-storage");
             if (logAll) {
                 AddLoggingToCurrentProcess("output");
             }
         }
     }
+
+    // Basin storages for contributions from the glacierized area
+    AddBrick("glacier-area-rain-snowmelt-storage", "Storage");
+    AddProcessToCurrentBrick("outflow", "Outflow:linear");
+    AddOutputToCurrentProcess("outlet");
+    AddBrick("glacier-area-icemelt-storage", "Storage");
+    AddProcessToCurrentBrick("outflow", "Outflow:linear");
+    AddOutputToCurrentProcess("outlet");
+    if (logAll) {
+        SelectBrick("glacier-area-rain-snowmelt-storage");
+        AddLoggingToCurrentBrick("content");
+        SelectProcess("outflow");
+        AddLoggingToCurrentProcess("output");
+        SelectBrick("glacier-area-icemelt-storage");
+        AddLoggingToCurrentBrick("content");
+        SelectProcess("outflow");
+        AddLoggingToCurrentProcess("output");
+    }
+
+
+
+    SelectBrick("ground-surface");
+
+
 
     // Add other bricks
     if (soilStorageNb == 1) {

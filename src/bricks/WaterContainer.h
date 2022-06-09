@@ -80,6 +80,10 @@ class WaterContainer : public wxObject {
      */
     virtual double SumIncomingFluxes();
 
+    Brick* GetParentBrick() {
+        return m_parent;
+    }
+
   protected:
 
   private:

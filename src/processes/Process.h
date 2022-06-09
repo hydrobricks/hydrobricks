@@ -111,6 +111,8 @@ class Process : public wxObject {
     WaterContainer* m_container;
     std::vector<Flux*> m_outputs;
 
+    double GetSumChangeRatesOtherProcesses();
+
   private:
 };
 

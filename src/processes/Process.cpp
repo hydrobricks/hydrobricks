@@ -11,6 +11,7 @@
 #include "Snowpack.h"
 #include "Glacier.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessOutflowRestDirect.h"
 
 Process::Process(WaterContainer* container)
     : m_container(container)
@@ -29,7 +30,8 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
     } else if (processSettings.type.IsSameAs("Outflow:direct", false)) {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
     } else if (processSettings.type.IsSameAs("Outflow:rest-direct", false) ||
-        return process;
+               processSettings.type.IsSameAs("Outflow:RestDirect", false)) {
+        return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     } else if (processSettings.type.IsSameAs("Infiltration:Socont", false)) {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
     } else if (processSettings.type.IsSameAs("Overflow", false)) {
@@ -105,4 +107,23 @@ void Process::SetOutputFluxesFraction(double value) {
             output->SetFraction(value);
         }
     }
+}
+
+double Process::GetSumChangeRatesOtherProcesses() {
+    double sumOtherProcesses = 0;
+
+    std::vector<Process *> otherProcesses = m_container->GetParentBrick()->GetProcesses();
+    for (auto process: otherProcesses) {
+        wxASSERT(process);
+        if (process == this) {
+            continue;
+        }
+        std::vector<Flux *> fluxes = process->GetOutputFluxes();
+        for (auto flux: fluxes) {
+            wxASSERT(flux);
+            sumOtherProcesses+= *flux->GetAmountPointer();
+        }
+    }
+
+    return sumOtherProcesses;
 }

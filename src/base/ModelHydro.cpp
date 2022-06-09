@@ -148,8 +148,8 @@ void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUni
 }
 
 void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings) {
-    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
-        modelSettings.SelectHydroUnitBrick(iBrick);
+    for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBricksNb(); ++iBrick) {
+        modelSettings.SelectSubBasinBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 

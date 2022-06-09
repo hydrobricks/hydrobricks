@@ -58,6 +58,24 @@ void Processor::ConnectToElementsToSolve() {
             }
         }
     }
+
+    for (int iBrick = 0; iBrick < basin->GetBricksCount(); ++iBrick) {
+        Brick* brick = basin->GetBrick(iBrick);
+
+        // Add the bricks need a solver here
+        m_iterableBricks.push_back(brick);
+
+        // Get state variables from bricks
+        vecDoublePt bricksValues = brick->GetStateVariableChanges();
+        StoreStateVariableChanges(bricksValues);
+
+        // Get state variables from processes
+        vecDoublePt processValues = brick->GetStateVariableChangesFromProcesses();
+        StoreStateVariableChanges(processValues);
+
+        // Count connections
+        m_solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+    }
 }
 
 void Processor::StoreStateVariableChanges(vecDoublePt& values) {
@@ -102,7 +120,7 @@ bool Processor::ProcessTimeStep() {
         return false;
     }
 
-    if (!basin->ComputeAggregatedValues()) {
+    if (!basin->ComputeOutletDischarge()) {
         return false;
     }
 

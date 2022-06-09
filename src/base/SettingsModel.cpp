@@ -672,18 +672,18 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     }
 
     // Basin storages for contributions from the glacierized area
-    AddHydroUnitBrick("glacier-area-rain-snowmelt-storage", "Storage");
+    AddSubBasinBrick("glacier-area-rain-snowmelt-storage", "Storage");
     AddBrickProcess("outflow", "Outflow:linear");
     AddProcessOutput("outlet");
-    AddHydroUnitBrick("glacier-area-icemelt-storage", "Storage");
+    AddSubBasinBrick("glacier-area-icemelt-storage", "Storage");
     AddBrickProcess("outflow", "Outflow:linear");
     AddProcessOutput("outlet");
     if (logAll) {
-        SelectHydroUnitBrick("glacier-area-rain-snowmelt-storage");
+        SelectSubBasinBrick("glacier-area-rain-snowmelt-storage");
         AddBrickLogging("content");
         SelectProcess("outflow");
         AddProcessLogging("output");
-        SelectHydroUnitBrick("glacier-area-icemelt-storage");
+        SelectSubBasinBrick("glacier-area-icemelt-storage");
         AddBrickLogging("content");
         SelectProcess("outflow");
         AddProcessLogging("output");

@@ -197,7 +197,7 @@ double* SubBasin::GetValuePointer(const wxString& name) {
     return nullptr;
 }
 
-bool SubBasin::ComputeAggregatedValues() {
+bool SubBasin::ComputeOutletDischarge() {
     m_outletTotal = 0;
     for (auto flux: m_outletFluxes) {
         m_outletTotal += flux->GetAmount();

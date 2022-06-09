@@ -60,7 +60,7 @@ class SubBasin : public wxObject {
 
     double* GetValuePointer(const wxString& name);
 
-    bool ComputeAggregatedValues();
+    bool ComputeOutletDischarge();
 
   protected:
     float m_area; // m2

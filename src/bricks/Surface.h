@@ -6,7 +6,7 @@
 
 class Surface : public SurfaceComponent {
   public:
-    Surface(HydroUnit *hydroUnit);
+    Surface();
 
     /**
      * @copydoc Brick::AssignParameters()

@@ -22,11 +22,31 @@ class SubBasin : public wxObject {
 
     bool IsOk();
 
+    void AddBrick(Brick* brick);
+
+    void AddSplitter(Splitter* splitter);
+
     void AddHydroUnit(HydroUnit* unit);
 
     int GetHydroUnitsNb();
 
     HydroUnit* GetHydroUnit(int index);
+
+    int GetBricksCount();
+
+    int GetSplittersCount();
+
+    Brick* GetBrick(int index);
+
+    bool HasBrick(const wxString &name);
+
+    Brick* GetBrick(const wxString &name);
+
+    Splitter* GetSplitter(int index);
+
+    bool HasSplitter(const wxString &name);
+
+    Splitter* GetSplitter(const wxString &name);
 
     bool HasIncomingFlow();
 
@@ -47,6 +67,8 @@ class SubBasin : public wxObject {
     float m_elevation; // m.a.s.l.
     double m_outletTotal;
     bool m_needsCleanup;
+    std::vector<Brick*> m_bricks;
+    std::vector<Splitter*> m_splitters;
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;

@@ -27,12 +27,12 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.GenerateSurfaceBricks();
 
         // Rain/snow splitter
-        m_model.SelectSplitter("snow-rain");
+        m_model.SelectHydroUnitSplitter("snow-rain");
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
         // Snowpack brick on surface 1
-        m_model.SelectBrick("ground-snowpack");
+        m_model.SelectHydroUnitBrick("ground-snowpack");
         m_model.AddBrickLogging("content");
 
         // Snow melt process
@@ -42,7 +42,7 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddProcessLogging("output");
 
         // Snowpack brick on surface 2
-        m_model.SelectBrick("glacier-snowpack");
+        m_model.SelectHydroUnitBrick("glacier-snowpack");
         m_model.AddBrickLogging("content");
 
         // Snow melt process
@@ -52,7 +52,7 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddProcessLogging("output");
 
         // Glacier melt process
-        m_model.SelectBrick("glacier");
+        m_model.SelectHydroUnitBrick("glacier");
         m_model.AddBrickProcess("melt", "Melt:degree-day");
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
@@ -61,13 +61,13 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.AddProcessOutput("glacier-surface");
 
         // Surface brick for the bare ground with a linear storage
-        m_model.SelectBrick("ground-surface");
+        m_model.SelectHydroUnitBrick("ground-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet", true);
 
         // Surface brick for the glacier part with a linear storage
-        m_model.SelectBrick("glacier-surface");
+        m_model.SelectHydroUnitBrick("glacier-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet", true);
@@ -108,7 +108,7 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
     EXPECT_TRUE(model.Run());
 /*
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
 

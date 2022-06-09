@@ -15,7 +15,7 @@ class ModelBasics : public ::testing::Test {
         // Model 1: simple linear storage
         m_model1.SetSolver("EulerExplicit");
         m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
-        m_model1.AddBrick("storage", "Storage");
+        m_model1.AddHydroUnitBrick("storage", "Storage");
         m_model1.AddBrickForcing("Precipitation");
         m_model1.AddBrickLogging("content");
         m_model1.AddBrickProcess("outflow", "Outflow:linear");
@@ -27,14 +27,14 @@ class ModelBasics : public ::testing::Test {
         // Model 2: 2 linear storages in cascade
         m_model2.SetSolver("EulerExplicit");
         m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
-        m_model2.AddBrick("storage-1", "Storage");
+        m_model2.AddHydroUnitBrick("storage-1", "Storage");
         m_model2.AddBrickForcing("Precipitation");
         m_model2.AddBrickLogging("content");
         m_model2.AddBrickProcess("outflow", "Outflow:linear");
         m_model2.AddProcessParameter("responseFactor", 0.5f);
         m_model2.AddProcessLogging("output");
         m_model2.AddProcessOutput("storage-2");
-        m_model2.AddBrick("storage-2", "Storage");
+        m_model2.AddHydroUnitBrick("storage-2", "Storage");
         m_model2.AddBrickLogging("content");
         m_model2.AddBrickProcess("outflow", "Outflow:linear");
         m_model2.AddProcessParameter("responseFactor", 0.3f);

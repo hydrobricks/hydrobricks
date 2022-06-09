@@ -1,8 +1,8 @@
 #include "SurfaceComponent.h"
 #include "HydroUnit.h"
 
-SurfaceComponent::SurfaceComponent(HydroUnit* hydroUnit)
-    : Brick(hydroUnit),
+SurfaceComponent::SurfaceComponent()
+    : Brick(),
       m_areaFraction(1.0)
 {
     m_needsSolver = false;

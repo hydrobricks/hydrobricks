@@ -19,7 +19,7 @@ class SnowpackModel : public ::testing::Test {
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Snowpack brick
-        m_model.AddBrick("snowpack", "Snowpack");
+        m_model.AddHydroUnitBrick("snowpack", "Snowpack");
         m_model.AddBrickLogging("content");
         m_model.AddBrickLogging("snow");
 
@@ -37,7 +37,7 @@ class SnowpackModel : public ::testing::Test {
         m_model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        m_model.AddSplitter("snow-rain", "SnowRain");
+        m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
         m_model.AddSplitterForcing("Precipitation");
         m_model.AddSplitterForcing("Temperature");
         m_model.AddSplitterOutput("outlet"); // rain
@@ -81,7 +81,7 @@ TEST_F(SnowpackModel, DegreeDay) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
 
@@ -115,7 +115,7 @@ class GlacierModel : public ::testing::Test {
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Glacier brick
-        m_model.AddBrick("glacier", "Glacier");
+        m_model.AddHydroUnitBrick("glacier", "Glacier");
 
         // Glacier melt process
         m_model.AddBrickProcess("melt", "Melt:degree-day");
@@ -155,7 +155,7 @@ TEST_F(GlacierModel, UnlimitedSupply) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 18.0, 21.0};
 
@@ -186,7 +186,7 @@ protected:
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Snowpack brick
-        m_model.AddBrick("snowpack", "Snowpack");
+        m_model.AddHydroUnitBrick("snowpack", "Snowpack");
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "Melt:degree-day");
@@ -197,7 +197,7 @@ protected:
         m_model.AddProcessOutput("glacier");
 
         // Glacier brick
-        m_model.AddBrick("glacier", "Glacier");
+        m_model.AddHydroUnitBrick("glacier", "Glacier");
         m_model.AddToRelatedSurfaceBrick("snowpack");
         m_model.AddBrickParameter("noMeltWhenSnowCover", true);
 
@@ -215,7 +215,7 @@ protected:
         m_model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        m_model.AddSplitter("snow-rain", "SnowRain");
+        m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
         m_model.AddSplitterForcing("Precipitation");
         m_model.AddSplitterForcing("Temperature");
         m_model.AddSplitterOutput("outlet"); // rain
@@ -261,7 +261,7 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 4.0, 8.0, 4.0, 4.0, 4.0, 4.0, 4.0};
 

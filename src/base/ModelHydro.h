@@ -50,9 +50,15 @@ class ModelHydro : public wxObject {
   private:
     void BuildModelStructure(SettingsModel& modelSettings);
 
+    void CreateSubBasinComponents(SettingsModel& modelSettings);
+
+    void CreateHydroUnitsComponents(SettingsModel& modelSettings);
+
     void LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit);
 
-    void LinkProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
+    void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
+
+    void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
 
     void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
@@ -60,9 +66,13 @@ class ModelHydro : public wxObject {
 
     void BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
 
-    void BuildBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit);
+    void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
 
-    void BuildSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit);
+    void BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit);
+
+    void BuildSubBasinSplittersFluxes(SettingsModel& modelSettings);
+
+    void BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit);
 
     void ConnectLoggerToValues(SettingsModel& modelSettings);
 

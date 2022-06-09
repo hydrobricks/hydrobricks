@@ -26,21 +26,21 @@ class FluxWeightedModel : public ::testing::Test {
         m_model.GenerateSurfaceBricks();
 
         // Direct outflow processes
-        m_model.SelectBrick("item-1");
+        m_model.SelectHydroUnitBrick("item-1");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("item-1-surface");
-        m_model.SelectBrick("item-2");
+        m_model.SelectHydroUnitBrick("item-2");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("item-2-surface");
 
         // Surface bricks
-        m_model.SelectBrick("item-1-surface");
+        m_model.SelectHydroUnitBrick("item-1-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet", true);
-        m_model.SelectBrick("item-2-surface");
+        m_model.SelectHydroUnitBrick("item-2-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet", true);
@@ -79,7 +79,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -124,7 +124,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -169,7 +169,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 

@@ -6,7 +6,7 @@
 
 class Storage : public Brick {
   public:
-    Storage(HydroUnit *hydroUnit);
+    Storage();
 
     /**
      * @copydoc Brick::AssignParameters()

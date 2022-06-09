@@ -8,7 +8,7 @@ class Flux;
 
 class SplitterMultiFluxes : public Splitter {
   public:
-    explicit SplitterMultiFluxes(HydroUnit *hydroUnit);
+    explicit SplitterMultiFluxes();
 
     /**
      * @copydoc Splitter::IsOk()

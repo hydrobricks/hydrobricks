@@ -56,8 +56,10 @@ struct ModelStructure {
     int id;
     vecStr logItems;
     std::vector<BrickSettings> surfaceBricks;
-    std::vector<BrickSettings> bricks;
-    std::vector<SplitterSettings> splitters;
+    std::vector<BrickSettings> hydroUnitBricks;
+    std::vector<BrickSettings> subBasinBricks;
+    std::vector<SplitterSettings> hydroUnitSplitters;
+    std::vector<SplitterSettings> subBasinSplitters;
 };
 
 class SettingsModel : public wxObject {
@@ -70,7 +72,9 @@ class SettingsModel : public wxObject {
 
     void SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit);
 
-    void AddBrick(const wxString &name, const wxString &type);
+    void AddHydroUnitBrick(const wxString &name, const wxString &type);
+
+    void AddSubBasinBrick(const wxString &name, const wxString &type);
 
     void AddSurfaceBrick(const wxString &name, const wxString &type);
 
@@ -90,7 +94,9 @@ class SettingsModel : public wxObject {
 
     void OutputProcessToSameBrick();
 
-    void AddSplitter(const wxString &name, const wxString &type);
+    void AddHydroUnitSplitter(const wxString &name, const wxString &type);
+
+    void AddSubBasinSplitter(const wxString &name, const wxString &type);
 
     void AddSplitterParameter(const wxString &name, float value, const wxString &type = "Constant");
 
@@ -118,17 +124,25 @@ class SettingsModel : public wxObject {
 
     bool SelectStructure(int id);
 
-    void SelectBrick(int index);
+    void SelectHydroUnitBrick(int index);
 
-    void SelectBrick(const wxString &name);
+    void SelectSubBasinBrick(int index);
+
+    void SelectHydroUnitBrick(const wxString &name);
+
+    void SelectSubBasinBrick(const wxString &name);
 
     void SelectProcess(int index);
 
     void SelectProcess(const wxString &name);
 
-    void SelectSplitter(int index);
+    void SelectHydroUnitSplitter(int index);
 
-    void SelectSplitter(const wxString &name);
+    void SelectSubBasinSplitter(int index);
+
+    void SelectHydroUnitSplitter(const wxString &name);
+
+    void SelectSubBasinSplitter(const wxString &name);
 
     bool Parse(const wxString &path);
 
@@ -136,9 +150,14 @@ class SettingsModel : public wxObject {
         return int(m_modelStructures.size());
     }
 
-    int GetBricksNb() const {
+    int GetHydroUnitBricksNb() const {
         wxASSERT(m_selectedStructure);
-        return int(m_selectedStructure->bricks.size());
+        return int(m_selectedStructure->hydroUnitBricks.size());
+    }
+
+    int GetSubBasinBricksNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->subBasinBricks.size());
     }
 
     int GetProcessesNb() const {
@@ -146,9 +165,14 @@ class SettingsModel : public wxObject {
         return int(m_selectedBrick->processes.size());
     }
 
-    int GetSplittersNb() const {
+    int GetHydroUnitSplittersNb() const {
         wxASSERT(m_selectedStructure);
-        return int(m_selectedStructure->splitters.size());
+        return int(m_selectedStructure->hydroUnitSplitters.size());
+    }
+
+    int GetSubBasinSplittersNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->subBasinSplitters.size());
     }
 
     SolverSettings GetSolverSettings() const {
@@ -159,9 +183,14 @@ class SettingsModel : public wxObject {
         return m_timer;
     }
 
-    BrickSettings GetBrickSettings(int index) const {
+    BrickSettings GetHydroUnitBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
-        return m_selectedStructure->bricks[index];
+        return m_selectedStructure->hydroUnitBricks[index];
+    }
+
+    BrickSettings GetSubBasinBrickSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->subBasinBricks[index];
     }
 
     ProcessSettings GetProcessSettings(int index) const {
@@ -169,12 +198,17 @@ class SettingsModel : public wxObject {
         return m_selectedBrick->processes[index];
     }
 
-    SplitterSettings GetSplitterSettings(int index) const {
+    SplitterSettings GetHydroUnitSplitterSettings(int index) const {
         wxASSERT(m_selectedStructure);
-        return m_selectedStructure->splitters[index];
+        return m_selectedStructure->hydroUnitSplitters[index];
     }
 
-    vecStr GetAggregatedLogLabels();
+    SplitterSettings GetSubBasinSplitterSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->subBasinSplitters[index];
+    }
+
+    vecStr GetSubBasinLogLabels();
 
     vecStr GetHydroUnitLogLabels();
 

@@ -6,7 +6,7 @@
 
 class GenericSurface : public SurfaceComponent {
   public:
-    GenericSurface(HydroUnit *hydroUnit);
+    GenericSurface();
 
     /**
      * @copydoc Brick::AssignParameters()

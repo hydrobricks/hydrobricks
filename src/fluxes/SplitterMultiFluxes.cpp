@@ -1,7 +1,7 @@
 #include "SplitterMultiFluxes.h"
 
-SplitterMultiFluxes::SplitterMultiFluxes(HydroUnit *hydroUnit)
-    : Splitter(hydroUnit)
+SplitterMultiFluxes::SplitterMultiFluxes()
+    : Splitter()
 {}
 
 bool SplitterMultiFluxes::IsOk() {

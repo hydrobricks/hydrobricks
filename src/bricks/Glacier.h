@@ -7,7 +7,7 @@
 
 class Glacier : public SurfaceComponent {
   public:
-    Glacier(HydroUnit *hydroUnit);
+    Glacier();
 
     /**
      * @copydoc Brick::AssignParameters()

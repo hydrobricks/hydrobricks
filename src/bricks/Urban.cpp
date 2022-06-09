@@ -1,7 +1,7 @@
 #include "Urban.h"
 
-Urban::Urban(HydroUnit *hydroUnit)
-    : SurfaceComponent(hydroUnit)
+Urban::Urban()
+    : SurfaceComponent()
 {}
 
 void Urban::AssignParameters(const BrickSettings &brickSettings) {

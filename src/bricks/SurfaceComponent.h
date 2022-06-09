@@ -8,7 +8,7 @@ class HydroUnit;
 
 class SurfaceComponent : public Brick {
   public:
-    SurfaceComponent(HydroUnit* hydroUnit);
+    SurfaceComponent();
 
     bool IsSurfaceComponent() override {
         return true;

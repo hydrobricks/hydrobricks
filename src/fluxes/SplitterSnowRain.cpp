@@ -1,7 +1,7 @@
 #include "SplitterSnowRain.h"
 
-SplitterSnowRain::SplitterSnowRain(HydroUnit *hydroUnit)
-    : Splitter(hydroUnit)
+SplitterSnowRain::SplitterSnowRain()
+    : Splitter()
 {}
 
 bool SplitterSnowRain::IsOk() {

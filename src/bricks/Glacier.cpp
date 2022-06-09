@@ -1,7 +1,7 @@
 #include "Glacier.h"
 
-Glacier::Glacier(HydroUnit *hydroUnit)
-    : SurfaceComponent(hydroUnit),
+Glacier::Glacier()
+    : SurfaceComponent(),
       m_ice(nullptr),
       m_infiniteStorage(true),
       m_noMeltWhenSnowCover(false)

@@ -6,7 +6,7 @@
 
 class Snowpack : public SurfaceComponent {
   public:
-    Snowpack(HydroUnit *hydroUnit);
+    Snowpack();
 
     /**
      * @copydoc Brick::AssignParameters()

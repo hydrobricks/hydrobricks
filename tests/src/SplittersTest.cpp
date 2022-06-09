@@ -41,7 +41,7 @@ TEST_F(Splitters, SnowRain) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.AddSplitter("snow-rain", "SnowRain");
+    m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
     m_model.AddSplitterForcing("Precipitation");
     m_model.AddSplitterForcing("Temperature");
     m_model.AddSplitterOutput("outlet"); // rain
@@ -63,7 +63,7 @@ TEST_F(Splitters, SnowRain) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting sum (only the sum of rain and snow)
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0};
 

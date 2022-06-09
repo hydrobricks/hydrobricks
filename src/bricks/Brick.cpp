@@ -9,15 +9,10 @@
 #include "Urban.h"
 #include "Vegetation.h"
 
-Brick::Brick(HydroUnit *hydroUnit)
+Brick::Brick()
     : m_needsSolver(true),
-      m_container(nullptr),
-      m_hydroUnit(hydroUnit)
+      m_container(nullptr)
 {
-    if (hydroUnit) {
-        hydroUnit->AddBrick(this);
-    }
-
     m_container = new WaterContainer(this);
 }
 
@@ -25,35 +20,21 @@ Brick::~Brick() {
     wxDELETE(m_container);
 }
 
-Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
+Brick* Brick::Factory(const BrickSettings &brickSettings) {
     if (brickSettings.type.IsSameAs("Storage")) {
-        auto brick = new Storage(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Storage();
     } else if (brickSettings.type.IsSameAs("Surface")) {
-        auto brick = new Surface(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Surface();
     } else if (brickSettings.type.IsSameAs("GenericSurface")) {
-        auto brick = new GenericSurface(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new GenericSurface();
     } else if (brickSettings.type.IsSameAs("Glacier")) {
-        auto brick = new Glacier(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Glacier();
     } else if (brickSettings.type.IsSameAs("Snowpack")) {
-        auto brick = new Snowpack(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Snowpack();
     } else if (brickSettings.type.IsSameAs("Urban")) {
-        auto brick = new Urban(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Urban();
     } else if (brickSettings.type.IsSameAs("Vegetation")) {
-        auto brick = new Vegetation(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Vegetation();
     } else {
         wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
     }
@@ -62,10 +43,6 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
 }
 
 bool Brick::IsOk() {
-    if (m_hydroUnit == nullptr) {
-        wxLogError(_("The brick is not attached to a hydro unit."));
-        return false;
-    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;

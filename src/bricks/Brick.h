@@ -7,15 +7,13 @@
 #include "SettingsModel.h"
 #include "WaterContainer.h"
 
-class HydroUnit;
-
 class Brick : public wxObject {
   public:
-    explicit Brick(HydroUnit* hydroUnit);
+    explicit Brick();
 
     ~Brick() override;
 
-    static Brick* Factory(const BrickSettings &brickSettings, HydroUnit* unit);
+    static Brick* Factory(const BrickSettings &brickSettings);
 
     static bool HasParameter(const BrickSettings &brickSettings, const wxString &name);
 
@@ -113,7 +111,6 @@ class Brick : public wxObject {
     wxString m_name;
     bool m_needsSolver;
     WaterContainer* m_container;
-    HydroUnit* m_hydroUnit;
     std::vector<Process*> m_processes;
 
   private:

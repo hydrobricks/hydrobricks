@@ -689,21 +689,31 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         AddProcessLogging("output");
     }
 
-
     SelectHydroUnitBrick("ground-surface");
-
-
+    AddBrickProcess("infiltration", "Infiltration:Socont");
+    AddProcessOutput("slow-reservoir");
+    AddBrickProcess("outflow", "Outflow:rest-direct");
+    AddProcessOutput("quick-reservoir");
 
     // Add other bricks
     if (soilStorageNb == 1) {
         AddHydroUnitBrick("slow-reservoir", "Storage");
+        AddBrickProcess("ET", "ET:Socont");
+        AddProcessForcing("PET");
         AddBrickProcess("outflow", "Outflow:linear");
+        AddProcessOutput("outlet");
         if (logAll) {
             AddBrickLogging("content");
             AddProcessLogging("output");
+            SelectProcess("ET");
+            AddProcessLogging("output");
+            SelectProcess("outflow");
+            AddProcessLogging("output");
         }
     } else if (soilStorageNb == 2) {
-        AddHydroUnitBrick("slow-reservoir-1", "Storage");
+        AddHydroUnitBrick("slow-reservoir", "Storage");
+        AddBrickProcess("ET", "ET:Socont");
+        AddProcessForcing("PET");
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessOutput("outlet");
         AddBrickProcess("percolation", "Outflow:constant");
@@ -712,7 +722,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessOutput("outlet");
         if (logAll) {
-            SelectHydroUnitBrick("slow-reservoir-1");
+            SelectHydroUnitBrick("slow-reservoir");
             AddBrickLogging("content");
             SelectProcess("outflow");
             AddProcessLogging("output");
@@ -727,8 +737,13 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         wxLogError(_("There can be only one or two groundwater storage(s)."));
     }
 
-
-
+    AddHydroUnitBrick("quick-reservoir", "Storage");
+    AddBrickProcess("outflow", "Runoff:Socont");
+    AddProcessOutput("outlet");
+    if (logAll) {
+        AddBrickLogging("content");
+        AddProcessLogging("output");
+    }
 
     AddLoggingToItem("outlet");
 

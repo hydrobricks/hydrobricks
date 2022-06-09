@@ -81,6 +81,7 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
         }
 
         LinkRelatedSurfaceBricks(modelSettings, unit);
+        LinkProcessesTargetBricks(modelSettings, unit);
         BuildBricksFluxes(modelSettings, unit);
         BuildSplittersFluxes(modelSettings, unit);
     }
@@ -94,6 +95,26 @@ void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUni
             for (const auto& relatedSurfaceBrick: brickSettings.relatedSurfaceBricks) {
                 auto relatedBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
                 brick->AddToRelatedBricks(relatedBrick);
+            }
+        }
+    }
+}
+
+void ModelHydro::LinkProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetBricksNb(); ++iBrick) {
+        modelSettings.SelectBrick(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            Brick* brick = unit->GetBrick(iBrick);
+            Process* process = brick->GetProcess(iProcess);
+
+            if (process->NeedsTargetBrickLinking()) {
+                if (processSettings.outputs.size() != 1) {
+                    throw ConceptionIssue(_("There can only be a single process output for brick linking."));
+                }
+                Brick* targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                process->SetTargetBrick(targetBrick);
             }
         }
     }

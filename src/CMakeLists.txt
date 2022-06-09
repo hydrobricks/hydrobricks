@@ -46,3 +46,8 @@ add_library(core STATIC ${src_core})
 
 # Specific definitions
 set_target_properties(core PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
+
+
+##### LINKING
+
+target_link_libraries(core ${CONAN_LIBS})

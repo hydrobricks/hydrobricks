@@ -52,6 +52,8 @@ class ModelHydro : public wxObject {
 
     void LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit);
 
+    void LinkProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
+
     void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
     void BuildForcingConnections(ProcessSettings &processSettings, HydroUnit* unit, Process* process);

@@ -61,6 +61,10 @@ class Process : public wxObject {
         return false;
     }
 
+    virtual bool NeedsTargetBrickLinking() {
+        return false;
+    }
+
     virtual int GetConnectionsNb() = 0;
 
     virtual vecDouble GetChangeRates() = 0;
@@ -96,6 +100,10 @@ class Process : public wxObject {
 
     WaterContainer* GetWaterContainer() {
         return m_container;
+    }
+
+    virtual void SetTargetBrick(Brick*) {
+        throw ShouldNotHappen();
     }
 
   protected:

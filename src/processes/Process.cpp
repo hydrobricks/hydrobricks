@@ -10,6 +10,7 @@
 #include "ProcessOutflowOverflow.h"
 #include "Snowpack.h"
 #include "Glacier.h"
+#include "ProcessInfiltrationSocont.h"
 
 Process::Process(WaterContainer* container)
     : m_container(container)
@@ -29,6 +30,10 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
         return process;
     } else if (processSettings.type.IsSameAs("Outflow:direct", false)) {
         auto process = new ProcessOutflowDirect(brick->GetWaterContainer());
+        brick->AddProcess(process);
+        return process;
+    } else if (processSettings.type.IsSameAs("Infiltration:Socont", false)) {
+        auto process = new ProcessInfiltrationSocont(brick->GetWaterContainer());
         brick->AddProcess(process);
         return process;
     } else if (processSettings.type.IsSameAs("Overflow", false)) {

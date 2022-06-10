@@ -1,6 +1,6 @@
 #include <netcdf.h>
 
-#include "Utilities.h"
+#include "Utils.h"
 
 bool IsNaN(const int value) {
     return value == NaNi;
@@ -198,4 +198,71 @@ void CheckNcStatus(int status) {
     if (status != NC_NOERR) {
         throw InvalidArgument(nc_strerror(status));
     }
+}
+
+Time GetTimeStructFromMJD(double mjd, int method) {
+    wxASSERT(mjd > 0);
+
+    // To Julian day
+    double jd = mjd + 2400001;  // And not 2400000.5 (not clear why...)
+
+    Time date;
+
+    // Remaining seconds
+    double rest = jd - floor(jd);
+    double sec = round(rest * 86400);
+    date.hour = (int)floor((float)(sec / 3600));
+    sec -= date.hour * 3600;
+    date.min = (int)floor((float)(sec / 60));
+    sec -= date.min * 60;
+    date.sec = (int)sec;
+
+    switch (method) {
+        case (1):
+
+            long a, b, c, d, e, z;
+
+            z = (long)jd;
+            if (z < 2299161L)
+                a = z;
+            else {
+                auto alpha = (long)((z - 1867216.25) / 36524.25);
+                a = z + 1 + alpha - alpha / 4;
+            }
+            b = a + 1524;
+            c = (long)((b - 122.1) / 365.25);
+            d = (long)(365.25 * c);
+            e = (long)((b - d) / 30.6001);
+            date.day = (int)b - d - (long)(30.6001 * e);
+            date.month = (int)(e < 13.5) ? e - 1 : e - 13;
+            date.year = (int)(date.month > 2.5) ? (c - 4716) : c - 4715;
+            if (date.year <= 0) date.year -= 1;
+
+            break;
+
+        case (2):
+
+            long t1, t2, yr, mo;
+
+            t1 = (long)jd + 68569L;
+            t2 = 4L * t1 / 146097L;
+            t1 = t1 - (146097L * t2 + 3L) / 4L;
+            yr = 4000L * (t1 + 1L) / 1461001L;
+            t1 = t1 - 1461L * yr / 4L + 31L;
+            mo = 80L * t1 / 2447L;
+            date.day = (int)(t1 - 2447L * mo / 80L);
+            t1 = mo / 11L;
+            date.month = (int)(mo + 2L - 12L * t1);
+            date.year = (int)(100L * (t2 - 49L) + yr + t1);
+
+            // Correct for BC years
+            if (date.year <= 0) date.year -= 1;
+
+            break;
+
+        default:
+            wxLogError(_("Incorrect method."));
+    }
+
+    return date;
 }

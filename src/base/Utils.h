@@ -1,5 +1,5 @@
-#ifndef HYDROBRICKS_UTILITIES_H
-#define HYDROBRICKS_UTILITIES_H
+#ifndef HYDROBRICKS_UTILS_H
+#define HYDROBRICKS_UTILS_H
 
 #include "Includes.h"
 
@@ -22,4 +22,6 @@ wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit);
 
 void CheckNcStatus(int status);
 
-#endif  // HYDROBRICKS_UTILITIES_H
+Time GetTimeStructFromMJD(double mjd, int method = 1);
+
+#endif  // HYDROBRICKS_UTILS_H

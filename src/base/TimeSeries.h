@@ -10,6 +10,8 @@ class TimeSeries : public wxObject {
 
     ~TimeSeries() override = default;
 
+    static bool Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSeries);
+
     virtual bool SetCursorToDate(const wxDateTime &dateTime) = 0;
 
     virtual bool AdvanceOneTimeStep() = 0;

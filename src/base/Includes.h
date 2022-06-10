@@ -134,6 +134,7 @@ class NotFound : public std::logic_error
 // Own classes
 //---------------------------------
 
+#include "GlobVars.h"
 #include "TypeDefs.h"
 #include "Enums.h"
 #include "Utilities.h"

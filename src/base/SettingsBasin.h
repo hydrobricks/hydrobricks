@@ -6,12 +6,14 @@
 
 struct SurfaceElementSettings {
     wxString name;
-    double ratio;
+    wxString type;
+    double fraction;
 };
 
 struct HydroUnitSettings {
     int id;
     double area;
+    double elevation;
     std::vector<SurfaceElementSettings> surfaceElements;
 };
 
@@ -23,9 +25,11 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area);
 
-    void AddSurfaceElementToCurrentUnit(const wxString& name, double ratio = 1.0);
+    void AddSurfaceElementToCurrentUnit(const wxString& name, double fraction = 1.0);
 
     void SelectUnit(int index);
+
+    bool Parse(const wxString &path);
 
     HydroUnitSettings GetHydroUnitSettings(int index) {
         wxASSERT(m_hydroUnits.size() > index);

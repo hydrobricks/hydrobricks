@@ -30,7 +30,7 @@ class Flux : public wxObject {
      */
     virtual void UpdateFlux(double amount) {
         if (m_needsWeighting) {
-            m_amount = amount * m_ratio;
+            m_amount = amount * m_fraction;
         } else {
             m_amount = amount;
         }
@@ -69,8 +69,16 @@ class Flux : public wxObject {
         m_needsWeighting = value;
     }
 
-    void SetRatio(double value) {
-        m_ratio = value;
+    void SetFraction(double value) {
+        m_fraction = value;
+    }
+
+    wxString GetType() {
+        return m_type;
+    }
+
+    void SetType(const wxString& type) {
+        m_type = type;
     }
 
   protected:
@@ -78,8 +86,9 @@ class Flux : public wxObject {
     double* m_changeRate;
     bool m_static;
     bool m_needsWeighting;
-    double m_ratio;
+    double m_fraction;
     Modifier* m_modifier;
+    wxString m_type;
 
   private:
 };

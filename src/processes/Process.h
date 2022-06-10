@@ -7,10 +7,11 @@
 #include "Flux.h"
 
 class Brick;
+class WaterContainer;
 
 class Process : public wxObject {
   public:
-    explicit Process(Brick* brick);
+    explicit Process(WaterContainer* container);
 
     ~Process() override = default;
 
@@ -52,7 +53,15 @@ class Process : public wxObject {
         return m_outputs;
     }
 
+    int GetOutputFluxesNb() {
+        return int(m_outputs.size());
+    }
+
     virtual bool ToAtmosphere() {
+        return false;
+    }
+
+    virtual bool NeedsTargetBrickLinking() {
         return false;
     }
 
@@ -79,7 +88,7 @@ class Process : public wxObject {
 
     virtual double* GetValuePointer(const wxString& name);
 
-    void SetOutputFluxesRatio(double value);
+    void SetOutputFluxesFraction(double value);
 
     wxString GetName() {
         return m_name;
@@ -89,10 +98,20 @@ class Process : public wxObject {
         m_name = name;
     }
 
+    WaterContainer* GetWaterContainer() {
+        return m_container;
+    }
+
+    virtual void SetTargetBrick(Brick*) {
+        throw ShouldNotHappen();
+    }
+
   protected:
     wxString m_name;
-    Brick* m_brick;
+    WaterContainer* m_container;
     std::vector<Flux*> m_outputs;
+
+    double GetSumChangeRatesOtherProcesses();
 
   private:
 };

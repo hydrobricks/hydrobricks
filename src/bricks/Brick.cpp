@@ -9,53 +9,32 @@
 #include "Urban.h"
 #include "Vegetation.h"
 
-Brick::Brick(HydroUnit *hydroUnit, bool withWaterContainer)
+Brick::Brick()
     : m_needsSolver(true),
-      m_container(nullptr),
-      m_hydroUnit(hydroUnit)
+      m_container(nullptr)
 {
-    if (hydroUnit) {
-        hydroUnit->AddBrick(this);
-    }
-
-    if (withWaterContainer) {
-        m_container = new WaterContainer(this);
-    }
+    m_container = new WaterContainer(this);
 }
 
 Brick::~Brick() {
     wxDELETE(m_container);
 }
 
-Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
+Brick* Brick::Factory(const BrickSettings &brickSettings) {
     if (brickSettings.type.IsSameAs("Storage")) {
-        auto brick = new Storage(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Storage();
     } else if (brickSettings.type.IsSameAs("Surface")) {
-        auto brick = new Surface(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Surface();
     } else if (brickSettings.type.IsSameAs("GenericSurface")) {
-        auto brick = new GenericSurface(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new GenericSurface();
     } else if (brickSettings.type.IsSameAs("Glacier")) {
-        auto brick = new Glacier(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Glacier();
     } else if (brickSettings.type.IsSameAs("Snowpack")) {
-        auto brick = new Snowpack(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Snowpack();
     } else if (brickSettings.type.IsSameAs("Urban")) {
-        auto brick = new Urban(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Urban();
     } else if (brickSettings.type.IsSameAs("Vegetation")) {
-        auto brick = new Vegetation(unit);
-        brick->AssignParameters(brickSettings);
-        return brick;
+        return new Vegetation();
     } else {
         wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
     }
@@ -64,10 +43,6 @@ Brick* Brick::Factory(const BrickSettings &brickSettings, HydroUnit* unit) {
 }
 
 bool Brick::IsOk() {
-    if (m_hydroUnit == nullptr) {
-        wxLogError(_("The brick is not attached to a hydro unit."));
-        return false;
-    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;
@@ -79,9 +54,13 @@ bool Brick::IsOk() {
 
 void Brick::AssignParameters(const BrickSettings &brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
-        CheckWaterContainer();
         m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
+}
+
+void Brick::AttachFluxIn(Flux* flux) {
+    wxASSERT(flux);
+    m_container->AttachFluxIn(flux);
 }
 
 bool Brick::HasParameter(const BrickSettings &brickSettings, const wxString &name) {
@@ -113,63 +92,24 @@ Process* Brick::GetProcess(int index) {
     return m_processes[index];
 }
 
-void Brick::SubtractAmount(double change) {
-    if (HasWaterContainer()) {
-        m_container->SubtractAmount(change);
-    }
-}
-
-void Brick::AddAmount(double change) {
-    CheckWaterContainer();
-    m_container->AddAmount(change);
-}
-
 void Brick::Finalize() {
-    CheckWaterContainer();
     m_container->Finalize();
 }
 
-double Brick::SumIncomingFluxes() {
-    double sum = 0;
-    for (auto & input : m_inputs) {
-        sum += input->GetAmount();
-    }
-
-    return sum;
-}
-
 void Brick::UpdateContentFromInputs() {
-    if (HasWaterContainer()) {
-        m_container->AddAmount(SumIncomingFluxes());
-    }
+    m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    if (m_container) {
-        m_container->ApplyConstraints(timeStep);
-    }
-}
-
-void Brick::CheckWaterContainer() {
-    if (m_container == nullptr) {
-        throw ConceptionIssue(_("Trying to access the water container of a brick that has none."));
-    }
-}
-
-bool Brick::HasWaterContainer() {
-    return m_container != nullptr;
+    m_container->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {
-    CheckWaterContainer();
     return m_container;
 }
 
 vecDoublePt Brick::GetStateVariableChanges() {
-    if (m_container) {
-        return m_container->GetStateVariableChanges();
-    }
-    return vecDoublePt {};
+    return m_container->GetStateVariableChanges();
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {

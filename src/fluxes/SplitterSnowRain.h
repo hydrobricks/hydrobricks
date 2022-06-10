@@ -7,7 +7,7 @@
 
 class SplitterSnowRain : public Splitter {
   public:
-    explicit SplitterSnowRain(HydroUnit *hydroUnit);
+    explicit SplitterSnowRain();
 
     /**
      * @copydoc Splitter::IsOk()

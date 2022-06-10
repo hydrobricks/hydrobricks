@@ -20,4 +20,6 @@ int FindT(const T *start, const T *end, T value, T tolerance = 0, bool showWarni
 
 wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit);
 
+void CheckNcStatus(int status);
+
 #endif  // HYDROBRICKS_UTILITIES_H

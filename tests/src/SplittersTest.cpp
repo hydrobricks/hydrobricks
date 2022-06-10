@@ -14,7 +14,7 @@ class Splitters : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
     TimeSeriesUniform* m_tsTemp{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
@@ -30,7 +30,7 @@ class Splitters : public ::testing::Test {
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
         wxDELETE(m_tsTemp);
     }
@@ -41,15 +41,15 @@ TEST_F(Splitters, SnowRain) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.AddSplitter("snow-rain", "SnowRain");
-    m_model.AddForcingToCurrentSplitter("Precipitation");
-    m_model.AddForcingToCurrentSplitter("Temperature");
-    m_model.AddOutputToCurrentSplitter("outlet"); // rain
-    m_model.AddOutputToCurrentSplitter("outlet"); // snow
-    m_model.AddLoggingToCurrentSplitter("rain");
-    m_model.AddLoggingToCurrentSplitter("snow");
-    m_model.AddParameterToCurrentSplitter("transitionStart", 0.0f);
-    m_model.AddParameterToCurrentSplitter("transitionEnd", 2.0f);
+    m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
+    m_model.AddSplitterForcing("Precipitation");
+    m_model.AddSplitterForcing("Temperature");
+    m_model.AddSplitterOutput("outlet"); // rain
+    m_model.AddSplitterOutput("outlet"); // snow
+    m_model.AddSplitterLogging("rain");
+    m_model.AddSplitterLogging("snow");
+    m_model.AddSplitterParameter("transitionStart", 0.0f);
+    m_model.AddSplitterParameter("transitionEnd", 2.0f);
     m_model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);
@@ -63,7 +63,7 @@ TEST_F(Splitters, SnowRain) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting sum (only the sum of rain and snow)
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0};
 

@@ -7,7 +7,7 @@
 
 class ProcessMeltDegreeDay : public ProcessMelt {
   public:
-    explicit ProcessMeltDegreeDay(Brick* brick);
+    explicit ProcessMeltDegreeDay(WaterContainer* container);
 
     ~ProcessMeltDegreeDay() override = default;
 

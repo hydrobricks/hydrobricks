@@ -7,7 +7,7 @@
 
 class ProcessETSocont : public ProcessET {
   public:
-    explicit ProcessETSocont(Brick* brick);
+    explicit ProcessETSocont(WaterContainer* container);
 
     ~ProcessETSocont() override = default;
 

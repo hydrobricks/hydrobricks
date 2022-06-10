@@ -8,28 +8,28 @@ class HydroUnit;
 
 class SurfaceComponent : public Brick {
   public:
-    SurfaceComponent(HydroUnit* hydroUnit, bool withWaterContainer);
+    SurfaceComponent();
 
     bool IsSurfaceComponent() override {
         return true;
     }
 
-    double GetAreaRatio() {
-        return m_areaRatio;
+    double GetAreaFraction() {
+        return m_areaFraction;
     }
 
-    void SetAreaRatio(double value);
+    void SetAreaFraction(double value);
 
     bool IsNull() override {
-        return m_areaRatio == 0.0;
+        return m_areaFraction == 0.0;
     }
 
-    void AddToRelatedBricks(SurfaceComponent* brick) {
+    virtual void AddToRelatedBricks(SurfaceComponent* brick) {
         m_relatedBricks.push_back(brick);
     }
 
   protected:
-    double m_areaRatio;
+    double m_areaFraction;
     std::vector<SurfaceComponent*> m_relatedBricks;
 
   private:

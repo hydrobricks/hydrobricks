@@ -40,7 +40,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     }
 }
 
-bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
+bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
 
     try {
         for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
@@ -50,11 +50,11 @@ bool SubBasin::AssignRatios(SettingsBasin& basinSettings) {
                 SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
-                brick->SetAreaRatio(elementSettings.ratio);
+                brick->SetAreaFraction(elementSettings.fraction);
             }
         }
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred while assigning the ratios: %s."), e.what());
+        wxLogError(_("An exception occurred while assigning the fractions: %s."), e.what());
         return false;
     }
 
@@ -69,8 +69,24 @@ bool SubBasin::IsOk() {
     for (auto unit : m_hydroUnits) {
         if (!unit->IsOk()) return false;
     }
+    for (auto brick : m_bricks) {
+        if (!brick->IsOk()) return false;
+    }
+    for (auto splitter : m_splitters) {
+        if (!splitter->IsOk()) return false;
+    }
 
     return true;
+}
+
+void SubBasin::AddBrick(Brick* brick) {
+    wxASSERT(brick);
+    m_bricks.push_back(brick);
+}
+
+void SubBasin::AddSplitter(Splitter* splitter) {
+    wxASSERT(splitter);
+    m_splitters.push_back(splitter);
 }
 
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
@@ -86,6 +102,66 @@ HydroUnit* SubBasin::GetHydroUnit(int index) {
     wxASSERT(m_hydroUnits[index]);
 
     return m_hydroUnits[index];
+}
+
+int SubBasin::GetBricksCount() {
+    return int(m_bricks.size());
+}
+
+int SubBasin::GetSplittersCount() {
+    return int(m_splitters.size());
+}
+
+Brick* SubBasin::GetBrick(int index) {
+    wxASSERT(m_bricks.size() > index);
+    wxASSERT(m_bricks[index]);
+
+    return m_bricks[index];
+}
+
+bool SubBasin::HasBrick(const wxString &name) {
+    for (auto brick: m_bricks) {
+        if (brick->GetName().IsSameAs(name, false)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Brick* SubBasin::GetBrick(const wxString &name) {
+    for (auto brick: m_bricks) {
+        if (brick->GetName().IsSameAs(name, false)) {
+            return brick;
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
+}
+
+Splitter* SubBasin::GetSplitter(int index) {
+    wxASSERT(m_splitters.size() > index);
+    wxASSERT(m_splitters[index]);
+
+    return m_splitters[index];
+}
+
+bool SubBasin::HasSplitter(const wxString &name) {
+    for (auto splitter: m_splitters) {
+        if (splitter->GetName().IsSameAs(name, false)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Splitter* SubBasin::GetSplitter(const wxString &name) {
+    for (auto splitter: m_splitters) {
+        if (splitter->GetName().IsSameAs(name, false)) {
+            return splitter;
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
 }
 
 bool SubBasin::HasIncomingFlow() {
@@ -121,7 +197,7 @@ double* SubBasin::GetValuePointer(const wxString& name) {
     return nullptr;
 }
 
-bool SubBasin::ComputeAggregatedValues() {
+bool SubBasin::ComputeOutletDischarge() {
     m_outletTotal = 0;
     for (auto flux: m_outletFluxes) {
         m_outletTotal += flux->GetAmount();

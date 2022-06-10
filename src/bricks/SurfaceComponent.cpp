@@ -1,22 +1,22 @@
 #include "SurfaceComponent.h"
 #include "HydroUnit.h"
 
-SurfaceComponent::SurfaceComponent(HydroUnit* hydroUnit, bool withWaterContainer)
-    : Brick(hydroUnit, withWaterContainer),
-      m_areaRatio(1.0)
+SurfaceComponent::SurfaceComponent()
+    : Brick(),
+      m_areaFraction(1.0)
 {
     m_needsSolver = false;
 }
 
-void SurfaceComponent::SetAreaRatio(double value) {
-    m_areaRatio = value;
+void SurfaceComponent::SetAreaFraction(double value) {
+    m_areaFraction = value;
     for (auto brick : m_relatedBricks) {
-        brick->SetAreaRatio(value);
+        brick->SetAreaFraction(value);
     }
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
-                output->SetRatio(value);
+                output->SetFraction(value);
             }
         }
     }

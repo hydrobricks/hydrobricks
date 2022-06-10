@@ -61,7 +61,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         if (applyConstraints) {
-            brick->ApplyConstraints(*m_timeStepInDays);
+            brick->ApplyConstraints(g_timeStepInDays);
         }
     }
 }
@@ -81,7 +81,7 @@ void Solver::ApplyConstraintsFor(int col) {
             }
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(*m_timeStepInDays);
+        brick->ApplyConstraints(g_timeStepInDays);
     }
 }
 
@@ -91,7 +91,7 @@ void Solver::ApplyConstraints() {
             continue;
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(*m_timeStepInDays);
+        brick->ApplyConstraints(g_timeStepInDays);
     }
 }
 
@@ -126,7 +126,7 @@ void Solver::ApplyProcesses(int col) const {
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, m_changeRates(iRate, col), *m_timeStepInDays);
+                process->ApplyChange(iConnect, m_changeRates(iRate, col), g_timeStepInDays);
                 iRate++;
             }
         }
@@ -142,7 +142,7 @@ void Solver::ApplyProcesses(const axd &changeRates) const {
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, changeRates(iRate), *m_timeStepInDays);
+                process->ApplyChange(iConnect, changeRates(iRate), g_timeStepInDays);
                 iRate++;
             }
         }

@@ -6,7 +6,7 @@
 
 class Vegetation : public SurfaceComponent {
   public:
-    Vegetation(HydroUnit *hydroUnit);
+    Vegetation();
 
     /**
      * @copydoc Brick::AssignParameters()

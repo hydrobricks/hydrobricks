@@ -9,9 +9,9 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, int hydroUnitsNb, const vecStr &aggregatedLabels, const vecStr &hydroUnitLabels);
+    void InitContainer(int timeSize, int hydroUnitsNb, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels);
 
-    void SetAggregatedValuePointer(int iLabel, double* valPt);
+    void SetSubBasinValuePointer(int iLabel, double* valPt);
 
     void SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt);
 
@@ -21,8 +21,8 @@ class Logger : public wxObject {
 
     void Increment();
 
-    const vecAxd& GetAggregatedValues() {
-        return m_aggregatedValues;
+    const vecAxd& GetSubBasinValues() {
+        return m_subBasinValues;
     }
 
     const vecAxxd& GetHydroUnitValues() {
@@ -32,9 +32,9 @@ class Logger : public wxObject {
   protected:
     int m_cursor;
     axd m_time;
-    vecStr m_aggregatedLabels;
-    vecAxd m_aggregatedValues;
-    vecDoublePt m_aggregatedValuesPt;
+    vecStr m_subBasinLabels;
+    vecAxd m_subBasinValues;
+    vecDoublePt m_subBasinValuesPt;
     vecInt m_hydroUnitIds;
     vecStr m_hydroUnitLabels;
     vecAxxd m_hydroUnitValues;

@@ -14,34 +14,36 @@ class FluxWeightedModel : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Surface elements
         m_model.AddSurfaceBrick("item-1", "GenericSurface");
         m_model.AddSurfaceBrick("item-2", "GenericSurface");
-        m_model.GenerateSurfaceComponents();
+        m_model.GeneratePrecipitationSplitters(false);
+        m_model.GenerateSurfaceComponentBricks(false);
+        m_model.GenerateSurfaceBricks();
 
         // Direct outflow processes
-        m_model.SelectBrick("item-1");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("item-1-surface");
-        m_model.SelectBrick("item-2");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("item-2-surface");
+        m_model.SelectHydroUnitBrick("item-1");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("item-1-surface");
+        m_model.SelectHydroUnitBrick("item-2");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("item-2-surface");
 
         // Surface bricks
-        m_model.SelectBrick("item-1-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
-        m_model.SelectBrick("item-2-surface");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:direct");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet", true);
+        m_model.SelectHydroUnitBrick("item-1-surface");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
+        m_model.SelectHydroUnitBrick("item-2-surface");
+        m_model.AddBrickProcess("outflow", "Outflow:direct");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet", true);
 
         m_model.AddLoggingToItem("outlet");
 
@@ -51,7 +53,7 @@ class FluxWeightedModel : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(precip);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };
@@ -69,7 +71,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(model.Initialize(m_model));
     EXPECT_TRUE(model.IsOk());
 
-    EXPECT_TRUE(subBasin.AssignRatios(basinProp));
+    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -77,7 +79,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -114,7 +116,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(model.Initialize(m_model));
     EXPECT_TRUE(model.IsOk());
 
-    EXPECT_TRUE(subBasin.AssignRatios(basinProp));
+    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -122,7 +124,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -159,7 +161,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(model.Initialize(m_model));
     EXPECT_TRUE(model.IsOk());
 
-    EXPECT_TRUE(subBasin.AssignRatios(basinProp));
+    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -167,7 +169,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 

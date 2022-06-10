@@ -1,8 +1,9 @@
-#include "Brick.h"
 #include "ProcessMelt.h"
+#include "Brick.h"
+#include "WaterContainer.h"
 
-ProcessMelt::ProcessMelt(Brick* brick)
-    : Process(brick)
+ProcessMelt::ProcessMelt(WaterContainer* container)
+    : Process(container)
 {}
 
 bool ProcessMelt::IsOk() {

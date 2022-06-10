@@ -1,8 +1,9 @@
 #include "ProcessMeltDegreeDay.h"
 #include "Brick.h"
+#include "WaterContainer.h"
 
-ProcessMeltDegreeDay::ProcessMeltDegreeDay(Brick* brick)
-    : ProcessMelt(brick),
+ProcessMeltDegreeDay::ProcessMeltDegreeDay(WaterContainer* container)
+    : ProcessMelt(container),
       m_temperature(nullptr),
       m_degreeDayFactor(nullptr),
       m_meltingTemperature(nullptr)

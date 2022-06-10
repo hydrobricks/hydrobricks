@@ -10,9 +10,9 @@ class HydroUnit;
 
 class Splitter : public wxObject {
   public:
-    explicit Splitter(HydroUnit *hydroUnit);
+    explicit Splitter();
 
-    static Splitter* Factory(const SplitterSettings &splitterSettings, HydroUnit* unit);
+    static Splitter* Factory(const SplitterSettings &splitterSettings);
 
     /**
      * Check that everything is correctly defined.

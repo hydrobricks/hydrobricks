@@ -11,5 +11,6 @@ void Forcing::AttachTimeSeriesData(TimeSeriesData* timeSeriesData) {
 }
 
 double Forcing::GetValue() {
+    wxASSERT(m_timeSeriesData);
     return m_timeSeriesData->GetCurrentValue();
 }

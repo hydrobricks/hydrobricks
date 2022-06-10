@@ -22,6 +22,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     vecDoublePt outgoingRates;
     double outputs = 0;
     for (auto process : m_parent->GetProcesses()) {
+        if (process->GetWaterContainer() != this) {
+            continue;
+        }
         for (auto flux : process->GetOutputFluxes()) {
             double* changeRate = flux->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
@@ -36,7 +39,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     vecDoublePt incomingRates;
     double inputs = 0;
     double inputsStatic = 0;
-    for (auto & input : m_parent->GetInputs()) {
+    for (auto & input : m_inputs) {
         if (input->IsForcing()) {
             inputsStatic += input->GetAmount();
         } else if (input->IsStatic()) {
@@ -95,10 +98,32 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     }
 }
 
+void WaterContainer::SetOutgoingRatesToZero() {
+    for (auto process : m_parent->GetProcesses()) {
+        if (process->GetWaterContainer() != this) {
+            continue;
+        }
+        for (auto flux : process->GetOutputFluxes()) {
+            double* changeRate = flux->GetChangeRatePointer();
+            wxASSERT(changeRate != nullptr);
+            *changeRate = 0;
+        }
+    }
+}
+
 void WaterContainer::Finalize() {
     m_content += m_contentChange;
     m_contentChange = 0;
     wxASSERT(m_content >= 0);
+}
+
+double WaterContainer::SumIncomingFluxes() {
+    double sum = 0;
+    for (auto & input : m_inputs) {
+        sum += input->GetAmount();
+    }
+
+    return sum;
 }
 
 vecDoublePt WaterContainer::GetStateVariableChanges() {

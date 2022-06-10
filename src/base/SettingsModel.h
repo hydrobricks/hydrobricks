@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
+#include "yaml-cpp/yaml.h"
+
 #include "Includes.h"
 #include "Parameter.h"
 
@@ -17,7 +19,9 @@ struct TimerSettings {
 
 struct OutputSettings {
     wxString target;
+    wxString fluxType = "water";
     bool withWeighting = false;
+    bool instantaneous = false;
 };
 
 struct ProcessSettings {
@@ -50,12 +54,12 @@ struct BrickSettings {
 
 struct ModelStructure {
     int id;
-    bool withSnow = false;
-    wxString snowMeltProcess;
     vecStr logItems;
     std::vector<BrickSettings> surfaceBricks;
-    std::vector<BrickSettings> bricks;
-    std::vector<SplitterSettings> splitters;
+    std::vector<BrickSettings> hydroUnitBricks;
+    std::vector<BrickSettings> subBasinBricks;
+    std::vector<SplitterSettings> hydroUnitSplitters;
+    std::vector<SplitterSettings> subBasinSplitters;
 };
 
 class SettingsModel : public wxObject {
@@ -68,65 +72,92 @@ class SettingsModel : public wxObject {
 
     void SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit);
 
-    void AddBrick(const wxString &name, const wxString &type);
+    void AddHydroUnitBrick(const wxString &name, const wxString &type);
+
+    void AddSubBasinBrick(const wxString &name, const wxString &type);
 
     void AddSurfaceBrick(const wxString &name, const wxString &type);
 
     void AddToRelatedSurfaceBrick(const wxString &name);
 
-    void AddParameterToCurrentBrick(const wxString &name, float value, const wxString &type = "Constant");
+    void AddBrickParameter(const wxString &name, float value, const wxString &type = "Constant");
 
-    void AddForcingToCurrentBrick(const wxString &name);
+    void AddBrickForcing(const wxString &name);
 
-    void AddProcessToCurrentBrick(const wxString &name, const wxString &type);
+    void AddBrickProcess(const wxString &name, const wxString &type);
 
-    void AddParameterToCurrentProcess(const wxString &name, float value, const wxString &type = "Constant");
+    void AddProcessParameter(const wxString &name, float value, const wxString &type = "Constant");
 
-    void AddForcingToCurrentProcess(const wxString &name);
+    void AddProcessForcing(const wxString &name);
 
-    void AddOutputToCurrentProcess(const wxString &target, bool withWeighting = false);
+    void AddProcessOutput(const wxString &target, bool withWeighting = false);
 
-    void AddSplitter(const wxString &name, const wxString &type);
+    void OutputProcessToSameBrick();
 
-    void AddParameterToCurrentSplitter(const wxString &name, float value, const wxString &type = "Constant");
+    void AddHydroUnitSplitter(const wxString &name, const wxString &type);
 
-    void AddForcingToCurrentSplitter(const wxString &name);
+    void AddSubBasinSplitter(const wxString &name, const wxString &type);
 
-    void AddOutputToCurrentSplitter(const wxString &target);
+    void AddSplitterParameter(const wxString &name, float value, const wxString &type = "Constant");
+
+    void AddSplitterForcing(const wxString &name);
+
+    void AddSplitterOutput(const wxString &target, const wxString &fluxType = "water");
 
     void AddLoggingToItem(const wxString &itemName);
 
-    void AddLoggingToCurrentBrick(const wxString &itemName);
+    void AddBrickLogging(const wxString &itemName);
 
-    void AddLoggingToCurrentProcess(const wxString &itemName);
+    void AddProcessLogging(const wxString &itemName);
 
-    void AddLoggingToCurrentSplitter(const wxString &itemName);
+    void AddSplitterLogging(const wxString &itemName);
 
-    void EnableSnow(const wxString &meltProcess);
+    void GeneratePrecipitationSplitters(bool withSnow);
 
-    void GenerateSurfaceComponents();
+    void GenerateSnowpacks(const wxString& snowMeltProcess);
+
+    void GenerateSnowpacksWithWaterRetention(const wxString& snowMeltProcess, const wxString& outflowProcess);
+
+    void GenerateSurfaceComponentBricks(bool withSnow);
+
+    void GenerateSurfaceBricks();
 
     bool SelectStructure(int id);
 
-    void SelectBrick(int index);
+    void SelectHydroUnitBrick(int index);
 
-    void SelectBrick(const wxString &name);
+    void SelectSubBasinBrick(int index);
+
+    void SelectHydroUnitBrick(const wxString &name);
+
+    void SelectSubBasinBrick(const wxString &name);
 
     void SelectProcess(int index);
 
     void SelectProcess(const wxString &name);
 
-    void SelectSplitter(int index);
+    void SelectHydroUnitSplitter(int index);
 
-    void SelectSplitter(const wxString &name);
+    void SelectSubBasinSplitter(int index);
+
+    void SelectHydroUnitSplitter(const wxString &name);
+
+    void SelectSubBasinSplitter(const wxString &name);
+
+    bool Parse(const wxString &path);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
     }
 
-    int GetBricksNb() const {
+    int GetHydroUnitBricksNb() const {
         wxASSERT(m_selectedStructure);
-        return int(m_selectedStructure->bricks.size());
+        return int(m_selectedStructure->hydroUnitBricks.size());
+    }
+
+    int GetSubBasinBricksNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->subBasinBricks.size());
     }
 
     int GetProcessesNb() const {
@@ -134,9 +165,14 @@ class SettingsModel : public wxObject {
         return int(m_selectedBrick->processes.size());
     }
 
-    int GetSplittersNb() const {
+    int GetHydroUnitSplittersNb() const {
         wxASSERT(m_selectedStructure);
-        return int(m_selectedStructure->splitters.size());
+        return int(m_selectedStructure->hydroUnitSplitters.size());
+    }
+
+    int GetSubBasinSplittersNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->subBasinSplitters.size());
     }
 
     SolverSettings GetSolverSettings() const {
@@ -147,9 +183,14 @@ class SettingsModel : public wxObject {
         return m_timer;
     }
 
-    BrickSettings GetBrickSettings(int index) const {
+    BrickSettings GetHydroUnitBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
-        return m_selectedStructure->bricks[index];
+        return m_selectedStructure->hydroUnitBricks[index];
+    }
+
+    BrickSettings GetSubBasinBrickSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->subBasinBricks[index];
     }
 
     ProcessSettings GetProcessSettings(int index) const {
@@ -157,12 +198,17 @@ class SettingsModel : public wxObject {
         return m_selectedBrick->processes[index];
     }
 
-    SplitterSettings GetSplitterSettings(int index) const {
+    SplitterSettings GetHydroUnitSplitterSettings(int index) const {
         wxASSERT(m_selectedStructure);
-        return m_selectedStructure->splitters[index];
+        return m_selectedStructure->hydroUnitSplitters[index];
     }
 
-    vecStr GetAggregatedLogLabels();
+    SplitterSettings GetSubBasinSplitterSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->subBasinSplitters[index];
+    }
+
+    vecStr GetSubBasinLogLabels();
 
     vecStr GetHydroUnitLogLabels();
 
@@ -174,6 +220,16 @@ class SettingsModel : public wxObject {
     BrickSettings* m_selectedBrick;
     ProcessSettings* m_selectedProcess;
     SplitterSettings* m_selectedSplitter;
+
+    vecStr ParseSurfaceNames(const YAML::Node &settings);
+
+    vecStr ParseSurfaceTypes(const YAML::Node &settings);
+
+    wxString ParseSolver(const YAML::Node &settings);
+
+    bool LogAll(const YAML::Node &settings);
+
+    bool GenerateStructureSocont(const YAML::Node &settings);
 };
 
 #endif  // HYDROBRICKS_SETTINGS_MODEL_H

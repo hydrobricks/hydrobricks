@@ -6,7 +6,7 @@
 
 class Urban : public SurfaceComponent {
   public:
-    Urban(HydroUnit *hydroUnit);
+    Urban();
 
     /**
      * @copydoc Brick::AssignParameters()

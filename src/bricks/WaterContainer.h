@@ -16,6 +16,8 @@ class WaterContainer : public wxObject {
 
     void ApplyConstraints(double timeStep);
 
+    void SetOutgoingRatesToZero();
+
     void Finalize();
 
     vecDoublePt GetStateVariableChanges();
@@ -49,12 +51,37 @@ class WaterContainer : public wxObject {
         m_content = value;
     }
 
+    bool IsNotEmpty() {
+        return GetContentWithChanges() > 0.0;
+    }
+
     bool HasOverflow() {
         return m_overflow != nullptr;
     }
 
     void LinkOverflow(Process* overflow) {
         m_overflow = overflow;
+    }
+
+    /**
+     * Attach incoming flux.
+     *
+     * @param flux incoming flux
+     */
+    void AttachFluxIn(Flux* flux) {
+        wxASSERT(flux);
+        m_inputs.push_back(flux);
+    }
+
+    /**
+     * Sums the water amount from the different fluxes.
+     *
+     * @return sum of the water amount [mm]
+     */
+    virtual double SumIncomingFluxes();
+
+    Brick* GetParentBrick() {
+        return m_parent;
     }
 
   protected:
@@ -65,6 +92,7 @@ class WaterContainer : public wxObject {
     float* m_capacity;
     Brick* m_parent;
     Process* m_overflow;
+    std::vector<Flux*> m_inputs;
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

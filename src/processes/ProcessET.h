@@ -7,7 +7,7 @@
 
 class ProcessET : public Process {
   public:
-    explicit ProcessET(Brick* brick);
+    explicit ProcessET(WaterContainer* container);
 
     ~ProcessET() override = default;
 

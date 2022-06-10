@@ -1,8 +1,9 @@
-#include "Brick.h"
 #include "ProcessOutflowOverflow.h"
+#include "Brick.h"
+#include "WaterContainer.h"
 
-ProcessOutflowOverflow::ProcessOutflowOverflow(Brick* brick)
-    : ProcessOutflow(brick)
+ProcessOutflowOverflow::ProcessOutflowOverflow(WaterContainer* container)
+    : ProcessOutflow(container)
 {}
 
 void ProcessOutflowOverflow::AssignParameters(const ProcessSettings &processSettings) {

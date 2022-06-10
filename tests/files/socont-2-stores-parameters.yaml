@@ -1,0 +1,20 @@
+glacier-debris:
+  degreeDayFactor: 4
+  meltingTemperature: 0
+  responseFactor: 0.2
+glacier-ice:
+  degreeDayFactor: 6
+  meltingTemperature: 0
+  responseFactor: 0.2
+snowpack:
+  degreeDayFactor: 2
+  meltingTemperature: 0
+  responseFactor: 0.5
+storage-rapid:
+  capacity: 500
+  percolationRate: 0.4
+  responseFactor: 0.2
+storage-slow:
+  responseFactor: 0.01
+surface-runoff:
+  runoffCoefficient: 500

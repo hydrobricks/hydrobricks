@@ -12,18 +12,18 @@ class SolverLinearStorage : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
         // Main storage
-        m_model.AddBrick("storage", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddHydroUnitBrick("storage", "Storage");
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -34,7 +34,7 @@ class SolverLinearStorage : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };
@@ -55,7 +55,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 3.000000, 5.100000, 6.570000, 4.599000, 3.219300, 2.253510,
                                  1.577457, 1.104220, 0.772954, 0.541068, 0.378747, 0.265123, 0.185586, 0.129910,
@@ -90,7 +90,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 1.500000, 3.667500, 5.282288, 4.985304, 3.714052, 2.766968, 2.061392,
                                  1.535737, 1.144124, 0.852372, 0.635017, 0.473088, 0.352450, 0.262576, 0.195619,
@@ -125,7 +125,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 1.361250, 3.600090, 5.258707, 5.126222, 3.797698, 2.813477, 2.084329,
                                  1.544149, 1.143964, 0.847491, 0.627853, 0.465137, 0.344591, 0.255286, 0.189125,
@@ -153,26 +153,26 @@ class Solver2LinearStorages : public ::testing::Test {
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
         // First storage
-        m_model.AddBrick("storage-1", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.5f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("storage-2");
+        m_model.AddHydroUnitBrick("storage-1", "Storage");
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.5f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("storage-2");
 
         // Second storage
-        m_model.AddBrick("storage-2", "Storage");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.3f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddHydroUnitBrick("storage-2", "Storage");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -183,7 +183,7 @@ class Solver2LinearStorages : public ::testing::Test {
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
     }
 };
@@ -204,7 +204,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 0.000000, 1.500000, 3.300000, 4.935000, 4.767000, 3.993150,
                                  3.123330, 2.350394, 1.727307, 1.250130, 0.895599, 0.637173, 0.451148, 0.318367,
@@ -241,7 +241,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.200000, 2.600250, 3.959843, 3.970493, 3.595773, 3.077449,
                                  2.541823, 2.049360, 1.624087, 1.270766, 0.984734, 0.757385, 0.579101, 0.440711,
@@ -278,7 +278,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.200000, 1.158225, 2.490032, 3.654047, 3.935308, 3.660692, 3.164185,
                                  2.618533, 2.106397, 1.661518, 1.292212, 0.994512, 0.759339, 0.576240, 0.435209,
@@ -309,31 +309,31 @@ class SolverLinearStorageWithET : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
     TimeSeriesUniform* m_tsPET{};
 
-    virtual void SetUp() {
+    void SetUp() override {
         m_model.SetSolver("EulerExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
 
         // Main storage
-        m_model.AddBrick("storage", "Storage");
-        m_model.AddForcingToCurrentBrick("Precipitation");
-        m_model.AddLoggingToCurrentBrick("content");
-        m_model.AddParameterToCurrentBrick("capacity", 20);
+        m_model.AddHydroUnitBrick("storage", "Storage");
+        m_model.AddBrickForcing("Precipitation");
+        m_model.AddBrickLogging("content");
+        m_model.AddBrickParameter("capacity", 20);
 
         // Linear outflow process
-        m_model.AddProcessToCurrentBrick("outflow", "Outflow:linear");
-        m_model.AddParameterToCurrentProcess("responseFactor", 0.1f);
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickProcess("outflow", "Outflow:linear");
+        m_model.AddProcessParameter("responseFactor", 0.1f);
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         // ET process
-        m_model.AddProcessToCurrentBrick("ET", "ET:Socont");
-        m_model.AddForcingToCurrentProcess("PET");
-        m_model.AddLoggingToCurrentProcess("output");
+        m_model.AddBrickProcess("ET", "ET:Socont");
+        m_model.AddProcessForcing("PET");
+        m_model.AddProcessLogging("output");
 
         // Overflow process
-        m_model.AddProcessToCurrentBrick("overflow", "Overflow");
-        m_model.AddLoggingToCurrentProcess("output");
-        m_model.AddOutputToCurrentProcess("outlet");
+        m_model.AddBrickProcess("overflow", "Overflow");
+        m_model.AddProcessLogging("output");
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -351,7 +351,7 @@ class SolverLinearStorageWithET : public ::testing::Test {
         m_tsPET = new TimeSeriesUniform(PET);
         m_tsPET->SetData(dataPET);
     }
-    virtual void TearDown() {
+    void TearDown() override {
         wxDELETE(m_tsPrecip);
         wxDELETE(m_tsPET);
     }
@@ -374,7 +374,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.000000, 7.336523, 2.000000, 1.700000, 1.437805, 1.209236,
                                  1.010555, 0.838417, 0.689829, 0.562117, 0.452890, 0.360015, 0.281586, 0.215905,
@@ -410,7 +410,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.500000, 1.335100, 6.043728, 1.850000, 1.586604, 1.354805, 1.151282,
                                  0.973043, 0.817396, 0.681921, 0.564437, 0.462986, 0.375808, 0.301320, 0.238103,
@@ -446,7 +446,7 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetAggregatedValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.467928, 1.312188, 5.989134, 1.856077, 1.591276, 1.358295, 1.153782,
                                  0.974723, 0.818401, 0.682377, 0.564453, 0.462655, 0.375211, 0.300526, 0.237170,

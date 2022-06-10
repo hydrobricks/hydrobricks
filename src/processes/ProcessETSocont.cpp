@@ -1,8 +1,9 @@
 #include "ProcessETSocont.h"
 #include "Brick.h"
+#include "WaterContainer.h"
 
-ProcessETSocont::ProcessETSocont(Brick* brick)
-    : ProcessET(brick),
+ProcessETSocont::ProcessETSocont(WaterContainer* container)
+    : ProcessET(container),
       m_pet(nullptr),
       m_exponent(0.5)
 {}
@@ -20,8 +21,8 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
 }
 
 vecDouble ProcessETSocont::GetChangeRates() {
-    wxASSERT(m_brick->GetWaterContainer()->HasMaximumCapacity());
-    return {m_pet->GetValue() * pow(m_brick->GetWaterContainer()->GetContentWithChanges() /
-                                        m_brick->GetWaterContainer()->GetMaximumCapacity(),
+    wxASSERT(m_container->HasMaximumCapacity());
+    return {m_pet->GetValue() * pow(m_container->GetContentWithChanges() /
+                                    m_container->GetMaximumCapacity(),
                                     m_exponent)};
 }

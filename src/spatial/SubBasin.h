@@ -64,7 +64,6 @@ class SubBasin : public wxObject {
 
   protected:
     float m_area; // m2
-    float m_elevation; // m.a.s.l.
     double m_outletTotal;
     bool m_needsCleanup;
     std::vector<Brick*> m_bricks;

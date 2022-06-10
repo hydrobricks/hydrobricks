@@ -3,8 +3,7 @@
 #include "SurfaceComponent.h"
 
 SubBasin::SubBasin()
-    : m_area(UNDEFINED),
-      m_elevation(UNDEFINED),
+    : m_area(0),
       m_outletTotal(0),
       m_needsCleanup(false)
 {}
@@ -91,6 +90,7 @@ void SubBasin::AddSplitter(Splitter* splitter) {
 
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
     m_hydroUnits.push_back(unit);
+    m_area += unit->GetArea();
 }
 
 int SubBasin::GetHydroUnitsNb() {

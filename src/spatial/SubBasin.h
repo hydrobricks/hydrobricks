@@ -62,6 +62,10 @@ class SubBasin : public wxObject {
 
     bool ComputeOutletDischarge();
 
+    float GetArea() {
+        return m_area;
+    }
+
   protected:
     float m_area; // m2
     double m_outletTotal;

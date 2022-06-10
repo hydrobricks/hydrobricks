@@ -103,6 +103,23 @@ TEST_F(ModelBasics, Model2RunsCorrectly) {
     EXPECT_TRUE(model.Run());
 }
 
+TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
+    SettingsBasin basinProp;
+    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_NEAR(subBasin.GetArea(), 264328000, 1050); // Difference due to storage as float in netcdf file.
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_model2);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+}
+
 TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     SubBasin subBasin;
     HydroUnit unit;

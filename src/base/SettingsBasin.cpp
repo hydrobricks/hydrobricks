@@ -19,7 +19,7 @@ void SettingsBasin::AddHydroUnit(int id, double area) {
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
-void SettingsBasin::AddSurfaceElementToCurrentUnit(const wxString& name, double fraction) {
+void SettingsBasin::AddHydroUnitSurfaceElement(const wxString& name, double fraction) {
     wxASSERT(m_selectedHydroUnit);
     SurfaceElementSettings element;
     element.name = name;

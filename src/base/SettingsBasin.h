@@ -25,7 +25,7 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area);
 
-    void AddSurfaceElementToCurrentUnit(const wxString& name, double fraction = 1.0);
+    void AddHydroUnitSurfaceElement(const wxString& name, double fraction = 1.0);
 
     void SelectUnit(int index);
 
@@ -42,7 +42,7 @@ class SettingsBasin : public wxObject {
         return m_selectedHydroUnit->surfaceElements[index];
     }
 
-    int GetUnitsNb() {
+    int GetHydroUnitsNb() {
         return int(m_hydroUnits.size());
     }
 

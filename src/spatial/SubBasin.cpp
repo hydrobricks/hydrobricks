@@ -29,20 +29,20 @@ bool SubBasin::Initialize(SettingsBasin& basinSettings) {
 
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     m_needsCleanup = true;
-    for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
         basinSettings.SelectUnit(iUnit);
 
         HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
         auto unit = new HydroUnit(unitSettings.area);
         unit->SetId(unitSettings.id);
-        m_hydroUnits.push_back(unit);
+        AddHydroUnit(unit);
     }
 }
 
 bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
 
     try {
-        for (int iUnit = 0; iUnit < basinSettings.GetUnitsNb(); ++iUnit) {
+        for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
             for (int iElement = 0; iElement < basinSettings.GetSurfaceElementsNb(); ++iElement) {

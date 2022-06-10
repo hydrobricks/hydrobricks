@@ -104,7 +104,7 @@ double* Process::GetValuePointer(const wxString&) {
 void Process::SetOutputFluxesFraction(double value) {
     for (auto output : m_outputs) {
         if (output->NeedsWeighting()) {
-            output->SetFraction(value);
+            output->MultiplyFraction(value);
         }
     }
 }

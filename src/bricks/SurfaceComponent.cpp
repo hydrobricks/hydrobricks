@@ -16,7 +16,7 @@ void SurfaceComponent::SetAreaFraction(double value) {
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
-                output->SetFraction(value);
+                output->MultiplyFraction(value);
             }
         }
     }

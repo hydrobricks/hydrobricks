@@ -12,7 +12,7 @@ SubBasin::SubBasin()
 SubBasin::~SubBasin() {
     if (m_needsCleanup) {
         for (auto& hydroUnit : m_hydroUnits) {
-            wxDELETEA(hydroUnit);
+            wxDELETE(hydroUnit);
         }
     }
 }

@@ -48,8 +48,9 @@ bool TimeSeriesDataRegular::SetValues(const vecDouble &values) {
     return true;
 }
 
-double TimeSeriesDataRegular::GetValueFor(const wxDateTime &) {
-    throw NotImplemented();
+double TimeSeriesDataRegular::GetValueFor(const wxDateTime &date) {
+    SetCursorToDate(date);
+    return m_values[m_cursor];
 }
 
 double TimeSeriesDataRegular::GetCurrentValue() {

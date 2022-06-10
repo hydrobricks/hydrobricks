@@ -89,6 +89,16 @@ typedef Eigen::ArrayXXd axxd;
 typedef std::vector<Eigen::ArrayXd> vecAxd;
 typedef std::vector<Eigen::ArrayXXd> vecAxxd;
 
+// A time structure
+typedef struct {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int min;
+    int sec;
+} Time;
+
 
 //---------------------------------
 // Own exceptions
@@ -137,6 +147,6 @@ class NotFound : public std::logic_error
 #include "GlobVars.h"
 #include "TypeDefs.h"
 #include "Enums.h"
-#include "Utilities.h"
+#include "Utils.h"
 
 #endif  // INCLUDES_H

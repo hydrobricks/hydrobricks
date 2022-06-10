@@ -29,11 +29,7 @@ class Flux : public wxObject {
      * @param amount the water amount of the flux.
      */
     virtual void UpdateFlux(double amount) {
-        if (m_needsWeighting) {
-            m_amount = amount * m_fraction;
-        } else {
-            m_amount = amount;
-        }
+        m_amount = amount * m_fraction;
     }
 
     void LinkChangeRate(double* rate) {
@@ -69,8 +65,8 @@ class Flux : public wxObject {
         m_needsWeighting = value;
     }
 
-    void SetFraction(double value) {
-        m_fraction = value;
+    void MultiplyFraction(double value) {
+        m_fraction *= value;
     }
 
     wxString GetType() {

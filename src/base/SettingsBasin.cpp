@@ -19,7 +19,7 @@ void SettingsBasin::AddHydroUnit(int id, double area) {
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
-void SettingsBasin::AddSurfaceElementToCurrentUnit(const wxString& name, double fraction) {
+void SettingsBasin::AddHydroUnitSurfaceElement(const wxString& name, double fraction) {
     wxASSERT(m_selectedHydroUnit);
     SurfaceElementSettings element;
     element.name = name;
@@ -65,20 +65,17 @@ bool SettingsBasin::Parse(const wxString &path) {
 
         // Get ids
         CheckNcStatus(nc_inq_varid(ncId, "id", &varId));
-        vecInt ids;
-        ids.resize(unitsNb);
+        vecInt ids(unitsNb);
         CheckNcStatus(nc_get_var_int(ncId, varId, &ids[0]));
 
         // Get areas
         CheckNcStatus(nc_inq_varid(ncId, "area", &varId));
-        vecFloat areas;
-        areas.resize(unitsNb);
+        vecFloat areas(unitsNb);
         CheckNcStatus(nc_get_var_float(ncId, varId, &areas[0]));
 
         // Get elevations
         CheckNcStatus(nc_inq_varid(ncId, "elevation", &varId));
-        vecFloat elevations;
-        elevations.resize(unitsNb);
+        vecFloat elevations(unitsNb);
         CheckNcStatus(nc_get_var_float(ncId, varId, &elevations[0]));
 
         // Store hydro units
@@ -93,8 +90,7 @@ bool SettingsBasin::Parse(const wxString &path) {
         // Get surface data
         for (const auto& surface: surfaces) {
             CheckNcStatus(nc_inq_varid(ncId, surface.mb_str(), &varId));
-            vecFloat fractions;
-            fractions.resize(unitsNb);
+            vecFloat fractions(unitsNb);
             CheckNcStatus(nc_get_var_float(ncId, varId, &fractions[0]));
 
             // Get the surface type

@@ -1,3 +1,5 @@
+#include <netcdf.h>
+
 #include "Utilities.h"
 
 bool IsNaN(const int value) {
@@ -192,3 +194,8 @@ wxDateTime IncrementDateBy(const wxDateTime &date, int amount, TimeUnit unit) {
     return newDate;
 }
 
+void CheckNcStatus(int status) {
+    if (status != NC_NOERR) {
+        throw InvalidArgument(nc_strerror(status));
+    }
+}

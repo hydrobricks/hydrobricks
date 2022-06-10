@@ -4,12 +4,6 @@
 #include "SettingsBasin.h"
 
 
-void CheckNcStatus(int status) {
-    if (status != NC_NOERR) {
-        throw InvalidArgument(nc_strerror(status));
-    }
-}
-
 SettingsBasin::SettingsBasin()
 {
 }
@@ -120,6 +114,8 @@ bool SettingsBasin::Parse(const wxString &path) {
                 m_hydroUnits[iUnit].surfaceElements.push_back(element);
             }
         }
+
+        CheckNcStatus(nc_close(ncId));
 
     } catch(std::exception& e) {
         wxLogError(e.what());

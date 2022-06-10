@@ -11,11 +11,7 @@ if (POLICY CMP0077)
 endif ()
 
 # Project name
-if (UNIX)
-    project(hydrobricks)
-else (UNIX)
-    project(HydroBricks)
-endif (UNIX)
+project(hydrobricks)
 
 
 ##### OPTIONS

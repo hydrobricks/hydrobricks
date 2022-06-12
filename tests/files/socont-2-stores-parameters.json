@@ -17,12 +17,12 @@
   "surface-runoff": {
     "runoffCoefficient": 500
   },
-  "storage-rapid": {
+  "slow-reservoir": {
     "capacity": 500,
     "responseFactor": 0.2,
     "percolationRate": 0.4
   },
-  "storage-slow": {
+  "slow-reservoir-2": {
     "responseFactor": 0.01
   }
 }

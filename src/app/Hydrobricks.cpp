@@ -137,18 +137,18 @@ int Hydrobricks::OnRun()
 
         // Model settings
         SettingsModel modelSettings;
-        if (!modelSettings.Parse(m_modelFile)) {
+        if (!modelSettings.ParseStructure(m_modelFile)) {
             return 1;
         }
 
         // Parameters
-        // m_parametersFile
-
-
+        if (!modelSettings.ParseParameters(m_parametersFile)) {
+            return 1;
+        }
 
         // Basin settings
         SettingsBasin basinSettings;
-        if (!basinSettings.Parse(m_basinFile)) {
+        if (!basinSettings.ParseStructure(m_basinFile)) {
             return 1;
         }
 
@@ -180,6 +180,11 @@ int Hydrobricks::OnRun()
             }
         }
         if (!model.AttachTimeSeriesToHydroUnits()) {
+            return 1;
+        }
+
+        // Check
+        if (!model.IsOk()) {
             return 1;
         }
 

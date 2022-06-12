@@ -27,7 +27,7 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.GenerateSurfaceBricks();
 
         // Rain/snow splitter
-        m_model.SelectHydroUnitSplitter("snow-rain");
+        m_model.SelectHydroUnitSplitter("snow-rain-transition");
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 

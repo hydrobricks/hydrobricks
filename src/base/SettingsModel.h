@@ -82,11 +82,17 @@ class SettingsModel : public wxObject {
 
     void AddBrickParameter(const wxString &name, float value, const wxString &type = "Constant");
 
+    void SetBrickParameterValue(const wxString &name, float value, const wxString &type = "Constant");
+
+    bool BrickHasParameter(const wxString &name);
+
     void AddBrickForcing(const wxString &name);
 
     void AddBrickProcess(const wxString &name, const wxString &type);
 
     void AddProcessParameter(const wxString &name, float value, const wxString &type = "Constant");
+
+    void SetProcessParameterValue(const wxString &name, float value, const wxString &type = "Constant");
 
     void AddProcessForcing(const wxString &name);
 
@@ -99,6 +105,8 @@ class SettingsModel : public wxObject {
     void AddSubBasinSplitter(const wxString &name, const wxString &type);
 
     void AddSplitterParameter(const wxString &name, float value, const wxString &type = "Constant");
+
+    void SetSplitterParameterValue(const wxString &name, float value, const wxString &type = "Constant");
 
     void AddSplitterForcing(const wxString &name);
 
@@ -128,6 +136,10 @@ class SettingsModel : public wxObject {
 
     void SelectSubBasinBrick(int index);
 
+    bool SelectHydroUnitBrickIfFound(const wxString &name);
+
+    bool SelectSubBasinBrickIfFound(const wxString &name);
+
     void SelectHydroUnitBrick(const wxString &name);
 
     void SelectSubBasinBrick(const wxString &name);
@@ -136,15 +148,23 @@ class SettingsModel : public wxObject {
 
     void SelectProcess(const wxString &name);
 
+    void SelectProcessWithParameter(const wxString &name);
+
     void SelectHydroUnitSplitter(int index);
 
     void SelectSubBasinSplitter(int index);
+
+    bool SelectHydroUnitSplitterIfFound(const wxString &name);
+
+    bool SelectSubBasinSplitterIfFound(const wxString &name);
 
     void SelectHydroUnitSplitter(const wxString &name);
 
     void SelectSubBasinSplitter(const wxString &name);
 
-    bool Parse(const wxString &path);
+    bool ParseStructure(const wxString &path);
+
+    bool ParseParameters(const wxString &path);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());

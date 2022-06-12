@@ -20,6 +20,8 @@ class ModelHydro : public wxObject {
 
     bool Run();
 
+    bool DumpOutputs(const wxString &path);
+
     bool AddTimeSeries(TimeSeries* timeSeries);
 
     bool AttachTimeSeriesToHydroUnits();

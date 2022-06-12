@@ -21,7 +21,7 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
 
         // Get number of units
         size_t unitsNb;
-        CheckNcStatus(nc_inq_dimid(ncId, "units", &dimIdUnit));
+        CheckNcStatus(nc_inq_dimid(ncId, "hydro_units", &dimIdUnit));
         CheckNcStatus(nc_inq_dimlen(ncId, dimIdUnit, &unitsNb));
 
         // Get time length

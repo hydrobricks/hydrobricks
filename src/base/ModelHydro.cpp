@@ -594,6 +594,10 @@ bool ModelHydro::Run() {
     return true;
 }
 
+bool ModelHydro::DumpOutputs(const wxString &path) {
+    return m_logger.DumpOutputs(path);
+}
+
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     for (auto ts: m_timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {

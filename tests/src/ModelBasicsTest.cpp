@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <wx/stdpaths.h>
 
 #include "ModelHydro.h"
 #include "ProcessOutflowLinear.h"
@@ -156,3 +157,20 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     ASSERT_FALSE(model.AddTimeSeries(tsPrecipSingleRainyDay));
 }
 
+TEST_F(ModelBasics, ModelDumpsOutputs) {
+    SettingsBasin basinProp;
+    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+
+    ModelHydro model(&subBasin);
+    model.Initialize(m_model2);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    EXPECT_TRUE(model.DumpOutputs(wxStandardPaths::Get().GetTempDir()));
+}

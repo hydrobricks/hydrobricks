@@ -60,7 +60,7 @@ bool SettingsBasin::Parse(const wxString &path) {
 
         // Get number of units
         size_t unitsNb;
-        CheckNcStatus(nc_inq_dimid(ncId, "units", &dimId));
+        CheckNcStatus(nc_inq_dimid(ncId, "hydro_units", &dimId));
         CheckNcStatus(nc_inq_dimlen(ncId, dimId, &unitsNb));
 
         // Get ids

@@ -193,6 +193,11 @@ int Hydrobricks::OnRun()
             return 1;
         }
 
+        // Save outputs
+        if (!model.DumpOutputs(m_outputPath)) {
+            return 1;
+        }
+
         // Processing time and sources number
         DisplayProcessingTime(sw);
         wxLogMessage(_("Calculation over."));

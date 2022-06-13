@@ -48,7 +48,7 @@ void Glacier::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Glacier::ApplyConstraints(double timeStep) {
+void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
     if (m_noMeltWhenSnowCover) {
         if (m_snowpack == nullptr) {
             throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
@@ -58,10 +58,10 @@ void Glacier::ApplyConstraints(double timeStep) {
         }
     } else {
         if (!m_infiniteStorage) {
-            m_ice->ApplyConstraints(timeStep);
+            m_ice->ApplyConstraints(timeStep, inSolver);
         }
     }
-    m_container->ApplyConstraints(timeStep);
+    m_container->ApplyConstraints(timeStep, inSolver);
 }
 
 vecDoublePt Glacier::GetStateVariableChanges() {

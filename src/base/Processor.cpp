@@ -155,7 +155,7 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(g_timeStepInDays);
+        brick->ApplyConstraints(g_timeStepInDays, false);
 
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {

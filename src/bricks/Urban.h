@@ -13,7 +13,7 @@ class Urban : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
-    void ApplyConstraints(double timeStep) override;
+    void ApplyConstraints(double timeStep, bool inSolver = true) override;
 
     void Finalize() override;
 

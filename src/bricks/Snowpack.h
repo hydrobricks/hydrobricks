@@ -25,7 +25,7 @@ class Snowpack : public SurfaceComponent {
 
     void UpdateContentFromInputs() override;
 
-    void ApplyConstraints(double timeStep) override;
+    void ApplyConstraints(double timeStep, bool inSolver = true) override;
 
     vecDoublePt GetStateVariableChanges() override;
 

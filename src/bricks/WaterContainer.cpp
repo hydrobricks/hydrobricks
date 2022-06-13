@@ -17,7 +17,7 @@ void WaterContainer::AddAmount(double change) {
     m_contentChange += change;
 }
 
-void WaterContainer::ApplyConstraints(double timeStep) {
+void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     // Get outgoing change rates
     vecDoublePt outgoingRates;
     double outputs = 0;
@@ -55,10 +55,18 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     }
 
     double change = inputs - outputs;
+    double content = 0;
+
+    if (inSolver) {
+        content = GetContentWithChanges();
+    } else {
+        // If not in solver, we might count the inputs twice.
+        content = GetContentWithoutChanges();
+    }
 
     // Avoid negative content
-    if (change < 0 && GetContentWithChanges() + inputsStatic + change * timeStep < 0) {
-        double diff = (GetContentWithChanges() + inputsStatic + change * timeStep) / timeStep;
+    if (change < 0 && content + inputsStatic + change * timeStep < 0) {
+        double diff = (content + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate :outgoingRates) {
             wxASSERT(rate != nullptr);
@@ -73,15 +81,15 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
-        if (GetContentWithChanges() + inputsStatic + change * timeStep > *m_capacity) {
-            double diff = (GetContentWithChanges() + inputsStatic + change * timeStep - *m_capacity) / timeStep;
+        if (content + inputsStatic + change * timeStep > *m_capacity) {
+            double diff = (content + inputsStatic + change * timeStep - *m_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
                 *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
                 return;
             }
             // Check that it is not only due to forcing
-            if (GetContentWithChanges() + inputsStatic > *m_capacity) {
+            if (content + inputsStatic > *m_capacity) {
                 throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
             // Limit the different rates proportionally
@@ -114,7 +122,7 @@ void WaterContainer::SetOutgoingRatesToZero() {
 void WaterContainer::Finalize() {
     m_content += m_contentChange;
     m_contentChange = 0;
-    wxASSERT(m_content >= 0);
+    wxASSERT(m_content >= -EPSILON_D);
 }
 
 double WaterContainer::SumIncomingFluxes() {

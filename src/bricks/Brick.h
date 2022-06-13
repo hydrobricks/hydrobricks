@@ -74,7 +74,7 @@ class Brick : public wxObject {
 
     virtual void UpdateContentFromInputs();
 
-    virtual void ApplyConstraints(double timeStep);
+    virtual void ApplyConstraints(double timeStep, bool inSolver = true);
 
     WaterContainer* GetWaterContainer();
 

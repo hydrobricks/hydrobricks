@@ -14,7 +14,7 @@ class WaterContainer : public wxObject {
 
     void AddAmount(double change);
 
-    void ApplyConstraints(double timeStep);
+    void ApplyConstraints(double timeStep, bool inSolver = true);
 
     void SetOutgoingRatesToZero();
 
@@ -41,6 +41,10 @@ class WaterContainer : public wxObject {
      */
     double GetContentWithChanges() const {
         return m_content + m_contentChange;
+    }
+
+    double GetContentWithoutChanges() const {
+        return m_content;
     }
 
     double* GetContentPointer() {

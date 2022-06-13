@@ -48,6 +48,8 @@ protected:
     wxString m_basinFile;
     wxString m_dataFile;
     wxString m_outputPath;
+    wxString m_startDate;
+    wxString m_endDate;
 
     wxString GetUserDirPath();
 

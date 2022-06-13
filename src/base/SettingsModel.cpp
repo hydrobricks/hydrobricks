@@ -614,6 +614,19 @@ vecStr SettingsModel::GetSubBasinLogLabels() {
     return logNames;
 }
 
+vecStr SettingsModel::GetSubBasinGenericLogLabels() {
+    wxASSERT(m_selectedStructure);
+    wxASSERT(m_modelStructures.size() == 1);
+
+    vecStr logNames;
+
+    for (const auto& label : m_selectedStructure->logItems) {
+        logNames.push_back(label);
+    }
+
+    return logNames;
+}
+
 bool SettingsModel::ParseStructure(const wxString &path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
@@ -959,6 +972,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     AddHydroUnitBrick("surface-runoff", "Storage");
     AddBrickProcess("runoff", "Runoff:Socont");
     AddProcessParameter("runoffCoefficient", 500.0f);
+    AddProcessParameter("slope", 0.5f);
     AddProcessOutput("outlet");
     if (logAll) {
         AddBrickLogging("content");

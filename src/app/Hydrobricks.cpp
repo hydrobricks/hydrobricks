@@ -78,8 +78,6 @@ void Hydrobricks::OnInitCmdLine(wxCmdLineParser &parser)
 
 bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser)
 {
-    wxConfigBase *config = wxFileConfig::Get();
-
     // Add a new line
     wxPrintf("\n");
 
@@ -103,22 +101,51 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser)
 
     if (parser.Found("model-file", &input)) {
         m_modelFile = input;
+    } else {
+        wxLogError("The argument 'model-file' is missing.");
+        return false;
     }
 
     if (parser.Found("parameters-file", &input)) {
         m_parametersFile = input;
+    } else {
+        wxLogError("The argument 'parameters-file' is missing.");
+        return false;
     }
 
     if (parser.Found("basin-file", &input)) {
         m_basinFile = input;
+    } else {
+        wxLogError("The argument 'basin-file' is missing.");
+        return false;
     }
 
     if (parser.Found("data-file", &input)) {
         m_dataFile = input;
+    } else {
+        wxLogError("The argument 'data-file' is missing.");
+        return false;
     }
 
     if (parser.Found("output-path", &input)) {
         m_outputPath = input;
+    } else {
+        wxLogError("The argument 'output-path' is missing.");
+        return false;
+    }
+
+    if (parser.Found("start-date", &input)) {
+        m_startDate = input;
+    } else {
+        wxLogError("The argument 'start-date' is missing.");
+        return false;
+    }
+
+    if (parser.Found("end-date", &input)) {
+        m_endDate = input;
+    } else {
+        wxLogError("The argument 'end-date' is missing.");
+        return false;
     }
 
     return wxAppConsole::OnCmdLineParsed(parser);
@@ -128,7 +155,7 @@ int Hydrobricks::OnRun()
 {
     try {
         // Create the output path if needed
-        if (CheckOutputDirectory()) {
+        if (!CheckOutputDirectory()) {
             return 1;
         }
 
@@ -141,6 +168,9 @@ int Hydrobricks::OnRun()
             return 1;
         }
 
+        // Modelling period
+        modelSettings.SetTimer(m_startDate, m_endDate, 1, "Day");
+
         // Parameters
         if (!modelSettings.ParseParameters(m_parametersFile)) {
             return 1;
@@ -148,7 +178,7 @@ int Hydrobricks::OnRun()
 
         // Basin settings
         SettingsBasin basinSettings;
-        if (!basinSettings.ParseStructure(m_basinFile)) {
+        if (!basinSettings.Parse(m_basinFile)) {
             return 1;
         }
 
@@ -263,10 +293,11 @@ void Hydrobricks::OnUnhandledException()
 void Hydrobricks::InitializeLog() {
     wxString fullPath = m_outputPath;
     wxString logFileName = "hydrobricks.log";
+    fullPath.Append(wxFileName::GetPathSeparator());
     fullPath.Append(logFileName);
     wxFFile *logFile = new wxFFile(fullPath, "w");
     auto *pLogFile = new wxLogStderr(logFile->fp());
-    wxLogChain *chain = new wxLogChain(pLogFile);
+    new wxLogChain(pLogFile);
     wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION,
                                         HYDROBRICKS_MINOR_VERSION,
                                         HYDROBRICKS_PATCH_VERSION);
@@ -274,7 +305,7 @@ void Hydrobricks::InitializeLog() {
 }
 
 bool Hydrobricks::CheckOutputDirectory() {
-    if (!wxFileName::Exists(m_outputPath)) {
+    if (!wxFileName::DirExists(m_outputPath)) {
         wxFileName dir = wxFileName(m_outputPath);
         if (!dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
             wxLogError(_("The path %s could not be created."), m_outputPath);

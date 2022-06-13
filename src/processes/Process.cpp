@@ -1,17 +1,18 @@
 #include "Process.h"
 
 #include "Brick.h"
-#include "WaterContainer.h"
+#include "Glacier.h"
 #include "ProcessETSocont.h"
+#include "ProcessInfiltrationSocont.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessOutflowConstant.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "Snowpack.h"
-#include "Glacier.h"
-#include "ProcessInfiltrationSocont.h"
 #include "ProcessOutflowRestDirect.h"
+#include "ProcessRunoffSocont.h"
+#include "Snowpack.h"
+#include "WaterContainer.h"
 
 Process::Process(WaterContainer* container)
     : m_container(container)
@@ -32,6 +33,10 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
     } else if (processSettings.type.IsSameAs("Outflow:rest-direct", false) ||
                processSettings.type.IsSameAs("Outflow:RestDirect", false)) {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
+    } else if (processSettings.type.IsSameAs("Runoff:Socont", false)) {
+        auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
+        process->AssignParameters(processSettings);
+        return process;
     } else if (processSettings.type.IsSameAs("Infiltration:Socont", false)) {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
     } else if (processSettings.type.IsSameAs("Overflow", false)) {

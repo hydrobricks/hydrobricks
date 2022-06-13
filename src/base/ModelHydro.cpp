@@ -499,9 +499,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         }
     }
 
-    vecStr commonLogLabels = modelSettings.GetSubBasinLogLabels();
-    for (auto & commonLogLabel : commonLogLabels) {
-        valPt = m_subBasin->GetValuePointer(commonLogLabel);
+    vecStr genericLogLabels = modelSettings.GetSubBasinGenericLogLabels();
+    for (auto & genericLogLabel : genericLogLabels) {
+        valPt = m_subBasin->GetValuePointer(genericLogLabel);
         if (valPt == nullptr) {
             throw ShouldNotHappen();
         }

@@ -230,6 +230,8 @@ class SettingsModel : public wxObject {
 
     vecStr GetSubBasinLogLabels();
 
+    vecStr GetSubBasinGenericLogLabels();
+
     vecStr GetHydroUnitLogLabels();
 
   protected:

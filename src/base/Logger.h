@@ -9,7 +9,7 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels);
+    void InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels);
 
     void SetSubBasinValuePointer(int iLabel, double* valPt);
 

@@ -8,6 +8,8 @@ static const wxCmdLineEntryDesc cmdLineDesc[] =
         {wxCMD_LINE_OPTION, NULL, "basin-file",         "Path to the spatial structure file"},
         {wxCMD_LINE_OPTION, NULL, "data-file",          "Path to the spatial structure file"},
         {wxCMD_LINE_OPTION, NULL, "output-path",        "Path to save the output from hydrobricks (no ending backslash)"},
+        {wxCMD_LINE_OPTION, NULL, "start-date",         "Starting date of the modelling (YYYY-MM-DD)"},
+        {wxCMD_LINE_OPTION, NULL, "end-date",           "Ending date of the modelling (YYYY-MM-DD)"},
         {wxCMD_LINE_NONE}
 };
 

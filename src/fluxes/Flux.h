@@ -28,9 +28,7 @@ class Flux : public wxObject {
      *
      * @param amount the water amount of the flux.
      */
-    virtual void UpdateFlux(double amount) {
-        m_amount = amount * m_fraction;
-    }
+    virtual void UpdateFlux(double amount);
 
     void LinkChangeRate(double* rate) {
         m_changeRate = rate;

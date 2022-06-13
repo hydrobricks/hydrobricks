@@ -10,3 +10,11 @@ Flux::Flux()
       m_modifier(nullptr),
       m_type("water")
 {}
+
+void Flux::UpdateFlux(double amount) {
+    if (m_fraction < 1.0) {
+        m_amount = amount * m_fraction;
+    } else {
+        m_amount = amount;
+    }
+}

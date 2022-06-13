@@ -15,6 +15,10 @@ double FluxToBrickInstantaneous::GetAmount() {
 
 void FluxToBrickInstantaneous::UpdateFlux(double amount) {
     wxASSERT(m_toBrick);
-    m_amount = amount; // Keep it for the logger.
+    if (m_fraction < 1.0) {
+        m_amount = amount * m_fraction; // Keep it for the logger.
+    } else {
+        m_amount = amount;
+    }
     m_toBrick->GetWaterContainer()->AddAmount(amount);
 }

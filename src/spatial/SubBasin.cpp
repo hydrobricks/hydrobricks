@@ -104,6 +104,16 @@ HydroUnit* SubBasin::GetHydroUnit(int index) {
     return m_hydroUnits[index];
 }
 
+vecInt SubBasin::GetHydroUnitsIds() {
+    vecInt ids;
+    ids.reserve(m_hydroUnits.size());
+    for (auto unit :m_hydroUnits) {
+        ids.push_back(unit->GetId());
+    }
+
+    return ids;
+}
+
 int SubBasin::GetBricksCount() {
     return int(m_bricks.size());
 }

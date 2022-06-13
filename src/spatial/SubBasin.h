@@ -32,6 +32,8 @@ class SubBasin : public wxObject {
 
     HydroUnit* GetHydroUnit(int index);
 
+    vecInt GetHydroUnitsIds();
+
     int GetBricksCount();
 
     int GetSplittersCount();

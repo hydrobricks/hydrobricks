@@ -26,7 +26,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
         m_logger.InitContainer(m_timer.GetTimeStepsNb(),
-                               m_subBasin->GetHydroUnitsNb(),
+                               m_subBasin->GetHydroUnitsIds(),
                                modelSettings.GetSubBasinLogLabels(),
                                modelSettings.GetHydroUnitLogLabels());
         ConnectLoggerToValues(modelSettings);

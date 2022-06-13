@@ -6,15 +6,15 @@ Logger::Logger()
     : m_cursor(0)
 {}
 
-void Logger::InitContainer(int timeSize, int hydroUnitsNb, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels) {
+void Logger::InitContainer(int timeSize, vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
     m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Zero(timeSize));
     m_subBasinValuesPt.resize(subBasinLabels.size());
-    m_hydroUnitIds.resize(hydroUnitsNb);
+    m_hydroUnitIds = hydroUnitsIds;
     m_hydroUnitLabels = hydroUnitLabels;
-    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Zero(timeSize, hydroUnitsNb));
-    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsNb, nullptr));
+    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Zero(timeSize, hydroUnitsIds.size()));
+    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
 }
 
 void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
@@ -66,10 +66,10 @@ bool Logger::DumpOutputs(const wxString &path) {
         filePath.Append(wxFileName::GetPathSeparator());
         filePath.Append("results.nc");
 
-        int timeSize = int(m_time.size());
-        int hydroUnitsNb = int(m_hydroUnitIds.size());
-        int subBasinLabelsNb = int(m_subBasinLabels.size());
-        int hydroUnitLabelsNb = int(m_hydroUnitLabels.size());
+        size_t timeSize = m_time.size();
+        size_t hydroUnitsNb = m_hydroUnitIds.size();
+        size_t subBasinLabelsNb = m_subBasinLabels.size();
+        size_t hydroUnitLabelsNb = m_hydroUnitLabels.size();
 
         // Create file
         CheckNcStatus(nc_create(filePath, NC_NETCDF4 | NC_CLOBBER, &ncId));
@@ -86,22 +86,41 @@ bool Logger::DumpOutputs(const wxString &path) {
         CheckNcStatus(nc_put_var_double(ncId, varId, &m_time[0]));
 
         vecInt dimHydroUnitVar = {dimIdUnit};
-        CheckNcStatus(nc_def_var(ncId, "hydro_units", NC_INT, 1, &dimHydroUnitVar[0], &varId));
+        CheckNcStatus(nc_def_var(ncId, "hydro_units_ids", NC_INT, 1, &dimHydroUnitVar[0], &varId));
         CheckNcStatus(nc_put_var_int(ncId, varId, &m_hydroUnitIds[0]));
 
         vecInt dimSubBasinValuesVar = {dimIdItemsAgg, dimIdTime};
         CheckNcStatus(nc_def_var(ncId, "sub_basin_values", NC_DOUBLE, 2, &dimSubBasinValuesVar[0], &varId));
-        CheckNcStatus(nc_def_var_deflate(ncId, varId, true, true, 7));
-        CheckNcStatus(nc_put_var_double(ncId, varId, &m_subBasinValues[0][0]));
+        CheckNcStatus(nc_def_var_deflate(ncId, varId, NC_SHUFFLE, true, 7));
+        for (size_t i = 0; i < m_subBasinValues.size(); ++i) {
+            size_t start[] = {i, 0};
+            size_t count[] = {1, timeSize};
+            CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_subBasinValues[i](0)));
+        }
 
         vecInt dimHydroUnitValuesVar = {dimIdItemsDist, dimIdUnit, dimIdTime};
         CheckNcStatus(nc_def_var(ncId, "hydro_units_values", NC_DOUBLE, 3, &dimHydroUnitValuesVar[0], &varId));
-        CheckNcStatus(nc_def_var_deflate(ncId, varId, true, true, 7));
-        CheckNcStatus(nc_put_var_double(ncId, varId, &m_hydroUnitValues[0](0, 0)));
+        CheckNcStatus(nc_def_var_deflate(ncId, varId, NC_SHUFFLE, true, 7));
+        for (size_t i = 0; i < m_hydroUnitValues.size(); ++i) {
+            size_t start[] = {i, 0, 0};
+            size_t count[] = {1, hydroUnitsNb, timeSize};
+            CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_hydroUnitValues[i](0, 0)));
+        }
 
         // Attributes
-        //nc_put_att_string(ncId, NC_GLOBAL, "labels_aggregated", subBasinLabelsNb, m_subBasinLabels[0].mb_str());
-        //nc_put_att_string(ncId, NC_GLOBAL, "labels_distributed", subBasinLabelsNb, m_hydroUnitLabels[0].c_str());
+        std::vector<const char *> subBasinLabels;
+        for (const auto& label :m_subBasinLabels) {
+            const char* str = (const char*)label.mb_str(wxConvUTF8);
+            subBasinLabels.push_back(str);
+        }
+        CheckNcStatus(nc_put_att_string(ncId, NC_GLOBAL, "labels_aggregated", subBasinLabelsNb, &subBasinLabels[0]));
+
+        std::vector<const char *> hydroUnitLabels;
+        for (const auto& label :m_hydroUnitLabels) {
+            const char* str = (const char*)label.mb_str(wxConvUTF8);
+            hydroUnitLabels.push_back(str);
+        }
+        CheckNcStatus(nc_put_att_string(ncId, NC_GLOBAL, "labels_distributed", hydroUnitLabelsNb, &hydroUnitLabels[0]));
 
         CheckNcStatus(nc_close(ncId));
 

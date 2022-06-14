@@ -20,12 +20,12 @@ class ProcessMeltDegreeDay : public ProcessMelt {
 
     void AttachForcing(Forcing* forcing) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
     Forcing* m_temperature;
     float* m_degreeDayFactor;
     float* m_meltingTemperature;
+
+    vecDouble GetRates() override;
 
   private:
 };

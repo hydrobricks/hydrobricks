@@ -72,7 +72,12 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
             wxASSERT(rate != nullptr);
             wxASSERT(*rate < 1000);
             wxASSERT(*rate > -1000);
-            if (*rate == 0.0) {
+            wxASSERT(*rate >= 0);
+            if (*rate <= EPSILON_D) {
+                continue;
+            }
+            if (std::abs(diff - change) < PRECISION) {
+                *rate = 0;
                 continue;
             }
             *rate += diff * std::abs((*rate) / outputs);
@@ -122,7 +127,7 @@ void WaterContainer::SetOutgoingRatesToZero() {
 void WaterContainer::Finalize() {
     m_content += m_contentChange;
     m_contentChange = 0;
-    wxASSERT(m_content >= -EPSILON_D);
+    wxASSERT(m_content >= -PRECISION);
 }
 
 double WaterContainer::SumIncomingFluxes() {

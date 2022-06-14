@@ -9,19 +9,19 @@ TEST(Utils, ZeroIsNotNaN) {
 }
 
 TEST(Utils, IsNaNIntTrue) {
-    int value = NaNi;
+    int value = NAN_I;
 
     EXPECT_TRUE(IsNaN(value));
 }
 
 TEST(Utils, IsNaNFloatTrue) {
-    float value = NaNf;
+    float value = NAN_F;
 
     EXPECT_TRUE(IsNaN(value));
 }
 
 TEST(Utils, IsNaNDoubleTrue) {
-    double value = NaNd;
+    double value = NAN_D;
 
     EXPECT_TRUE(IsNaN(value));
 }

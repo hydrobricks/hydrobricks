@@ -16,10 +16,10 @@ class ProcessOutflowLinear : public ProcessOutflow {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
     float* m_responseFactor;  // [1/d]
+
+    vecDouble GetRates() override;
 
   private:
 };

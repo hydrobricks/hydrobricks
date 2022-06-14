@@ -16,11 +16,10 @@ class ProcessOutflowOverflow : public ProcessOutflow {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    vecDouble GetChangeRates() override;
-
     void StoreInOutgoingFlux(double* rate, int index) override;
 
   protected:
+    vecDouble GetRates() override;
 
   private:
 };

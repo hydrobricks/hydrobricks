@@ -10,7 +10,7 @@ void ProcessOutflowOverflow::AssignParameters(const ProcessSettings &processSett
     Process::AssignParameters(processSettings);
 }
 
-vecDouble ProcessOutflowOverflow::GetChangeRates() {
+vecDouble ProcessOutflowOverflow::GetRates() {
     return {0};
 }
 

@@ -16,10 +16,10 @@ class ProcessOutflowConstant : public ProcessOutflow {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
     float* m_rate;  // [mm/d]
+
+    vecDouble GetRates() override;
 
   private:
 };

@@ -3,7 +3,7 @@
 #include "Utils.h"
 
 bool IsNaN(const int value) {
-    return value == NaNi;
+    return value == NAN_I;
 }
 
 bool IsNaN(const float value) {

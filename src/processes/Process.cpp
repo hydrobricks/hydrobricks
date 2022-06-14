@@ -91,6 +91,16 @@ float* Process::GetParameterValuePointer(const ProcessSettings &processSettings,
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
+vecDouble Process::GetChangeRates() {
+    if (m_container->GetContentWithChanges() <= 0) {
+        vecDouble res(GetConnectionsNb());
+        std::fill(res.begin(), res.end(), 0);
+        return res;
+    }
+
+    return GetRates();
+}
+
 void Process::StoreInOutgoingFlux(double* rate, int index) {
     wxASSERT(m_outputs.size() > index);
     m_outputs[index]->LinkChangeRate(rate);

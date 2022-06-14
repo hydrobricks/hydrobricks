@@ -18,11 +18,11 @@ class ProcessETSocont : public ProcessET {
 
     void AttachForcing(Forcing* forcing) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
     Forcing* m_pet;
     float m_exponent;
+
+    vecDouble GetRates() override;
 
   private:
 };

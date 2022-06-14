@@ -16,12 +16,12 @@ class ProcessRunoffSocont : public ProcessOutflow {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
     float* m_slope;  // [ratio]
     float* m_runoffParameter;  // []
     double m_h;  // [m]
+
+    vecDouble GetRates() override;
 
   private:
 };

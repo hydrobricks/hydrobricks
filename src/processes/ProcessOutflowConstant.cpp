@@ -16,6 +16,6 @@ void ProcessOutflowConstant::AssignParameters(const ProcessSettings &processSett
     }
 }
 
-vecDouble ProcessOutflowConstant::GetChangeRates() {
+vecDouble ProcessOutflowConstant::GetRates() {
     return {*m_rate};
 }

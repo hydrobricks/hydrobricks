@@ -16,9 +16,8 @@ class ProcessInfiltrationSocont : public ProcessInfiltration {
      */
     void AssignParameters(const ProcessSettings &processSettings) override;
 
-    vecDouble GetChangeRates() override;
-
   protected:
+    vecDouble GetRates() override;
 
   private:
 };

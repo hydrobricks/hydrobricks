@@ -15,7 +15,7 @@ void ProcessRunoffSocont::AssignParameters(const ProcessSettings &processSetting
     m_runoffParameter = GetParameterValuePointer(processSettings, "runoffCoefficient");
 }
 
-vecDouble ProcessRunoffSocont::GetChangeRates() {
+vecDouble ProcessRunoffSocont::GetRates() {
     // Unit conversion: [d] to [s]
     double dt = g_timeStepInDays * g_dayInSec;
 

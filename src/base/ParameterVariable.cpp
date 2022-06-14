@@ -35,7 +35,7 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
 
     if (i < 0) {
         wxLogError(_("The given year was not found in the reference years of the parameter."));
-        m_value = NaNf;
+        m_value = NAN_F;
         return false;
     }
 
@@ -100,7 +100,7 @@ bool ParameterVariableDates::UpdateParameter(double timeReference) {
 
     if (i < 0) {
         wxLogError(_("The given time was not found in the reference time array of the parameter."));
-        m_value = NaNf;
+        m_value = NAN_F;
         return false;
     }
 

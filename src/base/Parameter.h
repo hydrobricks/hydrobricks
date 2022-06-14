@@ -5,7 +5,7 @@
 
 class Parameter : public wxObject {
   public:
-    explicit Parameter(const wxString &name, float val = NaNf);
+    explicit Parameter(const wxString &name, float val = NAN_F);
 
     ~Parameter() override = default;
 

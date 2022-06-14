@@ -6,6 +6,6 @@ ProcessOutflowDirect::ProcessOutflowDirect(WaterContainer* container)
     : ProcessOutflow(container)
 {}
 
-vecDouble ProcessOutflowDirect::GetChangeRates() {
+vecDouble ProcessOutflowDirect::GetRates() {
     return {m_container->GetContentWithChanges()};
 }

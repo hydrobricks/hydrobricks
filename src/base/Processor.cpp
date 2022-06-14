@@ -160,6 +160,7 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {
             process->ApplyChange(i, m_changeRatesNoSolver(iRate), g_timeStepInDays);
+            m_changeRatesNoSolver(iRate) = 0;
             iRate++;
         }
     }

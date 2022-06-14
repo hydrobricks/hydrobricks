@@ -40,7 +40,7 @@ void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessMeltDegreeDay::GetChangeRates() {
+vecDouble ProcessMeltDegreeDay::GetRates() {
     double melt = 0;
     if (m_temperature->GetValue() >= *m_meltingTemperature) {
         melt = (m_temperature->GetValue() - *m_meltingTemperature) * *m_degreeDayFactor;

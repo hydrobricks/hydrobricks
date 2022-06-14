@@ -12,6 +12,6 @@ void ProcessOutflowLinear::AssignParameters(const ProcessSettings &processSettin
     m_responseFactor = GetParameterValuePointer(processSettings, "responseFactor");
 }
 
-vecDouble ProcessOutflowLinear::GetChangeRates() {
+vecDouble ProcessOutflowLinear::GetRates() {
     return {(*m_responseFactor) * m_container->GetContentWithChanges()};
 }

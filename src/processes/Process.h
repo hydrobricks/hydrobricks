@@ -67,7 +67,7 @@ class Process : public wxObject {
 
     virtual int GetConnectionsNb() = 0;
 
-    virtual vecDouble GetChangeRates() = 0;
+    virtual vecDouble GetChangeRates();
 
     virtual void StoreInOutgoingFlux(double* rate, int index);
 
@@ -112,6 +112,8 @@ class Process : public wxObject {
     std::vector<Flux*> m_outputs;
 
     double GetSumChangeRatesOtherProcesses();
+
+    virtual vecDouble GetRates() = 0;
 
   private:
 };

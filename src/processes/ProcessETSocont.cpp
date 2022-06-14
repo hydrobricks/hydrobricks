@@ -20,7 +20,7 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETSocont::GetChangeRates() {
+vecDouble ProcessETSocont::GetRates() {
     wxASSERT(m_container->HasMaximumCapacity());
     return {m_pet->GetValue() * pow(m_container->GetContentWithChanges() /
                                     m_container->GetMaximumCapacity(),

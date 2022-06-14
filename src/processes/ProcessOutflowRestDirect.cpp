@@ -6,6 +6,6 @@ ProcessOutflowRestDirect::ProcessOutflowRestDirect(WaterContainer* container)
     : ProcessOutflow(container)
 {}
 
-vecDouble ProcessOutflowRestDirect::GetChangeRates() {
+vecDouble ProcessOutflowRestDirect::GetRates() {
     return {wxMax(m_container->GetContentWithChanges() - GetSumChangeRatesOtherProcesses(), 0)};
 }

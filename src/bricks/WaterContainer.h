@@ -55,6 +55,8 @@ class WaterContainer : public wxObject {
         m_content = value;
     }
 
+    double GetTargetFillingRatio();
+
     bool IsNotEmpty() {
         return GetContentWithChanges() > 0.0;
     }

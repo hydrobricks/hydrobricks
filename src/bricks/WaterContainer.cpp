@@ -142,3 +142,7 @@ double WaterContainer::SumIncomingFluxes() {
 vecDoublePt WaterContainer::GetStateVariableChanges() {
     return vecDoublePt {&m_contentChange};
 }
+
+double WaterContainer::GetTargetFillingRatio() {
+    return wxMax(0.0, wxMin(1.0, GetContentWithChanges() / GetMaximumCapacity()));
+}

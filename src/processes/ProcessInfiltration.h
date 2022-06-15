@@ -35,6 +35,8 @@ class ProcessInfiltration : public Process {
 
     double GetTargetCapacity();
 
+    double GetTargetFillingRatio();
+
   private:
 };
 

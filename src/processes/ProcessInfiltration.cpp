@@ -39,3 +39,7 @@ double ProcessInfiltration::GetTargetStock() {
 double ProcessInfiltration::GetTargetCapacity() {
     return m_targetBrick->GetWaterContainer()->GetMaximumCapacity();
 }
+
+double ProcessInfiltration::GetTargetFillingRatio() {
+    return wxMax(0.0, wxMin(1.0, GetTargetStock() / GetTargetCapacity()));
+}

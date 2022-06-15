@@ -854,7 +854,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     if (logAll) {
         for (const auto& name: surfaceNames) {
             SelectHydroUnitBrick(name + "-snowpack");
-            AddBrickLogging("content");
+            AddBrickLogging("snow");
 
             SelectProcess("melt");
             AddProcessLogging("output");

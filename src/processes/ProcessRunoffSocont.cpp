@@ -26,7 +26,10 @@ vecDouble ProcessRunoffSocont::GetRates() {
 
     double shapeCoefficient = 0.5;
     double dh = (influx - runoff) / shapeCoefficient * dt; // [m]
-    m_h += dh;
+    //m_h += dh;
 
-    return {influx - dh/dt * shapeCoefficient};
+    double outflow = m_container->GetContentWithChanges() - dh/dt * shapeCoefficient;
+    outflow = influx;
+
+    return {outflow};
 }

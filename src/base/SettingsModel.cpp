@@ -929,6 +929,8 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         AddProcessForcing("PET");
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessOutput("outlet");
+        AddBrickProcess("overflow", "Overflow");
+        AddProcessOutput("outlet");
         if (logAll) {
             AddBrickLogging("content");
             AddProcessLogging("output");
@@ -948,6 +950,8 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
         AddBrickProcess("percolation", "Outflow:constant");
         AddProcessParameter("percolationRate", 0.4f);
         AddProcessOutput("slow-reservoir-2");
+        AddBrickProcess("overflow", "Overflow");
+        AddProcessOutput("outlet");
         AddHydroUnitBrick("slow-reservoir-2", "Storage");
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessParameter("responseFactor", 0.4f);

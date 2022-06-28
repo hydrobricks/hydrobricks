@@ -18,5 +18,5 @@ vecDouble ProcessRunoffSocont::GetRates() {
     double waterDepth = m_container->GetContentWithChanges();
     double runoff = *m_runoffParameter * pow(*m_slope, 0.5) * pow(waterDepth, 5/3);
 
-    return {runoff};
+    return {wxMin(runoff, waterDepth)};
 }

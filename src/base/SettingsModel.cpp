@@ -652,8 +652,6 @@ bool SettingsModel::ParseStructure(const wxString &path) {
         wxLogError(e.what());
         return false;
     }
-
-    return true;
 }
 
 bool SettingsModel::ParseParameters(const wxString &path) {

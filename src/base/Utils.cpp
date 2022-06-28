@@ -234,7 +234,6 @@ Time GetTimeStructFromMJD(double mjd) {
 }
 
 double ParseDate(const wxString &dateStr, TimeFormat format) {
-    double date;
     wxString msgLength = _("The length of the input date (%2.2d) is not as expected (%2.2d or %2.2d)");
     wxString msgConversion = _("The date (%s) conversion failed. Please check the format");
     long day = 0;

@@ -29,6 +29,9 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
             double* changeRate = flux->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
             wxASSERT(*changeRate < 1000);
+            if (*changeRate < 0) {
+                *changeRate = 0;
+            }
             wxASSERT(*changeRate > -EPSILON_D);
             outgoingRates.push_back(changeRate);
             outputs += *changeRate;
@@ -48,6 +51,9 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
             double* changeRate = input->GetChangeRatePointer();
             wxASSERT(changeRate != nullptr);
             wxASSERT(*changeRate < 1000);
+            if (*changeRate < 0) {
+                *changeRate = 0;
+            }
             wxASSERT(*changeRate > -EPSILON_D);
             incomingRates.push_back(changeRate);
             inputs += *changeRate;

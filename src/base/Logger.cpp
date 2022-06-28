@@ -71,6 +71,8 @@ bool Logger::DumpOutputs(const wxString &path) {
         size_t subBasinLabelsNb = m_subBasinLabels.size();
         size_t hydroUnitLabelsNb = m_hydroUnitLabels.size();
 
+        wxCharBuffer buffer;
+
         // Create file
         CheckNcStatus(nc_create(filePath, NC_NETCDF4 | NC_CLOBBER, &ncId));
 
@@ -84,10 +86,16 @@ bool Logger::DumpOutputs(const wxString &path) {
         vecInt dimTimeVar = {dimIdTime};
         CheckNcStatus(nc_def_var(ncId, "time", NC_DOUBLE, 1, &dimTimeVar[0], &varId));
         CheckNcStatus(nc_put_var_double(ncId, varId, &m_time[0]));
+        buffer = wxString("time").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
+        buffer = wxString("days since 1858-11-17 00:00:00.0").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
 
         vecInt dimHydroUnitVar = {dimIdUnit};
         CheckNcStatus(nc_def_var(ncId, "hydro_units_ids", NC_INT, 1, &dimHydroUnitVar[0], &varId));
         CheckNcStatus(nc_put_var_int(ncId, varId, &m_hydroUnitIds[0]));
+        buffer = wxString("hydrological units ids").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
 
         vecInt dimSubBasinValuesVar = {dimIdItemsAgg, dimIdTime};
         CheckNcStatus(nc_def_var(ncId, "sub_basin_values", NC_DOUBLE, 2, &dimSubBasinValuesVar[0], &varId));
@@ -97,6 +105,10 @@ bool Logger::DumpOutputs(const wxString &path) {
             size_t count[] = {1, timeSize};
             CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_subBasinValues[i](0)));
         }
+        buffer = wxString("aggregated values over the sub basin").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
+        buffer = wxString("mm").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
 
         vecInt dimHydroUnitValuesVar = {dimIdItemsDist, dimIdUnit, dimIdTime};
         CheckNcStatus(nc_def_var(ncId, "hydro_units_values", NC_DOUBLE, 3, &dimHydroUnitValuesVar[0], &varId));
@@ -106,8 +118,12 @@ bool Logger::DumpOutputs(const wxString &path) {
             size_t count[] = {1, hydroUnitsNb, timeSize};
             CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_hydroUnitValues[i](0, 0)));
         }
+        buffer = wxString("values for each hydrological units").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
+        buffer = wxString("mm").ToUTF8();
+        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
 
-        // Attributes
+        // Global attributes
         std::vector<const char *> subBasinLabels;
         for (const auto& label :m_subBasinLabels) {
             const char* str = (const char*)label.mb_str(wxConvUTF8);

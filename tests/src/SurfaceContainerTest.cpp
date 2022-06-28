@@ -74,14 +74,12 @@ class SurfaceContainerModel : public ::testing::Test {
 
         m_model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                                wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(precip);
 
-        auto temperature = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                                     wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);

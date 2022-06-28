@@ -11,7 +11,7 @@ class TimeMachine : public wxObject {
 
     ~TimeMachine() override = default;
 
-    void Initialize(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit);
+    void Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit);
 
     void Initialize(const TimerSettings &settings);
 
@@ -27,15 +27,15 @@ class TimeMachine : public wxObject {
 
     void UpdateTimeStepInDays();
 
-    wxDateTime GetDate() {
+    double GetDate() {
         return m_date;
     }
 
-    wxDateTime GetStart() {
+    double GetStart() {
         return m_start;
     }
 
-    wxDateTime GetEnd() {
+    double GetEnd() {
         return m_end;
     }
 
@@ -46,9 +46,9 @@ class TimeMachine : public wxObject {
   protected:
 
   private:
-    wxDateTime m_date;
-    wxDateTime m_start;
-    wxDateTime m_end;
+    double m_date;
+    double m_start;
+    double m_end;
     int m_timeStep;
     TimeUnit m_timeStepUnit;
     double m_timeStepInDays;

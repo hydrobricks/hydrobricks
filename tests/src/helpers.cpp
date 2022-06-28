@@ -2,7 +2,6 @@
 
 TimeMachine GenerateTimeMachineDaily() {
     TimeMachine timer;
-    timer.Initialize(wxDateTime(1, wxDateTime::Jan, 2020),
-                     wxDateTime(31, wxDateTime::Dec, 2020), 1, Day);
+    timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 1, 31), 1, Day);
     return timer;
 }

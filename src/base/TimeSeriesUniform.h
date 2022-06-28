@@ -15,7 +15,7 @@ class TimeSeriesUniform : public TimeSeries {
         m_data = data;
     }
 
-    bool SetCursorToDate(const wxDateTime &dateTime) override;
+    bool SetCursorToDate(double date) override;
 
     bool AdvanceOneTimeStep() override;
 
@@ -23,9 +23,9 @@ class TimeSeriesUniform : public TimeSeries {
         return false;
     }
 
-    wxDateTime GetStart() override;
+    double GetStart() override;
 
-    wxDateTime GetEnd() override;
+    double GetEnd() override;
 
     TimeSeriesData* GetDataPointer(int unitId) override;
 

@@ -473,38 +473,38 @@ TEST(Utils, SearchStdVectorWithTolerance) {
 }
 
 TEST(Utils, IncrementDateBy1Day) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 1, Day);
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 1, Day);
 
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(2, wxDateTime::Jan, 2020)));
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 2));
 }
 
 TEST(Utils, IncrementDateBy5Days) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 5, Day);
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 5, Day);
 
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(6, wxDateTime::Jan, 2020)));
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 6));
 }
 
 TEST(Utils, IncrementDateBy2Weeks) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 2, Week);
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Week);
 
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(15, wxDateTime::Jan, 2020)));
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 15));
 }
 
 TEST(Utils, IncrementDateBy2Hours) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 2, Hour);
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Hour);
 
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2020, 2)));
+    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 2));
 }
 
 TEST(Utils, IncrementDateBy2Minutes) {
-    wxDateTime date = wxDateTime(1, wxDateTime::Jan, 2020);
-    wxDateTime newDate = IncrementDateBy(date, 2, Minute);
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Minute);
 
-    EXPECT_TRUE(newDate.IsSameDate(wxDateTime(1, wxDateTime::Jan, 2020, 0, 2)));
+    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }
 
 TEST(Utils, GetTimeStructNormal20040101) {
@@ -549,59 +549,6 @@ TEST(Utils, GetTimeStructNormal20101104T10h) {
 TEST(Utils, GetTimeStructNormal20101104T103245) {
     double mjd = 55504.43940972211;
     Time date = GetTimeStructFromMJD(mjd);
-
-    EXPECT_EQ(2010, date.year);
-    EXPECT_EQ(11, date.month);
-    EXPECT_EQ(4, date.day);
-    EXPECT_EQ(10, date.hour);
-    EXPECT_EQ(32, date.min);
-    EXPECT_EQ(45, date.sec);
-}
-
-TEST(Utils, GetTimeStructAlternate20040101) {
-    double mjd = 53005;
-    Time date = GetTimeStructFromMJD(mjd, 2);
-
-    EXPECT_EQ(2004, date.year);
-    EXPECT_EQ(1, date.month);
-    EXPECT_EQ(1, date.day);
-}
-
-TEST(Utils, GetTimeStructAlternate20040101T12h) {
-    double mjd = 53005.5;
-    Time date = GetTimeStructFromMJD(mjd, 2);
-
-    EXPECT_EQ(2004, date.year);
-    EXPECT_EQ(1, date.month);
-    EXPECT_EQ(1, date.day);
-    EXPECT_EQ(12, date.hour);
-}
-
-TEST(Utils, GetTimeStructAlternate20101104T12h) {
-    double mjd = 55504.5;
-    Time date = GetTimeStructFromMJD(mjd, 2);
-
-    EXPECT_EQ(2010, date.year);
-    EXPECT_EQ(11, date.month);
-    EXPECT_EQ(4, date.day);
-    EXPECT_EQ(12, date.hour);
-}
-
-TEST(Utils, GetTimeStructAlternate20101104T10) {
-    double mjd = 55504.41666666651;
-    Time date = GetTimeStructFromMJD(mjd, 2);
-
-    EXPECT_EQ(2010, date.year);
-    EXPECT_EQ(11, date.month);
-    EXPECT_EQ(4, date.day);
-    EXPECT_EQ(10, date.hour);
-    EXPECT_EQ(0, date.min);
-    EXPECT_EQ(0, date.sec);
-}
-
-TEST(Utils, GetTimeStructAlternate20101104T103245) {
-    double mjd = 55504.43940972211;
-    Time date = GetTimeStructFromMJD(mjd, 2);
 
     EXPECT_EQ(2010, date.year);
     EXPECT_EQ(11, date.month);

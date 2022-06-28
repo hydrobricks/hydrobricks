@@ -47,8 +47,7 @@ class FluxWeightedModel : public ::testing::Test {
 
         m_model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                                wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(precip);

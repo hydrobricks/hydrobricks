@@ -11,17 +11,17 @@ class TimeSeriesData : public wxObject {
 
     virtual bool SetValues(const vecDouble &values);
 
-    virtual double GetValueFor(const wxDateTime &date);
+    virtual double GetValueFor(double date);
 
     virtual double GetCurrentValue();
 
-    virtual bool SetCursorToDate(const wxDateTime &dateTime) = 0;
+    virtual bool SetCursorToDate(double date) = 0;
 
     virtual bool AdvanceOneTimeStep() = 0;
 
-    virtual wxDateTime GetStart() = 0;
+    virtual double GetStart() = 0;
 
-    virtual wxDateTime GetEnd() = 0;
+    virtual double GetEnd() = 0;
 
   protected:
     vecDouble m_values;
@@ -33,27 +33,27 @@ class TimeSeriesData : public wxObject {
 
 class TimeSeriesDataRegular : public TimeSeriesData {
   public:
-    TimeSeriesDataRegular(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit);
+    TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit);
 
     ~TimeSeriesDataRegular() override = default;
 
     bool SetValues(const vecDouble &values) override;
 
-    double GetValueFor(const wxDateTime &date) override;
+    double GetValueFor(double date) override;
 
     double GetCurrentValue() override;
 
-    bool SetCursorToDate(const wxDateTime &dateTime) override;
+    bool SetCursorToDate(double date) override;
 
     bool AdvanceOneTimeStep() override;
 
-    wxDateTime GetStart() override;
+    double GetStart() override;
 
-    wxDateTime GetEnd() override;
+    double GetEnd() override;
 
   protected:
-    wxDateTime m_start;
-    wxDateTime m_end;
+    double m_start;
+    double m_end;
     int m_timeStep;
     TimeUnit m_timeStepUnit;
 
@@ -69,17 +69,17 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
 
     bool SetValues(const vecDouble &values) override;
 
-    double GetValueFor(const wxDateTime &date) override;
+    double GetValueFor(double date) override;
 
     double GetCurrentValue() override;
 
-    bool SetCursorToDate(const wxDateTime &dateTime) override;
+    bool SetCursorToDate(double date) override;
 
     bool AdvanceOneTimeStep() override;
 
-    wxDateTime GetStart() override;
+    double GetStart() override;
 
-    wxDateTime GetEnd() override;
+    double GetEnd() override;
 
   protected:
     vecDouble m_dates;

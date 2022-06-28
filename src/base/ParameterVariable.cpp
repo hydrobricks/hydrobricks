@@ -64,10 +64,11 @@ bool ParameterVariableMonthly::SetValues(const vecFloat& values) {
     return true;
 }
 
-bool ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
-    wxASSERT(month != wxDateTime::Inv_Month);
+bool ParameterVariableMonthly::UpdateParameter(int month) {
+    wxASSERT(month > 0);
+    wxASSERT(month <= 12);
 
-    m_value = m_values[month];
+    m_value = m_values[month-1];
 
     return true;
 }

@@ -5,10 +5,10 @@
 
 std::vector<double> GenerateDailyDatesVector() {
     std::vector<double> dates;
-    wxDateTime date(1, wxDateTime::Jan, 2010);
+    double date = GetMJD(2010, 1, 1);
     for (int i = 0; i < 10; ++i) {
-        dates.push_back(date.GetJDN());
-        date = date.Add(wxDateSpan(0, 0, 0, 1));
+        dates.push_back(date);
+        date += 1;
     }
 
     return dates;
@@ -69,7 +69,7 @@ TEST(ParameterVariableMonthly, UpdateParameter) {
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     parameter.SetValues(values);
 
-    parameter.UpdateParameter(wxDateTime::Mar);
+    parameter.UpdateParameter(3);
 
     EXPECT_EQ(3, parameter.GetValue());
 }
@@ -97,8 +97,8 @@ TEST(ParameterVariableDates, UpdateParameter) {
     std::vector<double> dates = GenerateDailyDatesVector();
     parameter.SetTimeAndValues(dates, values);
 
-    wxDateTime dateExtract(4, wxDateTime::Jan, 2010);
-    parameter.UpdateParameter(dateExtract.GetJDN());
+    double dateExtract = GetMJD(2010, 1, 4);
+    parameter.UpdateParameter(dateExtract);
 
     EXPECT_EQ(4, parameter.GetValue());
 }
@@ -110,9 +110,9 @@ TEST(ParameterVariableDates, UpdateParameterNotFound) {
     parameter.SetTimeAndValues(dates, values);
 
     wxLogNull logNo;
-    wxDateTime dateExtract(20, wxDateTime::Jan, 2010);
+    double dateExtract = GetMJD(2010, 1, 20);
 
-    EXPECT_FALSE(parameter.UpdateParameter(dateExtract.GetJDN()));
+    EXPECT_FALSE(parameter.UpdateParameter(dateExtract));
     EXPECT_TRUE(IsNaN(parameter.GetValue()));
 }
 
@@ -124,8 +124,8 @@ TEST(ParametersUpdater, DateUpdateDay) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableDates(&parameter);
-    updater.DateUpdate(wxDateTime(1, wxDateTime::Jan, 2010));
-    updater.DateUpdate(wxDateTime(4, wxDateTime::Jan, 2010));
+    updater.DateUpdate(GetMJD(2010, 2, 1));
+    updater.DateUpdate(GetMJD(2010, 1, 4));
 
     EXPECT_EQ(4, parameter.GetValue());
 }
@@ -137,8 +137,8 @@ TEST(ParametersUpdater, DateUpdateMonth) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableMonthly(&parameter);
-    updater.DateUpdate(wxDateTime(1, wxDateTime::Feb, 2010));
-    updater.DateUpdate(wxDateTime(1, wxDateTime::Mar, 2010));
+    updater.DateUpdate(GetMJD(2010, 2, 1));
+    updater.DateUpdate(GetMJD(2010, 3, 1));
 
     EXPECT_EQ(3, parameter.GetValue());
 }
@@ -150,8 +150,8 @@ TEST(ParametersUpdater, DateUpdateYear) {
 
     ParametersUpdater updater;
     updater.AddParameterVariableYearly(&parameter);
-    updater.DateUpdate(wxDateTime(1, wxDateTime::Jan, 2014));
-    updater.DateUpdate(wxDateTime(13, wxDateTime::Mar, 2015));
+    updater.DateUpdate(GetMJD(2014, 1, 1));
+    updater.DateUpdate(GetMJD(2015, 3, 13));
 
     EXPECT_EQ(5, parameter.GetValue());
 }

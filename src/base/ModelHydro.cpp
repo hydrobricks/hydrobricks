@@ -582,7 +582,7 @@ bool ModelHydro::Run() {
             wxLogError(_("Failed running the model."));
             return false;
         }
-        m_logger.SetDateTime(m_timer.GetDate().GetMJD());
+        m_logger.SetDate(m_timer.GetDate());
         m_logger.Record();
         m_timer.IncrementTime();
         m_logger.Increment();
@@ -606,12 +606,12 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
         }
     }
 
-    if (timeSeries->GetStart().IsLaterThan(m_timer.GetStart())) {
+    if (timeSeries->GetStart() > m_timer.GetStart()) {
         wxLogError(_("The data starts after the beginning of the modelling period."));
         return false;
     }
 
-    if (timeSeries->GetEnd().IsEarlierThan(m_timer.GetEnd())) {
+    if (timeSeries->GetEnd() < m_timer.GetEnd()) {
         wxLogError(_("The data ends before the end of the modelling period."));
         return false;
     }

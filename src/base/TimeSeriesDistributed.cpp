@@ -16,9 +16,9 @@ void TimeSeriesDistributed::AddData(TimeSeriesData* data, int unitId) {
     m_unitIds.push_back(unitId);
 }
 
-bool TimeSeriesDistributed::SetCursorToDate(const wxDateTime &dateTime) {
+bool TimeSeriesDistributed::SetCursorToDate(double date) {
     for (auto data: m_data) {
-        if (!data->SetCursorToDate(dateTime)) {
+        if (!data->SetCursorToDate(date)) {
             return false;
         }
     }
@@ -36,12 +36,12 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
     return true;
 }
 
-wxDateTime TimeSeriesDistributed::GetStart() {
+double TimeSeriesDistributed::GetStart() {
     wxASSERT(!m_data.empty());
     return m_data[0]->GetStart();
 }
 
-wxDateTime TimeSeriesDistributed::GetEnd() {
+double TimeSeriesDistributed::GetEnd() {
     wxASSERT(!m_data.empty());
     return m_data[0]->GetEnd();
 }

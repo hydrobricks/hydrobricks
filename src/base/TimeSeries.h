@@ -12,15 +12,15 @@ class TimeSeries : public wxObject {
 
     static bool Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSeries);
 
-    virtual bool SetCursorToDate(const wxDateTime &dateTime) = 0;
+    virtual bool SetCursorToDate(double date) = 0;
 
     virtual bool AdvanceOneTimeStep() = 0;
 
     virtual bool IsDistributed() = 0;
 
-    virtual wxDateTime GetStart() = 0;
+    virtual double GetStart() = 0;
 
-    virtual wxDateTime GetEnd() = 0;
+    virtual double GetEnd() = 0;
 
     virtual TimeSeriesData* GetDataPointer(int unitId) = 0;
 

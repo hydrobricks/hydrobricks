@@ -27,8 +27,7 @@ class SolverLinearStorage : public ::testing::Test {
 
         m_model.AddLoggingToItem("outlet");
 
-        auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                              wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
         data->SetValues({0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
@@ -176,8 +175,7 @@ class Solver2LinearStorages : public ::testing::Test {
 
         m_model.AddLoggingToItem("outlet");
 
-        auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                              wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
         data->SetValues({0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
@@ -337,15 +335,13 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         m_model.AddLoggingToItem("outlet");
 
-        auto dataPrec = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                                  wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        auto dataPrec = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
         dataPrec->SetValues({0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(dataPrec);
 
-        auto dataPET = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                                 wxDateTime(20, wxDateTime::Jan, 2020), 1, Day);
+        auto dataPET = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
         dataPET->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
                             1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
         m_tsPET = new TimeSeriesUniform(PET);

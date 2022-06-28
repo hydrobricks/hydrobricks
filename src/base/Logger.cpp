@@ -28,9 +28,9 @@ void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
     m_hydroUnitValuesPt[iLabel][iUnit] = valPt;
 }
 
-void Logger::SetDateTime(double dateTime) {
+void Logger::SetDate(double date) {
     wxASSERT(m_cursor < m_time.size());
-    m_time[m_cursor] = dateTime;
+    m_time[m_cursor] = date;
 }
 
 void Logger::Record() {

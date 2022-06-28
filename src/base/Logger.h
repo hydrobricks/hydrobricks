@@ -15,7 +15,7 @@ class Logger : public wxObject {
 
     void SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt);
 
-    void SetDateTime(double date);
+    void SetDate(double date);
 
     void Record();
 

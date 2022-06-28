@@ -1,8 +1,6 @@
 #ifndef HYDROBRICKS_PARAMETERS_UPDATER_H
 #define HYDROBRICKS_PARAMETERS_UPDATER_H
 
-#include <wx/datetime.h>
-
 #include "Includes.h"
 #include "ParameterVariable.h"
 
@@ -18,21 +16,21 @@ class ParametersUpdater : public wxObject {
 
     void AddParameterVariableDates(ParameterVariableDates* parameter);
 
-    void DateUpdate(const wxDateTime &date);
+    void DateUpdate(double date);
 
-    wxDateTime GetPreviousDate() {
+    double GetPreviousDate() {
         return m_previousDate;
     }
 
   protected:
     void ChangingYear(int year);
 
-    void ChangingMonth(wxDateTime::Month month);
+    void ChangingMonth(int month);
 
     void ChangingDate(double date);
 
   private:
-    wxDateTime m_previousDate;
+    double m_previousDate;
     std::vector<ParameterVariableYearly*> m_parametersYearly;
     std::vector<ParameterVariableMonthly*> m_parametersMonthly;
     std::vector<ParameterVariableDates*> m_parametersDates;

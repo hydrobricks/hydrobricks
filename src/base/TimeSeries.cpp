@@ -33,12 +33,10 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
         CheckNcStatus(nc_inq_varid(ncId, "time", &varId));
         vecFloat time(timeLength);
         CheckNcStatus(nc_get_var_float(ncId, varId, &time[0]));
-        Time startStruct = GetTimeStructFromMJD(time[0]);
-        Time endStruct = GetTimeStructFromMJD(time[time.size() - 1]);
-        wxDateTime start = wxDateTime(startStruct.day, wxDateTime::Month(startStruct.month - 1),
-                                      startStruct.year, startStruct.min);
-        wxDateTime end = wxDateTime(endStruct.day, wxDateTime::Month(endStruct.month - 1),
-                                    endStruct.year, endStruct.min);
+        Time startSt = GetTimeStructFromMJD(time[0]);
+        Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
+        double start = GetMJD(startSt.year, startSt.month, startSt.day, startSt.hour, startSt.min);
+        double end = GetMJD(endSt.year, endSt.month, endSt.day, endSt.hour, endSt.min);
 
         // Time step
         double timeStepData = time[1] - time[0];

@@ -1,8 +1,6 @@
 #ifndef HYDROBRICKS_PARAMETER_VARIABLE_H
 #define HYDROBRICKS_PARAMETER_VARIABLE_H
 
-#include <wx/datetime.h>
-
 #include "Parameter.h"
 
 class ParameterVariable : public Parameter {
@@ -41,7 +39,7 @@ class ParameterVariableMonthly : public ParameterVariable {
 
     bool SetValues(const vecFloat& values);
 
-    bool UpdateParameter(wxDateTime::Month month);
+    bool UpdateParameter(int month);
 
   protected:
   private:

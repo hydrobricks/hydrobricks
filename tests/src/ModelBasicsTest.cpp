@@ -43,8 +43,7 @@ class ModelBasics : public ::testing::Test {
         m_model2.AddProcessOutput("outlet");
         m_model2.AddLoggingToItem("outlet");
 
-        auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                              wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
+        auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(data);
@@ -129,8 +128,7 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     ModelHydro model(&subBasin);
     model.Initialize(m_model1);
 
-    auto data = new TimeSeriesDataRegular(wxDateTime(1, wxDateTime::Jan, 2020),
-                                          wxDateTime(9, wxDateTime::Jan, 2020), 1, Day);
+    auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 9), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPrecipSingleRainyDay = new TimeSeriesUniform(Precipitation);
     tsPrecipSingleRainyDay->SetData(data);
@@ -147,8 +145,7 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     ModelHydro model(&subBasin);
     model.Initialize(m_model1);
 
-    auto data = new TimeSeriesDataRegular(wxDateTime(2, wxDateTime::Jan, 2020),
-                                          wxDateTime(10, wxDateTime::Jan, 2020), 1, Day);
+    auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 2), GetMJD(2020, 1, 10), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPrecipSingleRainyDay = new TimeSeriesUniform(Precipitation);
     tsPrecipSingleRainyDay->SetData(data);

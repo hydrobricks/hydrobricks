@@ -9,9 +9,9 @@ TimeSeriesUniform::~TimeSeriesUniform() {
     wxDELETE(m_data);
 }
 
-bool TimeSeriesUniform::SetCursorToDate(const wxDateTime &dateTime) {
+bool TimeSeriesUniform::SetCursorToDate(double date) {
     wxASSERT(m_data);
-    if (!m_data->SetCursorToDate(dateTime)) {
+    if (!m_data->SetCursorToDate(date)) {
         return false;
     }
 
@@ -27,12 +27,12 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
-wxDateTime TimeSeriesUniform::GetStart() {
+double TimeSeriesUniform::GetStart() {
     wxASSERT(m_data);
     return m_data->GetStart();
 }
 
-wxDateTime TimeSeriesUniform::GetEnd() {
+double TimeSeriesUniform::GetEnd() {
     wxASSERT(m_data);
     return m_data->GetEnd();
 }

@@ -12,7 +12,7 @@ class TimeSeriesDistributed : public TimeSeries {
 
     void AddData(TimeSeriesData* data, int unitId);
 
-    bool SetCursorToDate(const wxDateTime &dateTime) override;
+    bool SetCursorToDate(double date) override;
 
     bool AdvanceOneTimeStep() override;
 
@@ -20,9 +20,9 @@ class TimeSeriesDistributed : public TimeSeries {
         return true;
     }
 
-    wxDateTime GetStart() override;
+    double GetStart() override;
 
-    wxDateTime GetEnd() override;
+    double GetEnd() override;
 
     TimeSeriesData* GetDataPointer(int unitId) override;
 

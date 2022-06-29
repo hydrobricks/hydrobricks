@@ -54,11 +54,13 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         modelSettings.SelectSubBasinBrick(iBrick);
         BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
 
+        // Create the brick
         Brick* brick = Brick::Factory(brickSettings);
         brick->SetName(brickSettings.name);
         brick->AssignParameters(brickSettings);
         m_subBasin->AddBrick(brick);
 
+        // Create the processes
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
@@ -73,6 +75,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         }
     }
 
+    // Create the splitters
     for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplittersNb(); ++iSplitter) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
         SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
@@ -91,6 +94,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
 
+        // Create the bricks for the hydro unit
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
@@ -102,6 +106,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
 
             BuildForcingConnections(brickSettings, unit, brick);
 
+            // Create the processes
             for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
                 modelSettings.SelectProcess(iProcess);
                 ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
@@ -118,6 +123,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             }
         }
 
+        // Create the splitters
         for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplittersNb(); ++iSplitter) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
             SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
@@ -204,6 +210,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
             Brick* brick = m_subBasin->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
 
+            // Water goes to the atmosphere (ET)
             if (process->ToAtmosphere()) {
                 flux = new FluxToAtmosphere();
                 process->AttachFluxOut(flux);
@@ -212,11 +219,15 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
 
             for (const auto& output: processSettings.outputs)  {
                 if (output.target.IsSameAs("outlet", false)) {
+
+                    // Water goes to the outlet
                     flux = new FluxToOutlet();
-                    flux->NeedsWeighting(output.withWeighting);
                     flux->SetType(output.fluxType);
                     m_subBasin->AttachOutletFlux(flux);
+
                 } else if (m_subBasin->HasBrick(output.target)) {
+
+                    // Water goes to another brick
                     Brick* targetBrick = m_subBasin->GetBrick(output.target);
                     if (output.instantaneous) {
                         flux = new FluxToBrickInstantaneous(targetBrick);
@@ -224,17 +235,19 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                         targetBrick->AttachFluxIn(flux);
                     } else {
                         flux = new FluxToBrick(targetBrick);
-                        flux->NeedsWeighting(output.withWeighting);
                         flux->SetType(output.fluxType);
                         targetBrick->AttachFluxIn(flux);
                     }
+
                 } else if (m_subBasin->HasSplitter(output.target)) {
+
+                    // Water goes to a splitter
                     Splitter* targetSplitter = m_subBasin->GetSplitter(output.target);
                     flux = new FluxSimple();
-                    flux->NeedsWeighting(output.withWeighting);
                     flux->SetType(output.fluxType);
                     flux->SetAsStatic();
                     targetSplitter->AttachFluxIn(flux);
+
                 } else {
                     throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
@@ -255,6 +268,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
             Brick* brick = unit->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
 
+            // Water goes to the atmosphere (ET)
             if (process->ToAtmosphere()) {
                 flux = new FluxToAtmosphere();
                 process->AttachFluxOut(flux);
@@ -263,14 +277,25 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
             for (const auto& output: processSettings.outputs)  {
                 if (output.target.IsSameAs("outlet", false)) {
+
+                    // Water goes to the outlet
                     flux = new FluxToOutlet();
-                    flux->NeedsWeighting(output.withWeighting);
                     flux->SetType(output.fluxType);
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+
+                    // From hydro unit to basin: weight by hydro unit area
+                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+
+                    // If surface component: weight by surface area
+                    if (brick->IsSurfaceComponent()) {
+                        flux->NeedsWeighting(true);
+                    }
                     m_subBasin->AttachOutletFlux(flux);
+
                 } else if (unit->HasBrick(output.target) || m_subBasin->HasBrick(output.target)) {
                     bool toSubBasin = false;
                     Brick* targetBrick = nullptr;
+
+                    // Look for target brick
                     if (unit->HasBrick(output.target)) {
                         targetBrick = unit->GetBrick(output.target);
                     } else {
@@ -278,34 +303,56 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                         toSubBasin = true;
                     }
 
+                    // If leaves surface components: weight by surface area
+                    if (brick->IsSurfaceComponent() && !targetBrick->IsSurfaceComponent()) {
+                        flux->NeedsWeighting(true);
+                    }
+
+                    // Create the flux
                     if (output.instantaneous) {
                         flux = new FluxToBrickInstantaneous(targetBrick);
                     } else {
                         flux = new FluxToBrick(targetBrick);
-                        flux->NeedsWeighting(output.withWeighting);
                     }
+
                     flux->SetType(output.fluxType);
+
+                    // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
                     }
+
                     targetBrick->AttachFluxIn(flux);
+
                 } else if (unit->HasSplitter(output.target) || m_subBasin->HasSplitter(output.target)) {
                     bool toSubBasin = false;
                     Splitter* targetSplitter = nullptr;
+
+                    // Look for target splitter
                     if (unit->HasSplitter(output.target)) {
                         targetSplitter = unit->GetSplitter(output.target);
                     } else {
                         targetSplitter = m_subBasin->GetSplitter(output.target);
                         toSubBasin = true;
                     }
+
+                    // Create the flux
                     flux = new FluxSimple();
-                    flux->NeedsWeighting(output.withWeighting);
                     flux->SetType(output.fluxType);
                     flux->SetAsStatic();
-                    if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+
+                    // If coming from a surface component: weight by surface area
+                    if (brick->IsSurfaceComponent()) {
+                        flux->NeedsWeighting(true);
                     }
+
+                    // From hydro unit to basin: weight by hydro unit area
+                    if (toSubBasin) {
+                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                    }
+
                     targetSplitter->AttachFluxIn(flux);
+
                 } else {
                     throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
@@ -326,21 +373,30 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
         for (const auto& output: splitterSettings.outputs)  {
             Flux* flux;
             if (output.target.IsSameAs("outlet", false)) {
+
+                // Water goes to the outlet
                 flux = new FluxToOutlet();
                 flux->SetType(output.fluxType);
                 m_subBasin->AttachOutletFlux(flux);
+
             } else if (m_subBasin->HasBrick(output.target)) {
+
+                // Look for target brick
                 Brick* targetBrick = m_subBasin->GetBrick(output.target);
                 flux = new FluxToBrick(targetBrick);
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
                 targetBrick->AttachFluxIn(flux);
+
             } else if (m_subBasin->HasSplitter(output.target)) {
+
+                // Look for target splitter
                 Splitter* targetSplitter = m_subBasin->GetSplitter(output.target);
                 flux = new FluxSimple();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
                 targetSplitter->AttachFluxIn(flux);
+
             } else {
                 throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
@@ -360,13 +416,21 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
         for (const auto& output: splitterSettings.outputs)  {
             Flux* flux;
             if (output.target.IsSameAs("outlet", false)) {
+
+                // Water goes to the outlet
                 flux = new FluxToOutlet();
                 flux->SetType(output.fluxType);
-                flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+
+                // From hydro unit to basin: weight by hydro unit area
+                flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+
                 m_subBasin->AttachOutletFlux(flux);
+
             } else if (unit->HasBrick(output.target) || m_subBasin->HasBrick(output.target)) {
                 bool toSubBasin = false;
                 Brick* targetBrick = nullptr;
+
+                // Look for target brick
                 if (unit->HasBrick(output.target)) {
                     targetBrick = unit->GetBrick(output.target);
                 } else {
@@ -374,29 +438,42 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                     toSubBasin = true;
                 }
 
+                // Create flux
                 flux = new FluxToBrick(targetBrick);
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
+
+                // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
                     flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
                 }
+
                 targetBrick->AttachFluxIn(flux);
+
             } else if (unit->HasSplitter(output.target) || m_subBasin->HasSplitter(output.target)) {
                 bool toSubBasin = false;
                 Splitter* targetSplitter = nullptr;
+
+                // Look for the target splitter
                 if (unit->HasSplitter(output.target)) {
                     targetSplitter = unit->GetSplitter(output.target);
                 } else {
                     targetSplitter = m_subBasin->GetSplitter(output.target);
                     toSubBasin = true;
                 }
+
+                // Create flux
                 flux = new FluxSimple();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
+
+                // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
                     flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
                 }
+
                 targetSplitter->AttachFluxIn(flux);
+
             } else {
                 throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }

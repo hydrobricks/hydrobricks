@@ -39,11 +39,11 @@ class FluxWeightedModel : public ::testing::Test {
         m_model.SelectHydroUnitBrick("item-1-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet", true);
+        m_model.AddProcessOutput("outlet");
         m_model.SelectHydroUnitBrick("item-2-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet", true);
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 

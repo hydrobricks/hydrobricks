@@ -192,12 +192,11 @@ void SettingsModel::AddProcessForcing(const wxString &name) {
     }
 }
 
-void SettingsModel::AddProcessOutput(const wxString &target, bool withWeighting) {
+void SettingsModel::AddProcessOutput(const wxString &target) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
     outputSettings.target = target;
-    outputSettings.withWeighting = withWeighting;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
@@ -207,7 +206,6 @@ void SettingsModel::OutputProcessToSameBrick() {
 
     OutputSettings outputSettings;
     outputSettings.target = m_selectedBrick->name;
-    outputSettings.withWeighting = false;
     outputSettings.instantaneous = true;
     m_selectedProcess->outputs.push_back(outputSettings);
 }

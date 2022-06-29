@@ -20,7 +20,6 @@ struct TimerSettings {
 struct OutputSettings {
     wxString target;
     wxString fluxType = "water";
-    bool withWeighting = false;
     bool instantaneous = false;
 };
 
@@ -96,7 +95,7 @@ class SettingsModel : public wxObject {
 
     void AddProcessForcing(const wxString &name);
 
-    void AddProcessOutput(const wxString &target, bool withWeighting = false);
+    void AddProcessOutput(const wxString &target);
 
     void OutputProcessToSameBrick();
 

@@ -64,13 +64,13 @@ class SurfaceContainerModel : public ::testing::Test {
         m_model.SelectHydroUnitBrick("ground-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet", true);
+        m_model.AddProcessOutput("outlet");
 
         // Surface brick for the glacier part with a linear storage
         m_model.SelectHydroUnitBrick("glacier-surface");
         m_model.AddBrickProcess("outflow", "Outflow:direct");
         m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet", true);
+        m_model.AddProcessOutput("outlet");
 
         m_model.AddLoggingToItem("outlet");
 

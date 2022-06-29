@@ -280,6 +280,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // Water goes to the outlet
                     flux = new FluxToOutlet();
+                    flux->SetAsStatic();
                     flux->SetType(output.fluxType);
 
                     // From hydro unit to basin: weight by hydro unit area
@@ -320,6 +321,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
                         flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                        flux->SetAsStatic();
                     }
 
                     targetBrick->AttachFluxIn(flux);

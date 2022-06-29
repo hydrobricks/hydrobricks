@@ -264,7 +264,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            Flux* flux;
+            Flux* flux = nullptr;
             Brick* brick = unit->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
 
@@ -303,11 +303,6 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                         toSubBasin = true;
                     }
 
-                    // If leaves surface components: weight by surface area
-                    if (brick->IsSurfaceComponent() && !targetBrick->IsSurfaceComponent()) {
-                        flux->NeedsWeighting(true);
-                    }
-
                     // Create the flux
                     if (output.instantaneous) {
                         flux = new FluxToBrickInstantaneous(targetBrick);
@@ -316,6 +311,11 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     flux->SetType(output.fluxType);
+
+                    // If leaves surface components: weight by surface area
+                    if (brick->IsSurfaceComponent() && !targetBrick->IsSurfaceComponent()) {
+                        flux->NeedsWeighting(true);
+                    }
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {

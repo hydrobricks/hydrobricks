@@ -21,7 +21,7 @@ class SurfaceComponent : public Brick {
     void SetAreaFraction(double value);
 
     bool IsNull() override {
-        return m_areaFraction == 0.0;
+        return m_areaFraction <= PRECISION;
     }
 
     virtual void AddToRelatedBricks(SurfaceComponent* brick) {

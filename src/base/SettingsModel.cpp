@@ -805,9 +805,13 @@ bool SettingsModel::LogAll(const YAML::Node &settings) {
 
 bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     int soilStorageNb = 1;
+    wxString surfaceRunoff = "socont-runoff";
     if (YAML::Node options = settings["options"]) {
         if (YAML::Node parameter = options["soil_storage_nb"]) {
             soilStorageNb = parameter.as<int>();
+        }
+        if (YAML::Node parameter = options["surface_runoff"]) {
+            surfaceRunoff = wxString(parameter.as<std::string>());
         }
     }
 
@@ -939,6 +943,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
             AddProcessLogging("output");
         }
     } else if (soilStorageNb == 2) {
+        wxLogMessage(_("Using 2 soil storages."));
         AddHydroUnitBrick("slow-reservoir", "Storage");
         AddBrickParameter("capacity", 500.0f);
         AddBrickProcess("ET", "ET:Socont");
@@ -973,9 +978,19 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     }
 
     AddHydroUnitBrick("surface-runoff", "Storage");
-    AddBrickProcess("runoff", "Runoff:Socont");
-    AddProcessParameter("runoffCoefficient", 500.0f);
-    AddProcessParameter("slope", 0.5f);
+    if (surfaceRunoff.IsSameAs("socont-runoff", false)) {
+        AddBrickProcess("runoff", "Runoff:Socont");
+        AddProcessParameter("runoffCoefficient", 500.0f);
+        AddProcessParameter("slope", 0.5f);
+    } else if (surfaceRunoff.IsSameAs("linear-storage", false)) {
+        wxLogMessage(_("Using a linear storage for the quick flow."));
+        AddBrickProcess("outflow", "Outflow:linear");
+        AddProcessParameter("responseFactor", 0.8f);
+    } else {
+        wxLogError(_("The surface runoff option %s is not recognised in Socont."), surfaceRunoff);
+        return false;
+    }
+
     AddProcessOutput("outlet");
     if (logAll) {
         AddBrickLogging("content");

@@ -203,6 +203,11 @@ int Hydrobricks::OnRun()
             return 1;
         }
 
+        // Assign surface fraction
+        if (!subBasin.AssignFractions(basinSettings)) {
+            return 1;
+        }
+
         // Add data
         for (auto timeSeries: vecTimeSeries) {
             if (!model.AddTimeSeries(timeSeries)) {

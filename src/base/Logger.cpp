@@ -9,11 +9,11 @@ Logger::Logger()
 void Logger::InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
-    m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Zero(timeSize));
+    m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
     m_subBasinValuesPt.resize(subBasinLabels.size());
     m_hydroUnitIds = hydroUnitsIds;
     m_hydroUnitLabels = hydroUnitLabels;
-    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Zero(timeSize, hydroUnitsIds.size()));
+    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitsIds.size()) * NAN_D);
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
 }
 

@@ -879,10 +879,13 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
 
             // Direct rain to linear storage
             SelectHydroUnitBrick(name);
+            AddBrickLogging("ice");
             AddBrickProcess("outflow-rain", "Outflow:direct");
             AddProcessOutput("glacier-area-rain-snowmelt-storage");
 
             // Glacier melt process
+            AddBrickParameter("noMeltWhenSnowCover", 1.0);
+            AddBrickParameter("infiniteStorage", 1.0);
             AddBrickProcess("melt", "Melt:degree-day");
             AddProcessForcing("Temperature");
             AddProcessParameter("degreeDayFactor", 3.0f);

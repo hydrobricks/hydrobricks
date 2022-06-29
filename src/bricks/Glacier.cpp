@@ -13,6 +13,9 @@ void Glacier::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
     if (HasParameter(brickSettings, "infiniteStorage")) {
         m_infiniteStorage = GetParameterValuePointer(brickSettings, "infiniteStorage");
+        if (m_infiniteStorage) {
+            m_ice->UpdateContent(10000.0);
+        }
     }
     if (HasParameter(brickSettings, "noMeltWhenSnowCover")) {
         m_noMeltWhenSnowCover = GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover");

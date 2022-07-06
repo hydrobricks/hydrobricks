@@ -180,7 +180,7 @@ protected:
 
     void SetUp() override {
         m_model.SetSolver("HeunExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetTimer("2020-01-01", "2020-01-08", 1, "Day");
 
         // Snowpack brick
         m_model.AddHydroUnitBrick("snowpack", "Snowpack");
@@ -197,11 +197,12 @@ protected:
         m_model.AddHydroUnitBrick("glacier", "Glacier");
         m_model.AddToRelatedSurfaceBrick("snowpack");
         m_model.AddBrickParameter("noMeltWhenSnowCover", true);
+        m_model.AddBrickParameter("infiniteStorage", 1.0);
 
         // Glacier melt process
         m_model.AddBrickProcess("melt", "Melt:degree-day");
         m_model.AddProcessForcing("Temperature");
-        m_model.AddProcessParameter("degreeDayFactor", 2.0f);
+        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 0.0f);
         m_model.AddProcessLogging("output");
         m_model.OutputProcessToSameBrick();
@@ -222,13 +223,13 @@ protected:
 
         m_model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
-        precip->SetValues({0.0, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        precip->SetValues({8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         m_tsPrecip = new TimeSeriesUniform(Precipitation);
         m_tsPrecip->SetData(precip);
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
-        temperature->SetValues({-2.0, -2.0, -2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        temperature->SetValues({-2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
         m_tsTemp = new TimeSeriesUniform(Temperature);
         m_tsTemp->SetData(temperature);
     }
@@ -258,7 +259,7 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
-    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 4.0, 8.0, 4.0, 4.0, 4.0, 4.0, 4.0};
+    vecDouble expectedOutputs = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
@@ -269,9 +270,9 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     // Check melt and swe
     vecAxxd unitOutput = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedSnowMelt = {0.0, 0.0, 0.0, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    vecDouble expectedIceMelt = {0.0, 0.0, 0.0, 0.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0};
-    vecDouble expectedTotMeltWater = {0.0, 0.0, 0.0, 4.0, 8.0, 4.0, 4.0, 4.0, 4.0, 4.0};
+    vecDouble expectedSnowMelt = {0.0, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedIceMelt = {0.0, 0.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
+    vecDouble expectedTotMeltWater = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
         EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);

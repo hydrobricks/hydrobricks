@@ -5,19 +5,24 @@ WaterContainer::WaterContainer(Brick* brick)
     : m_content(0),
       m_contentChange(0),
       m_capacity(nullptr),
+      m_infiniteStorage(false),
       m_parent(brick),
       m_overflow(nullptr)
 {}
 
 void WaterContainer::SubtractAmount(double change) {
+    if (m_infiniteStorage) return;
     m_contentChange -= change;
 }
 
 void WaterContainer::AddAmount(double change) {
+    if (m_infiniteStorage) return;
     m_contentChange += change;
 }
 
 void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
+    if (m_infiniteStorage) return;
+
     // Get outgoing change rates
     vecDoublePt outgoingRates;
     double outputs = 0;
@@ -131,6 +136,7 @@ void WaterContainer::SetOutgoingRatesToZero() {
 }
 
 void WaterContainer::Finalize() {
+    if (m_infiniteStorage) return;
     m_content += m_contentChange;
     m_contentChange = 0;
     wxASSERT(m_content >= -PRECISION);

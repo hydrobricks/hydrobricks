@@ -36,7 +36,6 @@ class Glacier : public SurfaceComponent {
 
   protected:
     WaterContainer* m_ice;
-    bool m_infiniteStorage;
     bool m_noMeltWhenSnowCover;
     Snowpack* m_snowpack;
 

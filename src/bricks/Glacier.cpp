@@ -3,7 +3,6 @@
 Glacier::Glacier()
     : SurfaceComponent(),
       m_ice(nullptr),
-      m_infiniteStorage(true),
       m_noMeltWhenSnowCover(false)
 {
     m_ice = new WaterContainer(this);
@@ -12,11 +11,15 @@ Glacier::Glacier()
 void Glacier::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);
     if (HasParameter(brickSettings, "infiniteStorage")) {
-        m_infiniteStorage = GetParameterValuePointer(brickSettings, "infiniteStorage");
-        if (m_infiniteStorage) {
-            m_ice->UpdateContent(10000.0);
+        if (GetParameterValuePointer(brickSettings, "infiniteStorage")) {
+            m_ice->SetAsInfiniteStorage();
         }
+    } else {
+        m_ice->SetAsInfiniteStorage();
+        wxLogWarning(_("No option found to specify if the glacier has an infinite storage. Defaulting to true."));
+        // wxLogWarning(_("The glacier has no infinite storage. An initial water equivalent must be provided."));
     }
+
     if (HasParameter(brickSettings, "noMeltWhenSnowCover")) {
         m_noMeltWhenSnowCover = GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover");
     }
@@ -38,16 +41,12 @@ WaterContainer* Glacier::GetIceContainer() {
 }
 
 void Glacier::Finalize() {
-    if (!m_infiniteStorage) {
-        m_ice->Finalize();
-    }
+    m_ice->Finalize();
     m_container->Finalize();
 }
 
 void Glacier::UpdateContentFromInputs() {
-    if (!m_infiniteStorage) {
-        m_ice->AddAmount(m_ice->SumIncomingFluxes());
-    }
+    m_ice->AddAmount(m_ice->SumIncomingFluxes());
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
@@ -59,11 +58,8 @@ void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
         if (m_snowpack->HasSnow()) {
             m_ice->SetOutgoingRatesToZero();
         }
-    } else {
-        if (!m_infiniteStorage) {
-            m_ice->ApplyConstraints(timeStep, inSolver);
-        }
     }
+    m_ice->ApplyConstraints(timeStep, inSolver);
     m_container->ApplyConstraints(timeStep, inSolver);
 }
 

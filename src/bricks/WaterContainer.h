@@ -31,7 +31,15 @@ class WaterContainer : public wxObject {
     }
 
     void SetMaximumCapacity(float* value) {
+        if (m_infiniteStorage) {
+            throw ConceptionIssue(_("Trying to set the maximum capacity of an infinite storage."));
+        }
+
         m_capacity = value;
+    }
+
+    void SetAsInfiniteStorage() {
+        m_infiniteStorage = true;
     }
 
     /**
@@ -40,10 +48,18 @@ class WaterContainer : public wxObject {
      * @return water content [mm]
      */
     double GetContentWithChanges() const {
+        if (m_infiniteStorage) {
+            return INFINITY;
+        }
+
         return m_content + m_contentChange;
     }
 
     double GetContentWithoutChanges() const {
+        if (m_infiniteStorage) {
+            return INFINITY;
+        }
+
         return m_content;
     }
 
@@ -52,6 +68,10 @@ class WaterContainer : public wxObject {
     }
 
     void UpdateContent(double value) {
+        if (m_infiniteStorage) {
+            throw ConceptionIssue(_("Trying to set the content of an infinite storage."));
+        }
+
         m_content = value;
     }
 
@@ -96,6 +116,7 @@ class WaterContainer : public wxObject {
     double m_content; // [mm]
     double m_contentChange; // [mm]
     float* m_capacity;
+    bool m_infiniteStorage;
     Brick* m_parent;
     Process* m_overflow;
     std::vector<Flux*> m_inputs;

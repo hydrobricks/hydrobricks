@@ -154,6 +154,11 @@ void Processor::ApplyDirectChanges(Brick* brick) {
             iRateCopy++;
         }
 
+        // Stop processing if change rate is null.
+        if (std::accumulate(rates.begin(), rates.end(), 0.0) < PRECISION) {
+            continue;
+        }
+
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         brick->ApplyConstraints(g_timeStepInDays, false);
 

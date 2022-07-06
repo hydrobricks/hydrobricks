@@ -41,6 +41,7 @@ void Solver::SaveStateVariables(int col) {
 void Solver::ComputeChangeRates(int col, bool applyConstraints) {
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+        double sumRates = 0.0;
         for (auto process : brick->GetProcesses()) {
 
             // Get the change rates (per day) independently of the time step and constraints (null bricks handled)
@@ -49,6 +50,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
             for (int i = 0; i < rates.size(); ++i) {
                 wxASSERT(m_changeRates.rows() > iRate);
                 m_changeRates(iRate, col) = rates[i];
+                sumRates += rates[i];
 
                 // Link to fluxes to enforce subsequent constraints
                 if (applyConstraints) {
@@ -59,7 +61,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        if (applyConstraints) {
+        if (applyConstraints && sumRates > PRECISION) {
             brick->ApplyConstraints(g_timeStepInDays);
         }
     }

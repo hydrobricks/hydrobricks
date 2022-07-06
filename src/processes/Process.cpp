@@ -108,8 +108,11 @@ void Process::StoreInOutgoingFlux(double* rate, int index) {
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
     wxASSERT(m_outputs.size() > connectionIndex);
-    m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
-    m_container->SubtractAmount(rate * timeStepInDays);
+    wxASSERT(rate >= 0);
+    if (rate > PRECISION) {
+        m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
+        m_container->SubtractAmount(rate * timeStepInDays);
+    }
 }
 
 double* Process::GetValuePointer(const wxString&) {

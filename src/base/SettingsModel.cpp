@@ -200,6 +200,14 @@ void SettingsModel::AddProcessOutput(const wxString &target) {
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::SetProcessOutputsAsInstantaneous() {
+    wxASSERT(m_selectedProcess);
+
+    for (auto &output: m_selectedProcess->outputs) {
+        output.instantaneous = true;
+    }
+}
+
 void SettingsModel::OutputProcessToSameBrick() {
     wxASSERT(m_selectedBrick);
     wxASSERT(m_selectedProcess);

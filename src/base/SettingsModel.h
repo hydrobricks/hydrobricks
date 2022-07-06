@@ -97,6 +97,8 @@ class SettingsModel : public wxObject {
 
     void AddProcessOutput(const wxString &target);
 
+    void SetProcessOutputsAsInstantaneous();
+
     void OutputProcessToSameBrick();
 
     void AddHydroUnitSplitter(const wxString &name, const wxString &type);

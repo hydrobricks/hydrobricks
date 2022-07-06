@@ -112,6 +112,8 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     if (rate > PRECISION) {
         m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
         m_container->SubtractAmount(rate * timeStepInDays);
+    } else {
+        m_outputs[connectionIndex]->UpdateFlux(0);
     }
 }
 

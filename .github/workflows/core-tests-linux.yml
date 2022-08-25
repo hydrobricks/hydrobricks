@@ -1,4 +1,4 @@
-name: Linux-Tests
+name: Core-Tests-Linux
 
 on: [push]
 

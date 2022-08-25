@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hydrobricks"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
     { name = "Pascal Horton", email = "pascal.horton@giub.unibe.ch" },
 ]
@@ -18,10 +18,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
-    "netCDF4",
-    "yaml",
     "numpy",
     "pandas",
+    "pyyaml",
+    "netCDF4",
     "matplotlib",
 ]
 

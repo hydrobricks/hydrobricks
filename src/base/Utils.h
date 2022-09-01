@@ -20,8 +20,6 @@ int FindT(const T *start, const T *end, T value, T tolerance = 0, bool showWarni
 
 double IncrementDateBy(double date, int amount, TimeUnit unit);
 
-void CheckNcStatus(int status);
-
 Time GetTimeStructFromMJD(double mjd);
 
 double ParseDate(const wxString &dateStr, TimeFormat format);

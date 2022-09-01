@@ -1,7 +1,6 @@
-#include <netcdf.h>
-
 #include "Parameter.h"
 #include "SettingsBasin.h"
+#include "FileNetcdf.h"
 
 
 SettingsBasin::SettingsBasin()
@@ -33,50 +32,28 @@ void SettingsBasin::SelectUnit(int index) {
 }
 
 bool SettingsBasin::Parse(const wxString &path) {
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
-        return false;
-    }
 
     try {
-        int ncId, varId, dimId;
+        FileNetcdf file;
 
-        CheckNcStatus(nc_open(path, NC_NOWRITE, &ncId));
+        if (!file.OpenReadOnly(path)) {
+            return false;
+        }
 
         // Get the surface names
-        size_t surfacesNb;
-        CheckNcStatus(nc_inq_attlen(ncId, NC_GLOBAL, "surface_names", &surfacesNb));
-
-        char **stringAtt = (char **) malloc(surfacesNb * sizeof(char *));
-        memset(stringAtt, 0, surfacesNb * sizeof(char *));
-        CheckNcStatus(nc_get_att_string(ncId, NC_GLOBAL, "surface_names", stringAtt));
-
-        vecStr surfaces;
-        for (int iSurface = 0; iSurface < surfacesNb; ++iSurface) {
-            wxString attValue = wxString(stringAtt[iSurface], wxConvUTF8);
-            surfaces.push_back(attValue);
-        }
-        nc_free_string(surfacesNb, stringAtt);
+        vecStr surfaces = file.GetAttString1D("surface_names");
 
         // Get number of units
-        size_t unitsNb;
-        CheckNcStatus(nc_inq_dimid(ncId, "hydro_units", &dimId));
-        CheckNcStatus(nc_inq_dimlen(ncId, dimId, &unitsNb));
+        int unitsNb = file.GetDimLen("hydro_units");
 
         // Get ids
-        CheckNcStatus(nc_inq_varid(ncId, "id", &varId));
-        vecInt ids(unitsNb);
-        CheckNcStatus(nc_get_var_int(ncId, varId, &ids[0]));
+        vecInt ids = file.GetVarInt1D("id", unitsNb);
 
         // Get areas
-        CheckNcStatus(nc_inq_varid(ncId, "area", &varId));
-        vecFloat areas(unitsNb);
-        CheckNcStatus(nc_get_var_float(ncId, varId, &areas[0]));
+        vecFloat areas = file.GetVarFloat1D("area", unitsNb);
 
         // Get elevations
-        CheckNcStatus(nc_inq_varid(ncId, "elevation", &varId));
-        vecFloat elevations(unitsNb);
-        CheckNcStatus(nc_get_var_float(ncId, varId, &elevations[0]));
+        vecFloat elevations = file.GetVarFloat1D("elevation", unitsNb);
 
         // Store hydro units
         for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
@@ -89,18 +66,10 @@ bool SettingsBasin::Parse(const wxString &path) {
 
         // Get surface data
         for (const auto& surface: surfaces) {
-            CheckNcStatus(nc_inq_varid(ncId, surface.mb_str(), &varId));
-            vecFloat fractions(unitsNb);
-            CheckNcStatus(nc_get_var_float(ncId, varId, &fractions[0]));
+            vecFloat fractions = file.GetVarFloat1D(surface, unitsNb);
 
             // Get the surface type
-            size_t typeLength;
-            CheckNcStatus(nc_inq_attlen(ncId, varId, "type", &typeLength));
-            auto *text = new char[typeLength + 1];
-            CheckNcStatus(nc_get_att_text(ncId, varId, "type", text));
-            text[typeLength] = '\0';
-            wxString type = wxString(text);
-            wxDELETEA(text);
+            wxString type = file.GetAttText("type", surface);
 
             for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
                 SurfaceElementSettings element;
@@ -110,8 +79,6 @@ bool SettingsBasin::Parse(const wxString &path) {
                 m_hydroUnits[iUnit].surfaceElements.push_back(element);
             }
         }
-
-        CheckNcStatus(nc_close(ncId));
 
     } catch(std::exception& e) {
         wxLogError(e.what());

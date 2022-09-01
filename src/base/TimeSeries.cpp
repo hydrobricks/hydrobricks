@@ -1,38 +1,29 @@
-#include <netcdf.h>
-
 #include "TimeSeries.h"
 #include "TimeSeriesUniform.h"
 #include "TimeSeriesDistributed.h"
+#include "FileNetcdf.h"
 
 TimeSeries::TimeSeries(VariableType type)
     : m_type(type)
 {}
 
 bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSeries) {
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
-        return false;
-    }
 
     try {
-        int ncId, varId, dimIdUnit, dimIdTime;
+        FileNetcdf file;
 
-        CheckNcStatus(nc_open(path, NC_NOWRITE, &ncId));
+        if (!file.OpenReadOnly(path)) {
+            return false;
+        }
 
         // Get number of units
-        size_t unitsNb;
-        CheckNcStatus(nc_inq_dimid(ncId, "hydro_units", &dimIdUnit));
-        CheckNcStatus(nc_inq_dimlen(ncId, dimIdUnit, &unitsNb));
+        int unitsNb = file.GetDimLen("hydro_units");
 
         // Get time length
-        size_t timeLength;
-        CheckNcStatus(nc_inq_dimid(ncId, "time", &dimIdTime));
-        CheckNcStatus(nc_inq_dimlen(ncId, dimIdTime, &timeLength));
+        int timeLength = file.GetDimLen("time");
 
         // Get time
-        CheckNcStatus(nc_inq_varid(ncId, "time", &varId));
-        vecFloat time(timeLength);
-        CheckNcStatus(nc_get_var_float(ncId, varId, &time[0]));
+        vecFloat time = file.GetVarFloat1D("time", timeLength);
         Time startSt = GetTimeStructFromMJD(time[0]);
         Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
         double start = GetMJD(startSt.year, startSt.month, startSt.day, startSt.hour, startSt.min);
@@ -54,19 +45,17 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
         }
 
         // Get ids
-        CheckNcStatus(nc_inq_varid(ncId, "id", &varId));
-        vecInt ids(unitsNb);
-        CheckNcStatus(nc_get_var_int(ncId, varId, &ids[0]));
+        vecInt ids = file.GetVarInt1D("id", unitsNb);
 
         // Extract variables
-        int varsNb, gattNb;
-        CheckNcStatus(nc_inq(ncId, nullptr, &varsNb, &gattNb, nullptr));
+        int varsNb = file.GetVarsNb();
+
+        int dimIdTime = file.GetDimId("time");
 
         for (int iVar = 0; iVar < varsNb; ++iVar) {
             // Get variable name
-            char varNameChar[NC_MAX_NAME + 1];
-            CheckNcStatus(nc_inq_varname(ncId, iVar, varNameChar));
-            wxString varName = wxString(varNameChar);
+            wxString varName = file.GetVarName(iVar);
+
             if (varName.IsSameAs("id", false) ||
                 varName.IsSameAs("time", false)) {
                 continue;
@@ -95,12 +84,10 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
             auto timeSeries = new TimeSeriesDistributed(varType);
 
             // Retrieve values from netCDF
-            vecInt dimIds(2);
-            CheckNcStatus(nc_inq_vardimid(ncId, iVar, &dimIds[0]));
+            vecInt dimIds = file.GetVarDimIds(iVar, 2);
 
             if (dimIds[0] == dimIdTime) {
-                axxd values = axxd::Zero((long long)unitsNb, (long long)timeLength);
-                CheckNcStatus(nc_get_var_double(ncId, iVar, values.data()));
+                axxd values = file.GetVarDouble2D(iVar, unitsNb, timeLength);
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
@@ -108,8 +95,7 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             } else {
-                axxd values = axxd::Zero((long long)timeLength, (long long)unitsNb);
-                CheckNcStatus(nc_get_var_double(ncId, iVar, values.data()));
+                axxd values = file.GetVarDouble2D(iVar, timeLength, unitsNb);
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
@@ -120,8 +106,6 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
 
             vecTimeSeries.push_back(timeSeries);
         }
-
-        CheckNcStatus(nc_close(ncId));
 
     } catch(std::exception& e) {
         wxLogError(e.what());

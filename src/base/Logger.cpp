@@ -1,6 +1,5 @@
-#include <netcdf.h>
-
 #include "Logger.h"
+#include "FileNetcdf.h"
 
 Logger::Logger()
     : m_cursor(0)
@@ -60,85 +59,45 @@ bool Logger::DumpOutputs(const wxString &path) {
     }
 
     try {
-        int ncId, varId, dimIdTime, dimIdUnit, dimIdItemsAgg, dimIdItemsDist;
-
         wxString filePath = path;
         filePath.Append(wxFileName::GetPathSeparator());
         filePath.Append("results.nc");
 
-        size_t timeSize = m_time.size();
-        size_t hydroUnitsNb = m_hydroUnitIds.size();
-        size_t subBasinLabelsNb = m_subBasinLabels.size();
-        size_t hydroUnitLabelsNb = m_hydroUnitLabels.size();
+        FileNetcdf file;
 
-        wxCharBuffer buffer;
-
-        // Create file
-        CheckNcStatus(nc_create(filePath, NC_NETCDF4 | NC_CLOBBER, &ncId));
+        if (!file.Create(filePath)) {
+            return false;
+        }
 
         // Create dimensions
-        CheckNcStatus(nc_def_dim(ncId, "time", timeSize, &dimIdTime));
-        CheckNcStatus(nc_def_dim(ncId, "hydro_units", hydroUnitsNb, &dimIdUnit));
-        CheckNcStatus(nc_def_dim(ncId, "aggregated_values", subBasinLabelsNb, &dimIdItemsAgg));
-        CheckNcStatus(nc_def_dim(ncId, "distributed_values", hydroUnitLabelsNb, &dimIdItemsDist));
+        int dimIdTime = file.DefDim("time", (int) m_time.size());
+        int dimIdUnit = file.DefDim("hydro_units", (int) m_hydroUnitIds.size());
+        int dimIdItemsAgg = file.DefDim("aggregated_values", (int) m_subBasinLabels.size());
+        int dimIdItemsDist = file.DefDim("distributed_values", (int) m_hydroUnitLabels.size());
 
         // Create variables and put data
-        vecInt dimTimeVar = {dimIdTime};
-        CheckNcStatus(nc_def_var(ncId, "time", NC_DOUBLE, 1, &dimTimeVar[0], &varId));
-        CheckNcStatus(nc_put_var_double(ncId, varId, &m_time[0]));
-        buffer = wxString("time").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
-        buffer = wxString("days since 1858-11-17 00:00:00.0").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
+        int varId = file.DefVarDouble("time", {dimIdTime});
+        file.PutVar(varId, m_time);
+        file.PutAttText("long_name", "time", varId);
+        file.PutAttText("units", "days since 1858-11-17 00:00:00.0", varId);
 
-        vecInt dimHydroUnitVar = {dimIdUnit};
-        CheckNcStatus(nc_def_var(ncId, "hydro_units_ids", NC_INT, 1, &dimHydroUnitVar[0], &varId));
-        CheckNcStatus(nc_put_var_int(ncId, varId, &m_hydroUnitIds[0]));
-        buffer = wxString("hydrological units ids").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
+        varId = file.DefVarInt("hydro_units_ids", {dimIdUnit});
+        file.PutVar(varId, m_hydroUnitIds);
+        file.PutAttText("long_name", "hydrological units ids", varId);
 
-        vecInt dimSubBasinValuesVar = {dimIdItemsAgg, dimIdTime};
-        CheckNcStatus(nc_def_var(ncId, "sub_basin_values", NC_DOUBLE, 2, &dimSubBasinValuesVar[0], &varId));
-        CheckNcStatus(nc_def_var_deflate(ncId, varId, NC_SHUFFLE, true, 7));
-        for (size_t i = 0; i < m_subBasinValues.size(); ++i) {
-            size_t start[] = {i, 0};
-            size_t count[] = {1, timeSize};
-            CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_subBasinValues[i](0)));
-        }
-        buffer = wxString("aggregated values over the sub basin").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
-        buffer = wxString("mm").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
+        varId = file.DefVarDouble("sub_basin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
+        file.PutVar(varId, m_subBasinValues);
+        file.PutAttText("long_name", "aggregated values over the sub basin", varId);
+        file.PutAttText("units", "mm", varId);
 
-        vecInt dimHydroUnitValuesVar = {dimIdItemsDist, dimIdUnit, dimIdTime};
-        CheckNcStatus(nc_def_var(ncId, "hydro_units_values", NC_DOUBLE, 3, &dimHydroUnitValuesVar[0], &varId));
-        CheckNcStatus(nc_def_var_deflate(ncId, varId, NC_SHUFFLE, true, 7));
-        for (size_t i = 0; i < m_hydroUnitValues.size(); ++i) {
-            size_t start[] = {i, 0, 0};
-            size_t count[] = {1, hydroUnitsNb, timeSize};
-            CheckNcStatus(nc_put_vara_double(ncId, varId, start, count, &m_hydroUnitValues[i](0, 0)));
-        }
-        buffer = wxString("values for each hydrological units").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "long_name", strlen(buffer.data()), buffer.data()));
-        buffer = wxString("mm").ToUTF8();
-        CheckNcStatus(nc_put_att_text(ncId, varId, "units", strlen(buffer.data()), buffer.data()));
+        varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);
+        file.PutVar(varId, m_hydroUnitValues);
+        file.PutAttText("long_name", "values for each hydrological units", varId);
+        file.PutAttText("units", "mm", varId);
 
         // Global attributes
-        std::vector<const char *> subBasinLabels;
-        for (const auto& label :m_subBasinLabels) {
-            const char* str = (const char*)label.mb_str(wxConvUTF8);
-            subBasinLabels.push_back(str);
-        }
-        CheckNcStatus(nc_put_att_string(ncId, NC_GLOBAL, "labels_aggregated", subBasinLabelsNb, &subBasinLabels[0]));
-
-        std::vector<const char *> hydroUnitLabels;
-        for (const auto& label :m_hydroUnitLabels) {
-            const char* str = (const char*)label.mb_str(wxConvUTF8);
-            hydroUnitLabels.push_back(str);
-        }
-        CheckNcStatus(nc_put_att_string(ncId, NC_GLOBAL, "labels_distributed", hydroUnitLabelsNb, &hydroUnitLabels[0]));
-
-        CheckNcStatus(nc_close(ncId));
+        file.PutAttString("labels_aggregated", m_subBasinLabels);
+        file.PutAttString("labels_distributed", m_hydroUnitLabels);
 
     } catch(std::exception& e) {
         wxLogError(e.what());

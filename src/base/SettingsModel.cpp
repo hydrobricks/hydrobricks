@@ -370,10 +370,10 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMelt
 
         AddHydroUnitBrick(brickSettings.name + "-snowpack", "Snowpack");
         AddBrickProcess("melt", snowMeltProcess);
-        AddProcessOutput(brickSettings.name + "-snowpack");
+        OutputProcessToSameBrick();
 
         AddBrickProcess("meltwater", outflowProcess);
-        OutputProcessToSameBrick();
+        AddProcessOutput(surfaceName);
 
         if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
             AddProcessForcing("Temperature");

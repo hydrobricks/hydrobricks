@@ -1,5 +1,3 @@
-#include <netcdf.h>
-
 #include "Utils.h"
 
 bool IsNaN(const int value) {
@@ -187,12 +185,6 @@ double IncrementDateBy(double date, int amount, TimeUnit unit) {
     }
 
     return 0;
-}
-
-void CheckNcStatus(int status) {
-    if (status != NC_NOERR) {
-        throw InvalidArgument(nc_strerror(status));
-    }
 }
 
 Time GetTimeStructFromMJD(double mjd) {

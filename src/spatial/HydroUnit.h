@@ -2,8 +2,10 @@
 #define HYDROBRICKS_HYDRO_UNIT_H
 
 #include "Brick.h"
+#include "Forcing.h"
 #include "HydroUnitProperty.h"
 #include "Includes.h"
+#include "Splitter.h"
 
 class HydroUnit : public wxObject {
   public:
@@ -14,7 +16,7 @@ class HydroUnit : public wxObject {
         Undefined
     };
 
-    HydroUnit(float area = UNDEFINED, Types type = Undefined);
+    HydroUnit(double area = UNDEFINED, Types type = Undefined);
 
     ~HydroUnit() override;
 
@@ -22,11 +24,29 @@ class HydroUnit : public wxObject {
 
     void AddBrick(Brick* brick);
 
+    void AddSplitter(Splitter* splitter);
+
+    bool HasForcing(VariableType type);
+
+    void AddForcing(Forcing* forcing);
+
+    Forcing* GetForcing(VariableType type);
+
     int GetBricksCount();
+
+    int GetSplittersCount();
 
     Brick* GetBrick(int index);
 
-    void SetInputFlux(Flux* flux);
+    bool HasBrick(const wxString &name);
+
+    Brick* GetBrick(const wxString &name);
+
+    Splitter* GetSplitter(int index);
+
+    bool HasSplitter(const wxString &name);
+
+    Splitter* GetSplitter(const wxString &name);
 
     bool IsOk();
 
@@ -34,7 +54,7 @@ class HydroUnit : public wxObject {
         return m_type;
     }
 
-    void SetId(long id) {
+    void SetId(int id) {
         m_id = id;
     }
 
@@ -42,17 +62,18 @@ class HydroUnit : public wxObject {
         return m_area;
     }
 
-    long GetId() const {
+    int GetId() const {
         return m_id;
     }
 
   protected:
     Types m_type;
-    long m_id;
-    float m_area; // m2
-    Flux* m_fluxInput;
+    int m_id;
+    double m_area; // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
+    std::vector<Splitter*> m_splitters;
+    std::vector<Forcing*> m_forcing;
 
   private:
 };

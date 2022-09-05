@@ -1,7 +1,7 @@
 #include "ParameterVariable.h"
 
-ParameterVariable::ParameterVariable()
-    : Parameter()
+ParameterVariable::ParameterVariable(const wxString &name, float value)
+    : Parameter(name, value)
 {}
 
 
@@ -9,11 +9,11 @@ ParameterVariable::ParameterVariable()
  * Class ParameterVariableYearly
  */
 
-ParameterVariableYearly::ParameterVariableYearly()
-    : ParameterVariable()
+ParameterVariableYearly::ParameterVariableYearly(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const std::vector<float>& values) {
+bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const vecFloat& values) {
     m_values = values;
     m_reference.reserve(yearEnd - yearStart + 1);
     for (int i = yearStart; i <= yearEnd; ++i) {
@@ -35,7 +35,7 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
 
     if (i < 0) {
         wxLogError(_("The given year was not found in the reference years of the parameter."));
-        m_value = NaNf;
+        m_value = NAN_F;
         return false;
     }
 
@@ -49,11 +49,11 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
  * Class ParameterVariableMonthly
  */
 
-ParameterVariableMonthly::ParameterVariableMonthly()
-    : ParameterVariable()
+ParameterVariableMonthly::ParameterVariableMonthly(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
+bool ParameterVariableMonthly::SetValues(const vecFloat& values) {
     m_values = values;
 
     if (m_values.size() != 12) {
@@ -64,10 +64,11 @@ bool ParameterVariableMonthly::SetValues(const std::vector<float>& values) {
     return true;
 }
 
-bool ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
-    wxASSERT(month != wxDateTime::Inv_Month);
+bool ParameterVariableMonthly::UpdateParameter(int month) {
+    wxASSERT(month > 0);
+    wxASSERT(month <= 12);
 
-    m_value = m_values[month];
+    m_value = m_values[month-1];
 
     return true;
 }
@@ -77,11 +78,11 @@ bool ParameterVariableMonthly::UpdateParameter(wxDateTime::Month month) {
  * Class ParameterVariableDates
  */
 
-ParameterVariableDates::ParameterVariableDates()
-    : ParameterVariable()
+ParameterVariableDates::ParameterVariableDates(const wxString &name, float value)
+    : ParameterVariable(name, value)
 {}
 
-bool ParameterVariableDates::SetTimeAndValues(const std::vector<double>& time, const std::vector<float>& values) {
+bool ParameterVariableDates::SetTimeAndValues(const vecDouble& time, const vecFloat& values) {
     m_reference = time;
     m_values = values;
 
@@ -100,7 +101,7 @@ bool ParameterVariableDates::UpdateParameter(double timeReference) {
 
     if (i < 0) {
         wxLogError(_("The given time was not found in the reference time array of the parameter."));
-        m_value = NaNf;
+        m_value = NAN_F;
         return false;
     }
 

@@ -1,44 +1,77 @@
 #include "TimeMachine.h"
 
-TimeMachine::TimeMachine(const wxDateTime &start, const wxDateTime &end, int timeStep, TimeUnit timeStepUnit)
-    : m_date(start),
-      m_start(start),
-      m_end(end),
-      m_timeStep(timeStep),
-      m_timeStepUnit(timeStepUnit),
+TimeMachine::TimeMachine()
+    : m_timeStep(0),
+      m_timeStepUnit(Day),
+      m_timeStepInDays(0),
       m_parametersUpdater(nullptr)
 {}
 
+void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit){
+    m_date = start;
+    m_start = start;
+    m_end = end;
+    m_timeStep = timeStep;
+    m_timeStepUnit = timeStepUnit;
+    UpdateTimeStepInDays();
+}
+
+void TimeMachine::Initialize(const TimerSettings &settings) {
+
+    m_start = ParseDate(settings.start, guess);
+    m_end = ParseDate(settings.end, guess);
+    m_date = m_start;
+    m_timeStep = settings.timeStep;
+
+    if (settings.timeStepUnit.IsSameAs("Day", false)) {
+        m_timeStepUnit = Day;
+    } else if (settings.timeStepUnit.IsSameAs("Hour", false)) {
+        m_timeStepUnit = Hour;
+    } else if (settings.timeStepUnit.IsSameAs("Minute", false)) {
+        m_timeStepUnit = Minute;
+    } else {
+        throw InvalidArgument(_("Time step unit unrecognized or not implemented."));
+    }
+
+    UpdateTimeStepInDays();
+}
+
 bool TimeMachine::IsOver() {
-    return !m_date.IsEarlierThan(m_end);
+    return m_date > m_end;
 }
 
 void TimeMachine::IncrementTime() {
-    switch (m_timeStepUnit) {
-        case Variable:
-            wxLogError(_("Variable time step is not yet implemented."));
-            wxFAIL;
-            break;
-        case Month:
-            m_date.Add(wxDateSpan(0, m_timeStep));
-            break;
-        case Week:
-            m_date.Add(wxDateSpan(0, 0, m_timeStep));
-            break;
-        case Day:
-            m_date.Add(wxDateSpan(0, 0, 0, m_timeStep));
-            break;
-        case Hour:
-            m_date.Add(wxTimeSpan(m_timeStep));
-            break;
-        case Minute:
-            m_date.Add(wxTimeSpan(0, m_timeStep));
-            break;
-        default:
-            wxLogError(_("The provided time step unit is not allowed."));
-    }
+    wxASSERT(m_timeStepInDays > 0);
+    m_date += m_timeStepInDays;
 
     if (m_parametersUpdater) {
         m_parametersUpdater->DateUpdate(m_date);
+    }
+}
+
+int TimeMachine::GetTimeStepsNb() {
+    wxASSERT(m_timeStepInDays > 0);
+    return int(1 + (m_end - m_start) / m_timeStepInDays);
+}
+
+void TimeMachine::UpdateTimeStepInDays() {
+
+    switch (m_timeStepUnit) {
+        case Variable:
+            throw NotImplemented();
+        case Week:
+            m_timeStepInDays = m_timeStep * 7;
+            break;
+        case Day:
+            m_timeStepInDays = m_timeStep;
+            break;
+        case Hour:
+            m_timeStepInDays = m_timeStep / 24.0;
+            break;
+        case Minute:
+            m_timeStepInDays = m_timeStep / 1440.0;
+            break;
+        default:
+            wxLogError(_("The provided time step unit is not allowed."));
     }
 }

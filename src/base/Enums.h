@@ -12,21 +12,36 @@ enum {
 };
 
 enum TimeUnit {
-    Year,
-    Month,
     Week,
     Day,
     Hour,
     Minute,
-    Second,
     Variable
 };
 
 enum VariableType {
     Precipitation,
     Temperature,
-    ETP,
-    MAX_VAR_TYPES
+    PET,
+    Custom1,
+    Custom2,
+    Custom3
+};
+
+enum TimeFormat {
+    ISOdate,
+    ISOdateTime,
+    YYYYMMDD,
+    YYYY_MM_DD,
+    YYYY_MM_DD_hh,
+    YYYYMMDD_hhmm,
+    YYYY_MM_DD_hh_mm,
+    YYYY_MM_DD_hh_mm_ss,
+    DD_MM_YYYY,
+    DD_MM_YYYY_hh_mm,
+    DD_MM_YYYY_hh_mm_ss,
+    hh_mm,
+    guess
 };
 
 #endif  // HYDROBRICKS_ENUMS_H

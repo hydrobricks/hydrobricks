@@ -1,11 +1,12 @@
 #ifndef HYDROBRICKS_SUBBASIN_H
 #define HYDROBRICKS_SUBBASIN_H
 
-#include "Includes.h"
+#include "Behaviour.h"
 #include "Connector.h"
 #include "HydroUnit.h"
-#include "Behaviour.h"
+#include "Includes.h"
 #include "TimeMachine.h"
+#include "SettingsBasin.h"
 
 class SubBasin : public wxObject {
   public:
@@ -13,13 +14,41 @@ class SubBasin : public wxObject {
 
     ~SubBasin() override;
 
+    bool Initialize(SettingsBasin& basinSettings);
+
+    void BuildBasin(SettingsBasin& basinSettings);
+
+    bool AssignFractions(SettingsBasin& basinSettings);
+
     bool IsOk();
+
+    void AddBrick(Brick* brick);
+
+    void AddSplitter(Splitter* splitter);
 
     void AddHydroUnit(HydroUnit* unit);
 
-    int GetHydroUnitsCount();
+    int GetHydroUnitsNb();
 
-    HydroUnit* SubBasin::GetHydroUnit(int index);
+    HydroUnit* GetHydroUnit(int index);
+
+    vecInt GetHydroUnitsIds();
+
+    int GetBricksCount();
+
+    int GetSplittersCount();
+
+    Brick* GetBrick(int index);
+
+    bool HasBrick(const wxString &name);
+
+    Brick* GetBrick(const wxString &name);
+
+    Splitter* GetSplitter(int index);
+
+    bool HasSplitter(const wxString &name);
+
+    Splitter* GetSplitter(const wxString &name);
 
     bool HasIncomingFlow();
 
@@ -27,19 +56,28 @@ class SubBasin : public wxObject {
 
     void AddOutputConnector(Connector* connector);
 
-    void AddContainer(Brick* container);
-
     void AddBehaviour(Behaviour* behaviour);
 
-    void AddFlux(Flux* flux);
+    void AttachOutletFlux(Flux* pFlux);
+
+    double* GetValuePointer(const wxString& name);
+
+    bool ComputeOutletDischarge();
+
+    float GetArea() {
+        return m_area;
+    }
 
   protected:
     float m_area; // m2
+    double m_outletTotal;
+    bool m_needsCleanup;
+    std::vector<Brick*> m_bricks;
+    std::vector<Splitter*> m_splitters;
     std::vector<HydroUnit*> m_hydroUnits;
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;
-    std::vector<Brick*> m_lumpedContainers;
-    std::vector<Flux*> m_lumpedFluxes;
+    std::vector<Flux*> m_outletFluxes;
     std::vector<Behaviour*> m_behaviours;
 
   private:

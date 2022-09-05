@@ -8,9 +8,26 @@ class TimeSeriesDistributed : public TimeSeries {
   public:
     TimeSeriesDistributed(VariableType type);
 
-    ~TimeSeriesDistributed() override = default;
+    ~TimeSeriesDistributed() override;
+
+    void AddData(TimeSeriesData* data, int unitId);
+
+    bool SetCursorToDate(double date) override;
+
+    bool AdvanceOneTimeStep() override;
+
+    bool IsDistributed() override {
+        return true;
+    }
+
+    double GetStart() override;
+
+    double GetEnd() override;
+
+    TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
+    vecInt m_unitIds;
     std::vector<TimeSeriesData*> m_data;
 
   private:

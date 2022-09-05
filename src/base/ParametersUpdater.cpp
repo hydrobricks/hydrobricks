@@ -1,7 +1,7 @@
 #include "ParametersUpdater.h"
 
 ParametersUpdater::ParametersUpdater()
-    : m_previousDate(1, wxDateTime::Jan, 0)
+    : m_previousDate(0)
 {}
 
 void ParametersUpdater::AddParameterVariableYearly(ParameterVariableYearly* parameter) {
@@ -16,16 +16,19 @@ void ParametersUpdater::AddParameterVariableDates(ParameterVariableDates* parame
     m_parametersDates.push_back(parameter);
 }
 
-void ParametersUpdater::DateUpdate(const wxDateTime &date) {
-    if (m_previousDate.GetYear() != date.GetYear()) {
-        ChangingYear(date.GetYear());
-        ChangingMonth(date.GetMonth());
-        ChangingDate(date.GetJulianDayNumber());
-    } else if (m_previousDate.GetMonth() != date.GetMonth()) {
-        ChangingMonth(date.GetMonth());
-        ChangingDate(date.GetJulianDayNumber());
+void ParametersUpdater::DateUpdate(double date) {
+    Time prevDate = GetTimeStructFromMJD(m_previousDate);
+    Time newDate = GetTimeStructFromMJD(date);
+
+    if (prevDate.year != newDate.year) {
+        ChangingYear(newDate.year);
+        ChangingMonth(newDate.month);
+        ChangingDate(date);
+    } else if (prevDate.month != newDate.month) {
+        ChangingMonth(newDate.month);
+        ChangingDate(date);
     } else {
-        ChangingDate(date.GetJulianDayNumber());
+        ChangingDate(date);
     }
 
     m_previousDate = date;
@@ -37,7 +40,7 @@ void ParametersUpdater::ChangingYear(int year) {
     }
 }
 
-void ParametersUpdater::ChangingMonth(wxDateTime::Month month) {
+void ParametersUpdater::ChangingMonth(int month) {
     for (auto & parameter : m_parametersMonthly) {
         parameter->UpdateParameter(month);
     }

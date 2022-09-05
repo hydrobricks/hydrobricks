@@ -1,0 +1,14 @@
+base: Socont
+solver: HeunExplicit
+options:
+  soil_storage_nb: 2
+surfaces:
+  names:
+  - ground
+  - glacier-ice
+  - glacier-debris
+  types:
+  - ground
+  - glacier
+  - glacier
+logger: all

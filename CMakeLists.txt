@@ -11,19 +11,15 @@ if (POLICY CMP0077)
 endif ()
 
 # Project name
-if (UNIX)
-    project(hydrobricks)
-else (UNIX)
-    project(HydroBricks)
-endif (UNIX)
+project(hydrobricks)
 
 
 ##### OPTIONS
 
 # Version number
 set(VERSION_MAJOR "0")
-set(VERSION_MINOR "0")
-set(VERSION_PATCH "1")
+set(VERSION_MINOR "1")
+set(VERSION_PATCH "0")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})

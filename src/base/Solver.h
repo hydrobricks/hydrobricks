@@ -2,6 +2,9 @@
 #define HYDROBRICKS_SOLVER_H
 
 #include "Includes.h"
+#include "SettingsModel.h"
+
+class Processor;
 
 class Solver : public wxObject {
   public:
@@ -9,7 +12,40 @@ class Solver : public wxObject {
 
     virtual bool Solve() = 0;
 
+    static Solver* Factory(const SolverSettings &solverSettings);
+
+    void Connect(Processor* processor) {
+        wxASSERT(processor);
+        m_processor = processor;
+    }
+
+    void InitializeContainers();
+
   protected:
+    Processor* m_processor;
+    axxd m_stateVariableChanges;
+    axxd m_changeRates;
+    int m_nIterations;
+
+    void SaveStateVariables(int col);
+
+    void ComputeChangeRates(int col, bool applyConstraints = true);
+
+    void ApplyConstraintsFor(int col);
+
+    void ApplyConstraints();
+
+    void ResetStateVariableChanges();
+
+    void SetStateVariablesToIteration(int col);
+
+    void SetStateVariablesToAvgOf(int col1, int col2);
+
+    void ApplyProcesses(int col) const;
+
+    void ApplyProcesses(const axd& changeRates) const;
+
+    void Finalize() const;
 
   private:
 };

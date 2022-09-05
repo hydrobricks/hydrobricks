@@ -36,7 +36,7 @@ TEST(ParameterVariableYearly, UpdateParameter) {
 
     parameter.UpdateParameter(2005);
 
-    EXPECT_EQ(6, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 6);
 }
 
 TEST(ParameterVariableYearly, UpdateParameterNotFound) {
@@ -71,7 +71,7 @@ TEST(ParameterVariableMonthly, UpdateParameter) {
 
     parameter.UpdateParameter(3);
 
-    EXPECT_EQ(3, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 3);
 }
 
 TEST(ParameterVariableDates, SetValues) {
@@ -100,7 +100,7 @@ TEST(ParameterVariableDates, UpdateParameter) {
     double dateExtract = GetMJD(2010, 1, 4);
     parameter.UpdateParameter(dateExtract);
 
-    EXPECT_EQ(4, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 4);
 }
 
 TEST(ParameterVariableDates, UpdateParameterNotFound) {
@@ -127,7 +127,7 @@ TEST(ParametersUpdater, DateUpdateDay) {
     updater.DateUpdate(GetMJD(2010, 2, 1));
     updater.DateUpdate(GetMJD(2010, 1, 4));
 
-    EXPECT_EQ(4, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 4);
 }
 
 TEST(ParametersUpdater, DateUpdateMonth) {
@@ -140,7 +140,7 @@ TEST(ParametersUpdater, DateUpdateMonth) {
     updater.DateUpdate(GetMJD(2010, 2, 1));
     updater.DateUpdate(GetMJD(2010, 3, 1));
 
-    EXPECT_EQ(3, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 3);
 }
 
 TEST(ParametersUpdater, DateUpdateYear) {
@@ -153,5 +153,5 @@ TEST(ParametersUpdater, DateUpdateYear) {
     updater.DateUpdate(GetMJD(2014, 1, 1));
     updater.DateUpdate(GetMJD(2015, 3, 13));
 
-    EXPECT_EQ(5, parameter.GetValue());
+    EXPECT_EQ(parameter.GetValue(), 5);
 }

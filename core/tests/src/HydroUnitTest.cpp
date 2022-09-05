@@ -5,13 +5,13 @@
 TEST(HydroUnit, BuildsCorrectly) {
     HydroUnit unit(100, HydroUnit::Lumped);
 
-    EXPECT_EQ(100, unit.GetArea());
-    EXPECT_EQ(HydroUnit::Lumped, unit.GetType());
+    EXPECT_EQ(unit.GetArea(), 100);
+    EXPECT_EQ(unit.GetType(), HydroUnit::Lumped);
 }
 
 TEST(HydroUnit, HasCorrectId) {
     HydroUnit unit;
     unit.SetId(9);
 
-    EXPECT_EQ(9, unit.GetId());
+    EXPECT_EQ(unit.GetId(), 9);
 }

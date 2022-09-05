@@ -1,10 +1,12 @@
 #include "FileNetcdf.h"
 
 FileNetcdf::FileNetcdf()
-    : m_ncId(0) {}
+    : m_ncId(-1) {}
 
 FileNetcdf::~FileNetcdf() {
-    CheckNcStatus(nc_close(m_ncId));
+    if (m_ncId >= 0) {
+        CheckNcStatus(nc_close(m_ncId));
+    }
 }
 
 void FileNetcdf::CheckNcStatus(int status) {
@@ -35,6 +37,11 @@ bool FileNetcdf::Create(const wxString &path) {
     return true;
 }
 
+void FileNetcdf::Close() {
+    CheckNcStatus(nc_close(m_ncId));
+    m_ncId = -1;
+}
+
 int FileNetcdf::GetVarsNb() {
     int varsNb, gattNb;
     CheckNcStatus(nc_inq(m_ncId, nullptr, &varsNb, &gattNb, nullptr));
@@ -42,11 +49,18 @@ int FileNetcdf::GetVarsNb() {
     return varsNb;
 }
 
+int FileNetcdf::GetVarId(const wxString &varName) {
+    int varId;
+    CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+
+    return varId;
+}
+
 wxString FileNetcdf::GetVarName(int varId) {
     char varNameChar[NC_MAX_NAME + 1];
     CheckNcStatus(nc_inq_varname(m_ncId, varId, varNameChar));
 
-    return wxString(varNameChar);
+    return {varNameChar};
 }
 
 vecInt FileNetcdf::GetVarDimIds(int varId, int dimNb) {
@@ -203,6 +217,15 @@ vecStr FileNetcdf::GetAttString1D(const wxString &attName, const wxString &varNa
     return items;
 }
 
+void FileNetcdf::PutAttString(const wxString &attName, const vecStr &values, int varId) {
+    std::vector<const char *> valuesChar;
+    for (const auto &label : values) {
+        const char *str = (const char *)label.mb_str(wxConvUTF8);
+        valuesChar.push_back(str);
+    }
+    CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.mb_str(), values.size(), &valuesChar[0]));
+}
+
 wxString FileNetcdf::GetAttText(const wxString &attName, const wxString &varName) {
     int varId = NC_GLOBAL;
     if (!varName.IsEmpty()) {
@@ -224,13 +247,4 @@ wxString FileNetcdf::GetAttText(const wxString &attName, const wxString &varName
 void FileNetcdf::PutAttText(const wxString &attName, const wxString &value, int varId) {
     wxCharBuffer buffer = value.ToUTF8();
     CheckNcStatus(nc_put_att_text(m_ncId, varId, attName.mb_str(), strlen(buffer.data()), buffer.data()));
-}
-
-void FileNetcdf::PutAttString(const wxString &attName, const vecStr &values, int varId) {
-    std::vector<const char *> valuesChar;
-    for (const auto &label : values) {
-        const char *str = (const char *)label.mb_str(wxConvUTF8);
-        valuesChar.push_back(str);
-    }
-    CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.mb_str(), values.size(), &valuesChar[0]));
 }

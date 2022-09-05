@@ -17,7 +17,11 @@ class FileNetcdf : public wxObject {
 
     bool Create(const wxString &path);
 
+    void Close();
+
     int GetVarsNb();
+
+    int GetVarId(const wxString &varName);
 
     wxString GetVarName(int varId);
 
@@ -57,11 +61,11 @@ class FileNetcdf : public wxObject {
 
     vecStr GetAttString1D(const wxString &attName, const wxString &varName = wxEmptyString);
 
-    wxString GetAttText(const wxString &attName, const wxString &varName);
+    void PutAttString(const wxString &attName, const vecStr &values, int varId = NC_GLOBAL);
+
+    wxString GetAttText(const wxString &attName, const wxString &varName = wxEmptyString);
 
     void PutAttText(const wxString &attName, const wxString &value, int varId = NC_GLOBAL);
-
-    void PutAttString(const wxString &attName, const vecStr &values, int varId = NC_GLOBAL);
 
   protected:
     int m_ncId;

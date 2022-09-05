@@ -1,4 +1,4 @@
-name: Python Wheels Build
+name: Python Build Wheels
 
 on: [push, pull_request]
 
@@ -13,14 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Used to host cibuildwheel
       - uses: actions/setup-python@v3
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.9.0
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse python
         # to supply options, put them in 'env', like:
         # env:
         #   CIBW_SOME_OPTION: value

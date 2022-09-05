@@ -19,12 +19,12 @@ list(REMOVE_DUPLICATES src_tests)
 
 # Include source directories
 list(APPEND inc_dirs
-        "${CMAKE_SOURCE_DIR}/src/base"
-        "${CMAKE_SOURCE_DIR}/src/behaviours"
-        "${CMAKE_SOURCE_DIR}/src/bricks"
-        "${CMAKE_SOURCE_DIR}/src/fluxes"
-        "${CMAKE_SOURCE_DIR}/src/processes"
-        "${CMAKE_SOURCE_DIR}/src/spatial"
+        "${CMAKE_SOURCE_DIR}/core/src/base"
+        "${CMAKE_SOURCE_DIR}/core/src/behaviours"
+        "${CMAKE_SOURCE_DIR}/core/src/bricks"
+        "${CMAKE_SOURCE_DIR}/core/src/fluxes"
+        "${CMAKE_SOURCE_DIR}/core/src/processes"
+        "${CMAKE_SOURCE_DIR}/core/src/spatial"
         )
 include_directories(${inc_dirs})
 

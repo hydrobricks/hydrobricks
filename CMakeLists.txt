@@ -24,7 +24,7 @@ add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/build/cmake ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/core/build/cmake ${CMAKE_MODULE_PATH})
 
 # Output path
 if (WIN32)
@@ -91,7 +91,7 @@ if (USE_CODECOV)
     setup_target_for_coverage_lcov(
             NAME hydrobricks-coverage
             EXECUTABLE hydrobricks-tests
-            EXCLUDE "/usr/*" "${PROJECT_SOURCE_DIR}/tests/src/*" "tests/*" "${CMAKE_BINARY_DIR}/_deps/*" "bin/*"
+            EXCLUDE "/usr/*" "${PROJECT_SOURCE_DIR}/core/tests/src/*" "tests/*" "${CMAKE_BINARY_DIR}/_deps/*" "bin/*"
             DEPENDENCIES hydrobricks-tests)
 endif (USE_CODECOV)
 
@@ -101,9 +101,9 @@ endif (USE_CODECOV)
 include(define_compilation_flags)
 
 # Add components
-add_subdirectory(src)
+add_subdirectory(core/src)
 if (BUILD_TESTS)
-    add_subdirectory(tests)
+    add_subdirectory(core/tests)
 endif ()
 
 

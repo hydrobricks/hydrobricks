@@ -44,7 +44,7 @@ jobs:
 
     - name: Copy test files
       working-directory: ${{github.workspace}}
-      run: cp -R tests/files/ bin/bin/
+      run: cp -R core/tests/files/ bin/bin/
 
     - name: List directory content
       working-directory: ${{github.workspace}}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Copy test files
         working-directory: ${{github.workspace}}
-        run: cp -R tests/files/ bin/tests
+        run: cp -R core/tests/files/ bin/tests
 
       - name: Build and run code coverage
         working-directory: ${{github.workspace}}/bin

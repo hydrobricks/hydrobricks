@@ -189,7 +189,7 @@ vecStr FileNetcdf::GetAttString1D(const wxString &attName, const wxString &varNa
     size_t itemsNb;
     CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.mb_str(), &itemsNb));
 
-    char **stringAtt = (char **) malloc(itemsNb * sizeof(char *));
+    char **stringAtt = (char **)malloc(itemsNb * sizeof(char *));
     memset(stringAtt, 0, itemsNb * sizeof(char *));
     CheckNcStatus(nc_get_att_string(m_ncId, varId, attName.mb_str(), stringAtt));
 
@@ -228,8 +228,8 @@ void FileNetcdf::PutAttText(const wxString &attName, const wxString &value, int 
 
 void FileNetcdf::PutAttString(const wxString &attName, const vecStr &values, int varId) {
     std::vector<const char *> valuesChar;
-    for (const auto &label: values) {
-        const char *str = (const char *) label.mb_str(wxConvUTF8);
+    for (const auto &label : values) {
+        const char *str = (const char *)label.mb_str(wxConvUTF8);
         valuesChar.push_back(str);
     }
     CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.mb_str(), values.size(), &valuesChar[0]));

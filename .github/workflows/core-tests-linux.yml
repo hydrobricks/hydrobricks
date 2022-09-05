@@ -19,6 +19,13 @@ jobs:
     - name: Install libraries
       run: sudo apt-get install tree python
 
+    - name: Cache Conan libs
+      id: cache-conan
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.conan
+        key: ${{ runner.os }}-conan
+
     - name: Install conan
       run: |
         pip install conan
@@ -66,6 +73,13 @@ jobs:
 
       - name: Install libraries
         run: sudo apt-get install tree lcov python
+
+      - name: Cache Conan libs
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          path: /home/runner/.conan
+          key: ${{ runner.os }}-conan
 
       - name: Install conan
         run: |

@@ -22,7 +22,8 @@ jobs:
       - name: GH Pages Deployment
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          external_repository: hydrobricks/hydrobricks-doc-core
           publish_dir: ./core/docs/html/
           enable_jekyll: false
           allow_empty_commit: false

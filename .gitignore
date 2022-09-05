@@ -41,3 +41,5 @@ cmake-build-relwithdebinfo/
 bin/
 python/dist/
 python/src/hydrobricks.egg-info/
+core/docs/html/
+core/docs/latex/

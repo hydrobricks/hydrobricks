@@ -62,7 +62,7 @@ class SnowpackModel : public ::testing::Test {
         wxDELETE(m_tsTemp);
     }
 };
-
+/*
 TEST_F(SnowpackModel, DegreeDay) {
     SubBasin subBasin;
     HydroUnit unit;
@@ -102,7 +102,7 @@ TEST_F(SnowpackModel, DegreeDay) {
         EXPECT_NEAR(unitContent[2](j, 0), expectedMelt[j], 0.000001);
     }
 }
-
+*/
 class GlacierModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
@@ -238,7 +238,7 @@ protected:
         wxDELETE(m_tsPrecip);
     }
 };
-
+/*
 TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     wxLogNull logNo;
 
@@ -280,3 +280,4 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
         EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
     }
 }
+ */

@@ -191,7 +191,10 @@ protected:
         m_model.AddProcessParameter("degreeDayFactor", 2.0f);
         m_model.AddProcessParameter("meltingTemperature", 0.0f);
         m_model.AddProcessLogging("output");
+        m_model.OutputProcessToSameBrick();
+        m_model.AddBrickProcess("meltwater", "Outflow:direct");
         m_model.AddProcessOutput("glacier");
+        m_model.SetProcessOutputsAsInstantaneous();
 
         // Glacier brick
         m_model.AddHydroUnitBrick("glacier", "Glacier");
@@ -238,7 +241,7 @@ protected:
         wxDELETE(m_tsPrecip);
     }
 };
-/*
+
 TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     wxLogNull logNo;
 
@@ -263,9 +266,14 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 
     for (auto & basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
-            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+            //EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+            wxPrintf(" | %.1f (%.1f)", basinOutput[j], expectedOutputs[j]);
         }
     }
+
+
+    wxPrintf("\n");
+
 
     // Check melt and swe
     vecAxxd unitOutput = model.GetLogger()->GetHydroUnitValues();
@@ -275,9 +283,32 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     vecDouble expectedTotMeltWater = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+
+        
+        wxPrintf(" | %.1f (%.1f)", unitOutput[0](j, 0), expectedSnowMelt[j]);
     }
+    wxPrintf("\n");
+
+    for (int j = 0; j < expectedIceMelt.size(); ++j) {
+        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+
+
+        wxPrintf(" | %.1f (%.1f)", unitOutput[1](j, 0), expectedIceMelt[j]);
+    }
+    wxPrintf("\n");
+
+    for (int j = 0; j < expectedIceMelt.size(); ++j) {
+        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+
+
+        wxPrintf(" | %.1f (%.1f)", unitOutput[2](j, 0), expectedTotMeltWater[j]);
+    }
+    wxPrintf("\n");
 }
- */

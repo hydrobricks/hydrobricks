@@ -10,10 +10,11 @@ SettingsBasin::SettingsBasin()
 SettingsBasin::~SettingsBasin() {
 }
 
-void SettingsBasin::AddHydroUnit(int id, double area) {
+void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     HydroUnitSettings unit;
     unit.id = id;
     unit.area = area;
+    unit.elevation = elevation;
     m_hydroUnits.push_back(unit);
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }

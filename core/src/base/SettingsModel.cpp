@@ -156,6 +156,14 @@ void SettingsModel::AddProcessParameter(const wxString &name, float value, const
         throw NotImplemented();
     }
 
+    // If the parameter already exists, replace its value
+    for (auto &parameter: m_selectedProcess->parameters) {
+        if (parameter->GetName().IsSameAs(name, false)) {
+            parameter->SetValue(value);
+            return;
+        }
+    }
+
     auto parameter = new Parameter(name, value);
 
     m_selectedProcess->parameters.push_back(parameter);

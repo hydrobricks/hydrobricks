@@ -23,7 +23,7 @@ class SettingsBasin : public wxObject {
 
     ~SettingsBasin() override;
 
-    void AddHydroUnit(int id, double area);
+    void AddHydroUnit(int id, double area, double elevation = 0.0);
 
     void AddHydroUnitSurfaceElement(const wxString& name, double fraction = 1.0);
 

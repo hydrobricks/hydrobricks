@@ -1,8 +1,9 @@
 # hydrobricks
 Modular Hydrological Modelling Framework
 
-[![Linux-Tests](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/linux-tests.yml)
+[![Core Tests Linux](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml)
 [![codecov](https://codecov.io/gh/hydrobricks/hydrobricks/branch/main/graph/badge.svg?token=G1PBSK8EG2)](https://codecov.io/gh/hydrobricks/hydrobricks)
+[![Doxygen](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-generate-doxygen.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-generate-doxygen.yml)
 
 > :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**
 

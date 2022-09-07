@@ -28,7 +28,7 @@ jobs:
 
     - name: Setup conan
       run: |
-        if ${{ grep -q "Version" <<< $(pip show conan) }}; then
+        if grep -q "Version" <<< $(pip show conan); then
           echo "Conan already installed."
         else
           pip install conan
@@ -87,11 +87,11 @@ jobs:
 
       - name: Setup conan
         run: |
-          if ${{ grep -q "Version" <<< $(pip show conan) }}; then
-          echo "Conan already installed."
+          if grep -q "Version" <<< $(pip show conan); then
+            echo "Conan already installed."
           else
-          pip install conan
-          conan profile new default --detect
+            pip install conan
+            conan profile new default --detect
           fi
           conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1

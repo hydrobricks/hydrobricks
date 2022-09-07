@@ -15,11 +15,11 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
         solverSettings.name.IsSameAs("Runge-Kutta", false) ||
         solverSettings.name.IsSameAs("RungeKutta", false)) {
         return new SolverRK4();
-    } else if (solverSettings.name.IsSameAs("EulerExplicit", false) ||
-               solverSettings.name.IsSameAs("Euler Explicit", false)) {
+    } else if (solverSettings.name.IsSameAs("Euler Explicit", false) ||
+               solverSettings.name.IsSameAs("EulerExplicit", false)) {
         return new SolverEulerExplicit();
-    } else if (solverSettings.name.IsSameAs("HeunExplicit", false) ||
-               solverSettings.name.IsSameAs("Heun Explicit", false)) {
+    } else if (solverSettings.name.IsSameAs("Heun Explicit", false) ||
+               solverSettings.name.IsSameAs("HeunExplicit", false)) {
         return new SolverHeunExplicit();
     }
     throw InvalidArgument(_("Incorrect solver name."));
@@ -77,16 +77,6 @@ void Solver::ApplyConstraintsFor(int col) {
                 process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
                 iRate++;
             }
-        }
-        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(g_timeStepInDays);
-    }
-}
-
-void Solver::ApplyConstraints() {
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
-        if (brick->IsNull()) {
-            continue;
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         brick->ApplyConstraints(g_timeStepInDays);

@@ -52,7 +52,7 @@ class Solver : public wxObject {
      * Compute the change rates of all processes.
      *
      * @param col The column of the internal storage where the change rates must be saved (= iteration).
-     * @param applyConstraints Option to apply the constraints (e.g. storage max capacity).
+     * @param applyConstraints Option to apply the constraints (e.g., storage max capacity).
      */
     void ComputeChangeRates(int col, bool applyConstraints = true);
 
@@ -62,11 +62,6 @@ class Solver : public wxObject {
      * @param col The column (= iteration) of the internal storage containing the change rates.
      */
     void ApplyConstraintsFor(int col);
-
-    /**
-     * Apply constraints (e.g. storage max capacity) on the current bricks.
-     */
-    void ApplyConstraints();
 
     /**
      * Reset the stored state variable changes to zero.

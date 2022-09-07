@@ -10,6 +10,11 @@ class Solver : public wxObject {
   public:
     explicit Solver();
 
+    /**
+     * Apply the solver.
+     *
+     * @return True if success, false otherwise.
+     */
     virtual bool Solve() = 0;
 
     /**

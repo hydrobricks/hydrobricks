@@ -26,11 +26,14 @@ Solver* Solver::Factory(const SolverSettings &solverSettings) {
 }
 
 void Solver::InitializeContainers() {
+    wxASSERT(m_processor);
+    wxASSERT(m_nIterations > 0);
     m_stateVariableChanges = axxd::Zero(m_processor->GetNbStateVariables(), m_nIterations);
     m_changeRates = axxd::Zero(m_processor->GetNbSolvableConnections(), m_nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {
+    wxASSERT(m_processor);
     int counter = 0;
     for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
         m_stateVariableChanges(counter, col) = *value;
@@ -39,6 +42,7 @@ void Solver::SaveStateVariables(int col) {
 }
 
 void Solver::ComputeChangeRates(int col, bool applyConstraints) {
+    wxASSERT(m_processor);
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         double sumRates = 0.0;
@@ -68,6 +72,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
 }
 
 void Solver::ApplyConstraintsFor(int col) {
+    wxASSERT(m_processor);
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         for (auto process : brick->GetProcesses()) {
@@ -84,12 +89,14 @@ void Solver::ApplyConstraintsFor(int col) {
 }
 
 void Solver::ResetStateVariableChanges() {
+    wxASSERT(m_processor);
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
         *value = 0;
     }
 }
 
 void Solver::SetStateVariablesToIteration(int col) {
+    wxASSERT(m_processor);
     int counter = 0;
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
         *value = m_stateVariableChanges(counter, col);
@@ -98,14 +105,16 @@ void Solver::SetStateVariablesToIteration(int col) {
 }
 
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
+    wxASSERT(m_processor);
     int counter = 0;
     for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
-        *value = (m_stateVariableChanges(counter, col1) + m_stateVariableChanges(counter, col2)) / 2;
+        *value = (m_stateVariableChanges(counter, col1) + m_stateVariableChanges(counter, col2)) / 2.0;
         counter++;
     }
 }
 
 void Solver::ApplyProcesses(int col) const {
+    wxASSERT(m_processor);
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
@@ -122,6 +131,7 @@ void Solver::ApplyProcesses(int col) const {
 }
 
 void Solver::ApplyProcesses(const axd &changeRates) const {
+    wxASSERT(m_processor);
     int iRate = 0;
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
@@ -138,6 +148,7 @@ void Solver::ApplyProcesses(const axd &changeRates) const {
 }
 
 void Solver::Finalize() const {
+    wxASSERT(m_processor);
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
             continue;

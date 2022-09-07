@@ -9,6 +9,9 @@ class SolverHeunExplicit : public Solver {
   public:
     explicit SolverHeunExplicit();
 
+    /**
+     * @copydoc Solver::Solve()
+     */
     bool Solve() override;
 
   protected:

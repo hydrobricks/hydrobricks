@@ -9,6 +9,9 @@ class SolverEulerExplicit : public Solver {
   public:
     explicit SolverEulerExplicit();
 
+    /**
+     * @copydoc Solver::Solve()
+     */
     bool Solve() override;
 
   protected:

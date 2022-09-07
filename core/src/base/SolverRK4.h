@@ -9,12 +9,14 @@ class SolverRK4 : public Solver {
   public:
     explicit SolverRK4();
 
+    /**
+     * @copydoc Solver::Solve()
+     */
     bool Solve() override;
 
   protected:
 
   private:
-
 };
 
 #endif  // HYDROBRICKS_SOLVER_RK4_H

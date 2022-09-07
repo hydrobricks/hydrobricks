@@ -4,6 +4,53 @@
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 
+TEST(Solver, FactoryBuildsSolvers) {
+    SolverSettings settings;
+    Solver* solver;
+
+    settings.name = "RK4";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "Runge-Kutta";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "RungeKutta";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "Euler Explicit";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "EulerExplicit";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "Heun Explicit";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+
+    settings.name = "HeunExplicit";
+    solver = Solver::Factory(settings);
+    EXPECT_TRUE(solver != nullptr);
+    wxDELETE(solver);
+}
+
+TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
+    SolverSettings settings;
+
+    settings.name = "InvalidName";
+    EXPECT_THROW(Solver::Factory(settings), InvalidArgument);
+}
+
 /**
  * Model: simple linear storage
  */

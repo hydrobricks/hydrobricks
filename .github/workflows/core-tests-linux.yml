@@ -26,14 +26,14 @@ jobs:
         path: /home/runner/.conan
         key: ${{ runner.os }}-conan
 
-    - if: ${{ grep -q "Version" <<< $(pip show conan) }}
-      name: Install conan
-      run: |
-        pip install conan
-        conan profile new default --detect
-
     - name: Setup conan
       run: |
+        if ${{ grep -q "Version" <<< $(pip show conan) }}; then
+          echo "Conan already installed."
+        else
+          pip install conan
+          conan profile new default --detect
+        fi
         conan profile update settings.compiler.libcxx=libstdc++11 default
         conan config set general.revisions_enabled=1
         conan remote add gitlab https://gitlab.com/api/v4/packages/conan
@@ -85,14 +85,14 @@ jobs:
           path: /home/runner/.conan
           key: ${{ runner.os }}-conan
 
-      - if: ${{ grep -q "Version" <<< $(pip show conan) }}
-        name: Install conan
-        run: |
-          pip install conan
-          conan profile new default --detect
-
       - name: Setup conan
         run: |
+          if ${{ grep -q "Version" <<< $(pip show conan) }}; then
+          echo "Conan already installed."
+          else
+          pip install conan
+          conan profile new default --detect
+          fi
           conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1
           conan remote add gitlab https://gitlab.com/api/v4/packages/conan

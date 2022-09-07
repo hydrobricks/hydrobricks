@@ -1,6 +1,9 @@
 #ifndef HYDROBRICKS_ENUMS_H
 #define HYDROBRICKS_ENUMS_H
 
+/**
+ * Enumeration for general informative flags.
+ */
 enum {
     FAILED = -1,
     OUT_OF_RANGE = -2,
@@ -11,6 +14,9 @@ enum {
     UNDEFINED = -7
 };
 
+/**
+ * Temporal units.
+ */
 enum TimeUnit {
     Week,
     Day,
@@ -19,6 +25,9 @@ enum TimeUnit {
     Variable
 };
 
+/**
+ * Types of forcing variables.
+ */
 enum VariableType {
     Precipitation,
     Temperature,
@@ -28,6 +37,9 @@ enum VariableType {
     Custom3
 };
 
+/**
+ * Formats for time/date formatting or parsing.
+ */
 enum TimeFormat {
     ISOdate,
     ISOdateTime,

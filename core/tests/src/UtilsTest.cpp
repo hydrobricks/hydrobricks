@@ -5,7 +5,7 @@
 TEST(Utils, ZeroIsNotNaN) {
     int value = 0;
 
-    EXPECT_FALSE(IsNaN((float)value));
+    EXPECT_FALSE(IsNaN((float) value));
 }
 
 TEST(Utils, IsNaNIntTrue) {
@@ -459,52 +459,17 @@ TEST(Utils, SearchDoubleArraySameValueOutOfRange) {
 
 TEST(Utils, SearchStdVectorWithTolerance) {
     std::vector<double> vect{
-        -88.542, -86.653, -84.753, -82.851, -80.947, -79.043, -77.139, -75.235, -73.331, -71.426, -69.522, -67.617,
-        -65.713, -63.808, -61.903, -59.999, -58.094, -56.189, -54.285, -52.380, -50.475, -48.571, -46.666, -44.761,
-        -42.856, -40.952, -39.047, -37.142, -35.238, -33.333, -31.428, -29.523, -27.619, -25.714, -23.809, -21.904,
-        -20.000, -18.095, -16.190, -14.286, -12.381, -10.476, -08.571, -06.667, -04.762, -02.857, -00.952, 00.952,
-        02.857,  04.762,  06.667,  08.571,  10.476,  12.381,  14.286,  16.190,  18.095,  20.000,  21.904,  23.809,
-        25.714,  27.619,  29.523,  31.428,  33.333,  35.238,  37.142,  39.047,  40.952,  42.856,  44.761,  46.666,
-        48.571,  50.475,  52.380,  54.285,  56.189,  58.094,  59.999,  61.903,  63.808,  65.713,  67.617,  69.522,
-        71.426,  73.331,  75.235,  77.139,  79.043,  80.947,  82.851,  84.753,  86.653,  88.542};
+            -88.542, -86.653, -84.753, -82.851, -80.947, -79.043, -77.139, -75.235, -73.331, -71.426, -69.522, -67.617,
+            -65.713, -63.808, -61.903, -59.999, -58.094, -56.189, -54.285, -52.380, -50.475, -48.571, -46.666, -44.761,
+            -42.856, -40.952, -39.047, -37.142, -35.238, -33.333, -31.428, -29.523, -27.619, -25.714, -23.809, -21.904,
+            -20.000, -18.095, -16.190, -14.286, -12.381, -10.476, -08.571, -06.667, -04.762, -02.857, -00.952, 00.952,
+            02.857, 04.762, 06.667, 08.571, 10.476, 12.381, 14.286, 16.190, 18.095, 20.000, 21.904, 23.809,
+            25.714, 27.619, 29.523, 31.428, 33.333, 35.238, 37.142, 39.047, 40.952, 42.856, 44.761, 46.666,
+            48.571, 50.475, 52.380, 54.285, 56.189, 58.094, 59.999, 61.903, 63.808, 65.713, 67.617, 69.522,
+            71.426, 73.331, 75.235, 77.139, 79.043, 80.947, 82.851, 84.753, 86.653, 88.542};
     int result = Find(&vect[0], &vect[93], 29.523, 0.01);
 
     EXPECT_EQ(62, result);
-}
-
-TEST(Utils, IncrementDateBy1Day) {
-    double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 1, Day);
-
-    EXPECT_EQ(newDate, GetMJD(2020, 1, 2));
-}
-
-TEST(Utils, IncrementDateBy5Days) {
-    double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 5, Day);
-
-    EXPECT_EQ(newDate, GetMJD(2020, 1, 6));
-}
-
-TEST(Utils, IncrementDateBy2Weeks) {
-    double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Week);
-
-    EXPECT_EQ(newDate, GetMJD(2020, 1, 15));
-}
-
-TEST(Utils, IncrementDateBy2Hours) {
-    double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Hour);
-
-    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 2));
-}
-
-TEST(Utils, IncrementDateBy2Minutes) {
-    double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Minute);
-
-    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }
 
 TEST(Utils, GetTimeStructNormal20040101) {
@@ -556,4 +521,235 @@ TEST(Utils, GetTimeStructNormal20101104T103245) {
     EXPECT_EQ(10, date.hour);
     EXPECT_EQ(32, date.min);
     EXPECT_EQ(45, date.sec);
+}
+
+TEST(Utils, GetTimeFromStringFormatISOdate) {
+    double conversion = ParseDate("2007-11-23", ISOdate);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatISOdatetime) {
+    double conversion = ParseDate("2007-11-23 13:05:01", ISOdateTime);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYY) {
+    double conversion = ParseDate("23.11.2007", DD_MM_YYYY);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYSlashes) {
+    double conversion = ParseDate("23/11/2007", DD_MM_YYYY);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07", DD_MM_YYYY), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDD) {
+    double conversion = ParseDate("2007.11.23", YYYY_MM_DD);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDDException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.2007", YYYY_MM_DD), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmm) {
+    double conversion = ParseDate("23.11.2007 13:05", DD_MM_YYYY_hh_mm);
+    double mjd = GetMJD(2007, 11, 23, 13, 5);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05", DD_MM_YYYY_hh_mm), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmm) {
+    double conversion = ParseDate("2007.11.23 13:05", YYYY_MM_DD_hh_mm);
+    double mjd = GetMJD(2007, 11, 23, 13, 5);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.2007 13:05", YYYY_MM_DD_hh_mm), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmss) {
+    double conversion = ParseDate("23.11.2007 13:05:01", DD_MM_YYYY_hh_mm_ss);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmssException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05:01", DD_MM_YYYY_hh_mm_ss), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmss) {
+    double conversion = ParseDate("2007.11.23 13:05:01", YYYY_MM_DD_hh_mm_ss);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmssException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.2007 13:05:01", YYYY_MM_DD_hh_mm_ss), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormathhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("13:05:01", hh_mm), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYY) {
+    double conversion = ParseDate("23.11.2007", guess);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYSlashes) {
+    double conversion = ParseDate("23/11/2007", guess);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDD) {
+    double conversion = ParseDate("2007.11.23", guess);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("11.2007", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmm) {
+    double conversion = ParseDate("23.11.2007 13:05", guess);
+    double mjd = GetMJD(2007, 11, 23, 13, 5);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmm) {
+    double conversion = ParseDate("2007.11.23 13:05", guess);
+    double mjd = GetMJD(2007, 11, 23, 13, 5);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmss) {
+    double conversion = ParseDate("23.11.2007 13:05:01", guess);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmssException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmss) {
+    double conversion = ParseDate("2007.11.23 13:05:01", guess);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmssException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
+}
+
+TEST(Utils, GetTimeFromStringFormatautohhmmException) {
+    wxLogNull logNo;
+
+    ASSERT_THROW(ParseDate("13:05:01", guess), std::exception);
+}
+
+TEST(Utils, IncrementDateBy1Day) {
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 1, Day);
+
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 2));
+}
+
+TEST(Utils, IncrementDateBy5Days) {
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 5, Day);
+
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 6));
+}
+
+TEST(Utils, IncrementDateBy2Weeks) {
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Week);
+
+    EXPECT_EQ(newDate, GetMJD(2020, 1, 15));
+}
+
+TEST(Utils, IncrementDateBy2Hours) {
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Hour);
+
+    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 2));
+}
+
+TEST(Utils, IncrementDateBy2Minutes) {
+    double date = GetMJD(2020, 1, 1);
+    double newDate = IncrementDateBy(date, 2, Minute);
+
+    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }

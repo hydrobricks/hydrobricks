@@ -24,7 +24,7 @@ int Find(const double *start, const double *end, double value, double tolerance,
     return FindT<double>(start, end, value, tolerance, showWarning);
 }
 
-template <class T>
+template<class T>
 int FindT(const T *start, const T *end, T value, T tolerance, bool showWarning) {
     wxASSERT(start);
     wxASSERT(end);
@@ -33,14 +33,14 @@ int FindT(const T *start, const T *end, T value, T tolerance, bool showWarning) 
     int length;
 
     // Initialize first and last variables.
-    first = (T *)start;
-    last = (T *)end;
+    first = (T *) start;
+    last = (T *) end;
 
     // Check array order
     if (*last > *first) {
         // Binary search
         while (first <= last) {
-            length = (int)(last - first);
+            length = (int) (last - first);
             mid = first + length / 2;
             if (value - tolerance > *mid) {
                 first = mid + 1;
@@ -54,9 +54,9 @@ int FindT(const T *start, const T *end, T value, T tolerance, bool showWarning) 
 
         // Check the pointers
         if (last - start < 0) {
-            last = (T *)start;
+            last = (T *) start;
         } else if (last - end > 0) {
-            last = (T *)end - 1;
+            last = (T *) end - 1;
         } else if (last - end == 0) {
             last -= 1;
         }
@@ -112,9 +112,9 @@ int FindT(const T *start, const T *end, T value, T tolerance, bool showWarning) 
 
         // Check the pointers
         if (first - start < 0) {
-            first = (T *)start + 1;
+            first = (T *) start + 1;
         } else if (first - end > 0) {
-            first = (T *)end;
+            first = (T *) end;
         } else if (first - start == 0) {
             first += 1;
         }
@@ -198,28 +198,28 @@ Time GetTimeStructFromMJD(double mjd) {
     // Remaining seconds
     double rest = jd - floor(jd);
     double sec = round(rest * 86400);
-    date.hour = (int)floor((float)(sec / 3600));
+    date.hour = (int) floor((float) (sec / 3600));
     sec -= date.hour * 3600;
-    date.min = (int)floor((float)(sec / 60));
+    date.min = (int) floor((float) (sec / 60));
     sec -= date.min * 60;
-    date.sec = (int)sec;
+    date.sec = (int) sec;
 
     long a, b, c, d, e, z;
 
-    z = (long)jd;
+    z = (long) jd;
     if (z < 2299161L)
         a = z;
     else {
-        auto alpha = (long)((z - 1867216.25) / 36524.25);
+        auto alpha = (long) ((z - 1867216.25) / 36524.25);
         a = z + 1 + alpha - alpha / 4;
     }
     b = a + 1524;
-    c = (long)((b - 122.1) / 365.25);
-    d = (long)(365.25 * c);
-    e = (long)((b - d) / 30.6001);
-    date.day = (int)b - d - (long)(30.6001 * e);
-    date.month = (int)(e < 13.5) ? e - 1 : e - 13;
-    date.year = (int)(date.month > 2.5) ? (c - 4716) : c - 4715;
+    c = (long) ((b - 122.1) / 365.25);
+    d = (long) (365.25 * c);
+    e = (long) ((b - d) / 30.6001);
+    date.day = (int) b - d - (long) (30.6001 * e);
+    date.month = (int) (e < 13.5) ? e - 1 : e - 13;
+    date.year = (int) (date.month > 2.5) ? (c - 4716) : c - 4715;
     if (date.year <= 0) date.year -= 1;
 
     return date;
@@ -248,7 +248,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 14, 19));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 14, 19));
 
         case (ISOdateTime):
 
@@ -268,7 +268,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour, min, sec);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 14, 19));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 14, 19));
 
         case (DD_MM_YYYY):
 
@@ -290,7 +290,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 8, 10));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 8, 10));
 
         case (YYYY_MM_DD):
         case (YYYYMMDD):
@@ -313,7 +313,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 8, 10));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 8, 10));
 
         case (YYYY_MM_DD_hh):
 
@@ -339,7 +339,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 10, 13));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 10, 13));
 
         case (DD_MM_YYYY_hh_mm):
 
@@ -369,7 +369,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour, min);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 12, 16));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 12, 16));
 
         case (YYYY_MM_DD_hh_mm):
         case (YYYYMMDD_hhmm):
@@ -400,7 +400,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour, min);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 12, 16));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 12, 16));
 
         case (DD_MM_YYYY_hh_mm_ss):
 
@@ -434,7 +434,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour, min, sec);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 14, 19));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 14, 19));
 
         case (YYYY_MM_DD_hh_mm_ss):
 
@@ -468,7 +468,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(year, month, day, hour, min, sec);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 14, 19));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 14, 19));
 
         case (hh_mm):
 
@@ -486,7 +486,7 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                 return GetMJD(0, 0, 0, hour, min);
             }
 
-            throw InvalidArgument(wxString::Format(msgLength, (int)dateStr.Len(), 4, 5));
+            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 4, 5));
 
         case (guess):
 
@@ -602,10 +602,10 @@ double GetMJD(int year, int month, int day, int hour, int minute, int second) {
         int a = year / 100;
         b = 2 - a + a / 4;
     }
-    mjd = (long)(365.25 * year - year_corr) + (long)(30.6001 * (month + 1)) + day + 1720995L + b;
+    mjd = (long) (365.25 * year - year_corr) + (long) (30.6001 * (month + 1)) + day + 1720995L + b;
 
     // The hour part
-    mjd += (double)hour / 24 + (double)minute / 1440 + (double)second / 86400;
+    mjd += (double) hour / 24 + (double) minute / 1440 + (double) second / 86400;
 
     // Set to Modified Julian Day
     mjd -= 2400001;  // And not 2400000.5 (not clear why)

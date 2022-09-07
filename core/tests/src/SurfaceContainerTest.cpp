@@ -115,7 +115,7 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
     }
-    
+
     // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 

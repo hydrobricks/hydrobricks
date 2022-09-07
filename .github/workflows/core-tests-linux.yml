@@ -33,10 +33,10 @@ jobs:
           echo "Conan default profile already exists."
         else
           conan profile new default --detect
+          conan remote add gitlab https://gitlab.com/api/v4/packages/conan
         fi
         conan profile update settings.compiler.libcxx=libstdc++11 default
         conan config set general.revisions_enabled=1
-        conan remote add gitlab https://gitlab.com/api/v4/packages/conan
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/bin
@@ -92,10 +92,10 @@ jobs:
             echo "Conan default profile already exists."
           else
             conan profile new default --detect
+            conan remote add gitlab https://gitlab.com/api/v4/packages/conan
           fi
           conan profile update settings.compiler.libcxx=libstdc++11 default
           conan config set general.revisions_enabled=1
-          conan remote add gitlab https://gitlab.com/api/v4/packages/conan
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin

@@ -287,7 +287,6 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
             throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 8, 10));
 
         case (YYYY_MM_DD):
-        case (YYYYMMDD):
 
             if (dateStr.Len() == 10) {
                 if (dateStr.Mid(0, 4).ToLong(&year) &&
@@ -307,28 +306,6 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
             throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 8, 10));
 
-        case (YYYY_MM_DD_hh):
-
-            if (dateStr.Len() == 13) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day) &&
-                    dateStr.Mid(11, 2).ToLong(&hour)) {
-                    return GetMJD(year, month, day, hour);
-                }
-                throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 10) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(4, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 2).ToLong(&day) &&
-                    dateStr.Mid(8, 2).ToLong(&hour)) {
-                    return GetMJD(year, month, day, hour);
-                }
-                throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            }
-
-            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 10, 13));
-
         case (DD_MM_YYYY_hh_mm):
 
             if (dateStr.Len() == 16) {
@@ -340,12 +317,12 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                     return GetMJD(year, month, day, hour, min);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 12) {
+            } else if (dateStr.Len() == 13) {
                 if (dateStr.Mid(0, 2).ToLong(&day) &&
                     dateStr.Mid(2, 2).ToLong(&month) &&
                     dateStr.Mid(4, 4).ToLong(&year) &&
-                    dateStr.Mid(8, 2).ToLong(&hour) &&
-                    dateStr.Mid(10, 2).ToLong(&min)) {
+                    dateStr.Mid(9, 2).ToLong(&hour) &&
+                    dateStr.Mid(11, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
@@ -354,7 +331,6 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
             throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 12, 16));
 
         case (YYYY_MM_DD_hh_mm):
-        case (YYYYMMDD_hhmm):
 
             if (dateStr.Len() == 16) {
                 if (dateStr.Mid(0, 4).ToLong(&year) &&
@@ -365,12 +341,12 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                     return GetMJD(year, month, day, hour, min);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 12) {
+            } else if (dateStr.Len() == 13) {
                 if (dateStr.Mid(0, 4).ToLong(&year) &&
                     dateStr.Mid(4, 2).ToLong(&month) &&
                     dateStr.Mid(6, 2).ToLong(&day) &&
-                    dateStr.Mid(8, 2).ToLong(&hour) &&
-                    dateStr.Mid(10, 2).ToLong(&min)) {
+                    dateStr.Mid(9, 2).ToLong(&hour) &&
+                    dateStr.Mid(11, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
@@ -390,13 +366,13 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 14) {
+            } else if (dateStr.Len() == 15) {
                 if (dateStr.Mid(0, 2).ToLong(&day) &&
                     dateStr.Mid(2, 2).ToLong(&month) &&
                     dateStr.Mid(4, 4).ToLong(&year) &&
-                    dateStr.Mid(8, 2).ToLong(&hour) &&
-                    dateStr.Mid(10, 2).ToLong(&min) &&
-                    dateStr.Mid(12, 2).ToLong(&sec)) {
+                    dateStr.Mid(9, 2).ToLong(&hour) &&
+                    dateStr.Mid(11, 2).ToLong(&min) &&
+                    dateStr.Mid(13, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
@@ -416,37 +392,19 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 14) {
+            } else if (dateStr.Len() == 15) {
                 if (dateStr.Mid(0, 4).ToLong(&year) &&
                     dateStr.Mid(4, 2).ToLong(&month) &&
                     dateStr.Mid(6, 2).ToLong(&day) &&
-                    dateStr.Mid(8, 2).ToLong(&hour) &&
-                    dateStr.Mid(10, 2).ToLong(&min) &&
-                    dateStr.Mid(12, 2).ToLong(&sec)) {
+                    dateStr.Mid(9, 2).ToLong(&hour) &&
+                    dateStr.Mid(11, 2).ToLong(&min) &&
+                    dateStr.Mid(13, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
             }
 
             throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 14, 19));
-
-        case (hh_mm):
-
-            if (dateStr.Len() == 5) {
-                if (dateStr.Mid(0, 2).ToLong(&hour) &&
-                    dateStr.Mid(3, 2).ToLong(&min)) {
-                    return GetMJD(0, 0, 0, hour, min);
-                }
-                throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 4) {
-                if (dateStr.Mid(0, 2).ToLong(&hour) &&
-                    dateStr.Mid(2, 2).ToLong(&min)) {
-                    return GetMJD(0, 0, 0, hour, min);
-                }
-                throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            }
-
-            throw InvalidArgument(wxString::Format(msgLength, (int) dateStr.Len(), 4, 5));
 
         case (guess):
 
@@ -511,12 +469,6 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
                         return GetMJD(year, month, day, hour, min, sec);
                     }
                     throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-                }
-                throw InvalidArgument(wxString::Format(msgConversion, dateStr));
-            } else if (dateStr.Len() == 5) {
-                if (dateStr.Mid(0, 2).ToLong(&hour) &&
-                    dateStr.Mid(3, 2).ToLong(&min)) {
-                    return GetMJD(0, 0, 0, hour, min);
                 }
                 throw InvalidArgument(wxString::Format(msgConversion, dateStr));
             }

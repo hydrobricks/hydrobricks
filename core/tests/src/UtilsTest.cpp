@@ -523,197 +523,233 @@ TEST(Utils, GetTimeStructNormal20101104T103245) {
     EXPECT_EQ(45, date.sec);
 }
 
-TEST(Utils, GetTimeFromStringFormatISOdate) {
+TEST(Utils, ParseDateFormatISOdate) {
     double conversion = ParseDate("2007-11-23", ISOdate);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatISOdatetime) {
+TEST(Utils, ParseDateFormatISOdateTime) {
     double conversion = ParseDate("2007-11-23 13:05:01", ISOdateTime);
     double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYY) {
+TEST(Utils, ParseDateFormatDDMMYYYY) {
     double conversion = ParseDate("23.11.2007", DD_MM_YYYY);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYSlashes) {
+TEST(Utils, ParseDateFormatDDMMYYYYSlashes) {
     double conversion = ParseDate("23/11/2007", DD_MM_YYYY);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYException) {
+TEST(Utils, ParseDateFormatDDMMYYYYNoSpace) {
+    double conversion = ParseDate("23112007", DD_MM_YYYY);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatDDMMYYYYException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07", DD_MM_YYYY), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDD) {
+TEST(Utils, ParseDateFormatYYYYMMDD) {
     double conversion = ParseDate("2007.11.23", YYYY_MM_DD);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDDException) {
+TEST(Utils, ParseDateFormatYYYYMMDDNoSpace) {
+    double conversion = ParseDate("20071123", YYYY_MM_DD);
+    double mjd = GetMJD(2007, 11, 23);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatYYYYMMDDException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.2007", YYYY_MM_DD), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmm) {
+TEST(Utils, ParseDateFormatDDMMYYYYhhmm) {
     double conversion = ParseDate("23.11.2007 13:05", DD_MM_YYYY_hh_mm);
-    double mjd = GetMJD(2007, 11, 23, 13, 5);
+    double mjd = GetMJD(2007, 11, 23, 13, 05);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmException) {
+TEST(Utils, ParseDateFormatDDMMYYYYhhmmNoSpace) {
+    double conversion = ParseDate("23112007 1305", DD_MM_YYYY_hh_mm);
+    double mjd = GetMJD(2007, 11, 23, 13, 05);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatDDMMYYYYhhmmException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05", DD_MM_YYYY_hh_mm), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmm) {
+TEST(Utils, ParseDateFormatYYYYMMDDhhmm) {
     double conversion = ParseDate("2007.11.23 13:05", YYYY_MM_DD_hh_mm);
     double mjd = GetMJD(2007, 11, 23, 13, 5);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmException) {
+TEST(Utils, ParseDateFormatYYYYMMDDhhmmNoSpace) {
+    double conversion = ParseDate("20071123 1305", YYYY_MM_DD_hh_mm);
+    double mjd = GetMJD(2007, 11, 23, 13, 5);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatYYYYMMDDhhmmException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.2007 13:05", YYYY_MM_DD_hh_mm), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmss) {
+TEST(Utils, ParseDateFormatDDMMYYYYhhmmss) {
     double conversion = ParseDate("23.11.2007 13:05:01", DD_MM_YYYY_hh_mm_ss);
     double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatDDMMYYYYhhmmssException) {
+TEST(Utils, ParseDateFormatDDMMYYYYhhmmssNoSpace) {
+    double conversion = ParseDate("23112007 130501", DD_MM_YYYY_hh_mm_ss);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatDDMMYYYYhhmmssException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", DD_MM_YYYY_hh_mm_ss), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmss) {
+TEST(Utils, ParseDateFormatYYYYMMDDhhmmss) {
     double conversion = ParseDate("2007.11.23 13:05:01", YYYY_MM_DD_hh_mm_ss);
     double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatYYYYMMDDhhmmssException) {
+TEST(Utils, ParseDateFormatYYYYMMDDhhmmssNoSpace) {
+    double conversion = ParseDate("20071123 130501", YYYY_MM_DD_hh_mm_ss);
+    double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateFormatYYYYMMDDhhmmssException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.2007 13:05:01", YYYY_MM_DD_hh_mm_ss), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormathhmmException) {
-    wxLogNull logNo;
-
-    ASSERT_THROW(ParseDate("13:05:01", hh_mm), std::exception);
-}
-
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYY) {
+TEST(Utils, ParseDateFormatautoDDMMYYYY) {
     double conversion = ParseDate("23.11.2007", guess);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYSlashes) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYSlashes) {
     double conversion = ParseDate("23/11/2007", guess);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYException) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDD) {
+TEST(Utils, ParseDateFormatautoYYYYMMDD) {
     double conversion = ParseDate("2007.11.23", guess);
     double mjd = GetMJD(2007, 11, 23);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDException) {
+TEST(Utils, ParseDateFormatautoYYYYMMDDException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("11.2007", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmm) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYhhmm) {
     double conversion = ParseDate("23.11.2007 13:05", guess);
     double mjd = GetMJD(2007, 11, 23, 13, 5);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmException) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmm) {
+TEST(Utils, ParseDateFormatautoYYYYMMDDhhmm) {
     double conversion = ParseDate("2007.11.23 13:05", guess);
     double mjd = GetMJD(2007, 11, 23, 13, 5);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmException) {
+TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmss) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmss) {
     double conversion = ParseDate("23.11.2007 13:05:01", guess);
     double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoDDMMYYYYhhmmssException) {
+TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmssException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmss) {
+TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmss) {
     double conversion = ParseDate("2007.11.23 13:05:01", guess);
     double mjd = GetMJD(2007, 11, 23, 13, 5, 1);
 
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, GetTimeFromStringFormatautoYYYYMMDDhhmmssException) {
+TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmssException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
 }
 
-TEST(Utils, GetTimeFromStringFormatautohhmmException) {
+TEST(Utils, ParseDateFormatautohhmmException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("13:05:01", guess), std::exception);

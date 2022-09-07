@@ -43,16 +43,12 @@ enum VariableType {
 enum TimeFormat {
     ISOdate,
     ISOdateTime,
-    YYYYMMDD,
     YYYY_MM_DD,
-    YYYY_MM_DD_hh,
-    YYYYMMDD_hhmm,
     YYYY_MM_DD_hh_mm,
     YYYY_MM_DD_hh_mm_ss,
     DD_MM_YYYY,
     DD_MM_YYYY_hh_mm,
     DD_MM_YYYY_hh_mm_ss,
-    hh_mm,
     guess
 };
 

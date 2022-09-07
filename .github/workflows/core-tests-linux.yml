@@ -28,10 +28,10 @@ jobs:
 
     - name: Setup conan
       run: |
-        if grep -q "Version" <<< $(pip show conan); then
-          echo "Conan already installed."
+        pip install conan
+        if grep -q "default" <<< $(conan profile list); then
+          echo "Conan default profile already exists."
         else
-          pip install conan
           conan profile new default --detect
         fi
         conan profile update settings.compiler.libcxx=libstdc++11 default
@@ -87,10 +87,10 @@ jobs:
 
       - name: Setup conan
         run: |
-          if grep -q "Version" <<< $(pip show conan); then
-            echo "Conan already installed."
+          pip install conan
+          if grep -q "default" <<< $(conan profile list); then
+            echo "Conan default profile already exists."
           else
-            pip install conan
             conan profile new default --detect
           fi
           conan profile update settings.compiler.libcxx=libstdc++11 default

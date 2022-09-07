@@ -8,7 +8,7 @@
  * Model: model with glacier and surface components
  */
 
-class SurfaceContainerModel : public ::testing::Test {
+class GlacierSurfaceComponentModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -53,6 +53,8 @@ class SurfaceContainerModel : public ::testing::Test {
 
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier");
+        m_model.AddBrickParameter("noMeltWhenSnowCover", 1.0);
+        m_model.AddBrickParameter("infiniteStorage", 1.0);
         m_model.AddBrickProcess("melt", "Melt:degree-day");
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
@@ -90,7 +92,7 @@ class SurfaceContainerModel : public ::testing::Test {
     }
 };
 
-TEST_F(SurfaceContainerModel, HalfGlacierized) {
+TEST_F(GlacierSurfaceComponentModel, HalfGlacierized) {
     SubBasin subBasin;
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
@@ -104,7 +106,7 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
-/*
+
     // Check resulting discharge
     vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
 
@@ -125,5 +127,5 @@ TEST_F(SurfaceContainerModel, HalfGlacierized) {
     for (int j = 0; j < expectedSWE.size(); ++j) {
         EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);
         EXPECT_NEAR(unitContent[1](j, 0), expectedMelt[j], 0.000001);
-    }*/
+    }
 }

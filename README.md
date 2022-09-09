@@ -7,6 +7,10 @@ Modular Hydrological Modelling Framework
 
 > :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**
 
+## Resources
+
+* Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
+
 ## Dependencies
 
 Get conan (requires Python 3) and setup the default profile:

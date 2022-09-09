@@ -33,3 +33,12 @@ dependencies = [
 [tool.cibuildwheel]
 test-requires = "pytest"
 test-command = "pytest {project}/tests"
+
+[tool.cibuildwheel.linux]
+before-all = "echo 'Dummy Linux comment...'"
+
+[tool.cibuildwheel.macos]
+before-all = "echo 'Dummy MacOS comment...'"
+
+[tool.cibuildwheel.windows]
+before-all = "echo 'Dummy Windows comment...'"

@@ -23,8 +23,13 @@ dependencies = [
     "pyyaml",
     "netCDF4",
     "matplotlib",
+    "pytest"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/hydrobricks/hydrobricks"
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
+
+[tool.cibuildwheel]
+test-requires = "pytest"
+test-command = "pytest {project}/tests"

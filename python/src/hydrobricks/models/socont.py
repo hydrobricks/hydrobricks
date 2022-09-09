@@ -1,10 +1,11 @@
-from .base_model import Model
+from hydrobricks.models.base_model import Model
 
 
 class Socont(Model):
+    """Socont model implementation"""
 
     def __init__(self,
-                 name=None,
+                 name="Socont",
                  **kwargs):
         super(Socont, self).__init__(
             name=name,

@@ -46,3 +46,5 @@ core/docs/latex/
 
 # Others
 *~$*
+**/__pycache__/*
+**.egg-info/

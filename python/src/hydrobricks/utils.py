@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 import datetime
 
 
+def validate_kwargs(kwargs, allowed_kwargs):
+    """Checks the keyword arguments against a set of allowed keys."""
+    for kwarg in kwargs:
+        if kwarg not in allowed_kwargs:
+            raise TypeError('Keyword argument not understood:', kwarg)
+
+
 def create_units_file(path, hydro_units, surface_names=None, surface_types=None):
     file_path = path / 'spatial_structure.nc'
 

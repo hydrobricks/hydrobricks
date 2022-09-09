@@ -13,4 +13,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Framework :: Pytest"
     ],
+    ext_modules=[
+        setuptools.Extension(
+            name='fake.module',
+            sources=[]
+        )
+    ]
 )

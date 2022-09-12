@@ -14,12 +14,6 @@ list(APPEND src_bind ${src_bind_cpp})
 # Remove eventual duplicates
 list(REMOVE_DUPLICATES src_bind)
 
-# Include source directories
-list(APPEND inc_dirs
-        "${CMAKE_SOURCE_DIR}/core/bindings"
-        )
-include_directories(${inc_dirs})
-
 
 ##### LIBRARIES
 
@@ -30,4 +24,4 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/core/extern/pybind11" "${EXECUTABLE_OUTPUT
 
 ##### GENERATED MODULE
 
-pybind11_add_module(hydrobricks MODULE ${src_bind})
+pybind11_add_module(hydrobricks ${src_bind})

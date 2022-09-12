@@ -74,6 +74,10 @@ else (MSVC)
     set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
 endif (MSVC)
 
+if (WIN32)
+    add_definitions(-D_CRTDBG_MAP_ALLOC)
+endif (WIN32)
+
 
 ##### LINKING
 

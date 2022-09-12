@@ -30,4 +30,4 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/core/extern/pybind11" "${EXECUTABLE_OUTPUT
 
 ##### GENERATED MODULE
 
-pybind11_add_module(hydrobricks ${src_bind})
+pybind11_add_module(hydrobricks MODULE ${src_bind})

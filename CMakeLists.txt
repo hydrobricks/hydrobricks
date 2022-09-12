@@ -37,6 +37,8 @@ endif (WIN32)
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 mark_as_advanced(CLEAR BUILD_TESTS)
 
+option(BUILD_PYBINDINGS "Do you want to build the Python bindings (recommended) ?" ON)
+
 # Enable Visual Leak Detector
 if (WIN32)
     option(USE_VLD "Should we use Visual Leak Detector (https://vld.codeplex.com) ?" OFF)
@@ -107,6 +109,9 @@ add_subdirectory(core/src)
 if (BUILD_TESTS)
     add_subdirectory(core/tests)
 endif ()
+if (BUILD_PYBINDINGS)
+    add_subdirectory(bindings)
+endif()
 
 
 ##### DISPLAY SOME INFORMATION

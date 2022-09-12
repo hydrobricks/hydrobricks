@@ -23,12 +23,9 @@ include_directories(${inc_dirs})
 
 ##### LIBRARIES
 
-include(${CONAN_PYBIND11_ROOT})
-
-# Own libraries
-add_library(pybindings STATIC ${src_bind})
+add_subdirectory("${CMAKE_SOURCE_DIR}/core/extern/pybind11" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 
 
-##### LINKING
+##### GENERATED MODULE
 
-target_link_libraries(pybindings hydrobricks)
+pybind11_add_module(hydrobricks ${src_bind})

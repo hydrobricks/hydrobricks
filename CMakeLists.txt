@@ -11,7 +11,7 @@ if (POLICY CMP0077)
 endif ()
 
 # Project name
-project(hydrobricks)
+project(hydrobricks LANGUAGES CXX)
 
 
 ##### OPTIONS
@@ -110,7 +110,7 @@ if (BUILD_TESTS)
     add_subdirectory(core/tests)
 endif ()
 if (BUILD_PYBINDINGS)
-    add_subdirectory(bindings)
+    add_subdirectory(core/bindings)
 endif()
 
 

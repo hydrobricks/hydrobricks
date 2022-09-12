@@ -51,13 +51,13 @@ add_library(core STATIC ${src_core})
 #### DECLARE EXECUTABLE
 
 if (WIN32)
-    add_executable(hydrobricks WIN32 ${src_app})
+    add_executable(hydrobricks-cli WIN32 ${src_app})
 elseif (UNIX AND NOT APPLE)
-    add_executable(hydrobricks ${src_app})
+    add_executable(hydrobricks-cli ${src_app})
 elseif (APPLE)
-    add_executable(hydrobricks MACOSX_BUNDLE ${src_app})
+    add_executable(hydrobricks-cli MACOSX_BUNDLE ${src_app})
 else (WIN32)
-    add_executable(hydrobricks ${src_app})
+    add_executable(hydrobricks-cli ${src_app})
 endif (WIN32)
 
 
@@ -67,11 +67,11 @@ endif (WIN32)
 set_target_properties(core PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
 
 if (MSVC)
-    set_target_properties(hydrobricks PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-    #set_target_properties(hydrobricks PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0; _CONSOLE")
-    set_target_properties(hydrobricks PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
+    set_target_properties(hydrobricks-cli PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
+    #set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0; _CONSOLE")
+    set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
 else (MSVC)
-    set_target_properties(hydrobricks PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
+    set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
 endif (MSVC)
 
 
@@ -84,4 +84,4 @@ target_link_libraries(core CONAN_PKG::gdal CONAN_PKG::wxbase CONAN_PKG::proj CON
         CONAN_PKG::openssl CONAN_PKG::flatbuffers CONAN_PKG::sqlite3 CONAN_PKG::libwebp
         CONAN_PKG::giflib CONAN_PKG::qhull CONAN_PKG::xz_utils CONAN_PKG::jbig CONAN_PKG::netcdf
         CONAN_PKG::zstd CONAN_PKG::yaml-cpp)
-target_link_libraries(hydrobricks core)
+target_link_libraries(hydrobricks-cli core)

@@ -23,6 +23,8 @@ include_directories(${inc_dirs})
 
 ##### LIBRARIES
 
+find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
+
 add_subdirectory("${CMAKE_SOURCE_DIR}/core/extern/pybind11" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 
 

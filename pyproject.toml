@@ -25,6 +25,7 @@ before-build = [
     "rm -rf {project}/build", # Setuptools bug causes collision between pypy and cpython artifacts
     "pip install conan",
     "conan profile new default --detect",
+    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing"

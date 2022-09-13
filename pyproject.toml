@@ -22,6 +22,9 @@ test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 
+[tool.cibuildwheel.linux.environment]
+CONAN_CACHE_DIR = "/root/.conan/data"
+
 [tool.cibuildwheel.linux]
 before-build = [
     "yum update",
@@ -33,7 +36,11 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing"
+    "ls {project}/.cache-conan",
+    "cp -R {project}/.cache-conan/* /root/.conan/data/",
+    "conan install . --build=missing",
+    "cp -R /root/.conan/data/* {project}/.cache-conan/",
+    "ls {project}/.cache-conan",
 ]
 
 [tool.cibuildwheel.windows]

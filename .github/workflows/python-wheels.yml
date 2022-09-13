@@ -41,11 +41,17 @@ jobs:
     - uses: actions/checkout@v3
 
     - uses: actions/setup-python@v4
+
+    - name: Cache conan libs
+      if: runner.os == 'Linux'
+      uses: actions/cache@v3
+      with:
+        path: .cache-conan
+        key: ${{ matrix.os }}-conan
       
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.9.0
       env:
-        CIBW_ARCHS_MACOS: auto universal2
         CIBW_CACHE_PATH: 'C:\Users\runneradmin\.conan\data'
 
     - name: Verify clean directory

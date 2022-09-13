@@ -73,6 +73,16 @@ conan_basic_setup(TARGETS)
 include_directories(${CONAN_INCLUDE_DIRS})
 
 
+##### OTHER DEPENDENCIES
+
+include(FetchContent)
+
+FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.10.0)
+
+
 ##### FIND ANALYSIS TOOLS
 
 # Visual Leak Detector

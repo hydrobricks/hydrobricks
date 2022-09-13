@@ -215,7 +215,7 @@ TEST(FileNetcdf, VarFloat1DIsWritten) {
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarFloat("var2", {dim1Id}, 1, true);
-    vecFloat valuesIn = {0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.0010};
+    vecFloat valuesIn = {0.0001f, 0.0002f, 0.0003f, 0.0004f, 0.0005f, 0.0006f, 0.0007f, 0.0008f, 0.0009f, 0.0010f};
     file.PutVar(0, valuesIn);
     vecFloat valuesOut = file.GetVarFloat1D("var2", 10);
     file.Close();

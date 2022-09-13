@@ -1,6 +1,5 @@
 #include "Hydrobricks.h"
 
-#include <gdal_priv.h>
 #include <wx/fileconf.h>
 #include <wx/filefn.h>
 #include <wx/stdpaths.h>
@@ -40,9 +39,6 @@ bool Hydrobricks::OnInit()
 	filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
 	wxFileConfig *pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
 	wxFileConfig::Set(pConfig);
-
-    // Initialize GDAL
-    GDALAllRegister();
 
     // Call default behaviour
     if (!wxApp::OnInit()) {

@@ -1,4 +1,4 @@
-name: Python pip
+name: Python Pip
 
 on:
   workflow_dispatch:

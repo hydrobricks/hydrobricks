@@ -55,7 +55,8 @@ endif()
 
 add_dependencies(hydrobricks-tests core)
 target_link_libraries(hydrobricks-tests core)
-target_link_libraries(hydrobricks-tests ${CONAN_LIBS})
+target_link_libraries(hydrobricks-tests CONAN_PKG::gtest)
+
 if (UNIX)
     target_link_libraries(hydrobricks-tests pthread)
 endif ()

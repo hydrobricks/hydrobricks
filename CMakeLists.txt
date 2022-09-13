@@ -11,7 +11,7 @@ if (POLICY CMP0077)
 endif ()
 
 # Project name
-project(hydrobricks)
+project(hydrobricks LANGUAGES CXX)
 
 
 ##### OPTIONS
@@ -66,7 +66,9 @@ endif (WIN32)
 ##### CONAN
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+conan_basic_setup(TARGETS)
+
+include_directories(${CONAN_INCLUDE_DIRS})
 
 
 ##### FIND ANALYSIS TOOLS

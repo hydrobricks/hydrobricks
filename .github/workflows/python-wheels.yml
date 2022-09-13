@@ -46,6 +46,7 @@ jobs:
       uses: pypa/cibuildwheel@v2.9.0
       env:
         CIBW_ARCHS_MACOS: auto universal2
+        CIBW_CACHE_PATH: 'C:\Users\runneradmin\.conan\data'
 
     - name: Verify clean directory
       run: git diff --exit-code

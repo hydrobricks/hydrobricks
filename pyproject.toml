@@ -24,9 +24,9 @@ test-skip = ["*universal2:arm64"]
 
 [tool.cibuildwheel.linux]
 before-build = [
-    "sudo apt update",
-    "sudo apt install gcc",
-    "sudo apt upgrade libstdc++6",
+    "apt update",
+    "apt install gcc",
+    "apt upgrade libstdc++6",
     "rm -rf {project}/build",
     "pip install conan",
     "conan profile new default --detect",

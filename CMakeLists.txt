@@ -11,7 +11,7 @@ if (POLICY CMP0077)
 endif ()
 
 # Project name
-project(hydrobricks LANGUAGES CXX)
+project(hydrobricks)
 
 
 ##### OPTIONS

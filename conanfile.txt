@@ -1,22 +1,12 @@
 [requires]
 wxbase/3.1.6@pascalhorton+wxbase/stable
-gdal/3.4.1@terranum-conan+gdal/stable
 netcdf/4.8.1
-proj/9.0.1
-libcurl/7.84.0
-libdeflate/1.12
-zlib/1.2.12
 eigen/3.4.0
 gtest/1.11.0
 yaml-cpp/0.7.0
-sqlite3/3.39.2
 
 [generators]
 cmake
-
-[options]
-gdal:with_curl = True
-gdal:shared = True
 
 [imports]
 bin, *.dll -> ./bin # Copies all dll files from packages bin folder to my "bin" folder

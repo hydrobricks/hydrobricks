@@ -82,10 +82,5 @@ endif (WIN32)
 ##### LINKING
 
 # Link libraries explicitly to not link Google Tests to the main app.
-target_link_libraries(core CONAN_PKG::gdal CONAN_PKG::wxbase CONAN_PKG::proj CONAN_PKG::libcurl
-        CONAN_PKG::libdeflate CONAN_PKG::libtiff CONAN_PKG::zlib CONAN_PKG::libpng
-        CONAN_PKG::json-c CONAN_PKG::expat CONAN_PKG::geos CONAN_PKG::libgeotiff CONAN_PKG::libjpeg
-        CONAN_PKG::openssl CONAN_PKG::flatbuffers CONAN_PKG::sqlite3 CONAN_PKG::libwebp
-        CONAN_PKG::giflib CONAN_PKG::qhull CONAN_PKG::xz_utils CONAN_PKG::jbig CONAN_PKG::netcdf
-        CONAN_PKG::zstd CONAN_PKG::yaml-cpp)
+target_link_libraries(core CONAN_PKG::wxbase CONAN_PKG::netcdf CONAN_PKG::yaml-cpp)
 target_link_libraries(hydrobricks-cli core)

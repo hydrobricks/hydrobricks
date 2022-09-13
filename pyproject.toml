@@ -24,5 +24,7 @@ test-skip = ["*universal2:arm64"]
 # Setuptools bug causes collision between pypy and cpython artifacts
 before-build = [
     "rm -rf {project}/build",
+    "echo {project}",
+    "echo {package}",
     "ls /project"
 ]

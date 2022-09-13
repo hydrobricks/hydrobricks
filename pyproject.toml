@@ -21,10 +21,11 @@ testpaths = ["tests"]
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
-# Setuptools bug causes collision between pypy and cpython artifacts
 before-build = [
-    "rm -rf {project}/build",
-    "echo {project}",
-    "echo {package}",
-    "ls /project"
+    "rm -rf {project}/build", # Setuptools bug causes collision between pypy and cpython artifacts
+    "pip install conan",
+    "conan profile new default --detect",
+    "conan profile update settings.compiler.libcxx=libstdc++11 default",
+    "conan config set general.revisions_enabled=1",
+    "conan install . --build=missing"
 ]

@@ -50,7 +50,8 @@ before-build = [
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing"
+    "conan install . --build=missing",
+    "echo %cd%"
 ]
 
 [tool.cibuildwheel.macos]

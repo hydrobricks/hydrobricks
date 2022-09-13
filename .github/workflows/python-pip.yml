@@ -43,7 +43,10 @@ jobs:
         fi
         conan profile update settings.compiler.libcxx=libstdc++11 default
         conan config set general.revisions_enabled=1
-        
+
+    - name: Get dependencies
+      run: conan install . --build=missing
+
     - name: Add requirements
       run: python -m pip install --upgrade wheel setuptools
 

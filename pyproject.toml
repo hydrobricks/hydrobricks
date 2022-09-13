@@ -22,7 +22,4 @@ test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 # Setuptools bug causes collision between pypy and cpython artifacts
-before-build = [
-    "rm -rf {project}/build",
-    "python -m conan install .. --build=missing"
-]
+before-build = "rm -rf {project}/build"

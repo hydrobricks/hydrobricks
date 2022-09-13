@@ -1,4 +1,4 @@
-name: Core Generate Doxygen
+name: Core Doxygen
 
 on:
   push:

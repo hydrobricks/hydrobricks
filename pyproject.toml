@@ -21,12 +21,37 @@ testpaths = ["tests"]
 test-command = "pytest {project}/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
+
+[tool.cibuildwheel.linux]
 before-build = [
-    "rm -rf {project}/build", # Setuptools bug causes collision between pypy and cpython artifacts
+    "sudo apt update",
+    "sudo apt install gcc",
+    "sudo apt upgrade libstdc++6",
+    "rm -rf {project}/build",
     "pip install conan",
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
+    "conan config set general.revisions_enabled=1",
+    "conan install . --build=missing"
+]
+
+[tool.cibuildwheel.windows]
+before-build = [
+    "rm -rf {project}/build",
+    "pip install conan",
+    "conan profile new default --detect",
+    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
+    "conan config set general.revisions_enabled=1",
+    "conan install . --build=missing"
+]
+
+[tool.cibuildwheel.macos]
+before-build = [
+    "rm -rf {project}/build",
+    "pip install conan",
+    "conan profile new default --detect",
+    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing"
 ]

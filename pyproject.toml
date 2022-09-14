@@ -15,10 +15,10 @@ minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = ["error"]
-testpaths = ["tests"]
+testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-command = "pytest {project}/tests"
+test-command = "pytest {project}/python/tests"
 test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 
@@ -31,6 +31,8 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
+    "conan install . --build=missing",
+    "pwd"
 ]
 
 [tool.cibuildwheel.windows]
@@ -53,5 +55,6 @@ before-build = [
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing"
+    "conan install . --build=missing",
+    "pwd"
 ]

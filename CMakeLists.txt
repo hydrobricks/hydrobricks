@@ -71,22 +71,22 @@ option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" ON)
 
 if (RUN_CONAN_FROM_CMAKE)
     # Run conan from CMake
-    if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+    if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
         message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
         file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
                 "${CMAKE_BINARY_DIR}/conan.cmake")
-    endif()
+    endif ()
 
     include(${CMAKE_BINARY_DIR}/conan.cmake)
 
     # Check conan install
     find_program(CONAN_CMD conan)
-    if(NOT CONAN_CMD AND CONAN_REQUIRED)
+    if (NOT CONAN_CMD AND CONAN_REQUIRED)
         message(FATAL_ERROR "Conan executable not found! Please install conan.")
-    endif()
-    if(NOT CONAN_DETECT_QUIET)
+    endif ()
+    if (NOT CONAN_DETECT_QUIET)
         message(STATUS "Conan: Found program ${CONAN_CMD}")
-    endif()
+    endif ()
     execute_process(COMMAND ${CONAN_CMD} --version
             RESULT_VARIABLE return_code
             OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
@@ -94,6 +94,11 @@ if (RUN_CONAN_FROM_CMAKE)
 
     message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
     message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
+
+    if (UNIX)
+        conan_cmake_configure(REQUIRES glibc_version_header/0.1@bincrafters/stable
+                GENERATORS cmake_find_package)
+    endif ()
 
     # Get libraries
     conan_cmake_run(CONANFILE conanfile.txt

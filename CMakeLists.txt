@@ -67,7 +67,7 @@ endif (WIN32)
 
 ##### CONAN
 
-option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
+option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" ON)
 
 if (RUN_CONAN_FROM_CMAKE)
     # Run conan from CMake

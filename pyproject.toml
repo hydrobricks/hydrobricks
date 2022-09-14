@@ -28,7 +28,8 @@ before-all = [
 ]
 before-build = [
     "rm -rf {project}/build",
-    "pip3 install --user conan",
+    "pip install conan",
+    "pip show conan",
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
@@ -39,7 +40,8 @@ before-build = [
 [tool.cibuildwheel.windows]
 before-build = [
     "rm -rf {project}/build",
-    "pip3 install --user conan",
+    "pip install conan",
+    "pip show conan",
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan config set general.revisions_enabled=1",
@@ -50,7 +52,8 @@ before-build = [
 [tool.cibuildwheel.macos]
 before-build = [
     "rm -rf {project}/build",
-    "pip3 install --user conan",
+    "pip install conan",
+    "pip show conan",
     "conan profile new default --detect",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan",
     "conan config set general.revisions_enabled=1",

@@ -27,7 +27,6 @@ CONAN_CACHE_DIR = "/root/.conan/data"
 
 [tool.cibuildwheel.linux]
 before-all = [
-    "yum update",
     "yum install -y gcc",
     "yum upgrade -y libstdc++6"
 ]

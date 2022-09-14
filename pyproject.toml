@@ -26,10 +26,12 @@ test-skip = ["*universal2:arm64"]
 CONAN_CACHE_DIR = "/root/.conan/data"
 
 [tool.cibuildwheel.linux]
-before-build = [
+before-all = [
     "yum update",
     "yum install gcc",
-    "yum upgrade libstdc++6",
+    "yum upgrade libstdc++6"
+]
+before-build = [
     "rm -rf {project}/build",
     "pip install conan",
     "conan profile new default --detect",

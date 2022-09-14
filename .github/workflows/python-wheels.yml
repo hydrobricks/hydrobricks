@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2019, macOS-11] # macos-latest not building due to an issue with wxbase
+        os: [ubuntu-22.04, windows-2019] # macOS not building due to an issue with wxbase
 
     steps:
     - uses: actions/checkout@v3

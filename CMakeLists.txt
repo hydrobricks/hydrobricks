@@ -67,35 +67,45 @@ endif (WIN32)
 
 ##### CONAN
 
-# Run conan from CMake
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-    message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-    file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
-            "${CMAKE_BINARY_DIR}/conan.cmake")
-endif()
+option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
 
-include(${CMAKE_BINARY_DIR}/conan.cmake)
+if (RUN_CONAN_FROM_CMAKE)
+    # Run conan from CMake
+    if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+        message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+        file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
+                "${CMAKE_BINARY_DIR}/conan.cmake")
+    endif()
 
-# Check conan install
-find_program(CONAN_CMD conan)
-if(NOT CONAN_CMD AND CONAN_REQUIRED)
-    message(FATAL_ERROR "Conan executable not found! Please install conan.")
-endif()
-if(NOT CONAN_DETECT_QUIET)
-    message(STATUS "Conan: Found program ${CONAN_CMD}")
-endif()
-execute_process(COMMAND ${CONAN_CMD} --version
-        RESULT_VARIABLE return_code
-        OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
-        ERROR_VARIABLE CONAN_VERSION_ERROR)
+    include(${CMAKE_BINARY_DIR}/conan.cmake)
 
-message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
-message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
+    # Check conan install
+    find_program(CONAN_CMD conan)
+    if(NOT CONAN_CMD AND CONAN_REQUIRED)
+        message(FATAL_ERROR "Conan executable not found! Please install conan.")
+    endif()
+    if(NOT CONAN_DETECT_QUIET)
+        message(STATUS "Conan: Found program ${CONAN_CMD}")
+    endif()
+    execute_process(COMMAND ${CONAN_CMD} --version
+            RESULT_VARIABLE return_code
+            OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
+            ERROR_VARIABLE CONAN_VERSION_ERROR)
 
-# Get libraries
-conan_cmake_run(CONANFILE conanfile.txt
-        BASIC_SETUP CMAKE_TARGETS
-        BUILD missing)
+    message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
+    message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
+
+    # Get libraries
+    conan_cmake_run(CONANFILE conanfile.txt
+            BASIC_SETUP CMAKE_TARGETS
+            BUILD missing)
+
+else (RUN_CONAN_FROM_CMAKE)
+
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+
+endif(RUN_CONAN_FROM_CMAKE)
 
 include_directories(${CONAN_INCLUDE_DIRS})
 

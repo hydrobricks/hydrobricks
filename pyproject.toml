@@ -19,6 +19,7 @@ testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
 test-command = "pytest {project}/python/tests"
+test-extras = "test"
 
 [tool.cibuildwheel.linux]
 before-build = [

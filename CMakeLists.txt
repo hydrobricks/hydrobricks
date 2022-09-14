@@ -67,7 +67,7 @@ endif (WIN32)
 
 ##### CONAN
 
-option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" ON)
+option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
 
 if (RUN_CONAN_FROM_CMAKE)
     # Run conan from CMake
@@ -107,7 +107,13 @@ if (RUN_CONAN_FROM_CMAKE)
 
 else (RUN_CONAN_FROM_CMAKE)
 
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    find_file(CONANBUILDINFO
+            NAMES conanbuildinfo.cmake
+            PATHS "${CMAKE_BINARY_DIR}"
+            "D:/a/hydrobricks/hydrobricks" # For GitHub actions
+            )
+
+    include(${CONANBUILDINFO})
     conan_basic_setup(TARGETS)
 
 endif(RUN_CONAN_FROM_CMAKE)

@@ -76,6 +76,23 @@ endif()
 
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
+# Check conan install
+find_program(CONAN_CMD conan)
+if(NOT CONAN_CMD AND CONAN_REQUIRED)
+    message(FATAL_ERROR "Conan executable not found! Please install conan.")
+endif()
+if(NOT CONAN_DETECT_QUIET)
+    message(STATUS "Conan: Found program ${CONAN_CMD}")
+endif()
+execute_process(COMMAND ${CONAN_CMD} --version
+        RESULT_VARIABLE return_code
+        OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
+        ERROR_VARIABLE CONAN_VERSION_ERROR)
+
+message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
+message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
+
+# Get libraries
 conan_cmake_run(CONANFILE conanfile.txt
         BASIC_SETUP CMAKE_TARGETS
         BUILD missing)

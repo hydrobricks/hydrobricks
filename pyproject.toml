@@ -25,6 +25,7 @@ test-skip = ["*universal2:arm64"]
 [tool.cibuildwheel.linux]
 before-all = [
     "yum install -y gcc",
+    "yum update libstdc++6"
 ]
 before-build = [
     "rm -rf {project}/build",

@@ -30,9 +30,6 @@ class CMakeBuild(build_ext):
         if not extension_dir.endswith(os.path.sep):
             extension_dir += os.path.sep
 
-        print(f'Config from setup.py: output directory = {extension_dir}')
-        distutils.log.warn(f'Config from setup.py: output directory = {extension_dir}')
-
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
@@ -99,12 +96,6 @@ class CMakeBuild(build_ext):
         build_temp = os.path.join(self.build_temp, ext.name)
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
-
-        print(f'Config from setup.py: CMake arguments = {cmake_args}')
-        print(f'Config from setup.py: Temporary dir = {build_temp}')
-
-        distutils.log.warn(f'Config from setup.py: CMake arguments = {cmake_args}')
-        distutils.log.warn(f'Config from setup.py: Temporary dir = {build_temp}')
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)

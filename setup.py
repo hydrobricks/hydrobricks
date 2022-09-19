@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+import distutils.log
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
@@ -30,6 +31,7 @@ class CMakeBuild(build_ext):
             extension_dir += os.path.sep
 
         print(f'Config from setup.py: output directory = {extension_dir}')
+        distutils.log.warn(f'Config from setup.py: output directory = {extension_dir}')
 
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
@@ -100,6 +102,9 @@ class CMakeBuild(build_ext):
 
         print(f'Config from setup.py: CMake arguments = {cmake_args}')
         print(f'Config from setup.py: Temporary dir = {build_temp}')
+
+        distutils.log.warn(f'Config from setup.py: CMake arguments = {cmake_args}')
+        distutils.log.warn(f'Config from setup.py: Temporary dir = {build_temp}')
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)

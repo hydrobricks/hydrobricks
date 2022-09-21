@@ -41,7 +41,6 @@ before-build = [
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
-    "pwd"
 ]
 
 [tool.cibuildwheel.windows]
@@ -52,7 +51,6 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
-    "echo %cd%"
 ]
 
 [tool.cibuildwheel.macos]
@@ -63,5 +61,4 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
-    "pwd"
 ]

@@ -18,8 +18,8 @@ project(hydrobricks)
 
 # Version number
 set(VERSION_MAJOR "0")
-set(VERSION_MINOR "1")
-set(VERSION_PATCH "0")
+set(VERSION_MINOR "0")
+set(VERSION_PATCH "3")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -121,6 +121,8 @@ else (RUN_CONAN_FROM_CMAKE)
             )
 
     include(${CONANBUILDINFO})
+    macro(conan_basic_setup)
+        set(options NO_OUTPUT_DIRS)
     conan_basic_setup(TARGETS)
 
 endif(RUN_CONAN_FROM_CMAKE)

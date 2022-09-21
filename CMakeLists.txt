@@ -115,6 +115,7 @@ else (RUN_CONAN_FROM_CMAKE)
     find_file(CONANBUILDINFO
             NAMES conanbuildinfo.cmake
             PATHS "${CMAKE_BINARY_DIR}"
+            PATHS "${CMAKE_SOURCE_DIR}"
             "D:/a/hydrobricks/hydrobricks" # For GitHub actions (Windows)
             "/project" # For GitHub actions (Linux)
             )

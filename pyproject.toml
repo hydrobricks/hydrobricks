@@ -18,8 +18,10 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
+test-requires = "pytest"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
+archs = ["auto64"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-i686-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
@@ -28,6 +30,7 @@ manylinux-s390x-image = "manylinux_2_28"
 manylinux-pypy_x86_64-image = "manylinux_2_28"
 manylinux-pypy_i686-image = "manylinux_2_28"
 manylinux-pypy_aarch64-image = "manylinux_2_28"
+build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [

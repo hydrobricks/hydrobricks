@@ -1,8 +1,4 @@
 
-# Project name
-project(pybindings)
-
-
 ##### SOURCE FILES
 
 # List source files
@@ -16,8 +12,6 @@ list(REMOVE_DUPLICATES src_bind)
 
 
 ##### LIBRARIES
-
-#find_package(Python 3.6 COMPONENTS Interpreter Development REQUIRED)
 
 FetchContent_MakeAvailable(pybind11)
 add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")

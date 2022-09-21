@@ -65,11 +65,6 @@ else (WIN32)
 endif (WIN32)
 
 
-##### SOME LOGGING
-
-message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-
-
 ##### CONAN
 
 option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
@@ -121,9 +116,7 @@ else (RUN_CONAN_FROM_CMAKE)
             )
 
     include(${CONANBUILDINFO})
-    macro(conan_basic_setup)
-        set(options NO_OUTPUT_DIRS)
-    conan_basic_setup(TARGETS)
+    conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
 endif(RUN_CONAN_FROM_CMAKE)
 

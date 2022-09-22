@@ -35,9 +35,9 @@ endif (WIN32)
 
 # Targets
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
-mark_as_advanced(CLEAR BUILD_TESTS)
+option(BUILD_CLI "Do you want to build the command-line version ?" ON)
+option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
 
-option(BUILD_PYBINDINGS "Do you want to build the Python bindings (recommended) ?" ON)
 
 # Enable Visual Leak Detector
 if (WIN32)
@@ -167,7 +167,9 @@ endif (USE_CODECOV)
 include(define_compilation_flags)
 
 # Add components
-add_subdirectory(core/src)
+if (BUILD_CLI)
+    add_subdirectory(core/src)
+endif ()
 if (BUILD_TESTS)
     add_subdirectory(core/tests)
 endif ()

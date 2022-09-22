@@ -43,7 +43,9 @@ python/dist/
 python/src/hydrobricks.egg-info/
 core/docs/html/
 core/docs/latex/
-build/
+build/lib.*
+build/temp.*
+build/bdist.*
 wheelhouse/
 
 # Others

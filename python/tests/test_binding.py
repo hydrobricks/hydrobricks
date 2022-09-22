@@ -1,6 +1,6 @@
-#import hydrobricks as hb
+import hydrobricks as hb
 
 
 def test_main():
-    assert 1 + 2 == 3
-    #assert hb.add(1, 2) == 3
+    param = hb.Parameter("super name")
+    assert param.get_name() == "super name"

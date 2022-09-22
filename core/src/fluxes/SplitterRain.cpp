@@ -25,8 +25,8 @@ void SplitterRain::AttachForcing(Forcing* forcing) {
     }
 }
 
-double* SplitterRain::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("rain")) {
+double* SplitterRain::GetValuePointer(const std::string& name) {
+    if (name == "rain") {
         return m_outputs[0]->GetAmountPointer();
     }
 

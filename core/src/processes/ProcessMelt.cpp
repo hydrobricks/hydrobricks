@@ -19,8 +19,8 @@ int ProcessMelt::GetConnectionsNb() {
     return 1;
 }
 
-double* ProcessMelt::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("output")) {
+double* ProcessMelt::GetValuePointer(const std::string& name) {
+    if (name == "output") {
         return m_outputs[0]->GetAmountPointer();
     }
 

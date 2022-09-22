@@ -69,7 +69,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
             process->SetName(processSettings.name);
             brick->AddProcess(process);
 
-            if (processSettings.type.IsSameAs("Overflow", false)) {
+            if (processSettings.type == "Overflow") {
                 brick->GetWaterContainer()->LinkOverflow(process);
             }
         }
@@ -115,7 +115,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
                 process->SetName(processSettings.name);
                 brick->AddProcess(process);
 
-                if (processSettings.type.IsSameAs("Overflow", false)) {
+                if (processSettings.type == "Overflow") {
                     brick->GetWaterContainer()->LinkOverflow(process);
                 }
 
@@ -218,7 +218,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
             }
 
             for (const auto& output: processSettings.outputs)  {
-                if (output.target.IsSameAs("outlet", false)) {
+                if (output.target == "outlet") {
 
                     // Water goes to the outlet
                     flux = new FluxToOutlet();
@@ -276,7 +276,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
             }
 
             for (const auto& output: processSettings.outputs)  {
-                if (output.target.IsSameAs("outlet", false)) {
+                if (output.target == "outlet") {
 
                     // Water goes to the outlet
                     flux = new FluxToOutlet();
@@ -374,7 +374,7 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
 
         for (const auto& output: splitterSettings.outputs)  {
             Flux* flux;
-            if (output.target.IsSameAs("outlet", false)) {
+            if (output.target == "outlet") {
 
                 // Water goes to the outlet
                 flux = new FluxToOutlet();
@@ -417,7 +417,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
         for (const auto& output: splitterSettings.outputs)  {
             Flux* flux;
-            if (output.target.IsSameAs("outlet", false)) {
+            if (output.target == "outlet") {
 
                 // Water goes to the outlet
                 flux = new FluxToOutlet();
@@ -673,7 +673,7 @@ bool ModelHydro::Run() {
     return true;
 }
 
-bool ModelHydro::DumpOutputs(const wxString &path) {
+bool ModelHydro::DumpOutputs(const std::string &path) {
     return m_logger.DumpOutputs(path);
 }
 

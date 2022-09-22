@@ -28,6 +28,23 @@ bool IsNaN(float value);
 bool IsNaN(double value);
 
 /**
+ * Ge the path separator of the OS used.
+ *
+ * @return The path separator of the current OS.
+ */
+const char *GetPathSeparator();
+
+/**
+ * Compare two strings in an case insensitive way.
+ *
+ * @param str1 First string
+ * @param str2 Second string
+ * @return True if strings match.
+ * @note From https://thispointer.com/c-case-insensitive-string-comparison-using-stl-c11-boost-library/
+ */
+bool StringsMatch(const std::string &str1, const std::string &str2);
+
+/**
  * Find an value in a vector of integers.
  *
  * @param start Pointer to the start of the search (e.g. start of the vector).
@@ -101,7 +118,7 @@ Time GetTimeStructFromMJD(double mjd);
  * @param format The format of the date to parse.
  * @return The date value as MJD.
  */
-double ParseDate(const wxString &dateStr, TimeFormat format);
+double ParseDate(const std::string &dateStr, TimeFormat format);
 
 /**
  * Get a date as an MJD value.

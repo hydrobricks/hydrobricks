@@ -24,9 +24,9 @@ class Process : public wxObject {
      */
     virtual bool IsOk() = 0;
 
-    static bool HasParameter(const ProcessSettings &processSettings, const wxString &name);
+    static bool HasParameter(const ProcessSettings &processSettings, const std::string &name);
 
-    static float* GetParameterValuePointer(const ProcessSettings &processSettings, const wxString &name);
+    static float* GetParameterValuePointer(const ProcessSettings &processSettings, const std::string &name);
 
     /**
      * Assign the parameters to the process.
@@ -86,15 +86,15 @@ class Process : public wxObject {
         return vecDoublePt {};
     }
 
-    virtual double* GetValuePointer(const wxString& name);
+    virtual double* GetValuePointer(const std::string& name);
 
     void SetOutputFluxesFraction(double value);
 
-    wxString GetName() {
+    std::string GetName() {
         return m_name;
     }
 
-    void SetName(const wxString &name) {
+    void SetName(const std::string &name) {
         m_name = name;
     }
 
@@ -107,7 +107,7 @@ class Process : public wxObject {
     }
 
   protected:
-    wxString m_name;
+    std::string m_name;
     WaterContainer* m_container;
     std::vector<Flux*> m_outputs;
 

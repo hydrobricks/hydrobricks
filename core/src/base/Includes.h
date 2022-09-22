@@ -79,7 +79,7 @@
 // Typedefs
 //---------------------------------
 
-typedef std::vector<wxString> vecStr;
+typedef std::vector<std::string> vecStr;
 typedef std::vector<int> vecInt;
 typedef std::vector<float> vecFloat;
 typedef std::vector<double> vecDouble;

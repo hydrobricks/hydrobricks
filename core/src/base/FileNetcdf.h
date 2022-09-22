@@ -17,7 +17,7 @@ class FileNetcdf : public wxObject {
      * @param path Path of the existing file.
      * @return True if successful, false otherwise
      */
-    bool OpenReadOnly(const wxString &path);
+    bool OpenReadOnly(const std::string &path);
 
     /**
      * Create a NetCDF file at the given path.
@@ -25,7 +25,7 @@ class FileNetcdf : public wxObject {
      * @param path Path of the file to be created.
      * @return True if successful, false otherwise.
      */
-    bool Create(const wxString &path);
+    bool Create(const std::string &path);
 
     /**
      * Close the NetCDF file. Not mandatory as the file is closed in the destructor if still opened.
@@ -45,7 +45,7 @@ class FileNetcdf : public wxObject {
      * @param varName The name of the variable of interest.
      * @return The id of the requested variable.
      */
-    int GetVarId(const wxString &varName);
+    int GetVarId(const std::string &varName);
 
     /**
      * Get the variable name corresponding to the provided id.
@@ -53,7 +53,7 @@ class FileNetcdf : public wxObject {
      * @param varId The id of the variable of interest.
      * @return The name of the requested variable.
      */
-    wxString GetVarName(int varId);
+    std::string GetVarName(int varId);
 
     /**
      * Get the dimension ids of the provided variable.
@@ -71,7 +71,7 @@ class FileNetcdf : public wxObject {
      * @param length Length of the new dimension.
      * @return The new dimension id.
      */
-    int DefDim(const wxString &dimName, int length);
+    int DefDim(const std::string &dimName, int length);
 
     /**
      * Get the dimension id corresponding to the provided name.
@@ -79,7 +79,7 @@ class FileNetcdf : public wxObject {
      * @param dimName The dimension name of interest.
      * @return The id of the requested dimension.
      */
-    int GetDimId(const wxString &dimName);
+    int GetDimId(const std::string &dimName);
 
     /**
      * Get the length of a dimension.
@@ -87,7 +87,7 @@ class FileNetcdf : public wxObject {
      * @param dimName The name of the dimension of interest.
      * @return The dimension length.
      */
-    int GetDimLen(const wxString &dimName);
+    int GetDimLen(const std::string &dimName);
 
     /**
      * Define a new integer variable.
@@ -98,7 +98,7 @@ class FileNetcdf : public wxObject {
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarInt(const wxString &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarInt(const std::string &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
 
     /**
      * Define a new float variable.
@@ -109,7 +109,7 @@ class FileNetcdf : public wxObject {
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarFloat(const wxString &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarFloat(const std::string &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
 
     /**
      * Define a new double variable.
@@ -120,7 +120,7 @@ class FileNetcdf : public wxObject {
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarDouble(const wxString &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarDouble(const std::string &varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
 
     /**
      * Get the values of a 1D integer variable. The whole vector retrieved at once.
@@ -129,7 +129,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecInt GetVarInt1D(const wxString &varName, int size);
+    vecInt GetVarInt1D(const std::string &varName, int size);
 
     /**
      * Get the values of a 1D float variable. The whole vector retrieved at once.
@@ -138,7 +138,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecFloat GetVarFloat1D(const wxString &varName, int size);
+    vecFloat GetVarFloat1D(const std::string &varName, int size);
 
     /**
      * Get the values of a 1D double variable. The whole vector retrieved at once.
@@ -147,7 +147,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecDouble GetVarDouble1D(const wxString &varName, int size);
+    vecDouble GetVarDouble1D(const std::string &varName, int size);
 
     /**
      * Get values of a 2D double variable. The whole array retrieved at once.
@@ -214,7 +214,7 @@ class FileNetcdf : public wxObject {
      * @param varName The variable name. If empty, search in the global attributes.
      * @return A string vector containing the data.
      */
-    vecStr GetAttString1D(const wxString &attName, const wxString &varName = wxEmptyString);
+    vecStr GetAttString1D(const std::string &attName, const std::string &varName = "");
 
     /**
      * Store a string vector as an attribute.
@@ -223,7 +223,7 @@ class FileNetcdf : public wxObject {
      * @param values A string vector containing the data.
      * @param varId The variable id. If empty, search in the global attributes.
      */
-    void PutAttString(const wxString &attName, const vecStr &values, int varId = NC_GLOBAL);
+    void PutAttString(const std::string &attName, const vecStr &values, int varId = NC_GLOBAL);
 
     /**
      * Get a string stored as an attribute.
@@ -232,7 +232,7 @@ class FileNetcdf : public wxObject {
      * @param varName The variable name. If empty, search in the global attributes.
      * @return A string containing the attribute content.
      */
-    wxString GetAttText(const wxString &attName, const wxString &varName = wxEmptyString);
+    std::string GetAttText(const std::string &attName, const std::string &varName = "");
 
     /**
      * Store a string as an attribute.
@@ -241,7 +241,7 @@ class FileNetcdf : public wxObject {
      * @param value The string to store.
      * @param varId The variable id. If empty, search in the global attributes.
      */
-    void PutAttText(const wxString &attName, const wxString &value, int varId = NC_GLOBAL);
+    void PutAttText(const std::string &attName, const std::string &value, int varId = NC_GLOBAL);
 
   protected:
     int m_ncId;

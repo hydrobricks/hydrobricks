@@ -19,8 +19,8 @@ int ProcessET::GetConnectionsNb() {
     return 1;
 }
 
-double* ProcessET::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("output")) {
+double* ProcessET::GetValuePointer(const std::string& name) {
+    if (name == "output") {
         return m_outputs[0]->GetAmountPointer();
     }
 

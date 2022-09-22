@@ -67,11 +67,11 @@ class Flux : public wxObject {
         m_fraction *= value;
     }
 
-    wxString GetType() {
+    std::string GetType() {
         return m_type;
     }
 
-    void SetType(const wxString& type) {
+    void SetType(const std::string& type) {
         m_type = type;
     }
 
@@ -82,7 +82,7 @@ class Flux : public wxObject {
     bool m_needsWeighting;
     double m_fraction;
     Modifier* m_modifier;
-    wxString m_type;
+    std::string m_type;
 
   private:
 };

@@ -5,8 +5,8 @@
 #include "Parameter.h"
 
 struct SurfaceElementSettings {
-    wxString name;
-    wxString type;
+    std::string name;
+    std::string type;
     double fraction;
 };
 
@@ -25,11 +25,11 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area, double elevation = 0.0);
 
-    void AddHydroUnitSurfaceElement(const wxString& name, double fraction = 1.0);
+    void AddHydroUnitSurfaceElement(const std::string& name, double fraction = 1.0);
 
     void SelectUnit(int index);
 
-    bool Parse(const wxString &path);
+    bool Parse(const std::string &path);
 
     HydroUnitSettings GetHydroUnitSettings(int index) {
         wxASSERT(m_hydroUnits.size() > index);

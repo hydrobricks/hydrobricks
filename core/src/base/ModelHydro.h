@@ -20,7 +20,7 @@ class ModelHydro : public wxObject {
 
     bool Run();
 
-    bool DumpOutputs(const wxString &path);
+    bool DumpOutputs(const std::string &path);
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 

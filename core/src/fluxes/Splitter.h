@@ -28,7 +28,7 @@ class Splitter : public wxObject {
      */
     virtual void AssignParameters(const SplitterSettings &splitterSettings) = 0;
 
-    float* GetParameterValuePointer(const SplitterSettings &splitterSettings, const wxString &name);
+    float* GetParameterValuePointer(const SplitterSettings &splitterSettings, const std::string &name);
 
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();
@@ -54,20 +54,20 @@ class Splitter : public wxObject {
         m_outputs.push_back(flux);
     }
 
-    virtual double* GetValuePointer(const wxString& name) = 0;
+    virtual double* GetValuePointer(const std::string& name) = 0;
 
     virtual void Compute() = 0;
 
-    wxString GetName() {
+    std::string GetName() {
         return m_name;
     }
 
-    void SetName(const wxString &name) {
+    void SetName(const std::string &name) {
         m_name = name;
     }
 
   protected:
-    wxString m_name;
+    std::string m_name;
     std::vector<Flux*> m_inputs;
     std::vector<Flux*> m_outputs;
 

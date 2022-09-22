@@ -52,16 +52,16 @@ void Logger::Increment() {
     m_cursor++;
 }
 
-bool Logger::DumpOutputs(const wxString &path) {
+bool Logger::DumpOutputs(const std::string &path) {
     if (!wxDirExists(path)) {
         wxLogError(_("The directory %s could not be found."), path);
         return false;
     }
 
     try {
-        wxString filePath = path;
-        filePath.Append(wxFileName::GetPathSeparator());
-        filePath.Append("results.nc");
+        std::string filePath = path;
+        filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
+        filePath.append("/results.nc");
 
         FileNetcdf file;
 

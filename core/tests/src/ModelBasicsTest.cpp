@@ -169,5 +169,5 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_TRUE(model.DumpOutputs(wxStandardPaths::Get().GetTempDir()));
+    EXPECT_TRUE(model.DumpOutputs(wxStandardPaths::Get().GetTempDir().ToStdString()));
 }

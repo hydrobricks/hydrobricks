@@ -23,11 +23,11 @@ void TimeMachine::Initialize(const TimerSettings &settings) {
     m_date = m_start;
     m_timeStep = settings.timeStep;
 
-    if (settings.timeStepUnit.IsSameAs("Day", false)) {
+    if (settings.timeStepUnit == "Day") {
         m_timeStepUnit = Day;
-    } else if (settings.timeStepUnit.IsSameAs("Hour", false)) {
+    } else if (settings.timeStepUnit == "Hour") {
         m_timeStepUnit = Hour;
-    } else if (settings.timeStepUnit.IsSameAs("Minute", false)) {
+    } else if (settings.timeStepUnit == "Minute") {
         m_timeStepUnit = Minute;
     } else {
         throw InvalidArgument(_("Time step unit unrecognized or not implemented."));

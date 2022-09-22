@@ -20,31 +20,31 @@ Process::Process(WaterContainer* container)
 }
 
 Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
-    if (processSettings.type.IsSameAs("Outflow:linear", false)) {
+    if (processSettings.type == "Outflow:linear") {
         auto process = new ProcessOutflowLinear(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type.IsSameAs("Outflow:constant", false)) {
+    } else if (processSettings.type == "Outflow:constant") {
         auto process = new ProcessOutflowConstant(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type.IsSameAs("Outflow:direct", false)) {
+    } else if (processSettings.type == "Outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type.IsSameAs("Outflow:rest-direct", false) ||
-               processSettings.type.IsSameAs("Outflow:RestDirect", false)) {
+    } else if (processSettings.type == "Outflow:rest-direct" ||
+               processSettings.type == "Outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
-    } else if (processSettings.type.IsSameAs("Runoff:Socont", false)) {
+    } else if (processSettings.type == "Runoff:Socont") {
         auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type.IsSameAs("Infiltration:Socont", false)) {
+    } else if (processSettings.type == "Infiltration:Socont") {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
-    } else if (processSettings.type.IsSameAs("Overflow", false)) {
+    } else if (processSettings.type == "Overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
-    } else if (processSettings.type.IsSameAs("ET:Socont", false)) {
+    } else if (processSettings.type == "ET:Socont") {
         return new ProcessETSocont(brick->GetWaterContainer());
-    } else if (processSettings.type.IsSameAs("Melt:degree-day", false) ||
-               processSettings.type.IsSameAs("Melt:DegreeDay", false)) {
+    } else if (processSettings.type == "Melt:degree-day" ||
+               processSettings.type == "Melt:DegreeDay") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             auto process = new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
@@ -69,9 +69,9 @@ void Process::AssignParameters(const ProcessSettings &) {
     // Nothing to do...
 }
 
-bool Process::HasParameter(const ProcessSettings &processSettings, const wxString &name) {
+bool Process::HasParameter(const ProcessSettings &processSettings, const std::string &name) {
     for (auto parameter: processSettings.parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             return true;
         }
     }
@@ -79,9 +79,9 @@ bool Process::HasParameter(const ProcessSettings &processSettings, const wxStrin
     return false;
 }
 
-float* Process::GetParameterValuePointer(const ProcessSettings &processSettings, const wxString &name) {
+float* Process::GetParameterValuePointer(const ProcessSettings &processSettings, const std::string &name) {
     for (auto parameter: processSettings.parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
             return parameter->GetValuePointer();
@@ -117,7 +117,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     }
 }
 
-double* Process::GetValuePointer(const wxString&) {
+double* Process::GetValuePointer(const std::string&) {
     return nullptr;
 }
 

@@ -43,13 +43,13 @@ public:
     void OnDisplaySecurityMessage(wxThreadEvent &event);
 
 protected:
-    wxString m_modelFile;
-    wxString m_parametersFile;
-    wxString m_basinFile;
-    wxString m_dataFile;
-    wxString m_outputPath;
-    wxString m_startDate;
-    wxString m_endDate;
+    std::string m_modelFile;
+    std::string m_parametersFile;
+    std::string m_basinFile;
+    std::string m_dataFile;
+    std::string m_outputPath;
+    std::string m_startDate;
+    std::string m_endDate;
 
     wxString GetUserDirPath();
 

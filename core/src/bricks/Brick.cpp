@@ -21,19 +21,19 @@ Brick::~Brick() {
 }
 
 Brick* Brick::Factory(const BrickSettings &brickSettings) {
-    if (brickSettings.type.IsSameAs("Storage")) {
+    if (brickSettings.type == "Storage") {
         return new Storage();
-    } else if (brickSettings.type.IsSameAs("Surface")) {
+    } else if (brickSettings.type == "Surface") {
         return new Surface();
-    } else if (brickSettings.type.IsSameAs("GenericSurface")) {
+    } else if (brickSettings.type == "GenericSurface") {
         return new GenericSurface();
-    } else if (brickSettings.type.IsSameAs("Glacier")) {
+    } else if (brickSettings.type == "Glacier") {
         return new Glacier();
-    } else if (brickSettings.type.IsSameAs("Snowpack")) {
+    } else if (brickSettings.type == "Snowpack") {
         return new Snowpack();
-    } else if (brickSettings.type.IsSameAs("Urban")) {
+    } else if (brickSettings.type == "Urban") {
         return new Urban();
-    } else if (brickSettings.type.IsSameAs("Vegetation")) {
+    } else if (brickSettings.type == "Vegetation") {
         return new Vegetation();
     } else {
         wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
@@ -63,9 +63,9 @@ void Brick::AttachFluxIn(Flux* flux) {
     m_container->AttachFluxIn(flux);
 }
 
-bool Brick::HasParameter(const BrickSettings &brickSettings, const wxString &name) {
+bool Brick::HasParameter(const BrickSettings &brickSettings, const std::string &name) {
     for (auto parameter: brickSettings.parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             return true;
         }
     }
@@ -73,9 +73,9 @@ bool Brick::HasParameter(const BrickSettings &brickSettings, const wxString &nam
     return false;
 }
 
-float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const wxString &name) {
+float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const std::string &name) {
     for (auto parameter: brickSettings.parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
             return parameter->GetValuePointer();
@@ -138,14 +138,14 @@ int Brick::GetProcessesConnectionsNb() {
     return counter;
 }
 
-double* Brick::GetBaseValuePointer(const wxString& name) {
-    if (name.IsSameAs("content") && m_container) {
+double* Brick::GetBaseValuePointer(const std::string& name) {
+    if (name == "content" && m_container) {
         return m_container->GetContentPointer();
     }
 
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const wxString&) {
+double* Brick::GetValuePointer(const std::string&) {
     return nullptr;
 }

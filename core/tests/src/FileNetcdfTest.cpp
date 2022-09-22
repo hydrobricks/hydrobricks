@@ -13,7 +13,7 @@ TEST(FileNetcdf, FileGetsCreated) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    EXPECT_TRUE(file.Create(path));
+    EXPECT_TRUE(file.Create(path.ToStdString()));
     wxFile::Exists(path);
     file.Close();
     wxRemoveFile(path);
@@ -40,7 +40,7 @@ TEST(FileNetcdf, VarNameIsRead) {
 
     ASSERT_TRUE(file.OpenReadOnly("files/time-series-data.nc"));
 
-    EXPECT_TRUE(file.GetVarName(1).IsSameAs("time"));
+    EXPECT_TRUE(file.GetVarName(1) == "time");
 }
 
 TEST(FileNetcdf, VarDimIdsAreRead) {
@@ -49,7 +49,7 @@ TEST(FileNetcdf, VarDimIdsAreRead) {
     ASSERT_TRUE(file.OpenReadOnly("files/time-series-data.nc"));
 
     vecInt dimsId = file.GetVarDimIds(2, 2);
-    EXPECT_TRUE(file.GetVarName(2).IsSameAs("temperature"));
+    EXPECT_TRUE(file.GetVarName(2) == "temperature");
 
     EXPECT_EQ(dimsId[0], 1);
     EXPECT_EQ(dimsId[1], 0);
@@ -59,7 +59,7 @@ TEST(FileNetcdf, DimGetsDefined) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     wxFile::Exists(path);
     file.DefDim("dim1", 100);
     EXPECT_EQ(file.GetDimLen("dim1"), 100);
@@ -89,7 +89,7 @@ TEST(FileNetcdf, VarIntGetsDefined) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarInt("var1", {dim1Id}, 1, false);
@@ -104,7 +104,7 @@ TEST(FileNetcdf, VarFloatGetsDefined) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarFloat("var1", {dim1Id}, 1, false);
@@ -119,7 +119,7 @@ TEST(FileNetcdf, VarDoubleGetsDefined) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarDouble("var1", {dim1Id}, 1, false);
@@ -160,7 +160,7 @@ TEST(FileNetcdf, VarDouble1DIsRead) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var2", {dim1Id}, 1, true);
@@ -193,7 +193,7 @@ TEST(FileNetcdf, VarInt1DIsWritten) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarInt("var2", {dim1Id}, 1, true);
@@ -211,7 +211,7 @@ TEST(FileNetcdf, VarFloat1DIsWritten) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarFloat("var2", {dim1Id}, 1, true);
@@ -229,7 +229,7 @@ TEST(FileNetcdf, VarDouble1DIsWritten) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var2", {dim1Id}, 1, true);
@@ -251,16 +251,16 @@ TEST(FileNetcdf, AttString1DIsRead) {
     vecStr surfaces = file.GetAttString1D("surface_names");
 
     EXPECT_EQ(surfaces.size(), 3);
-    EXPECT_TRUE(surfaces[0].IsSameAs("ground"));
-    EXPECT_TRUE(surfaces[1].IsSameAs("glacier-ice"));
-    EXPECT_TRUE(surfaces[2].IsSameAs("glacier-debris"));
+    EXPECT_TRUE(surfaces[0] == "ground");
+    EXPECT_TRUE(surfaces[1] == "glacier-ice");
+    EXPECT_TRUE(surfaces[2] == "glacier-debris");
 }
 
 TEST(FileNetcdf, AttString1DIsWritten) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var1", {dim1Id}, 1, true);
@@ -271,9 +271,9 @@ TEST(FileNetcdf, AttString1DIsWritten) {
     vecStr valsOut = file.GetAttString1D("att_name", "var1");
 
     EXPECT_EQ(valsOut.size(), 3);
-    EXPECT_TRUE(valsOut[0].IsSameAs("val1"));
-    EXPECT_TRUE(valsOut[1].IsSameAs("val2"));
-    EXPECT_TRUE(valsOut[2].IsSameAs("val3"));
+    EXPECT_TRUE(valsOut[0] == "val1");
+    EXPECT_TRUE(valsOut[1] == "val2");
+    EXPECT_TRUE(valsOut[2] == "val3");
 }
 
 TEST(FileNetcdf, AttTextIsRead) {
@@ -290,7 +290,7 @@ TEST(FileNetcdf, AttTextIsWritten) {
     FileNetcdf file;
 
     wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(file.Create(path.ToStdString()));
     ASSERT_TRUE(wxFile::Exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var1", {dim1Id}, 1, true);

@@ -18,7 +18,7 @@ class SplitterSnowRain : public Splitter {
 
     void AttachForcing(Forcing* forcing) override;
 
-    double* GetValuePointer(const wxString& name) override;
+    double* GetValuePointer(const std::string& name) override;
 
     void Compute() override;
 

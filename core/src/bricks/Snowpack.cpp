@@ -13,9 +13,9 @@ void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
 
 void Snowpack::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    if (flux->GetType().IsSameAs("snow")) {
+    if (flux->GetType() == "snow") {
         m_snow->AttachFluxIn(flux);
-    } else if (flux->GetType().IsSameAs("water")) {
+    } else if (flux->GetType() == "water") {
         m_container->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
@@ -53,8 +53,8 @@ vecDoublePt Snowpack::GetStateVariableChanges() {
     return vars;
 }
 
-double* Snowpack::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("snow")) {
+double* Snowpack::GetValuePointer(const std::string& name) {
+    if (name == "snow") {
         return m_snow->GetContentPointer();
     }
 

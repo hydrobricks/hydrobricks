@@ -38,15 +38,15 @@ class HydroUnit : public wxObject {
 
     Brick* GetBrick(int index);
 
-    bool HasBrick(const wxString &name);
+    bool HasBrick(const std::string &name);
 
-    Brick* GetBrick(const wxString &name);
+    Brick* GetBrick(const std::string &name);
 
     Splitter* GetSplitter(int index);
 
-    bool HasSplitter(const wxString &name);
+    bool HasSplitter(const std::string &name);
 
-    Splitter* GetSplitter(const wxString &name);
+    Splitter* GetSplitter(const std::string &name);
 
     bool IsOk();
 

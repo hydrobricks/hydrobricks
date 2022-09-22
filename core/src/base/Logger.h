@@ -21,7 +21,7 @@ class Logger : public wxObject {
 
     void Increment();
 
-    bool DumpOutputs(const wxString &path);
+    bool DumpOutputs(const std::string &path);
 
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;

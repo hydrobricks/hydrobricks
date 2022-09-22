@@ -1,6 +1,6 @@
 #include "ParameterVariable.h"
 
-ParameterVariable::ParameterVariable(const wxString &name, float value)
+ParameterVariable::ParameterVariable(const std::string &name, float value)
     : Parameter(name, value)
 {}
 
@@ -9,7 +9,7 @@ ParameterVariable::ParameterVariable(const wxString &name, float value)
  * Class ParameterVariableYearly
  */
 
-ParameterVariableYearly::ParameterVariableYearly(const wxString &name, float value)
+ParameterVariableYearly::ParameterVariableYearly(const std::string &name, float value)
     : ParameterVariable(name, value)
 {}
 
@@ -49,7 +49,7 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
  * Class ParameterVariableMonthly
  */
 
-ParameterVariableMonthly::ParameterVariableMonthly(const wxString &name, float value)
+ParameterVariableMonthly::ParameterVariableMonthly(const std::string &name, float value)
     : ParameterVariable(name, value)
 {}
 
@@ -78,7 +78,7 @@ bool ParameterVariableMonthly::UpdateParameter(int month) {
  * Class ParameterVariableDates
  */
 
-ParameterVariableDates::ParameterVariableDates(const wxString &name, float value)
+ParameterVariableDates::ParameterVariableDates(const std::string &name, float value)
     : ParameterVariable(name, value)
 {}
 

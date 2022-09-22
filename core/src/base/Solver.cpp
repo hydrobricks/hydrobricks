@@ -11,15 +11,15 @@ Solver::Solver()
 {}
 
 Solver* Solver::Factory(const SolverSettings &solverSettings) {
-    if (solverSettings.name.IsSameAs("RK4", false) ||
-        solverSettings.name.IsSameAs("Runge-Kutta", false) ||
-        solverSettings.name.IsSameAs("RungeKutta", false)) {
+    if (solverSettings.name == "RK4" ||
+        solverSettings.name == "Runge-Kutta" ||
+        solverSettings.name == "RungeKutta") {
         return new SolverRK4();
-    } else if (solverSettings.name.IsSameAs("Euler Explicit", false) ||
-               solverSettings.name.IsSameAs("EulerExplicit", false)) {
+    } else if (solverSettings.name == "Euler Explicit" ||
+               solverSettings.name == "EulerExplicit") {
         return new SolverEulerExplicit();
-    } else if (solverSettings.name.IsSameAs("Heun Explicit", false) ||
-               solverSettings.name.IsSameAs("HeunExplicit", false)) {
+    } else if (solverSettings.name == "Heun Explicit" ||
+               solverSettings.name == "HeunExplicit") {
         return new SolverHeunExplicit();
     }
     throw InvalidArgument(_("Incorrect solver name."));

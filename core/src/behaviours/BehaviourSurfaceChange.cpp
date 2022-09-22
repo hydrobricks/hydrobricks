@@ -10,7 +10,7 @@ void BehaviourSurfaceChange::AddChange(double date, int hydroUnitId, int surface
     m_area.push_back(area);
 }
 
-bool BehaviourSurfaceChange::Parse(const wxString &path) {
+bool BehaviourSurfaceChange::Parse(const std::string &path) {
 
     try {
         FileNetcdf file;
@@ -45,7 +45,7 @@ bool BehaviourSurfaceChange::Parse(const wxString &path) {
             vecFloat fractions = file.GetVarFloat1D(surface, changesNb);
 
             // Get the surface type
-            wxString type = file.GetAttText("type", surface);
+            std::string type = file.GetAttText("type", surface);
 
         }
 

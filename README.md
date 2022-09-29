@@ -38,3 +38,14 @@ mkdir cmake-build-debug
 cd cmake-build-debug
 conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing  
 ```
+
+Build Python wheels locally:
+```
+cibuildwheel --platform windows 
+```
+
+Test Python wheels locally:
+```
+import hydrobricks as hb
+help(hb.Parameter)
+```

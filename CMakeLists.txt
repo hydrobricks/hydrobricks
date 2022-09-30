@@ -95,11 +95,6 @@ if (RUN_CONAN_FROM_CMAKE)
     message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
     message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
 
-    if (UNIX)
-        conan_cmake_configure(REQUIRES glibc_version_header/0.1@bincrafters/stable
-                GENERATORS cmake_find_package)
-    endif ()
-
     # Get libraries
     conan_cmake_run(CONANFILE conanfile.txt
             BASIC_SETUP CMAKE_TARGETS
@@ -110,7 +105,7 @@ else (RUN_CONAN_FROM_CMAKE)
     find_file(CONANBUILDINFO
             NAMES conanbuildinfo.cmake
             PATHS "${CMAKE_BINARY_DIR}"
-            PATHS "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_SOURCE_DIR}"
             "D:/a/hydrobricks/hydrobricks" # For GitHub actions (Windows)
             "/project" # For GitHub actions (Linux)
             )

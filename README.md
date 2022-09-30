@@ -18,6 +18,9 @@ Get conan (requires Python 3) and setup the default profile:
 ```
 pip install conan
 conan profile new default --detect
+
+# On Linux:
+conan profile update settings.compiler.libcxx=libstdc++11 default
 ```
 
 Add GitLab as a remote:

@@ -1,7 +1,7 @@
 #include "ParameterVariable.h"
 
-ParameterVariable::ParameterVariable(const std::string &name, float value)
-    : Parameter(name, value)
+ParameterVariable::ParameterVariable(const std::string &name)
+    : Parameter(name)
 {}
 
 
@@ -9,8 +9,8 @@ ParameterVariable::ParameterVariable(const std::string &name, float value)
  * Class ParameterVariableYearly
  */
 
-ParameterVariableYearly::ParameterVariableYearly(const std::string &name, float value)
-    : ParameterVariable(name, value)
+ParameterVariableYearly::ParameterVariableYearly(const std::string &name)
+    : ParameterVariable(name)
 {}
 
 bool ParameterVariableYearly::SetValues(int yearStart, int yearEnd, const vecFloat& values) {
@@ -49,8 +49,8 @@ bool ParameterVariableYearly::UpdateParameter(int year) {
  * Class ParameterVariableMonthly
  */
 
-ParameterVariableMonthly::ParameterVariableMonthly(const std::string &name, float value)
-    : ParameterVariable(name, value)
+ParameterVariableMonthly::ParameterVariableMonthly(const std::string &name)
+    : ParameterVariable(name)
 {}
 
 bool ParameterVariableMonthly::SetValues(const vecFloat& values) {
@@ -78,8 +78,8 @@ bool ParameterVariableMonthly::UpdateParameter(int month) {
  * Class ParameterVariableDates
  */
 
-ParameterVariableDates::ParameterVariableDates(const std::string &name, float value)
-    : ParameterVariable(name, value)
+ParameterVariableDates::ParameterVariableDates(const std::string &name)
+    : ParameterVariable(name)
 {}
 
 bool ParameterVariableDates::SetTimeAndValues(const vecDouble& time, const vecFloat& values) {

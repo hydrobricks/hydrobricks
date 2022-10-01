@@ -35,6 +35,9 @@ build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [
+    "rm -rf {project}/build/lib.*",
+    "rm -rf {project}/build/temp.*",
+    "rm -rf {project}/build/bdist.*",
     "pip install conan",
     "pip show conan",
     "conan profile new default --detect --force",

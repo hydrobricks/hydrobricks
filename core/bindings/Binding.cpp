@@ -1,5 +1,6 @@
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
+#include <wx/log.h>
 
 #include "Includes.h"
 #include "Parameter.h"
@@ -29,4 +30,8 @@ PYBIND11_MODULE(hydrobricks, m) {
         .def(py::init<const std::string &>())
         .def("set_values", &ParameterVariableYearly::SetValues, "Set the parameter values",
             "year_start"_a, "year_end"_a, "values"_a);
+
+    py::class_<wxLogNull>(m, "LogNull")
+            .def(py::init<>());
+
 }

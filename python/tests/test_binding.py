@@ -1,5 +1,6 @@
 import hydrobricks as hb
 
+no_log = hb.LogNull()
 
 def test_parameter_creation():
     param = hb.Parameter("my param", 0)

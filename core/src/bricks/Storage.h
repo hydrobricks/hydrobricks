@@ -14,7 +14,6 @@ class Storage : public Brick {
     void AssignParameters(const BrickSettings &brickSettings) override;
 
   protected:
-
   private:
 };
 

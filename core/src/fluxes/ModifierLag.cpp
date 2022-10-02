@@ -1,4 +1,3 @@
 #include "ModifierLag.h"
 
-ModifierLag::ModifierLag()
-{}
+ModifierLag::ModifierLag() {}

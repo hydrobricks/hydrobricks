@@ -1,8 +1,6 @@
 #include "SplitterMultiFluxes.h"
 
-SplitterMultiFluxes::SplitterMultiFluxes()
-    : Splitter()
-{}
+SplitterMultiFluxes::SplitterMultiFluxes() : Splitter() {}
 
 bool SplitterMultiFluxes::IsOk() {
     if (m_outputs.size() < 2) {
@@ -17,7 +15,7 @@ bool SplitterMultiFluxes::IsOk() {
     return true;
 }
 
-void SplitterMultiFluxes::AssignParameters(const SplitterSettings &) {
+void SplitterMultiFluxes::AssignParameters(const SplitterSettings&) {
     // No parameter
 }
 

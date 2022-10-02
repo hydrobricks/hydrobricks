@@ -9,7 +9,8 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels);
+    void InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecStr& subBasinLabels,
+                       const vecStr& hydroUnitLabels);
 
     void SetSubBasinValuePointer(int iLabel, double* valPt);
 
@@ -21,7 +22,7 @@ class Logger : public wxObject {
 
     void Increment();
 
-    bool DumpOutputs(const std::string &path);
+    bool DumpOutputs(const std::string& path);
 
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;

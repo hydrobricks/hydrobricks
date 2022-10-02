@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_URBAN_H
 #define HYDROBRICKS_URBAN_H
 
-#include "SurfaceComponent.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class Urban : public SurfaceComponent {
   public:
@@ -18,7 +18,6 @@ class Urban : public SurfaceComponent {
     void Finalize() override;
 
   protected:
-
   private:
 };
 

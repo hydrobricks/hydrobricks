@@ -23,7 +23,7 @@ class Solver : public wxObject {
      * @param solverSettings The solver settings.
      * @return A new generated solver.
      */
-    static Solver* Factory(const SolverSettings &solverSettings);
+    static Solver* Factory(const SolverSettings& solverSettings);
 
     /**
      * Connect the solver to a processor.
@@ -107,6 +107,5 @@ class Solver : public wxObject {
 
   private:
 };
-
 
 #endif  // HYDROBRICKS_SOLVER_H

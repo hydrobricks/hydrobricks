@@ -39,12 +39,12 @@ Get or build debug libraries (the option ``-s compiler.runtime=MDd`` is for Wind
 ```
 mkdir cmake-build-debug
 cd cmake-build-debug
-conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing  
+conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing
 ```
 
 Build Python wheels locally:
 ```
-cibuildwheel --platform windows 
+cibuildwheel --platform windows
 ```
 
 Test Python wheels locally:

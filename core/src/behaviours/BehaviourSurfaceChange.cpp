@@ -1,4 +1,5 @@
 #include "BehaviourSurfaceChange.h"
+
 #include "FileNetcdf.h"
 
 BehaviourSurfaceChange::BehaviourSurfaceChange() {}
@@ -10,8 +11,7 @@ void BehaviourSurfaceChange::AddChange(double date, int hydroUnitId, int surface
     m_area.push_back(area);
 }
 
-bool BehaviourSurfaceChange::Parse(const std::string &path) {
-
+bool BehaviourSurfaceChange::Parse(const std::string& path) {
     try {
         FileNetcdf file;
 
@@ -37,20 +37,15 @@ bool BehaviourSurfaceChange::Parse(const std::string &path) {
         // Get the surface names
         vecStr surfaces = file.GetAttString1D("surface_names");
 
-
-
-
         // Get surface data
-        for (const auto& surface: surfaces) {
+        for (const auto& surface : surfaces) {
             vecFloat fractions = file.GetVarFloat1D(surface, changesNb);
 
             // Get the surface type
             std::string type = file.GetAttText("type", surface);
-
         }
 
-
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
         wxLogError(e.what());
         return false;
     }

@@ -1,12 +1,9 @@
 #include "ProcessETSocont.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
-ProcessETSocont::ProcessETSocont(WaterContainer* container)
-    : ProcessET(container),
-      m_pet(nullptr),
-      m_exponent(0.5)
-{}
+ProcessETSocont::ProcessETSocont(WaterContainer* container) : ProcessET(container), m_pet(nullptr), m_exponent(0.5) {}
 
 bool ProcessETSocont::IsOk() {
     return ProcessET::IsOk();

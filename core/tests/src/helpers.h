@@ -3,7 +3,6 @@
 
 #include "TimeMachine.h"
 
-
 TimeMachine GenerateTimeMachineDaily();
 
 #endif  // HYDROBRICKS_HELPERS_H

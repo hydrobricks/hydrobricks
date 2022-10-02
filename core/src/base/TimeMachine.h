@@ -13,7 +13,7 @@ class TimeMachine : public wxObject {
 
     void Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit);
 
-    void Initialize(const TimerSettings &settings);
+    void Initialize(const TimerSettings& settings);
 
     void AttachParametersUpdater(ParametersUpdater* updater) {
         m_parametersUpdater = updater;
@@ -44,7 +44,6 @@ class TimeMachine : public wxObject {
     }
 
   protected:
-
   private:
     double m_date;
     double m_start;

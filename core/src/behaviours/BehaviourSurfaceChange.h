@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_BEHAVIOUR_SURFACE_CHANGE_H
 #define HYDROBRICKS_BEHAVIOUR_SURFACE_CHANGE_H
 
-#include "Includes.h"
 #include "Behaviour.h"
+#include "Includes.h"
 
 class BehaviourSurfaceChange : public Behaviour {
   public:

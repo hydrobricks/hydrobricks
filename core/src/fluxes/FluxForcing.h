@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_FLUX_FORCING_H
 #define HYDROBRICKS_FLUX_FORCING_H
 
-#include "Includes.h"
 #include "Flux.h"
 #include "Forcing.h"
+#include "Includes.h"
 
 class FluxForcing : public Flux {
   public:
@@ -21,7 +21,7 @@ class FluxForcing : public Flux {
 
     void AttachForcing(Forcing* forcing);
 
-    bool IsForcing() override{
+    bool IsForcing() override {
         return true;
     }
 

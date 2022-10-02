@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
-#include "SurfaceComponent.h"
 #include "Includes.h"
 #include "Snowpack.h"
+#include "SurfaceComponent.h"
 
 class Glacier : public SurfaceComponent {
   public:
@@ -12,7 +12,7 @@ class Glacier : public SurfaceComponent {
     /**
      * @copydoc Brick::AssignParameters()
      */
-    void AssignParameters(const BrickSettings &brickSettings) override;
+    void AssignParameters(const BrickSettings& brickSettings) override;
 
     void AttachFluxIn(Flux* flux);
 

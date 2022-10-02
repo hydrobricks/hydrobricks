@@ -40,8 +40,8 @@ class SnowpackModel : public ::testing::Test {
         m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
         m_model.AddSplitterForcing("Precipitation");
         m_model.AddSplitterForcing("Temperature");
-        m_model.AddSplitterOutput("outlet"); // rain
-        m_model.AddSplitterOutput("snowpack", "snow"); // snow
+        m_model.AddSplitterOutput("outlet");            // rain
+        m_model.AddSplitterOutput("snowpack", "snow");  // snow
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
@@ -156,7 +156,7 @@ TEST_F(GlacierModel, UnlimitedSupply) {
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 18.0, 21.0};
 
-    for (auto & basinOutput : basinOutputs) {
+    for (auto& basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
@@ -173,7 +173,7 @@ TEST_F(GlacierModel, UnlimitedSupply) {
 }
 
 class GlacierModelWithSnowpack : public ::testing::Test {
-protected:
+  protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsTemp{};
     TimeSeriesUniform* m_tsPrecip{};
@@ -219,8 +219,8 @@ protected:
         m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
         m_model.AddSplitterForcing("Precipitation");
         m_model.AddSplitterForcing("Temperature");
-        m_model.AddSplitterOutput("outlet"); // rain
-        m_model.AddSplitterOutput("snowpack", "snow"); // snow
+        m_model.AddSplitterOutput("outlet");            // rain
+        m_model.AddSplitterOutput("snowpack", "snow");  // snow
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
@@ -264,16 +264,14 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 
     vecDouble expectedOutputs = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
-    for (auto & basinOutput : basinOutputs) {
+    for (auto& basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
-            //EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+            // EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
             wxPrintf(" | %.1f (%.1f)", basinOutput[j], expectedOutputs[j]);
         }
     }
 
-
     wxPrintf("\n");
-
 
     // Check melt and swe
     vecAxxd unitOutput = model.GetLogger()->GetHydroUnitValues();
@@ -283,30 +281,27 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     vecDouble expectedTotMeltWater = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
 
-        
         wxPrintf(" | %.1f (%.1f)", unitOutput[0](j, 0), expectedSnowMelt[j]);
     }
     wxPrintf("\n");
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
-
+        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
 
         wxPrintf(" | %.1f (%.1f)", unitOutput[1](j, 0), expectedIceMelt[j]);
     }
     wxPrintf("\n");
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        //EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        //EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
-
+        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
+        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
 
         wxPrintf(" | %.1f (%.1f)", unitOutput[2](j, 0), expectedTotMeltWater[j]);
     }

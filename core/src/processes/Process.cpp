@@ -14,12 +14,9 @@
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
-Process::Process(WaterContainer* container)
-    : m_container(container)
-{
-}
+Process::Process(WaterContainer *container) : m_container(container) {}
 
-Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) {
+Process *Process::Factory(const ProcessSettings &processSettings, Brick *brick) {
     if (processSettings.type == "Outflow:linear") {
         auto process = new ProcessOutflowLinear(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
@@ -30,8 +27,7 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
         return process;
     } else if (processSettings.type == "Outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "Outflow:rest-direct" ||
-               processSettings.type == "Outflow:RestDirect") {
+    } else if (processSettings.type == "Outflow:rest-direct" || processSettings.type == "Outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "Runoff:Socont") {
         auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
@@ -43,15 +39,14 @@ Process* Process::Factory(const ProcessSettings &processSettings, Brick* brick) 
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     } else if (processSettings.type == "ET:Socont") {
         return new ProcessETSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "Melt:degree-day" ||
-               processSettings.type == "Melt:DegreeDay") {
+    } else if (processSettings.type == "Melt:degree-day" || processSettings.type == "Melt:DegreeDay") {
         if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            auto snowBrick = dynamic_cast<Snowpack *>(brick);
             auto process = new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
             process->AssignParameters(processSettings);
             return process;
         } else if (brick->IsGlacier()) {
-            auto glacierBrick = dynamic_cast<Glacier*>(brick);
+            auto glacierBrick = dynamic_cast<Glacier *>(brick);
             auto process = new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
             process->AssignParameters(processSettings);
             return process;
@@ -70,7 +65,7 @@ void Process::AssignParameters(const ProcessSettings &) {
 }
 
 bool Process::HasParameter(const ProcessSettings &processSettings, const std::string &name) {
-    for (auto parameter: processSettings.parameters) {
+    for (auto parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
         }
@@ -79,8 +74,8 @@ bool Process::HasParameter(const ProcessSettings &processSettings, const std::st
     return false;
 }
 
-float* Process::GetParameterValuePointer(const ProcessSettings &processSettings, const std::string &name) {
-    for (auto parameter: processSettings.parameters) {
+float *Process::GetParameterValuePointer(const ProcessSettings &processSettings, const std::string &name) {
+    for (auto parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
@@ -101,7 +96,7 @@ vecDouble Process::GetChangeRates() {
     return GetRates();
 }
 
-void Process::StoreInOutgoingFlux(double* rate, int index) {
+void Process::StoreInOutgoingFlux(double *rate, int index) {
     wxASSERT(m_outputs.size() > index);
     m_outputs[index]->LinkChangeRate(rate);
 }
@@ -117,7 +112,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     }
 }
 
-double* Process::GetValuePointer(const std::string&) {
+double *Process::GetValuePointer(const std::string &) {
     return nullptr;
 }
 
@@ -133,15 +128,15 @@ double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 
     std::vector<Process *> otherProcesses = m_container->GetParentBrick()->GetProcesses();
-    for (auto process: otherProcesses) {
+    for (auto process : otherProcesses) {
         wxASSERT(process);
         if (process == this) {
             continue;
         }
         std::vector<Flux *> fluxes = process->GetOutputFluxes();
-        for (auto flux: fluxes) {
+        for (auto flux : fluxes) {
             wxASSERT(flux);
-            sumOtherProcesses+= *flux->GetAmountPointer();
+            sumOtherProcesses += *flux->GetAmountPointer();
         }
     }
 

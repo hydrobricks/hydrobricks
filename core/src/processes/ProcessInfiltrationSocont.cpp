@@ -1,12 +1,11 @@
 #include "ProcessInfiltrationSocont.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
-ProcessInfiltrationSocont::ProcessInfiltrationSocont(WaterContainer* container)
-    : ProcessInfiltration(container)
-{}
+ProcessInfiltrationSocont::ProcessInfiltrationSocont(WaterContainer* container) : ProcessInfiltration(container) {}
 
-void ProcessInfiltrationSocont::AssignParameters(const ProcessSettings &processSettings) {
+void ProcessInfiltrationSocont::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
 }
 

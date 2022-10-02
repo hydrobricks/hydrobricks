@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_FLUX_TO_BRICK_H
 #define HYDROBRICKS_FLUX_TO_BRICK_H
 
-#include "Includes.h"
 #include "Flux.h"
+#include "Includes.h"
 
 class Brick;
 

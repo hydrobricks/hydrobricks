@@ -4,38 +4,17 @@
 /**
  * Enumeration for general informative flags.
  */
-enum {
-    FAILED = -1,
-    OUT_OF_RANGE = -2,
-    NOT_FOUND = -3,
-    EMPTY = -4,
-    NONE = -5,
-    NOT_VALID = -6,
-    UNDEFINED = -7
-};
+enum { FAILED = -1, OUT_OF_RANGE = -2, NOT_FOUND = -3, EMPTY = -4, NONE = -5, NOT_VALID = -6, UNDEFINED = -7 };
 
 /**
  * Temporal units.
  */
-enum TimeUnit {
-    Week,
-    Day,
-    Hour,
-    Minute,
-    Variable
-};
+enum TimeUnit { Week, Day, Hour, Minute, Variable };
 
 /**
  * Types of forcing variables.
  */
-enum VariableType {
-    Precipitation,
-    Temperature,
-    PET,
-    Custom1,
-    Custom2,
-    Custom3
-};
+enum VariableType { Precipitation, Temperature, PET, Custom1, Custom2, Custom3 };
 
 /**
  * Formats for time/date formatting or parsing.

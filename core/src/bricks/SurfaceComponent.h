@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_SURFACE_COMPONENT_H
 #define HYDROBRICKS_SURFACE_COMPONENT_H
 
-#include "Includes.h"
 #include "Brick.h"
+#include "Includes.h"
 
 class HydroUnit;
 

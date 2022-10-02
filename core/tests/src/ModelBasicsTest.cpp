@@ -109,7 +109,7 @@ TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
-    EXPECT_NEAR(subBasin.GetArea(), 264328000, 1050); // Difference due to storage as float in netcdf file.
+    EXPECT_NEAR(subBasin.GetArea(), 264328000, 1050);  // Difference due to storage as float in netcdf file.
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model2);

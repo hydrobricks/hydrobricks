@@ -5,21 +5,14 @@
 #include "SolverHeunExplicit.h"
 #include "SolverRK4.h"
 
-Solver::Solver()
-    : m_processor(nullptr),
-      m_nIterations(1)
-{}
+Solver::Solver() : m_processor(nullptr), m_nIterations(1) {}
 
-Solver* Solver::Factory(const SolverSettings &solverSettings) {
-    if (solverSettings.name == "RK4" ||
-        solverSettings.name == "Runge-Kutta" ||
-        solverSettings.name == "RungeKutta") {
+Solver *Solver::Factory(const SolverSettings &solverSettings) {
+    if (solverSettings.name == "RK4" || solverSettings.name == "Runge-Kutta" || solverSettings.name == "RungeKutta") {
         return new SolverRK4();
-    } else if (solverSettings.name == "Euler Explicit" ||
-               solverSettings.name == "EulerExplicit") {
+    } else if (solverSettings.name == "Euler Explicit" || solverSettings.name == "EulerExplicit") {
         return new SolverEulerExplicit();
-    } else if (solverSettings.name == "Heun Explicit" ||
-               solverSettings.name == "HeunExplicit") {
+    } else if (solverSettings.name == "Heun Explicit" || solverSettings.name == "HeunExplicit") {
         return new SolverHeunExplicit();
     }
     throw InvalidArgument(_("Incorrect solver name."));
@@ -47,7 +40,6 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
     for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
         double sumRates = 0.0;
         for (auto process : brick->GetProcesses()) {
-
             // Get the change rates (per day) independently of the time step and constraints (null bricks handled)
             vecDouble rates = process->GetChangeRates();
 
@@ -90,7 +82,7 @@ void Solver::ApplyConstraintsFor(int col) {
 
 void Solver::ResetStateVariableChanges() {
     wxASSERT(m_processor);
-    for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
+    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
         *value = 0;
     }
 }
@@ -98,7 +90,7 @@ void Solver::ResetStateVariableChanges() {
 void Solver::SetStateVariablesToIteration(int col) {
     wxASSERT(m_processor);
     int counter = 0;
-    for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
+    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
         *value = m_stateVariableChanges(counter, col);
         counter++;
     }
@@ -107,7 +99,7 @@ void Solver::SetStateVariablesToIteration(int col) {
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
     wxASSERT(m_processor);
     int counter = 0;
-    for (auto value: *(m_processor->GetStateVariablesVectorPt())) {
+    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
         *value = (m_stateVariableChanges(counter, col1) + m_stateVariableChanges(counter, col2)) / 2.0;
         counter++;
     }

@@ -18,10 +18,8 @@
 #include <wx/cmdline.h>
 #include <wx/socket.h>
 
-
-class Hydrobricks : public wxAppConsole
-{
-public:
+class Hydrobricks : public wxAppConsole {
+  public:
     bool OnInit() override;
 
     int OnRun() override;
@@ -42,7 +40,7 @@ public:
 
     void OnDisplaySecurityMessage(wxThreadEvent &event);
 
-protected:
+  protected:
     std::string m_modelFile;
     std::string m_parametersFile;
     std::string m_basinFile;
@@ -59,9 +57,9 @@ protected:
 
     void DisplayProcessingTime(const wxStopWatch &sw);
 
-private:
+  private:
 };
 
 DECLARE_APP(Hydrobricks);
 
-#endif // HYDROBRICKS_APP_H
+#endif  // HYDROBRICKS_APP_H

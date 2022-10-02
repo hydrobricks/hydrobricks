@@ -2,11 +2,7 @@
 
 #include "SurfaceComponent.h"
 
-SubBasin::SubBasin()
-    : m_area(0),
-      m_outletTotal(0),
-      m_needsCleanup(false)
-{}
+SubBasin::SubBasin() : m_area(0), m_outletTotal(0), m_needsCleanup(false) {}
 
 SubBasin::~SubBasin() {
     if (m_needsCleanup) {
@@ -40,7 +36,6 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
 }
 
 bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
-
     try {
         for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
             basinSettings.SelectUnit(iUnit);
@@ -107,7 +102,7 @@ HydroUnit* SubBasin::GetHydroUnit(int index) {
 vecInt SubBasin::GetHydroUnitsIds() {
     vecInt ids;
     ids.reserve(m_hydroUnits.size());
-    for (auto unit :m_hydroUnits) {
+    for (auto unit : m_hydroUnits) {
         ids.push_back(unit->GetId());
     }
 
@@ -129,8 +124,8 @@ Brick* SubBasin::GetBrick(int index) {
     return m_bricks[index];
 }
 
-bool SubBasin::HasBrick(const std::string &name) {
-    for (auto brick: m_bricks) {
+bool SubBasin::HasBrick(const std::string& name) {
+    for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return true;
         }
@@ -138,8 +133,8 @@ bool SubBasin::HasBrick(const std::string &name) {
     return false;
 }
 
-Brick* SubBasin::GetBrick(const std::string &name) {
-    for (auto brick: m_bricks) {
+Brick* SubBasin::GetBrick(const std::string& name) {
+    for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return brick;
         }
@@ -155,8 +150,8 @@ Splitter* SubBasin::GetSplitter(int index) {
     return m_splitters[index];
 }
 
-bool SubBasin::HasSplitter(const std::string &name) {
-    for (auto splitter: m_splitters) {
+bool SubBasin::HasSplitter(const std::string& name) {
+    for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return true;
         }
@@ -164,8 +159,8 @@ bool SubBasin::HasSplitter(const std::string &name) {
     return false;
 }
 
-Splitter* SubBasin::GetSplitter(const std::string &name) {
-    for (auto splitter: m_splitters) {
+Splitter* SubBasin::GetSplitter(const std::string& name) {
+    for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return splitter;
         }
@@ -209,7 +204,7 @@ double* SubBasin::GetValuePointer(const std::string& name) {
 
 bool SubBasin::ComputeOutletDischarge() {
     m_outletTotal = 0;
-    for (auto flux: m_outletFluxes) {
+    for (auto flux : m_outletFluxes) {
         m_outletTotal += flux->GetAmount();
     }
 

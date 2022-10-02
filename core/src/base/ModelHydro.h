@@ -20,7 +20,7 @@ class ModelHydro : public wxObject {
 
     bool Run();
 
-    bool DumpOutputs(const std::string &path);
+    bool DumpOutputs(const std::string& path);
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 
@@ -64,7 +64,7 @@ class ModelHydro : public wxObject {
 
     void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    void BuildForcingConnections(ProcessSettings &processSettings, HydroUnit* unit, Process* process);
+    void BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process);
 
     void BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
 

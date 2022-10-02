@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_GENERIC_SURFACE_H
 #define HYDROBRICKS_GENERIC_SURFACE_H
 
-#include "SurfaceComponent.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class GenericSurface : public SurfaceComponent {
   public:
@@ -13,12 +13,11 @@ class GenericSurface : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings &brickSettings) override;
 
-    void ApplyConstraints(double timeStep, bool inSolver=true) override;
+    void ApplyConstraints(double timeStep, bool inSolver = true) override;
 
     void Finalize() override;
 
   protected:
-
   private:
 };
 

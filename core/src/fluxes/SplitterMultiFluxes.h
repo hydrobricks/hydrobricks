@@ -15,14 +15,13 @@ class SplitterMultiFluxes : public Splitter {
      */
     bool IsOk() override;
 
-    void AssignParameters(const SplitterSettings &splitterSettings) override;
+    void AssignParameters(const SplitterSettings& splitterSettings) override;
 
     double* GetValuePointer(const std::string& name) override;
 
     void Compute() override;
 
   protected:
-
   private:
 };
 

@@ -5,10 +5,9 @@
 #include "SplitterRain.h"
 #include "SplitterSnowRain.h"
 
-Splitter::Splitter()
-{}
+Splitter::Splitter() {}
 
-Splitter* Splitter::Factory(const SplitterSettings &splitterSettings) {
+Splitter *Splitter::Factory(const SplitterSettings &splitterSettings) {
     if (splitterSettings.type == "SnowRain") {
         auto splitter = new SplitterSnowRain();
         splitter->AssignParameters(splitterSettings);
@@ -24,8 +23,8 @@ Splitter* Splitter::Factory(const SplitterSettings &splitterSettings) {
     return nullptr;
 }
 
-float* Splitter::GetParameterValuePointer(const SplitterSettings &splitterSettings, const std::string &name) {
-    for (auto parameter: splitterSettings.parameters) {
+float *Splitter::GetParameterValuePointer(const SplitterSettings &splitterSettings, const std::string &name) {
+    for (auto parameter : splitterSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();

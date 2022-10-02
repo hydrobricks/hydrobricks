@@ -30,7 +30,6 @@ class TimeSeriesData : public wxObject {
   private:
 };
 
-
 class TimeSeriesDataRegular : public TimeSeriesData {
   public:
     TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit);
@@ -59,7 +58,6 @@ class TimeSeriesDataRegular : public TimeSeriesData {
 
   private:
 };
-
 
 class TimeSeriesDataIrregular : public TimeSeriesData {
   public:

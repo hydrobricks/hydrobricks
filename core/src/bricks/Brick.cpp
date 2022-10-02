@@ -9,10 +9,7 @@
 #include "Urban.h"
 #include "Vegetation.h"
 
-Brick::Brick()
-    : m_needsSolver(true),
-      m_container(nullptr)
-{
+Brick::Brick() : m_needsSolver(true), m_container(nullptr) {
     m_container = new WaterContainer(this);
 }
 
@@ -20,7 +17,7 @@ Brick::~Brick() {
     wxDELETE(m_container);
 }
 
-Brick* Brick::Factory(const BrickSettings &brickSettings) {
+Brick *Brick::Factory(const BrickSettings &brickSettings) {
     if (brickSettings.type == "Storage") {
         return new Storage();
     } else if (brickSettings.type == "Surface") {
@@ -58,13 +55,13 @@ void Brick::AssignParameters(const BrickSettings &brickSettings) {
     }
 }
 
-void Brick::AttachFluxIn(Flux* flux) {
+void Brick::AttachFluxIn(Flux *flux) {
     wxASSERT(flux);
     m_container->AttachFluxIn(flux);
 }
 
 bool Brick::HasParameter(const BrickSettings &brickSettings, const std::string &name) {
-    for (auto parameter: brickSettings.parameters) {
+    for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
         }
@@ -73,8 +70,8 @@ bool Brick::HasParameter(const BrickSettings &brickSettings, const std::string &
     return false;
 }
 
-float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const std::string &name) {
-    for (auto parameter: brickSettings.parameters) {
+float *Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const std::string &name) {
+    for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
@@ -85,7 +82,7 @@ float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
-Process* Brick::GetProcess(int index) {
+Process *Brick::GetProcess(int index) {
     wxASSERT(m_processes.size() > index);
     wxASSERT(m_processes[index]);
 
@@ -104,7 +101,7 @@ void Brick::ApplyConstraints(double timeStep, bool inSolver) {
     m_container->ApplyConstraints(timeStep, inSolver);
 }
 
-WaterContainer* Brick::GetWaterContainer() {
+WaterContainer *Brick::GetWaterContainer() {
     return m_container;
 }
 
@@ -114,7 +111,7 @@ vecDoublePt Brick::GetStateVariableChanges() {
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     vecDoublePt values;
-    for (auto const &process: m_processes) {
+    for (auto const &process : m_processes) {
         vecDoublePt processValues = process->GetStateVariables();
 
         if (processValues.empty()) {
@@ -131,14 +128,14 @@ vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
 int Brick::GetProcessesConnectionsNb() {
     int counter = 0;
 
-    for (auto const &process: m_processes) {
+    for (auto const &process : m_processes) {
         counter += process->GetConnectionsNb();
     }
 
     return counter;
 }
 
-double* Brick::GetBaseValuePointer(const std::string& name) {
+double *Brick::GetBaseValuePointer(const std::string &name) {
     if (name == "content" && m_container) {
         return m_container->GetContentPointer();
     }
@@ -146,6 +143,6 @@ double* Brick::GetBaseValuePointer(const std::string& name) {
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const std::string&) {
+double *Brick::GetValuePointer(const std::string &) {
     return nullptr;
 }

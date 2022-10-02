@@ -1,22 +1,19 @@
 #include "ModelHydro.h"
 
-#include "Includes.h"
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
 #include "FluxToBrick.h"
-#include "FluxToOutlet.h"
-#include "SurfaceComponent.h"
 #include "FluxToBrickInstantaneous.h"
+#include "FluxToOutlet.h"
+#include "Includes.h"
+#include "SurfaceComponent.h"
 
-ModelHydro::ModelHydro(SubBasin* subBasin)
-    : m_subBasin(subBasin)
-{
+ModelHydro::ModelHydro(SubBasin* subBasin) : m_subBasin(subBasin) {
     m_processor.SetModel(this);
 }
 
-ModelHydro::~ModelHydro() {
-}
+ModelHydro::~ModelHydro() {}
 
 bool ModelHydro::Initialize(SettingsModel& modelSettings) {
     try {
@@ -25,10 +22,8 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
         m_timer.Initialize(modelSettings.GetTimerSettings());
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
-        m_logger.InitContainer(m_timer.GetTimeStepsNb(),
-                               m_subBasin->GetHydroUnitsIds(),
-                               modelSettings.GetSubBasinLogLabels(),
-                               modelSettings.GetHydroUnitLogLabels());
+        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitsIds(),
+                               modelSettings.GetSubBasinLogLabels(), modelSettings.GetHydroUnitLogLabels());
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
         wxLogError(_("An exception occurred during model initialization: %s."), e.what());
@@ -147,7 +142,7 @@ void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUni
         BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
         if (!brickSettings.relatedSurfaceBricks.empty()) {
             auto brick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(iBrick));
-            for (const auto& relatedSurfaceBrick: brickSettings.relatedSurfaceBricks) {
+            for (const auto& relatedSurfaceBrick : brickSettings.relatedSurfaceBricks) {
                 auto relatedBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
                 brick->AddToRelatedBricks(relatedBrick);
             }
@@ -217,16 +212,14 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                 continue;
             }
 
-            for (const auto& output: processSettings.outputs)  {
+            for (const auto& output : processSettings.outputs) {
                 if (output.target == "outlet") {
-
                     // Water goes to the outlet
                     flux = new FluxToOutlet();
                     flux->SetType(output.fluxType);
                     m_subBasin->AttachOutletFlux(flux);
 
                 } else if (m_subBasin->HasBrick(output.target)) {
-
                     // Water goes to another brick
                     Brick* targetBrick = m_subBasin->GetBrick(output.target);
                     if (output.instantaneous) {
@@ -240,7 +233,6 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                     }
 
                 } else if (m_subBasin->HasSplitter(output.target)) {
-
                     // Water goes to a splitter
                     Splitter* targetSplitter = m_subBasin->GetSplitter(output.target);
                     flux = new FluxSimple();
@@ -249,7 +241,8 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                     targetSplitter->AttachFluxIn(flux);
 
                 } else {
-                    throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                    throw ConceptionIssue(
+                        wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
 
                 process->AttachFluxOut(flux);
@@ -275,9 +268,8 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                 continue;
             }
 
-            for (const auto& output: processSettings.outputs)  {
+            for (const auto& output : processSettings.outputs) {
                 if (output.target == "outlet") {
-
                     // Water goes to the outlet
                     flux = new FluxToOutlet();
                     flux->SetAsStatic();
@@ -356,7 +348,8 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     targetSplitter->AttachFluxIn(flux);
 
                 } else {
-                    throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                    throw ConceptionIssue(
+                        wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
 
                 process->AttachFluxOut(flux);
@@ -372,17 +365,15 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
 
         Splitter* splitter = m_subBasin->GetSplitter(iSplitter);
 
-        for (const auto& output: splitterSettings.outputs)  {
+        for (const auto& output : splitterSettings.outputs) {
             Flux* flux;
             if (output.target == "outlet") {
-
                 // Water goes to the outlet
                 flux = new FluxToOutlet();
                 flux->SetType(output.fluxType);
                 m_subBasin->AttachOutletFlux(flux);
 
             } else if (m_subBasin->HasBrick(output.target)) {
-
                 // Look for target brick
                 Brick* targetBrick = m_subBasin->GetBrick(output.target);
                 flux = new FluxToBrick(targetBrick);
@@ -391,7 +382,6 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
                 targetBrick->AttachFluxIn(flux);
 
             } else if (m_subBasin->HasSplitter(output.target)) {
-
                 // Look for target splitter
                 Splitter* targetSplitter = m_subBasin->GetSplitter(output.target);
                 flux = new FluxSimple();
@@ -400,7 +390,8 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                throw ConceptionIssue(
+                    wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 
             splitter->AttachFluxOut(flux);
@@ -415,10 +406,9 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
         Splitter* splitter = unit->GetSplitter(iSplitter);
 
-        for (const auto& output: splitterSettings.outputs)  {
+        for (const auto& output : splitterSettings.outputs) {
             Flux* flux;
             if (output.target == "outlet") {
-
                 // Water goes to the outlet
                 flux = new FluxToOutlet();
                 flux->SetType(output.fluxType);
@@ -447,7 +437,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetBrick->AttachFluxIn(flux);
@@ -471,13 +461,14 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea()); // From hydro unit to basin
+                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ConceptionIssue(wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                throw ConceptionIssue(
+                    wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 
             splitter->AttachFluxOut(flux);
@@ -499,7 +490,7 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
     }
 }
 
-void ModelHydro::BuildForcingConnections(ProcessSettings &processSettings, HydroUnit* unit, Process* process) {
+void ModelHydro::BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process) {
     for (auto forcingType : processSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
             auto newForcing = new Forcing(forcingType);
@@ -579,7 +570,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     }
 
     vecStr genericLogLabels = modelSettings.GetSubBasinGenericLogLabels();
-    for (auto & genericLogLabel : genericLogLabels) {
+    for (auto& genericLogLabel : genericLogLabels) {
         valPt = m_subBasin->GetValuePointer(genericLogLabel);
         if (valPt == nullptr) {
             throw ShouldNotHappen();
@@ -673,12 +664,12 @@ bool ModelHydro::Run() {
     return true;
 }
 
-bool ModelHydro::DumpOutputs(const std::string &path) {
+bool ModelHydro::DumpOutputs(const std::string& path) {
     return m_logger.DumpOutputs(path);
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
-    for (auto ts: m_timeSeries) {
+    for (auto ts : m_timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {
             wxLogError(_("The data variable is already linked to the model."));
             return false;
@@ -703,7 +694,7 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {
     wxASSERT(m_subBasin);
 
-    for (auto timeSeries: m_timeSeries) {
+    for (auto timeSeries : m_timeSeries) {
         VariableType type = timeSeries->GetVariableType();
 
         for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
@@ -719,7 +710,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 }
 
 bool ModelHydro::InitializeTimeSeries() {
-    for (auto timeSeries: m_timeSeries) {
+    for (auto timeSeries : m_timeSeries) {
         if (!timeSeries->SetCursorToDate(m_timer.GetDate())) {
             return false;
         }
@@ -729,7 +720,7 @@ bool ModelHydro::InitializeTimeSeries() {
 }
 
 bool ModelHydro::UpdateForcing() {
-    for (auto timeSeries: m_timeSeries) {
+    for (auto timeSeries : m_timeSeries) {
         if (!timeSeries->AdvanceOneTimeStep()) {
             return false;
         }

@@ -128,7 +128,7 @@ TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 31.0, 16.0};
 
-    for (auto & basinOutput : basinOutputs) {
+    for (auto& basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }
@@ -144,12 +144,12 @@ TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     vecDouble expectedTotGlacierContrib = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 35.0, 32.0};
 
     for (int j = 0; j < expectedSWE.size(); ++j) {
-        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001); // ground-snowpack-snow
-        EXPECT_NEAR(unitContent[1](j, 0), expectedNull[j], 0.000001); // ground-snowpack-content (water)
-        EXPECT_NEAR(unitContent[2](j, 0), expectedSnowMelt[j], 0.000001); // ground-snowmelt
-        EXPECT_NEAR(unitContent[3](j, 0), expectedSWE[j], 0.000001); // glacier-snowpack-snow
-        EXPECT_NEAR(unitContent[4](j, 0), expectedNull[j], 0.000001); // glacier-snowpack-content (water)
-        EXPECT_NEAR(unitContent[5](j, 0), expectedSnowMelt[j], 0.000001); // glacier-snowmelt
-        EXPECT_NEAR(unitContent[6](j, 0), expectedIceMelt[j], 0.000001); // glacier-icemelt
+        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);       // ground-snowpack-snow
+        EXPECT_NEAR(unitContent[1](j, 0), expectedNull[j], 0.000001);      // ground-snowpack-content (water)
+        EXPECT_NEAR(unitContent[2](j, 0), expectedSnowMelt[j], 0.000001);  // ground-snowmelt
+        EXPECT_NEAR(unitContent[3](j, 0), expectedSWE[j], 0.000001);       // glacier-snowpack-snow
+        EXPECT_NEAR(unitContent[4](j, 0), expectedNull[j], 0.000001);      // glacier-snowpack-content (water)
+        EXPECT_NEAR(unitContent[5](j, 0), expectedSnowMelt[j], 0.000001);  // glacier-snowmelt
+        EXPECT_NEAR(unitContent[6](j, 0), expectedIceMelt[j], 0.000001);   // glacier-icemelt
     }
 }

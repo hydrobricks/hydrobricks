@@ -1,8 +1,6 @@
 #include "GenericSurface.h"
 
-GenericSurface::GenericSurface()
-    : SurfaceComponent()
-{}
+GenericSurface::GenericSurface() : SurfaceComponent() {}
 
 void GenericSurface::AssignParameters(const BrickSettings &brickSettings) {
     Brick::AssignParameters(brickSettings);

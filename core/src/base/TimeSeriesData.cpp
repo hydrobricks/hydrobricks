@@ -4,9 +4,7 @@
  * TimeSeriesData
  */
 
-TimeSeriesData::TimeSeriesData()
-    : m_cursor(0)
-{}
+TimeSeriesData::TimeSeriesData() : m_cursor(0) {}
 
 bool TimeSeriesData::SetValues(const vecDouble &values) {
     m_values = values;
@@ -21,19 +19,16 @@ double TimeSeriesData::GetCurrentValue() {
     throw NotImplemented();
 }
 
-
 /*
  * TimeSeriesDataRegular
  */
 
-TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeStep,
-                                             TimeUnit timeStepUnit)
+TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit)
     : TimeSeriesData(),
       m_start(start),
       m_end(end),
       m_timeStep(timeStep),
-      m_timeStepUnit(timeStepUnit)
-{}
+      m_timeStepUnit(timeStepUnit) {}
 
 bool TimeSeriesDataRegular::SetValues(const vecDouble &values) {
     double calcEnd = IncrementDateBy(m_start, m_timeStep * int(values.size() - 1), m_timeStepUnit);
@@ -108,10 +103,7 @@ double TimeSeriesDataRegular::GetEnd() {
  * TimeSeriesDataIrregular
  */
 
-TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble &dates)
-    : TimeSeriesData(),
-      m_dates(dates)
-{}
+TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble &dates) : TimeSeriesData(), m_dates(dates) {}
 
 bool TimeSeriesDataIrregular::SetValues(const vecDouble &values) {
     if (m_dates.size() != values.size()) {
@@ -147,5 +139,5 @@ double TimeSeriesDataIrregular::GetStart() {
 
 double TimeSeriesDataIrregular::GetEnd() {
     wxASSERT(!m_dates.empty());
-    return m_dates[m_dates.size()-1];
+    return m_dates[m_dates.size() - 1];
 }

@@ -25,7 +25,6 @@ class ProcessET : public Process {
     }
 
   protected:
-
   private:
 };
 

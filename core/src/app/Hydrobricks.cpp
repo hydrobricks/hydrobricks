@@ -1,31 +1,29 @@
 #include "Hydrobricks.h"
 
+#include <wx/ffile.h>
 #include <wx/fileconf.h>
 #include <wx/filefn.h>
-#include <wx/stdpaths.h>
 #include <wx/log.h>
-#include <wx/ffile.h>
+#include <wx/stdpaths.h>
 
 #if _DEBUG
-    #include <wx/debug.h>
+#include <wx/debug.h>
 #endif
 
 #include "CmdLineDesc.h"
-#include "SettingsModel.h"
-#include "TimeSeries.h"
-#include "SettingsBasin.h"
-#include "SubBasin.h"
 #include "ModelHydro.h"
-
+#include "SettingsBasin.h"
+#include "SettingsModel.h"
+#include "SubBasin.h"
+#include "TimeSeries.h"
 
 wxIMPLEMENT_APP_CONSOLE(Hydrobricks);
 
-bool Hydrobricks::OnInit()
-{
+bool Hydrobricks::OnInit() {
 #if _DEBUG
-    #ifdef __WXMSW__
-        _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
-    #endif
+#ifdef __WXMSW__
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
 #endif
 
     // Set application name
@@ -35,10 +33,11 @@ bool Hydrobricks::OnInit()
     userDir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
 
     // Set config file
-	wxFileName filePath = wxFileConfig::GetLocalFile("hydrobricks", wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-	filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-	wxFileConfig *pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString, wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-	wxFileConfig::Set(pConfig);
+    wxFileName filePath = wxFileConfig::GetLocalFile("hydrobricks", wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
+    filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    wxFileConfig *pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString,
+                                             wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
+    wxFileConfig::Set(pConfig);
 
     // Call default behaviour
     if (!wxApp::OnInit()) {
@@ -49,8 +48,7 @@ bool Hydrobricks::OnInit()
     return true;
 }
 
-wxString Hydrobricks::GetUserDirPath()
-{
+wxString Hydrobricks::GetUserDirPath() {
     wxStandardPathsBase &stdPth = wxStandardPaths::Get();
     stdPth.UseAppInfo(0);
     wxString userDir = stdPth.GetUserDataDir();
@@ -61,8 +59,7 @@ wxString Hydrobricks::GetUserDirPath()
     return userDir;
 }
 
-void Hydrobricks::OnInitCmdLine(wxCmdLineParser &parser)
-{
+void Hydrobricks::OnInitCmdLine(wxCmdLineParser &parser) {
     wxAppConsole::OnInitCmdLine(parser);
 
     parser.SetDesc(cmdLineDesc);
@@ -72,8 +69,7 @@ void Hydrobricks::OnInitCmdLine(wxCmdLineParser &parser)
     parser.SetSwitchChars(wxT("-"));
 }
 
-bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser)
-{
+bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser) {
     // Add a new line
     wxPrintf("\n");
 
@@ -85,8 +81,9 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser)
 
     // Check if the user asked for the version
     if (parser.Found("version")) {
-        wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION);
-        wxPrintf("hydrobricks version %s, %s", version, (const wxChar *) wxString::FromAscii(__DATE__));
+        wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
+                                            HYDROBRICKS_PATCH_VERSION);
+        wxPrintf("hydrobricks version %s, %s", version, (const wxChar *)wxString::FromAscii(__DATE__));
         return false;
     }
 
@@ -147,8 +144,7 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser &parser)
     return wxAppConsole::OnCmdLineParsed(parser);
 }
 
-int Hydrobricks::OnRun()
-{
+int Hydrobricks::OnRun() {
     try {
         // Create the output path if needed
         if (!CheckOutputDirectory()) {
@@ -179,7 +175,7 @@ int Hydrobricks::OnRun()
         }
 
         // Data
-        std::vector<TimeSeries*> vecTimeSeries;
+        std::vector<TimeSeries *> vecTimeSeries;
         if (!TimeSeries::Parse(m_dataFile, vecTimeSeries)) {
             return 1;
         }
@@ -205,7 +201,7 @@ int Hydrobricks::OnRun()
         }
 
         // Add data
-        for (auto timeSeries: vecTimeSeries) {
+        for (auto timeSeries : vecTimeSeries) {
             if (!model.AddTimeSeries(timeSeries)) {
                 return 1;
             }
@@ -251,42 +247,37 @@ int Hydrobricks::OnRun()
     return wxApp::OnRun();
 }
 
-int Hydrobricks::OnExit()
-{
+int Hydrobricks::OnExit() {
     CleanUp();
 
-    #ifdef _DEBUG
-        #ifdef __WXMSW__
-            _CrtDumpMemoryLeaks();
-        #endif
-    #endif
+#ifdef _DEBUG
+#ifdef __WXMSW__
+    _CrtDumpMemoryLeaks();
+#endif
+#endif
 
     return 0;
 }
 
-void Hydrobricks::CleanUp()
-{
-	wxFileConfig::Get()->Flush();
-    delete wxFileConfig::Set((wxFileConfig *) nullptr);
+void Hydrobricks::CleanUp() {
+    wxFileConfig::Get()->Flush();
+    delete wxFileConfig::Set((wxFileConfig *)nullptr);
 
     wxApp::CleanUp();
 }
 
-bool Hydrobricks::OnExceptionInMainLoop()
-{
+bool Hydrobricks::OnExceptionInMainLoop() {
     wxLogError(_("An exception occurred."));
     CleanUp();
     return false;
 }
 
-void Hydrobricks::OnFatalException()
-{
+void Hydrobricks::OnFatalException() {
     wxLogError(_("A fatal exception occurred."));
     CleanUp();
 }
 
-void Hydrobricks::OnUnhandledException()
-{
+void Hydrobricks::OnUnhandledException() {
     wxLogError(_("An unhandled exception occurred."));
     CleanUp();
 }
@@ -299,10 +290,9 @@ void Hydrobricks::InitializeLog() {
     wxFFile *logFile = new wxFFile(fullPath, "w");
     auto *pLogFile = new wxLogStderr(logFile->fp());
     new wxLogChain(pLogFile);
-    wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION,
-                                        HYDROBRICKS_MINOR_VERSION,
-                                        HYDROBRICKS_PATCH_VERSION);
-    wxLogMessage("hydrobricks version %s, %s", version, (const wxChar *) wxString::FromAscii(__DATE__));
+    wxString version =
+        wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION);
+    wxLogMessage("hydrobricks version %s, %s", version, (const wxChar *)wxString::FromAscii(__DATE__));
 }
 
 bool Hydrobricks::CheckOutputDirectory() {
@@ -317,8 +307,7 @@ bool Hydrobricks::CheckOutputDirectory() {
     return true;
 }
 
-void Hydrobricks::DisplayProcessingTime(const wxStopWatch &sw)
-{
+void Hydrobricks::DisplayProcessingTime(const wxStopWatch &sw) {
     auto dispTime = float(sw.Time());
     wxString watchUnit = "ms";
     if (dispTime > 3600000) {

@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_SPLITTER_SNOW_RAIN_H
 #define HYDROBRICKS_SPLITTER_SNOW_RAIN_H
 
+#include "Forcing.h"
 #include "Includes.h"
 #include "Splitter.h"
-#include "Forcing.h"
 
 class SplitterSnowRain : public Splitter {
   public:
@@ -14,7 +14,7 @@ class SplitterSnowRain : public Splitter {
      */
     bool IsOk() override;
 
-    void AssignParameters(const SplitterSettings &splitterSettings) override;
+    void AssignParameters(const SplitterSettings& splitterSettings) override;
 
     void AttachForcing(Forcing* forcing) override;
 
@@ -26,7 +26,7 @@ class SplitterSnowRain : public Splitter {
     Forcing* m_precipitation;
     Forcing* m_temperature;
     float* m_transitionStart;  // [°C]
-    float* m_transitionEnd;  // [°C]
+    float* m_transitionEnd;    // [°C]
 
   private:
 };

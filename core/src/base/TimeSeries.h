@@ -10,7 +10,7 @@ class TimeSeries : public wxObject {
 
     ~TimeSeries() override = default;
 
-    static bool Parse(const std::string &path, std::vector<TimeSeries*> &vecTimeSeries);
+    static bool Parse(const std::string &path, std::vector<TimeSeries *> &vecTimeSeries);
 
     virtual bool SetCursorToDate(double date) = 0;
 
@@ -22,7 +22,7 @@ class TimeSeries : public wxObject {
 
     virtual double GetEnd() = 0;
 
-    virtual TimeSeriesData* GetDataPointer(int unitId) = 0;
+    virtual TimeSeriesData *GetDataPointer(int unitId) = 0;
 
     VariableType GetVariableType() {
         return m_type;

@@ -1,7 +1,6 @@
 #include "FileNetcdf.h"
 
-FileNetcdf::FileNetcdf()
-    : m_ncId(-1) {}
+FileNetcdf::FileNetcdf() : m_ncId(-1) {}
 
 FileNetcdf::~FileNetcdf() {
     if (m_ncId >= 0) {

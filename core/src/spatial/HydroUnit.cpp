@@ -1,13 +1,9 @@
 #include "HydroUnit.h"
 
-HydroUnit::HydroUnit(double area, Types type)
-    : m_type(type),
-      m_id(UNDEFINED),
-      m_area(area)
-{}
+HydroUnit::HydroUnit(double area, Types type) : m_type(type), m_id(UNDEFINED), m_area(area) {}
 
 HydroUnit::~HydroUnit() {
-    for (auto forcing: m_forcing) {
+    for (auto forcing : m_forcing) {
         wxDELETE(forcing);
     }
 }
@@ -28,7 +24,7 @@ void HydroUnit::AddSplitter(Splitter* splitter) {
 }
 
 bool HydroUnit::HasForcing(VariableType type) {
-    for (auto forcing: m_forcing) {
+    for (auto forcing : m_forcing) {
         if (forcing->GetType() == type) {
             return true;
         }
@@ -43,7 +39,7 @@ void HydroUnit::AddForcing(Forcing* forcing) {
 }
 
 Forcing* HydroUnit::GetForcing(VariableType type) {
-    for (auto forcing: m_forcing) {
+    for (auto forcing : m_forcing) {
         if (forcing->GetType() == type) {
             return forcing;
         }
@@ -67,8 +63,8 @@ Brick* HydroUnit::GetBrick(int index) {
     return m_bricks[index];
 }
 
-bool HydroUnit::HasBrick(const std::string &name) {
-    for (auto brick: m_bricks) {
+bool HydroUnit::HasBrick(const std::string& name) {
+    for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return true;
         }
@@ -76,8 +72,8 @@ bool HydroUnit::HasBrick(const std::string &name) {
     return false;
 }
 
-Brick* HydroUnit::GetBrick(const std::string &name) {
-    for (auto brick: m_bricks) {
+Brick* HydroUnit::GetBrick(const std::string& name) {
+    for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return brick;
         }
@@ -93,8 +89,8 @@ Splitter* HydroUnit::GetSplitter(int index) {
     return m_splitters[index];
 }
 
-bool HydroUnit::HasSplitter(const std::string &name) {
-    for (auto splitter: m_splitters) {
+bool HydroUnit::HasSplitter(const std::string& name) {
+    for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return true;
         }
@@ -102,8 +98,8 @@ bool HydroUnit::HasSplitter(const std::string &name) {
     return false;
 }
 
-Splitter* HydroUnit::GetSplitter(const std::string &name) {
-    for (auto splitter: m_splitters) {
+Splitter* HydroUnit::GetSplitter(const std::string& name) {
+    for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return splitter;
         }

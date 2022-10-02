@@ -1,11 +1,9 @@
 #include "TimeSeriesDistributed.h"
 
-TimeSeriesDistributed::TimeSeriesDistributed(VariableType type)
-    : TimeSeries(type)
-{}
+TimeSeriesDistributed::TimeSeriesDistributed(VariableType type) : TimeSeries(type) {}
 
 TimeSeriesDistributed::~TimeSeriesDistributed() {
-    for (auto data: m_data) {
+    for (auto data : m_data) {
         wxDELETE(data);
     }
 }
@@ -17,7 +15,7 @@ void TimeSeriesDistributed::AddData(TimeSeriesData* data, int unitId) {
 }
 
 bool TimeSeriesDistributed::SetCursorToDate(double date) {
-    for (auto data: m_data) {
+    for (auto data : m_data) {
         if (!data->SetCursorToDate(date)) {
             return false;
         }
@@ -27,7 +25,7 @@ bool TimeSeriesDistributed::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesDistributed::AdvanceOneTimeStep() {
-    for (auto data: m_data) {
+    for (auto data : m_data) {
         if (!data->AdvanceOneTimeStep()) {
             return false;
         }

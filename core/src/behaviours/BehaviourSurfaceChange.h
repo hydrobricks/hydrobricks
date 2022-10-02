@@ -12,7 +12,7 @@ class BehaviourSurfaceChange : public Behaviour {
 
     void AddChange(double date, int hydroUnitId, int surfaceTypeId, double area);
 
-    bool Parse(const wxString &path);
+    bool Parse(const std::string &path);
 
   protected:
     vecDouble m_dates;

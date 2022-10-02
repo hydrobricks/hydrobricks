@@ -19,7 +19,7 @@ void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
-void SettingsBasin::AddHydroUnitSurfaceElement(const wxString& name, double fraction) {
+void SettingsBasin::AddHydroUnitSurfaceElement(const std::string& name, double fraction) {
     wxASSERT(m_selectedHydroUnit);
     SurfaceElementSettings element;
     element.name = name;
@@ -32,7 +32,7 @@ void SettingsBasin::SelectUnit(int index) {
     m_selectedHydroUnit = &m_hydroUnits[index];
 }
 
-bool SettingsBasin::Parse(const wxString &path) {
+bool SettingsBasin::Parse(const std::string &path) {
 
     try {
         FileNetcdf file;
@@ -70,7 +70,7 @@ bool SettingsBasin::Parse(const wxString &path) {
             vecFloat fractions = file.GetVarFloat1D(surface, unitsNb);
 
             // Get the surface type
-            wxString type = file.GetAttText("type", surface);
+            std::string type = file.GetAttText("type", surface);
 
             for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
                 SurfaceElementSettings element;

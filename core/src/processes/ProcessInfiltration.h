@@ -22,7 +22,7 @@ class ProcessInfiltration : public Process {
 
     int GetConnectionsNb() override;
 
-    double* GetValuePointer(const wxString& name) override;
+    double* GetValuePointer(const std::string& name) override;
 
     void SetTargetBrick(Brick* targetBrick) override {
         m_targetBrick = targetBrick;

@@ -18,7 +18,7 @@ class ProcessET : public Process {
 
     int GetConnectionsNb() override;
 
-    double* GetValuePointer(const wxString& name) override;
+    double* GetValuePointer(const std::string& name) override;
 
     bool ToAtmosphere() override {
         return true;

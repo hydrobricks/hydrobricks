@@ -129,18 +129,18 @@ Brick* SubBasin::GetBrick(int index) {
     return m_bricks[index];
 }
 
-bool SubBasin::HasBrick(const wxString &name) {
+bool SubBasin::HasBrick(const std::string &name) {
     for (auto brick: m_bricks) {
-        if (brick->GetName().IsSameAs(name, false)) {
+        if (brick->GetName() == name) {
             return true;
         }
     }
     return false;
 }
 
-Brick* SubBasin::GetBrick(const wxString &name) {
+Brick* SubBasin::GetBrick(const std::string &name) {
     for (auto brick: m_bricks) {
-        if (brick->GetName().IsSameAs(name, false)) {
+        if (brick->GetName() == name) {
             return brick;
         }
     }
@@ -155,18 +155,18 @@ Splitter* SubBasin::GetSplitter(int index) {
     return m_splitters[index];
 }
 
-bool SubBasin::HasSplitter(const wxString &name) {
+bool SubBasin::HasSplitter(const std::string &name) {
     for (auto splitter: m_splitters) {
-        if (splitter->GetName().IsSameAs(name, false)) {
+        if (splitter->GetName() == name) {
             return true;
         }
     }
     return false;
 }
 
-Splitter* SubBasin::GetSplitter(const wxString &name) {
+Splitter* SubBasin::GetSplitter(const std::string &name) {
     for (auto splitter: m_splitters) {
-        if (splitter->GetName().IsSameAs(name, false)) {
+        if (splitter->GetName() == name) {
             return splitter;
         }
     }
@@ -198,8 +198,8 @@ void SubBasin::AttachOutletFlux(Flux* flux) {
     m_outletFluxes.push_back(flux);
 }
 
-double* SubBasin::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("outlet")) {
+double* SubBasin::GetValuePointer(const std::string& name) {
+    if (name == "outlet") {
         return &m_outletTotal;
     }
     wxLogError(_("Element '%s' not found"), name);

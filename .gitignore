@@ -43,8 +43,18 @@ python/dist/
 python/src/hydrobricks.egg-info/
 core/docs/html/
 core/docs/latex/
+build/lib.*
+build/temp.*
+build/bdist.*
+wheelhouse/
 
 # Others
 *~$*
 **/__pycache__/*
 **.egg-info/
+conan.lock
+conanbuildinfo.cmake
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
+

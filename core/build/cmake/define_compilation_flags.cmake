@@ -30,7 +30,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    add_definitions(-D_CRTDBG_MAP_ALLOC)
 endif (WIN32)
 
 if (USE_VLD)

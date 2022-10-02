@@ -28,10 +28,10 @@ void SplitterSnowRain::AttachForcing(Forcing* forcing) {
     }
 }
 
-double* SplitterSnowRain::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("rain")) {
+double* SplitterSnowRain::GetValuePointer(const std::string& name) {
+    if (name == "rain") {
         return m_outputs[0]->GetAmountPointer();
-    } else if (name.IsSameAs("snow")) {
+    } else if (name == "snow") {
         return m_outputs[1]->GetAmountPointer();
     }
 

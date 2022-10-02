@@ -50,6 +50,10 @@ else()
     set_target_properties(hydrobricks-tests PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
 endif()
 
+if (WIN32)
+    add_definitions(-D_CRTDBG_MAP_ALLOC)
+endif (WIN32)
+
 
 ##### LINKING
 

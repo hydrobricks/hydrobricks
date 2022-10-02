@@ -12,6 +12,17 @@ bool IsNaN(const double value) {
     return value != value;
 }
 
+const char *GetPathSeparator() {
+    return wxString(wxFileName::GetPathSeparator()).c_str();
+}
+
+bool StringsMatch(const std::string &str1, const std::string &str2) {
+    return ((str1.size() == str2.size()) &&
+            std::equal(str1.begin(), str1.end(), str2.begin(), [](const char &c1, const char &c2) {
+                return (c1 == c2 || std::toupper(c1) == std::toupper(c2));
+            }));
+}
+
 int Find(const int *start, const int *end, int value, int tolerance, bool showWarning) {
     return FindT<int>(start, end, value, tolerance, showWarning);
 }
@@ -225,7 +236,7 @@ Time GetTimeStructFromMJD(double mjd) {
     return date;
 }
 
-double ParseDate(const wxString &dateStr, TimeFormat format) {
+double ParseDate(const std::string &dateStr, TimeFormat format) {
     long day = 0;
     long month = 0;
     long year = 0;
@@ -233,13 +244,15 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
     long min = 0;
     long sec = 0;
 
+    wxString date = wxString(dateStr);
+
     switch (format) {
         case (ISOdate):
 
-            if (dateStr.Len() == 10) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day)) {
+            if (date.Len() == 10) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(5, 2).ToLong(&month) &&
+                    date.Mid(8, 2).ToLong(&day)) {
                     return GetMJD(year, month, day);
                 }
             }
@@ -247,13 +260,13 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (ISOdateTime):
 
-            if (dateStr.Len() == 19) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day) &&
-                    dateStr.Mid(11, 2).ToLong(&hour) &&
-                    dateStr.Mid(14, 2).ToLong(&min) &&
-                    dateStr.Mid(17, 2).ToLong(&sec)) {
+            if (date.Len() == 19) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(5, 2).ToLong(&month) &&
+                    date.Mid(8, 2).ToLong(&day) &&
+                    date.Mid(11, 2).ToLong(&hour) &&
+                    date.Mid(14, 2).ToLong(&min) &&
+                    date.Mid(17, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
             }
@@ -261,17 +274,17 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (DD_MM_YYYY):
 
-            if (dateStr.Len() == 10) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(3, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 4).ToLong(&year)) {
+            if (date.Len() == 10) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(3, 2).ToLong(&month) &&
+                    date.Mid(6, 4).ToLong(&year)) {
                     return GetMJD(year, month, day);
 
                 }
-            } else if (dateStr.Len() == 8) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(2, 2).ToLong(&month) &&
-                    dateStr.Mid(4, 4).ToLong(&year)) {
+            } else if (date.Len() == 8) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(2, 2).ToLong(&month) &&
+                    date.Mid(4, 4).ToLong(&year)) {
                     return GetMJD(year, month, day);
                 }
             }
@@ -279,16 +292,16 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (YYYY_MM_DD):
 
-            if (dateStr.Len() == 10) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day)) {
+            if (date.Len() == 10) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(5, 2).ToLong(&month) &&
+                    date.Mid(8, 2).ToLong(&day)) {
                     return GetMJD(year, month, day);
                 }
-            } else if (dateStr.Len() == 8) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(4, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 2).ToLong(&day)) {
+            } else if (date.Len() == 8) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(4, 2).ToLong(&month) &&
+                    date.Mid(6, 2).ToLong(&day)) {
                     return GetMJD(year, month, day);
                 }
             }
@@ -296,20 +309,20 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (DD_MM_YYYY_hh_mm):
 
-            if (dateStr.Len() == 16) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(3, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 4).ToLong(&year) &&
-                    dateStr.Mid(11, 2).ToLong(&hour) &&
-                    dateStr.Mid(14, 2).ToLong(&min)) {
+            if (date.Len() == 16) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(3, 2).ToLong(&month) &&
+                    date.Mid(6, 4).ToLong(&year) &&
+                    date.Mid(11, 2).ToLong(&hour) &&
+                    date.Mid(14, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
-            } else if (dateStr.Len() == 13) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(2, 2).ToLong(&month) &&
-                    dateStr.Mid(4, 4).ToLong(&year) &&
-                    dateStr.Mid(9, 2).ToLong(&hour) &&
-                    dateStr.Mid(11, 2).ToLong(&min)) {
+            } else if (date.Len() == 13) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(2, 2).ToLong(&month) &&
+                    date.Mid(4, 4).ToLong(&year) &&
+                    date.Mid(9, 2).ToLong(&hour) &&
+                    date.Mid(11, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
             }
@@ -317,20 +330,20 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (YYYY_MM_DD_hh_mm):
 
-            if (dateStr.Len() == 16) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day) &&
-                    dateStr.Mid(11, 2).ToLong(&hour) &&
-                    dateStr.Mid(14, 2).ToLong(&min)) {
+            if (date.Len() == 16) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(5, 2).ToLong(&month) &&
+                    date.Mid(8, 2).ToLong(&day) &&
+                    date.Mid(11, 2).ToLong(&hour) &&
+                    date.Mid(14, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
-            } else if (dateStr.Len() == 13) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(4, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 2).ToLong(&day) &&
-                    dateStr.Mid(9, 2).ToLong(&hour) &&
-                    dateStr.Mid(11, 2).ToLong(&min)) {
+            } else if (date.Len() == 13) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(4, 2).ToLong(&month) &&
+                    date.Mid(6, 2).ToLong(&day) &&
+                    date.Mid(9, 2).ToLong(&hour) &&
+                    date.Mid(11, 2).ToLong(&min)) {
                     return GetMJD(year, month, day, hour, min);
                 }
             }
@@ -338,22 +351,22 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (DD_MM_YYYY_hh_mm_ss):
 
-            if (dateStr.Len() == 19) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(3, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 4).ToLong(&year) &&
-                    dateStr.Mid(11, 2).ToLong(&hour) &&
-                    dateStr.Mid(14, 2).ToLong(&min) &&
-                    dateStr.Mid(17, 2).ToLong(&sec)) {
+            if (date.Len() == 19) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(3, 2).ToLong(&month) &&
+                    date.Mid(6, 4).ToLong(&year) &&
+                    date.Mid(11, 2).ToLong(&hour) &&
+                    date.Mid(14, 2).ToLong(&min) &&
+                    date.Mid(17, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
-            } else if (dateStr.Len() == 15) {
-                if (dateStr.Mid(0, 2).ToLong(&day) &&
-                    dateStr.Mid(2, 2).ToLong(&month) &&
-                    dateStr.Mid(4, 4).ToLong(&year) &&
-                    dateStr.Mid(9, 2).ToLong(&hour) &&
-                    dateStr.Mid(11, 2).ToLong(&min) &&
-                    dateStr.Mid(13, 2).ToLong(&sec)) {
+            } else if (date.Len() == 15) {
+                if (date.Mid(0, 2).ToLong(&day) &&
+                    date.Mid(2, 2).ToLong(&month) &&
+                    date.Mid(4, 4).ToLong(&year) &&
+                    date.Mid(9, 2).ToLong(&hour) &&
+                    date.Mid(11, 2).ToLong(&min) &&
+                    date.Mid(13, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
             }
@@ -361,22 +374,22 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (YYYY_MM_DD_hh_mm_ss):
 
-            if (dateStr.Len() == 19) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(5, 2).ToLong(&month) &&
-                    dateStr.Mid(8, 2).ToLong(&day) &&
-                    dateStr.Mid(11, 2).ToLong(&hour) &&
-                    dateStr.Mid(14, 2).ToLong(&min) &&
-                    dateStr.Mid(17, 2).ToLong(&sec)) {
+            if (date.Len() == 19) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(5, 2).ToLong(&month) &&
+                    date.Mid(8, 2).ToLong(&day) &&
+                    date.Mid(11, 2).ToLong(&hour) &&
+                    date.Mid(14, 2).ToLong(&min) &&
+                    date.Mid(17, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
-            } else if (dateStr.Len() == 15) {
-                if (dateStr.Mid(0, 4).ToLong(&year) &&
-                    dateStr.Mid(4, 2).ToLong(&month) &&
-                    dateStr.Mid(6, 2).ToLong(&day) &&
-                    dateStr.Mid(9, 2).ToLong(&hour) &&
-                    dateStr.Mid(11, 2).ToLong(&min) &&
-                    dateStr.Mid(13, 2).ToLong(&sec)) {
+            } else if (date.Len() == 15) {
+                if (date.Mid(0, 4).ToLong(&year) &&
+                    date.Mid(4, 2).ToLong(&month) &&
+                    date.Mid(6, 2).ToLong(&day) &&
+                    date.Mid(9, 2).ToLong(&hour) &&
+                    date.Mid(11, 2).ToLong(&min) &&
+                    date.Mid(13, 2).ToLong(&sec)) {
                     return GetMJD(year, month, day, hour, min, sec);
                 }
             }
@@ -384,55 +397,55 @@ double ParseDate(const wxString &dateStr, TimeFormat format) {
 
         case (guess):
 
-            if (dateStr.Len() == 10) {
-                if (dateStr.Mid(0, 4).ToLong(&year)) {
-                    if (dateStr.Mid(0, 4).ToLong(&year) &&
-                        dateStr.Mid(5, 2).ToLong(&month) &&
-                        dateStr.Mid(8, 2).ToLong(&day)) {
+            if (date.Len() == 10) {
+                if (date.Mid(0, 4).ToLong(&year)) {
+                    if (date.Mid(0, 4).ToLong(&year) &&
+                        date.Mid(5, 2).ToLong(&month) &&
+                        date.Mid(8, 2).ToLong(&day)) {
                         return GetMJD(year, month, day);
                     }
-                } else if (dateStr.Mid(0, 2).ToLong(&day)) {
-                    if (dateStr.Mid(0, 2).ToLong(&day) &&
-                        dateStr.Mid(3, 2).ToLong(&month) &&
-                        dateStr.Mid(6, 4).ToLong(&year)) {
+                } else if (date.Mid(0, 2).ToLong(&day)) {
+                    if (date.Mid(0, 2).ToLong(&day) &&
+                        date.Mid(3, 2).ToLong(&month) &&
+                        date.Mid(6, 4).ToLong(&year)) {
                         return GetMJD(year, month, day);
                     }
                 }
-            } else if (dateStr.Len() == 16) {
-                if (dateStr.Mid(0, 4).ToLong(&year)) {
-                    if (dateStr.Mid(0, 4).ToLong(&year) &&
-                        dateStr.Mid(5, 2).ToLong(&month) &&
-                        dateStr.Mid(8, 2).ToLong(&day) &&
-                        dateStr.Mid(11, 2).ToLong(&hour) &&
-                        dateStr.Mid(14, 2).ToLong(&min)) {
+            } else if (date.Len() == 16) {
+                if (date.Mid(0, 4).ToLong(&year)) {
+                    if (date.Mid(0, 4).ToLong(&year) &&
+                        date.Mid(5, 2).ToLong(&month) &&
+                        date.Mid(8, 2).ToLong(&day) &&
+                        date.Mid(11, 2).ToLong(&hour) &&
+                        date.Mid(14, 2).ToLong(&min)) {
                         return GetMJD(year, month, day, hour, min);
                     }
-                } else if (dateStr.Mid(0, 2).ToLong(&day)) {
-                    if (dateStr.Mid(0, 2).ToLong(&day) &&
-                        dateStr.Mid(3, 2).ToLong(&month) &&
-                        dateStr.Mid(6, 4).ToLong(&year) &&
-                        dateStr.Mid(11, 2).ToLong(&hour) &&
-                        dateStr.Mid(14, 2).ToLong(&min)) {
+                } else if (date.Mid(0, 2).ToLong(&day)) {
+                    if (date.Mid(0, 2).ToLong(&day) &&
+                        date.Mid(3, 2).ToLong(&month) &&
+                        date.Mid(6, 4).ToLong(&year) &&
+                        date.Mid(11, 2).ToLong(&hour) &&
+                        date.Mid(14, 2).ToLong(&min)) {
                         return GetMJD(year, month, day, hour, min);
                     }
                 }
-            } else if (dateStr.Len() == 19) {
-                if (dateStr.Mid(0, 4).ToLong(&year)) {
-                    if (dateStr.Mid(0, 4).ToLong(&year) &&
-                        dateStr.Mid(5, 2).ToLong(&month) &&
-                        dateStr.Mid(8, 2).ToLong(&day) &&
-                        dateStr.Mid(11, 2).ToLong(&hour) &&
-                        dateStr.Mid(14, 2).ToLong(&min) &&
-                        dateStr.Mid(17, 2).ToLong(&sec)) {
+            } else if (date.Len() == 19) {
+                if (date.Mid(0, 4).ToLong(&year)) {
+                    if (date.Mid(0, 4).ToLong(&year) &&
+                        date.Mid(5, 2).ToLong(&month) &&
+                        date.Mid(8, 2).ToLong(&day) &&
+                        date.Mid(11, 2).ToLong(&hour) &&
+                        date.Mid(14, 2).ToLong(&min) &&
+                        date.Mid(17, 2).ToLong(&sec)) {
                         return GetMJD(year, month, day, hour, min, sec);
                     }
-                } else if (dateStr.Mid(0, 2).ToLong(&day)) {
-                    if (dateStr.Mid(0, 2).ToLong(&day) &&
-                        dateStr.Mid(3, 2).ToLong(&month) &&
-                        dateStr.Mid(6, 4).ToLong(&year) &&
-                        dateStr.Mid(11, 2).ToLong(&hour) &&
-                        dateStr.Mid(14, 2).ToLong(&min) &&
-                        dateStr.Mid(17, 2).ToLong(&sec)) {
+                } else if (date.Mid(0, 2).ToLong(&day)) {
+                    if (date.Mid(0, 2).ToLong(&day) &&
+                        date.Mid(3, 2).ToLong(&month) &&
+                        date.Mid(6, 4).ToLong(&year) &&
+                        date.Mid(11, 2).ToLong(&hour) &&
+                        date.Mid(14, 2).ToLong(&min) &&
+                        date.Mid(17, 2).ToLong(&sec)) {
                         return GetMJD(year, month, day, hour, min, sec);
                     }
                 }

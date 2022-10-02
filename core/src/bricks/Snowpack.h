@@ -29,7 +29,7 @@ class Snowpack : public SurfaceComponent {
 
     vecDoublePt GetStateVariableChanges() override;
 
-    double* GetValuePointer(const wxString& name) override;
+    double* GetValuePointer(const std::string& name) override;
 
     bool HasSnow();
 

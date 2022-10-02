@@ -5,7 +5,7 @@
 
 class ParameterVariable : public Parameter {
   public:
-    explicit ParameterVariable(const wxString &name, float value = NAN_F);
+    explicit ParameterVariable(const std::string &name);
 
     ~ParameterVariable() override = default;
 
@@ -17,7 +17,7 @@ class ParameterVariable : public Parameter {
 
 class ParameterVariableYearly : public ParameterVariable {
   public:
-    explicit ParameterVariableYearly(const wxString &name, float value = NAN_F);
+    explicit ParameterVariableYearly(const std::string &name);
 
     ~ParameterVariableYearly() override = default;
 
@@ -33,7 +33,7 @@ class ParameterVariableYearly : public ParameterVariable {
 
 class ParameterVariableMonthly : public ParameterVariable {
   public:
-    explicit ParameterVariableMonthly(const wxString &name, float value = NAN_F);
+    explicit ParameterVariableMonthly(const std::string &name);
 
     ~ParameterVariableMonthly() override = default;
 
@@ -47,7 +47,7 @@ class ParameterVariableMonthly : public ParameterVariable {
 
 class ParameterVariableDates : public ParameterVariable {
   public:
-    explicit ParameterVariableDates(const wxString &name, float value = NAN_F);
+    explicit ParameterVariableDates(const std::string &name);
 
     ~ParameterVariableDates() override = default;
 

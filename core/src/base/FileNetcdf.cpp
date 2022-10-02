@@ -15,24 +15,24 @@ void FileNetcdf::CheckNcStatus(int status) {
     }
 }
 
-bool FileNetcdf::OpenReadOnly(const wxString &path) {
+bool FileNetcdf::OpenReadOnly(const std::string &path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
     }
 
-    CheckNcStatus(nc_open(path, NC_NOWRITE, &m_ncId));
+    CheckNcStatus(nc_open(path.c_str(), NC_NOWRITE, &m_ncId));
 
     return true;
 }
 
-bool FileNetcdf::Create(const wxString &path) {
+bool FileNetcdf::Create(const std::string &path) {
     if (!wxFileName(path).DirExists()) {
         wxLogError(_("The directory %s could not be found."), wxFileName(path).GetPath());
         return false;
     }
 
-    CheckNcStatus(nc_create(path, NC_NETCDF4 | NC_CLOBBER, &m_ncId));
+    CheckNcStatus(nc_create(path.c_str(), NC_NETCDF4 | NC_CLOBBER, &m_ncId));
 
     return true;
 }
@@ -49,14 +49,14 @@ int FileNetcdf::GetVarsNb() {
     return varsNb;
 }
 
-int FileNetcdf::GetVarId(const wxString &varName) {
+int FileNetcdf::GetVarId(const std::string &varName) {
     int varId;
-    CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
 
     return varId;
 }
 
-wxString FileNetcdf::GetVarName(int varId) {
+std::string FileNetcdf::GetVarName(int varId) {
     char varNameChar[NC_MAX_NAME + 1];
     CheckNcStatus(nc_inq_varname(m_ncId, varId, varNameChar));
 
@@ -70,32 +70,32 @@ vecInt FileNetcdf::GetVarDimIds(int varId, int dimNb) {
     return dimIds;
 }
 
-int FileNetcdf::DefDim(const wxString &dimName, int length) {
+int FileNetcdf::DefDim(const std::string &dimName, int length) {
     int dimId;
-    CheckNcStatus(nc_def_dim(m_ncId, dimName.mb_str(), length, &dimId));
+    CheckNcStatus(nc_def_dim(m_ncId, dimName.c_str(), length, &dimId));
 
     return dimId;
 }
 
-int FileNetcdf::GetDimId(const wxString &dimName) {
+int FileNetcdf::GetDimId(const std::string &dimName) {
     int dimId;
-    CheckNcStatus(nc_inq_dimid(m_ncId, dimName.mb_str(), &dimId));
+    CheckNcStatus(nc_inq_dimid(m_ncId, dimName.c_str(), &dimId));
 
     return dimId;
 }
 
-int FileNetcdf::GetDimLen(const wxString &dimName) {
+int FileNetcdf::GetDimLen(const std::string &dimName) {
     int dimId;
     size_t dimLen;
-    CheckNcStatus(nc_inq_dimid(m_ncId, dimName.mb_str(), &dimId));
+    CheckNcStatus(nc_inq_dimid(m_ncId, dimName.c_str(), &dimId));
     CheckNcStatus(nc_inq_dimlen(m_ncId, dimId, &dimLen));
 
     return dimLen;
 }
 
-int FileNetcdf::DefVarInt(const wxString &varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarInt(const std::string &varName, vecInt dimIds, int dimsNb, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(m_ncId, varName, NC_INT, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(m_ncId, varName.c_str(), NC_INT, dimsNb, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(m_ncId, varId, NC_SHUFFLE, true, 7));
@@ -104,9 +104,9 @@ int FileNetcdf::DefVarInt(const wxString &varName, vecInt dimIds, int dimsNb, bo
     return varId;
 }
 
-int FileNetcdf::DefVarFloat(const wxString &varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarFloat(const std::string &varName, vecInt dimIds, int dimsNb, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(m_ncId, varName, NC_FLOAT, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(m_ncId, varName.c_str(), NC_FLOAT, dimsNb, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(m_ncId, varId, NC_SHUFFLE, true, 7));
@@ -115,9 +115,9 @@ int FileNetcdf::DefVarFloat(const wxString &varName, vecInt dimIds, int dimsNb, 
     return varId;
 }
 
-int FileNetcdf::DefVarDouble(const wxString &varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarDouble(const std::string &varName, vecInt dimIds, int dimsNb, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(m_ncId, varName, NC_DOUBLE, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(m_ncId, varName.c_str(), NC_DOUBLE, dimsNb, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(m_ncId, varId, NC_SHUFFLE, true, 7));
@@ -125,31 +125,31 @@ int FileNetcdf::DefVarDouble(const wxString &varName, vecInt dimIds, int dimsNb,
 
     return varId;
 }
-vecInt FileNetcdf::GetVarInt1D(const wxString &varName, int size) {
+vecInt FileNetcdf::GetVarInt1D(const std::string &varName, int size) {
     int varId;
     vecInt items(size);
 
-    CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
     CheckNcStatus(nc_get_var_int(m_ncId, varId, &items[0]));
 
     return items;
 }
 
-vecFloat FileNetcdf::GetVarFloat1D(const wxString &varName, int size) {
+vecFloat FileNetcdf::GetVarFloat1D(const std::string &varName, int size) {
     int varId;
     vecFloat items(size);
 
-    CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
     CheckNcStatus(nc_get_var_float(m_ncId, varId, &items[0]));
 
     return items;
 }
 
-vecDouble FileNetcdf::GetVarDouble1D(const wxString &varName, int size) {
+vecDouble FileNetcdf::GetVarDouble1D(const std::string &varName, int size) {
     int varId;
     vecDouble items(size);
 
-    CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
     CheckNcStatus(nc_get_var_double(m_ncId, varId, &items[0]));
 
     return items;
@@ -194,22 +194,22 @@ void FileNetcdf::PutVar(int varId, const vecAxxd &values) {
     }
 }
 
-vecStr FileNetcdf::GetAttString1D(const wxString &attName, const wxString &varName) {
+vecStr FileNetcdf::GetAttString1D(const std::string &attName, const std::string &varName) {
     int varId = NC_GLOBAL;
-    if (!varName.IsEmpty()) {
-        CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    if (!varName.empty()) {
+        CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
     }
 
     size_t itemsNb;
-    CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.mb_str(), &itemsNb));
+    CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.c_str(), &itemsNb));
 
     char **stringAtt = (char **)malloc(itemsNb * sizeof(char *));
     memset(stringAtt, 0, itemsNb * sizeof(char *));
-    CheckNcStatus(nc_get_att_string(m_ncId, varId, attName.mb_str(), stringAtt));
+    CheckNcStatus(nc_get_att_string(m_ncId, varId, attName.c_str(), stringAtt));
 
     vecStr items;
     for (int i = 0; i < itemsNb; ++i) {
-        wxString attValue = wxString(stringAtt[i], wxConvUTF8);
+        std::string attValue = std::string(stringAtt[i]);
         items.push_back(attValue);
     }
     nc_free_string(itemsNb, stringAtt);
@@ -217,34 +217,34 @@ vecStr FileNetcdf::GetAttString1D(const wxString &attName, const wxString &varNa
     return items;
 }
 
-void FileNetcdf::PutAttString(const wxString &attName, const vecStr &values, int varId) {
+void FileNetcdf::PutAttString(const std::string &attName, const vecStr &values, int varId) {
     std::vector<const char *> valuesChar;
     for (const auto &label : values) {
-        const char *str = (const char *)label.mb_str(wxConvUTF8);
+        const char *str = (const char *)label.c_str();
         valuesChar.push_back(str);
     }
-    CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.mb_str(), values.size(), &valuesChar[0]));
+    CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.c_str(), values.size(), &valuesChar[0]));
 }
 
-wxString FileNetcdf::GetAttText(const wxString &attName, const wxString &varName) {
+std::string FileNetcdf::GetAttText(const std::string &attName, const std::string &varName) {
     int varId = NC_GLOBAL;
-    if (!varName.IsEmpty()) {
-        CheckNcStatus(nc_inq_varid(m_ncId, varName.mb_str(), &varId));
+    if (!varName.empty()) {
+        CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
     }
 
     size_t attLen;
-    CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.mb_str(), &attLen));
+    CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.c_str(), &attLen));
 
     auto *text = new char[attLen + 1];
-    CheckNcStatus(nc_get_att_text(m_ncId, varId, attName.mb_str(), text));
+    CheckNcStatus(nc_get_att_text(m_ncId, varId, attName.c_str(), text));
     text[attLen] = '\0';
-    wxString value = wxString(text);
+    std::string value = std::string(text);
     wxDELETEA(text);
 
     return value;
 }
 
-void FileNetcdf::PutAttText(const wxString &attName, const wxString &value, int varId) {
-    wxCharBuffer buffer = value.ToUTF8();
-    CheckNcStatus(nc_put_att_text(m_ncId, varId, attName.mb_str(), strlen(buffer.data()), buffer.data()));
+void FileNetcdf::PutAttText(const std::string &attName, const std::string &value, int varId) {
+    wxCharBuffer buffer = wxString(value).ToUTF8();
+    CheckNcStatus(nc_put_att_text(m_ncId, varId, attName.c_str(), strlen(buffer.data()), buffer.data()));
 }

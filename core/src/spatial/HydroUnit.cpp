@@ -67,18 +67,18 @@ Brick* HydroUnit::GetBrick(int index) {
     return m_bricks[index];
 }
 
-bool HydroUnit::HasBrick(const wxString &name) {
+bool HydroUnit::HasBrick(const std::string &name) {
     for (auto brick: m_bricks) {
-        if (brick->GetName().IsSameAs(name, false)) {
+        if (brick->GetName() == name) {
             return true;
         }
     }
     return false;
 }
 
-Brick* HydroUnit::GetBrick(const wxString &name) {
+Brick* HydroUnit::GetBrick(const std::string &name) {
     for (auto brick: m_bricks) {
-        if (brick->GetName().IsSameAs(name, false)) {
+        if (brick->GetName() == name) {
             return brick;
         }
     }
@@ -93,18 +93,18 @@ Splitter* HydroUnit::GetSplitter(int index) {
     return m_splitters[index];
 }
 
-bool HydroUnit::HasSplitter(const wxString &name) {
+bool HydroUnit::HasSplitter(const std::string &name) {
     for (auto splitter: m_splitters) {
-        if (splitter->GetName().IsSameAs(name, false)) {
+        if (splitter->GetName() == name) {
             return true;
         }
     }
     return false;
 }
 
-Splitter* HydroUnit::GetSplitter(const wxString &name) {
+Splitter* HydroUnit::GetSplitter(const std::string &name) {
     for (auto splitter: m_splitters) {
-        if (splitter->GetName().IsSameAs(name, false)) {
+        if (splitter->GetName() == name) {
             return splitter;
         }
     }

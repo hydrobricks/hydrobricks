@@ -5,7 +5,7 @@
 
 class Parameter : public wxObject {
   public:
-    explicit Parameter(const wxString &name, float val = NAN_F);
+    explicit Parameter(const std::string &name, float val = NAN_F);
 
     ~Parameter() override = default;
 
@@ -17,11 +17,11 @@ class Parameter : public wxObject {
         m_linked = value;
     }
 
-    wxString GetName() const {
+    std::string GetName() const {
         return m_name;
     }
 
-    void SetName(const wxString& name) {
+    void SetName(const std::string& name) {
         m_name = name;
     }
 
@@ -39,7 +39,7 @@ class Parameter : public wxObject {
 
   protected:
     bool m_linked;
-    wxString m_name;
+    std::string m_name;
     float m_value;
 
   private:

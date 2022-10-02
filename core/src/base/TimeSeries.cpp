@@ -7,7 +7,7 @@ TimeSeries::TimeSeries(VariableType type)
     : m_type(type)
 {}
 
-bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSeries) {
+bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTimeSeries) {
 
     try {
         FileNetcdf file;
@@ -54,27 +54,27 @@ bool TimeSeries::Parse(const wxString &path, std::vector<TimeSeries*> &vecTimeSe
 
         for (int iVar = 0; iVar < varsNb; ++iVar) {
             // Get variable name
-            wxString varName = file.GetVarName(iVar);
+            std::string varName = file.GetVarName(iVar);
 
-            if (varName.IsSameAs("id", false) ||
-                varName.IsSameAs("time", false)) {
+            if (varName == "id" ||
+                varName == "time") {
                 continue;
             }
 
             // Get forcing type
             VariableType varType;
-            if (varName.IsSameAs("Precipitation", false)) {
+            if (StringsMatch(varName, "Precipitation")) {
                 varType = Precipitation;
-            } else if (varName.IsSameAs("Temperature", false)) {
+            } else if (StringsMatch(varName, "Temperature")) {
                 varType = Temperature;
-            } else if (varName.IsSameAs("PET", false) ||
-                       varName.IsSameAs("ETP", false)) {
+            } else if (StringsMatch(varName, "PET") ||
+                       StringsMatch(varName, "ETP")) {
                 varType = PET;
-            } else if (varName.IsSameAs("Custom1", false)) {
+            } else if (StringsMatch(varName, "Custom1")) {
                 varType = Custom1;
-            } else if (varName.IsSameAs("Custom2", false)) {
+            } else if (StringsMatch(varName, "Custom2")) {
                 varType = Custom2;
-            } else if (varName.IsSameAs("Custom3", false)) {
+            } else if (StringsMatch(varName, "Custom3")) {
                 varType = Custom3;
             } else {
                 throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));

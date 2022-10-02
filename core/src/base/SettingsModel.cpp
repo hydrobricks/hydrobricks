@@ -38,18 +38,18 @@ SettingsModel::~SettingsModel() {
     }
 }
 
-void SettingsModel::SetSolver(const wxString &solverName) {
+void SettingsModel::SetSolver(const std::string &solverName) {
     m_solver.name = solverName;
 }
 
-void SettingsModel::SetTimer(const wxString &start, const wxString &end, int timeStep, const wxString &timeStepUnit) {
+void SettingsModel::SetTimer(const std::string &start, const std::string &end, int timeStep, const std::string &timeStepUnit) {
     m_timer.start = start;
     m_timer.end = end;
     m_timer.timeStep = timeStep;
     m_timer.timeStepUnit = timeStepUnit;
 }
 
-void SettingsModel::AddHydroUnitBrick(const wxString &name, const wxString &type) {
+void SettingsModel::AddHydroUnitBrick(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -60,7 +60,7 @@ void SettingsModel::AddHydroUnitBrick(const wxString &name, const wxString &type
     m_selectedBrick = &m_selectedStructure->hydroUnitBricks[m_selectedStructure->hydroUnitBricks.size() - 1];
 }
 
-void SettingsModel::AddSubBasinBrick(const wxString &name, const wxString &type) {
+void SettingsModel::AddSubBasinBrick(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -71,7 +71,7 @@ void SettingsModel::AddSubBasinBrick(const wxString &name, const wxString &type)
     m_selectedBrick = &m_selectedStructure->subBasinBricks[m_selectedStructure->subBasinBricks.size() - 1];
 }
 
-void SettingsModel::AddSurfaceBrick(const wxString &name, const wxString &type) {
+void SettingsModel::AddSurfaceBrick(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -81,15 +81,15 @@ void SettingsModel::AddSurfaceBrick(const wxString &name, const wxString &type) 
     m_selectedStructure->surfaceBricks.push_back(brick);
 }
 
-void SettingsModel::AddToRelatedSurfaceBrick(const wxString &name) {
+void SettingsModel::AddToRelatedSurfaceBrick(const std::string &name) {
     wxASSERT(m_selectedBrick);
     m_selectedBrick->relatedSurfaceBricks.push_back(name);
 }
 
-void SettingsModel::AddBrickParameter(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddBrickParameter(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedBrick);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
@@ -98,15 +98,15 @@ void SettingsModel::AddBrickParameter(const wxString &name, float value, const w
     m_selectedBrick->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetBrickParameterValue(const wxString &name, float value, const wxString &type) {
+void SettingsModel::SetBrickParameterValue(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedBrick);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
     for (auto &parameter:m_selectedBrick->parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             parameter->SetValue(value);
             return;
         }
@@ -115,10 +115,10 @@ void SettingsModel::SetBrickParameterValue(const wxString &name, float value, co
     throw ShouldNotHappen();
 }
 
-bool SettingsModel::BrickHasParameter(const wxString &name) {
+bool SettingsModel::BrickHasParameter(const std::string &name) {
     wxASSERT(m_selectedBrick);
     for (auto &parameter:m_selectedBrick->parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             return true;
         }
     }
@@ -126,19 +126,19 @@ bool SettingsModel::BrickHasParameter(const wxString &name) {
     return false;
 }
 
-void SettingsModel::AddBrickForcing(const wxString &name) {
+void SettingsModel::AddBrickForcing(const std::string &name) {
     wxASSERT(m_selectedBrick);
 
-    if (name.IsSameAs("Precipitation", false)) {
+    if (name == "Precipitation") {
         m_selectedBrick->forcing.push_back(Precipitation);
-    } else if (name.IsSameAs("Temperature", false)) {
+    } else if (name == "Temperature") {
         m_selectedBrick->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
 }
 
-void SettingsModel::AddBrickProcess(const wxString &name, const wxString &type) {
+void SettingsModel::AddBrickProcess(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedBrick);
 
     ProcessSettings processSettings;
@@ -149,16 +149,16 @@ void SettingsModel::AddBrickProcess(const wxString &name, const wxString &type) 
     m_selectedProcess = &m_selectedBrick->processes[m_selectedBrick->processes.size() - 1];
 }
 
-void SettingsModel::AddProcessParameter(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddProcessParameter(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedProcess);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
     // If the parameter already exists, replace its value
     for (auto &parameter: m_selectedProcess->parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             parameter->SetValue(value);
             return;
         }
@@ -169,15 +169,15 @@ void SettingsModel::AddProcessParameter(const wxString &name, float value, const
     m_selectedProcess->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetProcessParameterValue(const wxString &name, float value, const wxString &type) {
+void SettingsModel::SetProcessParameterValue(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedProcess);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
     for (auto &parameter:m_selectedProcess->parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             parameter->SetValue(value);
             return;
         }
@@ -186,21 +186,21 @@ void SettingsModel::SetProcessParameterValue(const wxString &name, float value, 
     throw ShouldNotHappen();
 }
 
-void SettingsModel::AddProcessForcing(const wxString &name) {
+void SettingsModel::AddProcessForcing(const std::string &name) {
     wxASSERT(m_selectedProcess);
 
-    if (name.IsSameAs("Precipitation", false)) {
+    if (name == "Precipitation") {
         m_selectedProcess->forcing.push_back(Precipitation);
-    } else if (name.IsSameAs("PET", false)) {
+    } else if (name == "PET") {
         m_selectedProcess->forcing.push_back(PET);
-    } else if (name.IsSameAs("Temperature", false)) {
+    } else if (name == "Temperature") {
         m_selectedProcess->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
 }
 
-void SettingsModel::AddProcessOutput(const wxString &target) {
+void SettingsModel::AddProcessOutput(const std::string &target) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
@@ -226,7 +226,7 @@ void SettingsModel::OutputProcessToSameBrick() {
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
-void SettingsModel::AddHydroUnitSplitter(const wxString &name, const wxString &type) {
+void SettingsModel::AddHydroUnitSplitter(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedStructure);
 
     SplitterSettings splitter;
@@ -237,7 +237,7 @@ void SettingsModel::AddHydroUnitSplitter(const wxString &name, const wxString &t
     m_selectedSplitter = &m_selectedStructure->hydroUnitSplitters[m_selectedStructure->hydroUnitSplitters.size() - 1];
 }
 
-void SettingsModel::AddSubBasinSplitter(const wxString &name, const wxString &type) {
+void SettingsModel::AddSubBasinSplitter(const std::string &name, const std::string &type) {
     wxASSERT(m_selectedStructure);
 
     SplitterSettings splitter;
@@ -248,10 +248,10 @@ void SettingsModel::AddSubBasinSplitter(const wxString &name, const wxString &ty
     m_selectedSplitter = &m_selectedStructure->subBasinSplitters[m_selectedStructure->subBasinSplitters.size() - 1];
 }
 
-void SettingsModel::AddSplitterParameter(const wxString &name, float value, const wxString &type) {
+void SettingsModel::AddSplitterParameter(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedSplitter);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
@@ -260,15 +260,15 @@ void SettingsModel::AddSplitterParameter(const wxString &name, float value, cons
     m_selectedSplitter->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetSplitterParameterValue(const wxString &name, float value, const wxString &type) {
+void SettingsModel::SetSplitterParameterValue(const std::string &name, float value, const std::string &type) {
     wxASSERT(m_selectedSplitter);
 
-    if (!type.IsSameAs("Constant")) {
+    if (type != "Constant") {
         throw NotImplemented();
     }
 
     for (auto &parameter:m_selectedSplitter->parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             parameter->SetValue(value);
             return;
         }
@@ -277,19 +277,19 @@ void SettingsModel::SetSplitterParameterValue(const wxString &name, float value,
     throw ShouldNotHappen();
 }
 
-void SettingsModel::AddSplitterForcing(const wxString &name) {
+void SettingsModel::AddSplitterForcing(const std::string &name) {
     wxASSERT(m_selectedSplitter);
 
-    if (name.IsSameAs("Precipitation", false)) {
+    if (name == "Precipitation") {
         m_selectedSplitter->forcing.push_back(Precipitation);
-    } else if (name.IsSameAs("Temperature", false)) {
+    } else if (name == "Temperature") {
         m_selectedSplitter->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
 }
 
-void SettingsModel::AddSplitterOutput(const wxString &target, const wxString &fluxType) {
+void SettingsModel::AddSplitterOutput(const std::string &target, const std::string &fluxType) {
     wxASSERT(m_selectedSplitter);
 
     OutputSettings outputSettings;
@@ -298,22 +298,22 @@ void SettingsModel::AddSplitterOutput(const wxString &target, const wxString &fl
     m_selectedSplitter->outputs.push_back(outputSettings);
 }
 
-void SettingsModel::AddLoggingToItem(const wxString& itemName) {
+void SettingsModel::AddLoggingToItem(const std::string& itemName) {
     wxASSERT(m_selectedStructure);
     m_selectedStructure->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddBrickLogging(const wxString& itemName) {
+void SettingsModel::AddBrickLogging(const std::string& itemName) {
     wxASSERT(m_selectedBrick);
     m_selectedBrick->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddProcessLogging(const wxString& itemName) {
+void SettingsModel::AddProcessLogging(const std::string& itemName) {
     wxASSERT(m_selectedProcess);
     m_selectedProcess->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddSplitterLogging(const wxString& itemName) {
+void SettingsModel::AddSplitterLogging(const std::string& itemName) {
     wxASSERT(m_selectedSplitter);
     m_selectedSplitter->logItems.push_back(itemName);
 }
@@ -345,11 +345,11 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     }
 }
 
-void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
+void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
     wxASSERT(m_selectedStructure);
 
     for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
-        wxString surfaceName = brickSettings.name + "-surface";
+        std::string surfaceName = brickSettings.name + "-surface";
 
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
@@ -357,7 +357,7 @@ void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
         AddHydroUnitBrick(brickSettings.name + "-snowpack", "Snowpack");
         AddBrickProcess("melt", snowMeltProcess);
         AddProcessOutput(surfaceName);
-        if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
+        if (snowMeltProcess == "Melt:degree-day") {
             AddProcessForcing("Temperature");
             AddProcessParameter("degreeDayFactor", 3.0f);
             AddProcessParameter("meltingTemperature", 0.0f);
@@ -367,11 +367,11 @@ void SettingsModel::GenerateSnowpacks(const wxString& snowMeltProcess) {
     }
 }
 
-void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMeltProcess, const wxString& outflowProcess) {
+void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess, const std::string& outflowProcess) {
     wxASSERT(m_selectedStructure);
 
     for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
-        wxString surfaceName = brickSettings.name + "-surface";
+        std::string surfaceName = brickSettings.name + "-surface";
 
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
@@ -383,7 +383,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const wxString& snowMelt
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(surfaceName);
 
-        if (snowMeltProcess.IsSameAs("Melt:degree-day")) {
+        if (snowMeltProcess == "Melt:degree-day") {
             AddProcessForcing("Temperature");
         } else {
             throw NotImplemented();
@@ -416,7 +416,7 @@ void SettingsModel::GenerateSurfaceBricks() {
     wxASSERT(m_selectedStructure);
 
     for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
-        wxString surfaceName = brickSettings.name + "-surface";
+        std::string surfaceName = brickSettings.name + "-surface";
         AddHydroUnitBrick(surfaceName, "Surface");
     }
 }
@@ -451,7 +451,7 @@ void SettingsModel::SelectSubBasinBrick(int index) {
     m_selectedBrick = &m_selectedStructure->subBasinBricks[index];
 }
 
-bool SettingsModel::SelectHydroUnitBrickIfFound(const wxString &name) {
+bool SettingsModel::SelectHydroUnitBrickIfFound(const std::string &name) {
     wxASSERT(m_selectedStructure);
     for (auto &brick : m_selectedStructure->hydroUnitBricks) {
         if (brick.name == name) {
@@ -463,7 +463,7 @@ bool SettingsModel::SelectHydroUnitBrickIfFound(const wxString &name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinBrickIfFound(const wxString &name) {
+bool SettingsModel::SelectSubBasinBrickIfFound(const std::string &name) {
     wxASSERT(m_selectedStructure);
     for (auto &brick : m_selectedStructure->subBasinBricks) {
         if (brick.name == name) {
@@ -475,13 +475,13 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const wxString &name) {
     return false;
 }
 
-void SettingsModel::SelectHydroUnitBrick(const wxString &name) {
+void SettingsModel::SelectHydroUnitBrick(const std::string &name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw ShouldNotHappen();
     }
 }
 
-void SettingsModel::SelectSubBasinBrick(const wxString &name) {
+void SettingsModel::SelectSubBasinBrick(const std::string &name) {
     if (!SelectSubBasinBrickIfFound(name)) {
         throw ShouldNotHappen();
     }
@@ -494,7 +494,7 @@ void SettingsModel::SelectProcess(int index) {
     m_selectedProcess = &m_selectedBrick->processes[index];
 }
 
-void SettingsModel::SelectProcess(const wxString &name) {
+void SettingsModel::SelectProcess(const std::string &name) {
     wxASSERT(m_selectedBrick);
     for (auto &process : m_selectedBrick->processes) {
         if (process.name == name) {
@@ -506,11 +506,11 @@ void SettingsModel::SelectProcess(const wxString &name) {
     throw InvalidArgument(wxString::Format(_("The process '%s' was not found."), name));
 }
 
-void SettingsModel::SelectProcessWithParameter(const wxString &name) {
+void SettingsModel::SelectProcessWithParameter(const std::string &name) {
     wxASSERT(m_selectedBrick);
     for (auto &process : m_selectedBrick->processes) {
         for (auto &parameter: process.parameters) {
-            if (parameter->GetName().IsSameAs(name, false)) {
+            if (parameter->GetName() == name) {
                 m_selectedProcess = &process;
                 return;
             }
@@ -534,7 +534,7 @@ void SettingsModel::SelectSubBasinSplitter(int index) {
     m_selectedSplitter = &m_selectedStructure->subBasinSplitters[index];
 }
 
-bool SettingsModel::SelectHydroUnitSplitterIfFound(const wxString &name) {
+bool SettingsModel::SelectHydroUnitSplitterIfFound(const std::string &name) {
     wxASSERT(m_selectedStructure);
     for (auto &splitter : m_selectedStructure->hydroUnitSplitters) {
         if (splitter.name == name) {
@@ -546,7 +546,7 @@ bool SettingsModel::SelectHydroUnitSplitterIfFound(const wxString &name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinSplitterIfFound(const wxString &name) {
+bool SettingsModel::SelectSubBasinSplitterIfFound(const std::string &name) {
     wxASSERT(m_selectedStructure);
     for (auto &splitter : m_selectedStructure->subBasinSplitters) {
         if (splitter.name == name) {
@@ -558,13 +558,13 @@ bool SettingsModel::SelectSubBasinSplitterIfFound(const wxString &name) {
     return false;
 }
 
-void SettingsModel::SelectHydroUnitSplitter(const wxString &name) {
+void SettingsModel::SelectHydroUnitSplitter(const std::string &name) {
     if (!SelectHydroUnitSplitterIfFound(name)) {
         throw ShouldNotHappen();
     }
 }
 
-void SettingsModel::SelectSubBasinSplitter(const wxString &name) {
+void SettingsModel::SelectSubBasinSplitter(const std::string &name) {
     if (!SelectSubBasinSplitterIfFound(name)) {
         throw ShouldNotHappen();
     }
@@ -641,18 +641,18 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
     return logNames;
 }
 
-bool SettingsModel::ParseStructure(const wxString &path) {
+bool SettingsModel::ParseStructure(const std::string &path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
     }
 
     try {
-        YAML::Node settings = YAML::LoadFile(std::string(path.mb_str()));
+        YAML::Node settings = YAML::LoadFile(path);
 
         if (settings["base"]) {
-            wxString base = wxString(settings["base"].as<std::string>());
-            if (base.IsSameAs("Socont", false)) {
+            std::string base = settings["base"].as<std::string>();
+            if (base == "Socont") {
                 return GenerateStructureSocont(settings);
             } else {
                 wxLogError(_("Model base '%s' not recognized."));
@@ -668,14 +668,14 @@ bool SettingsModel::ParseStructure(const wxString &path) {
     }
 }
 
-bool SettingsModel::ParseParameters(const wxString &path) {
+bool SettingsModel::ParseParameters(const std::string &path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
     }
 
     try {
-        YAML::Node root = YAML::LoadFile(std::string(path.mb_str()));
+        YAML::Node root = YAML::LoadFile(path);
 
         if (!root.IsMap()) {
             wxLogError(_("Expecting a map node in the yaml parameter file."));
@@ -685,7 +685,7 @@ bool SettingsModel::ParseParameters(const wxString &path) {
         for (auto itL1 = root.begin(); itL1 != root.end(); ++itL1) {
             auto keyL1 = itL1->first;
             auto valL1 = itL1->second;
-            wxString nameL1 = wxString(keyL1.as<std::string>());
+            std::string nameL1 = keyL1.as<std::string>();
 
             bool isBrick = false;
             bool isSplitter = false;
@@ -697,7 +697,7 @@ bool SettingsModel::ParseParameters(const wxString &path) {
             } else if (SelectHydroUnitSplitterIfFound(nameL1) ||
                 SelectSubBasinSplitterIfFound(nameL1)) {
                 isSplitter = true;
-            } else if (nameL1.IsSameAs("snowpack", false)) {
+            } else if (nameL1 == "snowpack") {
                 // Specific actions needed
             } else {
                 wxLogError(_("Cannot find the nameL1 '%s'."), nameL1);
@@ -707,14 +707,14 @@ bool SettingsModel::ParseParameters(const wxString &path) {
             for (auto itL2 = valL1.begin(); itL2 != valL1.end(); ++itL2) {
                 auto keyL2 = itL2->first;
                 auto valL2 = itL2->second;
-                wxString nameL2 = wxString(keyL2.as<std::string>());
+                std::string nameL2 = keyL2.as<std::string>();
 
                 if (valL2.IsMap()) {
                     // The process to assign the parameter to has been specified.
                     for (auto itL3 = valL2.begin(); itL3 != valL2.end(); ++itL3) {
                         auto keyL3 = itL3->first;
                         auto valL3 = itL3->second;
-                        wxString nameL3 = wxString(keyL3.as<std::string>());
+                        std::string nameL3 = keyL3.as<std::string>();
 
                         if (!valL3.IsScalar()) {
                             throw ShouldNotHappen();
@@ -728,7 +728,7 @@ bool SettingsModel::ParseParameters(const wxString &path) {
                         } else if (isSplitter) {
                             throw ShouldNotHappen();
                         } else {
-                            if (nameL1.IsSameAs("snowpack", false)) {
+                            if (nameL1 == "snowpack") {
                                 for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
                                     SelectHydroUnitBrick(brickSettings.name + "-snowpack");
                                     SelectProcess(nameL2);
@@ -751,7 +751,7 @@ bool SettingsModel::ParseParameters(const wxString &path) {
                     } else if (isSplitter) {
                         SetSplitterParameterValue(nameL2, paramValue);
                     } else {
-                        if (nameL1.IsSameAs("snowpack", false)) {
+                        if (nameL1 == "snowpack") {
                             for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
                                 SelectHydroUnitBrick(brickSettings.name + "-snowpack");
                                 SelectProcessWithParameter(nameL2);
@@ -777,7 +777,7 @@ vecStr SettingsModel::ParseSurfaceNames(const YAML::Node &settings) {
     if (YAML::Node surfaces = settings["surfaces"]) {
         if (YAML::Node names = surfaces["names"]) {
             for (auto &&name: names) {
-                surfaceNames.push_back(wxString(name.as<std::string>()));
+                surfaceNames.push_back(name.as<std::string>());
             }
         }
     }
@@ -790,7 +790,7 @@ vecStr SettingsModel::ParseSurfaceTypes(const YAML::Node &settings) {
     if (YAML::Node surfaces = settings["surfaces"]) {
         if (YAML::Node types = surfaces["types"]) {
             for (auto &&type: types) {
-                surfaceTypes.push_back(wxString(type.as<std::string>()));
+                surfaceTypes.push_back(type.as<std::string>());
             }
         }
     }
@@ -798,9 +798,9 @@ vecStr SettingsModel::ParseSurfaceTypes(const YAML::Node &settings) {
     return surfaceTypes;
 }
 
-wxString SettingsModel::ParseSolver(const YAML::Node &settings) {
+std::string SettingsModel::ParseSolver(const YAML::Node &settings) {
     if (settings["solver"]) {
-        return wxString(settings["solver"].as<std::string>());
+        return settings["solver"].as<std::string>();
     }
 
     return "EulerExplicit";
@@ -808,8 +808,8 @@ wxString SettingsModel::ParseSolver(const YAML::Node &settings) {
 
 bool SettingsModel::LogAll(const YAML::Node &settings) {
     if (settings["logger"]) {
-        wxString target = wxString(settings["logger"].as<std::string>());
-        if (target.IsSameAs("all")) {
+        std::string target = settings["logger"].as<std::string>();
+        if (target == "all") {
             return true;
         } else {
             return false;
@@ -821,13 +821,13 @@ bool SettingsModel::LogAll(const YAML::Node &settings) {
 
 bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     int soilStorageNb = 1;
-    wxString surfaceRunoff = "socont-runoff";
+    std::string surfaceRunoff = "socont-runoff";
     if (YAML::Node options = settings["options"]) {
         if (YAML::Node parameter = options["soil_storage_nb"]) {
             soilStorageNb = parameter.as<int>();
         }
         if (YAML::Node parameter = options["surface_runoff"]) {
-            surfaceRunoff = wxString(parameter.as<std::string>());
+            surfaceRunoff = parameter.as<std::string>();
         }
     }
 
@@ -850,10 +850,10 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
 
     // Add other specific surfaces
     for (int i = 0; i < surfaceNames.size(); ++i) {
-        wxString type = surfaceTypes[i];
-        if (type.IsSameAs("ground", false)) {
+        std::string type = surfaceTypes[i];
+        if (type == "ground") {
             // Nothing to do, already added.
-        } else if (type.IsSameAs("glacier", false)) {
+        } else if (type == "glacier") {
             AddSurfaceBrick(surfaceNames[i], "Glacier");
         } else {
             wxLogError(_("The surface type %s is not used in Socont"), type);
@@ -879,17 +879,17 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
 
     // Add surface-related processes
     for (int i = 0; i < surfaceNames.size(); ++i) {
-        wxString type = surfaceTypes[i];
-        wxString name = surfaceNames[i];
+        std::string type = surfaceTypes[i];
+        std::string name = surfaceNames[i];
         SelectHydroUnitBrick(name);
 
-        if (type.IsSameAs("ground", false)) {
+        if (type == "ground") {
             // Direct rain water to surface
             SelectHydroUnitBrick(name);
             AddBrickProcess("outflow-rain", "Outflow:direct");
             AddProcessOutput(name + "-surface");
 
-        } else if (type.IsSameAs("glacier", false)) {
+        } else if (type == "glacier") {
             // Direct snow melt to linear storage
             SelectHydroUnitBrick(name + "-surface");
             AddBrickProcess("outflow-snowmelt", "Outflow:direct");
@@ -994,11 +994,11 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node &settings) {
     }
 
     AddHydroUnitBrick("surface-runoff", "Storage");
-    if (surfaceRunoff.IsSameAs("socont-runoff", false)) {
+    if (surfaceRunoff == "socont-runoff") {
         AddBrickProcess("runoff", "Runoff:Socont");
         AddProcessParameter("runoffCoefficient", 500.0f);
         AddProcessParameter("slope", 0.5f);
-    } else if (surfaceRunoff.IsSameAs("linear-storage", false)) {
+    } else if (surfaceRunoff == "linear-storage") {
         wxLogMessage(_("Using a linear storage for the quick flow."));
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessParameter("responseFactor", 0.8f);

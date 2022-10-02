@@ -27,9 +27,9 @@ void Glacier::AssignParameters(const BrickSettings &brickSettings) {
 
 void Glacier::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    if (flux->GetType().IsSameAs("ice")) {
+    if (flux->GetType() == "ice") {
         m_ice->AttachFluxIn(flux);
-    } else if (flux->GetType().IsSameAs("water")) {
+    } else if (flux->GetType() == "water") {
         m_container->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
@@ -75,8 +75,8 @@ vecDoublePt Glacier::GetStateVariableChanges() {
     return vars;
 }
 
-double* Glacier::GetValuePointer(const wxString& name) {
-    if (name.IsSameAs("ice")) {
+double* Glacier::GetValuePointer(const std::string& name) {
+    if (name == "ice") {
         return m_ice->GetContentPointer();
     }
 

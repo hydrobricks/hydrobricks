@@ -9,13 +9,13 @@ Splitter::Splitter()
 {}
 
 Splitter* Splitter::Factory(const SplitterSettings &splitterSettings) {
-    if (splitterSettings.type.IsSameAs("SnowRain")) {
+    if (splitterSettings.type == "SnowRain") {
         auto splitter = new SplitterSnowRain();
         splitter->AssignParameters(splitterSettings);
         return splitter;
-    } else if (splitterSettings.type.IsSameAs("Rain")) {
+    } else if (splitterSettings.type == "Rain") {
         return new SplitterRain();
-    } else if (splitterSettings.type.IsSameAs("MultiFluxes")) {
+    } else if (splitterSettings.type == "MultiFluxes") {
         return new SplitterMultiFluxes();
     } else {
         wxLogError(_("Splitter type '%s' not recognized."), splitterSettings.type);
@@ -24,9 +24,9 @@ Splitter* Splitter::Factory(const SplitterSettings &splitterSettings) {
     return nullptr;
 }
 
-float* Splitter::GetParameterValuePointer(const SplitterSettings &splitterSettings, const wxString &name) {
+float* Splitter::GetParameterValuePointer(const SplitterSettings &splitterSettings, const std::string &name) {
     for (auto parameter: splitterSettings.parameters) {
-        if (parameter->GetName().IsSameAs(name, false)) {
+        if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
             return parameter->GetValuePointer();

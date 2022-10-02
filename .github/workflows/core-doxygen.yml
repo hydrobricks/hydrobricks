@@ -1,4 +1,4 @@
-name: Core Generate Doxygen
+name: Core Doxygen
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-doxygen:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v2

@@ -18,8 +18,8 @@ project(hydrobricks)
 
 # Version number
 set(VERSION_MAJOR "0")
-set(VERSION_MINOR "1")
-set(VERSION_PATCH "0")
+set(VERSION_MINOR "0")
+set(VERSION_PATCH "3")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -35,7 +35,9 @@ endif (WIN32)
 
 # Targets
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
-mark_as_advanced(CLEAR BUILD_TESTS)
+option(BUILD_CLI "Do you want to build the command-line version ?" ON)
+option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
+
 
 # Enable Visual Leak Detector
 if (WIN32)
@@ -65,10 +67,67 @@ endif (WIN32)
 
 ##### CONAN
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
+option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
+
+if (RUN_CONAN_FROM_CMAKE)
+    # Run conan from CMake
+    if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
+        message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
+        file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
+                "${CMAKE_BINARY_DIR}/conan.cmake")
+    endif ()
+
+    include(${CMAKE_BINARY_DIR}/conan.cmake)
+
+    # Check conan install
+    find_program(CONAN_CMD conan)
+    if (NOT CONAN_CMD AND CONAN_REQUIRED)
+        message(FATAL_ERROR "Conan executable not found! Please install conan.")
+    endif ()
+    if (NOT CONAN_DETECT_QUIET)
+        message(STATUS "Conan: Found program ${CONAN_CMD}")
+    endif ()
+    execute_process(COMMAND ${CONAN_CMD} --version
+            RESULT_VARIABLE return_code
+            OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
+            ERROR_VARIABLE CONAN_VERSION_ERROR)
+
+    message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
+    message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
+
+    # Get libraries
+    conan_cmake_run(CONANFILE conanfile.txt
+            BASIC_SETUP CMAKE_TARGETS
+            BUILD missing)
+
+else (RUN_CONAN_FROM_CMAKE)
+
+    find_file(CONANBUILDINFO
+            NAMES conanbuildinfo.cmake
+            PATHS "${CMAKE_BINARY_DIR}"
+            "${CMAKE_SOURCE_DIR}"
+            "D:/a/hydrobricks/hydrobricks" # For GitHub actions (Windows)
+            "/project" # For GitHub actions (Linux)
+            )
+
+    include(${CONANBUILDINFO})
+    conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
+
+endif(RUN_CONAN_FROM_CMAKE)
 
 include_directories(${CONAN_INCLUDE_DIRS})
+
+message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY (post conan): ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+
+
+##### OTHER DEPENDENCIES
+
+include(FetchContent)
+
+FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.10.0)
 
 
 ##### FIND ANALYSIS TOOLS
@@ -103,10 +162,15 @@ endif (USE_CODECOV)
 include(define_compilation_flags)
 
 # Add components
-add_subdirectory(core/src)
+if (BUILD_CLI)
+    add_subdirectory(core/src)
+endif ()
 if (BUILD_TESTS)
     add_subdirectory(core/tests)
 endif ()
+if (BUILD_PYBINDINGS)
+    add_subdirectory(core/bindings)
+endif()
 
 
 ##### DISPLAY SOME INFORMATION

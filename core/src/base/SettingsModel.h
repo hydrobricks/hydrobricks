@@ -1,10 +1,9 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
-#include "yaml-cpp/yaml.h"
-
 #include "Includes.h"
 #include "Parameter.h"
+#include "yaml-cpp/yaml.h"
 
 struct SolverSettings {
     std::string name;
@@ -27,7 +26,7 @@ struct ProcessSettings {
     std::string name;
     std::string type;
     vecStr logItems;
-    std::vector<Parameter*> parameters;
+    std::vector<Parameter *> parameters;
     std::vector<VariableType> forcing;
     std::vector<OutputSettings> outputs;
 };
@@ -36,7 +35,7 @@ struct SplitterSettings {
     std::string name;
     std::string type;
     vecStr logItems;
-    std::vector<Parameter*> parameters;
+    std::vector<Parameter *> parameters;
     std::vector<VariableType> forcing;
     std::vector<OutputSettings> outputs;
 };
@@ -46,7 +45,7 @@ struct BrickSettings {
     std::string type;
     vecStr logItems;
     vecStr relatedSurfaceBricks;
-    std::vector<Parameter*> parameters;
+    std::vector<Parameter *> parameters;
     std::vector<VariableType> forcing;
     std::vector<ProcessSettings> processes;
 };
@@ -123,9 +122,9 @@ class SettingsModel : public wxObject {
 
     void GeneratePrecipitationSplitters(bool withSnow);
 
-    void GenerateSnowpacks(const std::string& snowMeltProcess);
+    void GenerateSnowpacks(const std::string &snowMeltProcess);
 
-    void GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess, const std::string& outflowProcess);
+    void GenerateSnowpacksWithWaterRetention(const std::string &snowMeltProcess, const std::string &outflowProcess);
 
     void GenerateSurfaceComponentBricks(bool withSnow);
 
@@ -239,10 +238,10 @@ class SettingsModel : public wxObject {
     std::vector<ModelStructure> m_modelStructures;
     SolverSettings m_solver;
     TimerSettings m_timer;
-    ModelStructure* m_selectedStructure;
-    BrickSettings* m_selectedBrick;
-    ProcessSettings* m_selectedProcess;
-    SplitterSettings* m_selectedSplitter;
+    ModelStructure *m_selectedStructure;
+    BrickSettings *m_selectedBrick;
+    ProcessSettings *m_selectedProcess;
+    SplitterSettings *m_selectedSplitter;
 
     vecStr ParseSurfaceNames(const YAML::Node &settings);
 

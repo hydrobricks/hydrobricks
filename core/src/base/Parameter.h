@@ -21,7 +21,7 @@ class Parameter : public wxObject {
         return m_name;
     }
 
-    void SetName(const std::string& name) {
+    void SetName(const std::string &name) {
         m_name = name;
     }
 

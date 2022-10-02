@@ -1,9 +1,6 @@
 #include "TimeSeriesUniform.h"
 
-TimeSeriesUniform::TimeSeriesUniform(VariableType type)
-    : TimeSeries(type),
-      m_data(nullptr)
-{}
+TimeSeriesUniform::TimeSeriesUniform(VariableType type) : TimeSeries(type), m_data(nullptr) {}
 
 TimeSeriesUniform::~TimeSeriesUniform() {
     wxDELETE(m_data);

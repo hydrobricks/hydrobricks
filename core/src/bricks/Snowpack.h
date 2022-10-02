@@ -11,7 +11,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::AssignParameters()
      */
-    void AssignParameters(const BrickSettings &brickSettings) override;
+    void AssignParameters(const BrickSettings& brickSettings) override;
 
     void AttachFluxIn(Flux* flux) override;
 

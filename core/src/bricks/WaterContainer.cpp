@@ -1,4 +1,5 @@
 #include "WaterContainer.h"
+
 #include "Brick.h"
 
 WaterContainer::WaterContainer(Brick* brick)
@@ -7,8 +8,7 @@ WaterContainer::WaterContainer(Brick* brick)
       m_capacity(nullptr),
       m_infiniteStorage(false),
       m_parent(brick),
-      m_overflow(nullptr)
-{}
+      m_overflow(nullptr) {}
 
 void WaterContainer::SubtractAmount(double change) {
     if (m_infiniteStorage) return;
@@ -47,7 +47,7 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     vecDoublePt incomingRates;
     double inputs = 0;
     double inputsStatic = 0;
-    for (auto & input : m_inputs) {
+    for (auto& input : m_inputs) {
         if (input->IsForcing()) {
             inputsStatic += input->GetAmount();
         } else if (input->IsStatic()) {
@@ -79,7 +79,7 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     if (change < 0 && content + inputsStatic + change * timeStep < 0) {
         double diff = (content + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
-        for (auto rate :outgoingRates) {
+        for (auto rate : outgoingRates) {
             wxASSERT(rate != nullptr);
             wxASSERT(*rate < 1000);
             wxASSERT(*rate > -EPSILON_D);
@@ -106,10 +106,11 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *m_capacity) {
-                throw ConceptionIssue(_("Forcing is coming directly into a brick with limited capacity and no overflow."));
+                throw ConceptionIssue(
+                    _("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
             // Limit the different rates proportionally
-            for (auto rate :incomingRates) {
+            for (auto rate : incomingRates) {
                 wxASSERT(rate != nullptr);
                 wxASSERT(*rate < 1000);
                 wxASSERT(*rate > -EPSILON_D);
@@ -144,7 +145,7 @@ void WaterContainer::Finalize() {
 
 double WaterContainer::SumIncomingFluxes() {
     double sum = 0;
-    for (auto & input : m_inputs) {
+    for (auto& input : m_inputs) {
         sum += input->GetAmount();
     }
 
@@ -152,7 +153,7 @@ double WaterContainer::SumIncomingFluxes() {
 }
 
 vecDoublePt WaterContainer::GetStateVariableChanges() {
-    return vecDoublePt {&m_contentChange};
+    return vecDoublePt{&m_contentChange};
 }
 
 double WaterContainer::GetTargetFillingRatio() {

@@ -1,8 +1,6 @@
 #include "ParametersUpdater.h"
 
-ParametersUpdater::ParametersUpdater()
-    : m_previousDate(0)
-{}
+ParametersUpdater::ParametersUpdater() : m_previousDate(0) {}
 
 void ParametersUpdater::AddParameterVariableYearly(ParameterVariableYearly* parameter) {
     m_parametersYearly.push_back(parameter);
@@ -35,19 +33,19 @@ void ParametersUpdater::DateUpdate(double date) {
 }
 
 void ParametersUpdater::ChangingYear(int year) {
-    for (auto & parameter : m_parametersYearly) {
+    for (auto& parameter : m_parametersYearly) {
         parameter->UpdateParameter(year);
     }
 }
 
 void ParametersUpdater::ChangingMonth(int month) {
-    for (auto & parameter : m_parametersMonthly) {
+    for (auto& parameter : m_parametersMonthly) {
         parameter->UpdateParameter(month);
     }
 }
 
 void ParametersUpdater::ChangingDate(double date) {
-    for (auto & parameter : m_parametersDates) {
+    for (auto& parameter : m_parametersDates) {
         parameter->UpdateParameter(date);
     }
 }

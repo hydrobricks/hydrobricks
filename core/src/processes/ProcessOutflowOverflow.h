@@ -14,7 +14,7 @@ class ProcessOutflowOverflow : public ProcessOutflow {
     /**
      * @copydoc Process::AssignParameters()
      */
-    void AssignParameters(const ProcessSettings &processSettings) override;
+    void AssignParameters(const ProcessSettings& processSettings) override;
 
     void StoreInOutgoingFlux(double* rate, int index) override;
 

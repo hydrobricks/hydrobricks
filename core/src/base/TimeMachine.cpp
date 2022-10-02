@@ -1,13 +1,8 @@
 #include "TimeMachine.h"
 
-TimeMachine::TimeMachine()
-    : m_timeStep(0),
-      m_timeStepUnit(Day),
-      m_timeStepInDays(0),
-      m_parametersUpdater(nullptr)
-{}
+TimeMachine::TimeMachine() : m_timeStep(0), m_timeStepUnit(Day), m_timeStepInDays(0), m_parametersUpdater(nullptr) {}
 
-void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit){
+void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit) {
     m_date = start;
     m_start = start;
     m_end = end;
@@ -17,7 +12,6 @@ void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit ti
 }
 
 void TimeMachine::Initialize(const TimerSettings &settings) {
-
     m_start = ParseDate(settings.start, guess);
     m_end = ParseDate(settings.end, guess);
     m_date = m_start;
@@ -55,7 +49,6 @@ int TimeMachine::GetTimeStepsNb() {
 }
 
 void TimeMachine::UpdateTimeStepInDays() {
-
     switch (m_timeStepUnit) {
         case Variable:
             throw NotImplemented();

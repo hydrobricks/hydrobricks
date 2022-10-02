@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_FLUX_TO_BRICK_INSTANTANEOUS_H
 #define HYDROBRICKS_FLUX_TO_BRICK_INSTANTANEOUS_H
 
-#include "Includes.h"
 #include "FluxToBrick.h"
+#include "Includes.h"
 
 class Brick;
 
@@ -23,7 +23,6 @@ class FluxToBrickInstantaneous : public FluxToBrick {
     void UpdateFlux(double amount) override;
 
   protected:
-
   private:
 };
 

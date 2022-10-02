@@ -15,7 +15,6 @@ class SolverHeunExplicit : public Solver {
     bool Solve() override;
 
   protected:
-
   private:
 };
 

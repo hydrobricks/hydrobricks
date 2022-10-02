@@ -1,13 +1,13 @@
 #include "ProcessOutflowLinear.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
 ProcessOutflowLinear::ProcessOutflowLinear(WaterContainer* container)
     : ProcessOutflow(container),
-      m_responseFactor(nullptr)
-{}
+      m_responseFactor(nullptr) {}
 
-void ProcessOutflowLinear::AssignParameters(const ProcessSettings &processSettings) {
+void ProcessOutflowLinear::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
     m_responseFactor = GetParameterValuePointer(processSettings, "responseFactor");
 }

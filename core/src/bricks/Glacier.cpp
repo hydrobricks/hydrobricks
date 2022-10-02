@@ -1,14 +1,10 @@
 #include "Glacier.h"
 
-Glacier::Glacier()
-    : SurfaceComponent(),
-      m_ice(nullptr),
-      m_noMeltWhenSnowCover(false)
-{
+Glacier::Glacier() : SurfaceComponent(), m_ice(nullptr), m_noMeltWhenSnowCover(false) {
     m_ice = new WaterContainer(this);
 }
 
-void Glacier::AssignParameters(const BrickSettings &brickSettings) {
+void Glacier::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
     if (HasParameter(brickSettings, "infiniteStorage")) {
         if (GetParameterValuePointer(brickSettings, "infiniteStorage")) {
@@ -65,10 +61,10 @@ void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
 
 vecDoublePt Glacier::GetStateVariableChanges() {
     vecDoublePt vars;
-    for (auto const &var: m_container->GetStateVariableChanges()) {
+    for (auto const& var : m_container->GetStateVariableChanges()) {
         vars.push_back(var);
     }
-    for (auto const &var: m_ice->GetStateVariableChanges()) {
+    for (auto const& var : m_ice->GetStateVariableChanges()) {
         vars.push_back(var);
     }
 

@@ -11,7 +11,6 @@ class ModifierLag : public Modifier {
     ~ModifierLag() override = default;
 
   protected:
-
   private:
 };
 

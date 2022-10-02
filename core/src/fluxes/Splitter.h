@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_SPLITTER_H
 #define HYDROBRICKS_SPLITTER_H
 
-#include "Includes.h"
 #include "Flux.h"
 #include "Forcing.h"
+#include "Includes.h"
 #include "SettingsModel.h"
 
 class HydroUnit;
@@ -12,7 +12,7 @@ class Splitter : public wxObject {
   public:
     explicit Splitter();
 
-    static Splitter* Factory(const SplitterSettings &splitterSettings);
+    static Splitter* Factory(const SplitterSettings& splitterSettings);
 
     /**
      * Check that everything is correctly defined.
@@ -26,9 +26,9 @@ class Splitter : public wxObject {
      *
      * @param splitterSettings settings of the splitter containing the parameters.
      */
-    virtual void AssignParameters(const SplitterSettings &splitterSettings) = 0;
+    virtual void AssignParameters(const SplitterSettings& splitterSettings) = 0;
 
-    float* GetParameterValuePointer(const SplitterSettings &splitterSettings, const std::string &name);
+    float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const std::string& name);
 
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();
@@ -62,7 +62,7 @@ class Splitter : public wxObject {
         return m_name;
     }
 
-    void SetName(const std::string &name) {
+    void SetName(const std::string& name) {
         m_name = name;
     }
 

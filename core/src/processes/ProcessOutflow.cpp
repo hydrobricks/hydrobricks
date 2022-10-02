@@ -1,10 +1,9 @@
 #include "ProcessOutflow.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
-ProcessOutflow::ProcessOutflow(WaterContainer* container)
-    : Process(container)
-{}
+ProcessOutflow::ProcessOutflow(WaterContainer* container) : Process(container) {}
 
 bool ProcessOutflow::IsOk() {
     if (m_outputs.size() != 1) {

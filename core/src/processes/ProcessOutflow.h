@@ -21,7 +21,6 @@ class ProcessOutflow : public Process {
     double* GetValuePointer(const std::string& name) override;
 
   protected:
-
   private:
 };
 

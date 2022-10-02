@@ -1,11 +1,11 @@
 #include "Logger.h"
+
 #include "FileNetcdf.h"
 
-Logger::Logger()
-    : m_cursor(0)
-{}
+Logger::Logger() : m_cursor(0) {}
 
-void Logger::InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecStr &subBasinLabels, const vecStr &hydroUnitLabels) {
+void Logger::InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecStr &subBasinLabels,
+                           const vecStr &hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
     m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
@@ -16,12 +16,12 @@ void Logger::InitContainer(int timeSize, const vecInt &hydroUnitsIds, const vecS
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
 }
 
-void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
+void Logger::SetSubBasinValuePointer(int iLabel, double *valPt) {
     wxASSERT(m_subBasinValuesPt.size() > iLabel);
     m_subBasinValuesPt[iLabel] = valPt;
 }
 
-void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
+void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double *valPt) {
     wxASSERT(m_hydroUnitValuesPt.size() > iLabel);
     wxASSERT(m_hydroUnitValuesPt[iLabel].size() > iUnit);
     m_hydroUnitValuesPt[iLabel][iUnit] = valPt;
@@ -70,10 +70,10 @@ bool Logger::DumpOutputs(const std::string &path) {
         }
 
         // Create dimensions
-        int dimIdTime = file.DefDim("time", (int) m_time.size());
-        int dimIdUnit = file.DefDim("hydro_units", (int) m_hydroUnitIds.size());
-        int dimIdItemsAgg = file.DefDim("aggregated_values", (int) m_subBasinLabels.size());
-        int dimIdItemsDist = file.DefDim("distributed_values", (int) m_hydroUnitLabels.size());
+        int dimIdTime = file.DefDim("time", (int)m_time.size());
+        int dimIdUnit = file.DefDim("hydro_units", (int)m_hydroUnitIds.size());
+        int dimIdItemsAgg = file.DefDim("aggregated_values", (int)m_subBasinLabels.size());
+        int dimIdItemsDist = file.DefDim("distributed_values", (int)m_hydroUnitLabels.size());
 
         // Create variables and put data
         int varId = file.DefVarDouble("time", {dimIdTime});
@@ -99,7 +99,7 @@ bool Logger::DumpOutputs(const std::string &path) {
         file.PutAttString("labels_aggregated", m_subBasinLabels);
         file.PutAttString("labels_distributed", m_hydroUnitLabels);
 
-    } catch(std::exception& e) {
+    } catch (std::exception &e) {
         wxLogError(e.what());
         return false;
     }

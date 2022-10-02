@@ -18,7 +18,6 @@ class Surface : public SurfaceComponent {
     void Finalize() override;
 
   protected:
-
   private:
 };
 

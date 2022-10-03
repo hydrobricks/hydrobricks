@@ -1,4 +1,4 @@
-import hydrobricks as hb
+import _hydrobricks as hb
 
 no_log = hb.LogNull()
 

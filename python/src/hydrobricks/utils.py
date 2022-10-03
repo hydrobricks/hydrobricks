@@ -14,7 +14,8 @@ def validate_kwargs(kwargs, allowed_kwargs):
             raise TypeError('Keyword argument not understood:', kwarg)
 
 
-def create_units_file(path, hydro_units, surface_names=None, surface_types=None):
+def create_units_file(path, hydro_units, surface_names=None,
+                      surface_types=None):
     file_path = path / 'spatial_structure.nc'
 
     # Create netCDF file
@@ -41,7 +42,8 @@ def create_units_file(path, hydro_units, surface_names=None, surface_types=None)
 
     if surface_names:
         for i in range(len(surface_names)):
-            var_surf = nc.createVariable(surface_names[i], 'float32', ('hydro_units',))
+            var_surf = nc.createVariable(surface_names[i], 'float32',
+                                         ('hydro_units',))
             var_surf[:] = hydro_units[surface_names[i]]
             var_surf.units = 'fraction'
             var_surf.type = surface_types[i]
@@ -49,7 +51,8 @@ def create_units_file(path, hydro_units, surface_names=None, surface_types=None)
     nc.close()
 
 
-def create_forcing_file(path, hydro_units, time, forcing_data, forcing_variables, max_compression=False):
+def create_forcing_file(path, hydro_units, time, forcing_data,
+                        forcing_variables, max_compression=False):
     file_path = path / 'time_series.nc'
 
     # Create netCDF file
@@ -70,9 +73,12 @@ def create_forcing_file(path, hydro_units, time, forcing_data, forcing_variables
 
     for index, variable in enumerate(forcing_variables):
         if max_compression:
-            var_data = nc.createVariable(variable, 'float32', ('time', 'hydro_units'), zlib=True, least_significant_digit=3)
+            var_data = nc.createVariable(variable, 'float32',
+                                         ('time', 'hydro_units'), zlib=True,
+                                         least_significant_digit=3)
         else:
-            var_data = nc.createVariable(variable, 'float32', ('time', 'hydro_units'), zlib=True)
+            var_data = nc.createVariable(variable, 'float32',
+                                         ('time', 'hydro_units'), zlib=True)
         var_data[:, :] = forcing_data[index]
 
     nc.close()
@@ -106,33 +112,44 @@ def spatialize_temp(ts, hydro_units, reference_alt, temp_lapse):
     for index, unit in hydro_units.iterrows():
         elevation = unit['elevation']
         if len(temp_lapse) == 1:
-            units_temperature[:, index] = ts['temperature'] + temp_lapse * (elevation - reference_alt) / 100
+            units_temperature[:, index] = \
+                ts['temperature'] + temp_lapse * \
+                (elevation - reference_alt) / 100
         elif len(temp_lapse) == 12:
             for m in range(12):
                 month = ts.date.dt.month == m + 1
                 month = month.to_numpy()
-                units_temperature[month, index] = ts['temperature'][month] + temp_lapse[m] * (elevation - reference_alt) / 100
+                units_temperature[month, index] = \
+                    ts['temperature'][month] + temp_lapse[m] * \
+                    (elevation - reference_alt) / 100
         else:
-            raise ValueError(f'The temperature lapse should have a length of 1 or 12. Here: {len(temp_lapse)}')
+            raise ValueError(
+                f'The temperature lapse should have a length of 1 or 12. '
+                f'Here: {len(temp_lapse)}')
 
     return units_temperature
 
 
-def spatialize_precip(ts, hydro_units, reference_alt, precip_corr_1, precip_corr_2=None, precip_corr_change=None):
+def spatialize_precip(ts, hydro_units, reference_alt, precip_corr_1,
+                      precip_corr_2=None, precip_corr_change=None):
     units_precip = np.zeros((len(ts), len(hydro_units)))
     hydro_units = hydro_units.reset_index()
     for index, unit in hydro_units.iterrows():
         elevation = unit['elevation']
 
         if not precip_corr_change:
-            units_precip[:, index] = ts['precipitation'] * (1 + precip_corr_1 * (elevation - reference_alt) / 100)
+            units_precip[:, index] = ts['precipitation'] * (
+                        1 + precip_corr_1 * (elevation - reference_alt) / 100)
             continue
 
         if elevation < precip_corr_change:
-            units_precip[:, index] = ts['precipitation'] * (1 + precip_corr_1 * (elevation - reference_alt) / 100)
+            units_precip[:, index] = ts['precipitation'] * (
+                        1 + precip_corr_1 * (elevation - reference_alt) / 100)
         else:
-            precip_below = ts['precipitation'] * (1 + precip_corr_1 * (precip_corr_change - reference_alt) / 100)
-            units_precip[:, index] = precip_below * (1 + precip_corr_2 * (elevation - precip_corr_change) / 100)
+            precip_below = ts['precipitation'] * (1 + precip_corr_1 * (
+                        precip_corr_change - reference_alt) / 100)
+            units_precip[:, index] = precip_below * (1 + precip_corr_2 * (
+                        elevation - precip_corr_change) / 100)
 
     return units_precip
 
@@ -146,14 +163,19 @@ def spatialize_pet(ts, hydro_units, reference_alt, pet_gradient):
             if pet_gradient == 0:
                 units_pet[:, index] = ts['pet']
             else:
-                units_pet[:, index] = ts['pet'] + pet_gradient * (elevation - reference_alt) / 100
+                units_pet[:, index] = ts['pet'] + pet_gradient * \
+                                      (elevation - reference_alt) / 100
         elif len(pet_gradient) == 12:
             for m in range(12):
                 month = ts.date.dt.month == m + 1
                 month = month.to_numpy()
-                units_pet[month, index] = ts['pet'][month] + pet_gradient[m] * (elevation - reference_alt) / 100
+                units_pet[month, index] = ts['pet'][month] + \
+                                          pet_gradient[m] * \
+                                          (elevation - reference_alt) / 100
         else:
-            raise ValueError(f'The temperature lapse should have a length of 1 or 12. Here: {len(pet_gradient)}')
+            raise ValueError(
+                f'The temperature lapse should have a length of 1 or 12. '
+                f'Here: {len(pet_gradient)}')
 
     return units_pet
 
@@ -252,6 +274,7 @@ def mjd_to_datetime(mjd):
     date = np.empty(len(mjd), dtype='datetime64[s]')
 
     for idx, _ in enumerate(year):
-        date[idx] = datetime.datetime(year[idx], month[idx], day[idx], hour[idx], min[idx], 0, 0)
+        date[idx] = datetime.datetime(year[idx], month[idx], day[idx],
+                                      hour[idx], min[idx], 0, 0)
 
     return date

@@ -6,4 +6,3 @@ class Socont(Model):
 
     def __init__(self, name='Socont', **kwargs):
         super(Socont, self).__init__(name=name, **kwargs)
-

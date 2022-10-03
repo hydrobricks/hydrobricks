@@ -2,7 +2,8 @@ import argparse
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='Hydrological modelling framework.')
+    parser = argparse.ArgumentParser(
+        description='Hydrological modelling framework.')
     parser.add_argument('model_name', type=str,
                         help='name of the hydrological model to build.')
     parser.add_argument('--output-dir', type=str, required=True, metavar='DIR',

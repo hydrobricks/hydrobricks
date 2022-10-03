@@ -52,3 +52,11 @@ def test_parameter_variable_yearly_value_assignment_fails_if_wrong_size():
     param = hb.ParameterVariableYearly("param yearly variable")
     assert not param.set_values(year_start=2020, year_end=2025,
                                 values=[1.0, 1.1, 1.2, 1.3, 1.4])
+
+
+def test_build_socont_model_structure():
+    model_structure = hb.ModelStructure()
+    assert model_structure.generate_socont_structure(
+        surface_types=['ground', 'glacier', 'glacier'],
+        surface_names=['ground', 'glacier-ice', 'glacier-debris'],
+        soil_storage_nb=2, surface_runoff='linear-storage')

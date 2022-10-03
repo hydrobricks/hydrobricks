@@ -5,6 +5,7 @@
 #include "Includes.h"
 #include "Parameter.h"
 #include "ParameterVariable.h"
+#include "SettingsModel.h"
 #include "Utils.h"
 
 namespace py = pybind11;
@@ -14,6 +15,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
     m.doc() = "hydrobricks Python interface";
 
     m.def("init", &InitHydrobricksForPython, "Initializes hydrobricks");
+
+    py::class_<SettingsModel>(m, "ModelStructure")
+        .def(py::init<>())
+        .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
+             "surface_types"_a, "surface_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont-runoff");
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<const std::string&, float>())

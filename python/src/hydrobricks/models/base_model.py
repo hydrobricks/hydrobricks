@@ -7,6 +7,7 @@ class Model:
     def __init__(self, name=None, **kwargs):
         self.name = name
         self.solver = 'HeunExplicit'
+        self.structure = None
 
         # Properties passed by via keyword arguments to avoid repetitions for children.
         allowed_kwargs = {

@@ -107,7 +107,8 @@ setup(
     author="Pascal Horton",
     author_email="pascal.horton@giub.unibe.",
     description="A modular hydrological modelling framework",
-    long_description="",
+    long_description="A modular hydrological modelling framework built on "
+                     "C++ and Python.",
     ext_modules=[CMakeExtension("hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,

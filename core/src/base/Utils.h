@@ -4,6 +4,44 @@
 #include "Includes.h"
 
 /**
+ * Initialization of the user directory and the config file.
+ */
+bool InitHydrobricks();
+
+/**
+ * Initialization of hydrobricks for Python.
+ */
+bool InitHydrobricksForPython();
+
+/**
+ * Get the user directory path.
+ *
+ * @return The user directory path.
+ */
+wxString GetUserDirPath();
+
+/**
+ * Check that the output directory exists and create it if not.
+ *
+ * @return True on success.
+ */
+bool CheckOutputDirectory(const std::string& path);
+
+/**
+ * Display the processing time.
+ *
+ * @param sw The stop watch instance created before the computations.
+ */
+void DisplayProcessingTime(const wxStopWatch& sw);
+
+/**
+ * Create a log file at the given path.
+ *
+ * @param path Destination of the log file.
+ */
+void InitLog(const std::string& path);
+
+/**
  * Check if the given integer value is a NaN.
  *
  * @param value The value to check.

@@ -1,5 +1,83 @@
 #include "Utils.h"
 
+#include <wx/ffile.h>
+#include <wx/fileconf.h>
+#include <wx/stdpaths.h>
+
+bool InitHydrobricks() {
+    // Create the user directory if necessary
+    wxFileName userDir = wxFileName::DirName(GetUserDirPath());
+    if (!userDir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+        return false;
+    }
+
+    // Set config file
+    wxFileName filePath = wxFileConfig::GetLocalFile("hydrobricks", wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
+    filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    wxFileConfig* pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString,
+                                             wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
+    wxFileConfig::Set(pConfig);
+
+    return true;
+}
+
+bool InitHydrobricksForPython() {
+    wxInitialize();
+    return InitHydrobricks();
+}
+
+wxString GetUserDirPath() {
+    wxStandardPathsBase& stdPth = wxStandardPaths::Get();
+    stdPth.UseAppInfo(0);
+    wxString userDir = stdPth.GetUserDataDir();
+    userDir.Append(wxFileName::GetPathSeparator());
+    userDir.Append("hydrobricks");
+    userDir.Append(wxFileName::GetPathSeparator());
+
+    return userDir;
+}
+
+void InitLog(const std::string& path) {
+    wxString fullPath = path;
+    wxString logFileName = "hydrobricks.log";
+    fullPath.Append(wxFileName::GetPathSeparator());
+    fullPath.Append(logFileName);
+    wxFFile* logFile = new wxFFile(fullPath, "w");
+    auto* pLogFile = new wxLogStderr(logFile->fp());
+    new wxLogChain(pLogFile);
+    wxString version =
+        wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION);
+    wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
+}
+
+bool CheckOutputDirectory(const std::string& path) {
+    if (!wxFileName::DirExists(path)) {
+        wxFileName dir = wxFileName(path);
+        if (!dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+            wxLogError(_("The path %s could not be created."), path);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void DisplayProcessingTime(const wxStopWatch& sw) {
+    auto dispTime = float(sw.Time());
+    wxString watchUnit = "ms";
+    if (dispTime > 3600000) {
+        dispTime = dispTime / 3600000.0f;
+        watchUnit = "h";
+    } else if (dispTime > 60000) {
+        dispTime = dispTime / 60000.0f;
+        watchUnit = "min";
+    } else if (dispTime > 1000) {
+        dispTime = dispTime / 1000.0f;
+        watchUnit = "s";
+    }
+    wxLogMessage(_("Processing time: %.2f %s."), dispTime, watchUnit);
+}
+
 bool IsNaN(const int value) {
     return value == NAN_I;
 }

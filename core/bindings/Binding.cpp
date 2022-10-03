@@ -5,12 +5,15 @@
 #include "Includes.h"
 #include "Parameter.h"
 #include "ParameterVariable.h"
+#include "Utils.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
 
 PYBIND11_MODULE(hydrobricks, m) {
     m.doc() = "hydrobricks Python interface";
+
+    m.def("init", &InitHydrobricksForPython, "Initializes hydrobricks");
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<const std::string&, float>())

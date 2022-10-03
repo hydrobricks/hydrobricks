@@ -1,10 +1,8 @@
 #include "Hydrobricks.h"
 
-#include <wx/ffile.h>
 #include <wx/fileconf.h>
 #include <wx/filefn.h>
 #include <wx/log.h>
-#include <wx/stdpaths.h>
 
 #if _DEBUG
 #include <wx/debug.h>
@@ -16,6 +14,7 @@
 #include "SettingsModel.h"
 #include "SubBasin.h"
 #include "TimeSeries.h"
+#include "Utils.h"
 
 wxIMPLEMENT_APP_CONSOLE(Hydrobricks);
 
@@ -29,15 +28,9 @@ bool Hydrobricks::OnInit() {
     // Set application name
     wxString appName = "hydrobricks";
     wxApp::SetAppName(appName);
-    wxFileName userDir = wxFileName::DirName(GetUserDirPath());
-    userDir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
 
-    // Set config file
-    wxFileName filePath = wxFileConfig::GetLocalFile("hydrobricks", wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-    filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-    wxFileConfig* pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString,
-                                             wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-    wxFileConfig::Set(pConfig);
+    // Init
+    InitHydrobricks();
 
     // Call default behaviour
     if (!wxApp::OnInit()) {
@@ -46,17 +39,6 @@ bool Hydrobricks::OnInit() {
     }
 
     return true;
-}
-
-wxString Hydrobricks::GetUserDirPath() {
-    wxStandardPathsBase& stdPth = wxStandardPaths::Get();
-    stdPth.UseAppInfo(0);
-    wxString userDir = stdPth.GetUserDataDir();
-    userDir.Append(wxFileName::GetPathSeparator());
-    userDir.Append("hydrobricks");
-    userDir.Append(wxFileName::GetPathSeparator());
-
-    return userDir;
 }
 
 void Hydrobricks::OnInitCmdLine(wxCmdLineParser& parser) {
@@ -147,12 +129,12 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
 int Hydrobricks::OnRun() {
     try {
         // Create the output path if needed
-        if (!CheckOutputDirectory()) {
+        if (!CheckOutputDirectory(m_outputPath)) {
             return 1;
         }
 
         // Initialize log
-        InitializeLog();
+        InitLog(m_outputPath);
 
         // Model settings
         SettingsModel modelSettings;
@@ -280,45 +262,4 @@ void Hydrobricks::OnFatalException() {
 void Hydrobricks::OnUnhandledException() {
     wxLogError(_("An unhandled exception occurred."));
     CleanUp();
-}
-
-void Hydrobricks::InitializeLog() {
-    wxString fullPath = m_outputPath;
-    wxString logFileName = "hydrobricks.log";
-    fullPath.Append(wxFileName::GetPathSeparator());
-    fullPath.Append(logFileName);
-    wxFFile* logFile = new wxFFile(fullPath, "w");
-    auto* pLogFile = new wxLogStderr(logFile->fp());
-    new wxLogChain(pLogFile);
-    wxString version =
-        wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION);
-    wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
-}
-
-bool Hydrobricks::CheckOutputDirectory() {
-    if (!wxFileName::DirExists(m_outputPath)) {
-        wxFileName dir = wxFileName(m_outputPath);
-        if (!dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
-            wxLogError(_("The path %s could not be created."), m_outputPath);
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void Hydrobricks::DisplayProcessingTime(const wxStopWatch& sw) {
-    auto dispTime = float(sw.Time());
-    wxString watchUnit = "ms";
-    if (dispTime > 3600000) {
-        dispTime = dispTime / 3600000.0f;
-        watchUnit = "h";
-    } else if (dispTime > 60000) {
-        dispTime = dispTime / 60000.0f;
-        watchUnit = "min";
-    } else if (dispTime > 1000) {
-        dispTime = dispTime / 1000.0f;
-        watchUnit = "s";
-    }
-    wxLogMessage(_("Processing time: %.2f %s."), dispTime, watchUnit);
 }

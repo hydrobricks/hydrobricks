@@ -13,18 +13,18 @@ class Brick : public wxObject {
 
     ~Brick() override;
 
-    static Brick* Factory(const BrickSettings &brickSettings);
+    static Brick* Factory(const BrickSettings& brickSettings);
 
-    static bool HasParameter(const BrickSettings &brickSettings, const std::string &name);
+    static bool HasParameter(const BrickSettings& brickSettings, const std::string& name);
 
-    static float* GetParameterValuePointer(const BrickSettings &brickSettings, const std::string &name);
+    static float* GetParameterValuePointer(const BrickSettings& brickSettings, const std::string& name);
 
     /**
      * Assign the parameters to the brick element.
      *
      * @param brickSettings settings of the brick containing the parameters.
      */
-    virtual void AssignParameters(const BrickSettings &brickSettings);
+    virtual void AssignParameters(const BrickSettings& brickSettings);
 
     /**
      * Attach incoming flux.
@@ -88,7 +88,7 @@ class Brick : public wxObject {
         return m_name;
     }
 
-    void SetName(const std::string &name) {
+    void SetName(const std::string& name) {
         m_name = name;
     }
 

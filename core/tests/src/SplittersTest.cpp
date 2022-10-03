@@ -42,8 +42,8 @@ TEST_F(Splitters, SnowRain) {
     m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
     m_model.AddSplitterForcing("Precipitation");
     m_model.AddSplitterForcing("Temperature");
-    m_model.AddSplitterOutput("outlet"); // rain
-    m_model.AddSplitterOutput("outlet"); // snow
+    m_model.AddSplitterOutput("outlet");  // rain
+    m_model.AddSplitterOutput("outlet");  // snow
     m_model.AddSplitterLogging("rain");
     m_model.AddSplitterLogging("snow");
     m_model.AddSplitterParameter("transitionStart", 0.0f);
@@ -65,7 +65,7 @@ TEST_F(Splitters, SnowRain) {
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0};
 
-    for (auto & basinOutput : basinOutputs) {
+    for (auto& basinOutput : basinOutputs) {
         for (int j = 0; j < basinOutput.size(); ++j) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
         }

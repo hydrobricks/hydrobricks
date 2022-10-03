@@ -46,8 +46,8 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
-#include <vector>
 #include <numeric>
+#include <vector>
 
 //---------------------------------
 // Automatic leak detection with Microsoft VisualC++
@@ -99,54 +99,53 @@ typedef struct {
     int sec;
 } Time;
 
-
 //---------------------------------
 // Own exceptions
 //---------------------------------
 
-class NotImplemented : public std::logic_error
-{
+class NotImplemented : public std::logic_error {
   public:
-    NotImplemented() : std::logic_error("Function not yet implemented") { };
+    NotImplemented()
+        : std::logic_error("Function not yet implemented"){};
 };
 
-class ShouldNotHappen : public std::logic_error
-{
+class ShouldNotHappen : public std::logic_error {
   public:
-    ShouldNotHappen() : std::logic_error("This should not happen...") { };
+    ShouldNotHappen()
+        : std::logic_error("This should not happen..."){};
 };
 
-class InvalidArgument : public std::invalid_argument
-{
+class InvalidArgument : public std::invalid_argument {
   public:
-    explicit InvalidArgument(const wxString &msg) : std::invalid_argument(msg) { };
+    explicit InvalidArgument(const wxString& msg)
+        : std::invalid_argument(msg){};
 };
 
-class MissingParameter : public std::logic_error
-{
+class MissingParameter : public std::logic_error {
   public:
-    explicit MissingParameter(const wxString &msg) : std::logic_error(msg) { };
+    explicit MissingParameter(const wxString& msg)
+        : std::logic_error(msg){};
 };
 
-class ConceptionIssue : public std::logic_error
-{
+class ConceptionIssue : public std::logic_error {
   public:
-    explicit ConceptionIssue(const wxString &msg) : std::logic_error(msg) { };
+    explicit ConceptionIssue(const wxString& msg)
+        : std::logic_error(msg){};
 };
 
-class NotFound : public std::logic_error
-{
+class NotFound : public std::logic_error {
   public:
-    explicit NotFound(const wxString &msg) : std::logic_error(msg) { };
+    explicit NotFound(const wxString& msg)
+        : std::logic_error(msg){};
 };
 
 //---------------------------------
 // Own classes
 //---------------------------------
 
+#include "Enums.h"
 #include "GlobVars.h"
 #include "TypeDefs.h"
-#include "Enums.h"
 #include "Utils.h"
 
 #endif  // INCLUDES_H

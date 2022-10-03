@@ -38,15 +38,15 @@ class HydroUnit : public wxObject {
 
     Brick* GetBrick(int index);
 
-    bool HasBrick(const std::string &name);
+    bool HasBrick(const std::string& name);
 
-    Brick* GetBrick(const std::string &name);
+    Brick* GetBrick(const std::string& name);
 
     Splitter* GetSplitter(int index);
 
-    bool HasSplitter(const std::string &name);
+    bool HasSplitter(const std::string& name);
 
-    Splitter* GetSplitter(const std::string &name);
+    Splitter* GetSplitter(const std::string& name);
 
     bool IsOk();
 
@@ -69,7 +69,7 @@ class HydroUnit : public wxObject {
   protected:
     Types m_type;
     int m_id;
-    double m_area; // m2
+    double m_area;  // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
     std::vector<Splitter*> m_splitters;

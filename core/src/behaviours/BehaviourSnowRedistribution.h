@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_BEHAVIOUR_SNOW_REDISTRIBUTION_H
 #define HYDROBRICKS_BEHAVIOUR_SNOW_REDISTRIBUTION_H
 
-#include "Includes.h"
 #include "Behaviour.h"
+#include "Includes.h"
 
 class BehaviourSnowRedistribution : public Behaviour {
   public:

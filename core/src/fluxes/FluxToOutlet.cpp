@@ -1,8 +1,7 @@
 #include "FluxToOutlet.h"
 
 FluxToOutlet::FluxToOutlet()
-    : Flux()
-{}
+    : Flux() {}
 
 bool FluxToOutlet::IsOk() {
     return true;

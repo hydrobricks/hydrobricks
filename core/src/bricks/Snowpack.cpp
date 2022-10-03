@@ -2,12 +2,11 @@
 
 Snowpack::Snowpack()
     : SurfaceComponent(),
-      m_snow(nullptr)
-{
+      m_snow(nullptr) {
     m_snow = new WaterContainer(this);
 }
 
-void Snowpack::AssignParameters(const BrickSettings &brickSettings) {
+void Snowpack::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
 
@@ -43,10 +42,10 @@ void Snowpack::ApplyConstraints(double timeStep, bool inSolver) {
 
 vecDoublePt Snowpack::GetStateVariableChanges() {
     vecDoublePt vars;
-    for (auto const &var: m_container->GetStateVariableChanges()) {
+    for (auto const& var : m_container->GetStateVariableChanges()) {
         vars.push_back(var);
     }
-    for (auto const &var: m_snow->GetStateVariableChanges()) {
+    for (auto const& var : m_snow->GetStateVariableChanges()) {
         vars.push_back(var);
     }
 

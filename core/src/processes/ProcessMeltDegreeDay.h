@@ -16,7 +16,7 @@ class ProcessMeltDegreeDay : public ProcessMelt {
      */
     bool IsOk() override;
 
-    void AssignParameters(const ProcessSettings &processSettings) override;
+    void AssignParameters(const ProcessSettings& processSettings) override;
 
     void AttachForcing(Forcing* forcing) override;
 

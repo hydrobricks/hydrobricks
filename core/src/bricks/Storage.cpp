@@ -1,9 +1,8 @@
 #include "Storage.h"
 
 Storage::Storage()
-    : Brick()
-{}
+    : Brick() {}
 
-void Storage::AssignParameters(const BrickSettings &brickSettings) {
+void Storage::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }

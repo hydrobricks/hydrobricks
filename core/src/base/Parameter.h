@@ -5,7 +5,7 @@
 
 class Parameter : public wxObject {
   public:
-    explicit Parameter(const std::string &name, float val = NAN_F);
+    explicit Parameter(const std::string& name, float val = NAN_F);
 
     ~Parameter() override = default;
 
@@ -29,7 +29,7 @@ class Parameter : public wxObject {
         return m_value;
     }
 
-    float *GetValuePointer() {
+    float* GetValuePointer() {
         return &m_value;
     }
 

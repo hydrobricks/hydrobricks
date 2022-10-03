@@ -1,10 +1,10 @@
 #include "ProcessMelt.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
 ProcessMelt::ProcessMelt(WaterContainer* container)
-    : Process(container)
-{}
+    : Process(container) {}
 
 bool ProcessMelt::IsOk() {
     if (m_outputs.size() != 1) {

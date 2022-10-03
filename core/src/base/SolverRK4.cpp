@@ -1,14 +1,13 @@
-#include "Processor.h"
 #include "SolverRK4.h"
 
+#include "Processor.h"
+
 SolverRK4::SolverRK4()
-    : Solver()
-{
+    : Solver() {
     m_nIterations = 5;
 }
 
 bool SolverRK4::Solve() {
-
     // Compute the change rates for k1 = f(tn, Sn)
     ComputeChangeRates(0);
 
@@ -60,8 +59,8 @@ bool SolverRK4::Solve() {
     ResetStateVariableChanges();
 
     // Final change rate
-    m_changeRates.col(4) = (m_changeRates.col(0) + 2 * m_changeRates.col(1) +
-                            2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
+    m_changeRates.col(4) =
+        (m_changeRates.col(0) + 2 * m_changeRates.col(1) + 2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
 
     // Apply the final rates
     ApplyConstraintsFor(4);
@@ -70,5 +69,3 @@ bool SolverRK4::Solve() {
 
     return true;
 }
-
-

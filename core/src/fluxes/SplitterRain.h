@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_SPLITTER_RAIN_H
 #define HYDROBRICKS_SPLITTER_RAIN_H
 
+#include "Forcing.h"
 #include "Includes.h"
 #include "Splitter.h"
-#include "Forcing.h"
 
 class SplitterRain : public Splitter {
   public:
@@ -14,7 +14,7 @@ class SplitterRain : public Splitter {
      */
     bool IsOk() override;
 
-    void AssignParameters(const SplitterSettings &splitterSettings) override;
+    void AssignParameters(const SplitterSettings& splitterSettings) override;
 
     void AttachForcing(Forcing* forcing) override;
 

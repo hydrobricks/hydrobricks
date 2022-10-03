@@ -10,7 +10,6 @@ class Modifier : public wxObject {
     ~Modifier() override = default;
 
   protected:
-
   private:
 };
 

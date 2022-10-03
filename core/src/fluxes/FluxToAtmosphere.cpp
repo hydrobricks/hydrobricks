@@ -1,8 +1,7 @@
 #include "FluxToAtmosphere.h"
 
 FluxToAtmosphere::FluxToAtmosphere()
-    : Flux()
-{}
+    : Flux() {}
 
 bool FluxToAtmosphere::IsOk() {
     return true;

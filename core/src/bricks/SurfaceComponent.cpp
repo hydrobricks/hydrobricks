@@ -1,10 +1,10 @@
 #include "SurfaceComponent.h"
+
 #include "HydroUnit.h"
 
 SurfaceComponent::SurfaceComponent()
     : Brick(),
-      m_areaFraction(1.0)
-{
+      m_areaFraction(1.0) {
     m_needsSolver = false;
 }
 

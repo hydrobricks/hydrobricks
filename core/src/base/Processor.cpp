@@ -7,15 +7,13 @@ Processor::Processor()
     : m_solver(nullptr),
       m_model(nullptr),
       m_solvableConnectionsNb(0),
-      m_directConnectionsNb(0)
-{
-}
+      m_directConnectionsNb(0) {}
 
 Processor::~Processor() {
     wxDELETE(m_solver);
 }
 
-void Processor::Initialize(const SolverSettings &solverSettings) {
+void Processor::Initialize(const SolverSettings& solverSettings) {
     m_solver = Solver::Factory(solverSettings);
     m_solver->Connect(this);
     ConnectToElementsToSolve();

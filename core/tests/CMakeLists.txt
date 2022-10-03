@@ -44,11 +44,11 @@ endif ()
 
 ##### DEFINITIONS
 
-if(WIN32)
+if (WIN32)
     set_target_properties(hydrobricks-tests PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-else()
+else ()
     set_target_properties(hydrobricks-tests PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
-endif()
+endif ()
 
 if (WIN32)
     add_definitions(-D_CRTDBG_MAP_ALLOC)

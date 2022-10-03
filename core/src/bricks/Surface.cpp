@@ -1,10 +1,9 @@
 #include "Surface.h"
 
 Surface::Surface()
-    : SurfaceComponent()
-{}
+    : SurfaceComponent() {}
 
-void Surface::AssignParameters(const BrickSettings &brickSettings) {
+void Surface::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
 

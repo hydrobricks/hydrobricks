@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_FLUX_SIMPLE_H
 #define HYDROBRICKS_FLUX_SIMPLE_H
 
-#include "Includes.h"
 #include "Flux.h"
+#include "Includes.h"
 
 class FluxSimple : public Flux {
   public:
@@ -21,7 +21,6 @@ class FluxSimple : public Flux {
     void UpdateFlux(double amount) override;
 
   protected:
-
   private:
 };
 

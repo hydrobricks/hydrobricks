@@ -29,7 +29,7 @@ class SettingsBasin : public wxObject {
 
     void SelectUnit(int index);
 
-    bool Parse(const std::string &path);
+    bool Parse(const std::string& path);
 
     HydroUnitSettings GetHydroUnitSettings(int index) {
         wxASSERT(m_hydroUnits.size() > index);
@@ -52,7 +52,6 @@ class SettingsBasin : public wxObject {
     }
 
   protected:
-
   private:
     std::vector<HydroUnitSettings> m_hydroUnits;
     HydroUnitSettings* m_selectedHydroUnit;

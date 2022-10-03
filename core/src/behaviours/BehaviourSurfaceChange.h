@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_BEHAVIOUR_SURFACE_CHANGE_H
 #define HYDROBRICKS_BEHAVIOUR_SURFACE_CHANGE_H
 
-#include "Includes.h"
 #include "Behaviour.h"
+#include "Includes.h"
 
 class BehaviourSurfaceChange : public Behaviour {
   public:
@@ -12,7 +12,7 @@ class BehaviourSurfaceChange : public Behaviour {
 
     void AddChange(double date, int hydroUnitId, int surfaceTypeId, double area);
 
-    bool Parse(const std::string &path);
+    bool Parse(const std::string& path);
 
   protected:
     vecDouble m_dates;

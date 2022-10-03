@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_URBAN_H
 #define HYDROBRICKS_URBAN_H
 
-#include "SurfaceComponent.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class Urban : public SurfaceComponent {
   public:
@@ -11,14 +11,13 @@ class Urban : public SurfaceComponent {
     /**
      * @copydoc Brick::AssignParameters()
      */
-    void AssignParameters(const BrickSettings &brickSettings) override;
+    void AssignParameters(const BrickSettings& brickSettings) override;
 
     void ApplyConstraints(double timeStep, bool inSolver = true) override;
 
     void Finalize() override;
 
   protected:
-
   private:
 };
 

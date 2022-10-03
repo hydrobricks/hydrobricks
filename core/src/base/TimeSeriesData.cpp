@@ -5,10 +5,9 @@
  */
 
 TimeSeriesData::TimeSeriesData()
-    : m_cursor(0)
-{}
+    : m_cursor(0) {}
 
-bool TimeSeriesData::SetValues(const vecDouble &values) {
+bool TimeSeriesData::SetValues(const vecDouble& values) {
     m_values = values;
     return true;
 }
@@ -21,21 +20,18 @@ double TimeSeriesData::GetCurrentValue() {
     throw NotImplemented();
 }
 
-
 /*
  * TimeSeriesDataRegular
  */
 
-TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeStep,
-                                             TimeUnit timeStepUnit)
+TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit)
     : TimeSeriesData(),
       m_start(start),
       m_end(end),
       m_timeStep(timeStep),
-      m_timeStepUnit(timeStepUnit)
-{}
+      m_timeStepUnit(timeStepUnit) {}
 
-bool TimeSeriesDataRegular::SetValues(const vecDouble &values) {
+bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
     double calcEnd = IncrementDateBy(m_start, m_timeStep * int(values.size() - 1), m_timeStepUnit);
     if (calcEnd != m_end) {
         wxLogError(_("The size of the time series data does not match the time properties."));
@@ -108,12 +104,11 @@ double TimeSeriesDataRegular::GetEnd() {
  * TimeSeriesDataIrregular
  */
 
-TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble &dates)
+TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble& dates)
     : TimeSeriesData(),
-      m_dates(dates)
-{}
+      m_dates(dates) {}
 
-bool TimeSeriesDataIrregular::SetValues(const vecDouble &values) {
+bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
     if (m_dates.size() != values.size()) {
         wxLogError(_("The size of the time series data does not match the dates array."));
         return false;
@@ -147,5 +142,5 @@ double TimeSeriesDataIrregular::GetStart() {
 
 double TimeSeriesDataIrregular::GetEnd() {
     wxASSERT(!m_dates.empty());
-    return m_dates[m_dates.size()-1];
+    return m_dates[m_dates.size() - 1];
 }

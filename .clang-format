@@ -5,6 +5,10 @@ AccessModifierOffset: -2
 ColumnLimit: 120
 BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: BeforeColon
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-AllowAllConstructorInitializersOnNextLine: false
+PackConstructorInitializers: Never
 AllowShortFunctionsOnASingleLine: Empty
+PointerAlignment: Left
+DerivePointerAlignment: false
+AllowShortEnumsOnASingleLine: false
+AlignOperands: Align
+PenaltyBreakAssignment: 20

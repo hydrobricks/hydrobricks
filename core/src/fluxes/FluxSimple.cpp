@@ -1,8 +1,7 @@
 #include "FluxSimple.h"
 
 FluxSimple::FluxSimple()
-    : Flux()
-{}
+    : Flux() {}
 
 bool FluxSimple::IsOk() {
     return true;

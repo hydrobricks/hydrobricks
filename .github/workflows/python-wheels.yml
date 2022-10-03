@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2019, macOS] # macOS not building due to an issue with wxbase
+        os: [ubuntu-22.04, windows-2019] # macOS images on GitHub actions are not available...
 
     steps:
     - uses: actions/checkout@v3
@@ -43,7 +43,7 @@ jobs:
     - uses: actions/setup-python@v4
       
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.9.0
+      uses: pypa/cibuildwheel@v2.10.2
       env:
         CIBW_ARCHS: auto64
 

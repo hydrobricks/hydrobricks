@@ -9,7 +9,7 @@ class TimeSeriesData : public wxObject {
 
     ~TimeSeriesData() override = default;
 
-    virtual bool SetValues(const vecDouble &values);
+    virtual bool SetValues(const vecDouble& values);
 
     virtual double GetValueFor(double date);
 
@@ -30,14 +30,13 @@ class TimeSeriesData : public wxObject {
   private:
 };
 
-
 class TimeSeriesDataRegular : public TimeSeriesData {
   public:
     TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit);
 
     ~TimeSeriesDataRegular() override = default;
 
-    bool SetValues(const vecDouble &values) override;
+    bool SetValues(const vecDouble& values) override;
 
     double GetValueFor(double date) override;
 
@@ -60,14 +59,13 @@ class TimeSeriesDataRegular : public TimeSeriesData {
   private:
 };
 
-
 class TimeSeriesDataIrregular : public TimeSeriesData {
   public:
-    explicit TimeSeriesDataIrregular(vecDouble &dates);
+    explicit TimeSeriesDataIrregular(vecDouble& dates);
 
     ~TimeSeriesDataIrregular() override = default;
 
-    bool SetValues(const vecDouble &values) override;
+    bool SetValues(const vecDouble& values) override;
 
     double GetValueFor(double date) override;
 

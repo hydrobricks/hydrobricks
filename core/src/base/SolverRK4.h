@@ -15,7 +15,6 @@ class SolverRK4 : public Solver {
     bool Solve() override;
 
   protected:
-
   private:
 };
 

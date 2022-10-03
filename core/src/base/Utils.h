@@ -32,7 +32,7 @@ bool IsNaN(double value);
  *
  * @return The path separator of the current OS.
  */
-const char *GetPathSeparator();
+const char* GetPathSeparator();
 
 /**
  * Compare two strings in an case insensitive way.
@@ -42,7 +42,7 @@ const char *GetPathSeparator();
  * @return True if strings match.
  * @note From https://thispointer.com/c-case-insensitive-string-comparison-using-stl-c11-boost-library/
  */
-bool StringsMatch(const std::string &str1, const std::string &str2);
+bool StringsMatch(const std::string& str1, const std::string& str2);
 
 /**
  * Find an value in a vector of integers.
@@ -54,7 +54,7 @@ bool StringsMatch(const std::string &str1, const std::string &str2);
  * @param showWarning option to show a warning if the value was not found in the vector (default: true).
  * @return The index of the searched value.
  */
-int Find(const int *start, const int *end, int value, int tolerance = 0, bool showWarning = true);
+int Find(const int* start, const int* end, int value, int tolerance = 0, bool showWarning = true);
 
 /**
  * Find an value in a vector of floats.
@@ -66,7 +66,7 @@ int Find(const int *start, const int *end, int value, int tolerance = 0, bool sh
  * @param showWarning option to show a warning if the value was not found in the vector (default: true).
  * @return The index of the searched value.
  */
-int Find(const float *start, const float *end, float value, float tolerance = 0.0, bool showWarning = true);
+int Find(const float* start, const float* end, float value, float tolerance = 0.0, bool showWarning = true);
 
 /**
  * Find an value in a vector of doubles.
@@ -78,7 +78,7 @@ int Find(const float *start, const float *end, float value, float tolerance = 0.
  * @param showWarning option to show a warning if the value was not found in the vector (default: true).
  * @return The index of the searched value.
  */
-int Find(const double *start, const double *end, double value, double tolerance = 0.0, bool showWarning = true);
+int Find(const double* start, const double* end, double value, double tolerance = 0.0, bool showWarning = true);
 
 /**
  * Find an value in a vector (template).
@@ -91,7 +91,7 @@ int Find(const double *start, const double *end, double value, double tolerance 
  * @return The index of the searched value.
  */
 template <class T>
-int FindT(const T *start, const T *end, T value, T tolerance = 0, bool showWarning = true);
+int FindT(const T* start, const T* end, T value, T tolerance = 0, bool showWarning = true);
 
 /**
  * Increment the provided date by the given amount of time.
@@ -118,7 +118,7 @@ Time GetTimeStructFromMJD(double mjd);
  * @param format The format of the date to parse.
  * @return The date value as MJD.
  */
-double ParseDate(const std::string &dateStr, TimeFormat format);
+double ParseDate(const std::string& dateStr, TimeFormat format);
 
 /**
  * Get a date as an MJD value.

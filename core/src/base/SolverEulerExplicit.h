@@ -15,7 +15,6 @@ class SolverEulerExplicit : public Solver {
     bool Solve() override;
 
   protected:
-
   private:
 };
 

@@ -1,8 +1,7 @@
 #include "SplitterRain.h"
 
 SplitterRain::SplitterRain()
-    : Splitter()
-{}
+    : Splitter() {}
 
 bool SplitterRain::IsOk() {
     if (m_outputs.size() != 1) {
@@ -13,7 +12,7 @@ bool SplitterRain::IsOk() {
     return true;
 }
 
-void SplitterRain::AssignParameters(const SplitterSettings &) {
+void SplitterRain::AssignParameters(const SplitterSettings&) {
     //
 }
 

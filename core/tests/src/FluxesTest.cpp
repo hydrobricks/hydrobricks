@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "ModelHydro.h"
-#include "SettingsModel.h"
 #include "SettingsBasin.h"
+#include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 
 /**
@@ -248,11 +248,11 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricksDifferentArea) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 2.0/3.0);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0/3.0);
+    basinProp.AddHydroUnitSurfaceElement("item-1", 2.0 / 3.0);
+    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0 / 3.0);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 4.0/5.0);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0/5.0);
+    basinProp.AddHydroUnitSurfaceElement("item-1", 4.0 / 5.0);
+    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0 / 5.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));

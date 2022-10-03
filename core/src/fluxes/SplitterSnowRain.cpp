@@ -1,8 +1,7 @@
 #include "SplitterSnowRain.h"
 
 SplitterSnowRain::SplitterSnowRain()
-    : Splitter()
-{}
+    : Splitter() {}
 
 bool SplitterSnowRain::IsOk() {
     if (m_outputs.size() != 2) {
@@ -13,7 +12,7 @@ bool SplitterSnowRain::IsOk() {
     return true;
 }
 
-void SplitterSnowRain::AssignParameters(const SplitterSettings &splitterSettings) {
+void SplitterSnowRain::AssignParameters(const SplitterSettings& splitterSettings) {
     m_transitionStart = GetParameterValuePointer(splitterSettings, "transitionStart");
     m_transitionEnd = GetParameterValuePointer(splitterSettings, "transitionEnd");
 }
@@ -46,7 +45,8 @@ void SplitterSnowRain::Compute() {
         m_outputs[0]->UpdateFlux(m_precipitation->GetValue());
         m_outputs[1]->UpdateFlux(0);
     } else {
-        double rainFraction = (m_temperature->GetValue() - *m_transitionStart) / (*m_transitionEnd - *m_transitionStart);
+        double rainFraction = (m_temperature->GetValue() - *m_transitionStart) /
+                              (*m_transitionEnd - *m_transitionStart);
         m_outputs[0]->UpdateFlux(m_precipitation->GetValue() * rainFraction);
         m_outputs[1]->UpdateFlux(m_precipitation->GetValue() * (1 - rainFraction));
     }

@@ -1,14 +1,11 @@
-#include "Parameter.h"
 #include "SettingsBasin.h"
+
 #include "FileNetcdf.h"
+#include "Parameter.h"
 
+SettingsBasin::SettingsBasin() {}
 
-SettingsBasin::SettingsBasin()
-{
-}
-
-SettingsBasin::~SettingsBasin() {
-}
+SettingsBasin::~SettingsBasin() {}
 
 void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     HydroUnitSettings unit;
@@ -32,8 +29,7 @@ void SettingsBasin::SelectUnit(int index) {
     m_selectedHydroUnit = &m_hydroUnits[index];
 }
 
-bool SettingsBasin::Parse(const std::string &path) {
-
+bool SettingsBasin::Parse(const std::string& path) {
     try {
         FileNetcdf file;
 
@@ -66,7 +62,7 @@ bool SettingsBasin::Parse(const std::string &path) {
         }
 
         // Get surface data
-        for (const auto& surface: surfaces) {
+        for (const auto& surface : surfaces) {
             vecFloat fractions = file.GetVarFloat1D(surface, unitsNb);
 
             // Get the surface type
@@ -81,7 +77,7 @@ bool SettingsBasin::Parse(const std::string &path) {
             }
         }
 
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
         wxLogError(e.what());
         return false;
     }

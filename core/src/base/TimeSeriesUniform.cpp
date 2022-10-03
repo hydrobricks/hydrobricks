@@ -2,8 +2,7 @@
 
 TimeSeriesUniform::TimeSeriesUniform(VariableType type)
     : TimeSeries(type),
-      m_data(nullptr)
-{}
+      m_data(nullptr) {}
 
 TimeSeriesUniform::~TimeSeriesUniform() {
     wxDELETE(m_data);

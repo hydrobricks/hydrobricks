@@ -11,8 +11,7 @@
 
 Brick::Brick()
     : m_needsSolver(true),
-      m_container(nullptr)
-{
+      m_container(nullptr) {
     m_container = new WaterContainer(this);
 }
 
@@ -20,7 +19,7 @@ Brick::~Brick() {
     wxDELETE(m_container);
 }
 
-Brick* Brick::Factory(const BrickSettings &brickSettings) {
+Brick* Brick::Factory(const BrickSettings& brickSettings) {
     if (brickSettings.type == "Storage") {
         return new Storage();
     } else if (brickSettings.type == "Surface") {
@@ -52,7 +51,7 @@ bool Brick::IsOk() {
     return true;
 }
 
-void Brick::AssignParameters(const BrickSettings &brickSettings) {
+void Brick::AssignParameters(const BrickSettings& brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
         m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
@@ -63,8 +62,8 @@ void Brick::AttachFluxIn(Flux* flux) {
     m_container->AttachFluxIn(flux);
 }
 
-bool Brick::HasParameter(const BrickSettings &brickSettings, const std::string &name) {
-    for (auto parameter: brickSettings.parameters) {
+bool Brick::HasParameter(const BrickSettings& brickSettings, const std::string& name) {
+    for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
         }
@@ -73,8 +72,8 @@ bool Brick::HasParameter(const BrickSettings &brickSettings, const std::string &
     return false;
 }
 
-float* Brick::GetParameterValuePointer(const BrickSettings &brickSettings, const std::string &name) {
-    for (auto parameter: brickSettings.parameters) {
+float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const std::string& name) {
+    for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();
@@ -114,13 +113,13 @@ vecDoublePt Brick::GetStateVariableChanges() {
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     vecDoublePt values;
-    for (auto const &process: m_processes) {
+    for (auto const& process : m_processes) {
         vecDoublePt processValues = process->GetStateVariables();
 
         if (processValues.empty()) {
             continue;
         }
-        for (auto const &value : processValues) {
+        for (auto const& value : processValues) {
             values.push_back(value);
         }
     }
@@ -131,7 +130,7 @@ vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
 int Brick::GetProcessesConnectionsNb() {
     int counter = 0;
 
-    for (auto const &process: m_processes) {
+    for (auto const& process : m_processes) {
         counter += process->GetConnectionsNb();
     }
 

@@ -111,10 +111,9 @@ class WaterContainer : public wxObject {
     }
 
   protected:
-
   private:
-    double m_content; // [mm]
-    double m_contentChange; // [mm]
+    double m_content;        // [mm]
+    double m_contentChange;  // [mm]
     float* m_capacity;
     bool m_infiniteStorage;
     Brick* m_parent;

@@ -5,8 +5,8 @@
 #include "Connector.h"
 #include "HydroUnit.h"
 #include "Includes.h"
-#include "TimeMachine.h"
 #include "SettingsBasin.h"
+#include "TimeMachine.h"
 
 class SubBasin : public wxObject {
   public:
@@ -40,15 +40,15 @@ class SubBasin : public wxObject {
 
     Brick* GetBrick(int index);
 
-    bool HasBrick(const std::string &name);
+    bool HasBrick(const std::string& name);
 
-    Brick* GetBrick(const std::string &name);
+    Brick* GetBrick(const std::string& name);
 
     Splitter* GetSplitter(int index);
 
-    bool HasSplitter(const std::string &name);
+    bool HasSplitter(const std::string& name);
 
-    Splitter* GetSplitter(const std::string &name);
+    Splitter* GetSplitter(const std::string& name);
 
     bool HasIncomingFlow();
 
@@ -69,7 +69,7 @@ class SubBasin : public wxObject {
     }
 
   protected:
-    float m_area; // m2
+    float m_area;  // m2
     double m_outletTotal;
     bool m_needsCleanup;
     std::vector<Brick*> m_bricks;

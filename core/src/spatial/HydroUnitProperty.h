@@ -10,7 +10,6 @@ class HydroUnitProperty : public wxObject {
     ~HydroUnitProperty() override = default;
 
   protected:
-
   private:
 };
 

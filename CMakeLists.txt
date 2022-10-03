@@ -113,7 +113,7 @@ else (RUN_CONAN_FROM_CMAKE)
     include(${CONANBUILDINFO})
     conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
 
-endif(RUN_CONAN_FROM_CMAKE)
+endif (RUN_CONAN_FROM_CMAKE)
 
 include_directories(${CONAN_INCLUDE_DIRS})
 
@@ -170,7 +170,7 @@ if (BUILD_TESTS)
 endif ()
 if (BUILD_PYBINDINGS)
     add_subdirectory(core/bindings)
-endif()
+endif ()
 
 
 ##### DISPLAY SOME INFORMATION

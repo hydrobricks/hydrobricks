@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "TimeSeriesUniform.h"
 #include "TimeSeriesData.h"
+#include "TimeSeriesUniform.h"
 
 TEST(TimeSeries, VariableType) {
     TimeSeriesUniform series(Precipitation);

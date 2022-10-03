@@ -1,10 +1,10 @@
 #include "FluxToBrick.h"
+
 #include "Brick.h"
 
 FluxToBrick::FluxToBrick(Brick* brick)
     : Flux(),
-      m_toBrick(brick)
-{}
+      m_toBrick(brick) {}
 
 bool FluxToBrick::IsOk() {
     return true;

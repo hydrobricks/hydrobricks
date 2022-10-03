@@ -3,13 +3,11 @@
 #include "Processor.h"
 
 SolverHeunExplicit::SolverHeunExplicit()
-    : Solver()
-{
+    : Solver() {
     m_nIterations = 3;
 }
 
 bool SolverHeunExplicit::Solve() {
-
     // Compute the change rates for f(tn, Sn)
     ComputeChangeRates(0);
 

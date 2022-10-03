@@ -1,8 +1,8 @@
 #ifndef HYDROBRICKS_VEGETATION_H
 #define HYDROBRICKS_VEGETATION_H
 
-#include "SurfaceComponent.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class Vegetation : public SurfaceComponent {
   public:
@@ -18,7 +18,6 @@ class Vegetation : public SurfaceComponent {
     void Finalize() override;
 
   protected:
-
   private:
 };
 

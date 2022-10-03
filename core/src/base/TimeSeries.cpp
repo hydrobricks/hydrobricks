@@ -1,14 +1,13 @@
 #include "TimeSeries.h"
-#include "TimeSeriesUniform.h"
-#include "TimeSeriesDistributed.h"
+
 #include "FileNetcdf.h"
+#include "TimeSeriesDistributed.h"
+#include "TimeSeriesUniform.h"
 
 TimeSeries::TimeSeries(VariableType type)
-    : m_type(type)
-{}
+    : m_type(type) {}
 
-bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTimeSeries) {
-
+bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -37,7 +36,7 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
             timeStep = 1;
         } else if (timeStepData > 1.0) {
             timeStep = int(round(timeStepData));
-        } else if(timeStepData < 1.0) {
+        } else if (timeStepData < 1.0) {
             timeUnit = Hour;
             timeStep = int(round(timeStepData * 24));
         } else {
@@ -56,8 +55,7 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
             // Get variable name
             std::string varName = file.GetVarName(iVar);
 
-            if (varName == "id" ||
-                varName == "time") {
+            if (varName == "id" || varName == "time") {
                 continue;
             }
 
@@ -67,8 +65,7 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
                 varType = Precipitation;
             } else if (StringsMatch(varName, "Temperature")) {
                 varType = Temperature;
-            } else if (StringsMatch(varName, "PET") ||
-                       StringsMatch(varName, "ETP")) {
+            } else if (StringsMatch(varName, "PET") || StringsMatch(varName, "ETP")) {
                 varType = PET;
             } else if (StringsMatch(varName, "Custom1")) {
                 varType = Custom1;
@@ -77,7 +74,8 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
             } else if (StringsMatch(varName, "Custom3")) {
                 varType = Custom3;
             } else {
-                throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+                throw InvalidArgument(
+                    wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
             }
 
             // Instantiate time series
@@ -91,7 +89,8 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+                    forcingData->SetValues(
+                        std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             } else {
@@ -99,7 +98,8 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+                    forcingData->SetValues(
+                        std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             }
@@ -107,7 +107,7 @@ bool TimeSeries::Parse(const std::string &path, std::vector<TimeSeries*> &vecTim
             vecTimeSeries.push_back(timeSeries);
         }
 
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
         wxLogError(e.what());
         return false;
     }

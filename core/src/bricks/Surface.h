@@ -11,14 +11,13 @@ class Surface : public SurfaceComponent {
     /**
      * @copydoc Brick::AssignParameters()
      */
-    void AssignParameters(const BrickSettings &brickSettings) override;
+    void AssignParameters(const BrickSettings& brickSettings) override;
 
     void ApplyConstraints(double timeStep, bool inSolver = true) override;
 
     void Finalize() override;
 
   protected:
-
   private:
 };
 

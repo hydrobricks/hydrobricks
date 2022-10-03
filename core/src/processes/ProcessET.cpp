@@ -1,10 +1,10 @@
 #include "ProcessET.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
 ProcessET::ProcessET(WaterContainer* container)
-    : Process(container)
-{}
+    : Process(container) {}
 
 bool ProcessET::IsOk() {
     if (m_outputs.size() != 1) {

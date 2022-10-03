@@ -12,7 +12,6 @@ class ProcessOutflowDirect : public ProcessOutflow {
     ~ProcessOutflowDirect() override = default;
 
   protected:
-
     vecDouble GetRates() override;
 
   private:

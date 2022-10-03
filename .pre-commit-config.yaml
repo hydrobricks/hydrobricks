@@ -13,7 +13,8 @@ repos:
   - id: check-symlinks
   - id: check-yaml
   - id: debug-statements
-  - id: mixed-line-ending --fix=lf
+  - id: mixed-line-ending
+    args: ["--fix", "lf"]
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 

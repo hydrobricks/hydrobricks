@@ -1,4 +1,3 @@
-import distutils.log
 import os
 import re
 import subprocess
@@ -24,15 +23,13 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        ext_dir = os.path.abspath(
-            os.path.dirname(self.get_ext_fullpath(ext.name)))
+        ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
             ext_dir += os.path.sep
 
-        debug = int(os.environ.get("DEBUG", 0)) \
-            if self.debug is None else self.debug
+        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
@@ -50,8 +47,7 @@ class CMakeBuild(build_ext):
         # Adding CMake arguments set as environment variable
         # (needed e.g. to build for ARM OSx on conda-forge)
         if "CMAKE_ARGS" in os.environ:
-            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ")
-                           if item]
+            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and
@@ -60,8 +56,7 @@ class CMakeBuild(build_ext):
                 try:
                     import ninja  # noqa: F401
 
-                    ninja_exe_path = os.path.join(ninja.BIN_DIR,
-                                                         "ninja")
+                    ninja_exe_path = os.path.join(ninja.BIN_DIR, "ninja")
                     cmake_args += [
                         "-GNinja",
                         f"-DCMAKE_MAKE_PROGRAM:FILEPATH={ninja_exe_path}",
@@ -71,10 +66,8 @@ class CMakeBuild(build_ext):
 
         else:
 
-            single_config = any(x in cmake_generator
-                                for x in {"NMake", "Ninja"})
-            contains_arch = any(x in cmake_generator
-                                for x in {"ARM", "Win64"})
+            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
+            contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
 
             # Specify the arch if using MSVC generator, but only if it doesn't
             # contain a backward-compatibility arch spec already in the
@@ -93,8 +86,7 @@ class CMakeBuild(build_ext):
             # Cross-compile support for macOS - respect ARCHFLAGS if set
             archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
             if archs:
-                cmake_args += [
-                    "-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
+                cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level.
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
@@ -105,10 +97,8 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
-        subprocess.check_call(["cmake", ext.source_dir] + cmake_args,
-                              cwd=build_temp)
-        subprocess.check_call(["cmake", "--build", "."] + build_args,
-                              cwd=build_temp)
+        subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
+        subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 
 
 setup(

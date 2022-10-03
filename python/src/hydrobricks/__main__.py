@@ -12,6 +12,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # do something...
+    print(args)
 
 
 if __name__ == "__main__":

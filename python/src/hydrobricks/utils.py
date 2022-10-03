@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import yaml
-from netCDF4 import Dataset, stringtochar
+from netCDF4 import Dataset
 
 
 def validate_kwargs(kwargs, allowed_kwargs):
@@ -43,8 +43,7 @@ def create_units_file(path, hydro_units, surface_names=None,
 
     if surface_names:
         for i in range(len(surface_names)):
-            var_surf = nc.createVariable(surface_names[i], 'float32',
-                                         ('hydro_units',))
+            var_surf = nc.createVariable(surface_names[i], 'float32', ('hydro_units',))
             var_surf[:] = hydro_units[surface_names[i]]
             var_surf.units = 'fraction'
             var_surf.type = surface_types[i]
@@ -113,9 +112,8 @@ def spatialize_temp(ts, hydro_units, reference_alt, temp_lapse):
     for index, unit in hydro_units.iterrows():
         elevation = unit['elevation']
         if len(temp_lapse) == 1:
-            units_temperature[:, index] = \
-                ts['temperature'] + temp_lapse * \
-                (elevation - reference_alt) / 100
+            units_temperature[:, index] = ts['temperature'] + temp_lapse * \
+                                          (elevation - reference_alt) / 100
         elif len(temp_lapse) == 12:
             for m in range(12):
                 month = ts.date.dt.month == m + 1
@@ -131,8 +129,8 @@ def spatialize_temp(ts, hydro_units, reference_alt, temp_lapse):
     return units_temperature
 
 
-def spatialize_precip(ts, hydro_units, reference_alt, precip_corr_1,
-                      precip_corr_2=None, precip_corr_change=None):
+def spatialize_precip(ts, hydro_units, reference_alt, precip_corr_1, precip_corr_2=None,
+                      precip_corr_change=None):
     units_precip = np.zeros((len(ts), len(hydro_units)))
     hydro_units = hydro_units.reset_index()
     for index, unit in hydro_units.iterrows():
@@ -170,9 +168,9 @@ def spatialize_pet(ts, hydro_units, reference_alt, pet_gradient):
             for m in range(12):
                 month = ts.date.dt.month == m + 1
                 month = month.to_numpy()
-                units_pet[month, index] = ts['pet'][month] + \
-                                          pet_gradient[m] * \
-                                          (elevation - reference_alt) / 100
+                units_pet[month, index] = \
+                    ts['pet'][month] + pet_gradient[m] * \
+                    (elevation - reference_alt) / 100
         else:
             raise ValueError(
                 f'The temperature lapse should have a length of 1 or 12. '

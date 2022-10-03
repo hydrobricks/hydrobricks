@@ -35,9 +35,6 @@ dependencies = [
 "Homepage" = "https://github.com/hydrobricks/hydrobricks"
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
 
-[flake8]
-max-line-length = 88
-
 [tool.black]
 line-length = 88
 

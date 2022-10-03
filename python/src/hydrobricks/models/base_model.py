@@ -8,7 +8,7 @@ class Model:
         self.name = name
         self.solver = 'HeunExplicit'
 
-        # Properties passed by via keyword arguments to avoid repetitions for all children.
+        # Properties passed by via keyword arguments to avoid repetitions for children.
         allowed_kwargs = {
             'solver',
         }

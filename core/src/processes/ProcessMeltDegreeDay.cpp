@@ -1,4 +1,5 @@
 #include "ProcessMeltDegreeDay.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
@@ -6,8 +7,7 @@ ProcessMeltDegreeDay::ProcessMeltDegreeDay(WaterContainer* container)
     : ProcessMelt(container),
       m_temperature(nullptr),
       m_degreeDayFactor(nullptr),
-      m_meltingTemperature(nullptr)
-{}
+      m_meltingTemperature(nullptr) {}
 
 bool ProcessMeltDegreeDay::IsOk() {
     if (!ProcessMelt::IsOk()) {
@@ -26,7 +26,7 @@ bool ProcessMeltDegreeDay::IsOk() {
     return true;
 }
 
-void ProcessMeltDegreeDay::AssignParameters(const ProcessSettings &processSettings) {
+void ProcessMeltDegreeDay::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
     m_degreeDayFactor = GetParameterValuePointer(processSettings, "degreeDayFactor");
     m_meltingTemperature = GetParameterValuePointer(processSettings, "meltingTemperature");

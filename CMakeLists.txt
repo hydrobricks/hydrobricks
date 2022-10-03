@@ -13,8 +13,7 @@ endif ()
 # Project name
 project(hydrobricks)
 
-
-##### OPTIONS
+# OPTIONS
 
 # Version number
 set(VERSION_MAJOR "0")
@@ -37,7 +36,6 @@ endif (WIN32)
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
-
 
 # Enable Visual Leak Detector
 if (WIN32)
@@ -64,8 +62,7 @@ else (WIN32)
     set(INSTALL_DIR_BIN bin)
 endif (WIN32)
 
-
-##### CONAN
+# CONAN
 
 option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
 
@@ -74,7 +71,7 @@ if (RUN_CONAN_FROM_CMAKE)
     if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
         message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
         file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
-                "${CMAKE_BINARY_DIR}/conan.cmake")
+             "${CMAKE_BINARY_DIR}/conan.cmake")
     endif ()
 
     include(${CMAKE_BINARY_DIR}/conan.cmake)
@@ -87,28 +84,24 @@ if (RUN_CONAN_FROM_CMAKE)
     if (NOT CONAN_DETECT_QUIET)
         message(STATUS "Conan: Found program ${CONAN_CMD}")
     endif ()
-    execute_process(COMMAND ${CONAN_CMD} --version
-            RESULT_VARIABLE return_code
-            OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
-            ERROR_VARIABLE CONAN_VERSION_ERROR)
+    execute_process(
+        COMMAND ${CONAN_CMD} --version
+        RESULT_VARIABLE return_code
+        OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
+        ERROR_VARIABLE CONAN_VERSION_ERROR)
 
     message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
     message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
 
     # Get libraries
-    conan_cmake_run(CONANFILE conanfile.txt
-            BASIC_SETUP CMAKE_TARGETS
-            BUILD missing)
+    conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
 
 else (RUN_CONAN_FROM_CMAKE)
 
-    find_file(CONANBUILDINFO
-            NAMES conanbuildinfo.cmake
-            PATHS "${CMAKE_BINARY_DIR}"
-            "${CMAKE_SOURCE_DIR}"
-            "D:/a/hydrobricks/hydrobricks" # For GitHub actions (Windows)
-            "/project" # For GitHub actions (Linux)
-            )
+    find_file(
+        CONANBUILDINFO
+        NAMES conanbuildinfo.cmake
+        PATHS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}" "D:/a/hydrobricks/hydrobricks" "/project")
 
     include(${CONANBUILDINFO})
     conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
@@ -119,18 +112,16 @@ include_directories(${CONAN_INCLUDE_DIRS})
 
 message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY (post conan): ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
-
-##### OTHER DEPENDENCIES
+# OTHER DEPENDENCIES
 
 include(FetchContent)
 
 FetchContent_Declare(
-        pybind11
-        GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v2.10.0)
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.10.0)
 
-
-##### FIND ANALYSIS TOOLS
+# FIND ANALYSIS TOOLS
 
 # Visual Leak Detector
 if (USE_VLD)
@@ -150,14 +141,21 @@ if (USE_CODECOV)
     include(CodeCoverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
-            NAME hydrobricks-coverage
-            EXECUTABLE hydrobricks-tests
-            EXCLUDE "/usr/*" "${PROJECT_SOURCE_DIR}/core/tests/src/*" "tests/*" "${CMAKE_BINARY_DIR}/_deps/*" "bin/*"
-            DEPENDENCIES hydrobricks-tests)
+        NAME
+        hydrobricks-coverage
+        EXECUTABLE
+        hydrobricks-tests
+        EXCLUDE
+        "/usr/*"
+        "${PROJECT_SOURCE_DIR}/core/tests/src/*"
+        "tests/*"
+        "${CMAKE_BINARY_DIR}/_deps/*"
+        "bin/*"
+        DEPENDENCIES
+        hydrobricks-tests)
 endif (USE_CODECOV)
 
-
-##### GET SUBDIRECTORIES CONTENT
+# GET SUBDIRECTORIES CONTENT
 
 include(define_compilation_flags)
 
@@ -172,8 +170,7 @@ if (BUILD_PYBINDINGS)
     add_subdirectory(core/bindings)
 endif ()
 
-
-##### DISPLAY SOME INFORMATION
+# DISPLAY SOME INFORMATION
 
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE = ${CMAKE_CXX_FLAGS_RELEASE}")

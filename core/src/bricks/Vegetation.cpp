@@ -3,7 +3,7 @@
 Vegetation::Vegetation()
     : SurfaceComponent() {}
 
-void Vegetation::AssignParameters(const BrickSettings &brickSettings) {
+void Vegetation::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
 

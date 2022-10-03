@@ -113,4 +113,15 @@ setup(
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.6",
+    classifiers=[
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+    ],
+    readme="python/README.md",
+    license="MIT",
+    project_urls={
+        "Source Code": "https://github.com/hydrobricks/hydrobricks",
+        "Bug Tracker": "https://github.com/hydrobricks/hydrobricks/issues",
+    },
 )

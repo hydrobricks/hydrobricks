@@ -109,8 +109,11 @@ setup(
     description="A modular hydrological modelling framework",
     long_description="A modular hydrological modelling framework built on "
                      "C++ and Python.",
-    ext_modules=[CMakeExtension("hydrobricks")],
+    ext_modules=[CMakeExtension("_hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
+    packages=['hydrobricks', 'hydrobricks.models'],
+    package_dir={'hydrobricks': 'python/src/hydrobricks',
+                 'hydrobricks.models': 'python/src/hydrobricks/models'},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.7",

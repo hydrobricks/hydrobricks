@@ -103,7 +103,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="hydrobricks",
-    version="0.0.2",
+    version="0.1.0",
     author="Pascal Horton",
     author_email="pascal.horton@giub.unibe.",
     description="A modular hydrological modelling framework",

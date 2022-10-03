@@ -49,14 +49,6 @@ class Hydrobricks : public wxAppConsole {
     std::string m_startDate;
     std::string m_endDate;
 
-    wxString GetUserDirPath();
-
-    void InitializeLog();
-
-    bool CheckOutputDirectory();
-
-    void DisplayProcessingTime(const wxStopWatch& sw);
-
   private:
 };
 

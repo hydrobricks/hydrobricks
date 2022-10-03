@@ -68,6 +68,7 @@ repos:
           .*/gcovr
       )$
 
+# Flake 8
 - repo: https://gitlab.com/pycqa/flake8
   rev: 5.0.4
   hooks:
@@ -92,7 +93,7 @@ repos:
           .*/CodeCoverage.cmake
       )$
 
-# Suggested hook if you add a .clang-format file
+# Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
   rev: v14.0.6
   hooks:

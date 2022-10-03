@@ -7,34 +7,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "hydrobricks"
-version = "0.0.2"
-authors = [
-    { name = "Pascal Horton", email = "pascal.horton@giub.unibe.ch" },
-]
-description = "A modular hydrological modelling framework"
-readme = "python/README.md"
-license = { text = "MIT" }
-requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: C++",
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-]
-dependencies = [
-    "numpy",
-    "pandas",
-    "pyyaml",
-    "netCDF4",
-    "matplotlib",
-    "pytest"
-]
-
-[project.urls]
-"Homepage" = "https://github.com/hydrobricks/hydrobricks"
-"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
-
 [tool.black]
 line-length = 88
 
@@ -53,7 +25,7 @@ test-requires = "pytest"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp36-*", "cp37-*", "cp39-*", "cp311-*", "cp312-*", "pp*"]
+skip = ["*musllinux*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

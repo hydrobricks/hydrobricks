@@ -103,7 +103,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="hydrobricks",
-    version="0.0.2",
+    version="0.1.0",
     author="Pascal Horton",
     author_email="pascal.horton@giub.unibe.",
     description="A modular hydrological modelling framework",
@@ -112,5 +112,16 @@ setup(
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.6",
+    python_requires=">=3.7",
+    classifiers=[
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+    ],
+    readme="python/README.md",
+    license="MIT",
+    project_urls={
+        "Source Code": "https://github.com/hydrobricks/hydrobricks",
+        "Bug Tracker": "https://github.com/hydrobricks/hydrobricks/issues",
+    },
 )

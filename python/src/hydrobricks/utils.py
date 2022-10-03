@@ -1,10 +1,11 @@
-from netCDF4 import Dataset, stringtochar
-import yaml
+import datetime
 import json
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import datetime
+import yaml
+from netCDF4 import Dataset, stringtochar
 
 
 def validate_kwargs(kwargs, allowed_kwargs):

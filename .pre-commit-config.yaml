@@ -18,7 +18,7 @@ repos:
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 
-# Black, the code formatter, natively supports pre-commit
+# Black, the code formatter
 #- repo: https://github.com/psf/black
 #  rev: 22.8.0
 #  hooks:
@@ -29,11 +29,16 @@ repos:
 #          .*/gcovr
 #      )$
 
-# Sort your imports in a standard form
-#- repo: https://github.com/PyCQA/isort
-#  rev: 5.10.1
-#  hooks:
-#  - id: isort
+# Sort imports in a standard form
+- repo: https://github.com/PyCQA/isort
+  rev: 5.10.1
+  hooks:
+  - id: isort
+    exclude: |
+      (?x)^(
+          docs/*|
+          .*/gcovr
+      )$
 
 # Upgrade older Python syntax
 #- repo: https://github.com/asottile/pyupgrade

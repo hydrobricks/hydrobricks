@@ -1,8 +1,8 @@
+import distutils.log
 import os
 import re
 import subprocess
 import sys
-import distutils.log
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext

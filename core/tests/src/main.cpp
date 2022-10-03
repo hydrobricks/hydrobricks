@@ -4,7 +4,7 @@
 
 #include "Includes.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     int resultTest = -2;
 
     try {
@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
         wxInitialize();
 
         // Set the local config object
-        wxFileConfig *pConfig =
+        wxFileConfig* pConfig =
             new wxFileConfig("HydroBricks", wxEmptyString, wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini",
                              wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini", wxCONFIG_USE_LOCAL_FILE);
         wxFileConfig::Set(pConfig);
@@ -50,9 +50,9 @@ int main(int argc, char **argv) {
 
         // Cleanup
         wxUninitialize();
-        delete wxFileConfig::Set((wxFileConfig *)nullptr);
+        delete wxFileConfig::Set((wxFileConfig*)nullptr);
 
-    } catch (std::exception &e) {
+    } catch (std::exception& e) {
         wxString msg(e.what(), wxConvUTF8);
         wxPrintf(_("Exception caught: %s\n"), msg);
     }

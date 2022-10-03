@@ -3,7 +3,7 @@
 GenericSurface::GenericSurface()
     : SurfaceComponent() {}
 
-void GenericSurface::AssignParameters(const BrickSettings &brickSettings) {
+void GenericSurface::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
 

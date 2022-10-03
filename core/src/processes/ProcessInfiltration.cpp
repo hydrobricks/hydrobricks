@@ -1,11 +1,11 @@
 #include "ProcessInfiltration.h"
+
 #include "Brick.h"
 #include "WaterContainer.h"
 
 ProcessInfiltration::ProcessInfiltration(WaterContainer* container)
     : Process(container),
-      m_targetBrick(nullptr)
-{}
+      m_targetBrick(nullptr) {}
 
 bool ProcessInfiltration::IsOk() {
     if (m_outputs.size() != 1) {

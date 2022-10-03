@@ -7,6 +7,40 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "hydrobricks"
+version = "0.0.2"
+authors = [
+    { name = "Pascal Horton", email = "pascal.horton@giub.unibe.ch" },
+]
+description = "A modular hydrological modelling framework"
+readme = "python/README.md"
+license = { text = "MIT" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "netCDF4",
+    "matplotlib",
+    "pytest"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/hydrobricks/hydrobricks"
+"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
+
+[flake8]
+max-line-length = 88
+
+[tool.black]
+line-length = 88
+
 [tool.isort]
 profile = "black"
 

@@ -19,49 +19,53 @@ repos:
   - id: trailing-whitespace
 
 # Black, the code formatter, natively supports pre-commit
-- repo: https://github.com/psf/black
-  rev: 22.8.0
-  hooks:
-  - id: black
-    exclude: ^(docs)
+#- repo: https://github.com/psf/black
+#  rev: 22.8.0
+#  hooks:
+#  - id: black
+#    exclude: |
+#      (?x)^(
+#          docs/*|
+#          .*/gcovr
+#      )$
 
 # Sort your imports in a standard form
-- repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
-  hooks:
-  - id: isort
+#- repo: https://github.com/PyCQA/isort
+#  rev: 5.10.1
+#  hooks:
+#  - id: isort
 
 # Upgrade older Python syntax
-- repo: https://github.com/asottile/pyupgrade
-  rev: v2.38.2
-  hooks:
-  - id: pyupgrade
-    args: ["--py36-plus"]
+#- repo: https://github.com/asottile/pyupgrade
+#  rev: v2.38.2
+#  hooks:
+#  - id: pyupgrade
+#    args: ["--py36-plus"]
 
 # Changes tabs to spaces
-- repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.3.1
-  hooks:
-  - id: remove-tabs
-    exclude: ^(docs)
+#- repo: https://github.com/Lucas-C/pre-commit-hooks
+#  rev: v1.3.1
+#  hooks:
+#  - id: remove-tabs
+#    exclude: ^(docs)
 
-- repo: https://gitlab.com/pycqa/flake8
-  rev: 5.0.4
-  hooks:
-  - id: flake8
-    additional_dependencies: [flake8-bugbear]
+#- repo: https://gitlab.com/pycqa/flake8
+#  rev: 5.0.4
+#  hooks:
+#  - id: flake8
+#    additional_dependencies: [flake8-bugbear]
 
 # CMake formatting
-- repo: https://github.com/cheshirekow/cmake-format-precommit
-  rev: v0.6.13
-  hooks:
-  - id: cmake-format
-    additional_dependencies: [pyyaml]
-    types: [file]
-    files: (\.cmake|CMakeLists.txt)(.in)?$
+#- repo: https://github.com/cheshirekow/cmake-format-precommit
+#  rev: v0.6.13
+#  hooks:
+#  - id: cmake-format
+#    additional_dependencies: [pyyaml]
+#    types: [file]
+#    files: (\.cmake|CMakeLists.txt)(.in)?$
 
 # Suggested hook if you add a .clang-format file
-- repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v14.0.6
-  hooks:
-  - id: clang-format
+#- repo: https://github.com/pre-commit/mirrors-clang-format
+#  rev: v14.0.6
+#  hooks:
+#  - id: clang-format

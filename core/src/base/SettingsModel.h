@@ -67,6 +67,9 @@ class SettingsModel : public wxObject {
 
     ~SettingsModel() override;
 
+    bool GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb = 1,
+                                 const std::string& surfaceRunoff = "socont-runoff");
+
     void SetSolver(const std::string& solverName);
 
     void SetTimer(const std::string& start, const std::string& end, int timeStep, const std::string& timeStepUnit);
@@ -236,6 +239,7 @@ class SettingsModel : public wxObject {
     vecStr GetHydroUnitLogLabels();
 
   protected:
+    bool m_logAll;
     std::vector<ModelStructure> m_modelStructures;
     SolverSettings m_solver;
     TimerSettings m_timer;
@@ -251,8 +255,6 @@ class SettingsModel : public wxObject {
     std::string ParseSolver(const YAML::Node& settings);
 
     bool LogAll(const YAML::Node& settings);
-
-    bool GenerateStructureSocont(const YAML::Node& settings);
 };
 
 #endif  // HYDROBRICKS_SETTINGS_MODEL_H

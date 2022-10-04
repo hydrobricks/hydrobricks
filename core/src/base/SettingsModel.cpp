@@ -3,7 +3,8 @@
 #include "Parameter.h"
 
 SettingsModel::SettingsModel()
-    : m_selectedStructure(nullptr),
+    : m_logAll(false),
+      m_selectedStructure(nullptr),
       m_selectedBrick(nullptr),
       m_selectedProcess(nullptr),
       m_selectedSplitter(nullptr) {
@@ -652,10 +653,34 @@ bool SettingsModel::ParseStructure(const std::string& path) {
     try {
         YAML::Node settings = YAML::LoadFile(path);
 
+        // Logger
+        m_logAll = LogAll(settings);
+
+        // Solver
+        SetSolver(ParseSolver(settings));
+
+        // Surface elements
+        vecStr surfaceNames = ParseSurfaceNames(settings);
+        vecStr surfaceTypes = ParseSurfaceTypes(settings);
+        if (surfaceNames.size() != surfaceTypes.size()) {
+            wxLogError(_("The length of the surface names and surface types do not match."));
+            return false;
+        }
+
         if (settings["base"]) {
             std::string base = settings["base"].as<std::string>();
             if (base == "Socont") {
-                return GenerateStructureSocont(settings);
+                int soilStorageNb = 1;
+                std::string surfaceRunoff = "socont-runoff";
+                if (YAML::Node options = settings["options"]) {
+                    if (YAML::Node parameter = options["soil_storage_nb"]) {
+                        soilStorageNb = parameter.as<int>();
+                    }
+                    if (YAML::Node parameter = options["surface_runoff"]) {
+                        surfaceRunoff = parameter.as<std::string>();
+                    }
+                }
+                return GenerateStructureSocont(surfaceTypes, surfaceNames, soilStorageNb, surfaceRunoff);
             } else {
                 wxLogError(_("Model base '%s' not recognized."));
                 return false;
@@ -819,32 +844,8 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
     return true;
 }
 
-bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
-    int soilStorageNb = 1;
-    std::string surfaceRunoff = "socont-runoff";
-    if (YAML::Node options = settings["options"]) {
-        if (YAML::Node parameter = options["soil_storage_nb"]) {
-            soilStorageNb = parameter.as<int>();
-        }
-        if (YAML::Node parameter = options["surface_runoff"]) {
-            surfaceRunoff = parameter.as<std::string>();
-        }
-    }
-
-    // Logger
-    bool logAll = LogAll(settings);
-
-    // Solver
-    SetSolver(ParseSolver(settings));
-
-    // Surface elements
-    vecStr surfaceNames = ParseSurfaceNames(settings);
-    vecStr surfaceTypes = ParseSurfaceTypes(settings);
-    if (surfaceNames.size() != surfaceTypes.size()) {
-        wxLogError(_("The length of the surface names and surface types do not match."));
-        return false;
-    }
-
+bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb,
+                                            const std::string& surfaceRunoff) {
     // Add default ground surface
     AddSurfaceBrick("ground", "GenericSurface");
 
@@ -867,7 +868,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
     GenerateSurfaceBricks();
 
     // Log snow processes for surface bricks
-    if (logAll) {
+    if (m_logAll) {
         for (const auto& name : surfaceNames) {
             SelectHydroUnitBrick(name + "-snowpack");
             AddBrickLogging("snow");
@@ -909,7 +910,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
             AddProcessParameter("degreeDayFactor", 3.0f);
             AddProcessParameter("meltingTemperature", 0.0f);
             AddProcessOutput("glacier-area-icemelt-storage");
-            if (logAll) {
+            if (m_logAll) {
                 AddProcessLogging("output");
             }
         }
@@ -924,7 +925,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
     AddBrickProcess("outflow", "Outflow:linear");
     AddProcessParameter("responseFactor", 0.2f);
     AddProcessOutput("outlet");
-    if (logAll) {
+    if (m_logAll) {
         SelectSubBasinBrick("glacier-area-rain-snowmelt-storage");
         AddBrickLogging("content");
         SelectProcess("outflow");
@@ -950,7 +951,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
         AddProcessOutput("outlet");
         AddBrickProcess("overflow", "Overflow");
         AddProcessOutput("outlet");
-        if (logAll) {
+        if (m_logAll) {
             AddBrickLogging("content");
             AddProcessLogging("output");
             SelectProcess("ET");
@@ -976,7 +977,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
         AddBrickProcess("outflow", "Outflow:linear");
         AddProcessParameter("responseFactor", 0.4f);
         AddProcessOutput("outlet");
-        if (logAll) {
+        if (m_logAll) {
             SelectHydroUnitBrick("slow-reservoir");
             AddBrickLogging("content");
             SelectProcess("outflow");
@@ -1008,7 +1009,7 @@ bool SettingsModel::GenerateStructureSocont(const YAML::Node& settings) {
     }
 
     AddProcessOutput("outlet");
-    if (logAll) {
+    if (m_logAll) {
         AddBrickLogging("content");
         AddProcessLogging("output");
     }

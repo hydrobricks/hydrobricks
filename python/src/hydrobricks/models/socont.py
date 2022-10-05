@@ -20,6 +20,7 @@ class Socont(Model):
             self.soil_storage_nb, self.surface_runoff)
 
     def _set_options(self, kwargs):
+        super()._set_options(kwargs)
         if 'soil_storage_nb' in kwargs:
             self.soil_storage_nb = kwargs['soil_storage_nb']
         if 'surface_runoff' in kwargs:

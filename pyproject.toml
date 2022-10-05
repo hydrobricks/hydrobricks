@@ -21,7 +21,7 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest"
+test-requires = "pytest pyyaml"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]

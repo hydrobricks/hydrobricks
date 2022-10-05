@@ -1,5 +1,7 @@
 from _hydrobricks import ModelStructure
 from hydrobricks import utils
+import json
+import yaml
 
 
 class Model:
@@ -7,21 +9,62 @@ class Model:
 
     def __init__(self, name=None, **kwargs):
         self.name = name
-        self.solver = 'HeunExplicit'
         self.structure = ModelStructure()
-        self.allowed_kwargs = {
-            'solver'
-        }
+        self.allowed_kwargs = {'solver', 'logger', 'surface_types', 'surface_names'}
 
-        self.set_options(kwargs)
+        # Default options
+        self.solver = 'HeunExplicit'
+        self.logger = 'all'
+        self.surface_types = ['ground']
+        self.surface_names = ['ground']
 
-    def set_options(self, kwargs):
-        if 'solver' in kwargs:
-            self.solver = kwargs['solver']
-
-    def validate_kwargs(self, kwargs):
-        # Validate optional keyword arguments.
-        utils.validate_kwargs(kwargs, self.allowed_kwargs)
+        self._set_options(kwargs)
 
     def get_name(self):
         return self.name
+
+    def create_config_file(self, directory, name, file_type='both'):
+        structure = {
+            'base': self.name,
+            'solver': self.solver,
+            'options': self._get_specific_options(),
+            'surfaces': {
+                'names': self.surface_names,
+                'types': self.surface_types
+            },
+            'logger': self.logger
+        }
+        self._dump_config_file(structure, directory, name, file_type)
+
+    def _set_options(self, kwargs):
+        if 'solver' in kwargs:
+            self.solver = kwargs['solver']
+        if 'logger' in kwargs:
+            self.logger = kwargs['logger']
+        if 'surface_types' in kwargs:
+            self.surface_types = kwargs['surface_types']
+        if 'surface_names' in kwargs:
+            self.surface_names = kwargs['surface_names']
+
+    def _add_allowed_kwargs(self, kwargs):
+        self.allowed_kwargs.update(kwargs)
+
+    def _validate_kwargs(self, kwargs):
+        # Validate optional keyword arguments.
+        utils.validate_kwargs(kwargs, self.allowed_kwargs)
+
+    def _get_specific_options(self):
+        return {}
+
+    @staticmethod
+    def _dump_config_file(structure, directory, name, file_type='both'):
+        # Dump YAML file
+        if file_type in ['both', 'yaml']:
+            with open(directory / f'{name}.yaml', 'w') as outfile:
+                yaml.dump(structure, outfile, sort_keys=False)
+
+        # Dump JSON file
+        if file_type in ['both', 'json']:
+            json_object = json.dumps(structure, indent=2)
+            with open(directory / f'{name}.json', 'w') as outfile:
+                outfile.write(json_object)

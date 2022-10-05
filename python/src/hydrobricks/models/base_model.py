@@ -1,5 +1,6 @@
 from _hydrobricks import ModelStructure
 from hydrobricks import utils
+from pathlib import Path
 import json
 import yaml
 
@@ -21,9 +22,25 @@ class Model:
         self._set_options(kwargs)
 
     def get_name(self):
+        """Get the name of the model"""
         return self.name
 
     def create_config_file(self, directory, name, file_type='both'):
+        """
+        Create a configuration file describing the model structure.
+
+        Such a file can be used when using the command-line version of hydrobricks. It
+        contains the options to generate the corresponding model structure.
+
+        Parameters
+        ----------
+        directory : str
+            The directory to write the file.
+        name : str
+            The name of the generated file.
+        file_type : file_type
+            The type of file to generate: 'json', 'yaml', or 'both'
+        """
         structure = {
             'base': self.name,
             'solver': self.solver,
@@ -57,7 +74,9 @@ class Model:
         return {}
 
     @staticmethod
-    def _dump_config_file(structure, directory, name, file_type='both'):
+    def _dump_config_file(structure, directory, name, file_type='yaml'):
+        directory = Path(directory)
+
         # Dump YAML file
         if file_type in ['both', 'yaml']:
             with open(directory / f'{name}.yaml', 'w') as outfile:

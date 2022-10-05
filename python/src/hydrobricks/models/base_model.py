@@ -1,4 +1,5 @@
 from _hydrobricks import ModelStructure
+from hydrobricks import utils
 
 
 class Model:
@@ -8,17 +9,19 @@ class Model:
         self.name = name
         self.solver = 'HeunExplicit'
         self.structure = ModelStructure()
+        self.allowed_kwargs = {
+            'solver'
+        }
 
-        # Properties passed by via keyword arguments to avoid repetitions for children.
-        # allowed_kwargs = {
-        #     'solver',
-        # }
-        # Validate optional keyword arguments.
-        # utils.validate_kwargs(kwargs, allowed_kwargs)
+        self.set_options(kwargs)
 
-        # Check solver option
+    def set_options(self, kwargs):
         if 'solver' in kwargs:
             self.solver = kwargs['solver']
+
+    def validate_kwargs(self, kwargs):
+        # Validate optional keyword arguments.
+        utils.validate_kwargs(kwargs, self.allowed_kwargs)
 
     def get_name(self):
         return self.name

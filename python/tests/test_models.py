@@ -27,7 +27,7 @@ def test_socont_creation_with_surface_runoff():
 
 
 def test_socont_creation_with_surfaces():
-    surface_names = ['forest', 'aletsch_glacier']
+    surface_names = ['ground', 'aletsch_glacier']
     surface_types = ['ground', 'glacier']
     models.Socont(surface_names=surface_names, surface_types=surface_types)
 
@@ -40,7 +40,7 @@ def test_create_json_config_file_created():
 
 
 def test_create_json_config_file_content():
-    surface_names = ['forest', 'aletsch_glacier']
+    surface_names = ['ground', 'aletsch_glacier']
     surface_types = ['ground', 'glacier']
     model = models.Socont(solver='Runge-Kutta', soil_storage_nb=2,
                           surface_names=surface_names,
@@ -53,8 +53,7 @@ def test_create_json_config_file_content():
         assert '"solver": "Runge-Kutta"' in txt
         assert '"soil_storage_nb": 2' in txt
         assert '"surface_runoff": "linear-storage"' in txt
-        assert '"logger": "min"' in txt
-        assert 'forest' in txt
+        assert 'ground' in txt
         assert 'aletsch_glacier' in txt
 
 
@@ -66,7 +65,7 @@ def test_create_yaml_config_file_created():
 
 
 def test_create_yaml_config_file_content():
-    surface_names = ['forest', 'aletsch_glacier']
+    surface_names = ['ground', 'aletsch_glacier']
     surface_types = ['ground', 'glacier']
     model = models.Socont(solver='Runge-Kutta', soil_storage_nb=2,
                           surface_names=surface_names,
@@ -79,6 +78,5 @@ def test_create_yaml_config_file_content():
         assert 'solver: Runge-Kutta' in txt
         assert 'soil_storage_nb: 2' in txt
         assert 'surface_runoff: linear-storage' in txt
-        assert 'logger: min' in txt
-        assert 'forest' in txt
+        assert 'ground' in txt
         assert 'aletsch_glacier' in txt

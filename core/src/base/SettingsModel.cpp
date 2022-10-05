@@ -480,13 +480,13 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const std::string& name) {
 
 void SettingsModel::SelectHydroUnitBrick(const std::string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit brick %s was not found", name));
+        throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
 }
 
 void SettingsModel::SelectSubBasinBrick(const std::string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin brick %s was not found", name));
+        throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
 }
 
@@ -563,13 +563,13 @@ bool SettingsModel::SelectSubBasinSplitterIfFound(const std::string& name) {
 
 void SettingsModel::SelectHydroUnitSplitter(const std::string& name) {
     if (!SelectHydroUnitSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit splitter %s was not found", name));
+        throw NotFound(wxString::Format("The hydro unit splitter '%s' was not found", name));
     }
 }
 
 void SettingsModel::SelectSubBasinSplitter(const std::string& name) {
     if (!SelectSubBasinSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin splitter %s was not found", name));
+        throw NotFound(wxString::Format("The sub-basin splitter '%s' was not found", name));
     }
 }
 

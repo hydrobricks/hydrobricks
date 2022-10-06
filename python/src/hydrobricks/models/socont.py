@@ -1,3 +1,5 @@
+from hydrobricks import ParameterSet
+
 from .base_model import Model
 
 
@@ -23,10 +25,86 @@ class Socont(Model):
         except RuntimeError as err:
             raise Exception(f'Socont model initialization raised an exception: {err}')
 
+    def generate_parameters(self):
+        ps = ParameterSet()
+
+        ps.define_parameter(
+            component='snow-rain-transition', name='transitionStart', unit='°C',
+            min_value=-5, max_value=5, default_value=0, mandatory=False)
+
+        ps.define_parameter(
+            component='snow-rain-transition', name='transitionEnd', unit='°C',
+            min_value=-5, max_value=5, default_value=2, mandatory=False)
+
+        ps.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d/°C',
+            aliases=['an'], min_value=0, max_value=12, mandatory=True)
+
+        ps.define_parameter(
+            component='snowpack', name='meltingTemperature', unit='°C',
+            min_value=0, max_value=5, default_value=0, mandatory=False)
+
+        for i, surface in enumerate(self.surface_types):
+            i_glacier = 0
+            if surface == 'glacier':
+                aliases = ['agl']
+                if self.surface_types.count('glacier') > 1:
+                    i_glacier += 1
+                    aliases = [f'agl_{self.surface_names[i].replace("-", "_")}',
+                               f'agl{i_glacier}']
+
+                ps.define_parameter(
+                    component=self.surface_names[i], name='degreeDayFactor',
+                    unit='mm/d/°C', aliases=aliases, min_value=0, max_value=20,
+                    mandatory=True)
+
+                ps.define_parameter(
+                    component=self.surface_names[i], name='meltingTemperature',
+                    unit='°C', min_value=0, max_value=5, default_value=0,
+                    mandatory=False)
+
+        ps.define_parameter(
+            component='glacier-area-rain-snowmelt-storage', name='responseFactor',
+            unit='1/t', liases=['kn'], min_value=0.001, max_value=1, mandatory=True)
+
+        ps.define_parameter(
+            component='glacier-area-icemelt-storage', name='responseFactor', unit='1/t',
+            aliases=['kgl'], min_value=0.001, max_value=1, mandatory=True)
+
+        ps.define_parameter(
+            component='surface-runoff', name='responseFactor', unit='1/t',
+            aliases=['kr'], min_value=0.001, max_value=1, mandatory=True)
+
+        ps.define_parameter(
+            component='slow-reservoir', name='capacity', unit='mm', aliases=['A'],
+            min_value=0, max_value=3000, mandatory=True)
+
+        if self.soil_storage_nb == 1:
+            ps.define_parameter(
+                component='slow-reservoir', name='responseFactor', unit='1/t',
+                aliases=['ks'], min_value=0, max_value=3000, mandatory=True)
+
+        elif self.soil_storage_nb == 2:
+            ps.define_parameter(
+                component='slow-reservoir', name='responseFactor', unit='1/t',
+                aliases=['ks1'], min_value=0.001, max_value=1, mandatory=True)
+
+            ps.define_parameter(
+                component='slow-reservoir', name='percolationRate', unit='mm/d',
+                aliases=['percol'], min_value=0, max_value=10, mandatory=True)
+
+            ps.define_parameter(
+                component='slow-reservoir-2', name='responseFactor', unit='1/t',
+                aliases=['ks2'], min_value=0.001, max_value=1, mandatory=True)
+
+        return ps
+
     def _set_options(self, kwargs):
         super()._set_options(kwargs)
         if 'soil_storage_nb' in kwargs:
-            self.soil_storage_nb = kwargs['soil_storage_nb']
+            self.soil_storage_nb = int(kwargs['soil_storage_nb'])
+            if self.soil_storage_nb < 1 or self.soil_storage_nb > 2:
+                raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
         if 'surface_runoff' in kwargs:
             self.surface_runoff = kwargs['surface_runoff']
 

@@ -1,5 +1,9 @@
-import numpy as np
 import datetime
+import json
+from pathlib import Path
+
+import numpy as np
+import yaml
 
 
 def validate_kwargs(kwargs, allowed_kwargs):
@@ -7,6 +11,21 @@ def validate_kwargs(kwargs, allowed_kwargs):
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             raise TypeError('Keyword argument not understood:', kwarg)
+
+
+def dump_config_file(content, directory, name, file_type='yaml'):
+    directory = Path(directory)
+
+    # Dump YAML file
+    if file_type in ['both', 'yaml']:
+        with open(directory / f'{name}.yaml', 'w') as outfile:
+            yaml.dump(content, outfile, sort_keys=False)
+
+    # Dump JSON file
+    if file_type in ['both', 'json']:
+        json_object = json.dumps(content, indent=2)
+        with open(directory / f'{name}.json', 'w') as outfile:
+            outfile.write(json_object)
 
 
 def jd_to_date(jd):

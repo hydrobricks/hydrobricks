@@ -1,8 +1,5 @@
 from _hydrobricks import ModelStructure
 from hydrobricks import utils
-from pathlib import Path
-import json
-import yaml
 
 
 class Model:
@@ -39,7 +36,7 @@ class Model:
         name : str
             The name of the generated file.
         file_type : file_type
-            The type of file to generate: 'json', 'yaml', or 'both'
+            The type of file to generate: 'json', 'yaml', or 'both'.
         """
         structure = {
             'base': self.name,
@@ -51,7 +48,10 @@ class Model:
             },
             'logger': self.logger
         }
-        self._dump_config_file(structure, directory, name, file_type)
+        utils.dump_config_file(structure, directory, name, file_type)
+
+    def generate_parameters(self):
+        raise Exception('Parameters cannot be generated for the base model.')
 
     def _set_options(self, kwargs):
         if 'solver' in kwargs:
@@ -72,18 +72,3 @@ class Model:
 
     def _get_specific_options(self):
         return {}
-
-    @staticmethod
-    def _dump_config_file(structure, directory, name, file_type='yaml'):
-        directory = Path(directory)
-
-        # Dump YAML file
-        if file_type in ['both', 'yaml']:
-            with open(directory / f'{name}.yaml', 'w') as outfile:
-                yaml.dump(structure, outfile, sort_keys=False)
-
-        # Dump JSON file
-        if file_type in ['both', 'json']:
-            json_object = json.dumps(structure, indent=2)
-            with open(directory / f'{name}.json', 'w') as outfile:
-                outfile.write(json_object)

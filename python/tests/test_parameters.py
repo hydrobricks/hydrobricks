@@ -159,6 +159,42 @@ def test_set_parameter_value_not_found():
         parameter_set.set_values({'xy': 2})
 
 
+def test_set_parameter_value_too_low():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='snowpack', name='degreeDayFactor', unit='mm/d', aliases=['as'],
+        min_value=2, max_value=6)
+    with pytest.raises(Exception):
+        parameter_set.set_values({'as': 1})
+
+
+def test_set_parameter_value_too_high():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='snowpack', name='degreeDayFactor', unit='mm/d', aliases=['as'],
+        min_value=2, max_value=6)
+    with pytest.raises(Exception):
+        parameter_set.set_values({'as': 10})
+
+
+def test_set_parameter_value_with_list_too_low():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='snowpack', name='degreeDayFactor', unit='mm/d', aliases=['as'],
+        min_value=[0, 1], max_value=[2, 3])
+    with pytest.raises(Exception):
+        parameter_set.set_values({'as': [1, 0]})
+
+
+def test_set_parameter_value_with_list_too_high():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='snowpack', name='degreeDayFactor', unit='mm/d', aliases=['as'],
+        min_value=[0, 1], max_value=[2, 3])
+    with pytest.raises(Exception):
+        parameter_set.set_values({'as': [1, 5]})
+
+
 @pytest.fixture
 def parameter_set():
     parameter_set = hb.ParameterSet()

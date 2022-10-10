@@ -69,11 +69,9 @@ class ParameterSet:
         for key in values:
             found = False
             for index, row in self.parameters.iterrows():
-                if row['aliases'] is not None and key in row['aliases']:
-                    self.parameters.loc[index, 'value'] = values[key]
-                    found = True
-                    break
-                if key == row['component'] + ':' + row['name']:
+                if row['aliases'] is not None and key in row['aliases'] \
+                        or key == row['component'] + ':' + row['name']:
+                    self._check_value_range(index, key, values[key])
                     self.parameters.loc[index, 'value'] = values[key]
                     found = True
                     break
@@ -168,6 +166,9 @@ class ParameterSet:
 
     @staticmethod
     def _check_min_max_consistency(min_value, max_value):
+        if min_value is None or max_value is None:
+            return
+
         if type(min_value) != list and type(max_value) != list:
             if max_value < min_value:
                 raise Exception(f'The provided min value ({min_value} is greater than '
@@ -195,3 +196,25 @@ class ParameterSet:
             if alias in existing_aliases:
                 raise Exception(f'The alias "{alias}" already exists. '
                                 f'It must be unique.')
+
+    def _check_value_range(self, index, key, value):
+        max_value = self.parameters.loc[index, 'max']
+        min_value = self.parameters.loc[index, 'min']
+
+        if type(min_value) != list:
+            if max_value is not None and value > max_value:
+                raise Exception(f'The value {value} for the parameter "{key}" is above '
+                                f'the maximum threshold ({max_value}).')
+            if min_value is not None and value < min_value:
+                raise Exception(f'The value {value} for the parameter "{key}" is below '
+                                f'the minimum threshold ({min_value}).')
+        else:
+            assert type(max_value) == list
+            assert type(value) == list
+            for min_v, max_v, val in zip(min_value, max_value, value):
+                if max_v is not None and value > max_v:
+                    raise Exception(f'The value {val} for the parameter "{key}" is '
+                                    f'above the maximum threshold ({max_v}).')
+                if min_v is not None and value < min_v:
+                    raise Exception(f'The value {val} for the parameter "{key}" is '
+                                    f'below the minimum threshold ({min_v}).')

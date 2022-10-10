@@ -44,22 +44,22 @@ class Socont(Model):
             component='snowpack', name='meltingTemperature', unit='°C',
             min_value=0, max_value=5, default_value=0, mandatory=False)
 
-        for i, surface in enumerate(self.surface_types):
+        for surface_type, surface_name in zip(self.surface_types, self.surface_names):
             i_glacier = 0
-            if surface == 'glacier':
+            if surface_type == 'glacier':
                 aliases = ['agl']
                 if self.surface_types.count('glacier') > 1:
                     i_glacier += 1
-                    aliases = [f'agl_{self.surface_names[i].replace("-", "_")}',
+                    aliases = [f'agl_{surface_name.replace("-", "_")}',
                                f'agl{i_glacier}']
 
                 ps.define_parameter(
-                    component=self.surface_names[i], name='degreeDayFactor',
+                    component=surface_name, name='degreeDayFactor',
                     unit='mm/d/°C', aliases=aliases, min_value=0, max_value=20,
                     mandatory=True)
 
                 ps.define_parameter(
-                    component=self.surface_names[i], name='meltingTemperature',
+                    component=surface_name, name='meltingTemperature',
                     unit='°C', min_value=0, max_value=5, default_value=0,
                     mandatory=False)
 

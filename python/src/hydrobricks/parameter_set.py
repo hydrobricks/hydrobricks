@@ -84,6 +84,40 @@ class ParameterSet:
             if not found:
                 raise Exception(f'The parameter "{key}" was not found')
 
+    def add_data_parameter(self, name, value=None, min_value=None,
+                           max_value=None, unit=None):
+        """
+        Add a parameter related to the data.
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter.
+        value : float/list
+            The parameter value.
+        min_value : float/list
+            Minimum value allowed for the parameter.
+        max_value : float/list
+            Maximum value allowed for the parameter.
+        unit : str
+            The unit of the parameter.
+        """
+        aliases = [name]
+        if aliases is not None:
+            existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
+            for alias in aliases:
+                if alias in existing_aliases:
+                    raise Exception(f'The alias "{alias}" already exists. '
+                                    f'It must be unique.')
+
+        new_row = pd.Series(
+            {'component': 'data', 'name': name, 'unit': unit, 'aliases': aliases,
+             'value': value, 'min': min_value, 'max': max_value,
+             'default_value': value, 'mandatory': False})
+
+        self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
+                                    ignore_index=True)
+
     def set_random_values(self, parameters):
         """
         Set the provided parameter to random values.

@@ -20,7 +20,7 @@ class HydroUnits:
     def load_from_csv(self, path, area_unit, column_elevation=None, column_area=None,
                       column_fractions=None, columns_areas=None):
         """
-        Define a parameter by setting its properties.
+        Read hydro units properties from csv file.
 
         Parameters
         ----------
@@ -72,7 +72,7 @@ class HydroUnits:
         Parameters
         ----------
         path : str
-            Path to the csv file containing hydro units data.
+            Path of the file to create.
         """
 
         # Create netCDF file

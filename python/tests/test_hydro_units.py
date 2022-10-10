@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 
 import hydrobricks as hb
@@ -80,4 +81,5 @@ def test_load_from_csv(hydro_units_csv):
 
 
 def test_create_file(hydro_units_csv):
-    hydro_units_csv.create_file('D:/test.nc')
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        hydro_units_csv.create_file(tmp_dir + '/test.nc')

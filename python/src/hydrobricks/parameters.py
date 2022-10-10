@@ -67,16 +67,25 @@ class ParameterSet:
             Example: {'k': 32, 'A': 300} or {'slow-reservoir:capacity': 300}
         """
         for key in values:
-            found = False
-            for index, row in self.parameters.iterrows():
-                if row['aliases'] is not None and key in row['aliases'] \
-                        or key == row['component'] + ':' + row['name']:
-                    self._check_value_range(index, key, values[key])
-                    self.parameters.loc[index, 'value'] = values[key]
-                    found = True
-                    break
-            if not found:
-                raise Exception(f'The parameter "{key}" was not found')
+            index = self._get_parameter_index(key)
+            self._check_value_range(index, key, values[key])
+            self.parameters.loc[index, 'value'] = values[key]
+
+    def get(self, name):
+        """
+        Get the value of a parameter by name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter.
+
+        Returns
+        ------
+        The parameter value.
+        """
+        index = self._get_parameter_index(name)
+        return self.parameters.loc[index, 'value']
 
     def add_data_parameter(self, name, value=None, min_value=None,
                            max_value=None, unit=None):
@@ -120,22 +129,18 @@ class ParameterSet:
             Example: ['kr', 'A']
         """
         for key in parameters:
-            found = False
-            for index, row in self.parameters.iterrows():
-                if row['aliases'] is not None and key in row['aliases'] \
-                        or key == row['component'] + ':' + row['name']:
-                    if type(row['min']) == list:
-                        new_values = []
-                        for min_val, max_val in zip(row['min'], row['max']):
-                            new_values.append(random.uniform(min_val, max_val))
-                        self.parameters.loc[index, 'value'] = new_values
-                    else:
-                        self.parameters.loc[index, 'value'] = random.uniform(
-                            row['min'], row['max'])
-                    found = True
-                    break
-            if not found:
-                raise Exception(f'The parameter "{key}" was not found')
+            index = self._get_parameter_index(key)
+            min_value = self.parameters.loc[index, 'min']
+            max_value = self.parameters.loc[index, 'max']
+
+            if type(min_value) == list:
+                new_values = []
+                for min_val, max_val in zip(min_value, max_value):
+                    new_values.append(random.uniform(min_val, max_val))
+                self.parameters.loc[index, 'value'] = new_values
+            else:
+                self.parameters.loc[index, 'value'] = random.uniform(
+                    min_value, max_value)
 
     def create_file(self, directory, name, file_type='both'):
         """
@@ -218,3 +223,11 @@ class ParameterSet:
                 if min_v is not None and value < min_v:
                     raise Exception(f'The value {val} for the parameter "{key}" is '
                                     f'below the minimum threshold ({min_v}).')
+
+    def _get_parameter_index(self, name):
+        for index, row in self.parameters.iterrows():
+            if row['aliases'] is not None and name in row['aliases'] \
+                    or name == row['component'] + ':' + row['name']:
+                return index
+
+        raise Exception(f'The parameter "{name}" was not found')

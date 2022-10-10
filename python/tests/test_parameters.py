@@ -135,8 +135,8 @@ def test_set_parameter_value_by_alias():
     parameter_set.define_parameter(
         component='glacier', name='degreeDayFactor', unit='mm/d', aliases=['ag', 'gd'])
     parameter_set.set_values({'as': 2, 'gd': 3})
-    assert parameter_set.parameters.loc[0].at['value'] == 2
-    assert parameter_set.parameters.loc[1].at['value'] == 3
+    assert parameter_set.get('as') == 2
+    assert parameter_set.get('ag') == 3
 
 
 def test_set_parameter_value_as_list():
@@ -146,8 +146,8 @@ def test_set_parameter_value_as_list():
     parameter_set.define_parameter(
         component='glacier', name='degreeDayFactor', unit='mm/d', aliases=['ag', 'gd'])
     parameter_set.set_values({'as': [2, 3], 'gd': [3, 4]})
-    assert parameter_set.parameters.loc[0].at['value'] == [2, 3]
-    assert parameter_set.parameters.loc[1].at['value'] == [3, 4]
+    assert parameter_set.get('as') == [2, 3]
+    assert parameter_set.get('ag') == [3, 4]
 
 
 def test_set_parameter_value_by_name():
@@ -158,8 +158,8 @@ def test_set_parameter_value_by_name():
         component='glacier', name='degreeDayFactor', unit='mm/d', aliases=['ag'])
     parameter_set.set_values({'snowpack:degreeDayFactor': 2,
                               'glacier:degreeDayFactor': 3})
-    assert parameter_set.parameters.loc[0].at['value'] == 2
-    assert parameter_set.parameters.loc[1].at['value'] == 3
+    assert parameter_set.get('as') == 2
+    assert parameter_set.get('ag') == 3
 
 
 def test_set_parameter_value_not_found():
@@ -262,12 +262,12 @@ def test_set_random_values(parameter_set):
         component='reservoir', name='capacity', aliases=['A'],
         min_value=0, max_value=3000)
     parameter_set.set_random_values(['dd', 'mt', 'A'])
-    assert parameter_set.parameters.loc[0].at['value'] >= 0
-    assert parameter_set.parameters.loc[0].at['value'] <= 10
-    assert parameter_set.parameters.loc[1].at['value'] >= 0
-    assert parameter_set.parameters.loc[1].at['value'] <= 5
-    assert parameter_set.parameters.loc[2].at['value'] >= 0
-    assert parameter_set.parameters.loc[2].at['value'] <= 3000
+    assert parameter_set.get('dd') >= 0
+    assert parameter_set.get('dd') <= 10
+    assert parameter_set.get('mt') >= 0
+    assert parameter_set.get('mt') <= 5
+    assert parameter_set.get('A') >= 0
+    assert parameter_set.get('A') <= 3000
 
 
 def test_set_random_values_with_lists(parameter_set):
@@ -282,15 +282,15 @@ def test_set_random_values_with_lists(parameter_set):
         component='reservoir', name='capacity', aliases=['A'],
         min_value=[0, 10], max_value=[10, 200])
     parameter_set.set_random_values(['dd', 'mt', 'A'])
-    assert parameter_set.parameters.loc[0].at['value'][0] >= 0
-    assert parameter_set.parameters.loc[0].at['value'][0] <= 2
-    assert parameter_set.parameters.loc[0].at['value'][1] >= 1
-    assert parameter_set.parameters.loc[0].at['value'][1] <= 3
-    assert parameter_set.parameters.loc[1].at['value'][0] >= 1
-    assert parameter_set.parameters.loc[1].at['value'][0] <= 3
-    assert parameter_set.parameters.loc[1].at['value'][1] >= 2
-    assert parameter_set.parameters.loc[1].at['value'][1] <= 4
-    assert parameter_set.parameters.loc[2].at['value'][0] >= 0
-    assert parameter_set.parameters.loc[2].at['value'][0] <= 10
-    assert parameter_set.parameters.loc[2].at['value'][1] >= 10
-    assert parameter_set.parameters.loc[2].at['value'][1] <= 200
+    assert parameter_set.get('dd')[0] >= 0
+    assert parameter_set.get('dd')[0] <= 2
+    assert parameter_set.get('dd')[1] >= 1
+    assert parameter_set.get('dd')[1] <= 3
+    assert parameter_set.get('mt')[0] >= 1
+    assert parameter_set.get('mt')[0] <= 3
+    assert parameter_set.get('mt')[1] >= 2
+    assert parameter_set.get('mt')[1] <= 4
+    assert parameter_set.get('A')[0] >= 0
+    assert parameter_set.get('A')[0] <= 10
+    assert parameter_set.get('A')[1] >= 10
+    assert parameter_set.get('A')[1] <= 200

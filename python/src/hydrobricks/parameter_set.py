@@ -44,12 +44,8 @@ class ParameterSet:
         if not mandatory and default_value is not None:
             value = default_value
 
-        if aliases is not None:
-            existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
-            for alias in aliases:
-                if alias in existing_aliases:
-                    raise Exception(f'The alias "{alias}" already exists. '
-                                    f'It must be unique.')
+        self._check_aliases_uniqueness(aliases)
+        self._check_min_max_consistency(min_value, max_value)
 
         new_row = pd.Series(
             {'component': component, 'name': name, 'unit': unit, 'aliases': aliases,
@@ -103,12 +99,9 @@ class ParameterSet:
             The unit of the parameter.
         """
         aliases = [name]
-        if aliases is not None:
-            existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
-            for alias in aliases:
-                if alias in existing_aliases:
-                    raise Exception(f'The alias "{alias}" already exists. '
-                                    f'It must be unique.')
+
+        self._check_aliases_uniqueness(aliases)
+        self._check_min_max_consistency(min_value, max_value)
 
         new_row = pd.Series(
             {'component': 'data', 'name': name, 'unit': unit, 'aliases': aliases,
@@ -134,10 +127,10 @@ class ParameterSet:
                 if row['aliases'] is not None and key in row['aliases'] \
                         or key == row['component'] + ':' + row['name']:
                     if type(row['min']) == list:
-                        for idx, min_val in enumerate(row['min']):
-                            max_val = row['max'][idx]
-                            new_val = random.uniform(min_val, max_val)
-                            self.parameters.loc[index, 'value'][idx] = new_val
+                        new_values = []
+                        for min_val, max_val in zip(row['min'], row['max']):
+                            new_values.append(random.uniform(min_val, max_val))
+                        self.parameters.loc[index, 'value'] = new_values
                     else:
                         self.parameters.loc[index, 'value'] = random.uniform(
                             row['min'], row['max'])
@@ -172,3 +165,33 @@ class ParameterSet:
             file_content.update({group_name: group_content})
 
         utils.dump_config_file(file_content, directory, name, file_type)
+
+    @staticmethod
+    def _check_min_max_consistency(min_value, max_value):
+        if type(min_value) != list and type(max_value) != list:
+            if max_value < min_value:
+                raise Exception(f'The provided min value ({min_value} is greater than '
+                                f'the max value ({max_value}).')
+            return
+
+        if type(min_value) != list or type(max_value) != list:
+            raise Exception('Mixing lists and floats for the definition of '
+                            'min/max values')
+
+        if len(min_value) != len(max_value):
+            raise Exception('The length of the min/max lists are not equal.')
+
+        for min_v, max_v in zip(min_value, max_value):
+            if max_v < min_v:
+                raise Exception(f'The provided min value ({min_v} in list is greater '
+                                f'than the max value ({max_v}).')
+
+    def _check_aliases_uniqueness(self, aliases):
+        if aliases is None:
+            return
+
+        existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
+        for alias in aliases:
+            if alias in existing_aliases:
+                raise Exception(f'The alias "{alias}" already exists. '
+                                f'It must be unique.')

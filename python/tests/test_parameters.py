@@ -25,6 +25,14 @@ def test_define_parameter():
     assert parameter_set.parameters.loc[0].at['value'] is None
 
 
+def test_define_parameter_min_max_mismatch():
+    parameter_set = hb.ParameterSet()
+    with pytest.raises(Exception):
+        parameter_set.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d',
+            aliases=['an', 'sdd'], min_value=3, max_value=2)
+
+
 def test_define_parameter_with_list():
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
@@ -32,6 +40,34 @@ def test_define_parameter_with_list():
         aliases=['an', 'sdd'], min_value=[0, 1, 2, 3], max_value=[10, 11, 12, 13])
     assert parameter_set.parameters.loc[0].at['min'] == [0, 1, 2, 3]
     assert parameter_set.parameters.loc[0].at['max'] == [10, 11, 12, 13]
+
+
+def test_define_parameter_min_max_mismatch_types():
+    parameter_set = hb.ParameterSet()
+    with pytest.raises(Exception):
+        parameter_set.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d',
+            aliases=['an', 'sdd'], min_value=0, max_value=[1, 2])
+    with pytest.raises(Exception):
+        parameter_set.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d',
+            aliases=['an', 'sdd'], min_value=[1, 2], max_value=3)
+
+
+def test_define_parameter_min_max_mismatch_list_size():
+    parameter_set = hb.ParameterSet()
+    with pytest.raises(Exception):
+        parameter_set.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d',
+            aliases=['an', 'sdd'], min_value=[0, 0], max_value=[1, 2, 3])
+
+
+def test_define_parameter_min_max_mismatch_in_list():
+    parameter_set = hb.ParameterSet()
+    with pytest.raises(Exception):
+        parameter_set.define_parameter(
+            component='snowpack', name='degreeDayFactor', unit='mm/d',
+            aliases=['an', 'sdd'], min_value=[3, 4], max_value=[1, 2])
 
 
 def test_define_parameter_nb_rows_is_correct():
@@ -170,12 +206,15 @@ def test_create_yaml_parameter_file_content(parameter_set):
 def test_set_random_values(parameter_set):
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
-        component='snowpack', name='meltFactor', min_value=0, max_value=10)
+        component='snowpack', name='meltFactor', aliases=['dd'],
+        min_value=0, max_value=10)
     parameter_set.define_parameter(
-        component='snowpack', name='meltingTemp', min_value=0, max_value=5)
+        component='snowpack', name='meltingTemp', aliases=['mt'],
+        min_value=0, max_value=5)
     parameter_set.define_parameter(
-        component='reservoir', name='capacity', min_value=0, max_value=3000)
-    parameter_set.set_random_values()
+        component='reservoir', name='capacity', aliases=['A'],
+        min_value=0, max_value=3000)
+    parameter_set.set_random_values(['dd', 'mt', 'A'])
     assert parameter_set.parameters.loc[0].at['value'] >= 0
     assert parameter_set.parameters.loc[0].at['value'] <= 10
     assert parameter_set.parameters.loc[1].at['value'] >= 0
@@ -187,12 +226,15 @@ def test_set_random_values(parameter_set):
 def test_set_random_values_with_lists(parameter_set):
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
-        component='snowpack', name='meltFactor', min_value=[0, 1], max_value=[2, 3])
+        component='snowpack', name='meltFactor', aliases=['dd'],
+        min_value=[0, 1], max_value=[2, 3])
     parameter_set.define_parameter(
-        component='snowpack', name='meltingTemp', min_value=[1, 2], max_value=[3, 4])
+        component='snowpack', name='meltingTemp', aliases=['mt'],
+        min_value=[1, 2], max_value=[3, 4])
     parameter_set.define_parameter(
-        component='reservoir', name='capacity', min_value=[0, 10], max_value=[10, 200])
-    parameter_set.set_random_values()
+        component='reservoir', name='capacity', aliases=['A'],
+        min_value=[0, 10], max_value=[10, 200])
+    parameter_set.set_random_values(['dd', 'mt', 'A'])
     assert parameter_set.parameters.loc[0].at['value'][0] >= 0
     assert parameter_set.parameters.loc[0].at['value'][0] <= 2
     assert parameter_set.parameters.loc[0].at['value'][1] >= 1

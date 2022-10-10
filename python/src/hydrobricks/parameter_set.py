@@ -5,14 +5,14 @@ from hydrobricks import utils
 
 
 class ParameterSet:
-    """Base class for the parameter sets"""
+    """Class for the parameter sets"""
 
     def __init__(self):
         self.parameters = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
                      'min', 'max', 'default_value', 'mandatory'])
 
-    def define_parameter(self, component, name, unit, aliases=None, min_value=None,
+    def define_parameter(self, component, name, unit=None, aliases=None, min_value=None,
                          max_value=None, default_value=None, mandatory=True):
         """
         Define a parameter by setting its properties.
@@ -30,11 +30,11 @@ class ParameterSet:
         aliases : list
             Aliases to the parameter name, such as names used in other implementations
             (e.g., kgl, an). Aliases must be unique.
-        min_value : float
+        min_value : float/list
             Minimum value allowed for the parameter.
-        max_value : float
+        max_value : float/list
             Maximum value allowed for the parameter.
-        default_value : float
+        default_value : float/list
             The parameter default value.
         mandatory : bool
             If the parameter needs to be defined or if it can silently use the
@@ -97,14 +97,16 @@ class ParameterSet:
         for key in parameters:
             found = False
             for index, row in self.parameters.iterrows():
-                if row['aliases'] is not None and key in row['aliases']:
-                    self.parameters.loc[index, 'value'] = random.uniform(
-                        row['min'], row['max'])
-                    found = True
-                    break
-                if key == row['component'] + ':' + row['name']:
-                    self.parameters.loc[index, 'value'] = random.uniform(
-                        row['min'], row['max'])
+                if row['aliases'] is not None and key in row['aliases'] \
+                        or key == row['component'] + ':' + row['name']:
+                    if type(row['min']) == list:
+                        for idx, min_val in enumerate(row['min']):
+                            max_val = row['max'][idx]
+                            new_val = random.uniform(min_val, max_val)
+                            self.parameters.loc[index, 'value'][idx] = new_val
+                    else:
+                        self.parameters.loc[index, 'value'] = random.uniform(
+                            row['min'], row['max'])
                     found = True
                     break
             if not found:

@@ -7,12 +7,15 @@ class HydroUnits:
     """Class for the hydro units"""
 
     def __init__(self, surface_types=None, surface_names=None):
-        if len(surface_types) != len(surface_names):
-            raise Exception('The length of the surface types and names do not match.')
+        self._check_surfaces_definitions(surface_types, surface_names)
         self.surface_types = surface_types
         self.surface_names = surface_names
-        self.hydro_units = pd.DataFrame(
-            columns=['id', 'area', 'elevation', 'surface_fractions'])
+        self.prefix_fraction = 'fraction-'
+        surface_cols = []
+        if surface_names:
+            surface_cols = [f'{self.prefix_fraction}{item}' for item in surface_names]
+        columns = ['id', 'area', 'elevation'] + surface_cols
+        self.hydro_units = pd.DataFrame(columns=columns)
 
     def load_from_csv(self, path, area_unit, column_elevation=None, column_area=None,
                       column_fractions=None, columns_areas=None):
@@ -51,7 +54,7 @@ class HydroUnits:
             self._check_surface_areas_match(columns_areas)
             area_values = np.zeros(shape=(len(file_content), len(columns_areas)))
             for idx, surface in enumerate(self.surface_names):
-                area_values[:, idx] = columns_areas[surface]
+                area_values[:, idx] = file_content[columns_areas[surface]]
             self._compute_area_portions(area_values)
 
         if area_unit == 'm':
@@ -96,7 +99,7 @@ class HydroUnits:
 
         for surface_type, surface_name in zip(self.surface_types, self.surface_names):
             var_surf = nc.createVariable(surface_name, 'float32', ('hydro_units',))
-            var_surf[:] = self.hydro_units[surface_name]
+            var_surf[:] = self.hydro_units[self.prefix_fraction + surface_name]
             var_surf.units = 'fraction'
             var_surf.type = surface_type
 
@@ -116,8 +119,20 @@ class HydroUnits:
         area = np.sum(area_values, axis=1)
 
         # Normalize surfaces
-        fractions = area_values / area
+        fractions = area_values / area[:, None]
 
         # Insert the results in the dataframe
         self.hydro_units['area'] = area
-        self.hydro_units['fractions'] = fractions
+        for idx, surface_name in enumerate(self.surface_names):
+            self.hydro_units[self.prefix_fraction + surface_name] = fractions[:, idx]
+
+    @staticmethod
+    def _check_surfaces_definitions(surface_types, surface_names):
+        if surface_types is None and surface_names is None:
+            return
+
+        if surface_types is None or surface_names is None:
+            raise Exception('The surface name or type is undefined.')
+
+        if len(surface_types) != len(surface_names):
+            raise Exception('The length of the surface types and names do not match.')

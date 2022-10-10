@@ -42,6 +42,17 @@ def test_define_parameter_with_list():
     assert parameter_set.parameters.loc[0].at['max'] == [10, 11, 12, 13]
 
 
+def test_define_parameter_with_list_after_float():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='glacier', name='degreeDayFactor', min_value=0, max_value=8)
+    parameter_set.define_parameter(
+        component='snowpack', name='degreeDayFactor',
+        min_value=[0, 1, 2, 3], max_value=[10, 11, 12, 13])
+    assert parameter_set.parameters.loc[1].at['min'] == [0, 1, 2, 3]
+    assert parameter_set.parameters.loc[1].at['max'] == [10, 11, 12, 13]
+
+
 def test_define_parameter_min_max_mismatch_types():
     parameter_set = hb.ParameterSet()
     with pytest.raises(Exception):

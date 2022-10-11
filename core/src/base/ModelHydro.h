@@ -18,6 +18,8 @@ class ModelHydro : public wxObject {
 
     bool Initialize(SettingsModel& modelSettings);
 
+    void UpdateParameters(SettingsModel& modelSettings);
+
     bool IsOk();
 
     bool Run();
@@ -29,6 +31,8 @@ class ModelHydro : public wxObject {
     bool AddTimeSeries(TimeSeries* timeSeries);
 
     bool CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+
+    void ClearTimeSeries();
 
     bool AttachTimeSeriesToHydroUnits();
 
@@ -65,6 +69,10 @@ class ModelHydro : public wxObject {
     void CreateSubBasinComponents(SettingsModel& modelSettings);
 
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);
+
+    void UpdateSubBasinParameters(SettingsModel& modelSettings);
+
+    void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
 
     void LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit);
 

@@ -96,11 +96,15 @@ class Model:
         The predicted discharge time series
         """
         try:
+            self._cleanup()
+
             # Parameters
             model_params = parameters.get_model_parameters()
             for _, param in model_params.iterrows():
                 self.settings.set_parameter(param['component'], param['name'],
                                             param['value'])
+
+            self.model.update_parameters(self.settings)
 
             # Add data
             time = utils.date_as_mjd(forcing.time.to_numpy())
@@ -196,3 +200,6 @@ class Model:
 
     def _get_specific_options(self):
         return {}
+
+    def _cleanup(self):
+        self.model.clear_time_series()

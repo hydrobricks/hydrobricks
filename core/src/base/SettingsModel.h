@@ -241,6 +241,11 @@ class SettingsModel : public wxObject {
     vecStr GetHydroUnitLogLabels();
 
     void SetLogAll(bool logAll = true) {
+        if (logAll) {
+            wxLogMessage("Logging all components.");
+        } else {
+            wxLogMessage("Minimal logging.");
+        }
         m_logAll = logAll;
     }
 

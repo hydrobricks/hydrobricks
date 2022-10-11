@@ -72,7 +72,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
+        .def("clear_time_series", &ModelHydro::ClearTimeSeries,
+             "Clear time series. Use only if the time series were created with ModelHydro::ClearTimeSeries.")
         .def("attach_time_series_to_hydro_units", &ModelHydro::AttachTimeSeriesToHydroUnits, "Attach the time series.")
+        .def("update_parameters", &ModelHydro::UpdateParameters, "Update the parameters with the provided values",
+             "model_settings"_a)
         .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")

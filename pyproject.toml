@@ -21,7 +21,7 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest pyyaml numpy pandas netCDF4"
+test-requires = "pytest pyyaml numpy pandas netCDF4 h5py"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
@@ -47,7 +47,6 @@ before-build = [
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
 ]
-before-test = "sudo apt-get install -y hdf5"
 
 [tool.cibuildwheel.windows]
 before-build = [

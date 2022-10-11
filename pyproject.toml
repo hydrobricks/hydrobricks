@@ -47,7 +47,7 @@ before-build = [
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
 ]
-before-test = "yum install hdf5"
+before-test = "yum -y install hdf5-devel"
 
 [tool.cibuildwheel.windows]
 before-build = [

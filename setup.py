@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
@@ -104,14 +105,19 @@ class CMakeBuild(build_ext):
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 
 
+# Read the contents of the README file
+this_directory = Path(__file__).parent
+long_description = (this_directory / "python" / "README.md").read_text()
+
+# Setup
 setup(
     name="hydrobricks",
     version="0.0.5",
     author="Pascal Horton",
-    author_email="pascal.horton@giub.unibe.",
+    author_email="pascal.horton@giub.unibe",
     description="A modular hydrological modelling framework",
-    long_description="A modular hydrological modelling framework built on "
-                     "C++ and Python.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("_hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
     packages=['hydrobricks', 'hydrobricks.models'],

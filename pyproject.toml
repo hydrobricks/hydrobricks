@@ -25,7 +25,7 @@ test-requires = "pytest pyyaml numpy pandas netCDF4"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*"]
+skip = ["*musllinux*", "cp311-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
@@ -46,11 +46,6 @@ before-build = [
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
-]
-before-test = [
-    "dnf -y install epel-release",
-    "dnf update",
-    "dnf -y install hdf5-devel"
 ]
 
 [tool.cibuildwheel.windows]

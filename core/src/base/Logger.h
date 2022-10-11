@@ -12,6 +12,8 @@ class Logger : public wxObject {
     void InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecStr& subBasinLabels,
                        const vecStr& hydroUnitLabels);
 
+    void Reset();
+
     void SetSubBasinValuePointer(int iLabel, double* valPt);
 
     void SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt);

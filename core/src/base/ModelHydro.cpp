@@ -750,6 +750,11 @@ bool ModelHydro::Run() {
     return true;
 }
 
+void ModelHydro::Reset() {
+    m_timer.Reset();
+    m_logger.Reset();
+}
+
 bool ModelHydro::DumpOutputs(const std::string& path) {
     return m_logger.DumpOutputs(path);
 }

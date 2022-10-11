@@ -17,6 +17,10 @@ void Logger::InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecS
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
 }
 
+void Logger::Reset() {
+    m_cursor = 0;
+}
+
 void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
     wxASSERT(m_subBasinValuesPt.size() > iLabel);
     m_subBasinValuesPt[iLabel] = valPt;

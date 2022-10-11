@@ -24,6 +24,8 @@ class ModelHydro : public wxObject {
 
     bool Run();
 
+    void Reset();
+
     bool DumpOutputs(const std::string& path);
 
     axd GetOutletDischarge();

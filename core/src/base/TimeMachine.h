@@ -15,6 +15,8 @@ class TimeMachine : public wxObject {
 
     void Initialize(const TimerSettings& settings);
 
+    void Reset();
+
     void AttachParametersUpdater(ParametersUpdater* updater) {
         m_parametersUpdater = updater;
     }

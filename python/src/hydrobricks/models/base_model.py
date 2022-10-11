@@ -204,3 +204,4 @@ class Model:
 
     def _cleanup(self):
         self.model.clear_time_series()
+        self.model.reset()

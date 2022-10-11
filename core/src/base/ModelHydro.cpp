@@ -16,6 +16,22 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 
 ModelHydro::~ModelHydro() {}
 
+bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    wxDELETE(m_subBasin);
+    m_subBasin = new SubBasin();
+    if (!m_subBasin->Initialize(basinSettings)) {
+        return false;
+    }
+    if (!Initialize(modelSettings)) {
+        return false;
+    }
+    if (!m_subBasin->AssignFractions(basinSettings)) {
+        return false;
+    }
+
+    return true;
+}
+
 bool ModelHydro::Initialize(SettingsModel& modelSettings) {
     try {
         BuildModelStructure(modelSettings);

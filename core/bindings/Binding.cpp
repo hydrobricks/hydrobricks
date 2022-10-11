@@ -62,7 +62,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<ModelHydro>(m, "ModelHydro")
         .def(py::init<>())
-        .def("set_sub_basin", &ModelHydro::SetSubBasin, "Set the basin", "sub_basin"_a)
+        .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin",
+             "model_settings"_a, "basin_settings"_a)
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model", "time_series"_a)
         .def("attach_time_series_to_hydro_units", &ModelHydro::AttachTimeSeriesToHydroUnits, "Attach the time series.")
         .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")

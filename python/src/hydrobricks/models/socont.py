@@ -44,8 +44,8 @@ class Socont(Model):
             component='snowpack', name='meltingTemperature', unit='°C',
             min_value=0, max_value=5, default_value=0, mandatory=False)
 
+        i_glacier = 0
         for surface_type, surface_name in zip(self.surface_types, self.surface_names):
-            i_glacier = 0
             if surface_type == 'glacier':
                 aliases = ['agl']
                 if self.surface_types.count('glacier') > 1:
@@ -65,7 +65,7 @@ class Socont(Model):
 
         ps.define_parameter(
             component='glacier-area-rain-snowmelt-storage', name='responseFactor',
-            unit='1/t', liases=['kn'], min_value=0.001, max_value=1, mandatory=True)
+            unit='1/t', aliases=['kn'], min_value=0.001, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='glacier-area-icemelt-storage', name='responseFactor', unit='1/t',

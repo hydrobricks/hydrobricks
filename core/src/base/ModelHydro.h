@@ -14,6 +14,8 @@ class ModelHydro : public wxObject {
 
     ~ModelHydro() override;
 
+    bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+
     bool Initialize(SettingsModel& modelSettings);
 
     bool IsOk();

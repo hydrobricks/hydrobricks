@@ -9,7 +9,7 @@ class Forcing(TimeSeries):
 
     def __init__(self, hydro_units):
         super().__init__()
-        self.hydro_units = hydro_units
+        self.hydro_units = hydro_units.hydro_units
 
     def spatialize_temperature(self, ref_elevation, lapse):
         """
@@ -24,7 +24,7 @@ class Forcing(TimeSeries):
             Temperature lapse [°C/100m] to compute the temperature for every hydro unit.
             Can be a unique value or a list providing a value for every month.
         """
-        unit_values = np.zeros((len(self.date), len(self.hydro_units)))
+        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
         i_col = self.data_name.index('temperature')
         for i_unit, unit in hydro_units.iterrows():
@@ -35,7 +35,7 @@ class Forcing(TimeSeries):
                                               (elevation - ref_elevation) / 100
             elif len(lapse) == 12:
                 for m in range(12):
-                    month = self.date.dt.month == m + 1
+                    month = self.time.dt.month == m + 1
                     month = month.to_numpy()
                     unit_values[month, i_unit] = \
                         self.data_raw[i_col][month] + lapse[m] * \
@@ -60,7 +60,7 @@ class Forcing(TimeSeries):
             Gradient [mm/100m] to compute the PET for every hydro unit.
             Can be a unique value or a list providing a value for every month.
         """
-        unit_values = np.zeros((len(self.date), len(self.hydro_units)))
+        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
         i_col = self.data_name.index('temperature')
         for i_unit, unit in hydro_units.iterrows():
@@ -75,7 +75,7 @@ class Forcing(TimeSeries):
 
             elif len(gradient) == 12:
                 for m in range(12):
-                    month = self.date.dt.month == m + 1
+                    month = self.time.dt.month == m + 1
                     month = month.to_numpy()
                     unit_values[month, i_unit] = \
                         self.data_raw[i_col][month] + gradient[m] * \
@@ -105,7 +105,7 @@ class Forcing(TimeSeries):
         elevation_threshold: float
             Threshold to switch from gradient 1 to gradient 2 (optional).
         """
-        unit_values = np.zeros((len(self.date), len(self.hydro_units)))
+        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
         i_col = self.data_name.index('precipitation')
         for i_unit, unit in hydro_units.iterrows():

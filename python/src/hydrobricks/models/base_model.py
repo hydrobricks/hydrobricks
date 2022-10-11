@@ -1,7 +1,7 @@
 import os
 
 import _hydrobricks as hb
-from _hydrobricks import ModelHydro, ModelStructure, SubBasin, TimeSeries
+from _hydrobricks import ModelHydro, ModelStructure, TimeSeries
 from hydrobricks import utils
 
 
@@ -12,7 +12,6 @@ class Model:
         self.name = name
         self.structure = ModelStructure()
         self.model = ModelHydro()
-        self.sub_basin = SubBasin()
         self.allowed_kwargs = {'solver', 'logger', 'surface_types', 'surface_names'}
 
         # Default options
@@ -63,7 +62,7 @@ class Model:
 
             # Parameters
             model_params = parameters.get_model_parameters()
-            for param in model_params.iterrows():
+            for _, param in model_params.iterrows():
                 self.structure.set_parameter(param['component'], param['name'],
                                              param['value'])
 
@@ -71,17 +70,10 @@ class Model:
             t = utils.Timer()
             t.start()
 
-            # Create the basin
-            if not self.sub_basin.init(spatial_structure.structure):
+            # Initialize the model (with sub basin creation)
+            if not self.model.init_with_basin(self.structure,
+                                              spatial_structure.structure):
                 raise RuntimeError('Basin creation failed.')
-
-            # Set the basin to the model
-            if not self.model.set_sub_basin(self.sub_basin):
-                raise RuntimeError('Passing the basin to the model failed.')
-
-            # Assign surface fractions
-            if not self.sub_basin.assign_fractions(spatial_structure.structure):
-                raise RuntimeError('Surface fraction assignment failed.')
 
             # Add data
             for data_name, dates, data in zip(forcing.data_name, forcing.date,

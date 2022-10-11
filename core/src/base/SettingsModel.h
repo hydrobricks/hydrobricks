@@ -170,6 +170,8 @@ class SettingsModel : public wxObject {
 
     bool ParseParameters(const std::string& path);
 
+    bool SetParameter(const std::string& component, const std::string& name, float value);
+
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
     }

@@ -797,6 +797,45 @@ bool SettingsModel::ParseParameters(const std::string& path) {
     return true;
 }
 
+bool SettingsModel::SetParameter(const std::string& component, const std::string& name, float value) {
+    bool isBrick = false;
+    bool isSplitter = false;
+
+    // Get target object
+    if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
+        isBrick = true;
+    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
+        isSplitter = true;
+    } else if (component == "snowpack") {
+        // Specific actions needed
+    } else {
+        wxLogError(_("Cannot find the component '%s'."), component);
+        return false;
+    }
+
+    // Can be: brick, splitter or process parameter.
+    if (isBrick) {
+        if (BrickHasParameter(name)) {
+            SetBrickParameterValue(name, value);
+        } else {
+            SelectProcessWithParameter(name);
+            SetProcessParameterValue(name, value);
+        }
+    } else if (isSplitter) {
+        SetSplitterParameterValue(name, value);
+    } else {
+        if (component == "snowpack") {
+            for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
+                SelectHydroUnitBrick(brickSettings.name + "-snowpack");
+                SelectProcessWithParameter(name);
+                SetProcessParameterValue(name, value);
+            }
+        }
+    }
+
+    return true;
+}
+
 vecStr SettingsModel::ParseSurfaceNames(const YAML::Node& settings) {
     vecStr surfaceNames;
     if (YAML::Node surfaces = settings["surfaces"]) {
@@ -846,7 +885,6 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
 
 bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb,
                                             const std::string& surfaceRunoff) {
-
     if (surfaceNames.size() != surfaceTypes.size()) {
         wxLogError(_("The length of the surface names and surface types do not match."));
         return false;

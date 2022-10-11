@@ -85,6 +85,7 @@ typedef std::vector<float> vecFloat;
 typedef std::vector<double> vecDouble;
 typedef std::vector<double*> vecDoublePt;
 typedef Eigen::ArrayXd axd;
+typedef Eigen::ArrayXi axi;
 typedef Eigen::ArrayXXd axxd;
 typedef std::vector<Eigen::ArrayXd> vecAxd;
 typedef std::vector<Eigen::ArrayXXd> vecAxxd;

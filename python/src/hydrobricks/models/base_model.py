@@ -1,4 +1,7 @@
-from _hydrobricks import ModelStructure
+import os
+
+import _hydrobricks as hb
+from _hydrobricks import ModelHydro, ModelStructure, SubBasin, TimeSeries
 from hydrobricks import utils
 
 
@@ -8,6 +11,8 @@ class Model:
     def __init__(self, name=None, **kwargs):
         self.name = name
         self.structure = ModelStructure()
+        self.model = ModelHydro()
+        self.sub_basin = SubBasin()
         self.allowed_kwargs = {'solver', 'logger', 'surface_types', 'surface_names'}
 
         # Default options
@@ -21,6 +26,88 @@ class Model:
     def get_name(self):
         """Get the name of the model"""
         return self.name
+
+    def setup_and_run(self, spatial_structure, parameters, forcing, output_path,
+                      start_date, end_date):
+        """
+        Setup and run the model.
+
+        Parameters
+        ----------
+        spatial_structure : HydroUnits
+            The spatial structure of the catchment.
+        parameters : ParameterSet
+            The parameters for the given model.
+        forcing : Forcing
+            The forcing data.
+        output_path: str
+            Path to save the results.
+        start_date: str
+            Starting date of the computation
+        end_date: str
+            Ending date of the computation
+
+        Return
+        ------
+        The predicted discharge time series
+        """
+        try:
+            if not os.path.isdir(output_path):
+                os.mkdir(output_path)
+
+            # Initialize log
+            hb.init_log(output_path)
+
+            # Modelling period
+            self.structure.set_timer(start_date, end_date, 1, "Day")
+
+            # Parameters
+            model_params = parameters.get_model_parameters()
+            for param in model_params.iterrows():
+                self.structure.set_parameter(param['component'], param['name'],
+                                             param['value'])
+
+            # Timer
+            t = utils.Timer()
+            t.start()
+
+            # Create the basin
+            if not self.sub_basin.init(spatial_structure.structure):
+                raise RuntimeError('Basin creation failed.')
+
+            # Set the basin to the model
+            if not self.model.set_sub_basin(self.sub_basin):
+                raise RuntimeError('Passing the basin to the model failed.')
+
+            # Assign surface fractions
+            if not self.sub_basin.assign_fractions(spatial_structure.structure):
+                raise RuntimeError('Surface fraction assignment failed.')
+
+            # Add data
+            for data_name, dates, data in zip(forcing.data_name, forcing.date,
+                                              forcing.data_spatialized):
+                time = utils.date_as_mjd(dates)
+                ids = forcing.hydro_units.get_ids().to_numpy()
+                ts = TimeSeries.create(data_name, time, ids, data)
+                if not self.model.add_time_series(ts):
+                    raise RuntimeError('Failed adding time series.')
+
+            if not self.model.attach_time_series_to_hydro_units():
+                raise RuntimeError('Attaching time series failed.')
+
+            # Check
+            if not self.model.is_ok():
+                raise RuntimeError('Model is not OK.')
+
+            # Do the work
+            if not self.model.run():
+                raise RuntimeError('Model run failed.')
+
+            # Processing time
+            t.stop()
+
+        except RuntimeError:
+            print("An exception occurred.")
 
     def create_config_file(self, directory, name, file_type='both'):
         """

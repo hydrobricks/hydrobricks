@@ -87,6 +87,12 @@ class ParameterSet:
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, 'value']
 
+    def get_model_parameters(self):
+        """
+        Get the model-only parameters (excluding data-related parameters).
+        """
+        return self.parameters[self.parameters['component'] != 'data']
+
     def add_data_parameter(self, name, value=None, min_value=None,
                            max_value=None, unit=None):
         """

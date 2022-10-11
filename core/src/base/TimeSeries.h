@@ -12,6 +12,8 @@ class TimeSeries : public wxObject {
 
     static bool Parse(const std::string& path, std::vector<TimeSeries*>& vecTimeSeries);
 
+    static bool Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+
     virtual bool SetCursorToDate(double date) = 0;
 
     virtual bool AdvanceOneTimeStep() = 0;
@@ -32,6 +34,9 @@ class TimeSeries : public wxObject {
     VariableType m_type;
 
   private:
+    static void ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& timeUnit);
+
+    static VariableType MatchVariableType(const std::string& varName);
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_H

@@ -294,3 +294,9 @@ def test_set_random_values_with_lists(parameter_set):
     assert parameter_set.get('A')[0] <= 10
     assert parameter_set.get('A')[1] >= 10
     assert parameter_set.get('A')[1] <= 200
+
+
+def test_get_model_only_parameters(parameter_set):
+    parameter_set.add_data_parameter('lapse', 0.6, min_value=0, max_value=1)
+    model_params = parameter_set.get_model_parameters()
+    assert len(model_params) == 3

@@ -10,7 +10,7 @@
 
 class ModelHydro : public wxObject {
   public:
-    ModelHydro(SubBasin* subBasin);
+    ModelHydro(SubBasin* subBasin = nullptr);
 
     ~ModelHydro() override;
 
@@ -28,6 +28,10 @@ class ModelHydro : public wxObject {
 
     SubBasin* GetSubBasin() {
         return m_subBasin;
+    }
+
+    void SetSubBasin(SubBasin* subBasin) {
+        m_subBasin = subBasin;
     }
 
     TimeMachine* GetTimeMachine() {

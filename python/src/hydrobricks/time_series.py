@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pandas as pd
+from hydrobricks import utils
 
 
 class TimeSeries:
@@ -39,4 +40,4 @@ class TimeSeries:
             self.data_raw.append(file_content[content[col]].to_numpy())
 
     def _date_as_mjd(self):
-        return pd.DatetimeIndex(self.date).to_julian_date() - 2400000.5
+        return utils.date_as_mjd(self.date)

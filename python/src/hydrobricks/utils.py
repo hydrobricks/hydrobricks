@@ -1,8 +1,10 @@
 import datetime
 import json
+import time
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import yaml
 
 
@@ -26,6 +28,10 @@ def dump_config_file(content, directory, name, file_type='yaml'):
         json_object = json.dumps(content, indent=2)
         with open(directory / f'{name}.json', 'w') as outfile:
             outfile.write(json_object)
+
+
+def date_as_mjd(date):
+    return pd.DatetimeIndex(date).to_julian_date() - 2400000.5
 
 
 def jd_to_date(jd):
@@ -94,3 +100,44 @@ def mjd_to_datetime(mjd):
                                       hour[idx], minute[idx], 0, 0)
 
     return date
+
+
+class Timer:
+    """Timer to time code execution. Based on: https://pypi.org/project/codetiming/"""
+    def __int__(self, text=None):
+        self._start_time = 0
+        self.last = 0
+        self.logger = print
+        if text is not None:
+            self.text = "Elapsed time: {:0.4f} seconds"
+
+    def start(self) -> None:
+        """Start a new timer."""
+        if self._start_time is not None:
+            raise Exception("Timer is running. Use .stop() to stop it")
+
+        self._start_time = time.perf_counter()
+
+    def stop(self) -> float:
+        """Stop the timer, and report the elapsed time."""
+        if self._start_time is None:
+            raise Exception("Timer is not running. Use .start() to start it")
+
+        # Calculate elapsed time
+        self.last = time.perf_counter() - self._start_time
+        self._start_time = None
+
+        # Report elapsed time
+        if self.logger:
+            if callable(self.text):
+                text = self.text(self.last)
+            else:
+                attributes = {
+                    "milliseconds": self.last * 1000,
+                    "seconds": self.last,
+                    "minutes": self.last / 60,
+                }
+                text = self.text.format(self.last, **attributes)
+            self.logger(text)
+
+        return self.last

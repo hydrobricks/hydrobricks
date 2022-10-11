@@ -101,8 +101,9 @@ class Model:
             # Parameters
             model_params = parameters.get_model_parameters()
             for _, param in model_params.iterrows():
-                self.settings.set_parameter(param['component'], param['name'],
-                                            param['value'])
+                if not self.settings.set_parameter(param['component'], param['name'],
+                                                   param['value']):
+                    raise RuntimeError('Failed setting parameter values.')
 
             self.model.update_parameters(self.settings)
 

@@ -821,8 +821,10 @@ bool SettingsModel::SetParameter(const std::string& component, const std::string
             SelectProcessWithParameter(name);
             SetProcessParameterValue(name, value);
         }
+        return true;
     } else if (isSplitter) {
         SetSplitterParameterValue(name, value);
+        return true;
     } else {
         if (component == "snowpack") {
             for (const auto& brickSettings : m_selectedStructure->surfaceBricks) {
@@ -830,10 +832,11 @@ bool SettingsModel::SetParameter(const std::string& component, const std::string
                 SelectProcessWithParameter(name);
                 SetProcessParameterValue(name, value);
             }
+            return true;
         }
     }
 
-    return true;
+    return false;
 }
 
 vecStr SettingsModel::ParseSurfaceNames(const YAML::Node& settings) {

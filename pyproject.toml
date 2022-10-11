@@ -56,6 +56,7 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
+    #"conan install . --build=missing -s build_type=Debug",
 ]
 
 [tool.cibuildwheel.macos]

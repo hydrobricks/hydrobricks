@@ -23,6 +23,9 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
+        # To build the extension in debug mode.
+        # self.debug = True
+
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
         # Required for auto-detection & inclusion of auxiliary "native" libs

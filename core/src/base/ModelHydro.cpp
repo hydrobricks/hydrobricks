@@ -742,6 +742,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 
 bool ModelHydro::InitializeTimeSeries() {
     for (auto timeSeries : m_timeSeries) {
+        wxASSERT(timeSeries);
         if (!timeSeries->SetCursorToDate(m_timer.GetDate())) {
             return false;
         }

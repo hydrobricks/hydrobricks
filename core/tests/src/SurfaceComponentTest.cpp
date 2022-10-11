@@ -105,8 +105,8 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
 TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddSurfaceElement("ground", 0.5);
-    basinSettings.AddSurfaceElement("glacier", 0.5);
+    basinSettings.AddSurfaceElement("ground", "", 0.5);
+    basinSettings.AddSurfaceElement("glacier", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

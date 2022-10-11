@@ -117,7 +117,7 @@ class HydroUnits:
 
     def _populate_binding_instance(self):
         for _, row in self.hydro_units.iterrows():
-            self.structure.add_hydro_unit(row['id'], row['area'], row['elevation'])
+            self.structure.add_hydro_unit(int(row['id']), row['area'], row['elevation'])
             for surf_type, surf_name in zip(self.surface_types, self.surface_names):
                 fraction = row[self.prefix_fraction + surf_name]
                 self.structure.add_surface_element(surf_name, surf_type, fraction)

@@ -133,7 +133,15 @@ class ParameterSet:
         parameters : list
             The name or alias of the parameters to set to random values.
             Example: ['kr', 'A']
+
+        Returns
+        -------
+        A dataframe with the assigned parameter values.
         """
+
+        # Create a dataframe to return assigned values
+        assigned_values = pd.DataFrame(columns=parameters)
+
         for key in parameters:
             index = self._get_parameter_index(key)
             min_value = self.parameters.loc[index, 'min']
@@ -147,6 +155,10 @@ class ParameterSet:
             else:
                 self.parameters.loc[index, 'value'] = random.uniform(
                     min_value, max_value)
+
+            assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
+
+        return assigned_values
 
     def create_file(self, directory, name, file_type='both'):
         """

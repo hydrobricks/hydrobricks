@@ -107,3 +107,12 @@ bool Logger::DumpOutputs(const std::string& path) {
 
     return true;
 }
+
+axd Logger::GetOutletDischarge() {
+    for (int i = 0; i < m_subBasinLabels.size(); i++) {
+        if (m_subBasinLabels[i] == "outlet") {
+            return m_subBasinValues[i];
+        }
+    }
+    throw ConceptionIssue(_("No 'outlet' component found in logger."));
+}

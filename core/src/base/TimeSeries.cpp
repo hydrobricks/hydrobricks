@@ -90,7 +90,7 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
     return true;
 }
 
-bool TimeSeries::Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
+TimeSeries* TimeSeries::Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
     // Get time
     Time startSt = GetTimeStructFromMJD(time[0]);
     Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
@@ -111,13 +111,16 @@ bool TimeSeries::Create(const std::string& varName, const axd& time, const axi& 
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         wxLogError(_("Dimension mismatch in the forcing data."));
-        return false;
+        throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
+                                               int(data.rows()), int(time.size()), int(data.cols()), int(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
         auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-        forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+        if (!forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
+            throw InvalidArgument("Time series creation failed.");
+        }
         timeSeries->AddData(forcingData, ids[i]);
     }
 

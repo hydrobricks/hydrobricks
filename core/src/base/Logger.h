@@ -24,6 +24,8 @@ class Logger : public wxObject {
 
     bool DumpOutputs(const std::string& path);
 
+    axd GetOutletDischarge();
+
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;
     }

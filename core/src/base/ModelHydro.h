@@ -24,7 +24,11 @@ class ModelHydro : public wxObject {
 
     bool DumpOutputs(const std::string& path);
 
+    axd GetOutletDischarge();
+
     bool AddTimeSeries(TimeSeries* timeSeries);
+
+    bool CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
 
     bool AttachTimeSeriesToHydroUnits();
 

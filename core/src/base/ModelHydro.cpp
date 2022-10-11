@@ -661,9 +661,11 @@ bool ModelHydro::IsOk() {
 }
 
 bool ModelHydro::Run() {
+    wxLogDebug(_("Initializing time series."));
     if (!InitializeTimeSeries()) {
         return false;
     }
+    wxLogDebug(_("Starting the computations."));
     while (!m_timer.IsOver()) {
         if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
@@ -683,6 +685,10 @@ bool ModelHydro::Run() {
 
 bool ModelHydro::DumpOutputs(const std::string& path) {
     return m_logger.DumpOutputs(path);
+}
+
+axd ModelHydro::GetOutletDischarge() {
+    return m_logger.GetOutletDischarge();
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
@@ -705,6 +711,14 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
 
     m_timeSeries.push_back(timeSeries);
 
+    return true;
+}
+
+bool ModelHydro::CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
+    TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
+    if (!AddTimeSeries(timeSeries)) {
+        return false;
+    }
     return true;
 }
 

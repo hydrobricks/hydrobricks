@@ -12,7 +12,7 @@ class TimeSeries : public wxObject {
 
     static bool Parse(const std::string& path, std::vector<TimeSeries*>& vecTimeSeries);
 
-    static bool Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+    static TimeSeries* Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
 
     virtual bool SetCursorToDate(double date) = 0;
 

@@ -20,6 +20,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     m.def("init", &InitHydrobricksForPython, "Initializes hydrobricks");
     m.def("init_log", &InitLog, "Initializes log", "path"_a);
+    m.def("set_max_log_level", &SetMaxLogLevel, "Set the log level to max (max verbosity)");
+    m.def("set_debug_log_level", &SetDebugLogLevel, "Set the log level to debug");
+    m.def("set_message_log_level", &SetMessageLogLevel, "Set the log level to message (standard)");
 
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
@@ -67,9 +70,12 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin",
              "model_settings"_a, "basin_settings"_a)
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model", "time_series"_a)
+        .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
+             "data_name"_a, "time"_a, "ids"_a, "data"_a)
         .def("attach_time_series_to_hydro_units", &ModelHydro::AttachTimeSeriesToHydroUnits, "Attach the time series.")
         .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
+        .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());

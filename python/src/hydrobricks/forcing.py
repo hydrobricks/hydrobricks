@@ -62,7 +62,7 @@ class Forcing(TimeSeries):
         """
         unit_values = np.zeros((len(self.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
-        i_col = self.data_name.index('temperature')
+        i_col = self.data_name.index('pet')
         for i_unit, unit in hydro_units.iterrows():
             elevation = unit['elevation']
 

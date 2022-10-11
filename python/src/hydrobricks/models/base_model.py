@@ -1,7 +1,7 @@
 import os
 
 import _hydrobricks as hb
-from _hydrobricks import ModelHydro, SettingsModel, TimeSeries
+from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
 
@@ -77,21 +77,22 @@ class Model:
                                             param['value'])
 
             # Timer
-            t = utils.Timer()
-            t.start()
+            timer = utils.Timer()
+            timer.start()
 
             # Initialize the model (with sub basin creation)
-            if not self.model.init_with_basin(self.settings,
-                                              spatial_structure.settings):
+            if not self.model.init_with_basin(
+                    self.settings, spatial_structure.settings):
                 raise RuntimeError('Basin creation failed.')
 
             # Add data
-            for data_name, dates, data in zip(forcing.data_name, forcing.date,
-                                              forcing.data_spatialized):
-                time = utils.date_as_mjd(dates)
-                ids = forcing.hydro_units.get_ids().to_numpy()
-                ts = TimeSeries.create(data_name, time, ids, data)
-                if not self.model.add_time_series(ts):
+            time = utils.date_as_mjd(forcing.time.to_numpy())
+            ids = spatial_structure.get_ids().to_numpy()
+            for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
+                if data is None:
+                    raise RuntimeError(f'The forcing {data_name} has not '
+                                       f'been spatialized.')
+                if not self.model.create_time_series(data_name, time, ids, data):
                     raise RuntimeError('Failed adding time series.')
 
             if not self.model.attach_time_series_to_hydro_units():
@@ -106,9 +107,13 @@ class Model:
                 raise RuntimeError('Model run failed.')
 
             # Processing time
-            t.stop()
+            timer.stop()
 
         except RuntimeError:
+            print("A runtime exception occurred.")
+        except TypeError:
+            print("A type error exception occurred.")
+        except Exception:
             print("An exception occurred.")
 
     def create_config_file(self, directory, name, file_type='both'):
@@ -138,6 +143,12 @@ class Model:
             'logger': 'all' if self.log_all else ''
         }
         utils.dump_config_file(settings, directory, name, file_type)
+
+    def get_outlet_discharge(self):
+        """
+        Get the computed outlet discharge.
+        """
+        return self.model.get_outlet_discharge()
 
     def generate_parameters(self):
         raise Exception('Parameters cannot be generated for the base model.')

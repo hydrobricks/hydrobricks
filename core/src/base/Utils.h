@@ -42,6 +42,21 @@ void DisplayProcessingTime(const wxStopWatch& sw);
 void InitLog(const std::string& path);
 
 /**
+ * Set the log level to max (max verbosity)
+ */
+void SetMaxLogLevel();
+
+/**
+ * Set the log level to debug
+ */
+void SetDebugLogLevel();
+
+/**
+ * Set the log level to message (standard)
+ */
+void SetMessageLogLevel();
+
+/**
  * Check if the given integer value is a NaN.
  *
  * @param value The value to check.

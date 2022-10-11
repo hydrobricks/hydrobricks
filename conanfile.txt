@@ -1,6 +1,5 @@
 [requires]
 wxbase/3.2.1@terranum-conan+wxbase/stable
-hdf5/1.13.1
 netcdf/4.8.1
 eigen/3.4.0
 gtest/1.11.0

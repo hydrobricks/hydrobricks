@@ -1,7 +1,7 @@
 import os
 
 import _hydrobricks as hb
-from _hydrobricks import ModelHydro, ModelStructure, TimeSeries
+from _hydrobricks import ModelHydro, SettingsModel, TimeSeries
 from hydrobricks import utils
 
 
@@ -10,13 +10,13 @@ class Model:
 
     def __init__(self, name=None, **kwargs):
         self.name = name
-        self.structure = ModelStructure()
+        self.settings = SettingsModel()
         self.model = ModelHydro()
-        self.allowed_kwargs = {'solver', 'logger', 'surface_types', 'surface_names'}
+        self.allowed_kwargs = {'solver', 'log_all', 'surface_types', 'surface_names'}
 
         # Default options
         self.solver = 'HeunExplicit'
-        self.logger = 'all'
+        self.log_all = False
         self.surface_types = ['ground']
         self.surface_names = ['ground']
 
@@ -25,6 +25,16 @@ class Model:
     def get_name(self):
         """Get the name of the model"""
         return self.name
+
+    def do_log_all(self):
+        """Enable logging of all components."""
+        self.log_all = True
+        self.settings.log_all()
+
+    def disable_log_all(self):
+        """Disable logging of all components."""
+        self.log_all = False
+        self.settings.log_all(False)
 
     def setup_and_run(self, spatial_structure, parameters, forcing, output_path,
                       start_date, end_date):
@@ -58,21 +68,21 @@ class Model:
             hb.init_log(output_path)
 
             # Modelling period
-            self.structure.set_timer(start_date, end_date, 1, "Day")
+            self.settings.set_timer(start_date, end_date, 1, "Day")
 
             # Parameters
             model_params = parameters.get_model_parameters()
             for _, param in model_params.iterrows():
-                self.structure.set_parameter(param['component'], param['name'],
-                                             param['value'])
+                self.settings.set_parameter(param['component'], param['name'],
+                                            param['value'])
 
             # Timer
             t = utils.Timer()
             t.start()
 
             # Initialize the model (with sub basin creation)
-            if not self.model.init_with_basin(self.structure,
-                                              spatial_structure.structure):
+            if not self.model.init_with_basin(self.settings,
+                                              spatial_structure.settings):
                 raise RuntimeError('Basin creation failed.')
 
             # Add data
@@ -117,7 +127,7 @@ class Model:
         file_type : file_type
             The type of file to generate: 'json', 'yaml', or 'both'.
         """
-        structure = {
+        settings = {
             'base': self.name,
             'solver': self.solver,
             'options': self._get_specific_options(),
@@ -125,9 +135,9 @@ class Model:
                 'names': self.surface_names,
                 'types': self.surface_types
             },
-            'logger': self.logger
+            'logger': 'all' if self.log_all else ''
         }
-        utils.dump_config_file(structure, directory, name, file_type)
+        utils.dump_config_file(settings, directory, name, file_type)
 
     def generate_parameters(self):
         raise Exception('Parameters cannot be generated for the base model.')
@@ -135,8 +145,8 @@ class Model:
     def _set_options(self, kwargs):
         if 'solver' in kwargs:
             self.solver = kwargs['solver']
-        if 'logger' in kwargs:
-            self.logger = kwargs['logger']
+        if 'log_all' in kwargs:
+            self.log_all = kwargs['log_all']
         if 'surface_types' in kwargs:
             self.surface_types = kwargs['surface_types']
         if 'surface_names' in kwargs:

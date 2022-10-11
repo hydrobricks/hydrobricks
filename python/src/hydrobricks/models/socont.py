@@ -18,10 +18,13 @@ class Socont(Model):
         self._set_options(kwargs)
 
         try:
-            if not self.structure.generate_socont_structure(
+            if not self.settings.generate_socont_structure(
                     self.surface_types, self.surface_names,
                     self.soil_storage_nb, self.surface_runoff):
                 raise Exception('Socont model initialization failed.')
+
+            self.settings.set_solver(self.solver)
+            self.settings.log_all(self.log_all)
         except RuntimeError as err:
             raise Exception(f'Socont model initialization raised an exception: {err}')
 

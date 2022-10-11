@@ -17,7 +17,7 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
     } else if (solverSettings.name == "Heun Explicit" || solverSettings.name == "HeunExplicit") {
         return new SolverHeunExplicit();
     }
-    throw InvalidArgument(_("Incorrect solver name."));
+    throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s."), solverSettings.name));
 }
 
 void Solver::InitializeContainers() {

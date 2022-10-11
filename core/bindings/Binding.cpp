@@ -21,16 +21,18 @@ PYBIND11_MODULE(_hydrobricks, m) {
     m.def("init", &InitHydrobricksForPython, "Initializes hydrobricks");
     m.def("init_log", &InitLog, "Initializes log", "path"_a);
 
-    py::class_<SettingsModel>(m, "ModelStructure")
+    py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
         .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
              "surface_types"_a, "surface_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont-runoff")
+        .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
+        .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
         .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter", "component"_a,
              "name"_a, "value"_a);
 
-    py::class_<SettingsBasin>(m, "SpatialStructure")
+    py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
              "area"_a, "elevation"_a)

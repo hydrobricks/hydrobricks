@@ -240,6 +240,10 @@ class SettingsModel : public wxObject {
 
     vecStr GetHydroUnitLogLabels();
 
+    void SetLogAll(bool logAll = true) {
+        m_logAll = logAll;
+    }
+
   protected:
     bool m_logAll;
     std::vector<ModelStructure> m_modelStructures;

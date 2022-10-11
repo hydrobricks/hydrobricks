@@ -30,7 +30,12 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter", "component"_a,
              "name"_a, "value"_a);
 
-    py::class_<SettingsBasin>(m, "SpatialStructure").def(py::init<>());
+    py::class_<SettingsBasin>(m, "SpatialStructure")
+        .def(py::init<>())
+        .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
+             "area"_a, "elevation"_a)
+        .def("add_surface_element", &SettingsBasin::AddSurfaceElement, "Add a surface element to the structure",
+             "name"_a, "type"_a, "fraction"_a);
 
     py::class_<SubBasin>(m, "SubBasin")
         .def(py::init<>())

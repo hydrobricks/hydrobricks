@@ -60,8 +60,8 @@ class FluxWeightedModel : public ::testing::Test {
 TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 1.0);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 0.0);
+    basinProp.AddSurfaceElement("item-1", 1.0);
+    basinProp.AddSurfaceElement("item-2", 0.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -105,8 +105,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 0.5);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 0.5);
+    basinProp.AddSurfaceElement("item-1", 0.5);
+    basinProp.AddSurfaceElement("item-2", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -150,8 +150,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 0.7);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 0.3);
+    basinProp.AddSurfaceElement("item-1", 0.7);
+    basinProp.AddSurfaceElement("item-2", 0.3);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -195,11 +195,11 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 0.5);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 0.5);
+    basinProp.AddSurfaceElement("item-1", 0.5);
+    basinProp.AddSurfaceElement("item-2", 0.5);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 0.5);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 0.5);
+    basinProp.AddSurfaceElement("item-1", 0.5);
+    basinProp.AddSurfaceElement("item-2", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -248,11 +248,11 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricksDifferentArea) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 2.0 / 3.0);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0 / 3.0);
+    basinProp.AddSurfaceElement("item-1", 2.0 / 3.0);
+    basinProp.AddSurfaceElement("item-2", 1.0 / 3.0);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddHydroUnitSurfaceElement("item-1", 4.0 / 5.0);
-    basinProp.AddHydroUnitSurfaceElement("item-2", 1.0 / 5.0);
+    basinProp.AddSurfaceElement("item-1", 4.0 / 5.0);
+    basinProp.AddSurfaceElement("item-2", 1.0 / 5.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));

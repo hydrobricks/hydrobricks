@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from _hydrobricks import SpatialStructure
 from netCDF4 import Dataset
 
 
@@ -7,6 +8,7 @@ class HydroUnits:
     """Class for the hydro units"""
 
     def __init__(self, surface_types=None, surface_names=None):
+        self.structure = SpatialStructure()
         self._check_surfaces_definitions(surface_types, surface_names)
         self.surface_types = surface_types
         self.surface_names = surface_names
@@ -64,6 +66,8 @@ class HydroUnits:
         else:
             raise Exception(f'Unit "{area_unit}" for the area is not supported.')
 
+        self._populate_binding_instance()
+
     def create_file(self, path):
         """
         Create a file containing the hydro unit properties. Such a file can be used in
@@ -104,6 +108,19 @@ class HydroUnits:
             var_surf.type = surface_type
 
         nc.close()
+
+    def get_ids(self):
+        """
+        Get the hydro unit ids.
+        """
+        return self.hydro_units['id']
+
+    def _populate_binding_instance(self):
+        for _, row in self.hydro_units.iterrows():
+            self.structure.add_hydro_unit(row['id'], row['area'], row['elevation'])
+            for surf_type, surf_name in zip(self.surface_types, self.surface_names):
+                fraction = row[self.prefix_fraction + surf_name]
+                self.structure.add_surface_element(surf_name, surf_type, fraction)
 
     def _check_surface_areas_match(self, columns_areas):
         if len(columns_areas) != len(self.surface_names):

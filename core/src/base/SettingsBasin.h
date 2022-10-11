@@ -25,7 +25,9 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area, double elevation = 0.0);
 
-    void AddHydroUnitSurfaceElement(const std::string& name, double fraction = 1.0);
+    void AddSurfaceElement(const std::string& name, double fraction = 1.0);
+
+    void AddSurfaceElement(const std::string& name, const std::string& type, double fraction = 1.0);
 
     void SelectUnit(int index);
 

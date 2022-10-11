@@ -109,8 +109,13 @@ bool TimeSeries::Create(const std::string& varName, const axd& time, const axi& 
     // Instantiate time series
     auto timeSeries = new TimeSeriesDistributed(varType);
 
-    for (int i = 0; i < data.rows(); ++i) {
-        axd valuesUnit = data.row(i);
+    if (data.rows() != time.size() || data.cols() != ids.size()) {
+        wxLogError(_("Dimension mismatch in the forcing data."));
+        return false;
+    }
+
+    for (int i = 0; i < data.cols(); ++i) {
+        axd valuesUnit = data.col(i);
         auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
         forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
         timeSeries->AddData(forcingData, ids[i]);

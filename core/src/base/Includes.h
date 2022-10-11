@@ -65,7 +65,7 @@
 #include <wx/msw/msvcrt.h>  // redefines the new() operator
 
 #if !defined(_INC_CRTDBG) || !defined(_CRTDBG_MAP_ALLOC)
-#error Debug CRT functions have not been included!
+#pragma message("Debug CRT functions have not been included!")
 #endif
 #endif
 
@@ -85,6 +85,7 @@ typedef std::vector<float> vecFloat;
 typedef std::vector<double> vecDouble;
 typedef std::vector<double*> vecDoublePt;
 typedef Eigen::ArrayXd axd;
+typedef Eigen::ArrayXi axi;
 typedef Eigen::ArrayXXd axxd;
 typedef std::vector<Eigen::ArrayXd> vecAxd;
 typedef std::vector<Eigen::ArrayXXd> vecAxxd;

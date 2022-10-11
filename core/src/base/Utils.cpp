@@ -50,6 +50,18 @@ void InitLog(const std::string& path) {
     wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
 }
 
+void SetMaxLogLevel() {
+    wxLog::SetLogLevel(wxLOG_Max);
+}
+
+void SetDebugLogLevel() {
+    wxLog::SetLogLevel(wxLOG_Debug);
+}
+
+void SetMessageLogLevel() {
+    wxLog::SetLogLevel(wxLOG_Message);
+}
+
 bool CheckOutputDirectory(const std::string& path) {
     if (!wxFileName::DirExists(path)) {
         wxFileName dir = wxFileName(path);

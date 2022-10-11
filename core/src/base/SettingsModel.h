@@ -170,6 +170,8 @@ class SettingsModel : public wxObject {
 
     bool ParseParameters(const std::string& path);
 
+    bool SetParameter(const std::string& component, const std::string& name, float value);
+
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
     }
@@ -237,6 +239,15 @@ class SettingsModel : public wxObject {
     vecStr GetSubBasinGenericLogLabels();
 
     vecStr GetHydroUnitLogLabels();
+
+    void SetLogAll(bool logAll = true) {
+        if (logAll) {
+            wxLogMessage("Logging all components.");
+        } else {
+            wxLogMessage("Minimal logging.");
+        }
+        m_logAll = logAll;
+    }
 
   protected:
     bool m_logAll;

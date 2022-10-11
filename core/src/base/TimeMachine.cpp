@@ -34,6 +34,10 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     UpdateTimeStepInDays();
 }
 
+void TimeMachine::Reset() {
+    m_date = m_start;
+}
+
 bool TimeMachine::IsOver() {
     return m_date > m_end;
 }

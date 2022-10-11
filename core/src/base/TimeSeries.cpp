@@ -29,19 +29,10 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
         double end = GetMJD(endSt.year, endSt.month, endSt.day, endSt.hour, endSt.min);
 
         // Time step
+        int timeStep;
+        TimeUnit timeUnit;
         double timeStepData = time[1] - time[0];
-        int timeStep = 0;
-        TimeUnit timeUnit = Day;
-        if (timeStepData == 1.0) {
-            timeStep = 1;
-        } else if (timeStepData > 1.0) {
-            timeStep = int(round(timeStepData));
-        } else if (timeStepData < 1.0) {
-            timeUnit = Hour;
-            timeStep = int(round(timeStepData * 24));
-        } else {
-            throw ShouldNotHappen();
-        }
+        ExtractTimeStep(timeStepData, timeStep, timeUnit);
 
         // Get ids
         vecInt ids = file.GetVarInt1D("id", unitsNb);
@@ -60,23 +51,7 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
             }
 
             // Get forcing type
-            VariableType varType;
-            if (StringsMatch(varName, "Precipitation")) {
-                varType = Precipitation;
-            } else if (StringsMatch(varName, "Temperature")) {
-                varType = Temperature;
-            } else if (StringsMatch(varName, "PET") || StringsMatch(varName, "ETP")) {
-                varType = PET;
-            } else if (StringsMatch(varName, "Custom1")) {
-                varType = Custom1;
-            } else if (StringsMatch(varName, "Custom2")) {
-                varType = Custom2;
-            } else if (StringsMatch(varName, "Custom3")) {
-                varType = Custom3;
-            } else {
-                throw InvalidArgument(
-                    wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
-            }
+            VariableType varType = MatchVariableType(varName);
 
             // Instantiate time series
             auto timeSeries = new TimeSeriesDistributed(varType);
@@ -113,4 +88,76 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
     }
 
     return true;
+}
+
+TimeSeries* TimeSeries::Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
+    // Get time
+    Time startSt = GetTimeStructFromMJD(time[0]);
+    Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
+    double start = GetMJD(startSt.year, startSt.month, startSt.day, startSt.hour, startSt.min);
+    double end = GetMJD(endSt.year, endSt.month, endSt.day, endSt.hour, endSt.min);
+
+    // Time step
+    int timeStep;
+    TimeUnit timeUnit;
+    double timeStepData = time[1] - time[0];
+    ExtractTimeStep(timeStepData, timeStep, timeUnit);
+
+    // Get forcing type
+    VariableType varType = MatchVariableType(varName);
+
+    // Instantiate time series
+    auto timeSeries = new TimeSeriesDistributed(varType);
+
+    if (data.rows() != time.size() || data.cols() != ids.size()) {
+        wxLogError(_("Dimension mismatch in the forcing data."));
+        throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
+                                               int(data.rows()), int(time.size()), int(data.cols()), int(ids.size())));
+    }
+
+    for (int i = 0; i < data.cols(); ++i) {
+        axd valuesUnit = data.col(i);
+        auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+        if (!forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
+            throw InvalidArgument("Time series creation failed.");
+        }
+        timeSeries->AddData(forcingData, ids[i]);
+    }
+
+    return timeSeries;
+}
+
+VariableType TimeSeries::MatchVariableType(const std::string& varName) {
+    VariableType varType;
+    if (StringsMatch(varName, "Precipitation")) {
+        varType = Precipitation;
+    } else if (StringsMatch(varName, "Temperature")) {
+        varType = Temperature;
+    } else if (StringsMatch(varName, "PET") || StringsMatch(varName, "ETP")) {
+        varType = PET;
+    } else if (StringsMatch(varName, "Custom1")) {
+        varType = Custom1;
+    } else if (StringsMatch(varName, "Custom2")) {
+        varType = Custom2;
+    } else if (StringsMatch(varName, "Custom3")) {
+        varType = Custom3;
+    } else {
+        throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+    }
+    return varType;
+}
+
+void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& timeUnit) {
+    timeStep = 0;
+    timeUnit = Day;
+    if (timeStepData == 1.0) {
+        timeStep = 1;
+    } else if (timeStepData > 1.0) {
+        timeStep = int(round(timeStepData));
+    } else if (timeStepData < 1.0) {
+        timeUnit = Hour;
+        timeStep = int(round(timeStepData * 24));
+    } else {
+        throw ShouldNotHappen();
+    }
 }

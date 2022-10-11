@@ -21,11 +21,11 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest"
+test-requires = "pytest pyyaml numpy pandas netCDF4"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*"]
+skip = ["*musllinux*", "cp311-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
@@ -56,6 +56,7 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
     "conan install . --build=missing",
+    #"conan install . --build=missing -s build_type=Debug",
 ]
 
 [tool.cibuildwheel.macos]

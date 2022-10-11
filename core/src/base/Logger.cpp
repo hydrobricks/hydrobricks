@@ -17,6 +17,10 @@ void Logger::InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecS
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
 }
 
+void Logger::Reset() {
+    m_cursor = 0;
+}
+
 void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
     wxASSERT(m_subBasinValuesPt.size() > iLabel);
     m_subBasinValuesPt[iLabel] = valPt;
@@ -106,4 +110,13 @@ bool Logger::DumpOutputs(const std::string& path) {
     }
 
     return true;
+}
+
+axd Logger::GetOutletDischarge() {
+    for (int i = 0; i < m_subBasinLabels.size(); i++) {
+        if (m_subBasinLabels[i] == "outlet") {
+            return m_subBasinValues[i];
+        }
+    }
+    throw ConceptionIssue(_("No 'outlet' component found in logger."));
 }

@@ -10,24 +10,40 @@
 
 class ModelHydro : public wxObject {
   public:
-    ModelHydro(SubBasin* subBasin);
+    ModelHydro(SubBasin* subBasin = nullptr);
 
     ~ModelHydro() override;
 
+    bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+
     bool Initialize(SettingsModel& modelSettings);
+
+    void UpdateParameters(SettingsModel& modelSettings);
 
     bool IsOk();
 
     bool Run();
 
+    void Reset();
+
     bool DumpOutputs(const std::string& path);
 
+    axd GetOutletDischarge();
+
     bool AddTimeSeries(TimeSeries* timeSeries);
+
+    bool CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+
+    void ClearTimeSeries();
 
     bool AttachTimeSeriesToHydroUnits();
 
     SubBasin* GetSubBasin() {
         return m_subBasin;
+    }
+
+    void SetSubBasin(SubBasin* subBasin) {
+        m_subBasin = subBasin;
     }
 
     TimeMachine* GetTimeMachine() {
@@ -55,6 +71,10 @@ class ModelHydro : public wxObject {
     void CreateSubBasinComponents(SettingsModel& modelSettings);
 
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);
+
+    void UpdateSubBasinParameters(SettingsModel& modelSettings);
+
+    void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
 
     void LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit);
 

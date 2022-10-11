@@ -55,7 +55,7 @@ def test_parameter_variable_yearly_value_assignment_fails_if_wrong_size():
 
 
 def test_build_socont_model_structure():
-    model_structure = hb.ModelStructure()
+    model_structure = hb.SettingsModel()
     assert model_structure.generate_socont_structure(
         surface_types=['ground', 'glacier', 'glacier'],
         surface_names=['ground', 'glacier-ice', 'glacier-debris'],

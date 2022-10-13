@@ -103,46 +103,18 @@ class Model:
         try:
             self.model.reset()
 
-            # Parameters
-            model_params = parameters.get_model_parameters()
-            for _, param in model_params.iterrows():
-                if not self.settings.set_parameter(param['component'], param['name'],
-                                                   param['value']):
-                    raise RuntimeError('Failed setting parameter values.')
+            self._set_parameters(parameters)
+            self._set_forcing(forcing)
 
-            self.model.update_parameters(self.settings)
-
-            # Add data if provided
-            if forcing is not None:
-                self.model.clear_time_series()
-                time = utils.date_as_mjd(forcing.time.to_numpy())
-                ids = self.spatial_structure.get_ids().to_numpy()
-                for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
-                    if data is None:
-                        raise RuntimeError(f'The forcing {data_name} has not '
-                                           f'been spatialized.')
-                    if not self.model.create_time_series(data_name, time, ids, data):
-                        raise RuntimeError('Failed adding time series.')
-
-                if not self.model.attach_time_series_to_hydro_units():
-                    raise RuntimeError('Attaching time series failed.')
-
-            elif not self.model.forcing_loaded():
-                raise RuntimeError('Please provide the forcing data at least once.')
-
-            # Check
             if not self.model.is_ok():
                 raise RuntimeError('Model is not OK.')
 
-            # Timer
             timer = utils.Timer()
             timer.start()
 
-            # Do the work
             if not self.model.run():
                 raise RuntimeError('Model run failed.')
 
-            # Processing time
             timer.stop()
 
         except RuntimeError:
@@ -151,6 +123,28 @@ class Model:
             print("A type error exception occurred.")
         except Exception:
             print("An exception occurred.")
+
+    def set_forcing(self, forcing):
+        """
+        Set the forcing data.
+
+        Parameters
+        ----------
+        forcing : Forcing
+            The forcing data.
+        """
+        self.model.clear_time_series()
+        time = utils.date_as_mjd(forcing.time.to_numpy())
+        ids = self.spatial_structure.get_ids().to_numpy()
+        for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
+            if data is None:
+                raise RuntimeError(f'The forcing {data_name} has not '
+                                   f'been spatialized.')
+            if not self.model.create_time_series(data_name, time, ids, data):
+                raise RuntimeError('Failed adding time series.')
+
+        if not self.model.attach_time_series_to_hydro_units():
+            raise RuntimeError('Attaching time series failed.')
 
     def create_config_file(self, directory, name, file_type='both'):
         """
@@ -211,3 +205,17 @@ class Model:
 
     def _get_specific_options(self):
         return {}
+
+    def _set_parameters(self, parameters):
+        model_params = parameters.get_model_parameters()
+        for _, param in model_params.iterrows():
+            if not self.settings.set_parameter(param['component'], param['name'],
+                                               param['value']):
+                raise RuntimeError('Failed setting parameter values.')
+        self.model.update_parameters(self.settings)
+
+    def _set_forcing(self, forcing):
+        if forcing is not None:
+            self.set_forcing(forcing)
+        elif not self.model.forcing_loaded():
+            raise RuntimeError('Please provide the forcing data at least once.')

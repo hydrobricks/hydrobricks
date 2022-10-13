@@ -24,8 +24,9 @@ class Model:
 
         self._set_options(kwargs)
 
-        # Recording level
+        # Setting base settings
         self.settings.log_all(self.record_all)
+        self.settings.set_solver(self.solver)
 
     def get_name(self):
         """Get the name of the model"""
@@ -125,9 +126,8 @@ class Model:
                 if not self.model.attach_time_series_to_hydro_units():
                     raise RuntimeError('Attaching time series failed.')
 
-            else:
-                if not self.model.forcing_loaded():
-                    raise RuntimeError('Please provide the forcing data at least once.')
+            elif not self.model.forcing_loaded():
+                raise RuntimeError('Please provide the forcing data at least once.')
 
             # Check
             if not self.model.is_ok():

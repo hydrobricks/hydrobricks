@@ -13,29 +13,23 @@ class Model:
         self.settings = SettingsModel()
         self.model = ModelHydro()
         self.spatial_structure = None
-        self.allowed_kwargs = {'solver', 'log_all', 'surface_types', 'surface_names'}
+        self.allowed_kwargs = {'solver', 'record_all', 'surface_types', 'surface_names'}
+        self.initialized = False
 
         # Default options
         self.solver = 'HeunExplicit'
-        self.log_all = False
+        self.record_all = True
         self.surface_types = ['ground']
         self.surface_names = ['ground']
 
         self._set_options(kwargs)
 
+        # Recording level
+        self.settings.log_all(self.record_all)
+
     def get_name(self):
         """Get the name of the model"""
         return self.name
-
-    def do_log_all(self, value=True):
-        """Enable logging of all components."""
-        self.log_all = value
-        self.settings.log_all(value)
-
-    def disable_log_all(self):
-        """Disable logging of all components."""
-        self.log_all = False
-        self.settings.log_all(False)
 
     def setup(self, spatial_structure, output_path, start_date, end_date):
         """
@@ -56,6 +50,10 @@ class Model:
         ------
         The predicted discharge time series
         """
+        if self.initialized:
+            raise RuntimeError('The model has already been initialized. '
+                               'Please create a new instance.')
+
         try:
             if not os.path.isdir(output_path):
                 os.mkdir(output_path)
@@ -73,6 +71,8 @@ class Model:
                     self.settings, spatial_structure.settings):
                 raise RuntimeError('Basin creation failed.')
 
+            self.initialized = True
+
         except RuntimeError:
             print("A runtime exception occurred.")
         except TypeError:
@@ -80,7 +80,7 @@ class Model:
         except Exception:
             print("An exception occurred.")
 
-    def run(self, parameters, forcing):
+    def run(self, parameters, forcing=None):
         """
         Setup and run the model.
 
@@ -95,6 +95,10 @@ class Model:
         ------
         The predicted discharge time series
         """
+        if not self.initialized:
+            raise RuntimeError('The model has not been initialized. '
+                               'Please run setup() first.')
+
         try:
             self._cleanup()
 
@@ -107,18 +111,23 @@ class Model:
 
             self.model.update_parameters(self.settings)
 
-            # Add data
-            time = utils.date_as_mjd(forcing.time.to_numpy())
-            ids = self.spatial_structure.get_ids().to_numpy()
-            for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
-                if data is None:
-                    raise RuntimeError(f'The forcing {data_name} has not '
-                                       f'been spatialized.')
-                if not self.model.create_time_series(data_name, time, ids, data):
-                    raise RuntimeError('Failed adding time series.')
+            # Add data if provided
+            if forcing is not None:
+                time = utils.date_as_mjd(forcing.time.to_numpy())
+                ids = self.spatial_structure.get_ids().to_numpy()
+                for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
+                    if data is None:
+                        raise RuntimeError(f'The forcing {data_name} has not '
+                                           f'been spatialized.')
+                    if not self.model.create_time_series(data_name, time, ids, data):
+                        raise RuntimeError('Failed adding time series.')
 
-            if not self.model.attach_time_series_to_hydro_units():
-                raise RuntimeError('Attaching time series failed.')
+                if not self.model.attach_time_series_to_hydro_units():
+                    raise RuntimeError('Attaching time series failed.')
+
+            else:
+                if not self.model.forcing_loaded():
+                    raise RuntimeError('Please provide the forcing data at least once.')
 
             # Check
             if not self.model.is_ok():
@@ -166,7 +175,7 @@ class Model:
                 'names': self.surface_names,
                 'types': self.surface_types
             },
-            'logger': 'all' if self.log_all else ''
+            'logger': 'all' if self.record_all else ''
         }
         utils.dump_config_file(settings, directory, name, file_type)
 
@@ -185,8 +194,8 @@ class Model:
     def _set_options(self, kwargs):
         if 'solver' in kwargs:
             self.solver = kwargs['solver']
-        if 'log_all' in kwargs:
-            self.log_all = kwargs['log_all']
+        if 'record_all' in kwargs:
+            self.record_all = kwargs['record_all']
         if 'surface_types' in kwargs:
             self.surface_types = kwargs['surface_types']
         if 'surface_names' in kwargs:

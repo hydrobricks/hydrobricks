@@ -22,6 +22,8 @@ class ModelHydro : public wxObject {
 
     bool IsOk();
 
+    bool ForcingLoaded();
+
     bool Run();
 
     void Reset();

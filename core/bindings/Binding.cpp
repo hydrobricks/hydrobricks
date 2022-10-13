@@ -77,6 +77,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("attach_time_series_to_hydro_units", &ModelHydro::AttachTimeSeriesToHydroUnits, "Attach the time series.")
         .def("update_parameters", &ModelHydro::UpdateParameters, "Update the parameters with the provided values",
              "model_settings"_a)
+        .def("forcing_loaded", &ModelHydro::ForcingLoaded, "Check if the forcing data were loaded.")
         .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")

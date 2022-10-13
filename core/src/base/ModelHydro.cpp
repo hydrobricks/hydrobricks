@@ -727,6 +727,10 @@ bool ModelHydro::IsOk() {
     return true;
 }
 
+bool ModelHydro::ForcingLoaded() {
+    return !m_timeSeries.empty();
+}
+
 bool ModelHydro::Run() {
     wxLogDebug(_("Initializing time series."));
     if (!InitializeTimeSeries()) {

@@ -85,6 +85,8 @@ class Forcing(TimeSeries):
                     f'The PET gradient should have a length of 1 or 12. '
                     f'Here: {len(gradient)}')
 
+        unit_values[unit_values < 0] = 0
+
         self.data_spatialized[i_col] = unit_values
 
     def spatialize_precipitation(self, ref_elevation, gradient_1, gradient_2=None,

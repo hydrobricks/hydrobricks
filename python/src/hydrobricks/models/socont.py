@@ -23,8 +23,6 @@ class Socont(Model):
                     self.soil_storage_nb, self.surface_runoff):
                 raise Exception('Socont model initialization failed.')
 
-            self.settings.set_solver(self.solver)
-            self.settings.log_all(self.log_all)
         except RuntimeError as err:
             raise Exception(f'Socont model initialization raised an exception: {err}')
 

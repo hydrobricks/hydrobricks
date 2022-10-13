@@ -101,7 +101,7 @@ class Model:
                                'Please run setup() first.')
 
         try:
-            self._cleanup()
+            self.model.reset()
 
             # Parameters
             model_params = parameters.get_model_parameters()
@@ -114,6 +114,7 @@ class Model:
 
             # Add data if provided
             if forcing is not None:
+                self.model.clear_time_series()
                 time = utils.date_as_mjd(forcing.time.to_numpy())
                 ids = self.spatial_structure.get_ids().to_numpy()
                 for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
@@ -210,7 +211,3 @@ class Model:
 
     def _get_specific_options(self):
         return {}
-
-    def _cleanup(self):
-        self.model.clear_time_series()
-        self.model.reset()

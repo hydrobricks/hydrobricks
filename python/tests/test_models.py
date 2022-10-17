@@ -1,7 +1,8 @@
-import hydrobricks.models as models
-import tempfile
 import os.path
+import tempfile
 from pathlib import Path
+
+import hydrobricks.models as models
 
 
 def test_model_creation():

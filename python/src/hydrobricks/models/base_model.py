@@ -29,9 +29,13 @@ class Model:
         self.settings.log_all(self.record_all)
         self.settings.set_solver(self.solver)
 
-    def get_name(self):
-        """Get the name of the model"""
-        return self.name
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     def setup(self, spatial_structure, output_path, start_date, end_date):
         """

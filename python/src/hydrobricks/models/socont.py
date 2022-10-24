@@ -52,7 +52,7 @@ class Socont(Model):
                 if self.surface_types.count('glacier') > 1:
                     i_glacier += 1
                     aliases = [f'a_ice_{surface_name.replace("-", "_")}',
-                               f'a_ice{i_glacier}']
+                               f'a_ice{i_glacier}', f'a_ice_{i_glacier}']
 
                 ps.define_parameter(
                     component=surface_name, name='degreeDayFactor',

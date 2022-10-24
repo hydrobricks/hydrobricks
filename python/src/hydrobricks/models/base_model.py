@@ -2,7 +2,6 @@ import os
 
 import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel
-
 from hydrobricks import utils
 
 

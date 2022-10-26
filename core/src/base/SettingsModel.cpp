@@ -1032,6 +1032,8 @@ bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfac
             AddProcessLogging("output");
             SelectProcess("percolation");
             AddProcessLogging("output");
+            SelectProcess("ET");
+            AddProcessLogging("output");
             SelectHydroUnitBrick("slow-reservoir-2");
             AddBrickLogging("content");
             SelectProcess("outflow");

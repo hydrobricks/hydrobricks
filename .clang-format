@@ -11,4 +11,4 @@ PointerAlignment: Left
 DerivePointerAlignment: false
 AllowShortEnumsOnASingleLine: false
 AlignOperands: Align
-PenaltyBreakAssignment: 20
+PenaltyBreakAssignment: 40

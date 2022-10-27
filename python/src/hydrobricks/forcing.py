@@ -12,7 +12,7 @@ class Forcing(TimeSeries):
         self.hydro_units = hydro_units.hydro_units
 
     def spatialize(self, variable, method='constant', ref_elevation=0, gradient=0,
-                   gradient_2=0, elevation_threshold=None):
+                   gradient_2=0, elevation_threshold=None, correction_factor=None):
         """
         Spatializes the provided variable to all hydro units using the defined method.
 
@@ -47,10 +47,13 @@ class Forcing(TimeSeries):
             For method(s): 'elevation_multi_gradients'
         elevation_threshold : int/float
             Threshold elevation to switch from gradient to gradient_2
+        correction_factor: float
+            Correction factor to apply to the precipitation data before spatialization
         """
         unit_values = np.zeros((len(self.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
         i_col = self.data_name.index(variable)
+        data_raw = self.data_raw[i_col].copy()
 
         # Check inputs
         if method == 'multiplicative_elevation_threshold_gradients':
@@ -68,43 +71,46 @@ class Forcing(TimeSeries):
                     f'The gradient should have a length of 1 or 12. '
                     f'Here: {len(gradient)}')
 
+        # Pre-process (e.g., correction factor)
+        if correction_factor:
+            data_raw = data_raw * correction_factor
+
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():
             elevation = unit['elevation']
 
             if method == 'constant':
-                unit_values[:, i_unit] = self.data_raw[i_col]
+                unit_values[:, i_unit] = data_raw
 
             elif method == 'additive_elevation_gradient':
                 if len(gradient) == 1:
-                    unit_values[:, i_unit] = self.data_raw[i_col] + gradient * \
+                    unit_values[:, i_unit] = data_raw + gradient * \
                                                   (elevation - ref_elevation) / 100
                 elif len(gradient) == 12:
                     for m in range(12):
                         month = self.time.dt.month == m + 1
                         month = month.to_numpy()
-                        unit_values[month, i_unit] = \
-                            self.data_raw[i_col][month] + gradient[m] * \
-                            (elevation - ref_elevation) / 100
+                        unit_values[month, i_unit] = data_raw[month] + gradient[m] * \
+                                                     (elevation - ref_elevation) / 100
 
             elif method == 'multiplicative_elevation_gradient':
                 if len(gradient) == 1:
-                    unit_values[:, i_unit] = self.data_raw[i_col] * (
+                    unit_values[:, i_unit] = data_raw * (
                                 1 + gradient * (elevation - ref_elevation) / 100)
                 elif len(gradient) == 12:
                     for m in range(12):
                         month = self.time.dt.month == m + 1
                         month = month.to_numpy()
                         unit_values[month, i_unit] = \
-                            self.data_raw[i_col][month] * (1 + gradient[m] * (
+                            data_raw[month] * (1 + gradient[m] * (
                                     elevation - ref_elevation) / 100)
 
             elif method == 'multiplicative_elevation_threshold_gradients':
                 if elevation < elevation_threshold:
-                    unit_values[:, i_unit] = self.data_raw[i_col] * (
+                    unit_values[:, i_unit] = data_raw * (
                             1 + gradient * (elevation - ref_elevation) / 100)
                 else:
-                    precip_below = self.data_raw[i_col] * (1 + gradient * (
+                    precip_below = data_raw * (1 + gradient * (
                             elevation_threshold - ref_elevation) / 100)
                     unit_values[:, i_unit] = precip_below * (
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
@@ -148,7 +154,7 @@ class Forcing(TimeSeries):
                         ref_elevation=ref_elevation, gradient=gradient)
 
     def spatialize_precipitation(self, ref_elevation, gradient_1, gradient_2=None,
-                                 elevation_threshold=None):
+                                 elevation_threshold=None, correction_factor=None):
         """
         Spatializes the precipitation using a single gradient for the full elevation
         range or a two-gradients approach with an elevation threshold.
@@ -164,15 +170,19 @@ class Forcing(TimeSeries):
             the threshold elevation (optional).
         elevation_threshold: float
             Threshold to switch from gradient 1 to gradient 2 (optional).
+        correction_factor: float
+            Correction factor to apply to the precipitation data before spatialization
         """
         if not elevation_threshold:
             self.spatialize('pet', 'multiplicative_elevation_gradient',
-                            ref_elevation=ref_elevation, gradient=gradient_1)
+                            ref_elevation=ref_elevation, gradient=gradient_1,
+                            correction_factor=correction_factor)
         else:
             self.spatialize('pet', 'multiplicative_elevation_threshold_gradients',
                             ref_elevation=ref_elevation, gradient=gradient_1,
                             gradient_2=gradient_2,
-                            elevation_threshold=elevation_threshold)
+                            elevation_threshold=elevation_threshold,
+                            correction_factor=correction_factor)
 
     def create_file(self, path, max_compression=False):
         """

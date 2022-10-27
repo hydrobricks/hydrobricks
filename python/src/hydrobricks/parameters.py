@@ -56,6 +56,23 @@ class ParameterSet:
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
 
+    def change_range(self, parameter, min_value, max_value):
+        """
+        Change the value range of a parameter.
+
+        Parameters
+        ----------
+        parameter: str
+            Name (or alias) of the parameter
+        min_value
+            New minimum value
+        max_value
+            New maximum value
+        """
+        index = self._get_parameter_index(parameter)
+        self.parameters.loc[index, 'min_value'] = min_value
+        self.parameters.loc[index, 'max_value)'] = max_value
+
     def define_constraint(self, parameter_1, constraint, parameter_2):
         """
         Define a constraint between 2 parameters (e.g., paramA > paramB)

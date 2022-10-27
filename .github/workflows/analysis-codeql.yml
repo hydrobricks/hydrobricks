@@ -69,11 +69,11 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{github.workspace}}/bin
-      run: cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake .. -DCMAKE_BUILD_TYPE=RelWithDebugInfo
 
     - name: Build
       working-directory: ${{github.workspace}}/bin
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build . --config RelWithDebugInfo
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2

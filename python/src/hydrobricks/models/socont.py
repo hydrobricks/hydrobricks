@@ -52,7 +52,7 @@ class Socont(Model):
                 if self.surface_types.count('glacier') > 1:
                     i_glacier += 1
                     aliases = [f'a_ice_{surface_name.replace("-", "_")}',
-                               f'a_ice{i_glacier}', f'a_ice_{i_glacier}']
+                               f'a_ice_{i_glacier}', f'a_ice{i_glacier}']
 
                 ps.define_parameter(
                     component=surface_name, name='degreeDayFactor',
@@ -63,6 +63,8 @@ class Socont(Model):
                     component=surface_name, name='meltingTemperature',
                     unit='°C', min_value=0, max_value=5, default_value=0,
                     mandatory=False)
+
+                ps.define_constraint('a_snow', '<', aliases[0])
 
         ps.define_parameter(
             component='glacier-area-rain-snowmelt-storage', name='responseFactor',

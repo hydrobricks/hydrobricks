@@ -11,6 +11,7 @@ class ParameterSet:
         self.parameters = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
                      'min', 'max', 'default_value', 'mandatory'])
+        self.contraints = []
 
     def define_parameter(self, component, name, unit=None, aliases=None, min_value=None,
                          max_value=None, default_value=None, mandatory=True):
@@ -54,6 +55,57 @@ class ParameterSet:
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
+
+    def define_constraint(self, parameter_1, constraint, parameter_2):
+        """
+        Define a constraint between 2 parameters (e.g., paramA > paramB)
+
+        Parameters
+        ----------
+        parameter_1 : str
+            The name of the first parameter.
+        constraint : str
+            The constraint (e.g. '<=').
+        parameter_2 : str
+            The name of the second parameter.
+
+        Examples
+        --------
+        parameter_set.define_constraint('paramA', '>=', 'paramB')
+        """
+        constraint = [parameter_1, constraint, parameter_2]
+        self.contraints.append(constraint)
+
+    def are_constraints_satisfied(self) -> bool:
+        """
+        Check if the constraints between parameters are satisfied.
+
+        Returns
+        -------
+        True is constraints are satisfied, False otherwise.
+        """
+        for constraint in self.contraints:
+            val_1 = self.get(constraint[0])
+            operator = self.get(constraint[1])
+            val_2 = self.get(constraint[2])
+
+            if isinstance(val_1, list) or isinstance(val_2, list):
+                raise NotImplemented
+
+            if operator in ['>', 'gt']:
+                if val_1 <= val_2:
+                    return False
+            elif operator in ['>=', 'ge']:
+                if val_1 < val_2:
+                    return False
+            elif operator in ['<', 'lt']:
+                if val_1 >= val_2:
+                    return False
+            elif operator in ['<=', 'le']:
+                if val_1 > val_2:
+                    return False
+
+        return True
 
     def set_values(self, values):
         """
@@ -142,21 +194,28 @@ class ParameterSet:
         # Create a dataframe to return assigned values
         assigned_values = pd.DataFrame(columns=parameters)
 
-        for key in parameters:
-            index = self._get_parameter_index(key)
-            min_value = self.parameters.loc[index, 'min']
-            max_value = self.parameters.loc[index, 'max']
+        for i in range(1100):
+            for key in parameters:
+                index = self._get_parameter_index(key)
+                min_value = self.parameters.loc[index, 'min']
+                max_value = self.parameters.loc[index, 'max']
 
-            if isinstance(min_value, list):
-                new_values = []
-                for min_val, max_val in zip(min_value, max_value):
-                    new_values.append(random.uniform(min_val, max_val))
-                self.parameters.loc[index, 'value'] = new_values
-            else:
-                self.parameters.loc[index, 'value'] = random.uniform(
-                    min_value, max_value)
+                if isinstance(min_value, list):
+                    new_values = []
+                    for min_val, max_val in zip(min_value, max_value):
+                        new_values.append(random.uniform(min_val, max_val))
+                    self.parameters.loc[index, 'value'] = new_values
+                else:
+                    self.parameters.loc[index, 'value'] = random.uniform(
+                        min_value, max_value)
 
-            assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
+                assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
+
+            if self.are_constraints_satisfied():
+                break
+
+            if i >= 1000:
+                raise RuntimeError('The parameter constraints could not be satisfied.')
 
         return assigned_values
 

@@ -103,7 +103,7 @@ class ParameterSet:
         """
         for constraint in self.constraints:
             val_1 = self.get(constraint[0])
-            operator = self.get(constraint[1])
+            operator = constraint[1]
             val_2 = self.get(constraint[2])
 
             if isinstance(val_1, list) or isinstance(val_2, list):

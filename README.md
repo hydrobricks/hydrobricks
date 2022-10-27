@@ -1,4 +1,7 @@
 # hydrobricks
+
+> :warning: **This is a very preliminary code base that is not doing much yet...**
+
 Modular Hydrological Modelling Framework
 
 [![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
@@ -9,12 +12,13 @@ Modular Hydrological Modelling Framework
 [![Core Doxygen](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/639e5bb76690488f9aac5feb89722bfa)](https://www.codacy.com/gh/hydrobricks/hydrobricks/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hydrobricks/hydrobricks&amp;utm_campaign=Badge_Grade)
 
-> :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**
+## Install
+
+Wheels are available to install from PyPI (https://pypi.org/project/hydrobricks/)
+
+Install: ```pip install hydrobricks```
 
 ## Resources
-
-Documentation: https://hydrobricks-doc.readthedocs.io/en/latest/
-
-How to build: https://github.com/hydrobricks/hydrobricks/wiki
-
-Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
+* **Documentation**: https://hydrobricks-doc.readthedocs.io/en/latest/
+* How to build: https://github.com/hydrobricks/hydrobricks/wiki
+* Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/

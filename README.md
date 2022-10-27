@@ -7,6 +7,7 @@ Modular Hydrological Modelling Framework
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/hydrobricks/hydrobricks/main.svg)](https://results.pre-commit.ci/latest/github/hydrobricks/hydrobricks/main)
 [![Core Doxygen](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/639e5bb76690488f9aac5feb89722bfa)](https://www.codacy.com/gh/hydrobricks/hydrobricks/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hydrobricks/hydrobricks&amp;utm_campaign=Badge_Grade)
+[![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
 
 > :warning: **Nothing to see here. This is a very preliminary code base that is not doing much yet...**
 

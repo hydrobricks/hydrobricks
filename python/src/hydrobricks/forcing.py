@@ -11,6 +11,110 @@ class Forcing(TimeSeries):
         super().__init__()
         self.hydro_units = hydro_units.hydro_units
 
+    def spatialize(self, variable, method='constant', ref_elevation=0, gradient=0,
+                   gradient_2=0, elevation_threshold=None):
+        """
+        Spatializes the provided variable to all hydro units using the defined method.
+
+        Parameters
+        ----------
+        variable: str
+            Name of the variable to spatialize.
+        method: str
+            Name of the method to use. Can be:
+            * constant: the same value will be used
+            * additive_elevation_gradient: use of an additive elevation gradient that
+              is either constant or changes for every month.
+              Parameters: 'ref_elevation', 'gradient'.
+            * multiplicative_elevation_gradient: use of a multiplicative elevation
+              gradient that is either constant or changes for every month.
+              Parameters: 'ref_elevation', 'gradient'.
+            * multiplicative_elevation_threshold_gradients: same as
+              multiplicative_elevation_gradient, but with an elevation threshold with a
+              gradient below and a gradient above.
+              Parameters: 'ref_elevation', 'gradient', 'gradient_2',
+              'elevation_threshold'
+        ref_elevation : float
+            Reference elevation.
+            For method(s): 'elevation_gradient'
+        gradient : float/list
+            Gradient of the variable to apply per 100m (e.g., °C/100m).
+            Can be a unique value or a list providing a value for every month.
+            For method(s): 'elevation_gradient', 'elevation_multi_gradients'
+        gradient_2 : float/list
+            Gradient of the variable to apply per 100m (e.g., °C/100m) for the units
+            above the elevation threshold defined by 'elevation_threshold'.
+            For method(s): 'elevation_multi_gradients'
+        elevation_threshold : int/float
+            Threshold elevation to switch from gradient to gradient_2
+        """
+        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
+        hydro_units = self.hydro_units.reset_index()
+        i_col = self.data_name.index(variable)
+
+        # Check inputs
+        if method == 'multiplicative_elevation_threshold_gradients':
+            if not elevation_threshold:
+                method = 'multiplicative_elevation_gradient'
+
+        if method in ['additive_elevation_gradient',
+                      'multiplicative_elevation_gradient']:
+            if isinstance(gradient, int) and gradient == 0:
+                method = 'constant'
+
+        if isinstance(gradient, list):
+            if len(gradient) not in [1, 12]:
+                raise ValueError(
+                    f'The gradient should have a length of 1 or 12. '
+                    f'Here: {len(gradient)}')
+
+        # Apply methods
+        for i_unit, unit in hydro_units.iterrows():
+            elevation = unit['elevation']
+
+            if method == 'constant':
+                unit_values[:, i_unit] = self.data_raw[i_col]
+
+            elif method == 'additive_elevation_gradient':
+                if len(gradient) == 1:
+                    unit_values[:, i_unit] = self.data_raw[i_col] + gradient * \
+                                                  (elevation - ref_elevation) / 100
+                elif len(gradient) == 12:
+                    for m in range(12):
+                        month = self.time.dt.month == m + 1
+                        month = month.to_numpy()
+                        unit_values[month, i_unit] = \
+                            self.data_raw[i_col][month] + gradient[m] * \
+                            (elevation - ref_elevation) / 100
+
+            elif method == 'multiplicative_elevation_gradient':
+                if len(gradient) == 1:
+                    unit_values[:, i_unit] = self.data_raw[i_col] * (
+                                1 + gradient * (elevation - ref_elevation) / 100)
+                elif len(gradient) == 12:
+                    for m in range(12):
+                        month = self.time.dt.month == m + 1
+                        month = month.to_numpy()
+                        unit_values[month, i_unit] = \
+                            self.data_raw[i_col][month] * (1 + gradient[m] * (
+                                    elevation - ref_elevation) / 100)
+
+            elif method == 'multiplicative_elevation_threshold_gradients':
+                if elevation < elevation_threshold:
+                    unit_values[:, i_unit] = self.data_raw[i_col] * (
+                            1 + gradient * (elevation - ref_elevation) / 100)
+                else:
+                    precip_below = self.data_raw[i_col] * (1 + gradient * (
+                            elevation_threshold - ref_elevation) / 100)
+                    unit_values[:, i_unit] = precip_below * (
+                            1 + gradient_2 * (elevation - elevation_threshold) / 100)
+
+        # Check outputs
+        if variable in ['pet', 'precipitation']:
+            unit_values[unit_values < 0] = 0
+
+        self.data_spatialized[i_col] = unit_values
+
     def spatialize_temperature(self, ref_elevation, lapse):
         """
         Spatializes the temperature using a temperature lapse that is either constant
@@ -24,28 +128,8 @@ class Forcing(TimeSeries):
             Temperature lapse [°C/100m] to compute the temperature for every hydro unit.
             Can be a unique value or a list providing a value for every month.
         """
-        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
-        hydro_units = self.hydro_units.reset_index()
-        i_col = self.data_name.index('temperature')
-        for i_unit, unit in hydro_units.iterrows():
-            elevation = unit['elevation']
-
-            if len(lapse) == 1:
-                unit_values[:, i_unit] = self.data_raw[i_col] + lapse * \
-                                              (elevation - ref_elevation) / 100
-            elif len(lapse) == 12:
-                for m in range(12):
-                    month = self.time.dt.month == m + 1
-                    month = month.to_numpy()
-                    unit_values[month, i_unit] = \
-                        self.data_raw[i_col][month] + lapse[m] * \
-                        (elevation - ref_elevation) / 100
-            else:
-                raise ValueError(
-                    f'The temperature lapse should have a length of 1 or 12. '
-                    f'Here: {len(lapse)}')
-
-        self.data_spatialized[i_col] = unit_values
+        self.spatialize('temperature', 'additive_elevation_gradient',
+                        ref_elevation=ref_elevation, gradient=lapse)
 
     def spatialize_pet(self, ref_elevation, gradient=0):
         """
@@ -60,34 +144,8 @@ class Forcing(TimeSeries):
             Gradient [mm/100m] to compute the PET for every hydro unit.
             Can be a unique value or a list providing a value for every month.
         """
-        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
-        hydro_units = self.hydro_units.reset_index()
-        i_col = self.data_name.index('pet')
-        for i_unit, unit in hydro_units.iterrows():
-            elevation = unit['elevation']
-
-            if len(gradient) == 1:
-                if gradient == 0:
-                    unit_values[:, i_unit] = self.data_raw[i_col]
-                else:
-                    unit_values[:, i_unit] = self.data_raw[i_col] + gradient * \
-                                             (elevation - ref_elevation) / 100
-
-            elif len(gradient) == 12:
-                for m in range(12):
-                    month = self.time.dt.month == m + 1
-                    month = month.to_numpy()
-                    unit_values[month, i_unit] = \
-                        self.data_raw[i_col][month] + gradient[m] * \
-                        (elevation - ref_elevation) / 100
-            else:
-                raise ValueError(
-                    f'The PET gradient should have a length of 1 or 12. '
-                    f'Here: {len(gradient)}')
-
-        unit_values[unit_values < 0] = 0
-
-        self.data_spatialized[i_col] = unit_values
+        self.spatialize('pet', 'additive_elevation_gradient',
+                        ref_elevation=ref_elevation, gradient=gradient)
 
     def spatialize_precipitation(self, ref_elevation, gradient_1, gradient_2=None,
                                  elevation_threshold=None):
@@ -107,27 +165,14 @@ class Forcing(TimeSeries):
         elevation_threshold: float
             Threshold to switch from gradient 1 to gradient 2 (optional).
         """
-        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
-        hydro_units = self.hydro_units.reset_index()
-        i_col = self.data_name.index('precipitation')
-        for i_unit, unit in hydro_units.iterrows():
-            elevation = unit['elevation']
-
-            if not elevation_threshold:
-                unit_values[:, i_unit] = self.data_raw[i_col] * (
-                            1 + gradient_1 * (elevation - ref_elevation) / 100)
-                continue
-
-            if elevation < elevation_threshold:
-                unit_values[:, i_unit] = self.data_raw[i_col] * (
-                            1 + gradient_1 * (elevation - ref_elevation) / 100)
-            else:
-                precip_below = self.data_raw[i_col] * (1 + gradient_1 * (
-                            elevation_threshold - ref_elevation) / 100)
-                unit_values[:, i_unit] = precip_below * (
-                            1 + gradient_2 * (elevation - elevation_threshold) / 100)
-
-        self.data_spatialized[i_col] = unit_values
+        if not elevation_threshold:
+            self.spatialize('pet', 'multiplicative_elevation_gradient',
+                            ref_elevation=ref_elevation, gradient=gradient_1)
+        else:
+            self.spatialize('pet', 'multiplicative_elevation_threshold_gradients',
+                            ref_elevation=ref_elevation, gradient=gradient_1,
+                            gradient_2=gradient_2,
+                            elevation_threshold=elevation_threshold)
 
     def create_file(self, path, max_compression=False):
         """

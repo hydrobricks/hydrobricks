@@ -1,6 +1,7 @@
 # hydrobricks
 Modular Hydrological Modelling Framework
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b2fe450029344c34b9085d2b8f80b2dd)](https://app.codacy.com/gh/hydrobricks/hydrobricks?utm_source=github.com&utm_medium=referral&utm_content=hydrobricks/hydrobricks&utm_campaign=Badge_Grade_Settings)
 [![Core Tests Linux](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml)
 [![Python Wheels](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml)
 [![codecov](https://codecov.io/gh/hydrobricks/hydrobricks/branch/main/graph/badge.svg?token=G1PBSK8EG2)](https://codecov.io/gh/hydrobricks/hydrobricks)

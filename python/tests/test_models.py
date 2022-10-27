@@ -5,11 +5,6 @@ from pathlib import Path
 import hydrobricks.models as models
 
 
-def test_model_creation():
-    model = models.Model('my model')
-    assert model.name == 'my model'
-
-
 def test_socont_creation():
     model = models.Socont()
     assert model.name == 'Socont'

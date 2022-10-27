@@ -174,11 +174,12 @@ class Forcing(TimeSeries):
             Correction factor to apply to the precipitation data before spatialization
         """
         if not elevation_threshold:
-            self.spatialize('pet', 'multiplicative_elevation_gradient',
+            self.spatialize('precipitation', 'multiplicative_elevation_gradient',
                             ref_elevation=ref_elevation, gradient=gradient_1,
                             correction_factor=correction_factor)
         else:
-            self.spatialize('pet', 'multiplicative_elevation_threshold_gradients',
+            self.spatialize('precipitation',
+                            'multiplicative_elevation_threshold_gradients',
                             ref_elevation=ref_elevation, gradient=gradient_1,
                             gradient_2=gradient_2,
                             elevation_threshold=elevation_threshold,

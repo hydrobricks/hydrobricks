@@ -32,7 +32,7 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
         }
         for (auto flux : process->GetOutputFluxes()) {
             double* changeRate = flux->GetChangeRatePointer();
-            wxASSERT(changeRate != nullptr);
+            wxASSERT(changeRate);
             wxASSERT(*changeRate < 1000);
             if (*changeRate < 0) {
                 *changeRate = 0;

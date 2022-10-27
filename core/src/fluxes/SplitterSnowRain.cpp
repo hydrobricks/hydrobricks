@@ -1,7 +1,11 @@
 #include "SplitterSnowRain.h"
 
 SplitterSnowRain::SplitterSnowRain()
-    : Splitter() {}
+    : Splitter(),
+      m_precipitation(nullptr),
+      m_temperature(nullptr),
+      m_transitionStart(nullptr),
+      m_transitionEnd(nullptr) {}
 
 bool SplitterSnowRain::IsOk() {
     if (m_outputs.size() != 2) {

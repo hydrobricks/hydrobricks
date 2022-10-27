@@ -1,7 +1,8 @@
 #include "FluxForcing.h"
 
 FluxForcing::FluxForcing()
-    : Flux() {}
+    : Flux(),
+      m_forcing(nullptr) {}
 
 bool FluxForcing::IsOk() {
     return true;

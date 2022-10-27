@@ -147,7 +147,7 @@ class ParameterSet:
             min_value = self.parameters.loc[index, 'min']
             max_value = self.parameters.loc[index, 'max']
 
-            if type(min_value) == list:
+            if isinstance(min_value, list):
                 new_values = []
                 for min_val, max_val in zip(min_value, max_value):
                     new_values.append(random.uniform(min_val, max_val))
@@ -192,13 +192,13 @@ class ParameterSet:
         if min_value is None or max_value is None:
             return
 
-        if type(min_value) != list and type(max_value) != list:
+        if not isinstance(min_value, list) and not isinstance(max_value, list):
             if max_value < min_value:
                 raise Exception(f'The provided min value ({min_value} is greater than '
                                 f'the max value ({max_value}).')
             return
 
-        if type(min_value) != list or type(max_value) != list:
+        if not isinstance(min_value, list) or not isinstance(max_value, list):
             raise Exception('Mixing lists and floats for the definition of '
                             'min/max values')
 
@@ -232,8 +232,8 @@ class ParameterSet:
                 raise Exception(f'The value {value} for the parameter "{key}" is below '
                                 f'the minimum threshold ({min_value}).')
         else:
-            assert type(max_value) == list
-            assert type(value) == list
+            assert isinstance(max_value, list)
+            assert isinstance(value, list)
             for min_v, max_v, val in zip(min_value, max_value, value):
                 if max_v is not None and value > max_v:
                     raise Exception(f'The value {val} for the parameter "{key}" is '

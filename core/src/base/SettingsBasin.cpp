@@ -3,7 +3,8 @@
 #include "FileNetcdf.h"
 #include "Parameter.h"
 
-SettingsBasin::SettingsBasin() {}
+SettingsBasin::SettingsBasin()
+    : m_selectedHydroUnit(nullptr) {}
 
 SettingsBasin::~SettingsBasin() {}
 

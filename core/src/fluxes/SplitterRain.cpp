@@ -1,7 +1,8 @@
 #include "SplitterRain.h"
 
 SplitterRain::SplitterRain()
-    : Splitter() {}
+    : Splitter(),
+      m_precipitation(nullptr) {}
 
 bool SplitterRain::IsOk() {
     if (m_outputs.size() != 1) {

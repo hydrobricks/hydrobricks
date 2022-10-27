@@ -2,7 +2,9 @@
 
 #include "SubBasin.h"
 
-Connector::Connector() {}
+Connector::Connector()
+    : m_in(nullptr),
+      m_out(nullptr) {}
 
 void Connector::Connect(SubBasin* in, SubBasin* out) {
     wxASSERT(in);

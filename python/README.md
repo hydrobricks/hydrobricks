@@ -7,7 +7,7 @@ A modular hydrological modelling framework
 
 During development, the package must be installed before being tested:
 
-```
+```shell
 pip install -e .
 pytest ./tests/
 ```

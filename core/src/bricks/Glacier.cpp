@@ -3,7 +3,8 @@
 Glacier::Glacier()
     : SurfaceComponent(),
       m_ice(nullptr),
-      m_noMeltWhenSnowCover(false) {
+      m_noMeltWhenSnowCover(false),
+      m_snowpack(nullptr) {
     m_ice = new WaterContainer(this);
 }
 

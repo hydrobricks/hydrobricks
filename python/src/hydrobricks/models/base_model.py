@@ -1,11 +1,12 @@
 import os
+from abc import ABC
 
 import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
 
-class Model:
+class Model(ABC):
     """Base class for the models"""
 
     def __init__(self, name=None, **kwargs):
@@ -187,8 +188,9 @@ class Model:
     def dump_outputs(self, path):
         self.model.dump_outputs(path)
 
+    @abstractmethod
     def generate_parameters(self):
-        raise Exception('Parameters cannot be generated for the base model.')
+        raise Exception(f'Parameters cannot be generated for the base model (named {self.name}).')
 
     def _set_options(self, kwargs):
         if 'solver' in kwargs:
@@ -207,6 +209,7 @@ class Model:
         # Validate optional keyword arguments.
         utils.validate_kwargs(kwargs, self.allowed_kwargs)
 
+    @abstractmethod
     def _get_specific_options(self):
         return {}
 

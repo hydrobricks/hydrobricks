@@ -1,7 +1,10 @@
 #include "TimeMachine.h"
 
 TimeMachine::TimeMachine()
-    : m_timeStep(0),
+    : m_date(0),
+      m_start(0),
+      m_end(0),
+      m_timeStep(0),
       m_timeStepUnit(Day),
       m_timeStepInDays(0),
       m_parametersUpdater(nullptr) {}

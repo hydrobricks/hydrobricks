@@ -47,7 +47,10 @@ conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing
 
 Build Python wheels locally:
 ```shell
+# Selecting the platform
 cibuildwheel --platform windows
+# Selecting a specific target:
+cibuildwheel --only cp38-win_amd64
 ```
 
 Test Python wheels locally:

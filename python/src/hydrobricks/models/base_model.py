@@ -1,5 +1,5 @@
 import os
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel

@@ -11,7 +11,7 @@ class ParameterSet:
         self.parameters = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
                      'min', 'max', 'default_value', 'mandatory'])
-        self.contraints = []
+        self.constraints = []
 
     def define_parameter(self, component, name, unit=None, aliases=None, min_value=None,
                          max_value=None, default_value=None, mandatory=True):
@@ -73,7 +73,7 @@ class ParameterSet:
         self.parameters.loc[index, 'min_value'] = min_value
         self.parameters.loc[index, 'max_value)'] = max_value
 
-    def define_constraint(self, parameter_1, constraint, parameter_2):
+    def define_constraint(self, parameter_1, operator, parameter_2):
         """
         Define a constraint between 2 parameters (e.g., paramA > paramB)
 
@@ -81,8 +81,8 @@ class ParameterSet:
         ----------
         parameter_1 : str
             The name of the first parameter.
-        constraint : str
-            The constraint (e.g. '<=').
+        operator : str
+            The operator (e.g. '<=').
         parameter_2 : str
             The name of the second parameter.
 
@@ -90,8 +90,8 @@ class ParameterSet:
         --------
         parameter_set.define_constraint('paramA', '>=', 'paramB')
         """
-        constraint = [parameter_1, constraint, parameter_2]
-        self.contraints.append(constraint)
+        constraint = [parameter_1, operator, parameter_2]
+        self.constraints.append(constraint)
 
     def are_constraints_satisfied(self) -> bool:
         """
@@ -101,7 +101,7 @@ class ParameterSet:
         -------
         True is constraints are satisfied, False otherwise.
         """
-        for constraint in self.contraints:
+        for constraint in self.constraints:
             val_1 = self.get(constraint[0])
             operator = self.get(constraint[1])
             val_2 = self.get(constraint[2])

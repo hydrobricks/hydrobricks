@@ -13,48 +13,8 @@ Modular Hydrological Modelling Framework
 
 ## Resources
 
+Documentation: https://hydrobricks-doc.readthedocs.io/en/latest/
+
+How to build: https://github.com/hydrobricks/hydrobricks/wiki
+
 Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
-
-## Dependencies
-
-Get conan (requires Python 3) and setup the default profile:
-```shell
-pip install conan
-conan profile new default --detect
-
-# On Linux:
-conan profile update settings.compiler.libcxx=libstdc++11 default
-```
-
-Add GitLab as a remote:
-```shell
-conan remote add gitlab https://gitlab.com/api/v4/packages/conan
-```
-
-Get or build release libraries:
-```shell
-mkdir cmake-build-release
-cd cmake-build-release
-conan install .. --build=missing
-```
-
-Get or build debug libraries (the option ``-s compiler.runtime=MDd`` is for Windows only):
-```shell
-mkdir cmake-build-debug
-cd cmake-build-debug
-conan install .. -s build_type=Debug -s compiler.runtime=MDd --build=missing
-```
-
-Build Python wheels locally:
-```shell
-# Selecting the platform
-cibuildwheel --platform windows
-# Selecting a specific target:
-cibuildwheel --only cp38-win_amd64
-```
-
-Test Python wheels locally:
-```shell
-import hydrobricks as hb
-help(hb.Parameter)
-```

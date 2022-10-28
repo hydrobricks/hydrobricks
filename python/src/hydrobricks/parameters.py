@@ -218,6 +218,8 @@ class ParameterSet:
                 max_value = self.parameters.loc[index, 'max']
 
                 if isinstance(min_value, list):
+                    if self.parameters.loc[index, 'value'] is None:
+                        self.parameters.loc[index, 'value'] = [0] * len(min_value)
                     for (idx, min_val), max_val in zip(enumerate(min_value), max_value):
                         self.parameters.loc[index, 'value'][idx] = \
                             random.uniform(min_val, max_val)

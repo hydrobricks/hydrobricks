@@ -296,6 +296,19 @@ def test_set_random_values_with_lists(parameter_set):
     assert parameter_set.get('A')[1] <= 200
 
 
+def test_reset_random_values_with_lists(parameter_set):
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='snowpack', name='meltFactor', aliases=['dd'],
+        min_value=[0, 1], max_value=[2, 3])
+    parameter_set.set_random_values(['dd'])
+    parameter_set.set_random_values(['dd'])
+    assert parameter_set.get('dd')[0] >= 0
+    assert parameter_set.get('dd')[0] <= 2
+    assert parameter_set.get('dd')[1] >= 1
+    assert parameter_set.get('dd')[1] <= 3
+
+
 def test_get_model_only_parameters(parameter_set):
     parameter_set.add_data_parameter('lapse', 0.6, min_value=0, max_value=1)
     model_params = parameter_set.get_model_parameters()

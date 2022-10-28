@@ -107,7 +107,7 @@ class ParameterSet:
             val_2 = self.get(constraint[2])
 
             if isinstance(val_1, list) or isinstance(val_2, list):
-                raise NotImplemented
+                raise NotImplementedError
 
             if operator in ['>', 'gt']:
                 if val_1 <= val_2:
@@ -218,10 +218,9 @@ class ParameterSet:
                 max_value = self.parameters.loc[index, 'max']
 
                 if isinstance(min_value, list):
-                    new_values = []
-                    for min_val, max_val in zip(min_value, max_value):
-                        new_values.append(random.uniform(min_val, max_val))
-                    self.parameters.loc[index, 'value'] = new_values
+                    for (idx, min_val), max_val in zip(enumerate(min_value), max_value):
+                        self.parameters.loc[index, 'value'][idx] = \
+                            random.uniform(min_val, max_val)
                 else:
                     self.parameters.loc[index, 'value'] = random.uniform(
                         min_value, max_value)

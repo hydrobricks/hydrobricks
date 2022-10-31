@@ -140,6 +140,22 @@ class ParameterSet:
             self._check_value_range(index, key, values[key])
             self.parameters.loc[index, 'value'] = values[key]
 
+    def has(self, name):
+        """
+        Check if a parameter exists.
+
+        Parameters
+        ----------
+        name : str
+            The name of the parameter.
+
+        Returns
+        ------
+        True if found, False otherwise.
+        """
+        index = self._get_parameter_index(name, raise_exception=False)
+        return index is not None
+
     def get(self, name):
         """
         Get the value of a parameter by name.
@@ -193,6 +209,22 @@ class ParameterSet:
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
 
+    def is_for_forcing(self, parameter_name):
+        """
+        Check if the parameter relates to forcing data.
+
+        Parameters
+        ----------
+        parameter_name
+            The name of the parameter.
+
+        Returns
+        -------
+        True if relates to forcing data, False otherwise.
+        """
+        index = self._get_parameter_index(parameter_name)
+        return self.parameters.loc[index, 'component'] == 'data'
+
     def set_random_values(self, parameters):
         """
         Set the provided parameter to random values.
@@ -227,7 +259,11 @@ class ParameterSet:
                     self.parameters.loc[index, 'value'] = random.uniform(
                         min_value, max_value)
 
-                assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
+                if isinstance(min_value, list):
+                    assigned_values.loc[0, key] = self.parameters.loc[
+                        index, 'value'].copy()
+                else:
+                    assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
 
             if self.are_constraints_satisfied():
                 break
@@ -319,10 +355,13 @@ class ParameterSet:
                     raise Exception(f'The value {val} for the parameter "{key}" is '
                                     f'below the minimum threshold ({min_v}).')
 
-    def _get_parameter_index(self, name):
+    def _get_parameter_index(self, name, raise_exception=True):
         for index, row in self.parameters.iterrows():
             if row['aliases'] is not None and name in row['aliases'] \
                     or name == row['component'] + ':' + row['name']:
                 return index
 
-        raise Exception(f'The parameter "{name}" was not found')
+        if raise_exception:
+            raise Exception(f'The parameter "{name}" was not found')
+
+        return None

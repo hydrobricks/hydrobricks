@@ -10,6 +10,47 @@ class Forcing(TimeSeries):
     def __init__(self, hydro_units):
         super().__init__()
         self.hydro_units = hydro_units.hydro_units
+        self.spatialization_operations = []
+
+    def define_spatialization(self, **kwargs):
+        """
+        Define the spatialization operations.
+
+        Parameters
+        ----------
+        kwargs
+            All the parameters needed by the function spatialize() to perform the
+            spatialization for the given forcing variable.
+        """
+        self.spatialization_operations.append(kwargs)
+
+    def apply_defined_spatialization(self, parameters, parameters_to_apply=None):
+        """
+        Apply the spatialization operations defined by define_spatialization().
+
+        Parameters
+        ----------
+        parameters: ParameterSet
+            The parameter object instance.
+        parameters_to_apply: list
+            A list of parameters to apply. The spatialization will only be applied for
+            the variables related to parameters in this list. If None, all variables are
+            spatialized.
+        """
+        for operation_ref in self.spatialization_operations:
+            operation = operation_ref.copy()
+            apply_operation = False
+            for key in operation:
+                value = operation[key]
+                if isinstance(value, str) and value.startswith('param:'):
+                    parameter_name = value.replace('param:', '')
+                    operation[key] = parameters.get(parameter_name)
+                    if parameters_to_apply is not None:
+                        if parameter_name in parameters_to_apply:
+                            apply_operation = True
+
+            if parameters_to_apply is None or apply_operation:
+                self.spatialize(**operation)
 
     def spatialize(self, variable, method='constant', ref_elevation=0, gradient=0,
                    gradient_2=0, elevation_threshold=None, correction_factor=None):

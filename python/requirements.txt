@@ -1,7 +1,7 @@
+HydroErr
 matplotlib
 netCDF4
 numpy
 pandas
 pytest
 pyyaml
-HydroErr

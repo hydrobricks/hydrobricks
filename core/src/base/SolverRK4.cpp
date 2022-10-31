@@ -59,8 +59,8 @@ bool SolverRK4::Solve() {
     ResetStateVariableChanges();
 
     // Final change rate
-    m_changeRates.col(4) =
-        (m_changeRates.col(0) + 2 * m_changeRates.col(1) + 2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
+    m_changeRates.col(
+        4) = (m_changeRates.col(0) + 2 * m_changeRates.col(1) + 2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
 
     // Apply the final rates
     ApplyConstraintsFor(4);

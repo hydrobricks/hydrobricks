@@ -45,8 +45,8 @@ void InitLog(const std::string& path) {
     wxFFile* logFile = new wxFFile(fullPath, "w");
     auto* pLogFile = new wxLogStderr(logFile->fp());
     new wxLogChain(pLogFile);
-    wxString version =
-        wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION);
+    wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
+                                        HYDROBRICKS_PATCH_VERSION);
     wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
 }
 

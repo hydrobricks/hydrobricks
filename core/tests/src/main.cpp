@@ -14,9 +14,9 @@ int main(int argc, char** argv) {
         wxInitialize();
 
         // Set the local config object
-        wxFileConfig* pConfig =
-            new wxFileConfig("HydroBricks", wxEmptyString, wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini",
-                             wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini", wxCONFIG_USE_LOCAL_FILE);
+        wxFileConfig* pConfig = new wxFileConfig(
+            "HydroBricks", wxEmptyString, wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini",
+            wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini", wxCONFIG_USE_LOCAL_FILE);
         wxFileConfig::Set(pConfig);
 
         // Check path

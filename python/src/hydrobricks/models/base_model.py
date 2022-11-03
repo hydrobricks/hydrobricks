@@ -1,10 +1,10 @@
-import os
 import importlib
-import pandas as pd
-import HydroErr
+import os
 from abc import ABC, abstractmethod
 
 import _hydrobricks as hb
+import HydroErr
+import pandas as pd
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -229,7 +229,7 @@ class Model(ABC):
         -------
         A dataframe containing the parameter values and the corresponding metrics.
         """
-        if method is not 'monte_carlo':
+        if method != 'monte_carlo':
             raise NotImplementedError
 
         random_forcing = self._needs_random_forcing(parameters, parameters_to_assess)

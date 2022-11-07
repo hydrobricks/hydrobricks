@@ -1,5 +1,6 @@
 #include "ModelHydro.h"
 
+#include "BaseSurfaceComponent.h"
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
@@ -7,7 +8,6 @@
 #include "FluxToBrickInstantaneous.h"
 #include "FluxToOutlet.h"
 #include "Includes.h"
-#include "SurfaceComponent.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin) {
@@ -363,7 +363,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
 
                     // If surface component: weight by surface area
-                    if (brick->IsSurfaceComponent()) {
+                    if (brick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
                     m_subBasin->AttachOutletFlux(flux);
@@ -390,7 +390,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetType(output.fluxType);
 
                     // If leaves surface components: weight by surface area
-                    if (brick->IsSurfaceComponent() && !targetBrick->IsSurfaceComponent()) {
+                    if (brick->CanHaveAreaFraction() && !targetBrick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
 
@@ -420,7 +420,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetAsStatic();
 
                     // If coming from a surface component: weight by surface area
-                    if (brick->IsSurfaceComponent()) {
+                    if (brick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
 

@@ -70,8 +70,8 @@ class ParameterSet:
             New maximum value
         """
         index = self._get_parameter_index(parameter)
-        self.parameters.loc[index, 'min_value'] = min_value
-        self.parameters.loc[index, 'max_value)'] = max_value
+        self.parameters.loc[index, 'min'] = min_value
+        self.parameters.loc[index, 'max'] = max_value
 
     def define_constraint(self, parameter_1, operator, parameter_2):
         """

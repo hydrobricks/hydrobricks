@@ -6,11 +6,11 @@
 
 class HydroUnit;
 
-class SurfaceComponent : public Brick {
+class BaseSurfaceComponent : public Brick {
   public:
-    SurfaceComponent();
+    BaseSurfaceComponent();
 
-    bool IsSurfaceComponent() override {
+    bool CanHaveAreaFraction() override {
         return true;
     }
 
@@ -24,13 +24,8 @@ class SurfaceComponent : public Brick {
         return m_areaFraction <= PRECISION;
     }
 
-    virtual void AddToRelatedBricks(SurfaceComponent* brick) {
-        m_relatedBricks.push_back(brick);
-    }
-
   protected:
     double m_areaFraction;
-    std::vector<SurfaceComponent*> m_relatedBricks;
 
   private:
 };

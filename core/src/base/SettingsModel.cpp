@@ -894,7 +894,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfac
     }
 
     // Add default ground surface
-    AddSurfaceBrick("ground", "GenericSurface");
+    AddSurfaceBrick("ground", "GenericLandCover");
 
     // Add other specific surfaces
     for (int i = 0; i < surfaceNames.size(); ++i) {

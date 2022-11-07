@@ -54,7 +54,7 @@ class Brick : public wxObject {
         return m_needsSolver;
     }
 
-    virtual bool IsSurfaceComponent() {
+    virtual bool CanHaveAreaFraction() {
         return false;
     }
 

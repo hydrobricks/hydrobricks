@@ -1,7 +1,7 @@
 #include "Snowpack.h"
 
 Snowpack::Snowpack()
-    : SurfaceComponent(),
+    : BaseSurfaceComponent(),
       m_snow(nullptr) {
     m_snow = new WaterContainer(this);
 }

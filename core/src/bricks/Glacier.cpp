@@ -1,7 +1,7 @@
 #include "Glacier.h"
 
 Glacier::Glacier()
-    : SurfaceComponent(),
+    : BaseLandCover(),
       m_ice(nullptr),
       m_noMeltWhenSnowCover(false),
       m_snowpack(nullptr) {
@@ -83,7 +83,7 @@ double* Glacier::GetValuePointer(const std::string& name) {
     return nullptr;
 }
 
-void Glacier::AddToRelatedBricks(SurfaceComponent* brick) {
+void Glacier::AddToRelatedBricks(BaseSurfaceComponent* brick) {
     m_relatedBricks.push_back(brick);
     if (m_noMeltWhenSnowCover && brick->IsSnowpack()) {
         m_snowpack = dynamic_cast<Snowpack*>(brick);

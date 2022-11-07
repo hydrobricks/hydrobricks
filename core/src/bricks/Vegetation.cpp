@@ -1,7 +1,7 @@
 #include "Vegetation.h"
 
 Vegetation::Vegetation()
-    : SurfaceComponent() {}
+    : BaseLandCover() {}
 
 void Vegetation::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);

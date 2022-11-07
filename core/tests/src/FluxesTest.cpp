@@ -19,8 +19,8 @@ class FluxWeightedModel : public ::testing::Test {
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Surface elements
-        m_model.AddSurfaceBrick("item-1", "GenericSurface");
-        m_model.AddSurfaceBrick("item-2", "GenericSurface");
+        m_model.AddSurfaceBrick("item-1", "GenericLandCover");
+        m_model.AddSurfaceBrick("item-2", "GenericLandCover");
         m_model.GeneratePrecipitationSplitters(false);
         m_model.GenerateSurfaceComponentBricks(false);
         m_model.GenerateSurfaceBricks();

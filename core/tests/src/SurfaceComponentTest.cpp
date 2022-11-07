@@ -19,7 +19,7 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
 
         // Surface elements
-        m_model.AddSurfaceBrick("ground", "GenericSurface");
+        m_model.AddSurfaceBrick("ground", "GenericLandCover");
         m_model.AddSurfaceBrick("glacier", "Glacier");
         m_model.GeneratePrecipitationSplitters(true);
         m_model.GenerateSnowpacks("Melt:degree-day");

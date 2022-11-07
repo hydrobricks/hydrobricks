@@ -1,12 +1,12 @@
-#ifndef HYDROBRICKS_SURFACE_H
-#define HYDROBRICKS_SURFACE_H
+#ifndef HYDROBRICKS_GENERIC_LAND_COVER_H
+#define HYDROBRICKS_GENERIC_LAND_COVER_H
 
+#include "BaseLandCover.h"
 #include "Includes.h"
-#include "SurfaceComponent.h"
 
-class Surface : public SurfaceComponent {
+class GenericLandCover : public BaseLandCover {
   public:
-    Surface();
+    GenericLandCover();
 
     /**
      * @copydoc Brick::AssignParameters()
@@ -21,4 +21,4 @@ class Surface : public SurfaceComponent {
   private:
 };
 
-#endif  // HYDROBRICKS_SURFACE_H
+#endif  // HYDROBRICKS_GENERIC_LAND_COVER_H

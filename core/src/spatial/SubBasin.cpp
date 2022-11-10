@@ -58,6 +58,18 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     return true;
 }
 
+void SubBasin::Reset() {
+    for (auto brick : m_bricks) {
+        brick->Reset();
+    }
+    for (auto hydroUnit : m_hydroUnits) {
+        hydroUnit->Reset();
+    }
+    for (auto flux : m_outletFluxes) {
+        flux->Reset();
+    }
+}
+
 bool SubBasin::IsOk() {
     if (m_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));

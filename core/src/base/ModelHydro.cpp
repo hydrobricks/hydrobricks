@@ -757,6 +757,7 @@ bool ModelHydro::Run() {
 void ModelHydro::Reset() {
     m_timer.Reset();
     m_logger.Reset();
+    m_subBasin->Reset();
 }
 
 bool ModelHydro::DumpOutputs(const std::string& path) {

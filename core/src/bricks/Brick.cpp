@@ -41,6 +41,13 @@ Brick* Brick::Factory(const BrickSettings& brickSettings) {
     return nullptr;
 }
 
+void Brick::Reset() {
+    m_container->Reset();
+    for (auto process : m_processes) {
+        process->Reset();
+    }
+}
+
 bool Brick::IsOk() {
     for (auto process : m_processes) {
         if (!process->IsOk()) {

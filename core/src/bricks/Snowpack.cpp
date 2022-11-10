@@ -6,6 +6,11 @@ Snowpack::Snowpack()
     m_snow = new WaterContainer(this);
 }
 
+void Snowpack::Reset() {
+    m_container->Reset();
+    m_snow->Reset();
+}
+
 void Snowpack::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }

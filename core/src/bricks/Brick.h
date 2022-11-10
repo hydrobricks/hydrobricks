@@ -38,6 +38,8 @@ class Brick : public wxObject {
         m_processes.push_back(process);
     }
 
+    virtual void Reset();
+
     /**
      * Check that everything is correctly defined.
      *

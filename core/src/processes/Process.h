@@ -17,6 +17,8 @@ class Process : public wxObject {
 
     static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
 
+    void Reset();
+
     /**
      * Check that everything is correctly defined.
      *

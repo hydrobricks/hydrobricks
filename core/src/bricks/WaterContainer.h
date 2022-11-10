@@ -20,6 +20,8 @@ class WaterContainer : public wxObject {
 
     void Finalize();
 
+    void Reset();
+
     vecDoublePt GetStateVariableChanges();
 
     bool HasMaximumCapacity() const {

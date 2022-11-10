@@ -143,6 +143,11 @@ void WaterContainer::Finalize() {
     wxASSERT(m_content >= -PRECISION);
 }
 
+void WaterContainer::Reset() {
+    m_content = 0;
+    m_contentChange = 0;
+}
+
 double WaterContainer::SumIncomingFluxes() {
     double sum = 0;
     for (auto& input : m_inputs) {

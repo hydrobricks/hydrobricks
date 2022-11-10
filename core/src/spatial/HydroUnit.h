@@ -20,6 +20,8 @@ class HydroUnit : public wxObject {
 
     ~HydroUnit() override;
 
+    void Reset();
+
     void AddProperty(HydroUnitProperty* property);
 
     void AddBrick(Brick* brick);

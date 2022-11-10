@@ -9,6 +9,8 @@ class Glacier : public SurfaceComponent {
   public:
     Glacier();
 
+    void Reset() override;
+
     /**
      * @copydoc Brick::AssignParameters()
      */

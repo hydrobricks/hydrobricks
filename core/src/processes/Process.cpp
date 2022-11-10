@@ -61,6 +61,12 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     return nullptr;
 }
 
+void Process::Reset() {
+    for (auto flux : m_outputs) {
+        flux->Reset();
+    }
+}
+
 void Process::AssignParameters(const ProcessSettings&) {
     // Nothing to do...
 }

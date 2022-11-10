@@ -11,6 +11,12 @@ HydroUnit::~HydroUnit() {
     }
 }
 
+void HydroUnit::Reset() {
+    for (auto brick : m_bricks) {
+        brick->Reset();
+    }
+}
+
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
     wxASSERT(property);
     m_properties.push_back(property);

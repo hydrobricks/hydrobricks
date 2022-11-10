@@ -8,6 +8,8 @@ class Snowpack : public SurfaceComponent {
   public:
     Snowpack();
 
+    void Reset() override;
+
     /**
      * @copydoc Brick::AssignParameters()
      */

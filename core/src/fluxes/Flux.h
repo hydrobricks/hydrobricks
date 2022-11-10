@@ -16,6 +16,8 @@ class Flux : public wxObject {
      */
     virtual bool IsOk() = 0;
 
+    virtual void Reset();
+
     /**
      * Get the amount of water outgoing the flux.
      *

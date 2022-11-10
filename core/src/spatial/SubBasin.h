@@ -20,6 +20,8 @@ class SubBasin : public wxObject {
 
     bool AssignFractions(SettingsBasin& basinSettings);
 
+    void Reset();
+
     bool IsOk();
 
     void AddBrick(Brick* brick);

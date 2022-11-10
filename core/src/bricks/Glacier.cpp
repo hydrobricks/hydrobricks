@@ -8,6 +8,11 @@ Glacier::Glacier()
     m_ice = new WaterContainer(this);
 }
 
+void Glacier::Reset() {
+    m_container->Reset();
+    m_ice->Reset();
+}
+
 void Glacier::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
     if (HasParameter(brickSettings, "infiniteStorage")) {

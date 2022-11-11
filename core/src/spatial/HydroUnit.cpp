@@ -17,6 +17,12 @@ void HydroUnit::Reset() {
     }
 }
 
+void HydroUnit::SaveAsInitialState() {
+    for (auto brick : m_bricks) {
+        brick->SaveAsInitialState();
+    }
+}
+
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
     wxASSERT(property);
     m_properties.push_back(property);

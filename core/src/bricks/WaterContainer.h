@@ -22,6 +22,8 @@ class WaterContainer : public wxObject {
 
     void Reset();
 
+    void SaveAsInitialState();
+
     vecDoublePt GetStateVariableChanges();
 
     bool HasMaximumCapacity() const {
@@ -116,6 +118,7 @@ class WaterContainer : public wxObject {
   private:
     double m_content;        // [mm]
     double m_contentChange;  // [mm]
+    double m_initialState;   // [mm]
     float* m_capacity;
     bool m_infiniteStorage;
     Brick* m_parent;

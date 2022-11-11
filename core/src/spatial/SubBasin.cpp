@@ -70,6 +70,15 @@ void SubBasin::Reset() {
     }
 }
 
+void SubBasin::SaveAsInitialState() {
+    for (auto brick : m_bricks) {
+        brick->Reset();
+    }
+    for (auto hydroUnit : m_hydroUnits) {
+        hydroUnit->Reset();
+    }
+}
+
 bool SubBasin::IsOk() {
     if (m_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));

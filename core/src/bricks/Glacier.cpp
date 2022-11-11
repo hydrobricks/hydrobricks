@@ -13,6 +13,11 @@ void Glacier::Reset() {
     m_ice->Reset();
 }
 
+void Glacier::SaveAsInitialState() {
+    m_container->SaveAsInitialState();
+    m_ice->SaveAsInitialState();
+}
+
 void Glacier::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
     if (HasParameter(brickSettings, "infiniteStorage")) {

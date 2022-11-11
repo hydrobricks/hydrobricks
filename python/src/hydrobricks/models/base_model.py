@@ -6,6 +6,7 @@ import _hydrobricks as hb
 import HydroErr
 import pandas as pd
 from _hydrobricks import ModelHydro, SettingsModel
+
 from hydrobricks import utils
 
 
@@ -131,6 +132,20 @@ class Model(ABC):
             print("A type error exception occurred.")
         except Exception:
             print("An exception occurred.")
+
+    def initialize_state_variables(self, parameters, forcing=None):
+        """
+        Run the model and save the state variables as initial values.
+
+        Parameters
+        ----------
+        parameters : ParameterSet
+            The parameters for the given model.
+        forcing : Forcing
+            The forcing data.
+        """
+        self.run(parameters, forcing)
+        self.model.save_as_initial_state()
 
     def set_forcing(self, forcing):
         """

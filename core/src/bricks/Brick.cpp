@@ -48,6 +48,10 @@ void Brick::Reset() {
     }
 }
 
+void Brick::SaveAsInitialState() {
+    m_container->SaveAsInitialState();
+}
+
 bool Brick::IsOk() {
     for (auto process : m_processes) {
         if (!process->IsOk()) {

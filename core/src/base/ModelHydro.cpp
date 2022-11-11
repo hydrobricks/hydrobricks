@@ -760,6 +760,10 @@ void ModelHydro::Reset() {
     m_subBasin->Reset();
 }
 
+void ModelHydro::SaveAsInitialState() {
+    m_subBasin->SaveAsInitialState();
+}
+
 bool ModelHydro::DumpOutputs(const std::string& path) {
     return m_logger.DumpOutputs(path);
 }

@@ -22,6 +22,8 @@ class SubBasin : public wxObject {
 
     void Reset();
 
+    void SaveAsInitialState();
+
     bool IsOk();
 
     void AddBrick(Brick* brick);

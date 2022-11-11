@@ -22,6 +22,8 @@ class HydroUnit : public wxObject {
 
     void Reset();
 
+    void SaveAsInitialState();
+
     void AddProperty(HydroUnitProperty* property);
 
     void AddBrick(Brick* brick);

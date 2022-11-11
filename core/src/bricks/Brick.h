@@ -40,6 +40,8 @@ class Brick : public wxObject {
 
     virtual void Reset();
 
+    virtual void SaveAsInitialState();
+
     /**
      * Check that everything is correctly defined.
      *

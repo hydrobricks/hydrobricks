@@ -5,6 +5,7 @@
 WaterContainer::WaterContainer(Brick* brick)
     : m_content(0),
       m_contentChange(0),
+      m_initialState(0),
       m_capacity(nullptr),
       m_infiniteStorage(false),
       m_parent(brick),
@@ -144,8 +145,12 @@ void WaterContainer::Finalize() {
 }
 
 void WaterContainer::Reset() {
-    m_content = 0;
+    m_content = m_initialState;
     m_contentChange = 0;
+}
+
+void WaterContainer::SaveAsInitialState() {
+    m_initialState = m_content;
 }
 
 double WaterContainer::SumIncomingFluxes() {

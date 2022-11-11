@@ -11,6 +11,8 @@ class Glacier : public SurfaceComponent {
 
     void Reset() override;
 
+    void SaveAsInitialState() override;
+
     /**
      * @copydoc Brick::AssignParameters()
      */

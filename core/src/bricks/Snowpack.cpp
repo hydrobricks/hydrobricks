@@ -11,6 +11,11 @@ void Snowpack::Reset() {
     m_snow->Reset();
 }
 
+void Snowpack::SaveAsInitialState() {
+    m_container->SaveAsInitialState();
+    m_snow->SaveAsInitialState();
+}
+
 void Snowpack::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }

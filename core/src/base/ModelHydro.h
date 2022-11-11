@@ -28,6 +28,8 @@ class ModelHydro : public wxObject {
 
     void Reset();
 
+    void SaveAsInitialState();
+
     bool DumpOutputs(const std::string& path);
 
     axd GetOutletDischarge();

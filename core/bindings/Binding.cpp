@@ -81,6 +81,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
+        .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 

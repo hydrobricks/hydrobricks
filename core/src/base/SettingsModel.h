@@ -54,7 +54,8 @@ struct BrickSettings {
 struct ModelStructure {
     int id;
     vecStr logItems;
-    std::vector<BrickSettings> surfaceBricks;
+    std::vector<BrickSettings> landCoverBricks;
+    std::vector<BrickSettings> surfaceComponentBricks;
     std::vector<BrickSettings> hydroUnitBricks;
     std::vector<BrickSettings> subBasinBricks;
     std::vector<SplitterSettings> hydroUnitSplitters;
@@ -74,11 +75,13 @@ class SettingsModel : public wxObject {
 
     void SetTimer(const std::string& start, const std::string& end, int timeStep, const std::string& timeStepUnit);
 
-    void AddHydroUnitBrick(const std::string& name, const std::string& type);
+    void AddHydroUnitBrick(const std::string& name, const std::string& type = "Storage");
 
-    void AddSubBasinBrick(const std::string& name, const std::string& type);
+    void AddSubBasinBrick(const std::string& name, const std::string& type = "Storage");
 
-    void AddSurfaceBrick(const std::string& name, const std::string& type);
+    void AddLandCoverBrick(const std::string& name, const std::string& type);
+
+    void AddSurfaceComponentBrick(const std::string& name, const std::string& type);
 
     void AddToRelatedSurfaceBrick(const std::string& name);
 
@@ -90,7 +93,8 @@ class SettingsModel : public wxObject {
 
     void AddBrickForcing(const std::string& name);
 
-    void AddBrickProcess(const std::string& name, const std::string& type);
+    void AddBrickProcess(const std::string& name, const std::string& type, const std::string& target = "",
+                         bool log = false);
 
     void AddProcessParameter(const std::string& name, float value, const std::string& type = "Constant");
 
@@ -118,7 +122,11 @@ class SettingsModel : public wxObject {
 
     void AddLoggingToItem(const std::string& itemName);
 
+    void AddLoggingToItems(std::initializer_list<const std::string> items);
+
     void AddBrickLogging(const std::string& itemName);
+
+    void AddBrickLogging(std::initializer_list<const std::string> items);
 
     void AddProcessLogging(const std::string& itemName);
 
@@ -129,10 +137,6 @@ class SettingsModel : public wxObject {
     void GenerateSnowpacks(const std::string& snowMeltProcess);
 
     void GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess, const std::string& outflowProcess);
-
-    void GenerateSurfaceComponentBricks(bool withSnow);
-
-    void GenerateSurfaceBricks();
 
     bool SelectStructure(int id);
 

@@ -20,8 +20,7 @@ class SnowpackModel : public ::testing::Test {
 
         // Snowpack brick
         m_model.AddHydroUnitBrick("snowpack", "Snowpack");
-        m_model.AddBrickLogging("content");
-        m_model.AddBrickLogging("snow");
+        m_model.AddBrickLogging({"content", "snow"});
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "Melt:degree-day");

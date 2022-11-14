@@ -17,72 +17,45 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
     void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetLogAll(true);
+
+        // Precipitation
+        m_model.GeneratePrecipitationSplitters(true);
 
         // Surface elements
-        m_model.AddSurfaceBrick("ground", "GenericLandCover");
-        m_model.AddSurfaceBrick("glacier", "Glacier");
-        m_model.GeneratePrecipitationSplitters(true);
+        m_model.AddLandCoverBrick("ground", "GenericLandCover");
+        m_model.AddLandCoverBrick("glacier", "Glacier");
         m_model.GenerateSnowpacks("Melt:degree-day");
-        m_model.GenerateSurfaceComponentBricks(true);
-        m_model.GenerateSurfaceBricks();
-
-        // Transfer rain to surface
-        m_model.SelectHydroUnitBrick("ground");
-        m_model.AddBrickProcess("outflow-rain", "Outflow:direct");
-        m_model.AddProcessOutput("ground-surface");
-        m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickProcess("outflow-rain", "Outflow:direct");
-        m_model.AddProcessOutput("glacier-surface");
 
         // Rain/snow splitter
         m_model.SelectHydroUnitSplitter("snow-rain-transition");
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
-        // Snowpack brick on surface 1
+        // Snow melt process on ground
         m_model.SelectHydroUnitBrick("ground-snowpack");
-        m_model.AddBrickLogging("snow");
-        m_model.AddBrickLogging("content");
-
-        // Snow melt process
         m_model.SelectProcess("melt");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 2.0f);
-        m_model.AddProcessLogging("output");
 
-        // Snowpack brick on surface 2
+        // Snow melt process on glacier
         m_model.SelectHydroUnitBrick("glacier-snowpack");
-        m_model.AddBrickLogging("snow");
-        m_model.AddBrickLogging("content");
-
-        // Snow melt process
         m_model.SelectProcess("melt");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 2.0f);
-        m_model.AddProcessLogging("output");
 
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier");
         m_model.AddBrickParameter("noMeltWhenSnowCover", 1.0);
         m_model.AddBrickParameter("infiniteStorage", 1.0);
-        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddBrickProcess("melt", "Melt:degree-day", "outlet");
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 4.0f);
         m_model.AddProcessParameter("meltingTemperature", 1.0f);
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("glacier-surface");
 
         // Surface brick for the bare ground with a direct outflow
-        m_model.SelectHydroUnitBrick("ground-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
-
-        // Surface brick for the glacier part with a direct outflow
-        m_model.SelectHydroUnitBrick("glacier-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
+        m_model.SelectHydroUnitBrick("ground");
+        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -105,8 +78,8 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
 TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddSurfaceElement("ground", "", 0.5);
-    basinSettings.AddSurfaceElement("glacier", "", 0.5);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

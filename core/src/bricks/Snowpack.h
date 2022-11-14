@@ -1,7 +1,7 @@
 #ifndef HYDROBRICKS_SNOWPACK_H
 #define HYDROBRICKS_SNOWPACK_H
 
-#include "BaseSurfaceComponent.h"
+#include "BaseLandCover.h"
 #include "Includes.h"
 
 class Snowpack : public BaseSurfaceComponent {

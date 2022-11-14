@@ -17,13 +17,13 @@ void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
-void SettingsBasin::AddSurfaceElement(const std::string& name, const std::string& type, double fraction) {
+void SettingsBasin::AddLandCover(const std::string& name, const std::string& type, double fraction) {
     wxASSERT(m_selectedHydroUnit);
-    SurfaceElementSettings element;
+    LandCoverSettings element;
     element.name = name;
     element.type = type;
     element.fraction = fraction;
-    m_selectedHydroUnit->surfaceElements.push_back(element);
+    m_selectedHydroUnit->landCovers.push_back(element);
 }
 
 void SettingsBasin::SelectUnit(int index) {
@@ -40,7 +40,7 @@ bool SettingsBasin::Parse(const std::string& path) {
         }
 
         // Get the surface names
-        vecStr surfaces = file.GetAttString1D("surface_names");
+        vecStr landCovers = file.GetAttString1D("land_covers");
 
         // Get number of units
         int unitsNb = file.GetDimLen("hydro_units");
@@ -64,18 +64,18 @@ bool SettingsBasin::Parse(const std::string& path) {
         }
 
         // Get surface data
-        for (const auto& surface : surfaces) {
-            vecFloat fractions = file.GetVarFloat1D(surface, unitsNb);
+        for (const auto& cover : landCovers) {
+            vecFloat fractions = file.GetVarFloat1D(cover, unitsNb);
 
-            // Get the surface type
-            std::string type = file.GetAttText("type", surface);
+            // Get the cover type
+            std::string type = file.GetAttText("type", cover);
 
             for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
-                SurfaceElementSettings element;
-                element.name = surface;
+                LandCoverSettings element;
+                element.name = cover;
                 element.type = type;
                 element.fraction = fractions[iUnit];
-                m_hydroUnits[iUnit].surfaceElements.push_back(element);
+                m_hydroUnits[iUnit].landCovers.push_back(element);
             }
         }
 

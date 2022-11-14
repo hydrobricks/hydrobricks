@@ -4,7 +4,7 @@
 #include "Includes.h"
 #include "Parameter.h"
 
-struct SurfaceElementSettings {
+struct LandCoverSettings {
     std::string name;
     std::string type;
     double fraction;
@@ -14,7 +14,7 @@ struct HydroUnitSettings {
     int id;
     double area;
     double elevation;
-    std::vector<SurfaceElementSettings> surfaceElements;
+    std::vector<LandCoverSettings> landCovers;
 };
 
 class SettingsBasin : public wxObject {
@@ -25,7 +25,7 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area, double elevation = 0.0);
 
-    void AddSurfaceElement(const std::string& name, const std::string& type = "", double fraction = 1.0);
+    void AddLandCover(const std::string& name, const std::string& type = "", double fraction = 1.0);
 
     void SelectUnit(int index);
 
@@ -36,19 +36,19 @@ class SettingsBasin : public wxObject {
         return m_hydroUnits[index];
     }
 
-    SurfaceElementSettings GetSurfaceElementSettings(int index) {
+    LandCoverSettings GetLandCoverSettings(int index) {
         wxASSERT(m_selectedHydroUnit);
-        wxASSERT(m_selectedHydroUnit->surfaceElements.size() > index);
-        return m_selectedHydroUnit->surfaceElements[index];
+        wxASSERT(m_selectedHydroUnit->landCovers.size() > index);
+        return m_selectedHydroUnit->landCovers[index];
     }
 
     int GetHydroUnitsNb() {
         return int(m_hydroUnits.size());
     }
 
-    int GetSurfaceElementsNb() {
+    int GetLandCoversNb() {
         wxASSERT(m_selectedHydroUnit);
-        return int(m_selectedHydroUnit->surfaceElements.size());
+        return int(m_selectedHydroUnit->landCovers.size());
     }
 
   protected:

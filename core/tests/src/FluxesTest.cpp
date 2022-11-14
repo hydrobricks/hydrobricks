@@ -17,34 +17,18 @@ class FluxWeightedModel : public ::testing::Test {
     void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetLogAll(true);
 
-        // Surface elements
-        m_model.AddSurfaceBrick("item-1", "GenericLandCover");
-        m_model.AddSurfaceBrick("item-2", "GenericLandCover");
+        // Precipitation
         m_model.GeneratePrecipitationSplitters(false);
-        m_model.GenerateSurfaceComponentBricks(false);
-        m_model.GenerateSurfaceBricks();
 
-        // Direct outflow processes
-        m_model.SelectHydroUnitBrick("item-1");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("item-1-surface");
-        m_model.SelectHydroUnitBrick("item-2");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("item-2-surface");
+        // Surface elements and processes
+        m_model.AddLandCoverBrick("item-1", "GenericLandCover");
+        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.AddLandCoverBrick("item-2", "GenericLandCover");
+        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
 
-        // Surface bricks
-        m_model.SelectHydroUnitBrick("item-1-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
-        m_model.SelectHydroUnitBrick("item-2-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
-
+        // Outlet
         m_model.AddLoggingToItem("outlet");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
@@ -60,8 +44,8 @@ class FluxWeightedModel : public ::testing::Test {
 TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddSurfaceElement("item-1", "", 1.0);
-    basinProp.AddSurfaceElement("item-2", "", 0.0);
+    basinProp.AddLandCover("item-1", "", 1.0);
+    basinProp.AddLandCover("item-2", "", 0.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -105,8 +89,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddSurfaceElement("item-1", "", 0.5);
-    basinProp.AddSurfaceElement("item-2", "", 0.5);
+    basinProp.AddLandCover("item-1", "", 0.5);
+    basinProp.AddLandCover("item-2", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -150,8 +134,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddSurfaceElement("item-1", "", 0.7);
-    basinProp.AddSurfaceElement("item-2", "", 0.3);
+    basinProp.AddLandCover("item-1", "", 0.7);
+    basinProp.AddLandCover("item-2", "", 0.3);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -195,11 +179,11 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddSurfaceElement("item-1", "", 0.5);
-    basinProp.AddSurfaceElement("item-2", "", 0.5);
+    basinProp.AddLandCover("item-1", "", 0.5);
+    basinProp.AddLandCover("item-2", "", 0.5);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddSurfaceElement("item-1", "", 0.5);
-    basinProp.AddSurfaceElement("item-2", "", 0.5);
+    basinProp.AddLandCover("item-1", "", 0.5);
+    basinProp.AddLandCover("item-2", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -248,11 +232,11 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricksDifferentArea) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddSurfaceElement("item-1", "", 2.0 / 3.0);
-    basinProp.AddSurfaceElement("item-2", "", 1.0 / 3.0);
+    basinProp.AddLandCover("item-1", "", 2.0 / 3.0);
+    basinProp.AddLandCover("item-2", "", 1.0 / 3.0);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddSurfaceElement("item-1", "", 4.0 / 5.0);
-    basinProp.AddSurfaceElement("item-2", "", 1.0 / 5.0);
+    basinProp.AddLandCover("item-1", "", 4.0 / 5.0);
+    basinProp.AddLandCover("item-2", "", 1.0 / 5.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));

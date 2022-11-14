@@ -1,7 +1,7 @@
 #ifndef HYDROBRICKS_URBAN_H
 #define HYDROBRICKS_URBAN_H
 
-#include "BaseSurfaceComponent.h"
+#include "BaseLandCover.h"
 #include "Includes.h"
 
 class Urban : public BaseLandCover {

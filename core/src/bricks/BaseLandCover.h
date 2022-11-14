@@ -3,6 +3,7 @@
 
 #include "Brick.h"
 #include "Includes.h"
+#include "BaseSurfaceComponent.h"
 
 class HydroUnit;
 
@@ -24,13 +25,13 @@ class BaseLandCover : public Brick {
         return m_areaFraction <= PRECISION;
     }
 
-    virtual void AddToRelatedBricks(SurfaceComponent* brick) {
+    virtual void AddToRelatedBricks(BaseSurfaceComponent* brick) {
         m_relatedBricks.push_back(brick);
     }
 
   protected:
     double m_areaFraction;
-    std::vector<SurfaceComponent*> m_relatedBricks;
+    std::vector<BaseSurfaceComponent*> m_relatedBricks;
 
   private:
 };

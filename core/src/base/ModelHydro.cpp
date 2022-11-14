@@ -1,6 +1,7 @@
 #include "ModelHydro.h"
 
 #include "BaseSurfaceComponent.h"
+#include "BaseLandCover.h"
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
@@ -225,7 +226,7 @@ void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUni
     for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
         BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
         if (!brickSettings.relatedSurfaceBricks.empty()) {
-            auto brick = dynamic_cast<BaseSurfaceComponent*>(unit->GetBrick(iBrick));
+            auto brick = dynamic_cast<BaseLandCover*>(unit->GetBrick(iBrick));
             for (const auto& relatedSurfaceBrick : brickSettings.relatedSurfaceBricks) {
                 auto relatedBrick = dynamic_cast<BaseSurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
                 brick->AddToRelatedBricks(relatedBrick);

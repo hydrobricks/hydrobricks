@@ -195,6 +195,15 @@ void FileNetcdf::PutVar(int varId, const vecAxxd& values) {
     }
 }
 
+bool FileNetcdf::HasAtt(const std::string& attName, const std::string& varName) {
+    int varId = NC_GLOBAL;
+    if (!varName.empty()) {
+        CheckNcStatus(nc_inq_varid(m_ncId, varName.c_str(), &varId));
+    }
+
+    return nc_inq_att(m_ncId, varId, attName.c_str(), nullptr, nullptr) != NC_ENOTATT;
+}
+
 vecStr FileNetcdf::GetAttString1D(const std::string& attName, const std::string& varName) {
     int varId = NC_GLOBAL;
     if (!varName.empty()) {

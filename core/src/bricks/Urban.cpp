@@ -1,7 +1,7 @@
 #include "Urban.h"
 
 Urban::Urban()
-    : BaseLandCover() {}
+    : LandCover() {}
 
 void Urban::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);

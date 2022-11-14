@@ -1,14 +1,14 @@
-#include "BaseLandCover.h"
+#include "LandCover.h"
 
 #include "HydroUnit.h"
 
-BaseLandCover::BaseLandCover()
+LandCover::LandCover()
     : Brick(),
       m_areaFraction(1.0) {
     m_needsSolver = false;
 }
 
-void BaseLandCover::SetAreaFraction(double value) {
+void LandCover::SetAreaFraction(double value) {
     m_areaFraction = value;
     for (auto brick : m_relatedBricks) {
         brick->SetAreaFraction(value);

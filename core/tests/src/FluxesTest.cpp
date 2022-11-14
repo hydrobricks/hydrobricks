@@ -73,9 +73,9 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     // Check melt and swe
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput2 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput4 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
@@ -115,12 +115,16 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
         EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
     }
 
-    // Check melt and swe
+    // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    // [0] "item-1:content"
+    // [1] "item-1:outflow:output"
+    // [2] "item-2:content"
+    // [3] "item-2:outflow:output"
 
-    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput2 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput4 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
@@ -160,12 +164,12 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
         EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
     }
 
-    // Check melt and swe
+    // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput2 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 0.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput4 = {0.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
@@ -208,12 +212,12 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
         EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
     }
 
-    // Check melt and swe
+    // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput2 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 0.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput4 = {0.0, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
@@ -261,25 +265,25 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricksDifferentArea) {
         EXPECT_NEAR(basinOutputs[0][j], expectedOutputs[j], 0.000001);
     }
 
-    // Check melt and swe
+    // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
-    vecDouble expectedOutput1 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput2 = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
-    vecDouble expectedOutput4 = {0.0, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 0.0, 0.0};
+    vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    vecDouble expectedOutput2 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 0.0, 0.0};
+    vecDouble expectedOutput4 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput5 = {0.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0};
     vecDouble expectedOutput6 = {0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
         EXPECT_NEAR(unitContent[0](j, 0), expectedOutput1[j], 0.000001);
         EXPECT_NEAR(unitContent[1](j, 0), expectedOutput2[j], 0.000001);
-        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
-        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput4[j], 0.000001);
+        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput3[j], 0.000001);
 
         EXPECT_NEAR(unitContent[0](j, 1), expectedOutput1[j], 0.000001);
-        EXPECT_NEAR(unitContent[1](j, 1), expectedOutput2[j], 0.000001);
-        EXPECT_NEAR(unitContent[2](j, 1), expectedOutput5[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 1), expectedOutput5[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 1), expectedOutput4[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 1), expectedOutput6[j], 0.000001);
     }
 }

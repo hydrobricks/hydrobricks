@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_BASE_LAND_COVER_H
-#define HYDROBRICKS_BASE_LAND_COVER_H
+#ifndef HYDROBRICKS_SURFACE_COMPONENT_H
+#define HYDROBRICKS_SURFACE_COMPONENT_H
 
 #include "Brick.h"
 #include "Includes.h"
-#include "BaseSurfaceComponent.h"
+#include "LandCover.h"
 
 class HydroUnit;
 
-class BaseLandCover : public Brick {
+class SurfaceComponent : public Brick {
   public:
-    BaseLandCover();
+    SurfaceComponent(LandCover* parent);
 
     bool CanHaveAreaFraction() override {
         return true;
@@ -25,15 +25,11 @@ class BaseLandCover : public Brick {
         return m_areaFraction <= PRECISION;
     }
 
-    virtual void AddToRelatedBricks(BaseSurfaceComponent* brick) {
-        m_relatedBricks.push_back(brick);
-    }
-
   protected:
+    LandCover* m_parent;
     double m_areaFraction;
-    std::vector<BaseSurfaceComponent*> m_relatedBricks;
 
   private:
 };
 
-#endif  // HYDROBRICKS_BASE_LAND_COVER_H
+#endif  // HYDROBRICKS_SURFACE_COMPONENT_H

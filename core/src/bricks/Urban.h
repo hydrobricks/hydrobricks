@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_URBAN_H
 #define HYDROBRICKS_URBAN_H
 
-#include "BaseLandCover.h"
 #include "Includes.h"
+#include "LandCover.h"
 
-class Urban : public BaseLandCover {
+class Urban : public LandCover {
   public:
     Urban();
 

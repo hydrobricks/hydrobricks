@@ -40,7 +40,12 @@ bool SettingsBasin::Parse(const std::string& path) {
         }
 
         // Get the surface names
-        vecStr landCovers = file.GetAttString1D("land_covers");
+        vecStr landCovers;
+        if (file.HasAtt("land_covers")) {
+            landCovers = file.GetAttString1D("land_covers");
+        } else if (file.HasAtt("surface_names")) {
+            landCovers = file.GetAttString1D("surface_names");
+        }
 
         // Get number of units
         int unitsNb = file.GetDimLen("hydro_units");

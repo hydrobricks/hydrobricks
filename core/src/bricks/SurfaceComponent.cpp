@@ -1,14 +1,15 @@
-#include "BaseSurfaceComponent.h"
+#include "SurfaceComponent.h"
 
 #include "HydroUnit.h"
 
-BaseSurfaceComponent::BaseSurfaceComponent()
+SurfaceComponent::SurfaceComponent(LandCover* parent)
     : Brick(),
+      m_parent(parent),
       m_areaFraction(1.0) {
     m_needsSolver = false;
 }
 
-void BaseSurfaceComponent::SetAreaFraction(double value) {
+void SurfaceComponent::SetAreaFraction(double value) {
     m_areaFraction = value;
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {

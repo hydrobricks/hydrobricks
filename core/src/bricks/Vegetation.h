@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_VEGETATION_H
 #define HYDROBRICKS_VEGETATION_H
 
-#include "BaseLandCover.h"
 #include "Includes.h"
+#include "LandCover.h"
 
-class Vegetation : public BaseLandCover {
+class Vegetation : public LandCover {
   public:
     Vegetation();
 

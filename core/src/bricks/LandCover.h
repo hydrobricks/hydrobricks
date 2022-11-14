@@ -1,14 +1,15 @@
-#ifndef HYDROBRICKS_SURFACE_COMPONENT_H
-#define HYDROBRICKS_SURFACE_COMPONENT_H
+#ifndef HYDROBRICKS_BASE_LAND_COVER_H
+#define HYDROBRICKS_BASE_LAND_COVER_H
 
 #include "Brick.h"
 #include "Includes.h"
+#include "SurfaceComponent.h"
 
 class HydroUnit;
 
-class BaseSurfaceComponent : public Brick {
+class LandCover : public Brick {
   public:
-    BaseSurfaceComponent();
+    LandCover();
 
     bool CanHaveAreaFraction() override {
         return true;
@@ -30,4 +31,4 @@ class BaseSurfaceComponent : public Brick {
   private:
 };
 
-#endif  // HYDROBRICKS_SURFACE_COMPONENT_H
+#endif  // HYDROBRICKS_BASE_LAND_COVER_H

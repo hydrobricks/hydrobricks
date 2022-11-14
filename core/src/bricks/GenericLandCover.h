@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_GENERIC_LAND_COVER_H
 #define HYDROBRICKS_GENERIC_LAND_COVER_H
 
-#include "BaseLandCover.h"
 #include "Includes.h"
+#include "LandCover.h"
 
-class GenericLandCover : public BaseLandCover {
+class GenericLandCover : public LandCover {
   public:
     GenericLandCover();
 

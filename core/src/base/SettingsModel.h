@@ -44,8 +44,8 @@ struct SplitterSettings {
 struct BrickSettings {
     std::string name;
     std::string type;
+    std::string parent;
     vecStr logItems;
-    vecStr relatedSurfaceBricks;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
     std::vector<ProcessSettings> processes;

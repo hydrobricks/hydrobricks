@@ -1,11 +1,11 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
-#include "BaseLandCover.h"
 #include "Includes.h"
+#include "LandCover.h"
 #include "Snowpack.h"
 
-class Glacier : public BaseLandCover {
+class Glacier : public LandCover {
   public:
     Glacier();
 
@@ -32,7 +32,7 @@ class Glacier : public BaseLandCover {
 
     double* GetValuePointer(const std::string& name) override;
 
-    void AddToRelatedBricks(BaseSurfaceComponent* brick) override;
+    void AddToRelatedBricks(SurfaceComponent* brick) override;
 
   protected:
     WaterContainer* m_ice;

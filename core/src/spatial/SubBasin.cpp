@@ -1,6 +1,6 @@
 #include "SubBasin.h"
 
-#include "SurfaceComponent.h"
+#include "BaseSurfaceComponent.h"
 
 SubBasin::SubBasin()
     : m_area(0),
@@ -46,7 +46,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < basinSettings.GetSurfaceElementsNb(); ++iElement) {
                 SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
 
-                auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                auto brick = dynamic_cast<BaseSurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
                 brick->SetAreaFraction(elementSettings.fraction);
             }
         }

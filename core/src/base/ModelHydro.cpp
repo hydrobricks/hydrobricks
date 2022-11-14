@@ -159,7 +159,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             BuildForcingConnections(splitterSettings, unit, splitter);
         }
 
-        LinkRelatedSurfaceBricks(modelSettings, unit);
+        LinkSurfaceComponentsParents(modelSettings, unit);
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);
         BuildHydroUnitSplittersFluxes(modelSettings, unit);
@@ -222,15 +222,13 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
     }
 }
 
-void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit) {
-    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
+void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSurfaceComponentBricksNb(); ++iBrick) {
         BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
-        if (!brickSettings.relatedSurfaceBricks.empty()) {
-            auto brick = dynamic_cast<LandCover*>(unit->GetBrick(iBrick));
-            for (const auto& relatedSurfaceBrick : brickSettings.relatedSurfaceBricks) {
-                auto relatedBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
-                brick->AddToRelatedBricks(relatedBrick);
-            }
+        if (!brickSettings.parent.empty()) {
+            auto surfaceComponentBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(iBrick));
+            auto landCoverBrick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.parent));
+            surfaceComponentBrick->SetParent(landCoverBrick);
         }
     }
 }

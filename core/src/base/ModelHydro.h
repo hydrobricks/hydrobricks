@@ -78,7 +78,7 @@ class ModelHydro : public wxObject {
 
     void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
 
-    void LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit);
+    void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
 
     void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
 

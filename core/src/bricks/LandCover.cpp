@@ -10,9 +10,6 @@ LandCover::LandCover()
 
 void LandCover::SetAreaFraction(double value) {
     m_areaFraction = value;
-    for (auto brick : m_relatedBricks) {
-        brick->SetAreaFraction(value);
-    }
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {

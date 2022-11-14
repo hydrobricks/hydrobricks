@@ -83,7 +83,7 @@ class SettingsModel : public wxObject {
 
     void AddSurfaceComponentBrick(const std::string& name, const std::string& type);
 
-    void AddToRelatedSurfaceBrick(const std::string& name);
+    void SetSurfaceComponentParent(const std::string& name);
 
     void AddBrickParameter(const std::string& name, float value, const std::string& type = "Constant");
 
@@ -188,6 +188,11 @@ class SettingsModel : public wxObject {
     int GetSubBasinBricksNb() const {
         wxASSERT(m_selectedStructure);
         return int(m_selectedStructure->subBasinBricks.size());
+    }
+
+    int GetSurfaceComponentBricksNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->surfaceComponentBricks.size());
     }
 
     int GetProcessesNb() const {

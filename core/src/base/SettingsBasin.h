@@ -10,11 +10,18 @@ struct LandCoverSettings {
     double fraction;
 };
 
+struct SurfaceComponentSettings {
+    std::string name;
+    std::string type;
+    double fraction;
+};
+
 struct HydroUnitSettings {
     int id;
     double area;
     double elevation;
     std::vector<LandCoverSettings> landCovers;
+    std::vector<SurfaceComponentSettings> surfaceComponents;
 };
 
 class SettingsBasin : public wxObject {
@@ -42,6 +49,12 @@ class SettingsBasin : public wxObject {
         return m_selectedHydroUnit->landCovers[index];
     }
 
+    SurfaceComponentSettings GetSurfaceComponentSettings(int index) {
+        wxASSERT(m_selectedHydroUnit);
+        wxASSERT(m_selectedHydroUnit->surfaceComponents.size() > index);
+        return m_selectedHydroUnit->surfaceComponents[index];
+    }
+
     int GetHydroUnitsNb() {
         return int(m_hydroUnits.size());
     }
@@ -49,6 +62,11 @@ class SettingsBasin : public wxObject {
     int GetLandCoversNb() {
         wxASSERT(m_selectedHydroUnit);
         return int(m_selectedHydroUnit->landCovers.size());
+    }
+
+    int GetSurfaceComponentsNb() {
+        wxASSERT(m_selectedHydroUnit);
+        return int(m_selectedHydroUnit->surfaceComponents.size());
     }
 
   protected:

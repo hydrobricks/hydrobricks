@@ -107,9 +107,9 @@ void SettingsModel::AddSurfaceComponentBrick(const std::string& name, const std:
     AddHydroUnitBrick(name, type);
 }
 
-void SettingsModel::AddToRelatedSurfaceBrick(const std::string& name) {
+void SettingsModel::SetSurfaceComponentParent(const std::string& name) {
     wxASSERT(m_selectedBrick);
-    m_selectedBrick->relatedSurfaceBricks.push_back(name);
+    m_selectedBrick->parent = name;
 }
 
 void SettingsModel::AddBrickParameter(const std::string& name, float value, const std::string& type) {
@@ -400,6 +400,7 @@ void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
+        SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
         if (snowMeltProcess == "Melt:degree-day") {
@@ -424,6 +425,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowM
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
+        SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess);
         OutputProcessToSameBrick();

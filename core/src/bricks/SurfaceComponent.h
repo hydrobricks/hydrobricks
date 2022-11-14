@@ -9,7 +9,7 @@ class HydroUnit;
 
 class SurfaceComponent : public Brick {
   public:
-    SurfaceComponent(LandCover* parent);
+    SurfaceComponent();
 
     bool CanHaveAreaFraction() override {
         return true;
@@ -23,6 +23,10 @@ class SurfaceComponent : public Brick {
 
     bool IsNull() override {
         return m_areaFraction <= PRECISION;
+    }
+
+    void SetParent(LandCover* parent) {
+        m_parent = parent;
     }
 
   protected:

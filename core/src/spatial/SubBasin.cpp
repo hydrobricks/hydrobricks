@@ -50,6 +50,14 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 wxASSERT(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
+
+            for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentsNb(); ++iElement) {
+                SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
+
+                auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                wxASSERT(brick);
+                brick->SetAreaFraction(elementSettings.fraction);
+            }
         }
     } catch (const std::exception& e) {
         wxLogError(_("An exception occurred while assigning the fractions: %s."), e.what());

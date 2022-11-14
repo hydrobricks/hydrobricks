@@ -25,8 +25,9 @@ class SurfaceComponent : public Brick {
         return m_areaFraction <= PRECISION;
     }
 
-    void SetParent(LandCover* parent) {
+    virtual void SetParent(LandCover* parent) {
         m_parent = parent;
+        m_parent->SurfaceComponentAdded(this);
     }
 
   protected:

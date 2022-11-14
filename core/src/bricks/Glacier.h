@@ -32,7 +32,7 @@ class Glacier : public LandCover {
 
     double* GetValuePointer(const std::string& name) override;
 
-    void AddToRelatedBricks(SurfaceComponent* brick) override;
+    void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
   protected:
     WaterContainer* m_ice;

@@ -1,6 +1,7 @@
 #include "SurfaceComponent.h"
 
 #include "HydroUnit.h"
+#include "LandCover.h"
 
 SurfaceComponent::SurfaceComponent()
     : Brick(),

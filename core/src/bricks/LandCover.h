@@ -3,9 +3,9 @@
 
 #include "Brick.h"
 #include "Includes.h"
-#include "SurfaceComponent.h"
 
 class HydroUnit;
+class SurfaceComponent;
 
 class LandCover : public Brick {
   public:
@@ -20,6 +20,8 @@ class LandCover : public Brick {
     }
 
     void SetAreaFraction(double value);
+
+    virtual void SurfaceComponentAdded(SurfaceComponent* brick);
 
     bool IsNull() override {
         return m_areaFraction <= PRECISION;

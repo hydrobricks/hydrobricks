@@ -83,8 +83,7 @@ double* Glacier::GetValuePointer(const std::string& name) {
     return nullptr;
 }
 
-void Glacier::AddToRelatedBricks(SurfaceComponent* brick) {
-    m_relatedBricks.push_back(brick);
+void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
     if (m_noMeltWhenSnowCover && brick->IsSnowpack()) {
         m_snowpack = dynamic_cast<Snowpack*>(brick);
     }

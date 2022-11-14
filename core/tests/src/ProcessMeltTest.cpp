@@ -197,7 +197,6 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 
         // Glacier brick
         m_model.AddHydroUnitBrick("glacier", "Glacier");
-        m_model.AddToRelatedSurfaceBrick("snowpack");
         m_model.AddBrickParameter("noMeltWhenSnowCover", true);
         m_model.AddBrickParameter("infiniteStorage", 1.0);
 

@@ -2,7 +2,7 @@
 #define HYDROBRICKS_SNOWPACK_H
 
 #include "Includes.h"
-#include "LandCover.h"
+#include "SurfaceComponent.h"
 
 class Snowpack : public SurfaceComponent {
   public:

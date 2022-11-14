@@ -1,6 +1,7 @@
 #include "SubBasin.h"
 
 #include "LandCover.h"
+#include "SurfaceComponent.h"
 
 SubBasin::SubBasin()
     : m_area(0),

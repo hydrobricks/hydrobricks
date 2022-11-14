@@ -1,6 +1,7 @@
 #include "LandCover.h"
 
 #include "HydroUnit.h"
+#include "SurfaceComponent.h"
 
 LandCover::LandCover()
     : Brick(),
@@ -17,4 +18,8 @@ void LandCover::SetAreaFraction(double value) {
             }
         }
     }
+}
+
+void LandCover::SurfaceComponentAdded(SurfaceComponent* brick) {
+    // Nothing to do.
 }

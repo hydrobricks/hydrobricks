@@ -248,12 +248,12 @@ TEST(FileNetcdf, AttString1DIsRead) {
 
     ASSERT_TRUE(file.OpenReadOnly("files/hydro-units-2-glaciers.nc"));
 
-    vecStr surfaces = file.GetAttString1D("surface_names");
+    vecStr landCovers = file.GetAttString1D("surface_names");
 
-    EXPECT_EQ(surfaces.size(), 3);
-    EXPECT_TRUE(surfaces[0] == "ground");
-    EXPECT_TRUE(surfaces[1] == "glacier-ice");
-    EXPECT_TRUE(surfaces[2] == "glacier-debris");
+    EXPECT_EQ(landCovers.size(), 3);
+    EXPECT_TRUE(landCovers[0] == "ground");
+    EXPECT_TRUE(landCovers[1] == "glacier-ice");
+    EXPECT_TRUE(landCovers[2] == "glacier-debris");
 }
 
 TEST(FileNetcdf, AttString1DIsWritten) {

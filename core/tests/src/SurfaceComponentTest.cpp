@@ -5,10 +5,10 @@
 #include "TimeSeriesUniform.h"
 
 /**
- * Model: model with glacier and surface components
+ * Model: model with glacier and land cover components
  */
 
-class GlacierSurfaceComponentModel : public ::testing::Test {
+class GlacierComponentModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -22,7 +22,7 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
         // Precipitation
         m_model.GeneratePrecipitationSplitters(true);
 
-        // Surface elements
+        // Land cover elements
         m_model.AddLandCoverBrick("ground", "GenericLandCover");
         m_model.AddLandCoverBrick("glacier", "Glacier");
         m_model.GenerateSnowpacks("Melt:degree-day");
@@ -53,7 +53,7 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
         m_model.AddProcessParameter("degreeDayFactor", 4.0f);
         m_model.AddProcessParameter("meltingTemperature", 1.0f);
 
-        // Surface brick for the bare ground with a direct outflow
+        // Land cover brick for the bare ground with a direct outflow
         m_model.SelectHydroUnitBrick("ground");
         m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
 
@@ -75,7 +75,7 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
     }
 };
 
-TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
+TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);

@@ -39,7 +39,7 @@ bool SettingsBasin::Parse(const std::string& path) {
             return false;
         }
 
-        // Get the surface names
+        // Get the land cover names
         vecStr landCovers;
         if (file.HasAtt("land_covers")) {
             landCovers = file.GetAttString1D("land_covers");
@@ -68,7 +68,7 @@ bool SettingsBasin::Parse(const std::string& path) {
             m_hydroUnits.push_back(unit);
         }
 
-        // Get surface data
+        // Get land cover data
         for (const auto& cover : landCovers) {
             vecFloat fractions = file.GetVarFloat1D(cover, unitsNb);
 

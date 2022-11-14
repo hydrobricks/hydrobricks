@@ -27,7 +27,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
         .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
-             "surface_types"_a, "surface_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont-runoff")
+             "land_cover_types"_a, "land_cover_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont-runoff")
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties", "start_date"_a, "end_date"_a,
@@ -39,13 +39,13 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
              "area"_a, "elevation"_a)
-        .def("add_surface_element", &SettingsBasin::AddSurfaceElement, "Add a surface element to the structure",
-             "name"_a, "type"_a, "fraction"_a);
+        .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "type"_a,
+             "fraction"_a);
 
     py::class_<SubBasin>(m, "SubBasin")
         .def(py::init<>())
         .def("init", &SubBasin::Initialize, "Initialize the basin", "spatial_structure"_a)
-        .def("assign_fractions", &SubBasin::AssignFractions, "Assign the surface fractions", "spatial_structure"_a);
+        .def("assign_fractions", &SubBasin::AssignFractions, "Assign the land cover fractions", "spatial_structure"_a);
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<const std::string&, float>())

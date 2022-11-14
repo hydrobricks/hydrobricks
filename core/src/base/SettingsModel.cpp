@@ -678,11 +678,11 @@ bool SettingsModel::ParseStructure(const std::string& path) {
         // Solver
         SetSolver(ParseSolver(settings));
 
-        // Surface elements
-        vecStr surfaceNames = ParseSurfaceNames(settings);
-        vecStr surfaceTypes = ParseSurfaceTypes(settings);
-        if (surfaceNames.size() != surfaceTypes.size()) {
-            wxLogError(_("The length of the surface names and surface types do not match."));
+        // Land covers
+        vecStr landCoverNames = ParseLandCoverNames(settings);
+        vecStr landCoverTypes = ParseLandCoverTypes(settings);
+        if (landCoverNames.size() != landCoverTypes.size()) {
+            wxLogError(_("The length of the land cover names and types do not match."));
             return false;
         }
 
@@ -699,7 +699,7 @@ bool SettingsModel::ParseStructure(const std::string& path) {
                         surfaceRunoff = parameter.as<std::string>();
                     }
                 }
-                return GenerateStructureSocont(surfaceTypes, surfaceNames, soilStorageNb, surfaceRunoff);
+                return GenerateStructureSocont(landCoverTypes, landCoverNames, soilStorageNb, surfaceRunoff);
             } else {
                 wxLogError(_("Model base '%s' not recognized."));
                 return false;
@@ -858,30 +858,30 @@ bool SettingsModel::SetParameter(const std::string& component, const std::string
     return false;
 }
 
-vecStr SettingsModel::ParseSurfaceNames(const YAML::Node& settings) {
-    vecStr surfaceNames;
-    if (YAML::Node surfaces = settings["surfaces"]) {
-        if (YAML::Node names = surfaces["names"]) {
+vecStr SettingsModel::ParseLandCoverNames(const YAML::Node& settings) {
+    vecStr landCoverNames;
+    if (YAML::Node landCovers = settings["land_covers"]) {
+        if (YAML::Node names = landCovers["names"]) {
             for (auto&& name : names) {
-                surfaceNames.push_back(name.as<std::string>());
+                landCoverNames.push_back(name.as<std::string>());
             }
         }
     }
 
-    return surfaceNames;
+    return landCoverNames;
 }
 
-vecStr SettingsModel::ParseSurfaceTypes(const YAML::Node& settings) {
-    vecStr surfaceTypes;
-    if (YAML::Node surfaces = settings["surfaces"]) {
-        if (YAML::Node types = surfaces["types"]) {
+vecStr SettingsModel::ParseLandCoverTypes(const YAML::Node& settings) {
+    vecStr landCoverTypes;
+    if (YAML::Node landCovers = settings["land_covers"]) {
+        if (YAML::Node types = landCovers["types"]) {
             for (auto&& type : types) {
-                surfaceTypes.push_back(type.as<std::string>());
+                landCoverTypes.push_back(type.as<std::string>());
             }
         }
     }
 
-    return surfaceTypes;
+    return landCoverTypes;
 }
 
 std::string SettingsModel::ParseSolver(const YAML::Node& settings) {
@@ -905,28 +905,28 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
     return true;
 }
 
-bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb,
+bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb,
                                             const std::string& surfaceRunoff) {
-    if (surfaceNames.size() != surfaceTypes.size()) {
-        wxLogError(_("The length of the surface names and surface types do not match."));
+    if (landCoverNames.size() != landCoverTypes.size()) {
+        wxLogError(_("The length of the land cover names and types do not match."));
         return false;
     }
 
     // Precipitation
     GeneratePrecipitationSplitters(true);
 
-    // Add default ground surface
+    // Add default ground land cover
     AddLandCoverBrick("ground", "GenericLandCover");
 
-    // Add other specific surfaces
-    for (int i = 0; i < surfaceNames.size(); ++i) {
-        std::string type = surfaceTypes[i];
+    // Add other specific land covers
+    for (int i = 0; i < landCoverNames.size(); ++i) {
+        std::string type = landCoverTypes[i];
         if (type == "ground") {
             // Nothing to do, already added.
         } else if (type == "glacier") {
-            AddLandCoverBrick(surfaceNames[i], "Glacier");
+            AddLandCoverBrick(landCoverNames[i], "Glacier");
         } else {
-            wxLogError(_("The surface type %s is not used in Socont"), type);
+            wxLogError(_("The land cover type %s is not used in Socont"), type);
             return false;
         }
     }
@@ -935,9 +935,9 @@ bool SettingsModel::GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfac
     GenerateSnowpacks("Melt:degree-day");
 
     // Add surface-related processes
-    for (int i = 0; i < surfaceNames.size(); ++i) {
-        std::string type = surfaceTypes[i];
-        std::string name = surfaceNames[i];
+    for (int i = 0; i < landCoverNames.size(); ++i) {
+        std::string type = landCoverTypes[i];
+        std::string name = landCoverNames[i];
         SelectHydroUnitBrick(name);
 
         if (type == "glacier") {

@@ -361,7 +361,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     // From hydro unit to basin: weight by hydro unit area
                     flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
 
-                    // If surface component: weight by surface area
+                    // Weight by surface area
                     if (brick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }

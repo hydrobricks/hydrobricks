@@ -177,7 +177,7 @@ int Hydrobricks::OnRun() {
             return 1;
         }
 
-        // Assign surface fraction
+        // Assign fraction
         if (!subBasin.AssignFractions(basinSettings)) {
             return 1;
         }

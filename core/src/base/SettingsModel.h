@@ -68,7 +68,7 @@ class SettingsModel : public wxObject {
 
     ~SettingsModel() override;
 
-    bool GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb = 1,
+    bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
                                  const std::string& surfaceRunoff = "socont-runoff");
 
     void SetSolver(const std::string& solverName);
@@ -268,9 +268,9 @@ class SettingsModel : public wxObject {
     ProcessSettings* m_selectedProcess;
     SplitterSettings* m_selectedSplitter;
 
-    vecStr ParseSurfaceNames(const YAML::Node& settings);
+    vecStr ParseLandCoverNames(const YAML::Node& settings);
 
-    vecStr ParseSurfaceTypes(const YAML::Node& settings);
+    vecStr ParseLandCoverTypes(const YAML::Node& settings);
 
     std::string ParseSolver(const YAML::Node& settings);
 

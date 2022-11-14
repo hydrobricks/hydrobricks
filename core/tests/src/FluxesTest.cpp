@@ -22,7 +22,7 @@ class FluxWeightedModel : public ::testing::Test {
         // Precipitation
         m_model.GeneratePrecipitationSplitters(false);
 
-        // Surface elements and processes
+        // Land cover elements and processes
         m_model.AddLandCoverBrick("item-1", "GenericLandCover");
         m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
         m_model.AddLandCoverBrick("item-2", "GenericLandCover");
@@ -180,7 +180,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     }
 }
 
-TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
+TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item-1", "", 0.5);
@@ -214,26 +214,29 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricks) {
 
     // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    // [0] "item-1:content"
+    // [1] "item-1:outflow:output"
+    // [2] "item-2:content"
+    // [3] "item-2:outflow:output"
 
     vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput2 = {0.0, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 0.0, 0.0};
-    vecDouble expectedOutput3 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    vecDouble expectedOutput4 = {0.0, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 0.0, 0.0};
+    vecDouble expectedOutput3 = {0.0, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 0.0, 0.0};
 
     for (int j = 0; j < expectedOutput1.size(); ++j) {
         EXPECT_NEAR(unitContent[0](j, 0), expectedOutput1[j], 0.000001);
         EXPECT_NEAR(unitContent[1](j, 0), expectedOutput2[j], 0.000001);
-        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
-        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput3[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 0), expectedOutput1[j], 0.000001);
+        EXPECT_NEAR(unitContent[3](j, 0), expectedOutput2[j], 0.000001);
 
         EXPECT_NEAR(unitContent[0](j, 1), expectedOutput1[j], 0.000001);
-        EXPECT_NEAR(unitContent[1](j, 1), expectedOutput2[j], 0.000001);
-        EXPECT_NEAR(unitContent[2](j, 1), expectedOutput4[j], 0.000001);
-        EXPECT_NEAR(unitContent[3](j, 1), expectedOutput4[j], 0.000001);
+        EXPECT_NEAR(unitContent[1](j, 1), expectedOutput3[j], 0.000001);
+        EXPECT_NEAR(unitContent[2](j, 1), expectedOutput1[j], 0.000001);
+        EXPECT_NEAR(unitContent[3](j, 1), expectedOutput3[j], 0.000001);
     }
 }
 
-TEST_F(FluxWeightedModel, TwoUnitsWithTwoSurfaceBricksDifferentArea) {
+TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item-1", "", 2.0 / 3.0);

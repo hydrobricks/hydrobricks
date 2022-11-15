@@ -99,6 +99,7 @@ vecDouble Process::GetChangeRates() {
 
 void Process::StoreInOutgoingFlux(double* rate, int index) {
     wxASSERT(m_outputs.size() > index);
+    wxASSERT(rate);
     m_outputs[index]->LinkChangeRate(rate);
 }
 

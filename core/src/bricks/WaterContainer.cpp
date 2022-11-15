@@ -48,9 +48,7 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     double inputs = 0;
     double inputsStatic = 0;
     for (auto& input : m_inputs) {
-        if (input->IsForcing()) {
-            inputsStatic += input->GetAmount();
-        } else if (input->IsStatic()) {
+        if (input->IsForcing() || input->IsStatic()) {
             inputsStatic += input->GetAmount();
         } else {
             double* changeRate = input->GetChangeRatePointer();

@@ -74,6 +74,8 @@ class ModelHydro : public wxObject {
 
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);
 
+    void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
+
     void UpdateSubBasinParameters(SettingsModel& modelSettings);
 
     void UpdateHydroUnitsParameters(SettingsModel& modelSettings);

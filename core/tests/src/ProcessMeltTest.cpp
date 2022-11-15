@@ -181,46 +181,33 @@ class GlacierModelWithSnowpack : public ::testing::Test {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-08", 1, "Day");
 
+        // Precipitation
+        m_model.GeneratePrecipitationSplitters(true);
+
+        // Glacier brick
+        m_model.AddLandCoverBrick("glacier", "Glacier");
+
         // Snowpack brick
-        m_model.AddHydroUnitBrick("snowpack", "Snowpack");
+        m_model.GenerateSnowpacks("Melt:degree-day");
 
         // Snow melt process
-        m_model.AddBrickProcess("melt", "Melt:degree-day");
-        m_model.AddProcessForcing("Temperature");
+        m_model.SelectHydroUnitBrick("glacier-snowpack");
         m_model.AddProcessParameter("degreeDayFactor", 2.0f);
         m_model.AddProcessParameter("meltingTemperature", 0.0f);
         m_model.AddProcessLogging("output");
-        m_model.OutputProcessToSameBrick();
-        m_model.AddBrickProcess("meltwater", "Outflow:direct");
-        m_model.AddProcessOutput("glacier");
-        m_model.SetProcessOutputsAsInstantaneous();
-
-        // Glacier brick
-        m_model.AddHydroUnitBrick("glacier", "Glacier");
-        m_model.AddBrickParameter("noMeltWhenSnowCover", true);
-        m_model.AddBrickParameter("infiniteStorage", 1.0);
 
         // Glacier melt process
-        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.SelectHydroUnitBrick("glacier");
+        m_model.AddBrickProcess("melt", "Melt:degree-day", "outlet");
+        m_model.AddBrickParameter("noMeltWhenSnowCover", true);
+        m_model.AddBrickParameter("infiniteStorage", 1.0);
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 0.0f);
         m_model.AddProcessLogging("output");
-        m_model.OutputProcessToSameBrick();
 
         // Add process to direct meltwater to the outlet
-        m_model.AddBrickProcess("meltwater", "Outflow:direct");
-        m_model.AddProcessOutput("outlet");
-        m_model.AddProcessLogging("output");
-
-        // Rain/snow splitter
-        m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
-        m_model.AddSplitterForcing("Precipitation");
-        m_model.AddSplitterForcing("Temperature");
-        m_model.AddSplitterOutput("outlet");            // rain
-        m_model.AddSplitterOutput("snowpack", "snow");  // snow
-        m_model.AddSplitterParameter("transitionStart", 0.0f);
-        m_model.AddSplitterParameter("transitionEnd", 2.0f);
+        m_model.AddBrickProcess("meltwater", "Outflow:direct", "outlet", true);
 
         m_model.AddLoggingToItem("outlet");
 

@@ -20,6 +20,6 @@ void LandCover::SetAreaFraction(double value) {
     }
 }
 
-void LandCover::SurfaceComponentAdded(SurfaceComponent* brick) {
+void LandCover::SurfaceComponentAdded(SurfaceComponent*) {
     // Nothing to do.
 }

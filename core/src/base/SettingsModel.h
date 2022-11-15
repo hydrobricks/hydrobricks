@@ -54,10 +54,10 @@ struct BrickSettings {
 struct ModelStructure {
     int id;
     vecStr logItems;
-    std::vector<BrickSettings> landCoverBricks;
-    std::vector<BrickSettings> surfaceComponentBricks;
     std::vector<BrickSettings> hydroUnitBricks;
     std::vector<BrickSettings> subBasinBricks;
+    vecInt landCoverBricks;
+    vecInt surfaceComponentBricks;
     std::vector<SplitterSettings> hydroUnitSplitters;
     std::vector<SplitterSettings> subBasinSplitters;
 };
@@ -221,6 +221,22 @@ class SettingsModel : public wxObject {
     BrickSettings GetHydroUnitBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
         return m_selectedStructure->hydroUnitBricks[index];
+    }
+
+    BrickSettings GetSurfaceComponentBrickSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        int brickIndex = m_selectedStructure->surfaceComponentBricks[index];
+        return m_selectedStructure->hydroUnitBricks[brickIndex];
+    }
+
+    vecInt GetSurfaceComponentBricksIndices() const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->surfaceComponentBricks;
+    }
+
+    vecInt GetLandCoverBricksIndices() const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->landCoverBricks;
     }
 
     BrickSettings GetSubBasinBrickSettings(int index) const {

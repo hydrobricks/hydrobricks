@@ -88,8 +88,8 @@ void SettingsModel::AddLandCoverBrick(const std::string& name, const std::string
     brick.name = name;
     brick.type = type;
 
-    m_selectedStructure->landCoverBricks.push_back(brick);
     AddHydroUnitBrick(name, type);
+    m_selectedStructure->landCoverBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 
     if (SelectHydroUnitSplitterIfFound("rain-splitter")) {
         AddSplitterOutput(brick.name);
@@ -103,8 +103,8 @@ void SettingsModel::AddSurfaceComponentBrick(const std::string& name, const std:
     brick.name = name;
     brick.type = type;
 
-    m_selectedStructure->surfaceComponentBricks.push_back(brick);
     AddHydroUnitBrick(name, type);
+    m_selectedStructure->surfaceComponentBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 }
 
 void SettingsModel::SetSurfaceComponentParent(const std::string& name) {
@@ -396,7 +396,8 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
 void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
     wxASSERT(m_selectedStructure);
 
-    for (const auto& brickSettings : m_selectedStructure->landCoverBricks) {
+    for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
+        BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
@@ -421,7 +422,8 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowM
                                                         const std::string& outflowProcess) {
     wxASSERT(m_selectedStructure);
 
-    for (const auto& brickSettings : m_selectedStructure->landCoverBricks) {
+    for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
+        BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow-splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
@@ -773,7 +775,8 @@ bool SettingsModel::ParseParameters(const std::string& path) {
                             throw ShouldNotHappen();
                         } else {
                             if (nameL1 == "snowpack") {
-                                for (const auto& brickSettings : m_selectedStructure->landCoverBricks) {
+                                for (int index : m_selectedStructure->landCoverBricks) {
+                                    BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
                                     SelectHydroUnitBrick(brickSettings.name + "-snowpack");
                                     SelectProcess(nameL2);
                                     SetProcessParameterValue(nameL3, paramValue);
@@ -796,7 +799,8 @@ bool SettingsModel::ParseParameters(const std::string& path) {
                         SetSplitterParameterValue(nameL2, paramValue);
                     } else {
                         if (nameL1 == "snowpack") {
-                            for (const auto& brickSettings : m_selectedStructure->landCoverBricks) {
+                            for (int index : m_selectedStructure->landCoverBricks) {
+                                BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
                                 SelectHydroUnitBrick(brickSettings.name + "-snowpack");
                                 SelectProcessWithParameter(nameL2);
                                 SetProcessParameterValue(nameL2, paramValue);
@@ -846,7 +850,8 @@ bool SettingsModel::SetParameter(const std::string& component, const std::string
         return true;
     } else {
         if (component == "snowpack") {
-            for (const auto& brickSettings : m_selectedStructure->landCoverBricks) {
+            for (int index : m_selectedStructure->landCoverBricks) {
+                BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
                 SelectHydroUnitBrick(brickSettings.name + "-snowpack");
                 SelectProcessWithParameter(name);
                 SetProcessParameterValue(name, value);
@@ -943,7 +948,6 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         if (type == "glacier") {
             // Direct rain and snow melt to linear storage
             SelectHydroUnitBrick(name);
-            AddBrickLogging("ice");
             AddBrickProcess("outflow-rain-snowmelt", "Outflow:direct", "glacier-area-rain-snowmelt-storage");
 
             // Glacier melt process

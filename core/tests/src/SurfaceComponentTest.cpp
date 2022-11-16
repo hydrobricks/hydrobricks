@@ -48,7 +48,7 @@ class GlacierComponentModel : public ::testing::Test {
         m_model.SelectHydroUnitBrick("glacier");
         m_model.AddBrickParameter("noMeltWhenSnowCover", 1.0);
         m_model.AddBrickParameter("infiniteStorage", 1.0);
-        m_model.AddBrickProcess("melt", "Melt:degree-day", "outlet");
+        m_model.AddBrickProcess("melt", "Melt:degree-day", "glacier");
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 4.0f);
         m_model.AddProcessParameter("meltingTemperature", 1.0f);
@@ -125,7 +125,7 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     vecDouble expectedNull = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
     vecDouble expectedSnowMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
-    vecDouble expectedIceMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 14.0, 16.0};
+    vecDouble expectedIceMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 28.0, 32.0};
 
     for (int j = 0; j < expectedSWE.size(); ++j) {
         EXPECT_NEAR(unitContent[5](j, 0), expectedSWE[j], 0.000001);        // ground-snowpack-snow

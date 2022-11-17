@@ -1,12 +1,12 @@
-#ifndef HYDROBRICKS_VEGETATION_H
-#define HYDROBRICKS_VEGETATION_H
+#ifndef HYDROBRICKS_GENERIC_LAND_COVER_H
+#define HYDROBRICKS_GENERIC_LAND_COVER_H
 
 #include "Includes.h"
 #include "LandCover.h"
 
-class Vegetation : public LandCover {
+class GenericLandCover : public LandCover {
   public:
-    Vegetation();
+    GenericLandCover();
 
     /**
      * @copydoc Brick::AssignParameters()
@@ -21,4 +21,4 @@ class Vegetation : public LandCover {
   private:
 };
 
-#endif  // HYDROBRICKS_VEGETATION_H
+#endif  // HYDROBRICKS_GENERIC_LAND_COVER_H

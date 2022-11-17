@@ -1,11 +1,10 @@
 #include "Brick.h"
 
-#include "GenericSurface.h"
+#include "GenericLandCover.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
 #include "Storage.h"
-#include "Surface.h"
 #include "Urban.h"
 #include "Vegetation.h"
 
@@ -22,18 +21,16 @@ Brick::~Brick() {
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
     if (brickSettings.type == "Storage") {
         return new Storage();
-    } else if (brickSettings.type == "Surface") {
-        return new Surface();
-    } else if (brickSettings.type == "GenericSurface") {
-        return new GenericSurface();
+    } else if (brickSettings.type == "GenericLandCover") {
+        return new GenericLandCover();
     } else if (brickSettings.type == "Glacier") {
         return new Glacier();
-    } else if (brickSettings.type == "Snowpack") {
-        return new Snowpack();
     } else if (brickSettings.type == "Urban") {
         return new Urban();
     } else if (brickSettings.type == "Vegetation") {
         return new Vegetation();
+    } else if (brickSettings.type == "Snowpack") {
+        return new Snowpack();
     } else {
         wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
     }
@@ -53,13 +50,16 @@ void Brick::SaveAsInitialState() {
 }
 
 bool Brick::IsOk() {
+    if (m_processes.empty()) {
+        wxLogError(_("The brick %s has no process attached"), m_name);
+        return false;
+    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;
         }
     }
-
-    return true;
+    return m_container->IsOk();
 }
 
 void Brick::AssignParameters(const BrickSettings& brickSettings) {
@@ -110,8 +110,8 @@ void Brick::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Brick::ApplyConstraints(double timeStep, bool inSolver) {
-    m_container->ApplyConstraints(timeStep, inSolver);
+void Brick::ApplyConstraints(double timeStep) {
+    m_container->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {

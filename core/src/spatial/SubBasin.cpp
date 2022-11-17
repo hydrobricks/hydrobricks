@@ -1,5 +1,6 @@
 #include "SubBasin.h"
 
+#include "LandCover.h"
 #include "SurfaceComponent.h"
 
 SubBasin::SubBasin()
@@ -43,10 +44,19 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
         for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
-            for (int iElement = 0; iElement < basinSettings.GetSurfaceElementsNb(); ++iElement) {
-                SurfaceElementSettings elementSettings = basinSettings.GetSurfaceElementSettings(iElement);
+            for (int iElement = 0; iElement < basinSettings.GetLandCoversNb(); ++iElement) {
+                LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
+
+                auto brick = dynamic_cast<LandCover*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                wxASSERT(brick);
+                brick->SetAreaFraction(elementSettings.fraction);
+            }
+
+            for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentsNb(); ++iElement) {
+                SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                wxASSERT(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
         }

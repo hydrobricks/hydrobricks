@@ -11,6 +11,21 @@ WaterContainer::WaterContainer(Brick* brick)
       m_parent(brick),
       m_overflow(nullptr) {}
 
+bool WaterContainer::IsOk() {
+    if (m_inputs.empty()) {
+        return true;
+    }
+
+    for (auto process : GetParentBrick()->GetProcesses()) {
+        if (process->GetWaterContainer() == this) {
+            return true;
+        }
+    }
+    wxLogError(_("The water container of the brick %s has no process attached."), GetParentBrick()->GetName());
+
+    return false;
+}
+
 void WaterContainer::SubtractAmount(double change) {
     if (m_infiniteStorage) return;
     m_contentChange -= change;
@@ -21,7 +36,7 @@ void WaterContainer::AddAmount(double change) {
     m_contentChange += change;
 }
 
-void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
+void WaterContainer::ApplyConstraints(double timeStep) {
     if (m_infiniteStorage) return;
 
     // Get outgoing change rates
@@ -49,9 +64,7 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     double inputs = 0;
     double inputsStatic = 0;
     for (auto& input : m_inputs) {
-        if (input->IsForcing()) {
-            inputsStatic += input->GetAmount();
-        } else if (input->IsStatic()) {
+        if (input->IsForcing() || input->IsStatic()) {
             inputsStatic += input->GetAmount();
         } else {
             double* changeRate = input->GetChangeRatePointer();
@@ -67,14 +80,8 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     }
 
     double change = inputs - outputs;
-    double content = 0;
 
-    if (inSolver) {
-        content = GetContentWithChanges();
-    } else {
-        // If not in solver, we might count the inputs twice.
-        content = GetContentWithoutChanges();
-    }
+    double content = GetContentWithChanges();
 
     // Avoid negative content
     if (change < 0 && content + inputsStatic + change * timeStep < 0) {
@@ -160,6 +167,10 @@ double WaterContainer::SumIncomingFluxes() {
     }
 
     return sum;
+}
+
+bool WaterContainer::ContentAccessible() const {
+    return GetContentWithChanges() > 0;
 }
 
 vecDoublePt WaterContainer::GetStateVariableChanges() {

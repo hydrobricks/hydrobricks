@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_SURFACE_COMPONENT_H
-#define HYDROBRICKS_SURFACE_COMPONENT_H
+#ifndef HYDROBRICKS_BASE_LAND_COVER_H
+#define HYDROBRICKS_BASE_LAND_COVER_H
 
 #include "Brick.h"
 #include "Includes.h"
-#include "LandCover.h"
 
 class HydroUnit;
+class SurfaceComponent;
 
-class SurfaceComponent : public Brick {
+class LandCover : public Brick {
   public:
-    SurfaceComponent();
+    LandCover();
 
     bool CanHaveAreaFraction() override {
         return true;
@@ -21,20 +21,16 @@ class SurfaceComponent : public Brick {
 
     void SetAreaFraction(double value);
 
+    virtual void SurfaceComponentAdded(SurfaceComponent* brick);
+
     bool IsNull() override {
         return m_areaFraction <= PRECISION;
     }
 
-    virtual void SetParent(LandCover* parent) {
-        m_parent = parent;
-        m_parent->SurfaceComponentAdded(this);
-    }
-
   protected:
-    LandCover* m_parent;
     double m_areaFraction;
 
   private:
 };
 
-#endif  // HYDROBRICKS_SURFACE_COMPONENT_H
+#endif  // HYDROBRICKS_BASE_LAND_COVER_H

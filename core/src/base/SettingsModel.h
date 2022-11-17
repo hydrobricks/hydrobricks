@@ -44,8 +44,8 @@ struct SplitterSettings {
 struct BrickSettings {
     std::string name;
     std::string type;
+    std::string parent;
     vecStr logItems;
-    vecStr relatedSurfaceBricks;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
     std::vector<ProcessSettings> processes;
@@ -54,9 +54,10 @@ struct BrickSettings {
 struct ModelStructure {
     int id;
     vecStr logItems;
-    std::vector<BrickSettings> surfaceBricks;
     std::vector<BrickSettings> hydroUnitBricks;
     std::vector<BrickSettings> subBasinBricks;
+    vecInt landCoverBricks;
+    vecInt surfaceComponentBricks;
     std::vector<SplitterSettings> hydroUnitSplitters;
     std::vector<SplitterSettings> subBasinSplitters;
 };
@@ -67,20 +68,22 @@ class SettingsModel : public wxObject {
 
     ~SettingsModel() override;
 
-    bool GenerateStructureSocont(vecStr& surfaceTypes, vecStr& surfaceNames, int soilStorageNb = 1,
+    bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
                                  const std::string& surfaceRunoff = "socont-runoff");
 
     void SetSolver(const std::string& solverName);
 
     void SetTimer(const std::string& start, const std::string& end, int timeStep, const std::string& timeStepUnit);
 
-    void AddHydroUnitBrick(const std::string& name, const std::string& type);
+    void AddHydroUnitBrick(const std::string& name, const std::string& type = "Storage");
 
-    void AddSubBasinBrick(const std::string& name, const std::string& type);
+    void AddSubBasinBrick(const std::string& name, const std::string& type = "Storage");
 
-    void AddSurfaceBrick(const std::string& name, const std::string& type);
+    void AddLandCoverBrick(const std::string& name, const std::string& type);
 
-    void AddToRelatedSurfaceBrick(const std::string& name);
+    void AddSurfaceComponentBrick(const std::string& name, const std::string& type);
+
+    void SetSurfaceComponentParent(const std::string& name);
 
     void AddBrickParameter(const std::string& name, float value, const std::string& type = "Constant");
 
@@ -90,7 +93,8 @@ class SettingsModel : public wxObject {
 
     void AddBrickForcing(const std::string& name);
 
-    void AddBrickProcess(const std::string& name, const std::string& type);
+    void AddBrickProcess(const std::string& name, const std::string& type, const std::string& target = "",
+                         bool log = false);
 
     void AddProcessParameter(const std::string& name, float value, const std::string& type = "Constant");
 
@@ -118,7 +122,11 @@ class SettingsModel : public wxObject {
 
     void AddLoggingToItem(const std::string& itemName);
 
+    void AddLoggingToItems(std::initializer_list<const std::string> items);
+
     void AddBrickLogging(const std::string& itemName);
+
+    void AddBrickLogging(std::initializer_list<const std::string> items);
 
     void AddProcessLogging(const std::string& itemName);
 
@@ -129,10 +137,6 @@ class SettingsModel : public wxObject {
     void GenerateSnowpacks(const std::string& snowMeltProcess);
 
     void GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess, const std::string& outflowProcess);
-
-    void GenerateSurfaceComponentBricks(bool withSnow);
-
-    void GenerateSurfaceBricks();
 
     bool SelectStructure(int id);
 
@@ -186,6 +190,11 @@ class SettingsModel : public wxObject {
         return int(m_selectedStructure->subBasinBricks.size());
     }
 
+    int GetSurfaceComponentBricksNb() const {
+        wxASSERT(m_selectedStructure);
+        return int(m_selectedStructure->surfaceComponentBricks.size());
+    }
+
     int GetProcessesNb() const {
         wxASSERT(m_selectedBrick);
         return int(m_selectedBrick->processes.size());
@@ -212,6 +221,22 @@ class SettingsModel : public wxObject {
     BrickSettings GetHydroUnitBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
         return m_selectedStructure->hydroUnitBricks[index];
+    }
+
+    BrickSettings GetSurfaceComponentBrickSettings(int index) const {
+        wxASSERT(m_selectedStructure);
+        int brickIndex = m_selectedStructure->surfaceComponentBricks[index];
+        return m_selectedStructure->hydroUnitBricks[brickIndex];
+    }
+
+    vecInt GetSurfaceComponentBricksIndices() const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->surfaceComponentBricks;
+    }
+
+    vecInt GetLandCoverBricksIndices() const {
+        wxASSERT(m_selectedStructure);
+        return m_selectedStructure->landCoverBricks;
     }
 
     BrickSettings GetSubBasinBrickSettings(int index) const {
@@ -259,9 +284,9 @@ class SettingsModel : public wxObject {
     ProcessSettings* m_selectedProcess;
     SplitterSettings* m_selectedSplitter;
 
-    vecStr ParseSurfaceNames(const YAML::Node& settings);
+    vecStr ParseLandCoverNames(const YAML::Node& settings);
 
-    vecStr ParseSurfaceTypes(const YAML::Node& settings);
+    vecStr ParseLandCoverTypes(const YAML::Node& settings);
 
     std::string ParseSolver(const YAML::Node& settings);
 

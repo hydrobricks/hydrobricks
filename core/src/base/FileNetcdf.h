@@ -208,6 +208,15 @@ class FileNetcdf : public wxObject {
     void PutVar(int varId, const vecAxxd& values);
 
     /**
+     * Check if an attribute exists.
+     *
+     * @param attName The attribute name.
+     * @param varName The variable name. If empty, search in the global attributes.
+     * @return True if the attribute exists, false otherwise.
+     */
+    bool HasAtt(const std::string& attName, const std::string& varName = "");
+
+    /**
      * Get a string vector stored as an attribute.
      *
      * @param attName The attribute name.

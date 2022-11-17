@@ -7,6 +7,7 @@
 #include "FluxToBrickInstantaneous.h"
 #include "FluxToOutlet.h"
 #include "Includes.h"
+#include "LandCover.h"
 #include "SurfaceComponent.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
@@ -117,33 +118,28 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
 
-        // Create the bricks for the hydro unit
+        vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
+        vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
+
+        // Create the surface component bricks
+        for (int iBrick : surfaceCompIndices) {
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
+        }
+
+        // Create the land cover bricks
+        for (int iBrick : landCoversIndices) {
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
+        }
+
+        // Create the other bricks
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
-            modelSettings.SelectHydroUnitBrick(iBrick);
-            BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
-
-            Brick* brick = Brick::Factory(brickSettings);
-            brick->SetName(brickSettings.name);
-            brick->AssignParameters(brickSettings);
-            unit->AddBrick(brick);
-
-            BuildForcingConnections(brickSettings, unit, brick);
-
-            // Create the processes
-            for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
-                modelSettings.SelectProcess(iProcess);
-                ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
-
-                Process* process = Process::Factory(processSettings, brick);
-                process->SetName(processSettings.name);
-                brick->AddProcess(process);
-
-                if (processSettings.type == "Overflow") {
-                    brick->GetWaterContainer()->LinkOverflow(process);
-                }
-
-                BuildForcingConnections(processSettings, unit, process);
+            if (std::find(surfaceCompIndices.begin(), surfaceCompIndices.end(), iBrick) != surfaceCompIndices.end()) {
+                continue;
             }
+            if (std::find(landCoversIndices.begin(), landCoversIndices.end(), iBrick) != landCoversIndices.end()) {
+                continue;
+            }
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
         }
 
         // Create the splitters
@@ -158,10 +154,38 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             BuildForcingConnections(splitterSettings, unit, splitter);
         }
 
-        LinkRelatedSurfaceBricks(modelSettings, unit);
+        LinkSurfaceComponentsParents(modelSettings, unit);
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);
         BuildHydroUnitSplittersFluxes(modelSettings, unit);
+    }
+}
+
+void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick) {
+    modelSettings.SelectHydroUnitBrick(iBrick);
+    BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+
+    Brick* brick = Brick::Factory(brickSettings);
+    brick->SetName(brickSettings.name);
+    brick->AssignParameters(brickSettings);
+    unit->AddBrick(brick);
+
+    BuildForcingConnections(brickSettings, unit, brick);
+
+    // Create the processes
+    for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+        modelSettings.SelectProcess(iProcess);
+        ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+
+        Process* process = Process::Factory(processSettings, brick);
+        process->SetName(processSettings.name);
+        brick->AddProcess(process);
+
+        if (processSettings.type == "Overflow") {
+            brick->GetWaterContainer()->LinkOverflow(process);
+        }
+
+        BuildForcingConnections(processSettings, unit, process);
     }
 }
 
@@ -199,7 +223,7 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
-            Brick* brick = unit->GetBrick(iBrick);
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             brick->AssignParameters(brickSettings);
 
             // Update the processes
@@ -221,15 +245,15 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
     }
 }
 
-void ModelHydro::LinkRelatedSurfaceBricks(SettingsModel& modelSettings, HydroUnit* unit) {
-    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
-        BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
-        if (!brickSettings.relatedSurfaceBricks.empty()) {
-            auto brick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(iBrick));
-            for (const auto& relatedSurfaceBrick : brickSettings.relatedSurfaceBricks) {
-                auto relatedBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(relatedSurfaceBrick));
-                brick->AddToRelatedBricks(relatedBrick);
-            }
+void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSurfaceComponentBricksNb(); ++iBrick) {
+        BrickSettings brickSettings = modelSettings.GetSurfaceComponentBrickSettings(iBrick);
+        if (!brickSettings.parent.empty()) {
+            auto surfaceComponentBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(brickSettings.name));
+            auto landCoverBrick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.parent));
+            wxASSERT(surfaceComponentBrick);
+            wxASSERT(landCoverBrick);
+            surfaceComponentBrick->SetParent(landCoverBrick);
         }
     }
 }
@@ -260,7 +284,7 @@ void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            Brick* brick = unit->GetBrick(iBrick);
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             Process* process = brick->GetProcess(iProcess);
 
             if (process->NeedsTargetBrickLinking()) {
@@ -342,7 +366,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Flux* flux = nullptr;
-            Brick* brick = unit->GetBrick(iBrick);
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             Process* process = brick->GetProcess(iProcess);
 
             // Water goes to the atmosphere (ET)
@@ -362,8 +386,8 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     // From hydro unit to basin: weight by hydro unit area
                     flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
 
-                    // If surface component: weight by surface area
-                    if (brick->IsSurfaceComponent()) {
+                    // Weight by surface area
+                    if (brick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
                     m_subBasin->AttachOutletFlux(flux);
@@ -390,7 +414,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetType(output.fluxType);
 
                     // If leaves surface components: weight by surface area
-                    if (brick->IsSurfaceComponent() && !targetBrick->IsSurfaceComponent()) {
+                    if (brick->CanHaveAreaFraction() && !targetBrick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
 
@@ -420,7 +444,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetAsStatic();
 
                     // If coming from a surface component: weight by surface area
-                    if (brick->IsSurfaceComponent()) {
+                    if (brick->CanHaveAreaFraction()) {
                         flux->NeedsWeighting(true);
                     }
 
@@ -673,9 +697,11 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         for (const auto& logItem : brickSettings.logItems) {
             for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
                 HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-                valPt = unit->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
+                valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
+                            ->GetBaseValuePointer(logItem);
                 if (valPt == nullptr) {
-                    valPt = unit->GetBrick(iBrickType)->GetValuePointer(logItem);
+                    valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
+                                ->GetValuePointer(logItem);
                 }
                 if (valPt == nullptr) {
                     throw ShouldNotHappen();
@@ -692,7 +718,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
             for (const auto& logItem : processSettings.logItems) {
                 for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
                     HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-                    valPt = unit->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
+                    valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
+                                ->GetProcess(iProcess)
+                                ->GetValuePointer(logItem);
                     if (valPt == nullptr) {
                         throw ShouldNotHappen();
                     }

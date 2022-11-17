@@ -4,7 +4,7 @@
   "options": {
     "soil_storage_nb": 2
   },
-  "surfaces": {
+  "land_covers": {
     "names": [
       "ground",
       "glacier-ice",

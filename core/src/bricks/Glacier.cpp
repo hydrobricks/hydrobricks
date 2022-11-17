@@ -1,11 +1,9 @@
 #include "Glacier.h"
 
 Glacier::Glacier()
-    : SurfaceComponent(),
-      m_ice(nullptr),
-      m_noMeltWhenSnowCover(false),
-      m_snowpack(nullptr) {
-    m_ice = new WaterContainer(this);
+    : LandCover(),
+      m_ice(nullptr) {
+    m_ice = new IceContainer(this);
 }
 
 void Glacier::Reset() {
@@ -31,7 +29,7 @@ void Glacier::AssignParameters(const BrickSettings& brickSettings) {
     }
 
     if (HasParameter(brickSettings, "noMeltWhenSnowCover")) {
-        m_noMeltWhenSnowCover = GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover");
+        m_ice->SetNoMeltWhenSnowCover(GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover"));
     }
 }
 
@@ -44,6 +42,13 @@ void Glacier::AttachFluxIn(Flux* flux) {
     } else {
         throw ShouldNotHappen();
     }
+}
+
+bool Glacier::IsOk() {
+    if (!m_ice->IsOk()) {
+        return false;
+    }
+    return Brick::IsOk();
 }
 
 WaterContainer* Glacier::GetIceContainer() {
@@ -60,17 +65,9 @@ void Glacier::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
-    if (m_noMeltWhenSnowCover) {
-        if (m_snowpack == nullptr) {
-            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
-        }
-        if (m_snowpack->HasSnow()) {
-            m_ice->SetOutgoingRatesToZero();
-        }
-    }
-    m_ice->ApplyConstraints(timeStep, inSolver);
-    m_container->ApplyConstraints(timeStep, inSolver);
+void Glacier::ApplyConstraints(double timeStep) {
+    m_ice->ApplyConstraints(timeStep);
+    m_container->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Glacier::GetStateVariableChanges() {
@@ -93,9 +90,9 @@ double* Glacier::GetValuePointer(const std::string& name) {
     return nullptr;
 }
 
-void Glacier::AddToRelatedBricks(SurfaceComponent* brick) {
-    m_relatedBricks.push_back(brick);
-    if (m_noMeltWhenSnowCover && brick->IsSnowpack()) {
-        m_snowpack = dynamic_cast<Snowpack*>(brick);
+void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
+    if (brick->IsSnowpack()) {
+        auto snowpack = dynamic_cast<Snowpack*>(brick);
+        m_ice->SetRelatedSnowpack(snowpack);
     }
 }

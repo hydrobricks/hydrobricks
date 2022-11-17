@@ -4,10 +4,6 @@ SplitterMultiFluxes::SplitterMultiFluxes()
     : Splitter() {}
 
 bool SplitterMultiFluxes::IsOk() {
-    if (m_outputs.size() < 2) {
-        wxLogError(_("SplitterMultiFluxes should have at least 2 outputs."));
-        return false;
-    }
     if (m_outputs.empty()) {
         wxLogError(_("SplitterMultiFluxes has no input."));
         return false;

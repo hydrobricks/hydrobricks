@@ -41,6 +41,10 @@ void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
 }
 
 vecDouble ProcessMeltDegreeDay::GetRates() {
+    if (!m_container->ContentAccessible()) {
+        return {0};
+    }
+
     double melt = 0;
     if (m_temperature->GetValue() >= *m_meltingTemperature) {
         melt = (m_temperature->GetValue() - *m_meltingTemperature) * *m_degreeDayFactor;

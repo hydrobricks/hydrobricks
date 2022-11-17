@@ -1,11 +1,12 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include "IceContainer.h"
 #include "Includes.h"
+#include "LandCover.h"
 #include "Snowpack.h"
-#include "SurfaceComponent.h"
 
-class Glacier : public SurfaceComponent {
+class Glacier : public LandCover {
   public:
     Glacier();
 
@@ -18,7 +19,9 @@ class Glacier : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings& brickSettings) override;
 
-    void AttachFluxIn(Flux* flux);
+    void AttachFluxIn(Flux* flux) override;
+
+    bool IsOk() override;
 
     WaterContainer* GetIceContainer();
 
@@ -30,18 +33,16 @@ class Glacier : public SurfaceComponent {
 
     void UpdateContentFromInputs() override;
 
-    void ApplyConstraints(double timeStep, bool inSolver = true) override;
+    void ApplyConstraints(double timeStep) override;
 
     vecDoublePt GetStateVariableChanges() override;
 
     double* GetValuePointer(const std::string& name) override;
 
-    void AddToRelatedBricks(SurfaceComponent* brick) override;
+    void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
   protected:
-    WaterContainer* m_ice;
-    bool m_noMeltWhenSnowCover;
-    Snowpack* m_snowpack;
+    IceContainer* m_ice;
 
   private:
 };

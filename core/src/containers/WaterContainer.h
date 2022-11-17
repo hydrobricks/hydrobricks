@@ -10,11 +10,13 @@ class WaterContainer : public wxObject {
   public:
     WaterContainer(Brick* brick);
 
+    virtual bool IsOk();
+
     void SubtractAmount(double change);
 
     void AddAmount(double change);
 
-    void ApplyConstraints(double timeStep, bool inSolver = true);
+    virtual void ApplyConstraints(double timeSte);
 
     void SetOutgoingRatesToZero();
 
@@ -109,6 +111,8 @@ class WaterContainer : public wxObject {
      * @return sum of the water amount [mm]
      */
     virtual double SumIncomingFluxes();
+
+    virtual bool ContentAccessible() const;
 
     Brick* GetParentBrick() {
         return m_parent;

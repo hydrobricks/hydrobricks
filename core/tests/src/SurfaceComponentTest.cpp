@@ -5,10 +5,10 @@
 #include "TimeSeriesUniform.h"
 
 /**
- * Model: model with glacier and surface components
+ * Model: model with glacier and land cover components
  */
 
-class GlacierSurfaceComponentModel : public ::testing::Test {
+class GlacierComponentModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -17,72 +17,48 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
     void SetUp() override {
         m_model.SetSolver("HeunExplicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetLogAll(true);
 
-        // Surface elements
-        m_model.AddSurfaceBrick("ground", "GenericSurface");
-        m_model.AddSurfaceBrick("glacier", "Glacier");
+        // Precipitation
         m_model.GeneratePrecipitationSplitters(true);
-        m_model.GenerateSnowpacks("Melt:degree-day");
-        m_model.GenerateSurfaceComponentBricks(true);
-        m_model.GenerateSurfaceBricks();
 
-        // Transfer rain to surface
-        m_model.SelectHydroUnitBrick("ground");
-        m_model.AddBrickProcess("outflow-rain", "Outflow:direct");
-        m_model.AddProcessOutput("ground-surface");
-        m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickProcess("outflow-rain", "Outflow:direct");
-        m_model.AddProcessOutput("glacier-surface");
+        // Land cover elements
+        m_model.AddLandCoverBrick("ground", "GenericLandCover");
+        m_model.AddLandCoverBrick("glacier", "Glacier");
+        m_model.GenerateSnowpacks("Melt:degree-day");
 
         // Rain/snow splitter
         m_model.SelectHydroUnitSplitter("snow-rain-transition");
         m_model.AddSplitterParameter("transitionStart", 0.0f);
         m_model.AddSplitterParameter("transitionEnd", 2.0f);
 
-        // Snowpack brick on surface 1
+        // Snow melt process on ground
         m_model.SelectHydroUnitBrick("ground-snowpack");
-        m_model.AddBrickLogging("snow");
-        m_model.AddBrickLogging("content");
-
-        // Snow melt process
         m_model.SelectProcess("melt");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 2.0f);
-        m_model.AddProcessLogging("output");
 
-        // Snowpack brick on surface 2
+        // Snow melt process on glacier
         m_model.SelectHydroUnitBrick("glacier-snowpack");
-        m_model.AddBrickLogging("snow");
-        m_model.AddBrickLogging("content");
-
-        // Snow melt process
         m_model.SelectProcess("melt");
         m_model.AddProcessParameter("degreeDayFactor", 3.0f);
         m_model.AddProcessParameter("meltingTemperature", 2.0f);
-        m_model.AddProcessLogging("output");
 
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier");
         m_model.AddBrickParameter("noMeltWhenSnowCover", 1.0);
         m_model.AddBrickParameter("infiniteStorage", 1.0);
-        m_model.AddBrickProcess("melt", "Melt:degree-day");
+        m_model.AddBrickProcess("melt", "Melt:degree-day", "glacier");
         m_model.AddProcessForcing("Temperature");
         m_model.AddProcessParameter("degreeDayFactor", 4.0f);
         m_model.AddProcessParameter("meltingTemperature", 1.0f);
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("glacier-surface");
+        m_model.SetProcessOutputsAsInstantaneous();
+        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.SetProcessOutputsAsInstantaneous();
 
-        // Surface brick for the bare ground with a direct outflow
-        m_model.SelectHydroUnitBrick("ground-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
-
-        // Surface brick for the glacier part with a direct outflow
-        m_model.SelectHydroUnitBrick("glacier-surface");
-        m_model.AddBrickProcess("outflow", "Outflow:direct");
-        m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("outlet");
+        // Land cover brick for the bare ground with a direct outflow
+        m_model.SelectHydroUnitBrick("ground");
+        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
 
         m_model.AddLoggingToItem("outlet");
 
@@ -102,11 +78,11 @@ class GlacierSurfaceComponentModel : public ::testing::Test {
     }
 };
 
-TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
+TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddSurfaceElement("ground", "", 0.5);
-    basinSettings.AddSurfaceElement("glacier", "", 0.5);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -136,20 +112,37 @@ TEST_F(GlacierSurfaceComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
 
     // Check components
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    // [0] "ground:content"
+    // [1] "ground:outflow:output"
+    // [2] "glacier:content"
+    // [3] "glacier:melt:output"
+    // [4] "glacier:outflow:output"
+    // [5] "ground-snowpack:content"
+    // [6] "ground-snowpack:snow"
+    // [7] "ground-snowpack:melt:output"
+    // [8] "glacier-snowpack:content"
+    // [9] "glacier-snowpack:snow"
+    // [10] "glacier-snowpack:melt:output"
 
     vecDouble expectedNull = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
     vecDouble expectedSnowMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
     vecDouble expectedIceMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 28.0, 32.0};
-    vecDouble expectedTotGlacierContrib = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 35.0, 32.0};
+    // Contributions fractionated:
+    vecDouble expectedGroundOut = {0.0, 0.0, 0.0, 2.5, 5.0, 6.5, 8.0, 9.5, 8.5, 0.0};
+    vecDouble expectedGlacierOut = {0.0, 0.0, 0.0, 2.5, 5.0, 6.5, 8.0, 9.5, 22.5, 16.0};
 
     for (int j = 0; j < expectedSWE.size(); ++j) {
-        EXPECT_NEAR(unitContent[0](j, 0), expectedSWE[j], 0.000001);       // ground-snowpack-snow
-        EXPECT_NEAR(unitContent[1](j, 0), expectedNull[j], 0.000001);      // ground-snowpack-content (water)
-        EXPECT_NEAR(unitContent[2](j, 0), expectedSnowMelt[j], 0.000001);  // ground-snowmelt
-        EXPECT_NEAR(unitContent[3](j, 0), expectedSWE[j], 0.000001);       // glacier-snowpack-snow
-        EXPECT_NEAR(unitContent[4](j, 0), expectedNull[j], 0.000001);      // glacier-snowpack-content (water)
-        EXPECT_NEAR(unitContent[5](j, 0), expectedSnowMelt[j], 0.000001);  // glacier-snowmelt
-        EXPECT_NEAR(unitContent[6](j, 0), expectedIceMelt[j], 0.000001);   // glacier-icemelt
+        EXPECT_NEAR(unitContent[0](j, 0), expectedNull[j], 0.000001);        // ground:content (direct flow)
+        EXPECT_NEAR(unitContent[1](j, 0), expectedGroundOut[j], 0.000001);   // ground:outflow:output
+        EXPECT_NEAR(unitContent[2](j, 0), expectedNull[j], 0.000001);        // glacier:content (direct flow)
+        EXPECT_NEAR(unitContent[3](j, 0), expectedIceMelt[j], 0.000001);     // glacier:melt:output
+        EXPECT_NEAR(unitContent[4](j, 0), expectedGlacierOut[j], 0.000001);  // glacier:outflow:output
+        EXPECT_NEAR(unitContent[5](j, 0), expectedNull[j], 0.000001);        // ground-snowpack:content (water)
+        EXPECT_NEAR(unitContent[6](j, 0), expectedSWE[j], 0.000001);         // ground-snowpack:snow
+        EXPECT_NEAR(unitContent[7](j, 0), expectedSnowMelt[j], 0.000001);    // ground-snowpack:melt:output
+        EXPECT_NEAR(unitContent[8](j, 0), expectedNull[j], 0.000001);        // glacier-snowpack:content (water)
+        EXPECT_NEAR(unitContent[9](j, 0), expectedSWE[j], 0.000001);         // glacier-snowpack:snow
+        EXPECT_NEAR(unitContent[10](j, 0), expectedSnowMelt[j], 0.000001);   // glacier-snowpack:melt:output
     }
 }

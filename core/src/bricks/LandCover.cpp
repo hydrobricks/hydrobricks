@@ -1,24 +1,25 @@
-#include "SurfaceComponent.h"
-
-#include "HydroUnit.h"
 #include "LandCover.h"
 
-SurfaceComponent::SurfaceComponent()
+#include "HydroUnit.h"
+#include "SurfaceComponent.h"
+
+LandCover::LandCover()
     : Brick(),
-      m_parent(nullptr),
       m_areaFraction(1.0) {
     m_needsSolver = false;
 }
 
-void SurfaceComponent::SetAreaFraction(double value) {
-    wxASSERT(m_parent);
+void LandCover::SetAreaFraction(double value) {
     m_areaFraction = value;
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
-                value *= m_parent->GetAreaFraction();
                 output->MultiplyFraction(value);
             }
         }
     }
+}
+
+void LandCover::SurfaceComponentAdded(SurfaceComponent*) {
+    // Nothing to do.
 }

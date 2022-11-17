@@ -2,9 +2,9 @@
 #define HYDROBRICKS_URBAN_H
 
 #include "Includes.h"
-#include "SurfaceComponent.h"
+#include "LandCover.h"
 
-class Urban : public SurfaceComponent {
+class Urban : public LandCover {
   public:
     Urban();
 
@@ -13,7 +13,7 @@ class Urban : public SurfaceComponent {
      */
     void AssignParameters(const BrickSettings& brickSettings) override;
 
-    void ApplyConstraints(double timeStep, bool inSolver = true) override;
+    void ApplyConstraints(double timeStep) override;
 
     void Finalize() override;
 

@@ -39,10 +39,23 @@ Brick* Brick::Factory(const BrickSettings& brickSettings) {
 }
 
 bool Brick::IsOk() {
+    if (m_processes.empty()) {
+        wxLogError(_("The brick %s has no process attached"), m_name);
+        return false;
+    }
     for (auto process : m_processes) {
         if (!process->IsOk()) {
             return false;
         }
+    }
+    bool waterContainerHasOutput = false;
+    for (auto process : m_processes) {
+        if (process->GetWaterContainer() == m_container) {
+            waterContainerHasOutput = true;
+        }
+    }
+    if (!waterContainerHasOutput) {
+        wxLogWarning(_("The water container of the brick %s has no process attached."), m_name);
     }
 
     return true;

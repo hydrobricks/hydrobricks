@@ -413,7 +413,7 @@ void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
         }
 
         if (m_logAll) {
-            AddBrickLogging({"snow", "content"});
+            AddBrickLogging("snow");
         }
     }
 }

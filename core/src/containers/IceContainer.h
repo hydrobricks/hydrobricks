@@ -23,6 +23,8 @@ class IceContainer : public WaterContainer {
         m_relatedSnowpack = snowpack;
     }
 
+    bool ContentAccessible() const override;
+
   protected:
   private:
     bool m_noMeltWhenSnowCover;

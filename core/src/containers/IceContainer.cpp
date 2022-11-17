@@ -18,3 +18,15 @@ void IceContainer::ApplyConstraints(double timeStep, bool inSolver) {
     }
     WaterContainer::ApplyConstraints(timeStep, inSolver);
 }
+
+bool IceContainer::ContentAccessible() const {
+    if (m_noMeltWhenSnowCover) {
+        if (m_relatedSnowpack == nullptr) {
+            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
+        }
+        if (m_relatedSnowpack->HasSnow()) {
+            return false;
+        }
+    }
+    return WaterContainer::ContentAccessible();
+}

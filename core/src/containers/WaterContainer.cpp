@@ -150,6 +150,10 @@ double WaterContainer::SumIncomingFluxes() {
     return sum;
 }
 
+bool WaterContainer::ContentAccessible() const {
+    return GetContentWithChanges() > 0;
+}
+
 vecDoublePt WaterContainer::GetStateVariableChanges() {
     return vecDoublePt{&m_contentChange};
 }

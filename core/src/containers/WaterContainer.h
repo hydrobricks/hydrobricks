@@ -106,6 +106,8 @@ class WaterContainer : public wxObject {
      */
     virtual double SumIncomingFluxes();
 
+    virtual bool ContentAccessible() const;
+
     Brick* GetParentBrick() {
         return m_parent;
     }

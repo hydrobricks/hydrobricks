@@ -53,6 +53,7 @@ class GlacierComponentModel : public ::testing::Test {
         m_model.AddProcessParameter("degreeDayFactor", 4.0f);
         m_model.AddProcessParameter("meltingTemperature", 1.0f);
         m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.SetProcessOutputsAsInstantaneous();
 
         // Land cover brick for the bare ground with a direct outflow
         m_model.SelectHydroUnitBrick("ground");

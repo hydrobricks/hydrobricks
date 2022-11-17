@@ -22,6 +22,7 @@ list(
     "${CMAKE_SOURCE_DIR}/core/src/base"
     "${CMAKE_SOURCE_DIR}/core/src/behaviours"
     "${CMAKE_SOURCE_DIR}/core/src/bricks"
+    "${CMAKE_SOURCE_DIR}/core/src/containers"
     "${CMAKE_SOURCE_DIR}/core/src/fluxes"
     "${CMAKE_SOURCE_DIR}/core/src/processes"
     "${CMAKE_SOURCE_DIR}/core/src/spatial")

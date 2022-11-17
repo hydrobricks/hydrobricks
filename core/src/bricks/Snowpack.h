@@ -3,6 +3,7 @@
 
 #include "Includes.h"
 #include "SurfaceComponent.h"
+#include "SnowContainer.h"
 
 class Snowpack : public SurfaceComponent {
   public:
@@ -34,7 +35,7 @@ class Snowpack : public SurfaceComponent {
     bool HasSnow();
 
   protected:
-    WaterContainer* m_snow;
+    SnowContainer* m_snow;
 
   private:
 };

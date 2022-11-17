@@ -4,6 +4,7 @@
 #include "Includes.h"
 #include "LandCover.h"
 #include "Snowpack.h"
+#include "IceContainer.h"
 
 class Glacier : public LandCover {
   public:
@@ -35,9 +36,7 @@ class Glacier : public LandCover {
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
   protected:
-    WaterContainer* m_ice;
-    bool m_noMeltWhenSnowCover;
-    Snowpack* m_snowpack;
+    IceContainer* m_ice;
 
   private:
 };

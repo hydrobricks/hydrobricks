@@ -3,7 +3,7 @@
 Snowpack::Snowpack()
     : SurfaceComponent(),
       m_snow(nullptr) {
-    m_snow = new WaterContainer(this);
+    m_snow = new SnowContainer(this);
 }
 
 void Snowpack::AssignParameters(const BrickSettings& brickSettings) {

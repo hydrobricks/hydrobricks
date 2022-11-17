@@ -2,10 +2,8 @@
 
 Glacier::Glacier()
     : LandCover(),
-      m_ice(nullptr),
-      m_noMeltWhenSnowCover(false),
-      m_snowpack(nullptr) {
-    m_ice = new WaterContainer(this);
+      m_ice(nullptr) {
+    m_ice = new IceContainer(this);
 }
 
 void Glacier::AssignParameters(const BrickSettings& brickSettings) {
@@ -21,7 +19,7 @@ void Glacier::AssignParameters(const BrickSettings& brickSettings) {
     }
 
     if (HasParameter(brickSettings, "noMeltWhenSnowCover")) {
-        m_noMeltWhenSnowCover = GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover");
+        m_ice->SetNoMeltWhenSnowCover(GetParameterValuePointer(brickSettings, "noMeltWhenSnowCover"));
     }
 }
 
@@ -51,14 +49,6 @@ void Glacier::UpdateContentFromInputs() {
 }
 
 void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
-    if (m_noMeltWhenSnowCover) {
-        if (m_snowpack == nullptr) {
-            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
-        }
-        if (m_snowpack->HasSnow()) {
-            m_ice->SetOutgoingRatesToZero();
-        }
-    }
     m_ice->ApplyConstraints(timeStep, inSolver);
     m_container->ApplyConstraints(timeStep, inSolver);
 }
@@ -84,7 +74,8 @@ double* Glacier::GetValuePointer(const std::string& name) {
 }
 
 void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
-    if (m_noMeltWhenSnowCover && brick->IsSnowpack()) {
-        m_snowpack = dynamic_cast<Snowpack*>(brick);
+    if (brick->IsSnowpack()) {
+        auto snowpack = dynamic_cast<Snowpack*>(brick);
+        m_ice->SetRelatedSnowpack(snowpack);
     }
 }

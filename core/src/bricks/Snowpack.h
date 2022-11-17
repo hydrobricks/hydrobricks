@@ -2,8 +2,8 @@
 #define HYDROBRICKS_SNOWPACK_H
 
 #include "Includes.h"
-#include "SurfaceComponent.h"
 #include "SnowContainer.h"
+#include "SurfaceComponent.h"
 
 class Snowpack : public SurfaceComponent {
   public:
@@ -16,6 +16,8 @@ class Snowpack : public SurfaceComponent {
 
     void AttachFluxIn(Flux* flux) override;
 
+    bool IsOk() override;
+
     WaterContainer* GetSnowContainer();
 
     bool IsSnowpack() override {
@@ -26,7 +28,7 @@ class Snowpack : public SurfaceComponent {
 
     void UpdateContentFromInputs() override;
 
-    void ApplyConstraints(double timeStep, bool inSolver = true) override;
+    void ApplyConstraints(double timeStep, bool inSolver) override;
 
     vecDoublePt GetStateVariableChanges() override;
 

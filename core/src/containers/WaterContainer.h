@@ -10,6 +10,8 @@ class WaterContainer : public wxObject {
   public:
     WaterContainer(Brick* brick);
 
+    virtual bool IsOk();
+
     void SubtractAmount(double change);
 
     void AddAmount(double change);

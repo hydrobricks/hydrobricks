@@ -34,6 +34,13 @@ void Glacier::AttachFluxIn(Flux* flux) {
     }
 }
 
+bool Glacier::IsOk() {
+    if (!m_ice->IsOk()) {
+        return false;
+    }
+    return Brick::IsOk();
+}
+
 WaterContainer* Glacier::GetIceContainer() {
     return m_ice;
 }

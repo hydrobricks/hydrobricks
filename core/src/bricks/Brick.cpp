@@ -48,17 +48,7 @@ bool Brick::IsOk() {
             return false;
         }
     }
-    bool waterContainerHasOutput = false;
-    for (auto process : m_processes) {
-        if (process->GetWaterContainer() == m_container) {
-            waterContainerHasOutput = true;
-        }
-    }
-    if (!waterContainerHasOutput) {
-        wxLogWarning(_("The water container of the brick %s has no process attached."), m_name);
-    }
-
-    return true;
+    return m_container->IsOk();
 }
 
 void Brick::AssignParameters(const BrickSettings& brickSettings) {

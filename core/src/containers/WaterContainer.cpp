@@ -10,6 +10,21 @@ WaterContainer::WaterContainer(Brick* brick)
       m_parent(brick),
       m_overflow(nullptr) {}
 
+bool WaterContainer::IsOk() {
+    if (m_inputs.empty()) {
+        return true;
+    }
+
+    for (auto process : GetParentBrick()->GetProcesses()) {
+        if (process->GetWaterContainer() == this) {
+            return true;
+        }
+    }
+    wxLogError(_("The water container of the brick %s has no process attached."), GetParentBrick()->GetName());
+
+    return false;
+}
+
 void WaterContainer::SubtractAmount(double change) {
     if (m_infiniteStorage) return;
     m_contentChange -= change;

@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include "IceContainer.h"
 #include "Includes.h"
 #include "LandCover.h"
 #include "Snowpack.h"
-#include "IceContainer.h"
 
 class Glacier : public LandCover {
   public:
@@ -15,7 +15,9 @@ class Glacier : public LandCover {
      */
     void AssignParameters(const BrickSettings& brickSettings) override;
 
-    void AttachFluxIn(Flux* flux);
+    void AttachFluxIn(Flux* flux) override;
+
+    bool IsOk() override;
 
     WaterContainer* GetIceContainer();
 
@@ -27,7 +29,7 @@ class Glacier : public LandCover {
 
     void UpdateContentFromInputs() override;
 
-    void ApplyConstraints(double timeStep, bool inSolver = true) override;
+    void ApplyConstraints(double timeStep, bool inSolver) override;
 
     vecDoublePt GetStateVariableChanges() override;
 

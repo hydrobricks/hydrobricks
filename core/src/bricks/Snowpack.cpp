@@ -21,6 +21,13 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     }
 }
 
+bool Snowpack::IsOk() {
+    if (!m_snow->IsOk()) {
+        return false;
+    }
+    return Brick::IsOk();
+}
+
 WaterContainer* Snowpack::GetSnowContainer() {
     return m_snow;
 }

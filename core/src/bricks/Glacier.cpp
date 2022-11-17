@@ -55,9 +55,9 @@ void Glacier::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Glacier::ApplyConstraints(double timeStep, bool inSolver) {
-    m_ice->ApplyConstraints(timeStep, inSolver);
-    m_container->ApplyConstraints(timeStep, inSolver);
+void Glacier::ApplyConstraints(double timeStep) {
+    m_ice->ApplyConstraints(timeStep);
+    m_container->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Glacier::GetStateVariableChanges() {

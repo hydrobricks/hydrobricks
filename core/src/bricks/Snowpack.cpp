@@ -42,9 +42,9 @@ void Snowpack::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Snowpack::ApplyConstraints(double timeStep, bool inSolver) {
-    m_snow->ApplyConstraints(timeStep, inSolver);
-    m_container->ApplyConstraints(timeStep, inSolver);
+void Snowpack::ApplyConstraints(double timeStep) {
+    m_snow->ApplyConstraints(timeStep);
+    m_container->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Snowpack::GetStateVariableChanges() {

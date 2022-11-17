@@ -7,8 +7,8 @@ void GenericLandCover::AssignParameters(const BrickSettings& brickSettings) {
     Brick::AssignParameters(brickSettings);
 }
 
-void GenericLandCover::ApplyConstraints(double timeStep, bool inSolver) {
-    Brick::ApplyConstraints(timeStep, inSolver);
+void GenericLandCover::ApplyConstraints(double timeStep) {
+    Brick::ApplyConstraints(timeStep);
 }
 
 void GenericLandCover::Finalize() {

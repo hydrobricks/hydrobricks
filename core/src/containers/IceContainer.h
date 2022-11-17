@@ -2,8 +2,8 @@
 #define HYDROBRICKS_ICE_CONTAINER_H
 
 #include "Includes.h"
-#include "WaterContainer.h"
 #include "Snowpack.h"
+#include "WaterContainer.h"
 
 class Brick;
 
@@ -11,7 +11,7 @@ class IceContainer : public WaterContainer {
   public:
     IceContainer(Brick* brick);
 
-    void ApplyConstraints(double timeStep, bool inSolver) override;
+    void ApplyConstraints(double timeStep) override;
 
     void SetNoMeltWhenSnowCover(const float* value) {
         wxASSERT(value);

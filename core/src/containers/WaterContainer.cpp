@@ -35,7 +35,7 @@ void WaterContainer::AddAmount(double change) {
     m_contentChange += change;
 }
 
-void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
+void WaterContainer::ApplyConstraints(double timeStep) {
     if (m_infiniteStorage) return;
 
     // Get outgoing change rates
@@ -79,14 +79,8 @@ void WaterContainer::ApplyConstraints(double timeStep, bool inSolver) {
     }
 
     double change = inputs - outputs;
-    double content = 0;
 
-    if (inSolver) {
-        content = GetContentWithChanges();
-    } else {
-        // If not in solver, we might count the inputs twice.
-        content = GetContentWithoutChanges();
-    }
+    double content = GetContentWithChanges();
 
     // Avoid negative content
     if (change < 0 && content + inputsStatic + change * timeStep < 0) {

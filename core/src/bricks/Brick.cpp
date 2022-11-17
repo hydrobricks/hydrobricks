@@ -99,8 +99,8 @@ void Brick::UpdateContentFromInputs() {
     m_container->AddAmount(m_container->SumIncomingFluxes());
 }
 
-void Brick::ApplyConstraints(double timeStep, bool inSolver) {
-    m_container->ApplyConstraints(timeStep, inSolver);
+void Brick::ApplyConstraints(double timeStep) {
+    m_container->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {

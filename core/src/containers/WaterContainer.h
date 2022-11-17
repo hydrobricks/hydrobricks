@@ -16,7 +16,7 @@ class WaterContainer : public wxObject {
 
     void AddAmount(double change);
 
-    virtual void ApplyConstraints(double timeStep, bool inSolver);
+    virtual void ApplyConstraints(double timeSte);
 
     void SetOutgoingRatesToZero();
 

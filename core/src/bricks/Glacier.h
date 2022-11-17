@@ -29,7 +29,7 @@ class Glacier : public LandCover {
 
     void UpdateContentFromInputs() override;
 
-    void ApplyConstraints(double timeStep, bool inSolver) override;
+    void ApplyConstraints(double timeStep) override;
 
     vecDoublePt GetStateVariableChanges() override;
 

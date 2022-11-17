@@ -13,7 +13,7 @@ class Urban : public LandCover {
      */
     void AssignParameters(const BrickSettings& brickSettings) override;
 
-    void ApplyConstraints(double timeStep, bool inSolver) override;
+    void ApplyConstraints(double timeStep) override;
 
     void Finalize() override;
 

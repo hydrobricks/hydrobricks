@@ -93,6 +93,7 @@ bool Processor::ProcessTimeStep() {
     SubBasin* basin = m_model->GetSubBasin();
 
     // Process the bricks that do not need a solver.
+    int ptIndex = 0;
     for (int iUnit = 0; iUnit < basin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
@@ -108,7 +109,7 @@ bool Processor::ProcessTimeStep() {
                 continue;
             }
 
-            ApplyDirectChanges(brick);
+            ApplyDirectChanges(brick, ptIndex);
         }
     }
 
@@ -124,11 +125,11 @@ bool Processor::ProcessTimeStep() {
     return true;
 }
 
-void Processor::ApplyDirectChanges(Brick* brick) {
+void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
     brick->UpdateContentFromInputs();
 
     // Initialize the change rates to 0 and link to fluxes
-    int iRate = 0;
+    int iRate = ptIndex;
     for (auto process : brick->GetProcesses()) {
         for (int i = 0; i < process->GetOutputFluxesNb(); ++i) {
             wxASSERT(m_changeRatesNoSolver.rows() > iRate);
@@ -140,7 +141,7 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         }
     }
 
-    iRate = 0;
+    iRate = ptIndex;
     for (auto process : brick->GetProcesses()) {
         // Get the change rates (per day) independently of the time step and constraints
         vecDouble rates = process->GetChangeRates();
@@ -153,13 +154,14 @@ void Processor::ApplyDirectChanges(Brick* brick) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        process->GetWaterContainer()->ApplyConstraints(g_timeStepInDays, false);
+        process->GetWaterContainer()->ApplyConstraints(g_timeStepInDays);
 
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {
             process->ApplyChange(i, m_changeRatesNoSolver(iRate), g_timeStepInDays);
             m_changeRatesNoSolver(iRate) = 0;
             iRate++;
+            ptIndex++;
         }
     }
 

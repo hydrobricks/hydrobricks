@@ -11,7 +11,7 @@ class Processor : public wxObject {
   public:
     explicit Processor();
 
-    ~Processor();
+    ~Processor() override;
 
     void Initialize(const SolverSettings& solverSettings);
 
@@ -31,11 +31,11 @@ class Processor : public wxObject {
         return &m_iterableBricks;
     }
 
-    int GetNbSolvableConnections() {
+    int GetNbSolvableConnections() const {
         return m_solvableConnectionsNb;
     }
 
-    int GetNbDirectConnections() {
+    int GetNbDirectConnections() const {
         return m_directConnectionsNb;
     }
 
@@ -51,7 +51,7 @@ class Processor : public wxObject {
   private:
     void StoreStateVariableChanges(vecDoublePt& values);
 
-    void ApplyDirectChanges(Brick* brick);
+    void ApplyDirectChanges(Brick* brick, int& ptIndex);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

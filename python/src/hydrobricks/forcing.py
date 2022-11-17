@@ -131,13 +131,13 @@ class Forcing(TimeSeries):
                     for m in range(12):
                         month = self.time.dt.month == m + 1
                         month = month.to_numpy()
-                        unit_values[month, i_unit] = data_raw[month] + gradient[m] * \
-                                                     (elevation - ref_elevation) / 100
+                        unit_values[month, i_unit] = data_raw[month] + gradient[m] * (
+                                elevation - ref_elevation) / 100
 
             elif method == 'multiplicative_elevation_gradient':
                 if len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw * (
-                                1 + gradient * (elevation - ref_elevation) / 100)
+                            1 + gradient * (elevation - ref_elevation) / 100)
                 elif len(gradient) == 12:
                     for m in range(12):
                         month = self.time.dt.month == m + 1

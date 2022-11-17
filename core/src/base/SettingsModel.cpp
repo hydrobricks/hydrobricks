@@ -957,6 +957,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
             AddProcessForcing("Temperature");
             AddProcessParameter("degreeDayFactor", 3.0f);
             AddProcessParameter("meltingTemperature", 0.0f);
+            SetProcessOutputsAsInstantaneous();
         }
     }
 

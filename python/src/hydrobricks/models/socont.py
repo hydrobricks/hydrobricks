@@ -19,7 +19,7 @@ class Socont(Model):
 
         try:
             if not self.settings.generate_socont_structure(
-                    self.surface_types, self.surface_names,
+                    self.land_cover_types, self.land_cover_names,
                     self.soil_storage_nb, self.surface_runoff):
                 raise Exception('Socont model initialization failed.')
 
@@ -46,23 +46,23 @@ class Socont(Model):
             min_value=0, max_value=5, default_value=0, mandatory=False)
 
         i_glacier = 0
-        for surface_type, surface_name in zip(self.surface_types, self.surface_names):
-            if surface_type == 'glacier':
+        for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
+            if cover_type == 'glacier':
                 aliases = ['a_ice']
-                if self.surface_types.count('glacier') == 1:
+                if self.land_cover_types.count('glacier') == 1:
                     ps.define_constraint('a_snow', '<', aliases[0])
-                elif self.surface_types.count('glacier') > 1:
+                elif self.land_cover_types.count('glacier') > 1:
                     i_glacier += 1
-                    aliases = [f'a_ice_{surface_name.replace("-", "_")}',
+                    aliases = [f'a_ice_{cover_name.replace("-", "_")}',
                                f'a_ice_{i_glacier}', f'a_ice{i_glacier}']
 
                 ps.define_parameter(
-                    component=surface_name, name='degreeDayFactor',
+                    component=cover_name, name='degreeDayFactor',
                     unit='mm/d/°C', aliases=aliases, min_value=0, max_value=20,
                     mandatory=True)
 
                 ps.define_parameter(
-                    component=surface_name, name='meltingTemperature',
+                    component=cover_name, name='meltingTemperature',
                     unit='°C', min_value=0, max_value=5, default_value=0,
                     mandatory=False)
 

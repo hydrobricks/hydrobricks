@@ -18,14 +18,15 @@ class Model(ABC):
         self.settings = SettingsModel()
         self.model = ModelHydro()
         self.spatial_structure = None
-        self.allowed_kwargs = {'solver', 'record_all', 'surface_types', 'surface_names'}
+        self.allowed_kwargs = {'solver', 'record_all', 'land_cover_types',
+                               'land_cover_names'}
         self.initialized = False
 
         # Default options
         self.solver = 'HeunExplicit'
         self.record_all = True
-        self.surface_types = ['ground']
-        self.surface_names = ['ground']
+        self.land_cover_types = ['ground']
+        self.land_cover_names = ['ground']
 
         self._set_options(kwargs)
 
@@ -189,9 +190,9 @@ class Model(ABC):
             'base': self.name,
             'solver': self.solver,
             'options': self._get_specific_options(),
-            'surfaces': {
-                'names': self.surface_names,
-                'types': self.surface_types
+            'land_covers': {
+                'names': self.land_cover_names,
+                'types': self.land_cover_types
             },
             'logger': 'all' if self.record_all else ''
         }
@@ -305,10 +306,10 @@ class Model(ABC):
             self.solver = kwargs['solver']
         if 'record_all' in kwargs:
             self.record_all = kwargs['record_all']
-        if 'surface_types' in kwargs:
-            self.surface_types = kwargs['surface_types']
-        if 'surface_names' in kwargs:
-            self.surface_names = kwargs['surface_names']
+        if 'land_cover_types' in kwargs:
+            self.land_cover_types = kwargs['land_cover_types']
+        if 'land_cover_names' in kwargs:
+            self.land_cover_names = kwargs['land_cover_names']
 
     def _add_allowed_kwargs(self, kwargs):
         self.allowed_kwargs.update(kwargs)

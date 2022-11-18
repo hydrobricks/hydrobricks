@@ -22,10 +22,10 @@ def test_socont_creation_with_surface_runoff():
     models.Socont(surface_runoff='linear-storage')
 
 
-def test_socont_creation_with_surfaces():
-    surface_names = ['ground', 'aletsch_glacier']
-    surface_types = ['ground', 'glacier']
-    models.Socont(surface_names=surface_names, surface_types=surface_types)
+def test_socont_creation_with_land_covers():
+    cover_names = ['ground', 'aletsch_glacier']
+    cover_types = ['ground', 'glacier']
+    models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 
 
 def test_create_json_config_file_created():
@@ -36,11 +36,11 @@ def test_create_json_config_file_created():
 
 
 def test_create_json_config_file_content():
-    surface_names = ['ground', 'aletsch_glacier']
-    surface_types = ['ground', 'glacier']
+    cover_names = ['ground', 'aletsch_glacier']
+    cover_types = ['ground', 'glacier']
     model = models.Socont(solver='Runge-Kutta', soil_storage_nb=2,
-                          surface_names=surface_names,
-                          surface_types=surface_types,
+                          land_cover_names=cover_names,
+                          land_cover_types=cover_types,
                           surface_runoff='linear-storage')
     with tempfile.TemporaryDirectory() as tmp_dir:
         model.create_config_file(tmp_dir, 'structure', 'json')
@@ -61,11 +61,11 @@ def test_create_yaml_config_file_created():
 
 
 def test_create_yaml_config_file_content():
-    surface_names = ['ground', 'aletsch_glacier']
-    surface_types = ['ground', 'glacier']
+    cover_names = ['ground', 'aletsch_glacier']
+    cover_types = ['ground', 'glacier']
     model = models.Socont(solver='Runge-Kutta', soil_storage_nb=2,
-                          surface_names=surface_names,
-                          surface_types=surface_types,
+                          land_cover_names=cover_names,
+                          land_cover_types=cover_types,
                           surface_runoff='linear-storage')
     with tempfile.TemporaryDirectory() as tmp_dir:
         model.create_config_file(tmp_dir, 'structure', 'yaml')

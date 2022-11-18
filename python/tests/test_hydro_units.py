@@ -16,28 +16,28 @@ def test_hydro_units_creation():
     hb.HydroUnits()
 
 
-def test_hydro_units_creation_with_surfaces():
-    hb.HydroUnits(surface_types=['ground', 'glacier'],
-                  surface_names=['ground', 'glacier'])
+def test_hydro_units_creation_with_land_covers():
+    hb.HydroUnits(land_cover_types=['ground', 'glacier'],
+                  land_cover_names=['ground', 'glacier'])
 
 
-def test_hydro_units_creation_with_surfaces_mismatch():
+def test_hydro_units_creation_with_land_covers_mismatch():
     with pytest.raises(Exception):
-        hb.HydroUnits(surface_types=['ground', 'glacier', 'glacier'],
-                      surface_names=None)
+        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
+                      land_cover_names=None)
 
 
-def test_hydro_units_creation_with_surfaces_size_mismatch():
+def test_hydro_units_creation_with_land_covers_size_mismatch():
     with pytest.raises(Exception):
-        hb.HydroUnits(surface_types=['ground', 'glacier', 'glacier'],
-                      surface_names=['ground', 'glacier'])
+        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
+                      land_cover_names=['ground', 'glacier'])
 
 
 @pytest.fixture
 def hydro_units():
     hydro_units = hb.HydroUnits(
-        surface_types=['ground', 'glacier', 'glacier'],
-        surface_names=['ground', 'glacier-ice', 'glacier-debris'])
+        land_cover_types=['ground', 'glacier', 'glacier'],
+        land_cover_names=['ground', 'glacier-ice', 'glacier-debris'])
     return hydro_units
 
 

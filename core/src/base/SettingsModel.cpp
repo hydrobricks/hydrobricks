@@ -980,6 +980,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         AddBrickProcess("ET", "ET:Socont");
         AddProcessForcing("PET");
         AddBrickProcess("outflow", "Outflow:linear", "outlet");
+        AddProcessParameter("responseFactor", 0.2f);
         AddBrickProcess("overflow", "Overflow", "outlet");
     } else if (soilStorageNb == 2) {
         wxLogMessage(_("Using 2 soil storages."));
@@ -988,13 +989,13 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         AddBrickProcess("ET", "ET:Socont");
         AddProcessForcing("PET");
         AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.01f);
+        AddProcessParameter("responseFactor", 0.2f);
         AddBrickProcess("percolation", "Outflow:constant", "slow-reservoir-2");
-        AddProcessParameter("percolationRate", 0.4f);
+        AddProcessParameter("percolationRate", 0.1f);
         AddBrickProcess("overflow", "Overflow", "outlet");
         AddHydroUnitBrick("slow-reservoir-2", "Storage");
         AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.4f);
+        AddProcessParameter("responseFactor", 0.02f);
     } else {
         wxLogError(_("There can be only one or two groundwater storages."));
     }

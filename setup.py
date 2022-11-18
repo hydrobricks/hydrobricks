@@ -112,7 +112,7 @@ long_description = (this_directory / "python" / "README.md").read_text()
 # Setup
 setup(
     name="hydrobricks",
-    version="0.1.2",
+    version="0.1.3",
     author="Pascal Horton",
     author_email="pascal.horton@giub.unibe",
     description="A modular hydrological modelling framework",
@@ -125,7 +125,7 @@ setup(
                  'hydrobricks.models': 'python/src/hydrobricks/models'},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",

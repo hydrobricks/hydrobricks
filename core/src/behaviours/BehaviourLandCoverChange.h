@@ -12,7 +12,7 @@ class BehaviourLandCoverChange : public Behaviour {
 
     void AddChange(double date, int hydroUnitId, int landCoverTypeId, double area);
 
-    bool Parse(const std::string& path);
+    bool Parse(const string& path);
 
   protected:
     vecDouble m_dates;

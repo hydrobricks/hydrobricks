@@ -69,7 +69,7 @@ vecDoublePt Snowpack::GetStateVariableChanges() {
     return vars;
 }
 
-double* Snowpack::GetValuePointer(const std::string& name) {
+double* Snowpack::GetValuePointer(const string& name) {
     if (name == "snow") {
         return m_snow->GetContentPointer();
     }

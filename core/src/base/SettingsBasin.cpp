@@ -17,7 +17,7 @@ void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
-void SettingsBasin::AddLandCover(const std::string& name, const std::string& type, double fraction) {
+void SettingsBasin::AddLandCover(const string& name, const string& type, double fraction) {
     wxASSERT(m_selectedHydroUnit);
     LandCoverSettings element;
     element.name = name;
@@ -31,7 +31,7 @@ void SettingsBasin::SelectUnit(int index) {
     m_selectedHydroUnit = &m_hydroUnits[index];
 }
 
-bool SettingsBasin::Parse(const std::string& path) {
+bool SettingsBasin::Parse(const string& path) {
     try {
         FileNetcdf file;
 
@@ -73,7 +73,7 @@ bool SettingsBasin::Parse(const std::string& path) {
             vecFloat fractions = file.GetVarFloat1D(cover, unitsNb);
 
             // Get the cover type
-            std::string type = file.GetAttText("type", cover);
+            string type = file.GetAttText("type", cover);
 
             for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
                 LandCoverSettings element;

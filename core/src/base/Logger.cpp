@@ -57,14 +57,14 @@ void Logger::Increment() {
     m_cursor++;
 }
 
-bool Logger::DumpOutputs(const std::string& path) {
+bool Logger::DumpOutputs(const string& path) {
     if (!wxDirExists(path)) {
         wxLogError(_("The directory %s could not be found."), path);
         return false;
     }
 
     try {
-        std::string filePath = path;
+        string filePath = path;
         filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
         filePath.append("/results.nc");
 

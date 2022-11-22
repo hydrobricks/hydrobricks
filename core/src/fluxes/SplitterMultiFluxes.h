@@ -17,7 +17,7 @@ class SplitterMultiFluxes : public Splitter {
 
     void AssignParameters(const SplitterSettings& splitterSettings) override;
 
-    double* GetValuePointer(const std::string& name) override;
+    double* GetValuePointer(const string& name) override;
 
     void Compute() override;
 

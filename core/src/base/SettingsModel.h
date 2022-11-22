@@ -7,25 +7,25 @@
 #include "Parameter.h"
 
 struct SolverSettings {
-    std::string name;
+    string name;
 };
 
 struct TimerSettings {
-    std::string start;
-    std::string end;
+    string start;
+    string end;
     int timeStep = 1;
-    std::string timeStepUnit;
+    string timeStepUnit;
 };
 
 struct OutputSettings {
-    std::string target;
-    std::string fluxType = "water";
+    string target;
+    string fluxType = "water";
     bool instantaneous = false;
 };
 
 struct ProcessSettings {
-    std::string name;
-    std::string type;
+    string name;
+    string type;
     vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
@@ -33,8 +33,8 @@ struct ProcessSettings {
 };
 
 struct SplitterSettings {
-    std::string name;
-    std::string type;
+    string name;
+    string type;
     vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
@@ -42,9 +42,9 @@ struct SplitterSettings {
 };
 
 struct BrickSettings {
-    std::string name;
-    std::string type;
-    std::string parent;
+    string name;
+    string type;
+    string parent;
     vecStr logItems;
     std::vector<Parameter*> parameters;
     std::vector<VariableType> forcing;
@@ -69,74 +69,73 @@ class SettingsModel : public wxObject {
     ~SettingsModel() override;
 
     bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
-                                 const std::string& surfaceRunoff = "socont-runoff");
+                                 const string& surfaceRunoff = "socont-runoff");
 
-    void SetSolver(const std::string& solverName);
+    void SetSolver(const string& solverName);
 
-    void SetTimer(const std::string& start, const std::string& end, int timeStep, const std::string& timeStepUnit);
+    void SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit);
 
-    void AddHydroUnitBrick(const std::string& name, const std::string& type = "Storage");
+    void AddHydroUnitBrick(const string& name, const string& type = "Storage");
 
-    void AddSubBasinBrick(const std::string& name, const std::string& type = "Storage");
+    void AddSubBasinBrick(const string& name, const string& type = "Storage");
 
-    void AddLandCoverBrick(const std::string& name, const std::string& type);
+    void AddLandCoverBrick(const string& name, const string& type);
 
-    void AddSurfaceComponentBrick(const std::string& name, const std::string& type);
+    void AddSurfaceComponentBrick(const string& name, const string& type);
 
-    void SetSurfaceComponentParent(const std::string& name);
+    void SetSurfaceComponentParent(const string& name);
 
-    void AddBrickParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddBrickParameter(const string& name, float value, const string& type = "Constant");
 
-    void SetBrickParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetBrickParameterValue(const string& name, float value, const string& type = "Constant");
 
-    bool BrickHasParameter(const std::string& name);
+    bool BrickHasParameter(const string& name);
 
-    void AddBrickForcing(const std::string& name);
+    void AddBrickForcing(const string& name);
 
-    void AddBrickProcess(const std::string& name, const std::string& type, const std::string& target = "",
-                         bool log = false);
+    void AddBrickProcess(const string& name, const string& type, const string& target = "", bool log = false);
 
-    void AddProcessParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddProcessParameter(const string& name, float value, const string& type = "Constant");
 
-    void SetProcessParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetProcessParameterValue(const string& name, float value, const string& type = "Constant");
 
-    void AddProcessForcing(const std::string& name);
+    void AddProcessForcing(const string& name);
 
-    void AddProcessOutput(const std::string& target);
+    void AddProcessOutput(const string& target);
 
     void SetProcessOutputsAsInstantaneous();
 
     void OutputProcessToSameBrick();
 
-    void AddHydroUnitSplitter(const std::string& name, const std::string& type);
+    void AddHydroUnitSplitter(const string& name, const string& type);
 
-    void AddSubBasinSplitter(const std::string& name, const std::string& type);
+    void AddSubBasinSplitter(const string& name, const string& type);
 
-    void AddSplitterParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddSplitterParameter(const string& name, float value, const string& type = "Constant");
 
-    void SetSplitterParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetSplitterParameterValue(const string& name, float value, const string& type = "Constant");
 
-    void AddSplitterForcing(const std::string& name);
+    void AddSplitterForcing(const string& name);
 
-    void AddSplitterOutput(const std::string& target, const std::string& fluxType = "water");
+    void AddSplitterOutput(const string& target, const string& fluxType = "water");
 
-    void AddLoggingToItem(const std::string& itemName);
+    void AddLoggingToItem(const string& itemName);
 
-    void AddLoggingToItems(std::initializer_list<const std::string> items);
+    void AddLoggingToItems(std::initializer_list<const string> items);
 
-    void AddBrickLogging(const std::string& itemName);
+    void AddBrickLogging(const string& itemName);
 
-    void AddBrickLogging(std::initializer_list<const std::string> items);
+    void AddBrickLogging(std::initializer_list<const string> items);
 
-    void AddProcessLogging(const std::string& itemName);
+    void AddProcessLogging(const string& itemName);
 
-    void AddSplitterLogging(const std::string& itemName);
+    void AddSplitterLogging(const string& itemName);
 
     void GeneratePrecipitationSplitters(bool withSnow);
 
-    void GenerateSnowpacks(const std::string& snowMeltProcess);
+    void GenerateSnowpacks(const string& snowMeltProcess);
 
-    void GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess, const std::string& outflowProcess);
+    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
 
     bool SelectStructure(int id);
 
@@ -144,37 +143,37 @@ class SettingsModel : public wxObject {
 
     void SelectSubBasinBrick(int index);
 
-    bool SelectHydroUnitBrickIfFound(const std::string& name);
+    bool SelectHydroUnitBrickIfFound(const string& name);
 
-    bool SelectSubBasinBrickIfFound(const std::string& name);
+    bool SelectSubBasinBrickIfFound(const string& name);
 
-    void SelectHydroUnitBrick(const std::string& name);
+    void SelectHydroUnitBrick(const string& name);
 
-    void SelectSubBasinBrick(const std::string& name);
+    void SelectSubBasinBrick(const string& name);
 
     void SelectProcess(int index);
 
-    void SelectProcess(const std::string& name);
+    void SelectProcess(const string& name);
 
-    void SelectProcessWithParameter(const std::string& name);
+    void SelectProcessWithParameter(const string& name);
 
     void SelectHydroUnitSplitter(int index);
 
     void SelectSubBasinSplitter(int index);
 
-    bool SelectHydroUnitSplitterIfFound(const std::string& name);
+    bool SelectHydroUnitSplitterIfFound(const string& name);
 
-    bool SelectSubBasinSplitterIfFound(const std::string& name);
+    bool SelectSubBasinSplitterIfFound(const string& name);
 
-    void SelectHydroUnitSplitter(const std::string& name);
+    void SelectHydroUnitSplitter(const string& name);
 
-    void SelectSubBasinSplitter(const std::string& name);
+    void SelectSubBasinSplitter(const string& name);
 
-    bool ParseStructure(const std::string& path);
+    bool ParseStructure(const string& path);
 
-    bool ParseParameters(const std::string& path);
+    bool ParseParameters(const string& path);
 
-    bool SetParameter(const std::string& component, const std::string& name, float value);
+    bool SetParameter(const string& component, const string& name, float value);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
@@ -288,7 +287,7 @@ class SettingsModel : public wxObject {
 
     vecStr ParseLandCoverTypes(const YAML::Node& settings);
 
-    std::string ParseSolver(const YAML::Node& settings);
+    string ParseSolver(const YAML::Node& settings);
 
     bool LogAll(const YAML::Node& settings);
 };

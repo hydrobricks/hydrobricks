@@ -37,7 +37,7 @@ class Glacier : public LandCover {
 
     vecDoublePt GetStateVariableChanges() override;
 
-    double* GetValuePointer(const std::string& name) override;
+    double* GetValuePointer(const string& name) override;
 
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 

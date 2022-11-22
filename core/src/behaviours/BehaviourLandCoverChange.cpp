@@ -11,7 +11,7 @@ void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, int landC
     m_area.push_back(area);
 }
 
-bool BehaviourLandCoverChange::Parse(const std::string& path) {
+bool BehaviourLandCoverChange::Parse(const string& path) {
     try {
         FileNetcdf file;
 
@@ -42,7 +42,7 @@ bool BehaviourLandCoverChange::Parse(const std::string& path) {
             vecFloat fractions = file.GetVarFloat1D(landCover, changesNb);
 
             // Get the land cover type
-            std::string type = file.GetAttText("type", landCover);
+            string type = file.GetAttText("type", landCover);
         }
 
     } catch (std::exception& e) {

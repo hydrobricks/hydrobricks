@@ -73,7 +73,7 @@ void Brick::AttachFluxIn(Flux* flux) {
     m_container->AttachFluxIn(flux);
 }
 
-bool Brick::HasParameter(const BrickSettings& brickSettings, const std::string& name) {
+bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
     for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
@@ -83,7 +83,7 @@ bool Brick::HasParameter(const BrickSettings& brickSettings, const std::string& 
     return false;
 }
 
-float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const std::string& name) {
+float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {
     for (auto parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
@@ -148,7 +148,7 @@ int Brick::GetProcessesConnectionsNb() {
     return counter;
 }
 
-double* Brick::GetBaseValuePointer(const std::string& name) {
+double* Brick::GetBaseValuePointer(const string& name) {
     if (name == "content" && m_container) {
         return m_container->GetContentPointer();
     }
@@ -156,6 +156,6 @@ double* Brick::GetBaseValuePointer(const std::string& name) {
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const std::string&) {
+double* Brick::GetValuePointer(const string&) {
     return nullptr;
 }

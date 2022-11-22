@@ -39,19 +39,18 @@ SettingsModel::~SettingsModel() {
     }
 }
 
-void SettingsModel::SetSolver(const std::string& solverName) {
+void SettingsModel::SetSolver(const string& solverName) {
     m_solver.name = solverName;
 }
 
-void SettingsModel::SetTimer(const std::string& start, const std::string& end, int timeStep,
-                             const std::string& timeStepUnit) {
+void SettingsModel::SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit) {
     m_timer.start = start;
     m_timer.end = end;
     m_timer.timeStep = timeStep;
     m_timer.timeStepUnit = timeStepUnit;
 }
 
-void SettingsModel::AddHydroUnitBrick(const std::string& name, const std::string& type) {
+void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -66,7 +65,7 @@ void SettingsModel::AddHydroUnitBrick(const std::string& name, const std::string
     }
 }
 
-void SettingsModel::AddSubBasinBrick(const std::string& name, const std::string& type) {
+void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -81,7 +80,7 @@ void SettingsModel::AddSubBasinBrick(const std::string& name, const std::string&
     }
 }
 
-void SettingsModel::AddLandCoverBrick(const std::string& name, const std::string& type) {
+void SettingsModel::AddLandCoverBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -96,7 +95,7 @@ void SettingsModel::AddLandCoverBrick(const std::string& name, const std::string
     }
 }
 
-void SettingsModel::AddSurfaceComponentBrick(const std::string& name, const std::string& type) {
+void SettingsModel::AddSurfaceComponentBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     BrickSettings brick;
@@ -107,12 +106,12 @@ void SettingsModel::AddSurfaceComponentBrick(const std::string& name, const std:
     m_selectedStructure->surfaceComponentBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 }
 
-void SettingsModel::SetSurfaceComponentParent(const std::string& name) {
+void SettingsModel::SetSurfaceComponentParent(const string& name) {
     wxASSERT(m_selectedBrick);
     m_selectedBrick->parent = name;
 }
 
-void SettingsModel::AddBrickParameter(const std::string& name, float value, const std::string& type) {
+void SettingsModel::AddBrickParameter(const string& name, float value, const string& type) {
     wxASSERT(m_selectedBrick);
 
     if (type != "Constant") {
@@ -124,7 +123,7 @@ void SettingsModel::AddBrickParameter(const std::string& name, float value, cons
     m_selectedBrick->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetBrickParameterValue(const std::string& name, float value, const std::string& type) {
+void SettingsModel::SetBrickParameterValue(const string& name, float value, const string& type) {
     wxASSERT(m_selectedBrick);
 
     if (type != "Constant") {
@@ -141,7 +140,7 @@ void SettingsModel::SetBrickParameterValue(const std::string& name, float value,
     throw ShouldNotHappen();
 }
 
-bool SettingsModel::BrickHasParameter(const std::string& name) {
+bool SettingsModel::BrickHasParameter(const string& name) {
     wxASSERT(m_selectedBrick);
     for (auto& parameter : m_selectedBrick->parameters) {
         if (parameter->GetName() == name) {
@@ -152,7 +151,7 @@ bool SettingsModel::BrickHasParameter(const std::string& name) {
     return false;
 }
 
-void SettingsModel::AddBrickForcing(const std::string& name) {
+void SettingsModel::AddBrickForcing(const string& name) {
     wxASSERT(m_selectedBrick);
 
     if (name == "Precipitation") {
@@ -164,8 +163,7 @@ void SettingsModel::AddBrickForcing(const std::string& name) {
     }
 }
 
-void SettingsModel::AddBrickProcess(const std::string& name, const std::string& type, const std::string& target,
-                                    bool log) {
+void SettingsModel::AddBrickProcess(const string& name, const string& type, const string& target, bool log) {
     wxASSERT(m_selectedBrick);
 
     ProcessSettings processSettings;
@@ -183,7 +181,7 @@ void SettingsModel::AddBrickProcess(const std::string& name, const std::string& 
     }
 }
 
-void SettingsModel::AddProcessParameter(const std::string& name, float value, const std::string& type) {
+void SettingsModel::AddProcessParameter(const string& name, float value, const string& type) {
     wxASSERT(m_selectedProcess);
 
     if (type != "Constant") {
@@ -203,7 +201,7 @@ void SettingsModel::AddProcessParameter(const std::string& name, float value, co
     m_selectedProcess->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetProcessParameterValue(const std::string& name, float value, const std::string& type) {
+void SettingsModel::SetProcessParameterValue(const string& name, float value, const string& type) {
     wxASSERT(m_selectedProcess);
 
     if (type != "Constant") {
@@ -220,7 +218,7 @@ void SettingsModel::SetProcessParameterValue(const std::string& name, float valu
     throw ShouldNotHappen();
 }
 
-void SettingsModel::AddProcessForcing(const std::string& name) {
+void SettingsModel::AddProcessForcing(const string& name) {
     wxASSERT(m_selectedProcess);
 
     if (name == "Precipitation") {
@@ -234,7 +232,7 @@ void SettingsModel::AddProcessForcing(const std::string& name) {
     }
 }
 
-void SettingsModel::AddProcessOutput(const std::string& target) {
+void SettingsModel::AddProcessOutput(const string& target) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
@@ -260,7 +258,7 @@ void SettingsModel::OutputProcessToSameBrick() {
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
-void SettingsModel::AddHydroUnitSplitter(const std::string& name, const std::string& type) {
+void SettingsModel::AddHydroUnitSplitter(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     SplitterSettings splitter;
@@ -271,7 +269,7 @@ void SettingsModel::AddHydroUnitSplitter(const std::string& name, const std::str
     m_selectedSplitter = &m_selectedStructure->hydroUnitSplitters[m_selectedStructure->hydroUnitSplitters.size() - 1];
 }
 
-void SettingsModel::AddSubBasinSplitter(const std::string& name, const std::string& type) {
+void SettingsModel::AddSubBasinSplitter(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
     SplitterSettings splitter;
@@ -282,7 +280,7 @@ void SettingsModel::AddSubBasinSplitter(const std::string& name, const std::stri
     m_selectedSplitter = &m_selectedStructure->subBasinSplitters[m_selectedStructure->subBasinSplitters.size() - 1];
 }
 
-void SettingsModel::AddSplitterParameter(const std::string& name, float value, const std::string& type) {
+void SettingsModel::AddSplitterParameter(const string& name, float value, const string& type) {
     wxASSERT(m_selectedSplitter);
 
     if (type != "Constant") {
@@ -294,7 +292,7 @@ void SettingsModel::AddSplitterParameter(const std::string& name, float value, c
     m_selectedSplitter->parameters.push_back(parameter);
 }
 
-void SettingsModel::SetSplitterParameterValue(const std::string& name, float value, const std::string& type) {
+void SettingsModel::SetSplitterParameterValue(const string& name, float value, const string& type) {
     wxASSERT(m_selectedSplitter);
 
     if (type != "Constant") {
@@ -311,7 +309,7 @@ void SettingsModel::SetSplitterParameterValue(const std::string& name, float val
     throw ShouldNotHappen();
 }
 
-void SettingsModel::AddSplitterForcing(const std::string& name) {
+void SettingsModel::AddSplitterForcing(const string& name) {
     wxASSERT(m_selectedSplitter);
 
     if (name == "Precipitation") {
@@ -323,7 +321,7 @@ void SettingsModel::AddSplitterForcing(const std::string& name) {
     }
 }
 
-void SettingsModel::AddSplitterOutput(const std::string& target, const std::string& fluxType) {
+void SettingsModel::AddSplitterOutput(const string& target, const string& fluxType) {
     wxASSERT(m_selectedSplitter);
 
     OutputSettings outputSettings;
@@ -332,36 +330,36 @@ void SettingsModel::AddSplitterOutput(const std::string& target, const std::stri
     m_selectedSplitter->outputs.push_back(outputSettings);
 }
 
-void SettingsModel::AddLoggingToItem(const std::string& itemName) {
+void SettingsModel::AddLoggingToItem(const string& itemName) {
     wxASSERT(m_selectedStructure);
     m_selectedStructure->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddLoggingToItems(std::initializer_list<const std::string> items) {
+void SettingsModel::AddLoggingToItems(std::initializer_list<const string> items) {
     wxASSERT(m_selectedStructure);
     for (const auto& item : items) {
         m_selectedStructure->logItems.push_back(item);
     }
 }
 
-void SettingsModel::AddBrickLogging(const std::string& itemName) {
+void SettingsModel::AddBrickLogging(const string& itemName) {
     wxASSERT(m_selectedBrick);
     m_selectedBrick->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddBrickLogging(std::initializer_list<const std::string> items) {
+void SettingsModel::AddBrickLogging(std::initializer_list<const string> items) {
     wxASSERT(m_selectedBrick);
     for (const auto& item : items) {
         m_selectedBrick->logItems.push_back(item);
     }
 }
 
-void SettingsModel::AddProcessLogging(const std::string& itemName) {
+void SettingsModel::AddProcessLogging(const string& itemName) {
     wxASSERT(m_selectedProcess);
     m_selectedProcess->logItems.push_back(itemName);
 }
 
-void SettingsModel::AddSplitterLogging(const std::string& itemName) {
+void SettingsModel::AddSplitterLogging(const string& itemName) {
     wxASSERT(m_selectedSplitter);
     m_selectedSplitter->logItems.push_back(itemName);
 }
@@ -393,7 +391,7 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     }
 }
 
-void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
+void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     wxASSERT(m_selectedStructure);
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
@@ -418,8 +416,7 @@ void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
     }
 }
 
-void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowMeltProcess,
-                                                        const std::string& outflowProcess) {
+void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess) {
     wxASSERT(m_selectedStructure);
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
@@ -475,7 +472,7 @@ void SettingsModel::SelectSubBasinBrick(int index) {
     m_selectedBrick = &m_selectedStructure->subBasinBricks[index];
 }
 
-bool SettingsModel::SelectHydroUnitBrickIfFound(const std::string& name) {
+bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
     wxASSERT(m_selectedStructure);
     for (auto& brick : m_selectedStructure->hydroUnitBricks) {
         if (brick.name == name) {
@@ -487,7 +484,7 @@ bool SettingsModel::SelectHydroUnitBrickIfFound(const std::string& name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinBrickIfFound(const std::string& name) {
+bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
     wxASSERT(m_selectedStructure);
     for (auto& brick : m_selectedStructure->subBasinBricks) {
         if (brick.name == name) {
@@ -499,13 +496,13 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const std::string& name) {
     return false;
 }
 
-void SettingsModel::SelectHydroUnitBrick(const std::string& name) {
+void SettingsModel::SelectHydroUnitBrick(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
 }
 
-void SettingsModel::SelectSubBasinBrick(const std::string& name) {
+void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
         throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
@@ -518,7 +515,7 @@ void SettingsModel::SelectProcess(int index) {
     m_selectedProcess = &m_selectedBrick->processes[index];
 }
 
-void SettingsModel::SelectProcess(const std::string& name) {
+void SettingsModel::SelectProcess(const string& name) {
     wxASSERT(m_selectedBrick);
     for (auto& process : m_selectedBrick->processes) {
         if (process.name == name) {
@@ -530,7 +527,7 @@ void SettingsModel::SelectProcess(const std::string& name) {
     throw InvalidArgument(wxString::Format(_("The process '%s' was not found."), name));
 }
 
-void SettingsModel::SelectProcessWithParameter(const std::string& name) {
+void SettingsModel::SelectProcessWithParameter(const string& name) {
     wxASSERT(m_selectedBrick);
     for (auto& process : m_selectedBrick->processes) {
         for (auto& parameter : process.parameters) {
@@ -558,7 +555,7 @@ void SettingsModel::SelectSubBasinSplitter(int index) {
     m_selectedSplitter = &m_selectedStructure->subBasinSplitters[index];
 }
 
-bool SettingsModel::SelectHydroUnitSplitterIfFound(const std::string& name) {
+bool SettingsModel::SelectHydroUnitSplitterIfFound(const string& name) {
     wxASSERT(m_selectedStructure);
     for (auto& splitter : m_selectedStructure->hydroUnitSplitters) {
         if (splitter.name == name) {
@@ -570,7 +567,7 @@ bool SettingsModel::SelectHydroUnitSplitterIfFound(const std::string& name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinSplitterIfFound(const std::string& name) {
+bool SettingsModel::SelectSubBasinSplitterIfFound(const string& name) {
     wxASSERT(m_selectedStructure);
     for (auto& splitter : m_selectedStructure->subBasinSplitters) {
         if (splitter.name == name) {
@@ -582,13 +579,13 @@ bool SettingsModel::SelectSubBasinSplitterIfFound(const std::string& name) {
     return false;
 }
 
-void SettingsModel::SelectHydroUnitSplitter(const std::string& name) {
+void SettingsModel::SelectHydroUnitSplitter(const string& name) {
     if (!SelectHydroUnitSplitterIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit splitter '%s' was not found", name));
     }
 }
 
-void SettingsModel::SelectSubBasinSplitter(const std::string& name) {
+void SettingsModel::SelectSubBasinSplitter(const string& name) {
     if (!SelectSubBasinSplitterIfFound(name)) {
         throw NotFound(wxString::Format("The sub-basin splitter '%s' was not found", name));
     }
@@ -665,7 +662,7 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
     return logNames;
 }
 
-bool SettingsModel::ParseStructure(const std::string& path) {
+bool SettingsModel::ParseStructure(const string& path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
@@ -689,16 +686,16 @@ bool SettingsModel::ParseStructure(const std::string& path) {
         }
 
         if (settings["base"]) {
-            std::string base = settings["base"].as<std::string>();
+            string base = settings["base"].as<string>();
             if (base == "Socont") {
                 int soilStorageNb = 1;
-                std::string surfaceRunoff = "socont-runoff";
+                string surfaceRunoff = "socont-runoff";
                 if (YAML::Node options = settings["options"]) {
                     if (YAML::Node parameter = options["soil_storage_nb"]) {
                         soilStorageNb = parameter.as<int>();
                     }
                     if (YAML::Node parameter = options["surface_runoff"]) {
-                        surfaceRunoff = parameter.as<std::string>();
+                        surfaceRunoff = parameter.as<string>();
                     }
                 }
                 return GenerateStructureSocont(landCoverTypes, landCoverNames, soilStorageNb, surfaceRunoff);
@@ -716,7 +713,7 @@ bool SettingsModel::ParseStructure(const std::string& path) {
     }
 }
 
-bool SettingsModel::ParseParameters(const std::string& path) {
+bool SettingsModel::ParseParameters(const string& path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
@@ -733,7 +730,7 @@ bool SettingsModel::ParseParameters(const std::string& path) {
         for (auto itL1 = root.begin(); itL1 != root.end(); ++itL1) {
             auto keyL1 = itL1->first;
             auto valL1 = itL1->second;
-            std::string nameL1 = keyL1.as<std::string>();
+            string nameL1 = keyL1.as<string>();
 
             bool isBrick = false;
             bool isSplitter = false;
@@ -753,14 +750,14 @@ bool SettingsModel::ParseParameters(const std::string& path) {
             for (auto itL2 = valL1.begin(); itL2 != valL1.end(); ++itL2) {
                 auto keyL2 = itL2->first;
                 auto valL2 = itL2->second;
-                std::string nameL2 = keyL2.as<std::string>();
+                string nameL2 = keyL2.as<string>();
 
                 if (valL2.IsMap()) {
                     // The process to assign the parameter to has been specified.
                     for (auto itL3 = valL2.begin(); itL3 != valL2.end(); ++itL3) {
                         auto keyL3 = itL3->first;
                         auto valL3 = itL3->second;
-                        std::string nameL3 = keyL3.as<std::string>();
+                        string nameL3 = keyL3.as<string>();
 
                         if (!valL3.IsScalar()) {
                             throw ShouldNotHappen();
@@ -820,7 +817,7 @@ bool SettingsModel::ParseParameters(const std::string& path) {
     return true;
 }
 
-bool SettingsModel::SetParameter(const std::string& component, const std::string& name, float value) {
+bool SettingsModel::SetParameter(const string& component, const string& name, float value) {
     bool isBrick = false;
     bool isSplitter = false;
 
@@ -868,7 +865,7 @@ vecStr SettingsModel::ParseLandCoverNames(const YAML::Node& settings) {
     if (YAML::Node landCovers = settings["land_covers"]) {
         if (YAML::Node names = landCovers["names"]) {
             for (auto&& name : names) {
-                landCoverNames.push_back(name.as<std::string>());
+                landCoverNames.push_back(name.as<string>());
             }
         }
     }
@@ -881,7 +878,7 @@ vecStr SettingsModel::ParseLandCoverTypes(const YAML::Node& settings) {
     if (YAML::Node landCovers = settings["land_covers"]) {
         if (YAML::Node types = landCovers["types"]) {
             for (auto&& type : types) {
-                landCoverTypes.push_back(type.as<std::string>());
+                landCoverTypes.push_back(type.as<string>());
             }
         }
     }
@@ -889,9 +886,9 @@ vecStr SettingsModel::ParseLandCoverTypes(const YAML::Node& settings) {
     return landCoverTypes;
 }
 
-std::string SettingsModel::ParseSolver(const YAML::Node& settings) {
+string SettingsModel::ParseSolver(const YAML::Node& settings) {
     if (settings["solver"]) {
-        return settings["solver"].as<std::string>();
+        return settings["solver"].as<string>();
     }
 
     return "EulerExplicit";
@@ -899,7 +896,7 @@ std::string SettingsModel::ParseSolver(const YAML::Node& settings) {
 
 bool SettingsModel::LogAll(const YAML::Node& settings) {
     if (settings["logger"]) {
-        std::string target = settings["logger"].as<std::string>();
+        string target = settings["logger"].as<string>();
         if (target == "all") {
             return true;
         } else {
@@ -911,7 +908,7 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
 }
 
 bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb,
-                                            const std::string& surfaceRunoff) {
+                                            const string& surfaceRunoff) {
     if (landCoverNames.size() != landCoverTypes.size()) {
         wxLogError(_("The length of the land cover names and types do not match."));
         return false;
@@ -925,7 +922,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
 
     // Add other specific land covers
     for (int i = 0; i < landCoverNames.size(); ++i) {
-        std::string type = landCoverTypes[i];
+        string type = landCoverTypes[i];
         if (type == "ground") {
             // Nothing to do, already added.
         } else if (type == "glacier") {
@@ -941,8 +938,8 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
 
     // Add surface-related processes
     for (int i = 0; i < landCoverNames.size(); ++i) {
-        std::string type = landCoverTypes[i];
-        std::string name = landCoverNames[i];
+        string type = landCoverTypes[i];
+        string name = landCoverNames[i];
         SelectHydroUnitBrick(name);
 
         if (type == "glacier") {

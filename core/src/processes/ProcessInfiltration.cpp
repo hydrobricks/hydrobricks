@@ -24,7 +24,7 @@ int ProcessInfiltration::GetConnectionsNb() {
     return 1;
 }
 
-double* ProcessInfiltration::GetValuePointer(const std::string& name) {
+double* ProcessInfiltration::GetValuePointer(const string& name) {
     if (name == "output") {
         return m_outputs[0]->GetAmountPointer();
     }

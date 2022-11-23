@@ -6,7 +6,6 @@ import _hydrobricks as hb
 import HydroErr
 import pandas as pd
 from _hydrobricks import ModelHydro, SettingsModel
-
 from hydrobricks import utils
 
 

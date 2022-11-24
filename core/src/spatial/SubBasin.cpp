@@ -133,7 +133,7 @@ HydroUnit* SubBasin::GetHydroUnit(int index) {
     return m_hydroUnits[index];
 }
 
-vecInt SubBasin::GetHydroUnitsIds() {
+vecInt SubBasin::GetHydroUnitIds() {
     vecInt ids;
     ids.reserve(m_hydroUnits.size());
     for (auto unit : m_hydroUnits) {
@@ -141,6 +141,16 @@ vecInt SubBasin::GetHydroUnitsIds() {
     }
 
     return ids;
+}
+
+vecDouble SubBasin::GetHydroUnitAreas() {
+    vecDouble areas;
+    areas.reserve(m_hydroUnits.size());
+    for (auto unit : m_hydroUnits) {
+        areas.push_back(unit->GetArea());
+    }
+
+    return areas;
 }
 
 int SubBasin::GetBricksCount() {

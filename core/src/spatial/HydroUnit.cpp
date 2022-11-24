@@ -130,6 +130,10 @@ bool HydroUnit::IsOk() {
     for (auto splitter : m_splitters) {
         if (!splitter->IsOk()) return false;
     }
+    if (m_area <= 0) {
+        wxLogError(_("The hydro unit area has not been defined."));
+        return false;
+    }
 
     return true;
 }

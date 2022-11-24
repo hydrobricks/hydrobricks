@@ -36,7 +36,7 @@ class Splitters : public ::testing::Test {
 
 TEST_F(Splitters, SnowRain) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.AddHydroUnitSplitter("snow-rain", "snow_rain");

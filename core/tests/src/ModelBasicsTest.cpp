@@ -55,7 +55,7 @@ class ModelBasics : public ::testing::Test {
 
 TEST_F(ModelBasics, Model1BuildsCorrectly) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
@@ -66,7 +66,7 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
 
 TEST_F(ModelBasics, Model1RunsCorrectly) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
@@ -80,7 +80,7 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
 
 TEST_F(ModelBasics, Model2BuildsCorrectly) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);

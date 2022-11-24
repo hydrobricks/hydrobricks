@@ -138,7 +138,7 @@ TEST_F(GlacierModel, UnlimitedSupply) {
     wxLogNull logNo;
 
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
@@ -231,7 +231,7 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     wxLogNull logNo;
 
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);

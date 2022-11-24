@@ -5,16 +5,17 @@
 Logger::Logger()
     : m_cursor(0) {}
 
-void Logger::InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecStr& subBasinLabels,
-                           const vecStr& hydroUnitLabels) {
+void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, const vecDouble& hydroUnitAreas,
+                           const vecStr& subBasinLabels, const vecStr& hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
     m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
     m_subBasinValuesPt.resize(subBasinLabels.size());
-    m_hydroUnitIds = hydroUnitsIds;
+    m_hydroUnitIds = hydroUnitIds;
+    m_hydroUnitAreas = hydroUnitAreas;
     m_hydroUnitLabels = hydroUnitLabels;
-    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitsIds.size()) * NAN_D);
-    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitsIds.size(), nullptr));
+    m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
+    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
 }
 
 void Logger::Reset() {

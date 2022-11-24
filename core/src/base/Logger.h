@@ -9,8 +9,8 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, const vecInt& hydroUnitsIds, const vecStr& subBasinLabels,
-                       const vecStr& hydroUnitLabels);
+    void InitContainer(int timeSize, const vecInt& hydroUnitIds, const vecDouble& hydroUnitAreas,
+                       const vecStr& subBasinLabels, const vecStr& hydroUnitLabels);
 
     void Reset();
 
@@ -43,6 +43,7 @@ class Logger : public wxObject {
     vecAxd m_subBasinValues;
     vecDoublePt m_subBasinValuesPt;
     vecInt m_hydroUnitIds;
+    vecDouble m_hydroUnitAreas;
     vecStr m_hydroUnitLabels;
     vecAxxd m_hydroUnitValues;
     std::vector<vecDoublePt> m_hydroUnitValuesPt;

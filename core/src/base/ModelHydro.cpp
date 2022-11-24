@@ -40,7 +40,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings) {
         m_timer.Initialize(modelSettings.GetTimerSettings());
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
-        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitsIds(),
+        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitIds(), m_subBasin->GetHydroUnitAreas(),
                                modelSettings.GetSubBasinLogLabels(), modelSettings.GetHydroUnitLogLabels());
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {

@@ -14,6 +14,7 @@ class ModelBasics : public ::testing::Test {
 
     void SetUp() override {
         // Model 1: simple linear storage
+        m_model1.SetLogAll(true);
         m_model1.SetSolver("euler_explicit");
         m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model1.AddHydroUnitBrick("storage", "storage");
@@ -26,6 +27,7 @@ class ModelBasics : public ::testing::Test {
         m_model1.AddLoggingToItem("outlet");
 
         // Model 2: 2 linear storages in cascade
+        m_model2.SetLogAll(true);
         m_model2.SetSolver("euler_explicit");
         m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model2.AddHydroUnitBrick("storage-1", "storage");
@@ -91,7 +93,7 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
 
 TEST_F(ModelBasics, Model2RunsCorrectly) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
@@ -122,7 +124,7 @@ TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
 
 TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);
@@ -139,7 +141,7 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
 
 TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);

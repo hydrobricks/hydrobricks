@@ -266,9 +266,9 @@ class SettingsModel : public wxObject {
 
     void SetLogAll(bool logAll = true) {
         if (logAll) {
-            wxLogMessage("Logging all components.");
+            wxLogVerbose("Logging all components.");
         } else {
-            wxLogMessage("Minimal logging.");
+            wxLogVerbose("Minimal logging.");
         }
         m_logAll = logAll;
     }

@@ -9,7 +9,7 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble& hydroUnitAreas,
+    void InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble hydroUnitAreas,
                        const vecStr& subBasinLabels, const vecStr& hydroUnitLabels);
 
     void Reset();
@@ -46,7 +46,7 @@ class Logger : public wxObject {
 
     double GetHydroUnitsFinalStorageState();
 
-    double GetTotalStorageChange();
+    double GetTotalStorageChanges();
 
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;

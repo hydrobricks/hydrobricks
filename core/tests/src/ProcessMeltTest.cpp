@@ -64,7 +64,7 @@ class SnowpackModel : public ::testing::Test {
 /*
 TEST_F(SnowpackModel, DegreeDay) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     ModelHydro model(&subBasin);

@@ -10,7 +10,7 @@ TEST(HydroUnit, BuildsCorrectly) {
 }
 
 TEST(HydroUnit, HasCorrectId) {
-    HydroUnit unit;
+    HydroUnit unit(100);
     unit.SetId(9);
 
     EXPECT_EQ(unit.GetId(), 9);

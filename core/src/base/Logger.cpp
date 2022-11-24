@@ -5,7 +5,7 @@
 Logger::Logger()
     : m_cursor(0) {}
 
-void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble& hydroUnitAreas,
+void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble hydroUnitAreas,
                            const vecStr& subBasinLabels, const vecStr& hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
@@ -206,7 +206,7 @@ double Logger::GetHydroUnitsFinalStorageState(){
     return sum;
 }
 
-double Logger::GetTotalStorageChange(){
+double Logger::GetTotalStorageChanges(){
     return GetHydroUnitsInitialStorageState() - GetSubBasinInitialStorageState() +
            GetHydroUnitsFinalStorageState() - GetHydroUnitsInitialStorageState();
 }

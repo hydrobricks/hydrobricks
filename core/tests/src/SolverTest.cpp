@@ -77,7 +77,7 @@ class SolverLinearStorage : public ::testing::Test {
 
 TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("euler_explicit");
@@ -112,7 +112,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
 
 TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("heun_explicit");
@@ -147,7 +147,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
 
 TEST_F(SolverLinearStorage, UsingRungeKutta) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("runge_kutta");
@@ -224,7 +224,7 @@ class Solver2LinearStorages : public ::testing::Test {
 
 TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("euler_explicit");
@@ -261,7 +261,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
 
 TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("heun_explicit");
@@ -298,7 +298,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
 
 TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("runge_kutta");
@@ -390,7 +390,7 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
 TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("euler_explicit");
@@ -426,7 +426,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
 
 TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("heun_explicit");
@@ -462,7 +462,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
 
 TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     SubBasin subBasin;
-    HydroUnit unit;
+    HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
     m_model.SetSolver("runge_kutta");

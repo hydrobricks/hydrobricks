@@ -41,16 +41,11 @@ TEST(SubBasin, EmptySubBasinIsNotOk) {
 
     EXPECT_FALSE(subBasin.IsOk());
 }
-/*
+
 TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
     HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
-    Storage storage(&unit);
-    FluxToBrick inFlux, outFlux;
-    storage.AttachFluxIn(&inFlux);
-    storage.AttachFluxOut(&outFlux);
-
     EXPECT_TRUE(subBasin.IsOk());
-}*/
+}

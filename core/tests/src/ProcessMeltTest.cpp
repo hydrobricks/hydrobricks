@@ -61,7 +61,7 @@ class SnowpackModel : public ::testing::Test {
         wxDELETE(m_tsTemp);
     }
 };
-/*
+
 TEST_F(SnowpackModel, DegreeDay) {
     SubBasin subBasin;
     HydroUnit unit(100);
@@ -78,14 +78,12 @@ TEST_F(SnowpackModel, DegreeDay) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
-
+    Logger* logger = model.GetLogger();
+    axd modelOutputs = logger->GetOutletDischarge();
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 17.0, 0.0};
 
-    for (auto & basinOutput : basinOutputs) {
-        for (int j = 0; j < basinOutput.size(); ++j) {
-            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
-        }
+    for (int j = 0; j < modelOutputs.size(); ++j) {
+        EXPECT_NEAR(modelOutputs[j], expectedOutputs[j], 0.000001);
     }
 
     // Check melt and swe
@@ -101,7 +99,7 @@ TEST_F(SnowpackModel, DegreeDay) {
         EXPECT_NEAR(unitContent[2](j, 0), expectedMelt[j], 0.000001);
     }
 }
-*/
+
 class GlacierModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
@@ -151,14 +149,12 @@ TEST_F(GlacierModel, UnlimitedSupply) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
-
+    Logger* logger = model.GetLogger();
+    axd modelOutputs = logger->GetOutletDischarge();
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 18.0, 21.0};
 
-    for (auto& basinOutput : basinOutputs) {
-        for (int j = 0; j < basinOutput.size(); ++j) {
-            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
-        }
+    for (int j = 0; j < modelOutputs.size(); ++j) {
+        EXPECT_NEAR(modelOutputs[j], expectedOutputs[j], 0.000001);
     }
 
     // Check melt and swe
@@ -230,9 +226,12 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     wxLogNull logNo;
 
+    SettingsBasin basinProp;
+    basinProp.AddHydroUnit(1, 1000);
+    basinProp.AddLandCover("glacier", "glacier", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(m_model));
@@ -244,51 +243,60 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 
     EXPECT_TRUE(model.Run());
 
+    Logger* logger = model.GetLogger();
+
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = logger->GetSubBasinValues();
 
     vecDouble expectedOutputs = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
+    axd modelOutputs = logger->GetOutletDischarge();
 
-    for (auto& basinOutput : basinOutputs) {
-        for (int j = 0; j < basinOutput.size(); ++j) {
-            // EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
-            wxPrintf(" | %.1f (%.1f)", basinOutput[j], expectedOutputs[j]);
-        }
+    for (int j = 0; j < expectedOutputs.size(); ++j) {
+        EXPECT_NEAR(modelOutputs[j], expectedOutputs[j], 0.000001);
     }
 
-    wxPrintf("\n");
-
     // Check melt and swe
-    vecAxxd unitOutput = model.GetLogger()->GetHydroUnitValues();
+    vecAxxd unitOutput = logger->GetHydroUnitValues();
 
     vecDouble expectedSnowMelt = {0.0, 4.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedIceMelt = {0.0, 0.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
-    vecDouble expectedTotMeltWater = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
 
     for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
-
-        wxPrintf(" | %.1f (%.1f)", unitOutput[0](j, 0), expectedSnowMelt[j]);
+        EXPECT_NEAR(unitOutput[0](j, 0), expectedIceMelt[j], 0.000001);
+        EXPECT_NEAR(unitOutput[2](j, 0), expectedSnowMelt[j], 0.000001);
     }
-    wxPrintf("\n");
+}
 
-    for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
+    wxLogNull logNo;
 
-        wxPrintf(" | %.1f (%.1f)", unitOutput[1](j, 0), expectedIceMelt[j]);
-    }
-    wxPrintf("\n");
+    SettingsBasin basinProp;
+    basinProp.AddHydroUnit(1, 1000);
+    basinProp.AddLandCover("glacier", "glacier", 1);
 
-    for (int j = 0; j < expectedIceMelt.size(); ++j) {
-        // EXPECT_NEAR(unitOutput[0](j, 0), expectedSnowMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[1](j, 0), expectedIceMelt[j], 0.000001);
-        // EXPECT_NEAR(unitOutput[2](j, 0), expectedTotMeltWater[j], 0.000001);
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
 
-        wxPrintf(" | %.1f (%.1f)", unitOutput[2](j, 0), expectedTotMeltWater[j]);
-    }
-    wxPrintf("\n");
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 8;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

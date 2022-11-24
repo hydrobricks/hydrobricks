@@ -37,7 +37,7 @@ wxString GetUserDirPath() {
     return userDir;
 }
 
-void InitLog(const std::string& path) {
+void InitLog(const string& path) {
     wxString fullPath = path;
     wxString logFileName = "hydrobricks.log";
     fullPath.Append(wxFileName::GetPathSeparator());
@@ -62,7 +62,7 @@ void SetMessageLogLevel() {
     wxLog::SetLogLevel(wxLOG_Message);
 }
 
-bool CheckOutputDirectory(const std::string& path) {
+bool CheckOutputDirectory(const string& path) {
     if (!wxFileName::DirExists(path)) {
         wxFileName dir = wxFileName(path);
         if (!dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
@@ -106,7 +106,7 @@ const char* GetPathSeparator() {
     return wxString(wxFileName::GetPathSeparator()).c_str();
 }
 
-bool StringsMatch(const std::string& str1, const std::string& str2) {
+bool StringsMatch(const string& str1, const string& str2) {
     return ((str1.size() == str2.size()) &&
             std::equal(str1.begin(), str1.end(), str2.begin(), [](const char& c1, const char& c2) {
                 return (c1 == c2 || std::toupper(c1) == std::toupper(c2));
@@ -326,7 +326,7 @@ Time GetTimeStructFromMJD(double mjd) {
     return date;
 }
 
-double ParseDate(const std::string& dateStr, TimeFormat format) {
+double ParseDate(const string& dateStr, TimeFormat format) {
     long day = 0;
     long month = 0;
     long year = 0;

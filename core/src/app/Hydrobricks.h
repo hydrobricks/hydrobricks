@@ -41,13 +41,13 @@ class Hydrobricks : public wxAppConsole {
     void OnDisplaySecurityMessage(wxThreadEvent& event);
 
   protected:
-    std::string m_modelFile;
-    std::string m_parametersFile;
-    std::string m_basinFile;
-    std::string m_dataFile;
-    std::string m_outputPath;
-    std::string m_startDate;
-    std::string m_endDate;
+    string m_modelFile;
+    string m_parametersFile;
+    string m_basinFile;
+    string m_dataFile;
+    string m_outputPath;
+    string m_startDate;
+    string m_endDate;
 
   private:
 };

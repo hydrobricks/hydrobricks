@@ -10,9 +10,9 @@ class TimeSeries : public wxObject {
 
     ~TimeSeries() override = default;
 
-    static bool Parse(const std::string& path, std::vector<TimeSeries*>& vecTimeSeries);
+    static bool Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeries);
 
-    static TimeSeries* Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+    static TimeSeries* Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     virtual bool SetCursorToDate(double date) = 0;
 
@@ -36,7 +36,7 @@ class TimeSeries : public wxObject {
   private:
     static void ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& timeUnit);
 
-    static VariableType MatchVariableType(const std::string& varName);
+    static VariableType MatchVariableType(const string& varName);
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_H

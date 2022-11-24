@@ -792,7 +792,7 @@ void ModelHydro::SaveAsInitialState() {
     m_subBasin->SaveAsInitialState();
 }
 
-bool ModelHydro::DumpOutputs(const std::string& path) {
+bool ModelHydro::DumpOutputs(const string& path) {
     return m_logger.DumpOutputs(path);
 }
 
@@ -823,7 +823,7 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     return true;
 }
 
-bool ModelHydro::CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
+bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
     TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
     if (!AddTimeSeries(timeSeries)) {
         return false;

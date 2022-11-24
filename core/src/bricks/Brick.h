@@ -15,9 +15,9 @@ class Brick : public wxObject {
 
     static Brick* Factory(const BrickSettings& brickSettings);
 
-    static bool HasParameter(const BrickSettings& brickSettings, const std::string& name);
+    static bool HasParameter(const BrickSettings& brickSettings, const string& name);
 
-    static float* GetParameterValuePointer(const BrickSettings& brickSettings, const std::string& name);
+    static float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
 
     /**
      * Assign the parameters to the brick element.
@@ -88,11 +88,11 @@ class Brick : public wxObject {
         return m_processes;
     }
 
-    std::string GetName() {
+    string GetName() {
         return m_name;
     }
 
-    void SetName(const std::string& name) {
+    void SetName(const string& name) {
         m_name = name;
     }
 
@@ -107,12 +107,12 @@ class Brick : public wxObject {
 
     int GetProcessesConnectionsNb();
 
-    double* GetBaseValuePointer(const std::string& name);
+    double* GetBaseValuePointer(const string& name);
 
-    virtual double* GetValuePointer(const std::string& name);
+    virtual double* GetValuePointer(const string& name);
 
   protected:
-    std::string m_name;
+    string m_name;
     bool m_needsSolver;
     WaterContainer* m_container;
     std::vector<Process*> m_processes;

@@ -78,7 +78,7 @@ Brick* HydroUnit::GetBrick(int index) {
     return m_bricks[index];
 }
 
-bool HydroUnit::HasBrick(const std::string& name) {
+bool HydroUnit::HasBrick(const string& name) {
     for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return true;
@@ -87,7 +87,7 @@ bool HydroUnit::HasBrick(const std::string& name) {
     return false;
 }
 
-Brick* HydroUnit::GetBrick(const std::string& name) {
+Brick* HydroUnit::GetBrick(const string& name) {
     for (auto brick : m_bricks) {
         if (brick->GetName() == name) {
             return brick;
@@ -104,7 +104,7 @@ Splitter* HydroUnit::GetSplitter(int index) {
     return m_splitters[index];
 }
 
-bool HydroUnit::HasSplitter(const std::string& name) {
+bool HydroUnit::HasSplitter(const string& name) {
     for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return true;
@@ -113,7 +113,7 @@ bool HydroUnit::HasSplitter(const std::string& name) {
     return false;
 }
 
-Splitter* HydroUnit::GetSplitter(const std::string& name) {
+Splitter* HydroUnit::GetSplitter(const string& name) {
     for (auto splitter : m_splitters) {
         if (splitter->GetName() == name) {
             return splitter;

@@ -7,7 +7,7 @@
 TimeSeries::TimeSeries(VariableType type)
     : m_type(type) {}
 
-bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTimeSeries) {
+bool TimeSeries::Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -44,7 +44,7 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
 
         for (int iVar = 0; iVar < varsNb; ++iVar) {
             // Get variable name
-            std::string varName = file.GetVarName(iVar);
+            string varName = file.GetVarName(iVar);
 
             if (varName == "id" || varName == "time") {
                 continue;
@@ -90,7 +90,7 @@ bool TimeSeries::Parse(const std::string& path, std::vector<TimeSeries*>& vecTim
     return true;
 }
 
-TimeSeries* TimeSeries::Create(const std::string& varName, const axd& time, const axi& ids, const axxd& data) {
+TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi& ids, const axxd& data) {
     // Get time
     Time startSt = GetTimeStructFromMJD(time[0]);
     Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
@@ -127,7 +127,7 @@ TimeSeries* TimeSeries::Create(const std::string& varName, const axd& time, cons
     return timeSeries;
 }
 
-VariableType TimeSeries::MatchVariableType(const std::string& varName) {
+VariableType TimeSeries::MatchVariableType(const string& varName) {
     VariableType varType;
     if (StringsMatch(varName, "precipitation")) {
         varType = Precipitation;

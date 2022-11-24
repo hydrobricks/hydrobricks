@@ -30,13 +30,13 @@ class ModelHydro : public wxObject {
 
     void SaveAsInitialState();
 
-    bool DumpOutputs(const std::string& path);
+    bool DumpOutputs(const string& path);
 
     axd GetOutletDischarge();
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 
-    bool CreateTimeSeries(const std::string& varName, const axd& time, const axi& ids, const axxd& data);
+    bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     void ClearTimeSeries();
 

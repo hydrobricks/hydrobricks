@@ -16,7 +16,7 @@ void SplitterMultiFluxes::AssignParameters(const SplitterSettings&) {
     // No parameter
 }
 
-double* SplitterMultiFluxes::GetValuePointer(const std::string& name) {
+double* SplitterMultiFluxes::GetValuePointer(const string& name) {
     if (name == "output-1") {
         return m_outputs[0]->GetAmountPointer();
     } else if (name == "output-2") {

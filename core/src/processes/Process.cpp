@@ -71,7 +71,7 @@ void Process::AssignParameters(const ProcessSettings&) {
     // Nothing to do...
 }
 
-bool Process::HasParameter(const ProcessSettings& processSettings, const std::string& name) {
+bool Process::HasParameter(const ProcessSettings& processSettings, const string& name) {
     for (auto parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
@@ -81,7 +81,7 @@ bool Process::HasParameter(const ProcessSettings& processSettings, const std::st
     return false;
 }
 
-float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const std::string& name) {
+float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const string& name) {
     for (auto parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
@@ -120,7 +120,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     }
 }
 
-double* Process::GetValuePointer(const std::string&) {
+double* Process::GetValuePointer(const string&) {
     return nullptr;
 }
 

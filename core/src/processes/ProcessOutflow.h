@@ -18,7 +18,7 @@ class ProcessOutflow : public Process {
 
     int GetConnectionsNb() override;
 
-    double* GetValuePointer(const std::string& name) override;
+    double* GetValuePointer(const string& name) override;
 
   protected:
   private:

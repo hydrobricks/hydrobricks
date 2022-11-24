@@ -44,15 +44,15 @@ class SubBasin : public wxObject {
 
     Brick* GetBrick(int index);
 
-    bool HasBrick(const std::string& name);
+    bool HasBrick(const string& name);
 
-    Brick* GetBrick(const std::string& name);
+    Brick* GetBrick(const string& name);
 
     Splitter* GetSplitter(int index);
 
-    bool HasSplitter(const std::string& name);
+    bool HasSplitter(const string& name);
 
-    Splitter* GetSplitter(const std::string& name);
+    Splitter* GetSplitter(const string& name);
 
     bool HasIncomingFlow();
 
@@ -64,7 +64,7 @@ class SubBasin : public wxObject {
 
     void AttachOutletFlux(Flux* pFlux);
 
-    double* GetValuePointer(const std::string& name);
+    double* GetValuePointer(const string& name);
 
     bool ComputeOutletDischarge();
 

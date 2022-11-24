@@ -82,7 +82,7 @@ vecDoublePt Glacier::GetStateVariableChanges() {
     return vars;
 }
 
-double* Glacier::GetValuePointer(const std::string& name) {
+double* Glacier::GetValuePointer(const string& name) {
     if (name == "ice") {
         return m_ice->GetContentPointer();
     }

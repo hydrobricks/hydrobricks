@@ -24,7 +24,7 @@ class Logger : public wxObject {
 
     void Increment();
 
-    bool DumpOutputs(const std::string& path);
+    bool DumpOutputs(const string& path);
 
     axd GetOutletDischarge();
 

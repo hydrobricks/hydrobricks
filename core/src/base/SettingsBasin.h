@@ -5,14 +5,14 @@
 #include "Parameter.h"
 
 struct LandCoverSettings {
-    std::string name;
-    std::string type;
+    string name;
+    string type;
     double fraction;
 };
 
 struct SurfaceComponentSettings {
-    std::string name;
-    std::string type;
+    string name;
+    string type;
     double fraction;
 };
 
@@ -32,11 +32,11 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnit(int id, double area, double elevation = 0.0);
 
-    void AddLandCover(const std::string& name, const std::string& type = "", double fraction = 1.0);
+    void AddLandCover(const string& name, const string& type = "", double fraction = 1.0);
 
     void SelectUnit(int index);
 
-    bool Parse(const std::string& path);
+    bool Parse(const string& path);
 
     HydroUnitSettings GetHydroUnitSettings(int index) {
         wxASSERT(m_hydroUnits.size() > index);

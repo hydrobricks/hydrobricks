@@ -23,7 +23,7 @@ Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
     return nullptr;
 }
 
-float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const std::string& name) {
+float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
     for (auto parameter : splitterSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());

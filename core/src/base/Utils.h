@@ -25,7 +25,7 @@ wxString GetUserDirPath();
  *
  * @return True on success.
  */
-bool CheckOutputDirectory(const std::string& path);
+bool CheckOutputDirectory(const string& path);
 
 /**
  * Display the processing time.
@@ -39,7 +39,7 @@ void DisplayProcessingTime(const wxStopWatch& sw);
  *
  * @param path Destination of the log file.
  */
-void InitLog(const std::string& path);
+void InitLog(const string& path);
 
 /**
  * Set the log level to max (max verbosity)
@@ -95,7 +95,7 @@ const char* GetPathSeparator();
  * @return True if strings match.
  * @note From https://thispointer.com/c-case-insensitive-string-comparison-using-stl-c11-boost-library/
  */
-bool StringsMatch(const std::string& str1, const std::string& str2);
+bool StringsMatch(const string& str1, const string& str2);
 
 /**
  * Find an value in a vector of integers.
@@ -171,7 +171,7 @@ Time GetTimeStructFromMJD(double mjd);
  * @param format The format of the date to parse.
  * @return The date value as MJD.
  */
-double ParseDate(const std::string& dateStr, TimeFormat format);
+double ParseDate(const string& dateStr, TimeFormat format);
 
 /**
  * Get a date as an MJD value.

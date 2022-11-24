@@ -48,7 +48,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("assign_fractions", &SubBasin::AssignFractions, "Assign the land cover fractions", "spatial_structure"_a);
 
     py::class_<Parameter>(m, "Parameter")
-        .def(py::init<const std::string&, float>())
+        .def(py::init<const string&, float>())
         .def_property("name", &Parameter::GetName, &Parameter::SetName)
         .def_property("value", &Parameter::GetValue, &Parameter::SetValue)
         .def("get_name", &Parameter::GetName, "Get the parameter name")
@@ -58,7 +58,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
     py::class_<ParameterVariableYearly, Parameter>(m, "ParameterVariableYearly")
-        .def(py::init<const std::string&>())
+        .def(py::init<const string&>())
         .def("set_values", &ParameterVariableYearly::SetValues, "Set the parameter values", "year_start"_a,
              "year_end"_a, "values"_a);
 

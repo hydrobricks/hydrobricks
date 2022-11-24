@@ -79,7 +79,8 @@
 // Typedefs
 //---------------------------------
 
-typedef std::vector<std::string> vecStr;
+typedef std::string string;
+typedef std::vector<string> vecStr;
 typedef std::vector<int> vecInt;
 typedef std::vector<float> vecFloat;
 typedef std::vector<double> vecDouble;

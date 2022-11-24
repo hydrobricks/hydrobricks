@@ -1,5 +1,5 @@
-base: Socont
-solver: HeunExplicit
+base: socont
+solver: heun_explicit
 options:
   soil_storage_nb: 2
 land_covers:

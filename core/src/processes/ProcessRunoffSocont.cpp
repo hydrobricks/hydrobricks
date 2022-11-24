@@ -11,7 +11,7 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
 void ProcessRunoffSocont::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
     m_slope = GetParameterValuePointer(processSettings, "slope");
-    m_runoffParameter = GetParameterValuePointer(processSettings, "runoffCoefficient");
+    m_runoffParameter = GetParameterValuePointer(processSettings, "runoff_coefficient");
 }
 
 vecDouble ProcessRunoffSocont::GetRates() {

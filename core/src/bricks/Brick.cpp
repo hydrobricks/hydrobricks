@@ -19,17 +19,17 @@ Brick::~Brick() {
 }
 
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
-    if (brickSettings.type == "Storage") {
+    if (brickSettings.type == "storage") {
         return new Storage();
-    } else if (brickSettings.type == "GenericLandCover") {
+    } else if (brickSettings.type == "generic_land_cover") {
         return new GenericLandCover();
-    } else if (brickSettings.type == "Glacier") {
+    } else if (brickSettings.type == "glacier") {
         return new Glacier();
     } else if (brickSettings.type == "Urban") {
         return new Urban();
     } else if (brickSettings.type == "Vegetation") {
         return new Vegetation();
-    } else if (brickSettings.type == "Snowpack") {
+    } else if (brickSettings.type == "snowpack") {
         return new Snowpack();
     } else {
         wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);

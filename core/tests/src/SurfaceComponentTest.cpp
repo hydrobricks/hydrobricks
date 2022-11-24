@@ -15,50 +15,50 @@ class GlacierComponentModel : public ::testing::Test {
     TimeSeriesUniform* m_tsTemp{};
 
     void SetUp() override {
-        m_model.SetSolver("HeunExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model.SetLogAll(true);
 
         // Precipitation
         m_model.GeneratePrecipitationSplitters(true);
 
         // Land cover elements
-        m_model.AddLandCoverBrick("ground", "GenericLandCover");
-        m_model.AddLandCoverBrick("glacier", "Glacier");
-        m_model.GenerateSnowpacks("Melt:degree-day");
+        m_model.AddLandCoverBrick("ground", "generic_land_cover");
+        m_model.AddLandCoverBrick("glacier", "glacier");
+        m_model.GenerateSnowpacks("melt:degree_day");
 
         // Rain/snow splitter
-        m_model.SelectHydroUnitSplitter("snow-rain-transition");
-        m_model.AddSplitterParameter("transitionStart", 0.0f);
-        m_model.AddSplitterParameter("transitionEnd", 2.0f);
+        m_model.SelectHydroUnitSplitter("snow_rain_transition");
+        m_model.AddSplitterParameter("transition_start", 0.0f);
+        m_model.AddSplitterParameter("transition_end", 2.0f);
 
         // Snow melt process on ground
         m_model.SelectHydroUnitBrick("ground-snowpack");
         m_model.SelectProcess("melt");
-        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
-        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessParameter("degree_day_factor", 3.0f);
+        m_model.AddProcessParameter("melting_temperature", 2.0f);
 
         // Snow melt process on glacier
         m_model.SelectHydroUnitBrick("glacier-snowpack");
         m_model.SelectProcess("melt");
-        m_model.AddProcessParameter("degreeDayFactor", 3.0f);
-        m_model.AddProcessParameter("meltingTemperature", 2.0f);
+        m_model.AddProcessParameter("degree_day_factor", 3.0f);
+        m_model.AddProcessParameter("melting_temperature", 2.0f);
 
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickParameter("noMeltWhenSnowCover", 1.0);
-        m_model.AddBrickParameter("infiniteStorage", 1.0);
-        m_model.AddBrickProcess("melt", "Melt:degree-day", "glacier");
-        m_model.AddProcessForcing("Temperature");
-        m_model.AddProcessParameter("degreeDayFactor", 4.0f);
-        m_model.AddProcessParameter("meltingTemperature", 1.0f);
+        m_model.AddBrickParameter("no_melt_when_snow_cover", 1.0);
+        m_model.AddBrickParameter("infinite_storage", 1.0);
+        m_model.AddBrickProcess("melt", "melt:degree_day", "glacier");
+        m_model.AddProcessForcing("temperature");
+        m_model.AddProcessParameter("degree_day_factor", 4.0f);
+        m_model.AddProcessParameter("melting_temperature", 1.0f);
         m_model.SetProcessOutputsAsInstantaneous();
-        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
         m_model.SetProcessOutputsAsInstantaneous();
 
         // Land cover brick for the bare ground with a direct outflow
         m_model.SelectHydroUnitBrick("ground");
-        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         m_model.AddLoggingToItem("outlet");
 

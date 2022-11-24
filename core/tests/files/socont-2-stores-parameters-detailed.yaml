@@ -1,33 +1,33 @@
-snow-rain-transition:
-  transitionStart: 0
-  transitionEnd: 2
+snow_rain_transition:
+  transition_start: 0
+  transition_end: 2
 snowpack:
   melt:
-    degreeDayFactor: 2
-    meltingTemperature: 0
+    degree_day_factor: 2
+    melting_temperature: 0
 glacier-ice:
   melt:
-    degreeDayFactor: 6
-    meltingTemperature: 0
+    degree_day_factor: 6
+    melting_temperature: 0
 glacier-debris:
   melt:
-    degreeDayFactor: 4
-    meltingTemperature: 0
+    degree_day_factor: 4
+    melting_temperature: 0
 glacier-area-rain-snowmelt-storage:
   outflow:
-    responseFactor: 0.2
+    response_factor: 0.2
 glacier-area-icemelt-storage:
   outflow:
-    responseFactor: 0.2
+    response_factor: 0.2
 surface-runoff:
   runoff:
-    runoffCoefficient: 500
+    runoff_coefficient: 500
 slow-reservoir:
   capacity: 500
   outflow:
-    responseFactor: 0.2
+    response_factor: 0.2
   percolation:
-    percolationRate: 0.4
+    percolation_rate: 0.4
 slow-reservoir-2:
   outflow:
-    responseFactor: 0.01
+    response_factor: 0.01

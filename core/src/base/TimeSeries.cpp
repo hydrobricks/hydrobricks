@@ -129,17 +129,17 @@ TimeSeries* TimeSeries::Create(const std::string& varName, const axd& time, cons
 
 VariableType TimeSeries::MatchVariableType(const std::string& varName) {
     VariableType varType;
-    if (StringsMatch(varName, "Precipitation")) {
+    if (StringsMatch(varName, "precipitation")) {
         varType = Precipitation;
-    } else if (StringsMatch(varName, "Temperature")) {
+    } else if (StringsMatch(varName, "temperature")) {
         varType = Temperature;
-    } else if (StringsMatch(varName, "PET") || StringsMatch(varName, "ETP")) {
+    } else if (StringsMatch(varName, "pet") || StringsMatch(varName, "etp")) {
         varType = PET;
-    } else if (StringsMatch(varName, "Custom1")) {
+    } else if (StringsMatch(varName, "custom_1")) {
         varType = Custom1;
-    } else if (StringsMatch(varName, "Custom2")) {
+    } else if (StringsMatch(varName, "custom_2")) {
         varType = Custom2;
-    } else if (StringsMatch(varName, "Custom3")) {
+    } else if (StringsMatch(varName, "custom_3")) {
         varType = Custom3;
     } else {
         throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));

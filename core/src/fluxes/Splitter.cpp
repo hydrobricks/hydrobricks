@@ -8,13 +8,13 @@
 Splitter::Splitter() {}
 
 Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
-    if (splitterSettings.type == "SnowRain") {
+    if (splitterSettings.type == "snow_rain") {
         auto splitter = new SplitterSnowRain();
         splitter->AssignParameters(splitterSettings);
         return splitter;
-    } else if (splitterSettings.type == "Rain") {
+    } else if (splitterSettings.type == "rain") {
         return new SplitterRain();
-    } else if (splitterSettings.type == "MultiFluxes") {
+    } else if (splitterSettings.type == "multi_fluxes") {
         return new SplitterMultiFluxes();
     } else {
         wxLogError(_("Splitter type '%s' not recognized."), splitterSettings.type);

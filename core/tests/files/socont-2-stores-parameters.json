@@ -1,28 +1,28 @@
 {
   "snowpack": {
-    "degreeDayFactor": 2,
-    "meltingTemperature": 0,
-    "responseFactor": 0.5
+    "degree_day_factor": 2,
+    "melting_temperature": 0,
+    "response_factor": 0.5
   },
   "glacier-ice": {
-    "degreeDayFactor": 6,
-    "meltingTemperature": 0,
-    "responseFactor": 0.2
+    "degree_day_factor": 6,
+    "melting_temperature": 0,
+    "response_factor": 0.2
   },
   "glacier-debris": {
-    "degreeDayFactor": 4,
-    "meltingTemperature": 0,
-    "responseFactor": 0.2
+    "degree_day_factor": 4,
+    "melting_temperature": 0,
+    "response_factor": 0.2
   },
   "surface-runoff": {
-    "runoffCoefficient": 500
+    "runoff_coefficient": 500
   },
   "slow-reservoir": {
     "capacity": 500,
-    "responseFactor": 0.2,
-    "percolationRate": 0.4
+    "response_factor": 0.2,
+    "percolation_rate": 0.4
   },
   "slow-reservoir-2": {
-    "responseFactor": 0.01
+    "response_factor": 0.01
   }
 }

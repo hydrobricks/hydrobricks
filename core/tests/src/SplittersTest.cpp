@@ -15,8 +15,8 @@ class Splitters : public ::testing::Test {
     TimeSeriesUniform* m_tsTemp{};
 
     void SetUp() override {
-        m_model.SetSolver("HeunExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -39,15 +39,15 @@ TEST_F(Splitters, SnowRain) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.AddHydroUnitSplitter("snow-rain", "SnowRain");
-    m_model.AddSplitterForcing("Precipitation");
-    m_model.AddSplitterForcing("Temperature");
+    m_model.AddHydroUnitSplitter("snow-rain", "snow_rain");
+    m_model.AddSplitterForcing("precipitation");
+    m_model.AddSplitterForcing("temperature");
     m_model.AddSplitterOutput("outlet");  // rain
     m_model.AddSplitterOutput("outlet");  // snow
     m_model.AddSplitterLogging("rain");
     m_model.AddSplitterLogging("snow");
-    m_model.AddSplitterParameter("transitionStart", 0.0f);
-    m_model.AddSplitterParameter("transitionEnd", 2.0f);
+    m_model.AddSplitterParameter("transition_start", 0.0f);
+    m_model.AddSplitterParameter("transition_end", 2.0f);
     m_model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);

@@ -18,29 +18,29 @@ Process::Process(WaterContainer* container)
     : m_container(container) {}
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
-    if (processSettings.type == "Outflow:linear") {
+    if (processSettings.type == "outflow:linear") {
         auto process = new ProcessOutflowLinear(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type == "Outflow:constant") {
+    } else if (processSettings.type == "outflow:constant") {
         auto process = new ProcessOutflowConstant(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type == "Outflow:direct") {
+    } else if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "Outflow:rest-direct" || processSettings.type == "Outflow:RestDirect") {
+    } else if (processSettings.type == "outflow:rest-direct" || processSettings.type == "outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "Runoff:Socont") {
+    } else if (processSettings.type == "runoff:socont") {
         auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
         process->AssignParameters(processSettings);
         return process;
-    } else if (processSettings.type == "Infiltration:Socont") {
+    } else if (processSettings.type == "infiltration:socont") {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "Overflow") {
+    } else if (processSettings.type == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
-    } else if (processSettings.type == "ET:Socont") {
+    } else if (processSettings.type == "et:socont") {
         return new ProcessETSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "Melt:degree-day" || processSettings.type == "Melt:DegreeDay") {
+    } else if (processSettings.type == "melt:degree_day" || processSettings.type == "Melt:DegreeDay") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             auto process = new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());

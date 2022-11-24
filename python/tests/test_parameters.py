@@ -232,7 +232,7 @@ def test_create_json_parameter_file_content(parameter_set):
     with tempfile.TemporaryDirectory() as tmp_dir:
         parameter_set.create_file(tmp_dir, 'parameters', 'json')
         txt = Path(tmp_dir + '/parameters.json').read_text()
-        assert '"degreeDayFactor": 3' in txt
+        assert '"degree_day_factor": 3' in txt
         assert '"capacity": 200' in txt
 
 

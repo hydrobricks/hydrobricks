@@ -143,7 +143,7 @@ int Hydrobricks::OnRun() {
         }
 
         // Modelling period
-        modelSettings.SetTimer(m_startDate, m_endDate, 1, "Day");
+        modelSettings.SetTimer(m_startDate, m_endDate, 1, "day");
 
         // Parameters
         if (!modelSettings.ParseParameters(m_parametersFile)) {

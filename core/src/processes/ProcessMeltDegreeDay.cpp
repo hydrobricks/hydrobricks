@@ -28,8 +28,8 @@ bool ProcessMeltDegreeDay::IsOk() {
 
 void ProcessMeltDegreeDay::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
-    m_degreeDayFactor = GetParameterValuePointer(processSettings, "degreeDayFactor");
-    m_meltingTemperature = GetParameterValuePointer(processSettings, "meltingTemperature");
+    m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor");
+    m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 }
 
 void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {

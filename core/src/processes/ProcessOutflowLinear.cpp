@@ -9,7 +9,7 @@ ProcessOutflowLinear::ProcessOutflowLinear(WaterContainer* container)
 
 void ProcessOutflowLinear::AssignParameters(const ProcessSettings& processSettings) {
     Process::AssignParameters(processSettings);
-    m_responseFactor = GetParameterValuePointer(processSettings, "responseFactor");
+    m_responseFactor = GetParameterValuePointer(processSettings, "response_factor");
 }
 
 vecDouble ProcessOutflowLinear::GetRates() {

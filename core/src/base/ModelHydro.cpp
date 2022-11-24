@@ -93,7 +93,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
             process->SetName(processSettings.name);
             brick->AddProcess(process);
 
-            if (processSettings.type == "Overflow") {
+            if (processSettings.type == "overflow") {
                 brick->GetWaterContainer()->LinkOverflow(process);
             }
         }
@@ -181,7 +181,7 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
         process->SetName(processSettings.name);
         brick->AddProcess(process);
 
-        if (processSettings.type == "Overflow") {
+        if (processSettings.type == "overflow") {
             brick->GetWaterContainer()->LinkOverflow(process);
         }
 

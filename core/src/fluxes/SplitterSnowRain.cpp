@@ -17,8 +17,8 @@ bool SplitterSnowRain::IsOk() {
 }
 
 void SplitterSnowRain::AssignParameters(const SplitterSettings& splitterSettings) {
-    m_transitionStart = GetParameterValuePointer(splitterSettings, "transitionStart");
-    m_transitionEnd = GetParameterValuePointer(splitterSettings, "transitionEnd");
+    m_transitionStart = GetParameterValuePointer(splitterSettings, "transition_start");
+    m_transitionEnd = GetParameterValuePointer(splitterSettings, "transition_end");
 }
 
 void SplitterSnowRain::AttachForcing(Forcing* forcing) {

@@ -30,11 +30,11 @@ class Socont(Model):
         ps = ParameterSet()
 
         ps.define_parameter(
-            component='snow-rain-transition', name='transitionStart', unit='°C',
+            component='snow_rain_transition', name='transitionStart', unit='°C',
             min_value=-5, max_value=5, default_value=0, mandatory=False)
 
         ps.define_parameter(
-            component='snow-rain-transition', name='transitionEnd', unit='°C',
+            component='snow_rain_transition', name='transitionEnd', unit='°C',
             min_value=-5, max_value=5, default_value=2, mandatory=False)
 
         ps.define_parameter(

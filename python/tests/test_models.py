@@ -45,10 +45,10 @@ def test_create_json_config_file_content():
     with tempfile.TemporaryDirectory() as tmp_dir:
         model.create_config_file(tmp_dir, 'structure', 'json')
         txt = Path(tmp_dir + '/structure.json').read_text()
-        assert '"base": "Socont"' in txt
-        assert '"solver": "Runge-Kutta"' in txt
+        assert '"base": "socont"' in txt
+        assert '"solver": "runge_kutta"' in txt
         assert '"soil_storage_nb": 2' in txt
-        assert '"surface_runoff": "linear-storage"' in txt
+        assert '"surface_runoff": "linear_storage"' in txt
         assert 'ground' in txt
         assert 'aletsch_glacier' in txt
 

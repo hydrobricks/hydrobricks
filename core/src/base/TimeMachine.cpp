@@ -24,11 +24,11 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     m_date = m_start;
     m_timeStep = settings.timeStep;
 
-    if (settings.timeStepUnit == "Day") {
+    if (settings.timeStepUnit == "day") {
         m_timeStepUnit = Day;
-    } else if (settings.timeStepUnit == "Hour") {
+    } else if (settings.timeStepUnit == "hour") {
         m_timeStepUnit = Hour;
-    } else if (settings.timeStepUnit == "Minute") {
+    } else if (settings.timeStepUnit == "minute") {
         m_timeStepUnit = Minute;
     } else {
         throw InvalidArgument(_("Time step unit unrecognized or not implemented."));

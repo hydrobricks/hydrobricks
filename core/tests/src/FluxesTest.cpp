@@ -15,18 +15,18 @@ class FluxWeightedModel : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
 
     void SetUp() override {
-        m_model.SetSolver("HeunExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model.SetLogAll(true);
 
         // Precipitation
         m_model.GeneratePrecipitationSplitters(false);
 
         // Land cover elements and processes
-        m_model.AddLandCoverBrick("item-1", "GenericLandCover");
-        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
-        m_model.AddLandCoverBrick("item-2", "GenericLandCover");
-        m_model.AddBrickProcess("outflow", "Outflow:direct", "outlet");
+        m_model.AddLandCoverBrick("item-1", "generic_land_cover");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        m_model.AddLandCoverBrick("item-2", "generic_land_cover");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         // Outlet
         m_model.AddLoggingToItem("outlet");

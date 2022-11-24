@@ -8,37 +8,27 @@ TEST(Solver, FactoryBuildsSolvers) {
     SolverSettings settings;
     Solver* solver;
 
-    settings.name = "RK4";
+    settings.name = "rk4";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
     wxDELETE(solver);
 
-    settings.name = "Runge-Kutta";
+    settings.name = "runge_kutta";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
     wxDELETE(solver);
 
-    settings.name = "RungeKutta";
+    settings.name = "runge_kutta";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
     wxDELETE(solver);
 
-    settings.name = "Euler Explicit";
+    settings.name = "euler_explicit";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
     wxDELETE(solver);
 
-    settings.name = "EulerExplicit";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
-
-    settings.name = "Heun Explicit";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
-
-    settings.name = "HeunExplicit";
+    settings.name = "heun_explicit";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
     wxDELETE(solver);
@@ -47,7 +37,7 @@ TEST(Solver, FactoryBuildsSolvers) {
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
     SolverSettings settings;
 
-    settings.name = "InvalidName";
+    settings.name = "invalid_name";
     EXPECT_THROW(Solver::Factory(settings), InvalidArgument);
 }
 
@@ -60,15 +50,15 @@ class SolverLinearStorage : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
 
     void SetUp() override {
-        m_model.SetSolver("EulerExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
+        m_model.SetSolver("euler_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "day");
 
         // Main storage
-        m_model.AddHydroUnitBrick("storage", "Storage");
-        m_model.AddBrickForcing("Precipitation");
+        m_model.AddHydroUnitBrick("storage", "storage");
+        m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
-        m_model.AddBrickProcess("outflow", "Outflow:linear");
-        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddBrickProcess("outflow", "outflow:linear");
+        m_model.AddProcessParameter("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -90,7 +80,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("EulerExplicit");
+    m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -125,7 +115,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("HeunExplicit");
+    m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -160,7 +150,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("RungeKutta");
+    m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -199,23 +189,23 @@ class Solver2LinearStorages : public ::testing::Test {
     TimeSeriesUniform* m_tsPrecip{};
 
     void SetUp() override {
-        m_model.SetSolver("EulerExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
+        m_model.SetSolver("euler_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "day");
 
         // First storage
-        m_model.AddHydroUnitBrick("storage-1", "Storage");
-        m_model.AddBrickForcing("Precipitation");
+        m_model.AddHydroUnitBrick("storage-1", "storage");
+        m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
-        m_model.AddBrickProcess("outflow", "Outflow:linear");
-        m_model.AddProcessParameter("responseFactor", 0.5f);
+        m_model.AddBrickProcess("outflow", "outflow:linear");
+        m_model.AddProcessParameter("response_factor", 0.5f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("storage-2");
 
         // Second storage
-        m_model.AddHydroUnitBrick("storage-2", "Storage");
+        m_model.AddHydroUnitBrick("storage-2", "storage");
         m_model.AddBrickLogging("content");
-        m_model.AddBrickProcess("outflow", "Outflow:linear");
-        m_model.AddProcessParameter("responseFactor", 0.3f);
+        m_model.AddBrickProcess("outflow", "outflow:linear");
+        m_model.AddProcessParameter("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -237,7 +227,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("EulerExplicit");
+    m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -274,7 +264,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("HeunExplicit");
+    m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -311,7 +301,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("RungeKutta");
+    m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -353,28 +343,28 @@ class SolverLinearStorageWithET : public ::testing::Test {
     TimeSeriesUniform* m_tsPET{};
 
     void SetUp() override {
-        m_model.SetSolver("EulerExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "Day");
+        m_model.SetSolver("euler_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-20", 1, "day");
 
         // Main storage
-        m_model.AddHydroUnitBrick("storage", "Storage");
-        m_model.AddBrickForcing("Precipitation");
+        m_model.AddHydroUnitBrick("storage", "storage");
+        m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
         m_model.AddBrickParameter("capacity", 20);
 
         // Linear outflow process
-        m_model.AddBrickProcess("outflow", "Outflow:linear");
-        m_model.AddProcessParameter("responseFactor", 0.1f);
+        m_model.AddBrickProcess("outflow", "outflow:linear");
+        m_model.AddProcessParameter("response_factor", 0.1f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
         // ET process
-        m_model.AddBrickProcess("ET", "ET:Socont");
-        m_model.AddProcessForcing("PET");
+        m_model.AddBrickProcess("et", "et:socont");
+        m_model.AddProcessForcing("pet");
         m_model.AddProcessLogging("output");
 
         // Overflow process
-        m_model.AddBrickProcess("overflow", "Overflow");
+        m_model.AddBrickProcess("overflow", "overflow");
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -403,7 +393,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("EulerExplicit");
+    m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -439,7 +429,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("HeunExplicit");
+    m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);
@@ -475,7 +465,7 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     HydroUnit unit;
     subBasin.AddHydroUnit(&unit);
 
-    m_model.SetSolver("RungeKutta");
+    m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
     model.Initialize(m_model);

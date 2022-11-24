@@ -74,7 +74,7 @@ class Model(ABC):
             hb.init_log(output_path)
 
             # Modelling period
-            self.settings.set_timer(start_date, end_date, 1, "Day")
+            self.settings.set_timer(start_date, end_date, 1, "day")
 
             # Initialize the model (with sub basin creation)
             if not self.model.init_with_basin(

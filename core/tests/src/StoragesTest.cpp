@@ -31,7 +31,7 @@ TEST(StorageLinear, MissingInFlux) {
 
     HydroUnit unit;
     StorageLinear storage(&unit);
-    Parameter responseFactor("responseFactor", 0.2f);
+    Parameter responseFactor("response_factor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
     FluxToBrick outFlux;
     storage.AttachFluxOut(&outFlux);
@@ -44,7 +44,7 @@ TEST(StorageLinear, MissingOutFlux) {
 
     HydroUnit unit;
     StorageLinear storage(&unit);
-    Parameter responseFactor("responseFactor", 0.2f);
+    Parameter responseFactor("response_factor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
     FluxToBrick inFlux;
     storage.AttachFluxIn(&inFlux);
@@ -55,7 +55,7 @@ TEST(StorageLinear, MissingOutFlux) {
 TEST(StorageLinear, CorrectlyLinksToParameters) {
     HydroUnit unit;
     StorageLinear storage(&unit);
-    Parameter responseFactor("responseFactor", 0.2f);
+    Parameter responseFactor("response_factor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
 
     EXPECT_FLOAT_EQ(0.2f, storage.GetResponseFactor());
@@ -68,7 +68,7 @@ TEST(StorageLinear, CorrectlyLinksToParameters) {
 TEST(StorageLinear, ComputesCorrectly) {
     HydroUnit unit;
     StorageLinear storage(&unit);
-    Parameter responseFactor("responseFactor", 0.2f);
+    Parameter responseFactor("response_factor", 0.2f);
     storage.SetResponseFactor(responseFactor.GetValuePointer());
     FluxToBrick inFlux, outFlux;
     storage.AttachFluxIn(&inFlux);

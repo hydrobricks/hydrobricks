@@ -15,14 +15,14 @@ std::vector<double> GenerateDailyDatesVector() {
 }
 
 TEST(ParameterVariableYearly, SetValues) {
-    ParameterVariableYearly parameter("dummyParameter");
+    ParameterVariableYearly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
     EXPECT_TRUE(parameter.SetValues(2000, 2010, values));
 }
 
 TEST(ParameterVariableYearly, SetValuesWrongSize) {
-    ParameterVariableYearly parameter("dummyParameter");
+    ParameterVariableYearly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     wxLogNull logNo;
 
@@ -30,7 +30,7 @@ TEST(ParameterVariableYearly, SetValuesWrongSize) {
 }
 
 TEST(ParameterVariableYearly, UpdateParameter) {
-    ParameterVariableYearly parameter("dummyParameter");
+    ParameterVariableYearly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     parameter.SetValues(2000, 2010, values);
 
@@ -40,7 +40,7 @@ TEST(ParameterVariableYearly, UpdateParameter) {
 }
 
 TEST(ParameterVariableYearly, UpdateParameterNotFound) {
-    ParameterVariableYearly parameter("dummyParameter");
+    ParameterVariableYearly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     parameter.SetValues(2000, 2010, values);
     wxLogNull logNo;
@@ -50,14 +50,14 @@ TEST(ParameterVariableYearly, UpdateParameterNotFound) {
 }
 
 TEST(ParameterVariableMonthly, SetValues) {
-    ParameterVariableMonthly parameter("dummyParameter");
+    ParameterVariableMonthly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
     EXPECT_TRUE(parameter.SetValues(values));
 }
 
 TEST(ParameterVariableMonthly, SetValuesWrongSize) {
-    ParameterVariableMonthly parameter("dummyParameter");
+    ParameterVariableMonthly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     wxLogNull logNo;
 
@@ -65,7 +65,7 @@ TEST(ParameterVariableMonthly, SetValuesWrongSize) {
 }
 
 TEST(ParameterVariableMonthly, UpdateParameter) {
-    ParameterVariableMonthly parameter("dummyParameter");
+    ParameterVariableMonthly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     parameter.SetValues(values);
 
@@ -75,7 +75,7 @@ TEST(ParameterVariableMonthly, UpdateParameter) {
 }
 
 TEST(ParameterVariableDates, SetValues) {
-    ParameterVariableDates parameter("dummyParameter");
+    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
 
@@ -83,7 +83,7 @@ TEST(ParameterVariableDates, SetValues) {
 }
 
 TEST(ParameterVariableDates, SetValuesWrongSize) {
-    ParameterVariableDates parameter("dummyParameter");
+    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::vector<double> dates = GenerateDailyDatesVector();
     wxLogNull logNo;
@@ -92,7 +92,7 @@ TEST(ParameterVariableDates, SetValuesWrongSize) {
 }
 
 TEST(ParameterVariableDates, UpdateParameter) {
-    ParameterVariableDates parameter("dummyParameter");
+    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
     parameter.SetTimeAndValues(dates, values);
@@ -104,7 +104,7 @@ TEST(ParameterVariableDates, UpdateParameter) {
 }
 
 TEST(ParameterVariableDates, UpdateParameterNotFound) {
-    ParameterVariableDates parameter("dummyParameter");
+    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
     parameter.SetTimeAndValues(dates, values);
@@ -117,7 +117,7 @@ TEST(ParameterVariableDates, UpdateParameterNotFound) {
 }
 
 TEST(ParametersUpdater, DateUpdateDay) {
-    ParameterVariableDates parameter("dummyParameter");
+    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
     parameter.SetTimeAndValues(dates, values);
@@ -131,7 +131,7 @@ TEST(ParametersUpdater, DateUpdateDay) {
 }
 
 TEST(ParametersUpdater, DateUpdateMonth) {
-    ParameterVariableMonthly parameter("dummyParameter");
+    ParameterVariableMonthly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     parameter.SetValues(values);
 
@@ -144,7 +144,7 @@ TEST(ParametersUpdater, DateUpdateMonth) {
 }
 
 TEST(ParametersUpdater, DateUpdateYear) {
-    ParameterVariableYearly parameter("dummyParameter");
+    ParameterVariableYearly parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8};
     parameter.SetValues(2011, 2018, values);
 

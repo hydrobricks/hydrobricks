@@ -10,11 +10,11 @@ Solver::Solver()
       m_nIterations(1) {}
 
 Solver* Solver::Factory(const SolverSettings& solverSettings) {
-    if (solverSettings.name == "RK4" || solverSettings.name == "Runge-Kutta" || solverSettings.name == "RungeKutta") {
+    if (solverSettings.name == "rk4" || solverSettings.name == "runge_kutta") {
         return new SolverRK4();
-    } else if (solverSettings.name == "Euler Explicit" || solverSettings.name == "EulerExplicit") {
+    } else if (solverSettings.name == "euler_explicit") {
         return new SolverEulerExplicit();
-    } else if (solverSettings.name == "Heun Explicit" || solverSettings.name == "HeunExplicit") {
+    } else if (solverSettings.name == "heun_explicit") {
         return new SolverHeunExplicit();
     }
     throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s."), solverSettings.name));

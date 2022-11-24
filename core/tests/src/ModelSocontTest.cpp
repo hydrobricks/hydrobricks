@@ -13,13 +13,13 @@ class ModelSocontBasic : public ::testing::Test {
     TimeSeriesUniform* m_tsPet{};
 
     void SetUp() override {
-        m_model.SetSolver("HeunExplicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "Day");
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model.SetLogAll(true);
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear-storage");
+        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});

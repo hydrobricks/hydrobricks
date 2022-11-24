@@ -91,7 +91,7 @@ void SettingsModel::AddLandCoverBrick(const std::string& name, const std::string
     AddHydroUnitBrick(name, type);
     m_selectedStructure->landCoverBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 
-    if (SelectHydroUnitSplitterIfFound("rain-splitter")) {
+    if (SelectHydroUnitSplitterIfFound("rain_splitter")) {
         AddSplitterOutput(brick.name);
     }
 }
@@ -115,7 +115,7 @@ void SettingsModel::SetSurfaceComponentParent(const std::string& name) {
 void SettingsModel::AddBrickParameter(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedBrick);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -127,7 +127,7 @@ void SettingsModel::AddBrickParameter(const std::string& name, float value, cons
 void SettingsModel::SetBrickParameterValue(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedBrick);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -155,9 +155,9 @@ bool SettingsModel::BrickHasParameter(const std::string& name) {
 void SettingsModel::AddBrickForcing(const std::string& name) {
     wxASSERT(m_selectedBrick);
 
-    if (name == "Precipitation") {
+    if (name == "precipitation") {
         m_selectedBrick->forcing.push_back(Precipitation);
-    } else if (name == "Temperature") {
+    } else if (name == "temperature") {
         m_selectedBrick->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -186,7 +186,7 @@ void SettingsModel::AddBrickProcess(const std::string& name, const std::string& 
 void SettingsModel::AddProcessParameter(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedProcess);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -206,7 +206,7 @@ void SettingsModel::AddProcessParameter(const std::string& name, float value, co
 void SettingsModel::SetProcessParameterValue(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedProcess);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -223,11 +223,11 @@ void SettingsModel::SetProcessParameterValue(const std::string& name, float valu
 void SettingsModel::AddProcessForcing(const std::string& name) {
     wxASSERT(m_selectedProcess);
 
-    if (name == "Precipitation") {
+    if (name == "precipitation") {
         m_selectedProcess->forcing.push_back(Precipitation);
-    } else if (name == "PET") {
+    } else if (name == "pet") {
         m_selectedProcess->forcing.push_back(PET);
-    } else if (name == "Temperature") {
+    } else if (name == "temperature") {
         m_selectedProcess->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -285,7 +285,7 @@ void SettingsModel::AddSubBasinSplitter(const std::string& name, const std::stri
 void SettingsModel::AddSplitterParameter(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedSplitter);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -297,7 +297,7 @@ void SettingsModel::AddSplitterParameter(const std::string& name, float value, c
 void SettingsModel::SetSplitterParameterValue(const std::string& name, float value, const std::string& type) {
     wxASSERT(m_selectedSplitter);
 
-    if (type != "Constant") {
+    if (type != "constant") {
         throw NotImplemented();
     }
 
@@ -314,9 +314,9 @@ void SettingsModel::SetSplitterParameterValue(const std::string& name, float val
 void SettingsModel::AddSplitterForcing(const std::string& name) {
     wxASSERT(m_selectedSplitter);
 
-    if (name == "Precipitation") {
+    if (name == "precipitation") {
         m_selectedSplitter->forcing.push_back(Precipitation);
-    } else if (name == "Temperature") {
+    } else if (name == "temperature") {
         m_selectedSplitter->forcing.push_back(Temperature);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -371,25 +371,25 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
 
     if (withSnow) {
         // Rain/snow splitter
-        AddHydroUnitSplitter("snow-rain-transition", "SnowRain");
-        AddSplitterForcing("Precipitation");
-        AddSplitterForcing("Temperature");
-        AddSplitterOutput("rain-splitter");
-        AddSplitterOutput("snow-splitter", "snow");
-        AddSplitterParameter("transitionStart", 0.0f);
-        AddSplitterParameter("transitionEnd", 2.0f);
+        AddHydroUnitSplitter("snow_rain_transition", "snow_rain");
+        AddSplitterForcing("precipitation");
+        AddSplitterForcing("temperature");
+        AddSplitterOutput("rain_splitter");
+        AddSplitterOutput("snow_splitter", "snow");
+        AddSplitterParameter("transition_start", 0.0f);
+        AddSplitterParameter("transition_end", 2.0f);
 
         // Splitter to land covers
-        AddHydroUnitSplitter("snow-splitter", "MultiFluxes");
-        AddHydroUnitSplitter("rain-splitter", "MultiFluxes");
+        AddHydroUnitSplitter("snow_splitter", "multi_fluxes");
+        AddHydroUnitSplitter("rain_splitter", "multi_fluxes");
     } else {
         // Rain splitter (connection to forcing)
-        AddHydroUnitSplitter("rain", "Rain");
-        AddSplitterForcing("Precipitation");
-        AddSplitterOutput("rain-splitter");
+        AddHydroUnitSplitter("rain", "rain");
+        AddSplitterForcing("precipitation");
+        AddSplitterOutput("rain_splitter");
 
         // Splitter to land covers
-        AddHydroUnitSplitter("rain-splitter", "MultiFluxes");
+        AddHydroUnitSplitter("rain_splitter", "multi_fluxes");
     }
 }
 
@@ -398,16 +398,16 @@ void SettingsModel::GenerateSnowpacks(const std::string& snowMeltProcess) {
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
-        SelectHydroUnitSplitter("snow-splitter");
+        SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
-        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
+        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
-        if (snowMeltProcess == "Melt:degree-day") {
-            AddProcessForcing("Temperature");
-            AddProcessParameter("degreeDayFactor", 3.0f);
-            AddProcessParameter("meltingTemperature", 0.0f);
+        if (snowMeltProcess == "melt:degree_day") {
+            AddProcessForcing("temperature");
+            AddProcessParameter("degree_day_factor", 3.0f);
+            AddProcessParameter("melting_temperature", 0.0f);
         } else {
             throw NotImplemented();
         }
@@ -424,9 +424,9 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowM
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
-        SelectHydroUnitSplitter("snow-splitter");
+        SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
-        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "Snowpack");
+        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess);
@@ -435,10 +435,10 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const std::string& snowM
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(brickSettings.name);
 
-        if (snowMeltProcess == "Melt:degree-day") {
-            AddProcessForcing("Temperature");
-            AddProcessParameter("degreeDayFactor", 3.0f);
-            AddProcessParameter("meltingTemperature", 0.0f);
+        if (snowMeltProcess == "melt:degree_day") {
+            AddProcessForcing("temperature");
+            AddProcessParameter("degree_day_factor", 3.0f);
+            AddProcessParameter("melting_temperature", 0.0f);
         } else {
             throw NotImplemented();
         }
@@ -690,9 +690,9 @@ bool SettingsModel::ParseStructure(const std::string& path) {
 
         if (settings["base"]) {
             std::string base = settings["base"].as<std::string>();
-            if (base == "Socont") {
+            if (base == "socont") {
                 int soilStorageNb = 1;
-                std::string surfaceRunoff = "socont-runoff";
+                std::string surfaceRunoff = "socont_runoff";
                 if (YAML::Node options = settings["options"]) {
                     if (YAML::Node parameter = options["soil_storage_nb"]) {
                         soilStorageNb = parameter.as<int>();
@@ -894,7 +894,7 @@ std::string SettingsModel::ParseSolver(const YAML::Node& settings) {
         return settings["solver"].as<std::string>();
     }
 
-    return "EulerExplicit";
+    return "euler_explicit";
 }
 
 bool SettingsModel::LogAll(const YAML::Node& settings) {
@@ -921,7 +921,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     GeneratePrecipitationSplitters(true);
 
     // Add default ground land cover
-    AddLandCoverBrick("ground", "GenericLandCover");
+    AddLandCoverBrick("ground", "generic_land_cover");
 
     // Add other specific land covers
     for (int i = 0; i < landCoverNames.size(); ++i) {
@@ -929,7 +929,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         if (type == "ground") {
             // Nothing to do, already added.
         } else if (type == "glacier") {
-            AddLandCoverBrick(landCoverNames[i], "Glacier");
+            AddLandCoverBrick(landCoverNames[i], "glacier");
         } else {
             wxLogError(_("The land cover type %s is not used in Socont"), type);
             return false;
@@ -937,7 +937,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     }
 
     // Snowpacks
-    GenerateSnowpacks("Melt:degree-day");
+    GenerateSnowpacks("melt:degree_day");
 
     // Add surface-related processes
     for (int i = 0; i < landCoverNames.size(); ++i) {
@@ -948,67 +948,67 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         if (type == "glacier") {
             // Direct rain and snow melt to linear storage
             SelectHydroUnitBrick(name);
-            AddBrickProcess("outflow-rain-snowmelt", "Outflow:direct", "glacier-area-rain-snowmelt-storage");
+            AddBrickProcess("outflow-rain-snowmelt", "outflow:direct", "glacier-area-rain-snowmelt-storage");
 
             // Glacier melt process
-            AddBrickParameter("noMeltWhenSnowCover", 1.0);
-            AddBrickParameter("infiniteStorage", 1.0);
-            AddBrickProcess("melt", "Melt:degree-day", "glacier-area-icemelt-storage");
-            AddProcessForcing("Temperature");
-            AddProcessParameter("degreeDayFactor", 3.0f);
-            AddProcessParameter("meltingTemperature", 0.0f);
+            AddBrickParameter("no_melt_when_snow_cover", 1.0);
+            AddBrickParameter("infinite_storage", 1.0);
+            AddBrickProcess("melt", "melt:degree_day", "glacier-area-icemelt-storage");
+            AddProcessForcing("temperature");
+            AddProcessParameter("degree_day_factor", 3.0f);
+            AddProcessParameter("melting_temperature", 0.0f);
             SetProcessOutputsAsInstantaneous();
         }
     }
 
     // Basin storages for contributions from the glacierized area
-    AddSubBasinBrick("glacier-area-rain-snowmelt-storage", "Storage");
-    AddBrickProcess("outflow", "Outflow:linear", "outlet");
-    AddProcessParameter("responseFactor", 0.2f);
-    AddSubBasinBrick("glacier-area-icemelt-storage", "Storage");
-    AddBrickProcess("outflow", "Outflow:linear", "outlet");
-    AddProcessParameter("responseFactor", 0.2f);
+    AddSubBasinBrick("glacier-area-rain-snowmelt-storage", "storage");
+    AddBrickProcess("outflow", "outflow:linear", "outlet");
+    AddProcessParameter("response_factor", 0.2f);
+    AddSubBasinBrick("glacier-area-icemelt-storage", "storage");
+    AddBrickProcess("outflow", "outflow:linear", "outlet");
+    AddProcessParameter("response_factor", 0.2f);
 
     // Infiltration and overflow
     SelectHydroUnitBrick("ground");
-    AddBrickProcess("infiltration", "Infiltration:Socont", "slow-reservoir");
-    AddBrickProcess("runoff", "Outflow:rest-direct", "surface-runoff");
+    AddBrickProcess("infiltration", "infiltration:socont", "slow-reservoir");
+    AddBrickProcess("runoff", "outflow:rest-direct", "surface-runoff");
 
     // Add other bricks
     if (soilStorageNb == 1) {
-        AddHydroUnitBrick("slow-reservoir", "Storage");
-        AddBrickProcess("ET", "ET:Socont");
-        AddProcessForcing("PET");
-        AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.2f);
-        AddBrickProcess("overflow", "Overflow", "outlet");
+        AddHydroUnitBrick("slow-reservoir", "storage");
+        AddBrickProcess("et", "et:socont");
+        AddProcessForcing("pet");
+        AddBrickProcess("outflow", "outflow:linear", "outlet");
+        AddProcessParameter("response_factor", 0.2f);
+        AddBrickProcess("overflow", "overflow", "outlet");
     } else if (soilStorageNb == 2) {
         wxLogMessage(_("Using 2 soil storages."));
-        AddHydroUnitBrick("slow-reservoir", "Storage");
+        AddHydroUnitBrick("slow-reservoir", "storage");
         AddBrickParameter("capacity", 500.0f);
-        AddBrickProcess("ET", "ET:Socont");
-        AddProcessForcing("PET");
-        AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.2f);
-        AddBrickProcess("percolation", "Outflow:constant", "slow-reservoir-2");
-        AddProcessParameter("percolationRate", 0.1f);
-        AddBrickProcess("overflow", "Overflow", "outlet");
-        AddHydroUnitBrick("slow-reservoir-2", "Storage");
-        AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.02f);
+        AddBrickProcess("et", "et:socont");
+        AddProcessForcing("pet");
+        AddBrickProcess("outflow", "outflow:linear", "outlet");
+        AddProcessParameter("response_factor", 0.2f);
+        AddBrickProcess("percolation", "outflow:constant", "slow-reservoir-2");
+        AddProcessParameter("percolation_rate", 0.1f);
+        AddBrickProcess("overflow", "overflow", "outlet");
+        AddHydroUnitBrick("slow-reservoir-2", "storage");
+        AddBrickProcess("outflow", "outflow:linear", "outlet");
+        AddProcessParameter("response_factor", 0.02f);
     } else {
         wxLogError(_("There can be only one or two groundwater storages."));
     }
 
-    AddHydroUnitBrick("surface-runoff", "Storage");
-    if (surfaceRunoff == "socont-runoff") {
-        AddBrickProcess("runoff", "Runoff:Socont", "outlet");
-        AddProcessParameter("runoffCoefficient", 500.0f);
+    AddHydroUnitBrick("surface-runoff", "storage");
+    if (surfaceRunoff == "socont_runoff") {
+        AddBrickProcess("runoff", "runoff:socont", "outlet");
+        AddProcessParameter("runoff_coefficient", 500.0f);
         AddProcessParameter("slope", 0.5f);
-    } else if (surfaceRunoff == "linear-storage") {
+    } else if (surfaceRunoff == "linear_storage") {
         wxLogMessage(_("Using a linear storage for the quick flow."));
-        AddBrickProcess("outflow", "Outflow:linear", "outlet");
-        AddProcessParameter("responseFactor", 0.8f);
+        AddBrickProcess("outflow", "outflow:linear", "outlet");
+        AddProcessParameter("response_factor", 0.8f);
     } else {
         wxLogError(_("The surface runoff option %s is not recognised in Socont."), surfaceRunoff);
         return false;

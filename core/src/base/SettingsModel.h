@@ -69,15 +69,15 @@ class SettingsModel : public wxObject {
     ~SettingsModel() override;
 
     bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
-                                 const std::string& surfaceRunoff = "socont-runoff");
+                                 const std::string& surfaceRunoff = "socont_runoff");
 
     void SetSolver(const std::string& solverName);
 
     void SetTimer(const std::string& start, const std::string& end, int timeStep, const std::string& timeStepUnit);
 
-    void AddHydroUnitBrick(const std::string& name, const std::string& type = "Storage");
+    void AddHydroUnitBrick(const std::string& name, const std::string& type = "storage");
 
-    void AddSubBasinBrick(const std::string& name, const std::string& type = "Storage");
+    void AddSubBasinBrick(const std::string& name, const std::string& type = "storage");
 
     void AddLandCoverBrick(const std::string& name, const std::string& type);
 
@@ -85,9 +85,9 @@ class SettingsModel : public wxObject {
 
     void SetSurfaceComponentParent(const std::string& name);
 
-    void AddBrickParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddBrickParameter(const std::string& name, float value, const std::string& type = "constant");
 
-    void SetBrickParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetBrickParameterValue(const std::string& name, float value, const std::string& type = "constant");
 
     bool BrickHasParameter(const std::string& name);
 
@@ -96,9 +96,9 @@ class SettingsModel : public wxObject {
     void AddBrickProcess(const std::string& name, const std::string& type, const std::string& target = "",
                          bool log = false);
 
-    void AddProcessParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddProcessParameter(const std::string& name, float value, const std::string& type = "constant");
 
-    void SetProcessParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetProcessParameterValue(const std::string& name, float value, const std::string& type = "constant");
 
     void AddProcessForcing(const std::string& name);
 
@@ -112,9 +112,9 @@ class SettingsModel : public wxObject {
 
     void AddSubBasinSplitter(const std::string& name, const std::string& type);
 
-    void AddSplitterParameter(const std::string& name, float value, const std::string& type = "Constant");
+    void AddSplitterParameter(const std::string& name, float value, const std::string& type = "constant");
 
-    void SetSplitterParameterValue(const std::string& name, float value, const std::string& type = "Constant");
+    void SetSplitterParameterValue(const std::string& name, float value, const std::string& type = "constant");
 
     void AddSplitterForcing(const std::string& name);
 

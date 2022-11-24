@@ -174,6 +174,41 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
     EXPECT_TRUE(model.DumpOutputs(wxStandardPaths::Get().GetTempDir().ToStdString()));
 }
 
+TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
+    SettingsBasin basinProp;
+    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+
+    ModelHydro model(&subBasin);
+    SettingsModel settingsModel = m_model1;
+    settingsModel.SetSolver("euler_explicit");
+    settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SetProcessParameterValue("response_factor", 0.0f);
+
+    model.Initialize(settingsModel);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 10;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
 TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     SettingsBasin basinProp;
     ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));

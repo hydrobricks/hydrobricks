@@ -34,6 +34,8 @@ class Logger : public wxObject {
 
     double GetTotalSubBasin(const string &item);
 
+    double GetTotalHydroUnits(const string &item);
+
     double GetTotalOutletDischarge();
 
     double GetTotalET();

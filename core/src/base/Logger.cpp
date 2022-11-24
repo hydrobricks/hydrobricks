@@ -156,6 +156,19 @@ double Logger::GetTotalSubBasin(const string &item) {
     return sum;
 }
 
+double Logger::GetTotalHydroUnits(const string &item) {
+    vecInt indices = GetIndicesForHydroUnitElements(item);
+
+    double sum = 0;
+    for (int index : indices) {
+        axd values = m_hydroUnitValues[index](Eigen::all, Eigen::all);
+        axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
+        sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+    }
+
+    return sum;
+}
+
 double Logger::GetTotalOutletDischarge() {
     return GetTotalSubBasin("outlet");
 }

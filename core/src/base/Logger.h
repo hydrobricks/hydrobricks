@@ -9,7 +9,7 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, const vecInt& hydroUnitIds, const vecDouble& hydroUnitAreas,
+    void InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble& hydroUnitAreas,
                        const vecStr& subBasinLabels, const vecStr& hydroUnitLabels);
 
     void Reset();
@@ -28,6 +28,26 @@ class Logger : public wxObject {
 
     axd GetOutletDischarge();
 
+    vecInt GetIndicesForSubBasinElements(const string &item);
+
+    vecInt GetIndicesForHydroUnitElements(const string &item);
+
+    double GetTotalSubBasin(const string &item);
+
+    double GetTotalOutletDischarge();
+
+    double GetTotalET();
+
+    double GetSubBasinInitialStorageState();
+
+    double GetSubBasinFinalStorageState();
+
+    double GetHydroUnitsInitialStorageState();
+
+    double GetHydroUnitsFinalStorageState();
+
+    double GetTotalStorageChange();
+
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;
     }
@@ -43,7 +63,7 @@ class Logger : public wxObject {
     vecAxd m_subBasinValues;
     vecDoublePt m_subBasinValuesPt;
     vecInt m_hydroUnitIds;
-    vecDouble m_hydroUnitAreas;
+    axd m_hydroUnitAreas;
     vecStr m_hydroUnitLabels;
     vecAxxd m_hydroUnitValues;
     std::vector<vecDoublePt> m_hydroUnitValuesPt;

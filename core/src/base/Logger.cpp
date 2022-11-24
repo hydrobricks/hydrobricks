@@ -5,14 +5,14 @@
 Logger::Logger()
     : m_cursor(0) {}
 
-void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, const vecDouble& hydroUnitAreas,
+void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble& hydroUnitAreas,
                            const vecStr& subBasinLabels, const vecStr& hydroUnitLabels) {
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
     m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
     m_subBasinValuesPt.resize(subBasinLabels.size());
     m_hydroUnitIds = hydroUnitIds;
-    m_hydroUnitAreas = hydroUnitAreas;
+    m_hydroUnitAreas = Eigen::Map<axd>(hydroUnitAreas.data(), hydroUnitAreas.size());
     m_hydroUnitLabels = hydroUnitLabels;
     m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
@@ -120,4 +120,93 @@ axd Logger::GetOutletDischarge() {
         }
     }
     throw ConceptionIssue(_("No 'outlet' component found in logger."));
+}
+
+vecInt Logger::GetIndicesForSubBasinElements(const string &item) {
+    vecInt indices;
+    for (int i = 0; i < m_subBasinLabels.size(); ++i) {
+        std::size_t found = m_subBasinLabels[i].find(item);
+        if (found != std::string::npos) {
+            indices.push_back(i);
+        }
+    }
+
+    return indices;
+}
+
+vecInt Logger::GetIndicesForHydroUnitElements(const string &item) {
+    vecInt indices;
+    for (int i = 0; i < m_hydroUnitLabels.size(); ++i) {
+        std::size_t found = m_hydroUnitLabels[i].find(item);
+        if (found != std::string::npos) {
+            indices.push_back(i);
+        }
+    }
+
+    return indices;
+}
+
+double Logger::GetTotalSubBasin(const string &item) {
+    vecInt indices = GetIndicesForSubBasinElements(item);
+    double sum = 0;
+    for (int index: indices) {
+        sum += m_subBasinValues[index].sum();
+    }
+
+    return sum;
+}
+
+double Logger::GetTotalOutletDischarge() {
+    return GetTotalSubBasin("outlet");
+}
+
+double Logger::GetTotalET() {
+    return GetTotalSubBasin("ET:output");
+}
+
+double Logger::GetSubBasinInitialStorageState(){
+    vecInt indices = GetIndicesForSubBasinElements(":content");
+    double sum = 0;
+    for (int index: indices) {
+        sum += m_subBasinValues[index].head(1)[0];
+    }
+
+    return sum;
+}
+
+double Logger::GetSubBasinFinalStorageState(){
+    vecInt indices = GetIndicesForSubBasinElements(":content");
+    double sum = 0;
+    for (int index: indices) {
+        sum += m_subBasinValues[index].tail(1)[0];
+    }
+
+    return sum;
+}
+
+double Logger::GetHydroUnitsInitialStorageState(){
+    vecInt indices = GetIndicesForHydroUnitElements(":content");
+    double sum = 0;
+    for (int index: indices) {
+        axd values = m_hydroUnitValues[index](0, Eigen::all);
+        sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
+    }
+
+    return sum;
+}
+
+double Logger::GetHydroUnitsFinalStorageState(){
+    vecInt indices = GetIndicesForHydroUnitElements(":content");
+    double sum = 0;
+    for (int index: indices) {
+        axd values = m_hydroUnitValues[index](Eigen::last, Eigen::all);
+        sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
+    }
+
+    return sum;
+}
+
+double Logger::GetTotalStorageChange(){
+    return GetHydroUnitsInitialStorageState() - GetSubBasinInitialStorageState() +
+           GetHydroUnitsFinalStorageState() - GetHydroUnitsInitialStorageState();
 }

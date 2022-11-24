@@ -13,6 +13,7 @@ class ModelSocontBasic : public ::testing::Test {
     TimeSeriesUniform* m_tsPet{};
 
     void SetUp() override {
+        m_model.SetLogAll();
         m_model.SetSolver("heun_explicit");
         m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model.SetLogAll(true);
@@ -103,58 +104,17 @@ TEST_F(ModelSocontBasic, WaterBalanceCloses) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinContent = model.GetLogger()->GetSubBasinValues();
-    // [0] "glacier-area-rain-snowmelt-storage:content"
-    // [1] "glacier-area-rain-snowmelt-storage:outflow:output"
-    // [2] "glacier-area-icemelt-storage:content"
-    // [3] "glacier-area-icemelt-storage:outflow:output"
-    // [4] "outlet"
-    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
-    // [0] "ground:content"
-    // [1] "ground:infiltration:output"
-    // [2] "ground:runoff:output"
-    // [3] "glacier:content"
-    // [4] "glacier:outflow-rain-snowmelt:output"
-    // [5] "glacier:melt:output"
-    // [6] "ground-snowpack:content"
-    // [7] "ground-snowpack:snow"
-    // [8] "ground-snowpack:melt:output"
-    // [9] "glacier-snowpack:content"
-    // [10] "glacier-snowpack:snow"
-    // [11] "glacier-snowpack:melt:output"
-    // [12] "slow-reservoir:content"
-    // [13] "slow-reservoir:ET:output"
-    // [14] "slow-reservoir:outflow:output"
-    // [15] "slow-reservoir:percolation:output"
-    // [16] "slow-reservoir:overflow:output"
-    // [17] "slow-reservoir-2:content"
-    // [18] "slow-reservoir-2:outflow:output"
-    // [19] "surface-runoff:content"
-    // [20] "surface-runoff:outflow:output"
+    Logger* logger = model.GetLogger();
 
-    // Input
+    // Water balance components
     double precip = 80;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
 
-    // Output
-    double discharge = basinContent[4].sum();
-    double et = unitContent[13].sum();
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
 
-    // Last state values
-    double sb0 = basinContent[0].tail(1)[0];
-    double sb2 = basinContent[2].tail(1)[0];
-    double su0 = unitContent[0](Eigen::last, Eigen::all).sum();
-    double su3 = unitContent[3](Eigen::last, Eigen::all).sum();
-    double su6 = unitContent[6](Eigen::last, Eigen::all).sum();
-    double su7 = unitContent[7](Eigen::last, Eigen::all).sum();
-    double su9 = unitContent[9](Eigen::last, Eigen::all).sum();
-    double su10 = unitContent[10](Eigen::last, Eigen::all).sum();
-    double su12 = unitContent[12](Eigen::last, Eigen::all).sum();
-    double su17 = unitContent[17](Eigen::last, Eigen::all).sum();
-    double su19 = unitContent[19](Eigen::last, Eigen::all).sum();
-    double stateBasin = sb0 + sb2;
-    double stateUnits = su0 + su3 + su6 + su7 + su9 + su10 + su12 + su17 + su19;
-
-    double balance = precip - discharge - et - stateBasin - stateUnits;
-
-    ASSERT_NEAR(balance, 0, 0.00002);
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

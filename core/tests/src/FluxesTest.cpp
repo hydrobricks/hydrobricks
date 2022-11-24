@@ -84,6 +84,19 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
         EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
     }
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 70;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
 TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
@@ -133,6 +146,19 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
         EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
     }
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 70;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
 TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
@@ -178,6 +204,19 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
         EXPECT_NEAR(unitContent[2](j, 0), expectedOutput3[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 0), expectedOutput4[j], 0.000001);
     }
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 70;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
@@ -234,6 +273,19 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
         EXPECT_NEAR(unitContent[2](j, 1), expectedOutput1[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 1), expectedOutput3[j], 0.000001);
     }
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 70;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
@@ -289,4 +341,17 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
         EXPECT_NEAR(unitContent[2](j, 1), expectedOutput4[j], 0.000001);
         EXPECT_NEAR(unitContent[3](j, 1), expectedOutput6[j], 0.000001);
     }
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 70;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

@@ -174,7 +174,7 @@ double Logger::GetTotalOutletDischarge() {
 }
 
 double Logger::GetTotalET() {
-    return GetTotalSubBasin("ET:output");
+    return GetTotalHydroUnits("et:output");
 }
 
 double Logger::GetSubBasinInitialStorageState(){

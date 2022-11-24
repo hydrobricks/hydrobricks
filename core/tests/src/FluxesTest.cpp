@@ -51,10 +51,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -109,10 +107,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -171,10 +167,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -232,10 +226,8 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -301,10 +293,8 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinProp));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());

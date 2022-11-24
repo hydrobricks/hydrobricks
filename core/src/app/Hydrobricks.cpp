@@ -173,12 +173,7 @@ int Hydrobricks::OnRun() {
 
         // Create the model
         ModelHydro model(&subBasin);
-        if (!model.Initialize(modelSettings)) {
-            return 1;
-        }
-
-        // Assign fraction
-        if (!subBasin.AssignFractions(basinSettings)) {
+        if (!model.Initialize(modelSettings, basinSettings)) {
             return 1;
         }
 

@@ -44,8 +44,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<SubBasin>(m, "SubBasin")
         .def(py::init<>())
-        .def("init", &SubBasin::Initialize, "Initialize the basin", "spatial_structure"_a)
-        .def("assign_fractions", &SubBasin::AssignFractions, "Assign the land cover fractions", "spatial_structure"_a);
+        .def("init", &SubBasin::Initialize, "Initialize the basin", "spatial_structure"_a);
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<const string&, float>())

@@ -23,25 +23,24 @@ bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin
     if (!m_subBasin->Initialize(basinSettings)) {
         return false;
     }
-    if (!Initialize(modelSettings)) {
-        return false;
-    }
-    if (!m_subBasin->AssignFractions(basinSettings)) {
+    if (!Initialize(modelSettings, basinSettings)) {
         return false;
     }
 
     return true;
 }
 
-bool ModelHydro::Initialize(SettingsModel& modelSettings) {
+bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinProp) {
     try {
         BuildModelStructure(modelSettings);
 
         m_timer.Initialize(modelSettings.GetTimerSettings());
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
-        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin->GetHydroUnitIds(), m_subBasin->GetHydroUnitAreas(),
-                               modelSettings.GetSubBasinLogLabels(), modelSettings.GetHydroUnitLogLabels());
+        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin, modelSettings);
+        if (!m_subBasin->AssignFractions(basinProp)) {
+            return false;
+        }
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
         wxLogError(_("An exception occurred during model initialization: %s."), e.what());

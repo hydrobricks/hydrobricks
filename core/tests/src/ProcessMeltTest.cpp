@@ -63,12 +63,15 @@ class SnowpackModel : public ::testing::Test {
 };
 
 TEST_F(SnowpackModel, DegreeDay) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
@@ -111,7 +114,7 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
@@ -170,12 +173,15 @@ class GlacierModel : public ::testing::Test {
 TEST_F(GlacierModel, UnlimitedSupply) {
     wxLogNull logNo;
 
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
@@ -269,7 +275,7 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
@@ -313,7 +319,7 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));

@@ -56,23 +56,29 @@ class ModelBasics : public ::testing::Test {
 };
 
 TEST_F(ModelBasics, Model1BuildsCorrectly) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1);
+    model.Initialize(m_model1, basinSettings);
 
     EXPECT_TRUE(model.IsOk());
 }
 
 TEST_F(ModelBasics, Model1RunsCorrectly) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1);
+    model.Initialize(m_model1, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -81,23 +87,29 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
 }
 
 TEST_F(ModelBasics, Model2BuildsCorrectly) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2);
+    model.Initialize(m_model2, basinSettings);
 
     EXPECT_TRUE(model.IsOk());
 }
 
 TEST_F(ModelBasics, Model2RunsCorrectly) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2);
+    model.Initialize(m_model2, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -114,7 +126,7 @@ TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
     EXPECT_NEAR(subBasin.GetArea(), 264328000, 1050);  // Difference due to storage as float in netcdf file.
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2);
+    model.Initialize(m_model2, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -123,12 +135,15 @@ TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
 }
 
 TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1);
+    model.Initialize(m_model1, basinSettings);
 
     auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 9), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
@@ -140,12 +155,15 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
 }
 
 TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1);
+    model.Initialize(m_model1, basinSettings);
 
     auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 2), GetMJD(2020, 1, 10), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
@@ -164,7 +182,7 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2);
+    model.Initialize(m_model2, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -187,7 +205,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     settingsModel.SelectHydroUnitBrick("storage");
     settingsModel.SetProcessParameterValue("response_factor", 0.0f);
 
-    model.Initialize(settingsModel);
+    model.Initialize(settingsModel, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -219,7 +237,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     ModelHydro model(&subBasin);
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("euler_explicit");
-    model.Initialize(settingsModel);
+    model.Initialize(settingsModel, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -251,7 +269,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
     ModelHydro model(&subBasin);
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("heun_explicit");
-    model.Initialize(settingsModel);
+    model.Initialize(settingsModel, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -283,7 +301,7 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2);
+    model.Initialize(m_model2, basinProp);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());

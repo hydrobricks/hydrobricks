@@ -88,10 +88,8 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
-
-    EXPECT_TRUE(subBasin.AssignFractions(basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));

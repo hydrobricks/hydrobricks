@@ -16,7 +16,7 @@ class ModelHydro : public wxObject {
 
     bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
-    bool Initialize(SettingsModel& modelSettings);
+    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinProp);
 
     void UpdateParameters(SettingsModel& modelSettings);
 

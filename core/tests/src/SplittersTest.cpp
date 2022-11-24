@@ -35,9 +35,12 @@ class Splitters : public ::testing::Test {
 };
 
 TEST_F(Splitters, SnowRain) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.AddHydroUnitSplitter("snow-rain", "snow_rain");
     m_model.AddSplitterForcing("precipitation");
@@ -51,7 +54,7 @@ TEST_F(Splitters, SnowRain) {
     m_model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));

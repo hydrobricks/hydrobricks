@@ -76,14 +76,17 @@ class SolverLinearStorage : public ::testing::Test {
 };
 
 TEST_F(SolverLinearStorage, UsingEulerExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -111,14 +114,17 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
 }
 
 TEST_F(SolverLinearStorage, UsingHeunExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -146,14 +152,17 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
 }
 
 TEST_F(SolverLinearStorage, UsingRungeKutta) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -223,14 +232,17 @@ class Solver2LinearStorages : public ::testing::Test {
 };
 
 TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -260,14 +272,17 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
 }
 
 TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -297,14 +312,17 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
 }
 
 TEST_F(Solver2LinearStorages, UsingRungeKutta) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -389,14 +407,17 @@ class SolverLinearStorageWithET : public ::testing::Test {
 };
 
 TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AddTimeSeries(m_tsPET));
@@ -425,14 +446,17 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
 }
 
 TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AddTimeSeries(m_tsPET));
@@ -461,14 +485,17 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
 }
 
 TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1);
+
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(&unit);
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     m_model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model);
+    model.Initialize(m_model, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AddTimeSeries(m_tsPET));

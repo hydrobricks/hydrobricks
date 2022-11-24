@@ -100,6 +100,41 @@ TEST_F(SnowpackModel, DegreeDay) {
     }
 }
 
+TEST_F(SnowpackModel, ModelClosesBalance) {
+    wxLogNull logNo;
+
+    SettingsBasin basinProp;
+    basinProp.AddHydroUnit(1, 1000);
+    basinProp.AddLandCover("ground", "ground", 1);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 80;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
 class GlacierModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
@@ -291,12 +326,13 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
 
     // Water balance components
     double precip = 8;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalStorageChanges();
 
     // Balance
-    double balance = discharge + et + storage - precip;
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

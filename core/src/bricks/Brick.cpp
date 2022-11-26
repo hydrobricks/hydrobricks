@@ -21,13 +21,13 @@ Brick::~Brick() {
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
     if (brickSettings.type == "storage") {
         return new Storage();
-    } else if (brickSettings.type == "generic_land_cover") {
+    } else if (brickSettings.type == "generic_land_cover" || brickSettings.type == "ground") {
         return new GenericLandCover();
     } else if (brickSettings.type == "glacier") {
         return new Glacier();
-    } else if (brickSettings.type == "Urban") {
+    } else if (brickSettings.type == "urban") {
         return new Urban();
-    } else if (brickSettings.type == "Vegetation") {
+    } else if (brickSettings.type == "vegetation") {
         return new Vegetation();
     } else if (brickSettings.type == "snowpack") {
         return new Snowpack();

@@ -37,7 +37,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinPr
         m_timer.Initialize(modelSettings.GetTimerSettings());
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
-        m_logger.InitContainer(m_timer.GetTimeStepsNb(), m_subBasin, modelSettings);
+        m_logger.InitContainers(m_timer.GetTimeStepsNb(), m_subBasin, modelSettings);
         if (!m_subBasin->AssignFractions(basinProp)) {
             return false;
         }
@@ -730,6 +730,8 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         }
     }
 
+    // Splitter values
+
     for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplittersNb(); ++iSplitter) {
         modelSettings.SelectHydroUnitSplitter(iSplitter);
         SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
@@ -745,6 +747,27 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 iLabel++;
             }
         }
+    }
+
+    // Fractions
+    iLabel = 0;
+
+    for (int iBrickType : modelSettings.GetLandCoverBricksIndices()) {
+        modelSettings.SelectHydroUnitBrick(iBrickType);
+        BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+
+        for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
+            HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
+            LandCover* brick = dynamic_cast<LandCover*>(
+                unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name));
+            valPt = brick->GetAreaFractionPointer();
+
+            if (valPt == nullptr) {
+                throw ShouldNotHappen();
+            }
+            m_logger.SetHydroUnitFractionPointer(iUnit, iLabel, valPt);
+        }
+        iLabel++;
     }
 }
 

@@ -2,6 +2,8 @@
 #define HYDROBRICKS_LOGGER_H
 
 #include "Includes.h"
+#include "SettingsModel.h"
+#include "SubBasin.h"
 
 class Logger : public wxObject {
   public:
@@ -9,14 +11,15 @@ class Logger : public wxObject {
 
     ~Logger() override = default;
 
-    void InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble hydroUnitAreas,
-                       const vecStr& subBasinLabels, const vecStr& hydroUnitLabels);
+    void InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& modelSettings);
 
     void Reset();
 
     void SetSubBasinValuePointer(int iLabel, double* valPt);
 
     void SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt);
+
+    void SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt);
 
     void SetDate(double date);
 
@@ -28,13 +31,13 @@ class Logger : public wxObject {
 
     axd GetOutletDischarge();
 
-    vecInt GetIndicesForSubBasinElements(const string &item);
+    vecInt GetIndicesForSubBasinElements(const string& item);
 
-    vecInt GetIndicesForHydroUnitElements(const string &item);
+    vecInt GetIndicesForHydroUnitElements(const string& item);
 
-    double GetTotalSubBasin(const string &item);
+    double GetTotalSubBasin(const string& item);
 
-    double GetTotalHydroUnits(const string &item);
+    double GetTotalHydroUnits(const string& item);
 
     double GetTotalOutletDischarge();
 
@@ -61,6 +64,7 @@ class Logger : public wxObject {
   protected:
     int m_cursor;
     axd m_time;
+    bool m_recordFractions;
     vecStr m_subBasinLabels;
     vecAxd m_subBasinValues;
     vecDoublePt m_subBasinValuesPt;
@@ -69,6 +73,9 @@ class Logger : public wxObject {
     vecStr m_hydroUnitLabels;
     vecAxxd m_hydroUnitValues;
     std::vector<vecDoublePt> m_hydroUnitValuesPt;
+    vecInt m_hydroUnitFractionIds;
+    vecAxxd m_hydroUnitFractions;
+    std::vector<vecDoublePt> m_hydroUnitFractionsPt;
 
   private:
 };

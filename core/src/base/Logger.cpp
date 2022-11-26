@@ -3,10 +3,14 @@
 #include "FileNetcdf.h"
 
 Logger::Logger()
-    : m_cursor(0) {}
+    : m_cursor(0),
+      m_recordFractions(true) {}
 
-void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble hydroUnitAreas,
-                           const vecStr& subBasinLabels, const vecStr& hydroUnitLabels) {
+void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& modelSettings) {
+    vecInt hydroUnitIds = subBasin->GetHydroUnitIds();
+    vecDouble hydroUnitAreas = subBasin->GetHydroUnitAreas();
+    vecStr subBasinLabels = modelSettings.GetSubBasinLogLabels();
+    vecStr hydroUnitLabels = modelSettings.GetHydroUnitLogLabels();
     m_time.resize(timeSize);
     m_subBasinLabels = subBasinLabels;
     m_subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
@@ -16,6 +20,13 @@ void Logger::InitContainer(int timeSize, const vecInt& hydroUnitIds, vecDouble h
     m_hydroUnitLabels = hydroUnitLabels;
     m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
+    if (m_recordFractions) {
+        m_hydroUnitFractionIds = modelSettings.GetLandCoverBricksIndices();
+        m_hydroUnitFractions = vecAxxd(m_hydroUnitFractionIds.size(),
+                                       axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
+        m_hydroUnitFractionsPt = std::vector<vecDoublePt>(m_hydroUnitFractionIds.size(),
+                                                          vecDoublePt(hydroUnitIds.size(), nullptr));
+    }
 }
 
 void Logger::Reset() {
@@ -31,6 +42,14 @@ void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
     wxASSERT(m_hydroUnitValuesPt.size() > iLabel);
     wxASSERT(m_hydroUnitValuesPt[iLabel].size() > iUnit);
     m_hydroUnitValuesPt[iLabel][iUnit] = valPt;
+}
+
+void Logger::SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt) {
+    if (m_recordFractions) {
+        wxASSERT(m_hydroUnitFractionsPt.size() > iLabel);
+        wxASSERT(m_hydroUnitFractionsPt[iLabel].size() > iUnit);
+        m_hydroUnitFractionsPt[iLabel][iUnit] = valPt;
+    }
 }
 
 void Logger::SetDate(double date) {
@@ -50,6 +69,15 @@ void Logger::Record() {
         for (int iUnit = 0; iUnit < m_hydroUnitValues[iUnitVal].cols(); ++iUnit) {
             wxASSERT(m_hydroUnitValuesPt[iUnitVal][iUnit]);
             m_hydroUnitValues[iUnitVal](m_cursor, iUnit) = *m_hydroUnitValuesPt[iUnitVal][iUnit];
+        }
+    }
+
+    if (m_recordFractions) {
+        for (int iUnitVal = 0; iUnitVal < m_hydroUnitFractionsPt.size(); ++iUnitVal) {
+            for (int iUnit = 0; iUnit < m_hydroUnitFractions[iUnitVal].cols(); ++iUnit) {
+                wxASSERT(m_hydroUnitFractionsPt[iUnitVal][iUnit]);
+                m_hydroUnitFractions[iUnitVal](m_cursor, iUnit) = *m_hydroUnitFractionsPt[iUnitVal][iUnit];
+            }
         }
     }
 }
@@ -91,6 +119,10 @@ bool Logger::DumpOutputs(const string& path) {
         file.PutVar(varId, m_hydroUnitIds);
         file.PutAttText("long_name", "hydrological units ids", varId);
 
+        varId = file.DefVarDouble("hydro_units_areas", {dimIdUnit});
+        file.PutVar(varId, m_hydroUnitAreas);
+        file.PutAttText("long_name", "hydrological units areas", varId);
+
         varId = file.DefVarDouble("sub_basin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
         file.PutVar(varId, m_subBasinValues);
         file.PutAttText("long_name", "aggregated values over the sub basin", varId);
@@ -122,7 +154,7 @@ axd Logger::GetOutletDischarge() {
     throw ConceptionIssue(_("No 'outlet' component found in logger."));
 }
 
-vecInt Logger::GetIndicesForSubBasinElements(const string &item) {
+vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
     vecInt indices;
     for (int i = 0; i < m_subBasinLabels.size(); ++i) {
         std::size_t found = m_subBasinLabels[i].find(item);
@@ -134,7 +166,7 @@ vecInt Logger::GetIndicesForSubBasinElements(const string &item) {
     return indices;
 }
 
-vecInt Logger::GetIndicesForHydroUnitElements(const string &item) {
+vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
     vecInt indices;
     for (int i = 0; i < m_hydroUnitLabels.size(); ++i) {
         std::size_t found = m_hydroUnitLabels[i].find(item);
@@ -146,17 +178,17 @@ vecInt Logger::GetIndicesForHydroUnitElements(const string &item) {
     return indices;
 }
 
-double Logger::GetTotalSubBasin(const string &item) {
+double Logger::GetTotalSubBasin(const string& item) {
     vecInt indices = GetIndicesForSubBasinElements(item);
     double sum = 0;
-    for (int index: indices) {
+    for (int index : indices) {
         sum += m_subBasinValues[index].sum();
     }
 
     return sum;
 }
 
-double Logger::GetTotalHydroUnits(const string &item) {
+double Logger::GetTotalHydroUnits(const string& item) {
     vecInt indices = GetIndicesForHydroUnitElements(item);
 
     double sum = 0;
@@ -177,30 +209,30 @@ double Logger::GetTotalET() {
     return GetTotalHydroUnits("et:output");
 }
 
-double Logger::GetSubBasinInitialStorageState(){
+double Logger::GetSubBasinInitialStorageState() {
     vecInt indices = GetIndicesForSubBasinElements(":content");
     double sum = 0;
-    for (int index: indices) {
+    for (int index : indices) {
         sum += m_subBasinValues[index].head(1)[0];
     }
 
     return sum;
 }
 
-double Logger::GetSubBasinFinalStorageState(){
+double Logger::GetSubBasinFinalStorageState() {
     vecInt indices = GetIndicesForSubBasinElements(":content");
     double sum = 0;
-    for (int index: indices) {
+    for (int index : indices) {
         sum += m_subBasinValues[index].tail(1)[0];
     }
 
     return sum;
 }
 
-double Logger::GetHydroUnitsInitialStorageState(){
+double Logger::GetHydroUnitsInitialStorageState() {
     vecInt indices = GetIndicesForHydroUnitElements(":content");
     double sum = 0;
-    for (int index: indices) {
+    for (int index : indices) {
         axd values = m_hydroUnitValues[index](0, Eigen::all);
         sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
     }
@@ -208,10 +240,10 @@ double Logger::GetHydroUnitsInitialStorageState(){
     return sum;
 }
 
-double Logger::GetHydroUnitsFinalStorageState(){
+double Logger::GetHydroUnitsFinalStorageState() {
     vecInt indices = GetIndicesForHydroUnitElements(":content");
     double sum = 0;
-    for (int index: indices) {
+    for (int index : indices) {
         axd values = m_hydroUnitValues[index](Eigen::last, Eigen::all);
         sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
     }
@@ -219,7 +251,7 @@ double Logger::GetHydroUnitsFinalStorageState(){
     return sum;
 }
 
-double Logger::GetTotalStorageChanges(){
-    return GetHydroUnitsInitialStorageState() - GetSubBasinInitialStorageState() +
-           GetHydroUnitsFinalStorageState() - GetHydroUnitsInitialStorageState();
+double Logger::GetTotalStorageChanges() {
+    return GetHydroUnitsInitialStorageState() - GetSubBasinInitialStorageState() + GetHydroUnitsFinalStorageState() -
+           GetHydroUnitsInitialStorageState();
 }

@@ -58,7 +58,7 @@ class ModelBasics : public ::testing::Test {
 TEST_F(ModelBasics, Model1BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -72,7 +72,7 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
 TEST_F(ModelBasics, Model1RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -89,7 +89,7 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
 TEST_F(ModelBasics, Model2BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -103,7 +103,7 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
 TEST_F(ModelBasics, Model2RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -137,7 +137,7 @@ TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
 TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -157,7 +157,7 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
 TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

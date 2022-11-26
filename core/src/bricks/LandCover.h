@@ -19,6 +19,10 @@ class LandCover : public Brick {
         return m_areaFraction;
     }
 
+    double* GetAreaFractionPointer() {
+        return &m_areaFraction;
+    }
+
     void SetAreaFraction(double value);
 
     virtual void SurfaceComponentAdded(SurfaceComponent* brick);

@@ -58,7 +58,6 @@ class ModelBasics : public ::testing::Test {
 TEST_F(ModelBasics, Model1BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -72,7 +71,6 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
 TEST_F(ModelBasics, Model1RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -89,7 +87,6 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
 TEST_F(ModelBasics, Model2BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -103,7 +100,6 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
 TEST_F(ModelBasics, Model2RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -117,27 +113,9 @@ TEST_F(ModelBasics, Model2RunsCorrectly) {
     EXPECT_TRUE(model.Run());
 }
 
-TEST_F(ModelBasics, ModelBuildsCorrectlyFromFile) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
-
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
-    EXPECT_NEAR(subBasin.GetArea(), 264328000, 1050);  // Difference due to storage as float in netcdf file.
-
-    ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinProp);
-
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
-
-    EXPECT_TRUE(model.Run());
-}
-
 TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -157,7 +135,6 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
 TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -175,14 +152,14 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
 }
 
 TEST_F(ModelBasics, ModelDumpsOutputs) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
 
     SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinProp);
+    model.Initialize(m_model2, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -193,11 +170,11 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
 }
 
 TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
 
     SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
     SettingsModel settingsModel = m_model1;
@@ -205,7 +182,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     settingsModel.SelectHydroUnitBrick("storage");
     settingsModel.SetProcessParameterValue("response_factor", 0.0f);
 
-    model.Initialize(settingsModel, basinProp);
+    model.Initialize(settingsModel, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -228,16 +205,16 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
 }
 
 TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
 
     SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("euler_explicit");
-    model.Initialize(settingsModel, basinProp);
+    model.Initialize(settingsModel, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -260,16 +237,16 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
 }
 
 TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
 
     SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("heun_explicit");
-    model.Initialize(settingsModel, basinProp);
+    model.Initialize(settingsModel, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -281,27 +258,25 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
 
     // Water balance components
     double precip = 10;
-    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier-ice:melt:output") +
-                              logger->GetTotalHydroUnits("glacier-debris-ice:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalStorageChanges();
 
     // Balance
-    double balance = discharge + et + storage - precip - totalGlacierMelt;
+    double balance = discharge + et + storage - precip;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
 TEST_F(ModelBasics, Model2ClosesBalance) {
-    SettingsBasin basinProp;
-    ASSERT_TRUE(basinProp.Parse("files/hydro-units-2-glaciers.nc"));
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
 
     SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinProp);
+    model.Initialize(m_model2, basinSettings);
 
     ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -313,14 +288,12 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
 
     // Water balance components
     double precip = 10;
-    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier-ice:melt:output") +
-                              logger->GetTotalHydroUnits("glacier-debris-ice:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalStorageChanges();
 
     // Balance
-    double balance = discharge + et + storage - precip - totalGlacierMelt;
+    double balance = discharge + et + storage - precip;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

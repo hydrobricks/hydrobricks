@@ -78,7 +78,6 @@ class SolverLinearStorage : public ::testing::Test {
 TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -116,7 +115,6 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
 TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -154,7 +152,6 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
 TEST_F(SolverLinearStorage, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -234,7 +231,6 @@ class Solver2LinearStorages : public ::testing::Test {
 TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -274,7 +270,6 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
 TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -314,7 +309,6 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
 TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -409,7 +403,6 @@ class SolverLinearStorageWithET : public ::testing::Test {
 TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -448,7 +441,6 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
 TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -487,7 +479,6 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
 TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

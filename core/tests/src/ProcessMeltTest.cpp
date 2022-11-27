@@ -65,7 +65,6 @@ class SnowpackModel : public ::testing::Test {
 TEST_F(SnowpackModel, DegreeDay) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
@@ -108,7 +107,6 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
 
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
-    basinProp.AddLandCover("ground", "ground", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -175,7 +173,7 @@ TEST_F(GlacierModel, UnlimitedSupply) {
 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
+    basinSettings.AddLandCover("glacier", "glacier", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

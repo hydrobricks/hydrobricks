@@ -37,7 +37,6 @@ class Splitters : public ::testing::Test {
 TEST_F(Splitters, SnowRain) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    basinSettings.AddLandCover("ground", "", 1);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

@@ -332,35 +332,59 @@ void SettingsModel::AddSplitterOutput(const string& target, const string& fluxTy
 
 void SettingsModel::AddLoggingToItem(const string& itemName) {
     wxASSERT(m_selectedStructure);
+    if (std::find(m_selectedStructure->logItems.begin(), m_selectedStructure->logItems.end(), itemName) !=
+        m_selectedStructure->logItems.end()) {
+        return;
+    }
     m_selectedStructure->logItems.push_back(itemName);
 }
 
 void SettingsModel::AddLoggingToItems(std::initializer_list<const string> items) {
     wxASSERT(m_selectedStructure);
     for (const auto& item : items) {
+        if (std::find(m_selectedStructure->logItems.begin(), m_selectedStructure->logItems.end(), item) !=
+            m_selectedStructure->logItems.end()) {
+            continue;
+        }
         m_selectedStructure->logItems.push_back(item);
     }
 }
 
 void SettingsModel::AddBrickLogging(const string& itemName) {
     wxASSERT(m_selectedBrick);
+    if (std::find(m_selectedBrick->logItems.begin(), m_selectedBrick->logItems.end(), itemName) !=
+        m_selectedBrick->logItems.end()) {
+        return;
+    }
     m_selectedBrick->logItems.push_back(itemName);
 }
 
 void SettingsModel::AddBrickLogging(std::initializer_list<const string> items) {
     wxASSERT(m_selectedBrick);
     for (const auto& item : items) {
+        if (std::find(m_selectedBrick->logItems.begin(), m_selectedBrick->logItems.end(), item) !=
+            m_selectedBrick->logItems.end()) {
+            continue;
+        }
         m_selectedBrick->logItems.push_back(item);
     }
 }
 
 void SettingsModel::AddProcessLogging(const string& itemName) {
     wxASSERT(m_selectedProcess);
+    if (std::find(m_selectedProcess->logItems.begin(), m_selectedProcess->logItems.end(), itemName) !=
+        m_selectedProcess->logItems.end()) {
+        return;
+    }
     m_selectedProcess->logItems.push_back(itemName);
 }
 
 void SettingsModel::AddSplitterLogging(const string& itemName) {
     wxASSERT(m_selectedSplitter);
+    if (std::find(m_selectedSplitter->logItems.begin(), m_selectedSplitter->logItems.end(), itemName) !=
+        m_selectedSplitter->logItems.end()) {
+        return;
+    }
     m_selectedSplitter->logItems.push_back(itemName);
 }
 

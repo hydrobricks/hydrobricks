@@ -252,6 +252,6 @@ double Logger::GetHydroUnitsFinalStorageState() {
 }
 
 double Logger::GetTotalStorageChanges() {
-    return GetHydroUnitsInitialStorageState() - GetSubBasinInitialStorageState() + GetHydroUnitsFinalStorageState() -
+    return GetSubBasinFinalStorageState() - GetSubBasinInitialStorageState() + GetHydroUnitsFinalStorageState() -
            GetHydroUnitsInitialStorageState();
 }

@@ -188,7 +188,7 @@ double Logger::GetTotalSubBasin(const string& item) {
     return sum;
 }
 
-double Logger::GetTotalHydroUnits(const string& item) {
+double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
     vecInt indices = GetIndicesForHydroUnitElements(item);
     double sum = 0;
     std::size_t found = item.find(":content");
@@ -205,15 +205,21 @@ double Logger::GetTotalHydroUnits(const string& item) {
                 }
             }
             axxd values = fraction * m_hydroUnitValues[i];
-            axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
+            axxd areas = m_hydroUnitAreas.transpose().replicate(values.rows(), 1);
             sum += (values * areas).sum() / m_hydroUnitAreas.sum();
         }
     } else {
         // Not a storage content: fraction is already accounted for.
-        for (int i : indices) {
-            axxd values = m_hydroUnitValues[i];
-            axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
-            sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+        if (needsAreaWeighting) {
+            for (int i : indices) {
+                axxd values = m_hydroUnitValues[i];
+                axxd areas = m_hydroUnitAreas.transpose().replicate(values.rows(), 1);
+                sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+            }
+        } else {
+            for (int i : indices) {
+                sum += m_hydroUnitValues[i].sum();
+            }
         }
     }
 
@@ -225,7 +231,7 @@ double Logger::GetTotalOutletDischarge() {
 }
 
 double Logger::GetTotalET() {
-    return GetTotalHydroUnits("et:output");
+    return GetTotalHydroUnits("et:output", true);
 }
 
 double Logger::GetSubBasinInitialStorageState() {

@@ -39,7 +39,7 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
 
         // Get land cover data
         for (const auto& landCover : landCovers) {
-            vecFloat fractions = file.GetVarFloat1D(landCover, changesNb);
+            vecDouble fractions = file.GetVarDouble1D(landCover, changesNb);
 
             // Get the land cover type
             string type = file.GetAttText("type", landCover);

@@ -62,7 +62,7 @@ class HydroUnit : public wxObject {
         m_id = id;
     }
 
-    float GetArea() {
+    double GetArea() {
         return m_area;
     }
 

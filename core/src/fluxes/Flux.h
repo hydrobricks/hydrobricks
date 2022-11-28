@@ -37,7 +37,6 @@ class Flux : public wxObject {
     }
 
     double* GetChangeRatePointer() {
-        wxASSERT(m_changeRate);
         return m_changeRate;
     }
 

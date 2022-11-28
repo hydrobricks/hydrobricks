@@ -70,12 +70,12 @@ class SubBasin : public wxObject {
 
     bool ComputeOutletDischarge();
 
-    float GetArea() {
+    double GetArea() {
         return m_area;
     }
 
   protected:
-    float m_area;  // m2
+    double m_area;  // m2
     double m_outletTotal;
     bool m_needsCleanup;
     std::vector<Brick*> m_bricks;

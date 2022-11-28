@@ -11,5 +11,9 @@ void ProcessInfiltrationSocont::AssignParameters(const ProcessSettings& processS
 }
 
 vecDouble ProcessInfiltrationSocont::GetRates() {
+    if (GetTargetCapacity() <= 0) {
+        return {0};
+    }
+
     return {m_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))};
 }

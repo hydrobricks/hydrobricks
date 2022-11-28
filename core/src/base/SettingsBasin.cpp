@@ -54,7 +54,7 @@ bool SettingsBasin::Parse(const string& path) {
         vecInt ids = file.GetVarInt1D("id", unitsNb);
 
         // Get areas
-        vecFloat areas = file.GetVarFloat1D("area", unitsNb);
+        vecDouble areas = file.GetVarDouble1D("area", unitsNb);
 
         // Get elevations
         vecFloat elevations = file.GetVarFloat1D("elevation", unitsNb);
@@ -70,7 +70,7 @@ bool SettingsBasin::Parse(const string& path) {
 
         // Get land cover data
         for (const auto& cover : landCovers) {
-            vecFloat fractions = file.GetVarFloat1D(cover, unitsNb);
+            vecDouble fractions = file.GetVarDouble1D(cover, unitsNb);
 
             // Get the cover type
             string type = file.GetAttText("type", cover);

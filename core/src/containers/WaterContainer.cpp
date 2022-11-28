@@ -54,6 +54,10 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         }
         for (auto flux : process->GetOutputFluxes()) {
             double* changeRate = flux->GetChangeRatePointer();
+            if (changeRate == nullptr) {
+                // For example when the originating brick has an area = 0.
+                continue;
+            }
             wxASSERT(changeRate);
             wxASSERT(*changeRate < 1000);
             if (*changeRate < 0) {
@@ -74,7 +78,11 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             inputsStatic += input->GetAmount();
         } else {
             double* changeRate = input->GetChangeRatePointer();
-            wxASSERT(changeRate != nullptr);
+            if (changeRate == nullptr) {
+                // For example when the originating brick has an area = 0.
+                continue;
+            }
+            wxASSERT(changeRate);
             wxASSERT(*changeRate < 1000);
             if (*changeRate < 0) {
                 *changeRate = 0;
@@ -115,8 +123,11 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             double diff = (content + inputsStatic + change * timeStep - *m_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
-                *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
-                return;
+                if (m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer() != nullptr) {
+                    *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
+                    return;
+                }
+                throw ShouldNotHappen();
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *m_capacity) {
@@ -144,7 +155,11 @@ void WaterContainer::SetOutgoingRatesToZero() {
         }
         for (auto flux : process->GetOutputFluxes()) {
             double* changeRate = flux->GetChangeRatePointer();
-            wxASSERT(changeRate != nullptr);
+            if (changeRate == nullptr) {
+                // For example when the originating brick has an area = 0.
+                continue;
+            }
+            wxASSERT(changeRate);
             *changeRate = 0;
         }
     }
@@ -186,5 +201,6 @@ vecDoublePt WaterContainer::GetDynamicContentChanges() {
 }
 
 double WaterContainer::GetTargetFillingRatio() {
+    wxASSERT(GetMaximumCapacity() > 0);
     return wxMax(0.0, wxMin(1.0, GetContentWithChanges() / GetMaximumCapacity()));
 }

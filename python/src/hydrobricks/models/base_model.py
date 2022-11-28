@@ -6,6 +6,7 @@ import _hydrobricks as hb
 import HydroErr
 import pandas as pd
 from _hydrobricks import ModelHydro, SettingsModel
+
 from hydrobricks import utils
 
 
@@ -22,7 +23,7 @@ class Model(ABC):
         self.initialized = False
 
         # Default options
-        self.solver = 'HeunExplicit'
+        self.solver = 'heun_explicit'
         self.record_all = True
         self.land_cover_types = ['ground']
         self.land_cover_names = ['ground']

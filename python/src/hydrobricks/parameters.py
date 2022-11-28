@@ -1,6 +1,7 @@
 import random
 
 import pandas as pd
+
 from hydrobricks import utils
 
 
@@ -25,7 +26,7 @@ class ParameterSet:
             glacier, surface-runoff).
         name : str
             The name of the parameter in the C++ code of hydrobricks (e.g.,
-            degreeDayFactor, responseFactor).
+            degree_day_factor, response_factor).
         unit : str
             The unit of the parameter.
         aliases : list

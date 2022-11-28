@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2022-11-28
+
+### Added
+
+- Addition of functions to extract the water balance components.
+- Addition of static content change rate (vs dynamic; e.g. for instantaneous fluxes).
+
+### Fixed
+
+- Fixed issues with fluxes and the water balance.
+
+### Changed
+
+- The parameter names are now using snake_case.
+- The fraction assignment has been moved to the model initialization (so it's not forgotten).
+
+
 ## [0.1.3] - 2022-11-18
 
 ### Added

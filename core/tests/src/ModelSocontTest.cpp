@@ -80,6 +80,87 @@ TEST_F(ModelSocontBasic, ModelRunsCorrectly) {
     EXPECT_TRUE(model.Run());
 }
 
+TEST_F(ModelSocontBasic, WaterBalanceClosesWithoutGlacierMelt) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    m_model.SelectHydroUnitBrick("glacier");
+    m_model.SelectProcess("melt");
+    m_model.SetProcessParameterValue("degree_day_factor", 0.0f);
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 80;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
+TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    auto precipValues = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    TimeSeriesUniform* tsPrecip = new TimeSeriesUniform(Precipitation);
+    tsPrecip->SetData(precipValues);
+
+    ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 0;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+
+    wxDELETE(tsPrecip);
+}
+
 TEST_F(ModelSocontBasic, WaterBalanceCloses) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

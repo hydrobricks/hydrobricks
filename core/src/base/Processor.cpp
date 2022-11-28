@@ -40,7 +40,7 @@ void Processor::ConnectToElementsToSolve() {
                 solverRequired = true;
 
                 // Get state variables from bricks
-                vecDoublePt bricksValues = brick->GetStateVariableChanges();
+                vecDoublePt bricksValues = brick->GetDynamicContentChanges();
                 StoreStateVariableChanges(bricksValues);
 
                 // Get state variables from processes
@@ -63,7 +63,7 @@ void Processor::ConnectToElementsToSolve() {
         m_iterableBricks.push_back(brick);
 
         // Get state variables from bricks
-        vecDoublePt bricksValues = brick->GetStateVariableChanges();
+        vecDoublePt bricksValues = brick->GetDynamicContentChanges();
         StoreStateVariableChanges(bricksValues);
 
         // Get state variables from processes

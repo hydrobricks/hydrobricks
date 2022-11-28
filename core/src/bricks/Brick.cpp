@@ -107,7 +107,7 @@ void Brick::Finalize() {
 }
 
 void Brick::UpdateContentFromInputs() {
-    m_container->AddAmount(m_container->SumIncomingFluxes());
+    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
 }
 
 void Brick::ApplyConstraints(double timeStep) {
@@ -118,8 +118,8 @@ WaterContainer* Brick::GetWaterContainer() {
     return m_container;
 }
 
-vecDoublePt Brick::GetStateVariableChanges() {
-    return m_container->GetStateVariableChanges();
+vecDoublePt Brick::GetDynamicContentChanges() {
+    return m_container->GetDynamicContentChanges();
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {

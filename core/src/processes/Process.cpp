@@ -114,7 +114,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     wxASSERT(rate >= 0);
     if (rate > PRECISION) {
         m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
-        m_container->SubtractAmount(rate * timeStepInDays);
+        m_container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
     } else {
         m_outputs[connectionIndex]->UpdateFlux(0);
     }

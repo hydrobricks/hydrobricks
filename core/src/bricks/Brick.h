@@ -101,7 +101,7 @@ class Brick : public wxObject {
      *
      * @return vector of pointers to the state variables.
      */
-    virtual vecDoublePt GetStateVariableChanges();
+    virtual vecDoublePt GetDynamicContentChanges();
 
     vecDoublePt GetStateVariableChangesFromProcesses();
 

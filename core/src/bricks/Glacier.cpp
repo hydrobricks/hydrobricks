@@ -61,8 +61,8 @@ void Glacier::Finalize() {
 }
 
 void Glacier::UpdateContentFromInputs() {
-    m_ice->AddAmount(m_ice->SumIncomingFluxes());
-    m_container->AddAmount(m_container->SumIncomingFluxes());
+    m_ice->AddAmountToDynamicContentChange(m_ice->SumIncomingFluxes());
+    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
 }
 
 void Glacier::ApplyConstraints(double timeStep) {
@@ -70,12 +70,12 @@ void Glacier::ApplyConstraints(double timeStep) {
     m_container->ApplyConstraints(timeStep);
 }
 
-vecDoublePt Glacier::GetStateVariableChanges() {
+vecDoublePt Glacier::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_container->GetStateVariableChanges()) {
+    for (auto const& var : m_container->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
-    for (auto const& var : m_ice->GetStateVariableChanges()) {
+    for (auto const& var : m_ice->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
 

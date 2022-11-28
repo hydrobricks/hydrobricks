@@ -238,6 +238,8 @@ class SettingsModel : public wxObject {
         return m_selectedStructure->landCoverBricks;
     }
 
+    vecStr GetLandCoverBricksNames() const;
+
     BrickSettings GetSubBasinBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
         return m_selectedStructure->subBasinBricks[index];

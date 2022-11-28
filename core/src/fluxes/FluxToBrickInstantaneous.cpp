@@ -20,5 +20,5 @@ void FluxToBrickInstantaneous::UpdateFlux(double amount) {
     } else {
         m_amount = amount;
     }
-    m_toBrick->GetWaterContainer()->AddAmount(amount);
+    m_toBrick->GetWaterContainer()->AddAmountToStaticContentChange(m_amount);
 }

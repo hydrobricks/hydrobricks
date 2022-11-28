@@ -642,6 +642,16 @@ vecStr SettingsModel::GetHydroUnitLogLabels() {
     return logNames;
 }
 
+vecStr SettingsModel::GetLandCoverBricksNames() const {
+    wxASSERT(m_selectedStructure);
+    vecStr names;
+    for (int index : m_selectedStructure->landCoverBricks) {
+        names.push_back(m_selectedStructure->hydroUnitBricks[index].name);
+    }
+
+    return names;
+}
+
 vecStr SettingsModel::GetSubBasinLogLabels() {
     wxASSERT(m_selectedStructure);
     wxASSERT(m_modelStructures.size() == 1);

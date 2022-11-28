@@ -12,9 +12,11 @@ class WaterContainer : public wxObject {
 
     virtual bool IsOk();
 
-    void SubtractAmount(double change);
+    void SubtractAmountFromDynamicContentChange(double change);
 
-    void AddAmount(double change);
+    void AddAmountToDynamicContentChange(double change);
+
+    void AddAmountToStaticContentChange(double change);
 
     virtual void ApplyConstraints(double timeSte);
 
@@ -26,7 +28,7 @@ class WaterContainer : public wxObject {
 
     void SaveAsInitialState();
 
-    vecDoublePt GetStateVariableChanges();
+    vecDoublePt GetDynamicContentChanges();
 
     bool HasMaximumCapacity() const {
         return m_capacity != nullptr;
@@ -58,7 +60,7 @@ class WaterContainer : public wxObject {
             return INFINITY;
         }
 
-        return m_content + m_contentChange;
+        return m_content + m_contentChangeDynamic + m_contentChangeStatic;
     }
 
     double GetContentWithoutChanges() const {
@@ -120,9 +122,10 @@ class WaterContainer : public wxObject {
 
   protected:
   private:
-    double m_content;        // [mm]
-    double m_contentChange;  // [mm]
-    double m_initialState;   // [mm]
+    double m_content;               // [mm]
+    double m_contentChangeDynamic;  // [mm]
+    double m_contentChangeStatic;   // [mm]
+    double m_initialState;          // [mm]
     float* m_capacity;
     bool m_infiniteStorage;
     Brick* m_parent;

@@ -21,10 +21,10 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
     if (m_recordFractions) {
-        m_hydroUnitFractionIds = modelSettings.GetLandCoverBricksIndices();
-        m_hydroUnitFractions = vecAxxd(m_hydroUnitFractionIds.size(),
+        m_hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
+        m_hydroUnitFractions = vecAxxd(m_hydroUnitFractionLabels.size(),
                                        axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
-        m_hydroUnitFractionsPt = std::vector<vecDoublePt>(m_hydroUnitFractionIds.size(),
+        m_hydroUnitFractionsPt = std::vector<vecDoublePt>(m_hydroUnitFractionLabels.size(),
                                                           vecDoublePt(hydroUnitIds.size(), nullptr));
     }
 }
@@ -190,12 +190,31 @@ double Logger::GetTotalSubBasin(const string& item) {
 
 double Logger::GetTotalHydroUnits(const string& item) {
     vecInt indices = GetIndicesForHydroUnitElements(item);
-
     double sum = 0;
-    for (int index : indices) {
-        axd values = m_hydroUnitValues[index](Eigen::all, Eigen::all);
-        axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
-        sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+    std::size_t found = item.find(":content");
+    if (found != std::string::npos) {
+        // Storage content: fraction must be accounted for.
+        for (int i : indices) {
+            axxd fraction = axxd::Ones(m_hydroUnitValues[i].rows(), m_hydroUnitValues[i].cols());
+            string componentName = m_hydroUnitLabels[i];
+            for (int j = 0; j < m_hydroUnitFractionLabels.size(); ++j) {
+                string fractionLabel = m_hydroUnitFractionLabels[j];
+                if (componentName == fractionLabel + ":content") {
+                    fraction = m_hydroUnitFractions[j];
+                    break;
+                }
+            }
+            axxd values = fraction * m_hydroUnitValues[i];
+            axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
+            sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+        }
+    } else {
+        // Not a storage content: fraction is already accounted for.
+        for (int i : indices) {
+            axxd values = m_hydroUnitValues[i];
+            axxd areas = m_hydroUnitAreas.replicate(values.size(), 1);
+            sum += (values * areas).sum() / m_hydroUnitAreas.sum();
+        }
     }
 
     return sum;
@@ -232,8 +251,18 @@ double Logger::GetSubBasinFinalStorageState() {
 double Logger::GetHydroUnitsInitialStorageState() {
     vecInt indices = GetIndicesForHydroUnitElements(":content");
     double sum = 0;
-    for (int index : indices) {
-        axd values = m_hydroUnitValues[index](0, Eigen::all);
+    for (int i : indices) {
+        axd fraction = axd::Ones(m_hydroUnitValues[i].cols());
+        string componentName = m_hydroUnitLabels[i];
+        for (int j = 0; j < m_hydroUnitFractionLabels.size(); ++j) {
+            string fractionLabel = m_hydroUnitFractionLabels[j];
+            if (wxString(componentName).StartsWith(fractionLabel + ":")) {
+                fraction = m_hydroUnitFractions[j](0, Eigen::all);
+                break;
+            }
+        }
+        axd values = m_hydroUnitValues[i](0, Eigen::all);
+        values *= fraction;
         sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
     }
 
@@ -243,8 +272,18 @@ double Logger::GetHydroUnitsInitialStorageState() {
 double Logger::GetHydroUnitsFinalStorageState() {
     vecInt indices = GetIndicesForHydroUnitElements(":content");
     double sum = 0;
-    for (int index : indices) {
-        axd values = m_hydroUnitValues[index](Eigen::last, Eigen::all);
+    for (int i : indices) {
+        axd fraction = axd::Ones(m_hydroUnitValues[i].cols());
+        string componentName = m_hydroUnitLabels[i];
+        for (int j = 0; j < m_hydroUnitFractionLabels.size(); ++j) {
+            string fractionLabel = m_hydroUnitFractionLabels[j];
+            if (wxString(componentName).StartsWith(fractionLabel + ":")) {
+                fraction = m_hydroUnitFractions[j](Eigen::last, Eigen::all);
+                break;
+            }
+        }
+        axd values = m_hydroUnitValues[i](Eigen::last, Eigen::all);
+        values *= fraction;
         sum += (values * m_hydroUnitAreas).sum() / m_hydroUnitAreas.sum();
     }
 

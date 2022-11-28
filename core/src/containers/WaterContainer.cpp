@@ -4,7 +4,8 @@
 
 WaterContainer::WaterContainer(Brick* brick)
     : m_content(0),
-      m_contentChange(0),
+      m_contentChangeDynamic(0),
+      m_contentChangeStatic(0),
       m_initialState(0),
       m_capacity(nullptr),
       m_infiniteStorage(false),
@@ -26,14 +27,19 @@ bool WaterContainer::IsOk() {
     return false;
 }
 
-void WaterContainer::SubtractAmount(double change) {
+void WaterContainer::SubtractAmountFromDynamicContentChange(double change) {
     if (m_infiniteStorage) return;
-    m_contentChange -= change;
+    m_contentChangeDynamic -= change;
 }
 
-void WaterContainer::AddAmount(double change) {
+void WaterContainer::AddAmountToDynamicContentChange(double change) {
     if (m_infiniteStorage) return;
-    m_contentChange += change;
+    m_contentChangeDynamic += change;
+}
+
+void WaterContainer::AddAmountToStaticContentChange(double change) {
+    if (m_infiniteStorage) return;
+    m_contentChangeStatic += change;
 }
 
 void WaterContainer::ApplyConstraints(double timeStep) {
@@ -146,14 +152,16 @@ void WaterContainer::SetOutgoingRatesToZero() {
 
 void WaterContainer::Finalize() {
     if (m_infiniteStorage) return;
-    m_content += m_contentChange;
-    m_contentChange = 0;
+    m_content += m_contentChangeDynamic + m_contentChangeStatic;
+    m_contentChangeDynamic = 0;
+    m_contentChangeStatic = 0;
     wxASSERT(m_content >= -PRECISION);
 }
 
 void WaterContainer::Reset() {
     m_content = m_initialState;
-    m_contentChange = 0;
+    m_contentChangeDynamic = 0;
+    m_contentChangeStatic = 0;
 }
 
 void WaterContainer::SaveAsInitialState() {
@@ -173,8 +181,8 @@ bool WaterContainer::ContentAccessible() const {
     return GetContentWithChanges() > 0;
 }
 
-vecDoublePt WaterContainer::GetStateVariableChanges() {
-    return vecDoublePt{&m_contentChange};
+vecDoublePt WaterContainer::GetDynamicContentChanges() {
+    return vecDoublePt{&m_contentChangeDynamic};
 }
 
 double WaterContainer::GetTargetFillingRatio() {

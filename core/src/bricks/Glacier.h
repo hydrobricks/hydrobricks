@@ -35,7 +35,7 @@ class Glacier : public LandCover {
 
     void ApplyConstraints(double timeStep) override;
 
-    vecDoublePt GetStateVariableChanges() override;
+    vecDoublePt GetDynamicContentChanges() override;
 
     double* GetValuePointer(const string& name) override;
 

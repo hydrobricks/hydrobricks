@@ -48,8 +48,8 @@ void Snowpack::Finalize() {
 }
 
 void Snowpack::UpdateContentFromInputs() {
-    m_snow->AddAmount(m_snow->SumIncomingFluxes());
-    m_container->AddAmount(m_container->SumIncomingFluxes());
+    m_snow->AddAmountToDynamicContentChange(m_snow->SumIncomingFluxes());
+    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {
@@ -57,12 +57,12 @@ void Snowpack::ApplyConstraints(double timeStep) {
     m_container->ApplyConstraints(timeStep);
 }
 
-vecDoublePt Snowpack::GetStateVariableChanges() {
+vecDoublePt Snowpack::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_container->GetStateVariableChanges()) {
+    for (auto const& var : m_container->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
-    for (auto const& var : m_snow->GetStateVariableChanges()) {
+    for (auto const& var : m_snow->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
 

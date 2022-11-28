@@ -204,6 +204,76 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
+TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    SettingsModel settingsModel = m_model1;
+    settingsModel.SetSolver("heun_explicit");
+    settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SetProcessParameterValue("response_factor", 0.0f);
+
+    model.Initialize(settingsModel, basinSettings);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 10;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
+TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    SettingsModel settingsModel = m_model1;
+    settingsModel.SetSolver("runge_kutta");
+    settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SetProcessParameterValue("response_factor", 0.0f);
+
+    model.Initialize(settingsModel, basinSettings);
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 10;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
 TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

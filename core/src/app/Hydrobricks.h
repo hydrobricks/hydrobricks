@@ -18,6 +18,8 @@
 #include <wx/cmdline.h>
 #include <wx/socket.h>
 
+#include "Includes.h"
+
 class Hydrobricks : public wxAppConsole {
   public:
     bool OnInit() override;

@@ -20,10 +20,17 @@ def test_shapefile_parsing():
     Catchment(CATCHMENT_OUTLINE)
 
 
-def test_shapefile_parsing():
+def test_dem_extraction():
     if not hb.has_rasterio or not hb.has_geopandas or not hb.has_shapely:
         return
     catchment = Catchment(CATCHMENT_OUTLINE)
     assert catchment.extract_dem(CATCHMENT_DEM)
 
+
+def test_elevation_bands_isohypses():
+    if not hb.has_rasterio or not hb.has_geopandas or not hb.has_shapely:
+        return
+    catchment = Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.get_elevation_bands(method='isohypse', distance=100)
 

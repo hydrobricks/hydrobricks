@@ -27,7 +27,7 @@ class HydroUnits:
 
         Parameters
         ----------
-        path : str
+        path : str|Path
             Path to the csv file containing hydro units data.
         area_unit: str
             Unit for the area values: "m" or "km"

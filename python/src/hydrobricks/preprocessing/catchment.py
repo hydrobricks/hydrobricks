@@ -27,8 +27,6 @@ class Catchment:
         except Exception as e:
             print(e)
             return False
-        except:
-            return False
 
     def get_elevation_bands(self):
         pass

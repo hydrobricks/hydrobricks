@@ -15,31 +15,31 @@ from .time_series import TimeSeries
 try:
     from netCDF4 import Dataset
 except ImportError:
-    _has_netcdf = False
+    has_netcdf = False
 else:
-    _has_netcdf = True
+    has_netcdf = True
 
 try:
     import rasterio
 except ImportError:
-    _has_rasterio = False
+    has_rasterio = False
 else:
     from rasterio.mask import mask
-    _has_rasterio = True
+    has_rasterio = True
 
 try:
     import geopandas as gpd
 except ImportError:
-    _has_geopandas = False
+    has_geopandas = False
 else:
-    _has_geopandas = True
+    has_geopandas = True
 
 try:
     from shapely.geometry import mapping
 except ImportError:
-    _has_shapely = False
+    has_shapely = False
 else:
-    _has_shapely = True
+    has_shapely = True
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',

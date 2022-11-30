@@ -80,7 +80,7 @@ class HydroUnits:
         path : str
             Path of the file to create.
         """
-        if not hb._has_netcdf:
+        if not hb.has_netcdf:
             raise ImportError("netcdf4 is required to do this.")
 
         # Create netCDF file

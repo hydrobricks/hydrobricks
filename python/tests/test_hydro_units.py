@@ -7,7 +7,7 @@ import pytest
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    'files',
+    '..', '..', 'tests', 'files',
 )
 
 
@@ -43,15 +43,15 @@ def hydro_units():
 def test_load_from_csv_wrong_unit(hydro_units):
     with pytest.raises(Exception):
         hydro_units.load_from_csv(
-            TEST_FILES_DIR / 'hydro_units_absolute_areas.csv', area_unit='mi',
-            column_elevation='Elevation Bands')
+            TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
+            area_unit='mi', column_elevation='Elevation Bands')
 
 
 @pytest.fixture
 def hydro_units_csv(hydro_units):
     hydro_units.load_from_csv(
-        TEST_FILES_DIR / 'hydro_units_absolute_areas.csv', area_unit='km',
-        column_elevation='Elevation Bands',
+        TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
+        area_unit='km', column_elevation='Elevation Bands',
         columns_areas={'ground': 'Sum_Area Non Glacier Band',
                        'glacier-ice': 'Sum_Area ICE Band',
                        'glacier-debris': 'Sum_Area Debris Band'})

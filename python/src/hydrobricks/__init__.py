@@ -12,6 +12,13 @@ from .observations import Observations
 from .parameters import ParameterSet
 from .time_series import TimeSeries
 
+try:
+    from netCDF4 import Dataset
+except ImportError:
+    _has_netcdf = False
+else:
+    _has_netcdf = True
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'init', 'init_log', 'set_debug_log_level', 'set_max_log_level',

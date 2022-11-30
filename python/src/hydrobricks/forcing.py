@@ -1,5 +1,5 @@
 import numpy as np
-from netCDF4 import Dataset
+import hydrobricks as hb
 
 from .time_series import TimeSeries
 
@@ -237,6 +237,8 @@ class Forcing(TimeSeries):
         max_compression: bool
             Option to allow maximum compression for data in file.
         """
+        if not hb._has_netcdf:
+            raise ImportError("netcdf4 is required to do this.")
 
         time = self._date_as_mjd()
 

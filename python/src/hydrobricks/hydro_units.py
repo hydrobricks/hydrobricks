@@ -31,7 +31,7 @@ class HydroUnits:
         path : str|Path
             Path to the csv file containing hydro units data.
         area_unit: str
-            Unit for the area values: "m" or "km"
+            Unit for the area values: "m2" or "km2"
         column_elevation : str
             Column name containing the elevation values in [m] (optional).
         column_area : str
@@ -62,9 +62,9 @@ class HydroUnits:
                 area_values[:, idx] = file_content[columns_areas[cover]]
             self._compute_area_portions(area_values)
 
-        if area_unit == 'm':
+        if area_unit == 'm' or area_unit == 'm2':
             pass
-        elif area_unit == 'km':
+        elif area_unit == 'km' or area_unit == 'km2':
             self.hydro_units['area'] = self.hydro_units['area'] * 1000 * 1000
         else:
             raise Exception(f'Unit "{area_unit}" for the area is not supported.')

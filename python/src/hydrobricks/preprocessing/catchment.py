@@ -76,16 +76,18 @@ class Catchment:
         else:
             raise ValueError
 
-        bands = np.zeros(len(elevations))
+        res_bands = np.zeros(len(elevations) - 1)
+        res_elevations = np.zeros(len(elevations) - 1)
         for i in range(len(elevations) - 1):
             n_cells = np.count_nonzero(
                 np.logical_and(self.masked_dem_data >= elevations[i],
                                self.masked_dem_data <= elevations[i + 1]))
-            bands[i] = n_cells * self.dem.res[0] * self.dem.res[1]
+            res_bands[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
+            res_elevations[i] = round(float(np.mean(elevations[i:i+2])), 2)
 
         df = pd.DataFrame(columns=['elevation', 'area'])
-        df['elevation'] = elevations
-        df['area'] = bands
+        df['elevation'] = res_elevations
+        df['area'] = res_bands
 
         return df
 

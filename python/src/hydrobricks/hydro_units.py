@@ -84,7 +84,7 @@ class HydroUnits:
             raise ImportError("netcdf4 is required to do this.")
 
         # Create netCDF file
-        nc = Dataset(path, 'w', 'NETCDF4')
+        nc = hb.Dataset(path, 'w', 'NETCDF4')
 
         # Global attributes
         nc.version = 1.0

@@ -243,7 +243,7 @@ class Forcing(TimeSeries):
         time = self._date_as_mjd()
 
         # Create netCDF file
-        nc = Dataset(path, 'w', 'NETCDF4')
+        nc = hb.Dataset(path, 'w', 'NETCDF4')
 
         # Dimensions
         nc.createDimension('hydro_units', len(self.hydro_units))

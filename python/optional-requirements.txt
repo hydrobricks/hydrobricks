@@ -1,1 +1,6 @@
 netCDF4
+matplotlib
+pytest
+rasterio
+geopandas
+shapely

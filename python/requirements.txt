@@ -1,6 +1,4 @@
 HydroErr
-matplotlib
 numpy
 pandas
-pytest
 pyyaml

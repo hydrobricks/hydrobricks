@@ -44,4 +44,4 @@ else:
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'init', 'init_log', 'set_debug_log_level', 'set_max_log_level',
-           'set_message_log_level')
+           'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask')

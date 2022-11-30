@@ -76,3 +76,7 @@ def test_create_yaml_config_file_content():
         assert 'surface_runoff: linear_storage' in txt
         assert 'ground' in txt
         assert 'aletsch_glacier' in txt
+
+
+def test_socont_closes_water_balance():
+    pass

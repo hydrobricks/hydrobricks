@@ -1,6 +1,6 @@
-netCDF4
+geopandas
 matplotlib
+netCDF4
 pytest
 rasterio
-geopandas
 shapely

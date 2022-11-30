@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 import hydrobricks as hb
 
@@ -45,7 +46,7 @@ class Catchment:
             print(e)
             return False
 
-    def get_elevation_bands(self, method='isohypse', number=100, distance=100):
+    def get_elevation_bands(self, method='isohypse', number=100, distance=50):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -63,14 +64,30 @@ class Catchment:
 
         Returns
         -------
-
+        A dataframe with the elevation bands.
         """
         if method == 'isohypse':
-            self._build_elevation_bands_isohypse(distance)
+            min_val = np.nanmin(self.masked_dem_data)
+            max_val = np.nanmax(self.masked_dem_data)
+            elevations = np.arange(min_val, max_val + distance, distance)
         elif method == 'quantiles':
-            self._build_elevation_bands_quantiles(number)
+            elevations = np.nanquantile(self.masked_dem_data,
+                                        np.linspace(0, 1, num=number))
         else:
             raise ValueError
+
+        bands = np.zeros(len(elevations))
+        for i in range(len(elevations) - 1):
+            n_cells = np.count_nonzero(
+                np.logical_and(self.masked_dem_data >= elevations[i],
+                               self.masked_dem_data <= elevations[i + 1]))
+            bands[i] = n_cells * self.dem.res[0] * self.dem.res[1]
+
+        df = pd.DataFrame(columns=['elevation', 'area'])
+        df['elevation'] = elevations
+        df['area'] = bands
+
+        return df
 
     def _extract_outline(self, outline):
         if not outline:
@@ -78,15 +95,3 @@ class Catchment:
         shapefile = hb.gpd.read_file(outline)
         geoms = shapefile.geometry.values
         self.outline = geoms[0]
-
-    def _build_elevation_bands_isohypse(self, distance):
-        min = np.nanmin(self.masked_dem_data)
-        max = np.nanmax(self.masked_dem_data)
-        elevations = np.arange(min, max + distance, distance)
-        #bands = np.zeros(len(elevations))
-        #for i in range(len(elevations)):
-        #    n_cells = np.count_nonzero(elevations[i] < self.masked_dem_data < elevations[i+1])
-        print(elevations)
-
-    def _build_elevation_bands_quantiles(self, number):
-        pass

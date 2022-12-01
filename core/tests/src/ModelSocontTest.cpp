@@ -111,7 +111,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithoutGlacierMelt) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -151,7 +151,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -189,7 +189,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithHeunExplicit) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -225,7 +225,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithEulerExplicit) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -261,7 +261,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithRungeKutta) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -304,7 +304,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -349,7 +349,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -391,7 +391,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMelt) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -429,7 +429,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnits) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -473,7 +473,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -518,12 +518,13 @@ TEST(ModelSocont, WaterBalanceCloses) {
     double precip = vecTimeSeries[0]->GetTotal(&basinSettings);
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
+    double snow = logger->GetTotalSnowStorageChanges();
 
     EXPECT_TRUE(storage >= 0);
 
     // Balance
-    double balance = discharge + et + storage - precip;
+    double balance = discharge + et + storage + snow - precip;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

@@ -37,6 +37,9 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinPr
         m_timer.Initialize(modelSettings.GetTimerSettings());
         g_timeStepInDays = *m_timer.GetTimeStepPointer();
         m_processor.Initialize(modelSettings.GetSolverSettings());
+        if (modelSettings.LogAll()) {
+            m_logger.RecordFractions();
+        }
         m_logger.InitContainers(m_timer.GetTimeStepsNb(), m_subBasin, modelSettings);
         if (!m_subBasin->AssignFractions(basinProp)) {
             return false;
@@ -782,11 +785,12 @@ bool ModelHydro::ForcingLoaded() {
 }
 
 bool ModelHydro::Run() {
-    wxLogDebug(_("Initializing time series."));
     if (!InitializeTimeSeries()) {
         return false;
     }
-    wxLogDebug(_("Starting the computations."));
+
+    m_logger.SaveInitialValues();
+
     while (!m_timer.IsOver()) {
         if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
@@ -831,7 +835,7 @@ double ModelHydro::GetTotalET() {
 }
 
 double ModelHydro::GetTotalStorageChanges() {
-    return m_logger.GetTotalStorageChanges();
+    return m_logger.GetTotalWaterStorageChanges();
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {

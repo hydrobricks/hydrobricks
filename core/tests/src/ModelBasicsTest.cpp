@@ -196,7 +196,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -231,7 +231,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -266,7 +266,7 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -298,7 +298,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -330,7 +330,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -360,7 +360,7 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
     double precip = 10;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;

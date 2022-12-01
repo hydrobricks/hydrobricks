@@ -23,6 +23,8 @@ class Logger : public wxObject {
 
     void SetDate(double date);
 
+    void SaveInitialValues();
+
     void Record();
 
     void Increment();
@@ -43,15 +45,17 @@ class Logger : public wxObject {
 
     double GetTotalET();
 
-    double GetSubBasinInitialStorageState();
+    double GetSubBasinInitialStorageState(const string& tag);
 
-    double GetSubBasinFinalStorageState();
+    double GetSubBasinFinalStorageState(const string& tag);
 
-    double GetHydroUnitsInitialStorageState();
+    double GetHydroUnitsInitialStorageState(const string& tag);
 
-    double GetHydroUnitsFinalStorageState();
+    double GetHydroUnitsFinalStorageState(const string& tag);
 
-    double GetTotalStorageChanges();
+    double GetTotalWaterStorageChanges();
+
+    double GetTotalSnowStorageChanges();
 
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;
@@ -61,16 +65,22 @@ class Logger : public wxObject {
         return m_hydroUnitValues;
     }
 
+    void RecordFractions() {
+        m_recordFractions = true;
+    }
+
   protected:
     int m_cursor;
     axd m_time;
     bool m_recordFractions;
     vecStr m_subBasinLabels;
+    axd m_subBasinInitialValues;
     vecAxd m_subBasinValues;
     vecDoublePt m_subBasinValuesPt;
     vecInt m_hydroUnitIds;
     axd m_hydroUnitAreas;
     vecStr m_hydroUnitLabels;
+    vecAxd m_hydroUnitInitialValues;
     vecAxxd m_hydroUnitValues;
     std::vector<vecDoublePt> m_hydroUnitValuesPt;
     vecStr m_hydroUnitFractionLabels;

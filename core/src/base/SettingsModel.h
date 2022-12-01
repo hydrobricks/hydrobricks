@@ -275,6 +275,10 @@ class SettingsModel : public wxObject {
         m_logAll = logAll;
     }
 
+    bool LogAll() {
+        return m_logAll;
+    }
+
   protected:
     bool m_logAll;
     std::vector<ModelStructure> m_modelStructures;

@@ -128,7 +128,7 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
@@ -333,7 +333,7 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;

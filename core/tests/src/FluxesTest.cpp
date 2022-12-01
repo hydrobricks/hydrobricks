@@ -89,7 +89,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     double precip = 70;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -149,7 +149,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     double precip = 70;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -205,7 +205,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     double precip = 70;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -272,7 +272,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     double precip = 70;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;
@@ -338,7 +338,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     double precip = 70;
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
-    double storage = logger->GetTotalStorageChanges();
+    double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
     double balance = discharge + et + storage - precip;

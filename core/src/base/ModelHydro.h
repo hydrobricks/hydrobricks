@@ -38,7 +38,9 @@ class ModelHydro : public wxObject {
 
     double GetTotalET();
 
-    double GetTotalStorageChanges();
+    double GetTotalWaterStorageChanges();
+
+    double GetTotalSnowStorageChanges();
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 

@@ -838,8 +838,12 @@ double ModelHydro::GetTotalET() {
     return m_logger.GetTotalET();
 }
 
-double ModelHydro::GetTotalStorageChanges() {
+double ModelHydro::GetTotalWaterStorageChanges() {
     return m_logger.GetTotalWaterStorageChanges();
+}
+
+double ModelHydro::GetTotalSnowStorageChanges() {
+    return m_logger.GetTotalSnowStorageChanges();
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {

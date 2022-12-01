@@ -822,6 +822,18 @@ axd ModelHydro::GetOutletDischarge() {
     return m_logger.GetOutletDischarge();
 }
 
+double ModelHydro::GetTotalOutletDischarge() {
+    return m_logger.GetTotalOutletDischarge();
+}
+
+double ModelHydro::GetTotalET() {
+    return m_logger.GetTotalET();
+}
+
+double ModelHydro::GetTotalStorageChanges() {
+    return m_logger.GetTotalStorageChanges();
+}
+
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     for (auto ts : m_timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {

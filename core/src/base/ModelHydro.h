@@ -34,6 +34,12 @@ class ModelHydro : public wxObject {
 
     axd GetOutletDischarge();
 
+    double GetTotalOutletDischarge();
+
+    double GetTotalET();
+
+    double GetTotalStorageChanges();
+
     bool AddTimeSeries(TimeSeries* timeSeries);
 
     bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);

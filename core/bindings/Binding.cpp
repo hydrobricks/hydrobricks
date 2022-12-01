@@ -82,6 +82,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
+        .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
+        .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")
+        .def("get_total_storage_change", &ModelHydro::GetTotalStorageChanges, "Get the total change in storage water.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());

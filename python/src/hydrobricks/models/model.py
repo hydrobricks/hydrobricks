@@ -204,6 +204,24 @@ class Model(ABC):
         """
         return self.model.get_outlet_discharge()
 
+    def get_total_outlet_discharge(self):
+        """
+        Get the outlet discharge total.
+        """
+        return self.model.get_total_outlet_discharge()
+
+    def get_total_et(self):
+        """
+        Get the total amount of water lost by evapotranspiration.
+        """
+        return self.model.get_total_et()
+
+    def get_total_storage_change(self):
+        """
+        Get the total change in storage water.
+        """
+        return self.model.get_total_storage_change()
+
     def dump_outputs(self, path):
         """
         Write the model outputs to a netcdf file.

@@ -281,3 +281,10 @@ class Forcing(TimeSeries):
             var_data[:, :] = self.data_spatialized[index]
 
         nc.close()
+
+    def get_total_precipitation(self):
+        i_col = self.data_name.index('precipitation')
+        data = self.data_spatialized[i_col].sum(axis=0)
+        areas = self.hydro_units['area']
+        tot_precip = data * areas / areas.sum()
+        return tot_precip.sum()

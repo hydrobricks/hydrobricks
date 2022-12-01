@@ -94,13 +94,8 @@ def test_socont_closes_water_balance():
 
     # Parameters
     parameters = socont.generate_parameters()
-
-    # Model parameters: a_snow [mm/d/°C], k_slow_1 [1/t], k_slow_2 [1/t],
-    # k_quick [1/t], k_snow [1/t], A [mm], percol [mm/d]
-    parameters.set_values({'a_snow': 3, 'k_snow': 0.01, 'k_quick': 0.05, 'A': 200,
-                           'k_slow_1': 0.001, 'percol': 0.5, 'k_slow_2': 0.005})
-
-    # Add data parameters
+    parameters.set_values({'a_snow': 3, 'k_quick': 0.05, 'A': 200, 'k_slow_1': 0.001,
+                           'percol': 0.5, 'k_slow_2': 0.005})
     parameters.add_data_parameter('precip_correction_factor', 1)
     parameters.add_data_parameter('precip_gradient', 0.05)
     parameters.add_data_parameter('temp_gradients', -0.6)
@@ -112,15 +107,13 @@ def test_socont_closes_water_balance():
         column_area='area')
 
     # Preparation of the forcing data
+    station_temp_alt = 1250  # Temperature reference altitude
+    station_precip_alt = 1250  # Precipitation reference altitude
     forcing = hb.Forcing(hydro_units)
     forcing.load_from_csv(
         CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
-
-    station_temp_alt = 1250  # Temperature reference altitude
-    station_precip_alt = 1250  # Precipitation reference altitude
-
     forcing.spatialize_temperature(station_temp_alt, parameters.get('temp_gradients'))
     forcing.spatialize_pet()
     forcing.spatialize_precipitation(
@@ -129,7 +122,29 @@ def test_socont_closes_water_balance():
         correction_factor=parameters.get('precip_correction_factor'))
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        socont.setup(spatial_structure=hydro_units, output_path=tmp_dir,
+        output_path = r"C:\Users\phorton\Downloads\tmp"
+        socont.setup(spatial_structure=hydro_units, output_path=output_path,
                      start_date='1981-01-01', end_date='2020-12-31')
-        socont.initialize_state_variables(parameters=parameters, forcing=forcing)
+        #socont.initialize_state_variables(parameters=parameters, forcing=forcing)
         socont.run(parameters=parameters, forcing=forcing)
+
+    # Water balance
+    precip_total = forcing.get_total_precipitation();
+    discharge_total = socont.get_total_outlet_discharge()
+    et_total = socont.get_total_et();
+    storage_change = socont.get_total_storage_change();
+    balance = discharge_total + et_total + storage_change - precip_total;
+
+    assert balance == 0
+
+    # Preparation of the obs data
+    obs = hb.Observations()
+    obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
+                      content={'discharge': 'Discharge (mm/d)'})
+
+    sim_ts = socont.get_outlet_discharge()
+    obs_ts = obs.data_raw[0]
+    nse = socont.eval('nse', obs_ts)
+    kge_2012 = socont.eval('kge_2012', obs_ts)
+
+    print(f'nse={nse}, kge_2012={kge_2012}')

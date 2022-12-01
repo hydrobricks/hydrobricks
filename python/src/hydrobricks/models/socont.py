@@ -1,6 +1,6 @@
 from hydrobricks import ParameterSet
 
-from .base_model import Model
+from .model import Model
 
 
 class Socont(Model):
@@ -46,8 +46,10 @@ class Socont(Model):
             min_value=0, max_value=5, default_value=0, mandatory=False)
 
         i_glacier = 0
+        has_glacier = False
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             if cover_type == 'glacier':
+                has_glacier = True
                 aliases = ['a_ice']
                 if self.land_cover_types.count('glacier') == 1:
                     ps.define_constraint('a_snow', '<', aliases[0])
@@ -66,18 +68,20 @@ class Socont(Model):
                     unit='°C', min_value=0, max_value=5, default_value=0,
                     mandatory=False)
 
-        ps.define_parameter(
-            component='glacier-area-rain-snowmelt-storage', name='response_factor',
-            unit='1/t', aliases=['k_snow'], min_value=0.001, max_value=1,
-            mandatory=True)
+        if has_glacier:
+            ps.define_parameter(
+                component='glacier-area-rain-snowmelt-storage', name='response_factor',
+                unit='1/t', aliases=['k_snow'], min_value=0, max_value=1,
+                mandatory=True)
 
-        ps.define_parameter(
-            component='glacier-area-icemelt-storage', name='response_factor',
-            unit='1/t', aliases=['k_ice'], min_value=0.001, max_value=1, mandatory=True)
+            ps.define_parameter(
+                component='glacier-area-icemelt-storage', name='response_factor',
+                unit='1/t', aliases=['k_ice'], min_value=0, max_value=1,
+                mandatory=True)
 
         ps.define_parameter(
             component='surface-runoff', name='response_factor', unit='1/t',
-            aliases=['k_quick'], min_value=0.001, max_value=1, mandatory=True)
+            aliases=['k_quick'], min_value=0, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='slow-reservoir', name='capacity', unit='mm', aliases=['A'],
@@ -91,7 +95,7 @@ class Socont(Model):
         elif self.soil_storage_nb == 2:
             ps.define_parameter(
                 component='slow-reservoir', name='response_factor', unit='1/t',
-                aliases=['k_slow_1', 'k_slow1'], min_value=0.001, max_value=1,
+                aliases=['k_slow_1', 'k_slow1'], min_value=0, max_value=1,
                 mandatory=True)
 
             ps.define_parameter(
@@ -100,7 +104,7 @@ class Socont(Model):
 
             ps.define_parameter(
                 component='slow-reservoir-2', name='response_factor', unit='1/t',
-                aliases=['k_slow_2', 'k_slow2'], min_value=0.001, max_value=1,
+                aliases=['k_slow_2', 'k_slow2'], min_value=0, max_value=1,
                 mandatory=True)
 
         return ps

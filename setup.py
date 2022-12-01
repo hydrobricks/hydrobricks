@@ -120,7 +120,7 @@ setup(
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("_hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
-    packages=['hydrobricks', 'hydrobricks.models'],
+    packages=['hydrobricks', 'hydrobricks.models', 'hydrobricks.preprocessing'],
     package_dir={'hydrobricks': 'python/src/hydrobricks',
                  'hydrobricks.models': 'python/src/hydrobricks/models',
                  'hydrobricks.preprocessing': 'python/src/hydrobricks/preprocessing'},

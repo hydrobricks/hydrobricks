@@ -38,36 +38,38 @@ class SettingsBasin : public wxObject {
 
     bool Parse(const string& path);
 
-    HydroUnitSettings GetHydroUnitSettings(int index) {
+    HydroUnitSettings GetHydroUnitSettings(int index) const {
         wxASSERT(m_hydroUnits.size() > index);
         return m_hydroUnits[index];
     }
 
-    LandCoverSettings GetLandCoverSettings(int index) {
+    LandCoverSettings GetLandCoverSettings(int index) const {
         wxASSERT(m_selectedHydroUnit);
         wxASSERT(m_selectedHydroUnit->landCovers.size() > index);
         return m_selectedHydroUnit->landCovers[index];
     }
 
-    SurfaceComponentSettings GetSurfaceComponentSettings(int index) {
+    SurfaceComponentSettings GetSurfaceComponentSettings(int index) const {
         wxASSERT(m_selectedHydroUnit);
         wxASSERT(m_selectedHydroUnit->surfaceComponents.size() > index);
         return m_selectedHydroUnit->surfaceComponents[index];
     }
 
-    int GetHydroUnitsNb() {
+    int GetHydroUnitsNb() const {
         return int(m_hydroUnits.size());
     }
 
-    int GetLandCoversNb() {
+    int GetLandCoversNb() const {
         wxASSERT(m_selectedHydroUnit);
         return int(m_selectedHydroUnit->landCovers.size());
     }
 
-    int GetSurfaceComponentsNb() {
+    int GetSurfaceComponentsNb() const {
         wxASSERT(m_selectedHydroUnit);
         return int(m_selectedHydroUnit->surfaceComponents.size());
     }
+
+    double GetTotalArea() const;
 
   protected:
   private:

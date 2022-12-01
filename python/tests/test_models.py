@@ -129,11 +129,11 @@ def test_socont_closes_water_balance():
         socont.run(parameters=parameters, forcing=forcing)
 
     # Water balance
-    precip_total = forcing.get_total_precipitation();
+    precip_total = forcing.get_total_precipitation()
     discharge_total = socont.get_total_outlet_discharge()
-    et_total = socont.get_total_et();
-    storage_change = socont.get_total_storage_change();
-    balance = discharge_total + et_total + storage_change - precip_total;
+    et_total = socont.get_total_et()
+    storage_change = socont.get_total_storage_change()
+    balance = discharge_total + et_total + storage_change - precip_total
 
     assert balance == 0
 

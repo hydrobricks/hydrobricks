@@ -91,3 +91,12 @@ bool SettingsBasin::Parse(const string& path) {
 
     return true;
 }
+
+double SettingsBasin::GetTotalArea() const {
+    double sum = 0;
+    for (const auto& unit : m_hydroUnits) {
+        sum += unit.area;
+    }
+
+    return sum;
+}

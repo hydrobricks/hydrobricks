@@ -15,6 +15,8 @@ class TimeSeriesData : public wxObject {
 
     virtual double GetCurrentValue();
 
+    virtual double GetSum();
+
     virtual bool SetCursorToDate(double date) = 0;
 
     virtual bool AdvanceOneTimeStep() = 0;
@@ -41,6 +43,8 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     double GetValueFor(double date) override;
 
     double GetCurrentValue() override;
+
+    double GetSum() override;
 
     bool SetCursorToDate(double date) override;
 
@@ -70,6 +74,8 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     double GetValueFor(double date) override;
 
     double GetCurrentValue() override;
+
+    double GetSum() override;
 
     bool SetCursorToDate(double date) override;
 

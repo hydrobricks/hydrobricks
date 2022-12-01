@@ -3,6 +3,7 @@
 
 #include "Includes.h"
 #include "TimeSeriesData.h"
+#include "SettingsBasin.h"
 
 class TimeSeries : public wxObject {
   public:
@@ -23,6 +24,8 @@ class TimeSeries : public wxObject {
     virtual double GetStart() = 0;
 
     virtual double GetEnd() = 0;
+
+    virtual double GetTotal(const SettingsBasin* basinSettings) = 0;
 
     virtual TimeSeriesData* GetDataPointer(int unitId) = 0;
 

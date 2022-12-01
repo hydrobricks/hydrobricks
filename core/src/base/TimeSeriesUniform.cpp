@@ -36,6 +36,10 @@ double TimeSeriesUniform::GetEnd() {
     return m_data->GetEnd();
 }
 
+double TimeSeriesUniform::GetTotal(const SettingsBasin* ) {
+    throw NotImplemented();
+}
+
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
     wxASSERT(m_data);
     return m_data;

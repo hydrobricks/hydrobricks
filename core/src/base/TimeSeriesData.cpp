@@ -20,6 +20,10 @@ double TimeSeriesData::GetCurrentValue() {
     throw NotImplemented();
 }
 
+double TimeSeriesData::GetSum() {
+    throw NotImplemented();
+}
+
 /*
  * TimeSeriesDataRegular
  */
@@ -51,6 +55,14 @@ double TimeSeriesDataRegular::GetValueFor(double date) {
 double TimeSeriesDataRegular::GetCurrentValue() {
     wxASSERT(m_values.size() > m_cursor);
     return m_values[m_cursor];
+}
+
+double TimeSeriesDataRegular::GetSum() {
+    double sum = 0;
+    for (const auto& value : m_values)
+        sum += value;
+
+    return sum;
 }
 
 bool TimeSeriesDataRegular::SetCursorToDate(double date) {
@@ -125,6 +137,10 @@ double TimeSeriesDataIrregular::GetValueFor(double) {
 double TimeSeriesDataIrregular::GetCurrentValue() {
     wxASSERT(m_values.size() > m_cursor);
     return m_values[m_cursor];
+}
+
+double TimeSeriesDataIrregular::GetSum() {
+    throw NotImplemented();
 }
 
 bool TimeSeriesDataIrregular::SetCursorToDate(double) {

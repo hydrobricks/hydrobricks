@@ -45,6 +45,19 @@ double TimeSeriesDistributed::GetEnd() {
     return m_data[0]->GetEnd();
 }
 
+double TimeSeriesDistributed::GetTotal(const SettingsBasin* basinSettings) {
+    double total = 0;
+    double areaTotal = basinSettings->GetTotalArea();
+    for (int i = 0; i < basinSettings->GetHydroUnitsNb(); ++i) {
+        double area = basinSettings->GetHydroUnitSettings(i).area;
+        int id = basinSettings->GetHydroUnitSettings(i).id;
+        double sumUnit = GetDataPointer(id)->GetSum();
+        total += sumUnit * area / areaTotal;
+    }
+
+    return total;
+}
+
 TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
     wxASSERT(m_data.size() == m_unitIds.size());
 

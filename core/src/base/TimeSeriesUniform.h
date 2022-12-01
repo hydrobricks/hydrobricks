@@ -27,6 +27,8 @@ class TimeSeriesUniform : public TimeSeries {
 
     double GetEnd() override;
 
+    double GetTotal(const SettingsBasin* basinSettings) override;
+
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:

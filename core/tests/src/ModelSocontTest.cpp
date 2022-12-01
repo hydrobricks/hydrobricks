@@ -480,3 +480,46 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
+
+TEST_F(ModelSocontBasic, WaterBalanceCloses) {
+    SettingsBasin basinSettings;
+    EXPECT_TRUE(basinSettings.Parse("../../tests/files/catchments/ch_sitter_appenzell/hydro_units.nc"));
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+
+    SettingsModel modelSettings;
+    modelSettings.SetLogAll();
+    modelSettings.SetSolver("heun_explicit");
+    modelSettings.SetTimer("1981-01-01", "2020-12-31", 1, "day");
+    modelSettings.SetLogAll(true);
+    vecStr landCover = {"ground"};
+    modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
+
+    EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    std::vector<TimeSeries*> vecTimeSeries;
+    EXPECT_TRUE(TimeSeries::Parse("../../tests/files/catchments/ch_sitter_appenzell/meteo.nc", vecTimeSeries));
+    for (auto timeSeries : vecTimeSeries) {
+        ASSERT_TRUE(model.AddTimeSeries(timeSeries));
+    }
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = vecTimeSeries[0]->GetTotal(&basinSettings);
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}

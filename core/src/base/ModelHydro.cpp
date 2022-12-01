@@ -332,7 +332,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                 } else if (m_subBasin->HasBrick(output.target)) {
                     // Water goes to another brick
                     Brick* targetBrick = m_subBasin->GetBrick(output.target);
-                    if (output.instantaneous) {
+                    if (output.isInstantaneous) {
                         flux = new FluxToBrickInstantaneous(targetBrick);
                         flux->SetType(output.fluxType);
                         targetBrick->AttachFluxIn(flux);
@@ -407,7 +407,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     // Create the flux
-                    if (output.instantaneous) {
+                    if (output.isInstantaneous) {
                         flux = new FluxToBrickInstantaneous(targetBrick);
                     } else {
                         flux = new FluxToBrick(targetBrick);
@@ -460,6 +460,10 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                 } else {
                     throw ConceptionIssue(
                         wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                }
+
+                if (output.isStatic) {
+                    flux->SetAsStatic();
                 }
 
                 process->AttachFluxOut(flux);

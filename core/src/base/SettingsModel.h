@@ -20,7 +20,8 @@ struct TimerSettings {
 struct OutputSettings {
     string target;
     string fluxType = "water";
-    bool instantaneous = false;
+    bool isInstantaneous = false;
+    bool isStatic = false;
 };
 
 struct ProcessSettings {
@@ -104,6 +105,8 @@ class SettingsModel : public wxObject {
     void AddProcessOutput(const string& target);
 
     void SetProcessOutputsAsInstantaneous();
+
+    void SetProcessOutputsAsStatic();
 
     void OutputProcessToSameBrick();
 

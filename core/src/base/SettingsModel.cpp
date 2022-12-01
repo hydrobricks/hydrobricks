@@ -244,7 +244,15 @@ void SettingsModel::SetProcessOutputsAsInstantaneous() {
     wxASSERT(m_selectedProcess);
 
     for (auto& output : m_selectedProcess->outputs) {
-        output.instantaneous = true;
+        output.isInstantaneous = true;
+    }
+}
+
+void SettingsModel::SetProcessOutputsAsStatic() {
+    wxASSERT(m_selectedProcess);
+
+    for (auto& output : m_selectedProcess->outputs) {
+        output.isStatic = true;
     }
 }
 
@@ -254,7 +262,7 @@ void SettingsModel::OutputProcessToSameBrick() {
 
     OutputSettings outputSettings;
     outputSettings.target = m_selectedBrick->name;
-    outputSettings.instantaneous = true;
+    outputSettings.isInstantaneous = true;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 

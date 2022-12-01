@@ -2,6 +2,8 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import pytest
+
 import hydrobricks as hb
 import hydrobricks.models as models
 
@@ -88,6 +90,8 @@ def test_create_yaml_config_file_content():
 
 
 def test_socont_closes_water_balance():
+    tmp_dir = tempfile.TemporaryDirectory()
+
     # Model options
     socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
                            record_all=True)
@@ -121,30 +125,18 @@ def test_socont_closes_water_balance():
         gradient=parameters.get('precip_gradient'),
         correction_factor=parameters.get('precip_correction_factor'))
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        output_path = r"C:\Users\phorton\Downloads\tmp"
-        socont.setup(spatial_structure=hydro_units, output_path=output_path,
-                     start_date='1981-01-01', end_date='2020-12-31')
-        #socont.initialize_state_variables(parameters=parameters, forcing=forcing)
-        socont.run(parameters=parameters, forcing=forcing)
+    socont.setup(spatial_structure=hydro_units, output_path=tmp_dir,
+                 start_date='1981-01-01', end_date='2020-12-31')
+    socont.run(parameters=parameters, forcing=forcing)
 
     # Water balance
     precip_total = forcing.get_total_precipitation()
     discharge_total = socont.get_total_outlet_discharge()
     et_total = socont.get_total_et()
-    storage_change = socont.get_total_storage_change()
-    balance = discharge_total + et_total + storage_change - precip_total
+    storage_change = socont.get_total_water_storage_change()
+    snow_change = socont.get_total_snow_storage_change()
+    balance = discharge_total + et_total + storage_change + snow_change - precip_total
 
-    assert balance == 0
+    assert balance == pytest.approx(0, 0.00001)
 
-    # Preparation of the obs data
-    obs = hb.Observations()
-    obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
-                      content={'discharge': 'Discharge (mm/d)'})
-
-    sim_ts = socont.get_outlet_discharge()
-    obs_ts = obs.data_raw[0]
-    nse = socont.eval('nse', obs_ts)
-    kge_2012 = socont.eval('kge_2012', obs_ts)
-
-    print(f'nse={nse}, kge_2012={kge_2012}')
+    tmp_dir.cleanup()

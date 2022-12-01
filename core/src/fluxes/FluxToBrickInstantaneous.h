@@ -15,10 +15,16 @@ class FluxToBrickInstantaneous : public FluxToBrick {
      */
     bool IsOk() override;
 
+    bool IsInstantaneous() override {
+        return true;
+    }
+
     /**
      * @copydoc Flux::GetAmount()
      */
     double GetAmount() override;
+
+    double GetRealAmount();
 
     void UpdateFlux(double amount) override;
 

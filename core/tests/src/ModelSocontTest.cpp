@@ -496,9 +496,8 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetTimer("1981-01-01", "2020-12-31", 1, "day");
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
-    modelSettings.GenerateStructureSocont(landCover, landCover, 1, "linear_storage");
-    modelSettings.SetParameter("slow-reservoir", "capacity", 0);
-    modelSettings.SetParameter("slow-reservoir", "response_factor", 0);
+    modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
+    modelSettings.SetParameter("slow-reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
     EXPECT_TRUE(model.IsOk());

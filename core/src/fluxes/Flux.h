@@ -48,6 +48,10 @@ class Flux : public wxObject {
         return false;
     }
 
+    virtual bool IsInstantaneous() {
+        return false;
+    }
+
     void SetAsStatic() {
         m_static = true;
     }

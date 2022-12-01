@@ -60,8 +60,6 @@ void Logger::SetDate(double date) {
 }
 
 void Logger::SaveInitialValues() {
-    wxASSERT(m_cursor < m_time.size());
-
     for (int iSubBasin = 0; iSubBasin < m_subBasinValuesPt.size(); ++iSubBasin) {
         wxASSERT(m_subBasinValuesPt[iSubBasin]);
         m_subBasinInitialValues[iSubBasin] = *m_subBasinValuesPt[iSubBasin];
@@ -175,7 +173,7 @@ axd Logger::GetOutletDischarge() {
 vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
     vecInt indices;
     for (int i = 0; i < m_subBasinLabels.size(); ++i) {
-        std::size_t found = m_subBasinLabels[i].find(item);
+        size_t found = m_subBasinLabels[i].find(item);
         if (found != std::string::npos) {
             indices.push_back(i);
         }
@@ -187,7 +185,7 @@ vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
 vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
     vecInt indices;
     for (int i = 0; i < m_hydroUnitLabels.size(); ++i) {
-        std::size_t found = m_hydroUnitLabels[i].find(item);
+        size_t found = m_hydroUnitLabels[i].find(item);
         if (found != std::string::npos) {
             indices.push_back(i);
         }
@@ -209,7 +207,7 @@ double Logger::GetTotalSubBasin(const string& item) {
 double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
     vecInt indices = GetIndicesForHydroUnitElements(item);
     double sum = 0;
-    std::size_t found = item.find(":content");
+    size_t found = item.find(":content");
     if (found != std::string::npos) {
         // Storage content: fraction must be accounted for.
         for (int i : indices) {

@@ -1,6 +1,7 @@
 #include "WaterContainer.h"
 
 #include "Brick.h"
+#include "FluxToBrickInstantaneous.h"
 
 WaterContainer::WaterContainer(Brick* brick)
     : m_content(0),
@@ -74,27 +75,30 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     double inputs = 0;
     double inputsStatic = 0;
     for (auto& input : m_inputs) {
+        if (input->IsInstantaneous()) {
+            inputsStatic += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
+            continue;
+        }
         if (input->IsForcing() || input->IsStatic()) {
             inputsStatic += input->GetAmount();
-        } else {
-            double* changeRate = input->GetChangeRatePointer();
-            if (changeRate == nullptr) {
-                // For example when the originating brick has an area = 0.
-                continue;
-            }
-            wxASSERT(changeRate);
-            wxASSERT(*changeRate < 1000);
-            if (*changeRate < 0) {
-                *changeRate = 0;
-            }
-            wxASSERT(*changeRate > -EPSILON_D);
-            incomingRates.push_back(changeRate);
-            inputs += *changeRate;
+            continue;
         }
+        double* changeRate = input->GetChangeRatePointer();
+        if (changeRate == nullptr) {
+            // For example when the originating brick has an area = 0.
+            continue;
+        }
+        wxASSERT(changeRate);
+        wxASSERT(*changeRate < 1000);
+        if (*changeRate < 0) {
+            *changeRate = 0;
+        }
+        wxASSERT(*changeRate > -EPSILON_D);
+        incomingRates.push_back(changeRate);
+        inputs += *changeRate;
     }
 
     double change = inputs - outputs;
-
     double content = GetContentWithDynamicChanges();
 
     // Avoid negative content

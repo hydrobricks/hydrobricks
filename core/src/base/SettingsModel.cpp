@@ -1008,6 +1008,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     // Add other bricks
     if (soilStorageNb == 1) {
         AddHydroUnitBrick("slow-reservoir", "storage");
+        AddBrickParameter("capacity", 200.0f);
         AddBrickProcess("et", "et:socont");
         AddProcessForcing("pet");
         AddBrickProcess("outflow", "outflow:linear", "outlet");
@@ -1016,7 +1017,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     } else if (soilStorageNb == 2) {
         wxLogMessage(_("Using 2 soil storages."));
         AddHydroUnitBrick("slow-reservoir", "storage");
-        AddBrickParameter("capacity", 500.0f);
+        AddBrickParameter("capacity", 200.0f);
         AddBrickProcess("et", "et:socont");
         AddProcessForcing("pet");
         AddBrickProcess("outflow", "outflow:linear", "outlet");

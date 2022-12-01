@@ -481,7 +481,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
-TEST_F(ModelSocontBasic, WaterBalanceCloses) {
+TEST(ModelSocont, WaterBalanceCloses) {
     SettingsBasin basinSettings;
     EXPECT_TRUE(basinSettings.Parse("../../tests/files/catchments/ch_sitter_appenzell/hydro_units.nc"));
 
@@ -496,7 +496,9 @@ TEST_F(ModelSocontBasic, WaterBalanceCloses) {
     modelSettings.SetTimer("1981-01-01", "2020-12-31", 1, "day");
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
-    modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
+    modelSettings.GenerateStructureSocont(landCover, landCover, 1, "linear_storage");
+    modelSettings.SetParameter("slow-reservoir", "capacity", 0);
+    modelSettings.SetParameter("slow-reservoir", "response_factor", 0);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
     EXPECT_TRUE(model.IsOk());
@@ -517,6 +519,8 @@ TEST_F(ModelSocontBasic, WaterBalanceCloses) {
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalStorageChanges();
+
+    EXPECT_TRUE(storage >= 0);
 
     // Balance
     double balance = discharge + et + storage - precip;

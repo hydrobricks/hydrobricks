@@ -20,7 +20,7 @@ class TimeSeries:
 
         Parameters
         ----------
-        path : str
+        path : str|Path
             Path to the csv file containing hydro units data.
         column_time : str
             Column name containing the time.

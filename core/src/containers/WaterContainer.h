@@ -35,6 +35,7 @@ class WaterContainer : public wxObject {
     }
 
     double GetMaximumCapacity() {
+        wxASSERT(m_capacity);
         return *m_capacity;
     }
 
@@ -61,6 +62,14 @@ class WaterContainer : public wxObject {
         }
 
         return m_content + m_contentChangeDynamic + m_contentChangeStatic;
+    }
+
+    double GetContentWithDynamicChanges() const {
+        if (m_infiniteStorage) {
+            return INFINITY;
+        }
+
+        return m_content + m_contentChangeDynamic;
     }
 
     double GetContentWithoutChanges() const {

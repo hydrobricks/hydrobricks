@@ -95,7 +95,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 
     double change = inputs - outputs;
 
-    double content = GetContentWithChanges();
+    double content = GetContentWithDynamicChanges();
 
     // Avoid negative content
     if (change < 0 && content + inputsStatic + change * timeStep < 0) {

@@ -48,7 +48,7 @@ void Snowpack::Finalize() {
 }
 
 void Snowpack::UpdateContentFromInputs() {
-    m_snow->AddAmountToDynamicContentChange(m_snow->SumIncomingFluxes());
+    m_snow->AddAmountToStaticContentChange(m_snow->SumIncomingFluxes());
     m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
 }
 

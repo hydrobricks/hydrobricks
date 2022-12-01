@@ -102,7 +102,7 @@ def test_socont_closes_water_balance():
 
     # Add data parameters
     parameters.add_data_parameter('precip_correction_factor', 1)
-    parameters.add_data_parameter('precip_gradient', 0.04)
+    parameters.add_data_parameter('precip_gradient', 0.05)
     parameters.add_data_parameter('temp_gradients', -0.6)
 
     # Preparation of the hydro units
@@ -118,8 +118,8 @@ def test_socont_closes_water_balance():
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
 
-    station_temp_alt = 2507  # Temperature measurement station altitude
-    station_precip_alt = 2507  # Precipitation measurement station altitude
+    station_temp_alt = 1250  # Temperature reference altitude
+    station_precip_alt = 1250  # Precipitation reference altitude
 
     forcing.spatialize_temperature(station_temp_alt, parameters.get('temp_gradients'))
     forcing.spatialize_pet()

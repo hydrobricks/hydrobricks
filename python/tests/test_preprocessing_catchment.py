@@ -46,3 +46,12 @@ def test_elevation_bands_quantiles():
     catchment.extract_dem(CATCHMENT_DEM)
     bands = catchment.get_elevation_bands(method='quantiles', number=25)
     assert 74430000 < bands['area'].sum() < 74450000
+
+
+def test_get_mean_elevation():
+    if not has_required_packages():
+        return
+    catchment = Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    mean_elevation = catchment.get_mean_elevation()
+    assert 1200 < mean_elevation < 1300

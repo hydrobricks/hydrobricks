@@ -11,6 +11,10 @@ class HydroUnits:
     def __init__(self, land_cover_types=None, land_cover_names=None):
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
+        if not land_cover_types:
+            land_cover_types = ['ground']
+        if not land_cover_names:
+            land_cover_names = ['ground']
         self.land_cover_types = land_cover_types
         self.land_cover_names = land_cover_names
         self.prefix_fraction = 'fraction-'
@@ -61,6 +65,9 @@ class HydroUnits:
             for idx, cover in enumerate(self.land_cover_names):
                 area_values[:, idx] = file_content[columns_areas[cover]]
             self._compute_area_portions(area_values)
+        else:
+            idx = self.prefix_fraction + 'ground'
+            self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
         if area_unit == 'm' or area_unit == 'm2':
             pass

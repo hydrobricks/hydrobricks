@@ -53,7 +53,7 @@ class Forcing(TimeSeries):
             if parameters_to_apply is None or apply_operation:
                 self.spatialize(**operation)
 
-    def spatialize(self, variable, method='constant', ref_elevation=0, gradient=0,
+    def spatialize(self, variable, method='constant', ref_elevation=None, gradient=0,
                    gradient_2=0, elevation_threshold=None, correction_factor=None):
         """
         Spatializes the provided variable to all hydro units using the defined method.
@@ -125,10 +125,11 @@ class Forcing(TimeSeries):
                 unit_values[:, i_unit] = data_raw
 
             elif method == 'additive_elevation_gradient':
-                if len(gradient) == 1:
+                if isinstance(gradient, float) or isinstance(gradient, list) \
+                        and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw + gradient * \
                                                   (elevation - ref_elevation) / 100
-                elif len(gradient) == 12:
+                elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
                         month = self.time.dt.month == m + 1
                         month = month.to_numpy()
@@ -136,10 +137,11 @@ class Forcing(TimeSeries):
                                 elevation - ref_elevation) / 100
 
             elif method == 'multiplicative_elevation_gradient':
-                if len(gradient) == 1:
+                if isinstance(gradient, float) or isinstance(gradient, list) \
+                        and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw * (
                             1 + gradient * (elevation - ref_elevation) / 100)
-                elif len(gradient) == 12:
+                elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
                         month = self.time.dt.month == m + 1
                         month = month.to_numpy()
@@ -179,7 +181,7 @@ class Forcing(TimeSeries):
         self.spatialize('temperature', 'additive_elevation_gradient',
                         ref_elevation=ref_elevation, gradient=lapse)
 
-    def spatialize_pet(self, ref_elevation, gradient=0):
+    def spatialize_pet(self, ref_elevation=None, gradient=0):
         """
         Spatializes the PET using a gradient that is either constant or changes for
         every month.
@@ -195,8 +197,9 @@ class Forcing(TimeSeries):
         self.spatialize('pet', 'additive_elevation_gradient',
                         ref_elevation=ref_elevation, gradient=gradient)
 
-    def spatialize_precipitation(self, ref_elevation, gradient_1, gradient_2=None,
-                                 elevation_threshold=None, correction_factor=None):
+    def spatialize_precipitation(self, ref_elevation, gradient=None, gradient_1=None,
+                                 gradient_2=None, elevation_threshold=None,
+                                 correction_factor=None):
         """
         Spatializes the precipitation using a single gradient for the full elevation
         range or a two-gradients approach with an elevation threshold.
@@ -205,6 +208,8 @@ class Forcing(TimeSeries):
         ----------
         ref_elevation : float
             Elevation of the reference station.
+        gradient : float
+            Precipitation gradient (ratio) per 100 m of altitude.
         gradient_1 : float
             Precipitation gradient (ratio) per 100 m of altitude.
         gradient_2 : float
@@ -215,7 +220,13 @@ class Forcing(TimeSeries):
         correction_factor: float
             Correction factor to apply to the precipitation data before spatialization
         """
-        if not elevation_threshold:
+        if not gradient_1 and gradient:
+            gradient_1 = gradient
+
+        if not gradient_1:
+            self.spatialize('precipitation', 'constant',
+                            correction_factor=correction_factor)
+        elif not elevation_threshold:
             self.spatialize('precipitation', 'multiplicative_elevation_gradient',
                             ref_elevation=ref_elevation, gradient=gradient_1,
                             correction_factor=correction_factor)

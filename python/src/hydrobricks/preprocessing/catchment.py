@@ -91,6 +91,16 @@ class Catchment:
 
         return df
 
+    def get_mean_elevation(self):
+        """
+        Get the catchment mean elevation.
+
+        Returns
+        -------
+        The catchment mean elevation.
+        """
+        return np.nanmean(self.masked_dem_data)
+
     def _extract_outline(self, outline):
         if not outline:
             return

@@ -50,6 +50,11 @@ void InitLog(const string& path) {
     wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
 }
 
+void CloseLog() {
+    wxLog::FlushActive();
+    delete wxLog::SetActiveTarget(nullptr);
+}
+
 void SetMaxLogLevel() {
     wxLog::SetLogLevel(wxLOG_Max);
 }

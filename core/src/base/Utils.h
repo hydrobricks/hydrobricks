@@ -42,6 +42,11 @@ void DisplayProcessingTime(const wxStopWatch& sw);
 void InitLog(const string& path);
 
 /**
+ * Close the log file.
+ */
+void CloseLog();
+
+/**
  * Set the log level to max (max verbosity)
  */
 void SetMaxLogLevel();

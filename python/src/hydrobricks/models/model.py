@@ -134,6 +134,9 @@ class Model(ABC):
         except Exception:
             print("An exception occurred.")
 
+    def cleanup(self):
+        hb.close_log()
+
     def initialize_state_variables(self, parameters, forcing=None):
         """
         Run the model and save the state variables as initial values.

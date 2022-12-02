@@ -137,6 +137,7 @@ def test_socont_closes_water_balance():
     snow_change = socont.get_total_snow_storage_changes()
     balance = discharge_total + et_total + storage_change + snow_change - precip_total
 
-    assert balance == pytest.approx(0, 0.00001)
+    assert balance == pytest.approx(0, abs=1e-8)
 
+    socont.cleanup()
     tmp_dir.cleanup()

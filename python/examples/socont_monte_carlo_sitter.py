@@ -76,7 +76,7 @@ mc_analysis = socont.analyze(
 # Plot
 for param in parameters_list:
     mc_analysis.plot.scatter(x=param, y='nse')
-    plt.ylim(-1, 1)
+    plt.ylim(0, 1)
     plt.title(param)
     plt.tight_layout()
     plt.show()

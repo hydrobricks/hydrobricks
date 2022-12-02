@@ -84,9 +84,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
         .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
         .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")
-        .def("get_total_water_storage_change", &ModelHydro::GetTotalWaterStorageChanges,
+        .def("get_total_water_storage_changes", &ModelHydro::GetTotalWaterStorageChanges,
              "Get the total change in water storage.")
-        .def("get_total_snow_storage_change", &ModelHydro::GetTotalSnowStorageChanges,
+        .def("get_total_snow_storage_changes", &ModelHydro::GetTotalSnowStorageChanges,
              "Get the total change in snow storage.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 

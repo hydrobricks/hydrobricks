@@ -66,7 +66,7 @@ class Model(ABC):
                                'Please create a new instance.')
 
         try:
-            if not os.path.isdir(output_path):
+            if isinstance(output_path, str) and not os.path.isdir(output_path):
                 os.mkdir(output_path)
 
             self.spatial_structure = spatial_structure

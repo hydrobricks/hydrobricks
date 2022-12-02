@@ -125,7 +125,7 @@ def test_socont_closes_water_balance():
         gradient=parameters.get('precip_gradient'),
         correction_factor=parameters.get('precip_correction_factor'))
 
-    socont.setup(spatial_structure=hydro_units, output_path=tmp_dir,
+    socont.setup(spatial_structure=hydro_units, output_path=tmp_dir.name,
                  start_date='1981-01-01', end_date='2020-12-31')
     socont.run(parameters=parameters, forcing=forcing)
 
@@ -133,8 +133,8 @@ def test_socont_closes_water_balance():
     precip_total = forcing.get_total_precipitation()
     discharge_total = socont.get_total_outlet_discharge()
     et_total = socont.get_total_et()
-    storage_change = socont.get_total_water_storage_change()
-    snow_change = socont.get_total_snow_storage_change()
+    storage_change = socont.get_total_water_storage_changes()
+    snow_change = socont.get_total_snow_storage_changes()
     balance = discharge_total + et_total + storage_change + snow_change - precip_total
 
     assert balance == pytest.approx(0, 0.00001)

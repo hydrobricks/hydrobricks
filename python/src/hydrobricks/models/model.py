@@ -216,11 +216,17 @@ class Model(ABC):
         """
         return self.model.get_total_et()
 
-    def get_total_storage_change(self):
+    def get_total_water_storage_changes(self):
         """
-        Get the total change in storage water.
+        Get the total change in water storage.
         """
-        return self.model.get_total_storage_change()
+        return self.model.get_total_water_storage_changes()
+
+    def get_total_snow_storage_changes(self):
+        """
+        Get the total change in snow storage.
+        """
+        return self.model.get_total_snow_storage_changes()
 
     def dump_outputs(self, path):
         """

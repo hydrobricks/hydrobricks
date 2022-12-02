@@ -24,7 +24,7 @@ class Model(ABC):
 
         # Default options
         self.solver = 'heun_explicit'
-        self.record_all = True
+        self.record_all = False
         self.land_cover_types = ['ground']
         self.land_cover_names = ['ground']
 
@@ -72,7 +72,7 @@ class Model(ABC):
             self.spatial_structure = spatial_structure
 
             # Initialize log
-            hb.init_log(output_path)
+            hb.init_log(str(output_path))
 
             # Modelling period
             self.settings.set_timer(start_date, end_date, 1, "day")

@@ -140,4 +140,7 @@ def test_socont_closes_water_balance():
     assert balance == pytest.approx(0, abs=1e-8)
 
     socont.cleanup()
-    tmp_dir.cleanup()
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        print('Could not remove temporary directory.')

@@ -20,7 +20,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     m.def("init", &InitHydrobricksForPython, "Initializes hydrobricks");
     m.def("init_log", &InitLog, "Initializes log", "path"_a);
-    m.def("close_log", &CloseLog, "Closes the log", "path"_a);
+    m.def("close_log", &CloseLog, "Closes the log");
     m.def("set_max_log_level", &SetMaxLogLevel, "Set the log level to max (max verbosity)");
     m.def("set_debug_log_level", &SetDebugLogLevel, "Set the log level to debug");
     m.def("set_message_log_level", &SetMessageLogLevel, "Set the log level to message (standard)");

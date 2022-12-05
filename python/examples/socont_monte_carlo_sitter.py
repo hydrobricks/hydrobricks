@@ -2,10 +2,9 @@ import os.path
 import tempfile
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
 import hydrobricks as hb
 import hydrobricks.models as models
+import matplotlib.pyplot as plt
 
 # Paths
 TEST_FILES_DIR = Path(

@@ -2,9 +2,8 @@ import os.path
 import tempfile
 from pathlib import Path
 
-import pytest
-
 import hydrobricks as hb
+import pytest
 
 
 def test_parameter_creation():

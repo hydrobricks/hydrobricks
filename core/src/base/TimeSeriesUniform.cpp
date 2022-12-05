@@ -36,7 +36,7 @@ double TimeSeriesUniform::GetEnd() {
     return m_data->GetEnd();
 }
 
-double TimeSeriesUniform::GetTotal(const SettingsBasin* ) {
+double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
     throw NotImplemented();
 }
 

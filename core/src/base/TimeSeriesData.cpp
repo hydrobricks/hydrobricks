@@ -59,8 +59,7 @@ double TimeSeriesDataRegular::GetCurrentValue() {
 
 double TimeSeriesDataRegular::GetSum() {
     double sum = 0;
-    for (const auto& value : m_values)
-        sum += value;
+    for (const auto& value : m_values) sum += value;
 
     return sum;
 }

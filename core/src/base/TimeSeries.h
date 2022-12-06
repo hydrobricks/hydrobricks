@@ -2,8 +2,8 @@
 #define HYDROBRICKS_TIME_SERIES_H
 
 #include "Includes.h"
-#include "TimeSeriesData.h"
 #include "SettingsBasin.h"
+#include "TimeSeriesData.h"
 
 class TimeSeries : public wxObject {
   public:

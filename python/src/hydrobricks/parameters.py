@@ -1,6 +1,7 @@
 import random
 
 import pandas as pd
+import spotpy
 
 from hydrobricks import utils
 
@@ -13,6 +14,21 @@ class ParameterSet:
             columns=['component', 'name', 'unit', 'aliases', 'value',
                      'min', 'max', 'default_value', 'mandatory'])
         self.constraints = []
+        self._allow_changing = []
+
+    @property
+    def allow_changing(self):
+        return self._allow_changing
+
+    @allow_changing.setter
+    def allow_changing(self, allow_changing):
+        """
+        allow_changing: list
+            A list of parameters to assess. Only the parameters in this list will be
+            changed. If a parameter is related to data forcing, the spatialization
+            will be performed again.
+        """
+        self._allow_changing = allow_changing
 
     def define_parameter(self, component, name, unit=None, aliases=None, min_value=None,
                          max_value=None, default_value=None, mandatory=True):
@@ -273,6 +289,39 @@ class ParameterSet:
                 raise RuntimeError('The parameter constraints could not be satisfied.')
 
         return assigned_values
+
+    def needs_random_forcing(self):
+        """
+        Check if one of the parameters to assess involves the meteorological data.
+
+        Returns
+        -------
+        True if one of the parameters to assess involves the meteorological data.
+        """
+        for param in self.allow_changing:
+            if not self.has(param):
+                raise RuntimeError(f'The parameter {param} was not found.')
+            if self.is_for_forcing(param):
+                return True
+        return False
+
+    def get_for_spotpy(self):
+        """
+        Get the parameters to assess ready to be used in spotpy.
+
+        Returns
+        -------
+        A list of the parameters as spotpy objects.
+        """
+        spotpy_params = []
+        for param_name in self.allow_changing:
+            index = self._get_parameter_index(param_name)
+            param = self.parameters.loc[index]
+            spotpy_params.append(
+                spotpy.parameter.Uniform(param_name, low=param['min'],
+                                         high=param['max'])
+            )
+        return spotpy_params
 
     def create_file(self, directory, name, file_type='both'):
         """

@@ -39,7 +39,7 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-            aliases=['a_snow'], min_value=0, max_value=12, mandatory=True)
+            aliases=['a_snow'], min_value=1, max_value=12, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',
@@ -60,7 +60,7 @@ class Socont(Model):
 
                 ps.define_parameter(
                     component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=aliases, min_value=0, max_value=20,
+                    unit='mm/d/°C', aliases=aliases, min_value=5, max_value=20,
                     mandatory=True)
 
                 ps.define_parameter(
@@ -90,7 +90,7 @@ class Socont(Model):
         if self.soil_storage_nb == 1:
             ps.define_parameter(
                 component='slow-reservoir', name='response_factor', unit='1/t',
-                aliases=['k_slow'], min_value=0, max_value=3000, mandatory=True)
+                aliases=['k_slow'], min_value=0, max_value=1, mandatory=True)
 
         elif self.soil_storage_nb == 2:
             ps.define_parameter(

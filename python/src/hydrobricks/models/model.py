@@ -125,7 +125,7 @@ class Model(ABC):
             if not self.model.run():
                 raise RuntimeError('Model run failed.')
 
-            timer.stop()
+            timer.stop(show_time=False)
 
         except RuntimeError:
             print("A runtime exception occurred.")
@@ -242,7 +242,7 @@ class Model(ABC):
         """
         self.model.dump_outputs(path)
 
-    def analyze(self, method, parameters, parameters_to_assess, forcing, observations,
+    def analyze(self, method, parameters, forcing, observations,
                 metrics, nb_runs=10000):
         """
         Perform an analysis of the model parameters.
@@ -254,10 +254,6 @@ class Model(ABC):
             Options: monte_carlo
         parameters: ParameterSet
             The parameter set to analyze.
-        parameters_to_assess: list
-            A list of parameters to assess. Only the parameters in this list will be
-            changed. If a parameter is related to data forcing, the spatialization
-            will be performed again.
         forcing: Forcing
             Forcing data object.
         observations: Observations
@@ -275,7 +271,8 @@ class Model(ABC):
         if method != 'monte_carlo':
             raise NotImplementedError
 
-        random_forcing = self._needs_random_forcing(parameters, parameters_to_assess)
+        random_forcing = parameters.needs_random_forcing()
+        parameters_to_assess = parameters.allow_changing
 
         forcing.apply_defined_spatialization(parameters)
         if not random_forcing:
@@ -362,12 +359,3 @@ class Model(ABC):
             self.set_forcing(forcing)
         elif not self.model.forcing_loaded():
             raise RuntimeError('Please provide the forcing data at least once.')
-
-    @staticmethod
-    def _needs_random_forcing(parameters, parameters_to_assess):
-        for param in parameters_to_assess:
-            if not parameters.has(param):
-                raise RuntimeError(f'The parameter {param} was not found.')
-            if parameters.is_for_forcing(param):
-                return True
-        return False

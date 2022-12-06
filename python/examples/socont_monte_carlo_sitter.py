@@ -64,17 +64,16 @@ socont.setup(spatial_structure=hydro_units, output_path=working_dir,
              start_date='1981-01-01', end_date='2020-12-31')
 
 # Select the parameters to optimize/analyze
-parameters_list = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
-                   'precip_corr_factor']
+parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
+                             'precip_corr_factor']
 
 # Proceed to the Monte Carlo analysis
 mc_analysis = socont.analyze(
     method='monte_carlo', metrics=['kge_2012', 'nse', 'me'], forcing=forcing,
-    parameters=parameters, nb_runs=200, observations=obs.data_raw[0],
-    parameters_to_assess=parameters_list)
+    parameters=parameters, nb_runs=200, observations=obs.data_raw[0])
 
 # Plot
-for param in parameters_list:
+for param in parameters.allow_changing:
     mc_analysis.plot.scatter(x=param, y='nse')
     plt.ylim(0, 1)
     plt.title(param)

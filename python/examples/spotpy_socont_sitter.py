@@ -56,8 +56,6 @@ forcing.define_spatialization(
     correction_factor='param:precip_corr_factor'
 )
 
-forcing.apply_defined_spatialization(parameters)
-
 # Obs data
 obs = hb.Observations()
 obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',

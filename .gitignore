@@ -52,6 +52,7 @@ wheelhouse/
 *~$*
 **/__pycache__/*
 **.egg-info/
+**/examples/*.csv
 conan.lock
 conanbuildinfo.cmake
 conanbuildinfo.txt

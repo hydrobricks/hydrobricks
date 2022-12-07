@@ -13,8 +13,11 @@ CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 
-tmp_dir = tempfile.TemporaryDirectory()
-working_dir = Path(tmp_dir.name)
+with tempfile.TemporaryDirectory() as tmp_dir_name:
+    tmp_dir = tmp_dir_name
+
+os.mkdir(tmp_dir)
+working_dir = Path(tmp_dir)
 
 # Model structure
 socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
@@ -22,7 +25,7 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 
 # Parameters
 parameters = socont.generate_parameters()
-parameters.add_data_parameter('precip_corr_factor', 1, min_value=0.7, max_value=1.3)
+parameters.add_data_parameter('precip_corr_factor', 0.85, min_value=0.7, max_value=1.3)
 parameters.add_data_parameter('precip_gradient', 0.05, min_value=0, max_value=0.2)
 parameters.add_data_parameter('temp_gradients', -0.6, min_value=-1, max_value=0)
 

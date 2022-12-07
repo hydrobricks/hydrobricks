@@ -3,7 +3,8 @@ import spotpy
 
 class SpotpySetup:
 
-    def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None):
+    def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None,
+                 invert_obj_func=False):
         self.model = model
         self.params = params
         self.params_spotpy = params.get_for_spotpy()
@@ -13,8 +14,11 @@ class SpotpySetup:
         self.obs = obs.data_raw[0]
         self.warmup = warmup
         self.obj_func = obj_func
+        self.invert_obj_func = invert_obj_func
         if not self.random_forcing:
             self.model.set_forcing(forcing=forcing)
+        if not obj_func:
+            print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
     def parameters(self):
         return spotpy.parameter.generate(self.params_spotpy)
@@ -39,7 +43,9 @@ class SpotpySetup:
 
     def objectivefunction(self, simulation, evaluation, params=None):
         if not self.obj_func:
-            like = spotpy.objectivefunctions.nashsutcliffe(evaluation, simulation)
+            like = spotpy.objectivefunctions.kge_non_parametric(evaluation, simulation)
         else:
             like = self.obj_func(evaluation, simulation)
+            if self.invert_obj_func:
+                like = -like
         return like

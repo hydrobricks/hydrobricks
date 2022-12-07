@@ -11,7 +11,6 @@ from .forcing import Forcing
 from .hydro_units import HydroUnits
 from .observations import Observations
 from .parameters import ParameterSet
-from .spotpy_setup import SpotpySetup
 from .time_series import TimeSeries
 
 try:
@@ -43,8 +42,16 @@ except ImportError:
 else:
     has_shapely = True
 
+try:
+    import spotpy
+except ImportError:
+    has_spotpy = False
+else:
+    has_spotpy = True
+    from .spotpy_setup import SpotpySetup
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'init', 'init_log', 'close_log', 'set_debug_log_level', 'set_max_log_level',
            'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask',
-           'SpotpySetup')
+           'SpotpySetup', 'spotpy')

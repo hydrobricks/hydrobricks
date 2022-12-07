@@ -2,4 +2,3 @@ HydroErr
 numpy
 pandas
 pyyaml
-spotpy

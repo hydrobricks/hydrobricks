@@ -4,3 +4,4 @@ netCDF4
 pytest
 rasterio
 shapely
+spotpy

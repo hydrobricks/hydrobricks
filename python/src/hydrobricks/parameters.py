@@ -1,9 +1,8 @@
 import random
 
 import pandas as pd
-import spotpy
 
-from hydrobricks import utils
+import hydrobricks as hb
 
 
 class ParameterSet:
@@ -313,13 +312,15 @@ class ParameterSet:
         -------
         A list of the parameters as spotpy objects.
         """
+        if not hb.has_spotpy:
+            raise ImportError("spotpy is required to do this.")
         spotpy_params = []
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
             spotpy_params.append(
-                spotpy.parameter.Uniform(param_name, low=param['min'],
-                                         high=param['max'])
+                hb.spotpy.parameter.Uniform(param_name, low=param['min'],
+                                            high=param['max'])
             )
         return spotpy_params
 
@@ -348,7 +349,7 @@ class ParameterSet:
                 group_content.update({row['name']: row['value']})
             file_content.update({group_name: group_content})
 
-        utils.dump_config_file(file_content, directory, name, file_type)
+        hb.utils.dump_config_file(file_content, directory, name, file_type)
 
     @staticmethod
     def _check_min_max_consistency(min_value, max_value):

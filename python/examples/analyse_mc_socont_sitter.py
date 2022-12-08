@@ -9,7 +9,7 @@ parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_
 # Proceed to the Monte Carlo analysis
 mc_analysis = socont.analyze(
     method='monte_carlo', metrics=['kge_2012', 'nse', 'me'], forcing=forcing,
-    parameters=parameters, nb_runs=1000, observations=obs.data_raw[0])
+    parameters=parameters, nb_runs=10000, observations=obs.data_raw[0])
 
 # Plot
 for param in parameters.allow_changing:

@@ -13,7 +13,7 @@ spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
                             obj_func=spotpy.objectivefunctions.nashsutcliffe)
 
 # Select number of runs and run spotpy
-nb_runs = 50
+nb_runs = 10000
 sampler = spotpy.algorithms.mc(spot_setup, dbname='socont_sitter_MC', dbformat='csv')
 sampler.sample(nb_runs)
 

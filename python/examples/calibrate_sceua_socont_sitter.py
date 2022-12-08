@@ -8,13 +8,13 @@ from setups.socont_sitter import parameters, socont, forcing, obs, tmp_dir
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
                              'precip_corr_factor']
 
-# Setup SPOTPY
+# Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
 spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
                             obj_func=spotpy.objectivefunctions.nashsutcliffe,
                             invert_obj_func=True)
 
 # Select number of maximum repetitions and run spotpy
-max_rep = 10
+max_rep = 10000
 sampler = spotpy.algorithms.sceua(spot_setup, dbname='socont_sitter_SCEUA',
                                   dbformat='csv')
 sampler.sample(max_rep)

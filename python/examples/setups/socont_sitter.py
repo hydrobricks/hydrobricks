@@ -1,6 +1,7 @@
 import os.path
 import tempfile
 from pathlib import Path
+
 import hydrobricks as hb
 import hydrobricks.models as models
 
@@ -15,6 +16,9 @@ CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 
 if 'USE_PRECIP_GRADIENT' not in locals() and 'USE_PRECIP_GRADIENT' not in globals():
     USE_PRECIP_GRADIENT = False
+
+if 'USE_PYET' not in locals() and 'USE_PYET' not in globals():
+    USE_PYET = False
 
 
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -52,7 +56,10 @@ forcing.define_spatialization(
     variable='temperature', method='additive_elevation_gradient',
     ref_elevation=ref_elevation, gradient='param:temp_gradients')
 
-forcing.define_spatialization(variable='pet', method='constant')
+if USE_PYET:
+    forcing.define_spatialization(variable='pet', method='pyet:priestley_taylor')
+else:
+    forcing.define_spatialization(variable='pet', method='constant')
 
 if USE_PRECIP_GRADIENT:
     forcing.define_spatialization(

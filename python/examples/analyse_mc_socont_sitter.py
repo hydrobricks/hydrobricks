@@ -1,6 +1,7 @@
 import shutil
+
 import matplotlib.pyplot as plt
-from setups.socont_sitter import parameters, socont, forcing, obs, tmp_dir
+from setups.socont_sitter import forcing, obs, parameters, socont, tmp_dir
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',

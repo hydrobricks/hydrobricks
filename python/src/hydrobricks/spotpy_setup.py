@@ -21,7 +21,22 @@ class SpotpySetup:
             print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
     def parameters(self):
-        return spotpy.parameter.generate(self.params_spotpy)
+        x = None
+        for i in range(1000):
+            x = spotpy.parameter.generate(self.params_spotpy)
+            names = [row[1] for row in x]
+            values = [row[0] for row in x]
+            params = self.params
+            param_values = dict(zip(names, values))
+            params.set_values(param_values)
+
+            if params.are_constraints_satisfied():
+                break
+
+            if i >= 1000:
+                raise RuntimeError('The parameter constraints could not be satisfied.')
+
+        return x
 
     def simulation(self, x):
         params = self.params

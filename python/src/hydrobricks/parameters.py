@@ -1,7 +1,8 @@
 import random
 
-import hydrobricks as hb
 import pandas as pd
+
+import hydrobricks as hb
 
 
 class ParameterSet:
@@ -10,7 +11,7 @@ class ParameterSet:
     def __init__(self):
         self.parameters = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
-                     'min', 'max', 'default_value', 'mandatory'])
+                     'min', 'max', 'default_value', 'mandatory', 'prior'])
         self.constraints = []
         self._allow_changing = []
 
@@ -66,7 +67,7 @@ class ParameterSet:
         new_row = pd.Series(
             {'component': component, 'name': name, 'unit': unit, 'aliases': aliases,
              'value': value, 'min': min_value, 'max': max_value,
-             'default_value': default_value, 'mandatory': mandatory})
+             'default_value': default_value, 'mandatory': mandatory, 'prior': None})
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
@@ -87,6 +88,24 @@ class ParameterSet:
         index = self._get_parameter_index(parameter)
         self.parameters.loc[index, 'min'] = min_value
         self.parameters.loc[index, 'max'] = max_value
+
+    def set_prior(self, parameter, prior):
+        """
+        Change the value range of a parameter.
+
+        Parameters
+        ----------
+        parameter: str
+            Name (or alias) of the parameter
+        prior: spotpy.parameter
+            The prior distribution (instance of spotpy.parameter)
+        """
+        if not hb.has_spotpy:
+            raise ImportError("spotpy is required to do this.")
+
+        index = self._get_parameter_index(parameter)
+        prior.name = parameter
+        self.parameters.loc[index, 'prior'] = prior
 
     def define_constraint(self, parameter_1, operator, parameter_2):
         """
@@ -313,14 +332,21 @@ class ParameterSet:
         """
         if not hb.has_spotpy:
             raise ImportError("spotpy is required to do this.")
+
         spotpy_params = []
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
-            spotpy_params.append(
-                hb.spotpy.parameter.Uniform(param_name, low=param['min'],
-                                            high=param['max'])
-            )
+            if param['prior']:
+                spotpy_params.append(
+                    param['prior']
+                )
+            else:
+                spotpy_params.append(
+                    hb.spotpy.parameter.Uniform(param_name, low=param['min'],
+                                                high=param['max'])
+                )
+
         return spotpy_params
 
     def create_file(self, directory, name, file_type='both'):

@@ -10,6 +10,9 @@ import hydrobricks as hb
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
                              'precip_corr_factor']
 
+# Set a specific prior distribution instead of the default (Uniform)
+parameters.set_prior('a_snow', spotpy.parameter.Normal(mean=4, stddev=2))
+
 # Setup SPOTPY
 spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
                             obj_func=spotpy.objectivefunctions.nashsutcliffe)

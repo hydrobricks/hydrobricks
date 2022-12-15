@@ -2,9 +2,10 @@ import importlib
 import os
 from abc import ABC, abstractmethod
 
-import _hydrobricks as hb
 import HydroErr
 import pandas as pd
+
+import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -240,62 +241,6 @@ class Model(ABC):
             Path to the target file.
         """
         self.model.dump_outputs(path)
-
-    def analyze(self, method, parameters, forcing, observations,
-                metrics, nb_runs=10000):
-        """
-        Perform an analysis of the model parameters.
-
-        Parameters
-        ----------
-        method: str
-            The name of the analysis method to use.
-            Options: monte_carlo
-        parameters: ParameterSet
-            The parameter set to analyze.
-        forcing: Forcing
-            Forcing data object.
-        observations: Observations
-            Observations to compare to.
-        metrics: list
-            List of the metrics to assess.
-            Example: ['nse', 'kge_2012']
-        nb_runs: int
-            Number of assessment to make.
-
-        Returns
-        -------
-        A dataframe containing the parameter values and the corresponding metrics.
-        """
-        if method != 'monte_carlo':
-            raise NotImplementedError
-
-        random_forcing = parameters.needs_random_forcing()
-        parameters_to_assess = parameters.allow_changing
-
-        forcing.apply_defined_spatialization(parameters)
-        if not random_forcing:
-            self.set_forcing(forcing=forcing)
-
-        columns = [*parameters_to_assess, *metrics]
-        tested_params = pd.DataFrame(columns=columns)
-
-        for n in range(nb_runs):
-            print(f'Run {n + 1}/{nb_runs}')
-            assigned_values = parameters.set_random_values(parameters_to_assess)
-
-            if random_forcing:
-                forcing.apply_defined_spatialization(parameters, parameters_to_assess)
-                self.run(parameters=parameters, forcing=forcing)
-            else:
-                self.run(parameters=parameters)
-
-            for metric in metrics:
-                assigned_values[metric] = self.eval(metric, observations)
-
-            tested_params = pd.concat([tested_params, assigned_values])
-
-        return tested_params
 
     def eval(self, metric, observations):
         """

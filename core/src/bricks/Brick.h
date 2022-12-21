@@ -70,6 +70,10 @@ class Brick : public wxObject {
         return false;
     }
 
+    virtual bool IsLandCover() {
+        return false;
+    }
+
     virtual bool IsNull() {
         return false;
     }

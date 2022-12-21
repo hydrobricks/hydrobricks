@@ -2,9 +2,10 @@ import importlib
 import os
 from abc import ABC, abstractmethod
 
-import _hydrobricks as hb
 import HydroErr
 import pandas as pd
+
+import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -171,6 +172,17 @@ class Model(ABC):
 
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
+
+    def add_behaviour(self, behaviour):
+        """
+        Add a behaviour to the model.
+
+        Parameters
+        ----------
+        behaviour : Behaviour
+            The behaviour object. The dates must be sorted.
+        """
+        self.model.add_behaviour(behaviour)
 
     def create_config_file(self, directory, name, file_type='both'):
         """

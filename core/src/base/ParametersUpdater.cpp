@@ -1,21 +1,29 @@
 #include "ParametersUpdater.h"
 
 ParametersUpdater::ParametersUpdater()
-    : m_previousDate(0) {}
+    : m_active(false),
+      m_previousDate(0) {}
 
 void ParametersUpdater::AddParameterVariableYearly(ParameterVariableYearly* parameter) {
     m_parametersYearly.push_back(parameter);
+    m_active = true;
 }
 
 void ParametersUpdater::AddParameterVariableMonthly(ParameterVariableMonthly* parameter) {
     m_parametersMonthly.push_back(parameter);
+    m_active = true;
 }
 
 void ParametersUpdater::AddParameterVariableDates(ParameterVariableDates* parameter) {
     m_parametersDates.push_back(parameter);
+    m_active = true;
 }
 
 void ParametersUpdater::DateUpdate(double date) {
+    if (!m_active) {
+        return;
+    }
+
     Time prevDate = GetTimeStructFromMJD(m_previousDate);
     Time newDate = GetTimeStructFromMJD(date);
 

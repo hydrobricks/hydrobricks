@@ -27,6 +27,10 @@ class LandCover : public Brick {
 
     virtual void SurfaceComponentAdded(SurfaceComponent* brick);
 
+    bool IsLandCover() override {
+        return true;
+    }
+
     bool IsNull() override {
         return m_areaFraction <= PRECISION;
     }

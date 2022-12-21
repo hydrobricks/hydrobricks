@@ -13,9 +13,12 @@
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin) {
     m_processor.SetModel(this);
+    m_behavioursManager.SetModel(this);
+    m_timer.SetBehavioursManager(&m_behavioursManager);
+    m_timer.SetParametersUpdater(&m_parametersUpdater);
 }
 
-ModelHydro::~ModelHydro() {}
+ModelHydro::~ModelHydro() = default;
 
 bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
     wxDELETE(m_subBasin);
@@ -867,6 +870,10 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     m_timeSeries.push_back(timeSeries);
 
     return true;
+}
+
+bool ModelHydro::AddBehaviour(Behaviour* behaviour) {
+    return m_behavioursManager.AddBehaviour(behaviour);
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {

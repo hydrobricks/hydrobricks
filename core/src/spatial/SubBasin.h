@@ -1,7 +1,6 @@
 #ifndef HYDROBRICKS_SUBBASIN_H
 #define HYDROBRICKS_SUBBASIN_H
 
-#include "Behaviour.h"
 #include "Connector.h"
 #include "HydroUnit.h"
 #include "Includes.h"
@@ -36,6 +35,8 @@ class SubBasin : public wxObject {
 
     HydroUnit* GetHydroUnit(int index);
 
+    HydroUnit* GetHydroUnitById(int id);
+
     vecInt GetHydroUnitIds();
 
     vecDouble GetHydroUnitAreas();
@@ -62,8 +63,6 @@ class SubBasin : public wxObject {
 
     void AddOutputConnector(Connector* connector);
 
-    void AddBehaviour(Behaviour* behaviour);
-
     void AttachOutletFlux(Flux* pFlux);
 
     double* GetValuePointer(const string& name);
@@ -84,7 +83,6 @@ class SubBasin : public wxObject {
     std::vector<Connector*> m_inConnectors;
     std::vector<Connector*> m_outConnectors;
     std::vector<Flux*> m_outletFluxes;
-    std::vector<Behaviour*> m_behaviours;
 
   private:
 };

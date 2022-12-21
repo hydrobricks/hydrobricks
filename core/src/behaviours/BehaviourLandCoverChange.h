@@ -14,8 +14,9 @@ class BehaviourLandCoverChange : public Behaviour {
 
     bool Parse(const string& path);
 
+    bool Apply(double date) override;
+
   protected:
-    vecDouble m_dates;
     vecInt m_hydroUnitIds;
     vecInt m_landCoverTypeIds;
     vecDouble m_area;

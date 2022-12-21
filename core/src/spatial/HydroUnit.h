@@ -76,6 +76,7 @@ class HydroUnit : public wxObject {
     double m_area;  // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
+    std::vector<Brick*> m_landCoverBricks;
     std::vector<Splitter*> m_splitters;
     std::vector<Forcing*> m_forcing;
 

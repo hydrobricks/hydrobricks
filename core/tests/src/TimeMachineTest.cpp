@@ -37,11 +37,9 @@ TEST(TimeMachine, IncrementMinute) {
 TEST(TimeMachine, ParametersUpdaterIsTriggered) {
     TimeMachine timer;
     timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 3, 1), 1, Day);
-    ParametersUpdater updater;
-    timer.AttachParametersUpdater(&updater);
     timer.IncrementTime();
 
-    EXPECT_EQ(updater.GetPreviousDate(), GetMJD(2020, 1, 2));
+    EXPECT_EQ(timer.GetParametersUpdater()->GetPreviousDate(), GetMJD(2020, 1, 2));
 }
 
 TEST(TimeMachine, IsNotOver) {

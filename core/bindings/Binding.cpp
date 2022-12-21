@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include <wx/log.h>
 
+#include "BehaviourLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
@@ -70,6 +71,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin",
              "model_settings"_a, "basin_settings"_a)
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model", "time_series"_a)
+        .def("add_behaviour", &ModelHydro::AddBehaviour, "Adding a behaviour to the model", "behaviour"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
         .def("clear_time_series", &ModelHydro::ClearTimeSeries,
@@ -90,6 +92,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_total_snow_storage_changes", &ModelHydro::GetTotalSnowStorageChanges,
              "Get the total change in snow storage.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
+
+    py::class_<BehaviourLandCoverChange>(m, "BehaviourLandCoverChange")
+        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_ids"_a, "land_cover_type_ids"_a,
+             "area"_a);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

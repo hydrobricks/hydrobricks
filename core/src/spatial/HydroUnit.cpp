@@ -31,6 +31,10 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
 void HydroUnit::AddBrick(Brick* brick) {
     wxASSERT(brick);
     m_bricks.push_back(brick);
+
+    if (brick->IsLandCover()) {
+        m_landCoverBricks.push_back(brick);
+    }
 }
 
 void HydroUnit::AddSplitter(Splitter* splitter) {

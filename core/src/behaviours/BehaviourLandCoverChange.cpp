@@ -1,6 +1,8 @@
 #include "BehaviourLandCoverChange.h"
 
 #include "FileNetcdf.h"
+#include "HydroUnit.h"
+#include "ModelHydro.h"
 
 BehaviourLandCoverChange::BehaviourLandCoverChange() {}
 
@@ -51,4 +53,12 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
     }
 
     return true;
+}
+
+bool BehaviourLandCoverChange::Apply(double date) {
+    wxASSERT(m_dates.size() > m_cursor);
+
+    HydroUnit* unit = m_manager->GetModel()->GetSubBasin()->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
+
+    return false;
 }

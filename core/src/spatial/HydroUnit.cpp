@@ -170,7 +170,16 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
 
     if (total - 1.0 > EPSILON_D) {
         double diff = total - 1.0;
+        if (ground == nullptr) {
+            wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));
+            return false;
+        }
+        if (ground->GetAreaFraction() < diff) {
+            wxLogError(_("The ground (generic) land cover is not large enough to compensate the area fractions."));
+            return false;
+        }
+        ground->SetAreaFraction(ground->GetAreaFraction() - diff);
     }
 
-    return false;
+    return true;
 }

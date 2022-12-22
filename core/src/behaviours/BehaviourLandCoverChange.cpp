@@ -10,7 +10,7 @@ void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, int landC
     m_dates.push_back(date);
     m_hydroUnitIds.push_back(hydroUnitId);
     m_landCoverTypeIds.push_back(landCoverTypeId);
-    m_area.push_back(area);
+    m_areaFractions.push_back(area);
 }
 
 bool BehaviourLandCoverChange::Parse(const string& path) {
@@ -28,7 +28,7 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
         m_hydroUnitIds = file.GetVarInt1D("hydro_unit", changesNb);
 
         // Get areas
-        m_area = file.GetVarDouble1D("area", changesNb);
+        m_areaFractions = file.GetVarDouble1D("area", changesNb);
 
         // Get time
         m_dates = file.GetVarDouble1D("time", changesNb);
@@ -37,10 +37,10 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
         m_landCoverTypeIds = file.GetVarInt1D("land_cover_type", changesNb);
 
         // Get the land cover names
-        vecStr landCovers = file.GetAttString1D("land_cover_names");
+        m_landCoverNames = file.GetAttString1D("land_cover_names");
 
         // Get land cover data
-        for (const auto& landCover : landCovers) {
+        for (const auto& landCover : m_landCoverNames) {
             vecDouble fractions = file.GetVarDouble1D(landCover, changesNb);
 
             // Get the land cover type
@@ -58,11 +58,13 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
 bool BehaviourLandCoverChange::Apply(double date) {
     wxASSERT(m_dates.size() > m_cursor);
     wxASSERT(m_hydroUnitIds.size() > m_cursor);
-    wxASSERT(m_area.size() > m_cursor);
+    wxASSERT(m_areaFractions.size() > m_cursor);
+    wxASSERT(m_landCoverTypeIds.size() > m_cursor);
+    wxASSERT(m_landCoverNames.size() > m_landCoverTypeIds[m_cursor]);
 
     HydroUnit* unit = m_manager->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
-    wxString landCoverName = "";
-    unit->ChangeLandCoverAreaFraction(landCoverName, m_area[m_cursor]);
+    string landCoverName = m_landCoverNames[m_landCoverTypeIds[m_cursor]];
+    unit->ChangeLandCoverAreaFraction(landCoverName, m_areaFractions[m_cursor]);
 
     return false;
 }

@@ -19,7 +19,8 @@ class BehaviourLandCoverChange : public Behaviour {
   protected:
     vecInt m_hydroUnitIds;
     vecInt m_landCoverTypeIds;
-    vecDouble m_area;
+    vecStr m_landCoverNames;
+    vecDouble m_areaFractions;
 
   private:
 };

@@ -58,7 +58,7 @@ class BehaviourLandCoverChange:
 
     def get_land_covers_nb(self):
         """
-        Get the number of land cover registered.
+        Get the number of land covers registered.
         """
         return self.behaviour.get_land_covers_nb()
 
@@ -87,9 +87,6 @@ class BehaviourLandCoverChange:
             for row in range(2, len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
                 area = float(file_content.loc[row, col])
-                if area_unit == 'm' or area_unit == 'm2':
-                    pass
-                elif area_unit == 'km' or area_unit == 'km2':
-                    area = area * 1000 * 1000
+                area = utils.area_in_m2(area, area_unit)
 
                 self.behaviour.add_change(mjd, hu_id, land_cover, area)

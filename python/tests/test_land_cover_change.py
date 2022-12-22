@@ -38,5 +38,20 @@ def test_load_from_csv(hydro_units_csv):
         hydro_units_csv, area_unit='km2', match_with='elevation'
     )
 
+    assert changes.get_land_covers_nb() == 1
+    assert changes.get_changes_nb() == 340
+
+
+def test_load_from_two_files(hydro_units_csv):
+    changes = behaviours.BehaviourLandCoverChange()
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
+        hydro_units_csv, area_unit='km2', match_with='elevation'
+    )
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
+        hydro_units_csv, area_unit='km2', match_with='elevation'
+    )
+
     assert changes.get_land_covers_nb() == 2
-    assert changes.get_changes_nb() == 2
+    assert changes.get_changes_nb() == 340 + 357

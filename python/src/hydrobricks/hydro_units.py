@@ -1,7 +1,9 @@
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
+
+import hydrobricks as hb
 from _hydrobricks import SettingsBasin
+from hydrobricks import utils
 
 
 class HydroUnits:
@@ -68,12 +70,7 @@ class HydroUnits:
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
-        if area_unit == 'm' or area_unit == 'm2':
-            pass
-        elif area_unit == 'km' or area_unit == 'km2':
-            self.hydro_units['area'] = self.hydro_units['area'] * 1000 * 1000
-        else:
-            raise Exception(f'Unit "{area_unit}" for the area is not supported.')
+        self.hydro_units['area'] = utils.area_in_m2(self.hydro_units['area'], area_unit)
 
         self._populate_binding_instance()
 

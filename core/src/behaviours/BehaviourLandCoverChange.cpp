@@ -4,67 +4,46 @@
 #include "HydroUnit.h"
 #include "ModelHydro.h"
 
-BehaviourLandCoverChange::BehaviourLandCoverChange() {}
+BehaviourLandCoverChange::BehaviourLandCoverChange() = default;
 
-void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, int landCoverTypeId, double area) {
+void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, const string& landCoverName, double area) {
+    int landCoverId = GetLandCoverId(landCoverName);
+
     m_dates.push_back(date);
     m_hydroUnitIds.push_back(hydroUnitId);
-    m_landCoverTypeIds.push_back(landCoverTypeId);
-    m_areaFractions.push_back(area);
-}
-
-bool BehaviourLandCoverChange::Parse(const string& path) {
-    try {
-        FileNetcdf file;
-
-        if (!file.OpenReadOnly(path)) {
-            return false;
-        }
-
-        // Get number of changes
-        int changesNb = file.GetDimLen("changes");
-
-        // Get ids
-        m_hydroUnitIds = file.GetVarInt1D("hydro_unit", changesNb);
-
-        // Get areas
-        m_areaFractions = file.GetVarDouble1D("area", changesNb);
-
-        // Get time
-        m_dates = file.GetVarDouble1D("time", changesNb);
-
-        // Get land cover types
-        m_landCoverTypeIds = file.GetVarInt1D("land_cover_type", changesNb);
-
-        // Get the land cover names
-        m_landCoverNames = file.GetAttString1D("land_cover_names");
-
-        // Get land cover data
-        for (const auto& landCover : m_landCoverNames) {
-            vecDouble fractions = file.GetVarDouble1D(landCover, changesNb);
-
-            // Get the land cover type
-            string type = file.GetAttText("type", landCover);
-        }
-
-    } catch (std::exception& e) {
-        wxLogError(e.what());
-        return false;
-    }
-
-    return true;
+    m_landCoverIds.push_back(landCoverId);
+    m_areas.push_back(area);
 }
 
 bool BehaviourLandCoverChange::Apply(double date) {
     wxASSERT(m_dates.size() > m_cursor);
     wxASSERT(m_hydroUnitIds.size() > m_cursor);
-    wxASSERT(m_areaFractions.size() > m_cursor);
-    wxASSERT(m_landCoverTypeIds.size() > m_cursor);
-    wxASSERT(m_landCoverNames.size() > m_landCoverTypeIds[m_cursor]);
+    wxASSERT(m_areas.size() > m_cursor);
+    wxASSERT(m_landCoverIds.size() > m_cursor);
+    wxASSERT(m_landCoverNames.size() > m_landCoverIds[m_cursor]);
 
     HydroUnit* unit = m_manager->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
-    string landCoverName = m_landCoverNames[m_landCoverTypeIds[m_cursor]];
-    unit->ChangeLandCoverAreaFraction(landCoverName, m_areaFractions[m_cursor]);
+    string landCoverName = m_landCoverNames[m_landCoverIds[m_cursor]];
+    double areaFraction = m_areas[m_cursor] / unit->GetArea();
+    unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 
     return false;
+}
+
+int BehaviourLandCoverChange::GetLandCoverId(const string& landCoverName) {
+    int landCoverId = -1;
+    for (int i = 0; i < m_landCoverNames.size(); ++i) {
+        if (m_landCoverNames[i] == landCoverName) {
+            landCoverId = i;
+            break;
+        }
+    }
+
+    // Insert as a new land cover if not found.
+    if (landCoverId == -1) {
+        m_landCoverNames.push_back(landCoverName);
+        landCoverId = m_landCoverNames.size() - 1;
+    }
+
+    return landCoverId;
 }

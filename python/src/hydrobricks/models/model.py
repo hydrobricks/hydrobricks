@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import HydroErr
 import pandas as pd
 
-import _hydrobricks as hb
+import _hydrobricks as _hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -72,7 +72,7 @@ class Model(ABC):
             self.spatial_structure = spatial_structure
 
             # Initialize log
-            hb.init_log(str(output_path))
+            _hb.init_log(str(output_path))
 
             # Modelling period
             self.settings.set_timer(start_date, end_date, 1, "day")
@@ -135,7 +135,7 @@ class Model(ABC):
             print("An exception occurred.")
 
     def cleanup(self):
-        hb.close_log()
+        _hb.close_log()
 
     def initialize_state_variables(self, parameters, forcing=None):
         """

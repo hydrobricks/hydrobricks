@@ -94,8 +94,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
     py::class_<BehaviourLandCoverChange>(m, "BehaviourLandCoverChange")
-        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_ids"_a, "land_cover_type_ids"_a,
-             "area"_a);
+        .def(py::init<>())
+        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

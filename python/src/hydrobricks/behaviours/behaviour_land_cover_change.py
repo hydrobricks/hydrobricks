@@ -50,6 +50,18 @@ class BehaviourLandCoverChange:
         self._match_hydro_unit_ids(file_content, hydro_units, match_with)
         self._extract_changes(area_unit, file_content)
 
+    def get_changes_nb(self):
+        """
+        Get the number of changes registered.
+        """
+        return self.behaviour.get_changes_nb()
+
+    def get_land_covers_nb(self):
+        """
+        Get the number of land cover registered.
+        """
+        return self.behaviour.get_land_covers_nb()
+
     @staticmethod
     def _match_hydro_unit_ids(file_content, hydro_units, match_with):
         hu_df = hydro_units.hydro_units
@@ -74,7 +86,7 @@ class BehaviourLandCoverChange:
 
             for row in range(2, len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
-                area = file_content.loc[row, col]
+                area = float(file_content.loc[row, col])
                 if area_unit == 'm' or area_unit == 'm2':
                     pass
                 elif area_unit == 'km' or area_unit == 'km2':

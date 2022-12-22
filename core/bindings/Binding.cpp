@@ -95,7 +95,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<BehaviourLandCoverChange>(m, "BehaviourLandCoverChange")
         .def(py::init<>())
-        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a);
+        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
+        .def("get_changes_nb", &BehaviourLandCoverChange::GetChangesNb)
+        .def("get_land_covers_nb", &BehaviourLandCoverChange::GetLandCoversNb);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

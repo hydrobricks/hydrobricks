@@ -14,6 +14,14 @@ class BehaviourLandCoverChange : public Behaviour {
 
     bool Apply(double date) override;
 
+    int GetChangesNb() {
+        return int(m_dates.size());
+    }
+
+    int GetLandCoversNb() {
+        return int(m_landCoverNames.size());
+    }
+
   protected:
     vecInt m_hydroUnitIds;
     vecInt m_landCoverIds;

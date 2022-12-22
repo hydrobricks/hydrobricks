@@ -38,4 +38,5 @@ def test_load_from_csv(hydro_units_csv):
         hydro_units_csv, area_unit='km2', match_with='elevation'
     )
 
-    print(changes)
+    assert changes.get_land_covers_nb() == 2
+    assert changes.get_changes_nb() == 2

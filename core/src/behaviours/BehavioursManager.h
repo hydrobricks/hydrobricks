@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_BEHAVIOUR_UPDATER_H
 #define HYDROBRICKS_BEHAVIOUR_UPDATER_H
 
+#include "HydroUnit.h"
 #include "Includes.h"
 
 class ModelHydro;
@@ -21,6 +22,8 @@ class BehavioursManager : public wxObject {
     bool AddBehaviour(Behaviour* behaviour);
 
     void DateUpdate(double date);
+
+    HydroUnit* GetHydroUnitById(int id);
 
   protected:
     bool m_active;

@@ -57,8 +57,12 @@ bool BehaviourLandCoverChange::Parse(const string& path) {
 
 bool BehaviourLandCoverChange::Apply(double date) {
     wxASSERT(m_dates.size() > m_cursor);
+    wxASSERT(m_hydroUnitIds.size() > m_cursor);
+    wxASSERT(m_area.size() > m_cursor);
 
-    HydroUnit* unit = m_manager->GetModel()->GetSubBasin()->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
+    HydroUnit* unit = m_manager->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
+    wxString landCoverName = "";
+    unit->ChangeLandCoverAreaFraction(landCoverName, m_area[m_cursor]);
 
     return false;
 }

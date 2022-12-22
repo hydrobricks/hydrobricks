@@ -33,7 +33,8 @@ void HydroUnit::AddBrick(Brick* brick) {
     m_bricks.push_back(brick);
 
     if (brick->IsLandCover()) {
-        m_landCoverBricks.push_back(brick);
+        auto* landCover = dynamic_cast<LandCover*>(brick);
+        m_landCoverBricks.push_back(landCover);
     }
 }
 
@@ -140,4 +141,36 @@ bool HydroUnit::IsOk() {
     }
 
     return true;
+}
+
+bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
+    if (fraction<0 | fraction> 1) {
+        wxLogError(_("The given fraction (%f) is not in the allowed range [0 .. 1]"), fraction);
+        return false;
+    }
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == name) {
+            brick->SetAreaFraction(fraction);
+            return FixLandCoverFractionsTotal();
+        }
+    }
+    wxLogError(_("Land cover '%s' was not found."), name);
+    return false;
+}
+
+bool HydroUnit::FixLandCoverFractionsTotal() {
+    LandCover* ground = nullptr;
+    double total = 0;
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == "ground" || brick->GetName() == "generic") {
+            ground = brick;
+        }
+        total += brick->GetAreaFraction();
+    }
+
+    if (total - 1.0 > EPSILON_D) {
+        double diff = total - 1.0;
+    }
+
+    return false;
 }

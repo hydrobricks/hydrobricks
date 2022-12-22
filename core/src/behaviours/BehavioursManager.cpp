@@ -1,6 +1,7 @@
 #include "BehavioursManager.h"
 
 #include "Behaviour.h"
+#include "ModelHydro.h"
 
 BehavioursManager::BehavioursManager()
     : m_active(false),
@@ -49,4 +50,8 @@ void BehavioursManager::DateUpdate(double date) {
         m_behaviours[m_behaviourIndices[m_cursor]]->Apply(date);
         m_cursor++;
     }
+}
+
+HydroUnit* BehavioursManager::GetHydroUnitById(int id) {
+    return m_model->GetSubBasin()->GetHydroUnitById(id);
 }

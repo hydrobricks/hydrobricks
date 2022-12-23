@@ -51,10 +51,10 @@ class SpotpySetup:
             model.run(parameters=params)
         sim = model.get_outlet_discharge()
 
-        return sim[self.warmup + 1:]
+        return sim[self.warmup:]
 
     def evaluation(self):
-        return self.obs[self.warmup + 1:]
+        return self.obs[self.warmup:]
 
     def objectivefunction(self, simulation, evaluation, params=None):
         if not self.obj_func:

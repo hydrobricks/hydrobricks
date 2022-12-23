@@ -70,10 +70,12 @@ TEST_F(BehavioursInModel, LandCoverChangeWorks) {
 
     BehaviourLandCoverChange behaviour;
     behaviour.AddChange(GetMJD(2020, 1, 5), 2, "glacier", 80);
+    EXPECT_TRUE(model.AddBehaviour(&behaviour));
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_EQ(model.GetSubBasin()->GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0);
-    EXPECT_EQ(model.GetSubBasin()->GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0);
-    EXPECT_EQ(model.GetSubBasin()->GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.5);
 }

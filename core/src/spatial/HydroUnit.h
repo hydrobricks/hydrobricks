@@ -47,6 +47,8 @@ class HydroUnit : public wxObject {
 
     Brick* GetBrick(const string& name);
 
+    LandCover* GetLandCover(const string& name);
+
     Splitter* GetSplitter(int index);
 
     bool HasSplitter(const string& name);

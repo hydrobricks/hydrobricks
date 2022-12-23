@@ -102,6 +102,16 @@ Brick* HydroUnit::GetBrick(const string& name) {
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
+LandCover* HydroUnit::GetLandCover(const string& name) {
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == name) {
+            return brick;
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
+}
+
 Splitter* HydroUnit::GetSplitter(int index) {
     wxASSERT(m_splitters.size() > index);
     wxASSERT(m_splitters[index]);

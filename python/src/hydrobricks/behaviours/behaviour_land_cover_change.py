@@ -3,11 +3,14 @@ import pandas as pd
 import _hydrobricks as _hb
 from hydrobricks import utils
 
+from .behaviour import Behaviour
 
-class BehaviourLandCoverChange:
+
+class BehaviourLandCoverChange(Behaviour):
     """Class for the land cover changes."""
 
     def __init__(self):
+        super().__init__()
         self.behaviour = _hb.BehaviourLandCoverChange()
 
     def load_from_csv(self, path, hydro_units, area_unit, match_with='elevation'):

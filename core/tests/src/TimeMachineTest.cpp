@@ -34,14 +34,6 @@ TEST(TimeMachine, IncrementMinute) {
     EXPECT_FLOAT_EQ(timer.GetDate(), GetMJD(2020, 1, 1, 0, 1));
 }
 
-TEST(TimeMachine, ParametersUpdaterIsTriggered) {
-    TimeMachine timer;
-    timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 3, 1), 1, Day);
-    timer.IncrementTime();
-
-    EXPECT_EQ(timer.GetParametersUpdater()->GetPreviousDate(), GetMJD(2020, 1, 2));
-}
-
 TEST(TimeMachine, IsNotOver) {
     TimeMachine timer;
     timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 1, 3), 1, Day);

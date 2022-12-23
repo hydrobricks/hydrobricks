@@ -13,6 +13,7 @@ from hydrobricks import utils
 class Model(ABC):
     """Base class for the models"""
 
+    @abstractmethod
     def __init__(self, name=None, **kwargs):
         self.name = name
         self.settings = SettingsModel()
@@ -173,7 +174,7 @@ class Model(ABC):
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
 
-    def add_behaviour(self, behaviour):
+    def add_behaviour(self, behaviour) -> bool:
         """
         Add a behaviour to the model.
 
@@ -182,7 +183,7 @@ class Model(ABC):
         behaviour : Behaviour
             The behaviour object. The dates must be sorted.
         """
-        self.model.add_behaviour(behaviour)
+        return self.model.add_behaviour(behaviour.behaviour)
 
     def create_config_file(self, directory, name, file_type='both'):
         """

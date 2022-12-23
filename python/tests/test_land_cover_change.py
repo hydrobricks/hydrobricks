@@ -5,6 +5,7 @@ import pytest
 
 import hydrobricks as hb
 import hydrobricks.behaviours as behaviours
+import hydrobricks.models as models
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -55,3 +56,14 @@ def test_load_from_two_files(hydro_units_csv):
 
     assert changes.get_land_covers_nb() == 2
     assert changes.get_changes_nb() == 340 + 357
+
+
+def test_add_behaviour_to_model(hydro_units_csv):
+    changes = behaviours.BehaviourLandCoverChange()
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
+        hydro_units_csv, area_unit='km2', match_with='elevation'
+    )
+
+    model = models.Socont()
+    assert model.add_behaviour(changes)

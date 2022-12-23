@@ -5,6 +5,7 @@
 #include "Forcing.h"
 #include "HydroUnitProperty.h"
 #include "Includes.h"
+#include "LandCover.h"
 #include "Splitter.h"
 
 class HydroUnit : public wxObject {
@@ -46,6 +47,8 @@ class HydroUnit : public wxObject {
 
     Brick* GetBrick(const string& name);
 
+    LandCover* GetLandCover(const string& name);
+
     Splitter* GetSplitter(int index);
 
     bool HasSplitter(const string& name);
@@ -53,6 +56,10 @@ class HydroUnit : public wxObject {
     Splitter* GetSplitter(const string& name);
 
     bool IsOk();
+
+    bool ChangeLandCoverAreaFraction(const string& name, double fraction);
+
+    bool FixLandCoverFractionsTotal();
 
     Types GetType() {
         return m_type;
@@ -76,6 +83,7 @@ class HydroUnit : public wxObject {
     double m_area;  // m2
     std::vector<HydroUnitProperty*> m_properties;
     std::vector<Brick*> m_bricks;
+    std::vector<LandCover*> m_landCoverBricks;
     std::vector<Splitter*> m_splitters;
     std::vector<Forcing*> m_forcing;
 

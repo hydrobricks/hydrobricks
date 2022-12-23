@@ -31,7 +31,18 @@ def dump_config_file(content, directory, name, file_type='yaml'):
 
 
 def date_as_mjd(date):
+    if isinstance(date, pd.Timestamp):
+        return date.to_julian_date() - 2400000.5
     return pd.DatetimeIndex(date).to_julian_date() - 2400000.5
+
+
+def area_in_m2(area, unit):
+    if unit == 'm' or unit == 'm2':
+        return area
+    elif unit == 'km' or unit == 'km2':
+        return area * 1000 * 1000
+    else:
+        raise ValueError(f'The area unit "{unit}" is not supported.')
 
 
 def jd_to_date(jd):

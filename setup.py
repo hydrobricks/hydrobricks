@@ -112,7 +112,7 @@ long_description = (this_directory / "python" / "README.md").read_text()
 # Setup
 setup(
     name="hydrobricks",
-    version="0.3.1",
+    version="0.4.0",
     author="Pascal Horton",
     author_email="pascal.horton@giub.unibe",
     description="A modular hydrological modelling framework",
@@ -123,7 +123,9 @@ setup(
     packages=['hydrobricks', 'hydrobricks.models', 'hydrobricks.preprocessing'],
     package_dir={'hydrobricks': 'python/src/hydrobricks',
                  'hydrobricks.models': 'python/src/hydrobricks/models',
-                 'hydrobricks.preprocessing': 'python/src/hydrobricks/preprocessing'},
+                 'hydrobricks.preprocessing': 'python/src/hydrobricks/preprocessing',
+                 'hydrobricks.behaviours': 'python/src/hydrobricks/behaviours',
+                 },
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.8",

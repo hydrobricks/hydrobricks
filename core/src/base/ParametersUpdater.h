@@ -30,6 +30,7 @@ class ParametersUpdater : public wxObject {
     void ChangingDate(double date);
 
   private:
+    bool m_active;
     double m_previousDate;
     std::vector<ParameterVariableYearly*> m_parametersYearly;
     std::vector<ParameterVariableMonthly*> m_parametersMonthly;

@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_TIME_MACHINE_H
 #define HYDROBRICKS_TIME_MACHINE_H
 
+#include "BehavioursManager.h"
 #include "Includes.h"
 #include "ParametersUpdater.h"
 #include "SettingsModel.h"
@@ -16,10 +17,6 @@ class TimeMachine : public wxObject {
     void Initialize(const TimerSettings& settings);
 
     void Reset();
-
-    void AttachParametersUpdater(ParametersUpdater* updater) {
-        m_parametersUpdater = updater;
-    }
 
     bool IsOver();
 
@@ -45,6 +42,14 @@ class TimeMachine : public wxObject {
         return &m_timeStepInDays;
     }
 
+    void SetParametersUpdater(ParametersUpdater* parametersUpdater) {
+        m_parametersUpdater = parametersUpdater;
+    }
+
+    void SetBehavioursManager(BehavioursManager* behavioursManager) {
+        m_behavioursManager = behavioursManager;
+    }
+
   protected:
   private:
     double m_date;
@@ -54,6 +59,7 @@ class TimeMachine : public wxObject {
     TimeUnit m_timeStepUnit;
     double m_timeStepInDays;
     ParametersUpdater* m_parametersUpdater;
+    BehavioursManager* m_behavioursManager;
 };
 
 #endif  // HYDROBRICKS_TIME_MACHINE_H

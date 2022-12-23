@@ -10,17 +10,26 @@ class BehaviourLandCoverChange : public Behaviour {
 
     ~BehaviourLandCoverChange() override = default;
 
-    void AddChange(double date, int hydroUnitId, int landCoverTypeId, double area);
+    void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
 
-    bool Parse(const string& path);
+    bool Apply(double date) override;
+
+    int GetChangesNb() {
+        return int(m_dates.size());
+    }
+
+    int GetLandCoversNb() {
+        return int(m_landCoverNames.size());
+    }
 
   protected:
-    vecDouble m_dates;
     vecInt m_hydroUnitIds;
-    vecInt m_landCoverTypeIds;
-    vecDouble m_area;
+    vecInt m_landCoverIds;
+    vecStr m_landCoverNames;
+    vecDouble m_areas;
 
   private:
+    int GetLandCoverId(const string& landCoverName);
 };
 
 #endif  // HYDROBRICKS_BEHAVIOUR_LAND_COVER_CHANGE_H

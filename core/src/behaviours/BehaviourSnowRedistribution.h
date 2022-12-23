@@ -10,6 +10,8 @@ class BehaviourSnowRedistribution : public Behaviour {
 
     ~BehaviourSnowRedistribution() override = default;
 
+    bool Apply(double date) override;
+
   protected:
   private:
 };

@@ -44,6 +44,8 @@ class ModelHydro : public wxObject {
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 
+    bool AddBehaviour(Behaviour* behaviour);
+
     bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     void ClearTimeSeries();
@@ -75,6 +77,8 @@ class ModelHydro : public wxObject {
     SubBasin* m_subBasin;
     TimeMachine m_timer;
     Logger m_logger;
+    BehavioursManager m_behavioursManager;
+    ParametersUpdater m_parametersUpdater;
     std::vector<TimeSeries*> m_timeSeries;
 
   private:

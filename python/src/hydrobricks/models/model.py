@@ -2,10 +2,9 @@ import importlib
 import os
 from abc import ABC, abstractmethod
 
+import _hydrobricks as _hb
 import HydroErr
 import pandas as pd
-
-import _hydrobricks as _hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 

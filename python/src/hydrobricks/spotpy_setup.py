@@ -1,10 +1,11 @@
 import spotpy
+from datetime import datetime
 
 
 class SpotpySetup:
 
     def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None,
-                 invert_obj_func=False):
+                 invert_obj_func=False, dump_outputs=False, dump_dir=''):
         self.model = model
         self.params = params
         self.params_spotpy = params.get_for_spotpy()
@@ -15,6 +16,8 @@ class SpotpySetup:
         self.warmup = warmup
         self.obj_func = obj_func
         self.invert_obj_func = invert_obj_func
+        self.dump_outputs = dump_outputs
+        self.dump_dir = dump_dir
         if not self.random_forcing:
             self.model.set_forcing(forcing=forcing)
         if not obj_func:
@@ -50,6 +53,11 @@ class SpotpySetup:
         else:
             model.run(parameters=params)
         sim = model.get_outlet_discharge()
+
+        if self.dump_outputs:
+            now = datetime.now()
+            date_time = now.strftime("%Y-%m-%d_%H%M%S")
+            model.dump_outputs(self.dump_dir + date_time)
 
         return sim[self.warmup:]
 

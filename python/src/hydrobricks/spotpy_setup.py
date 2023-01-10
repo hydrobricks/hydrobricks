@@ -1,5 +1,8 @@
-import spotpy
+import importlib
 from datetime import datetime
+
+import HydroErr
+import spotpy
 
 
 class SpotpySetup:
@@ -67,8 +70,13 @@ class SpotpySetup:
     def objectivefunction(self, simulation, evaluation, params=None):
         if not self.obj_func:
             like = spotpy.objectivefunctions.kge_non_parametric(evaluation, simulation)
+        elif isinstance(self.obj_func, str):
+            eval_fct = getattr(importlib.import_module('HydroErr'), self.obj_func)
+            like = eval_fct(simulation, evaluation)
         else:
             like = self.obj_func(evaluation, simulation)
-            if self.invert_obj_func:
-                like = -like
+
+        if self.invert_obj_func:
+            like = -like
+
         return like

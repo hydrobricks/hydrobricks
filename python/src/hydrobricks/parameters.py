@@ -1,7 +1,8 @@
 import random
 
-import hydrobricks as hb
 import pandas as pd
+
+import hydrobricks as hb
 
 
 class ParameterSet:
@@ -157,7 +158,7 @@ class ParameterSet:
 
         return True
 
-    def set_values(self, values):
+    def set_values(self, values, allow_adapt=False):
         """
         Set the parameter values.
 
@@ -167,11 +168,15 @@ class ParameterSet:
             The values must be provided as a dictionary with the parameter name with the
             related component or one of its aliases as the key.
             Example: {'k': 32, 'A': 300} or {'slow-reservoir:capacity': 300}
+        allow_adapt : bool
+            Allow the parameter values to be adapted to enforce defined constraints
+            (e.g.: min, max)
         """
         for key in values:
             index = self._get_parameter_index(key)
-            self._check_value_range(index, key, values[key])
-            self.parameters.loc[index, 'value'] = values[key]
+            value = self._check_value_range(index, key, values[key],
+                                            allow_adapt=allow_adapt)
+            self.parameters.loc[index, 'value'] = value
 
     def has(self, name):
         """
@@ -408,27 +413,39 @@ class ParameterSet:
                 raise Exception(f'The alias "{alias}" already exists. '
                                 f'It must be unique.')
 
-    def _check_value_range(self, index, key, value):
+    def _check_value_range(self, index, key, value, allow_adapt=False):
         max_value = self.parameters.loc[index, 'max']
         min_value = self.parameters.loc[index, 'min']
 
         if type(min_value) != list:
             if max_value is not None and value > max_value:
+                if allow_adapt:
+                    return max_value
                 raise Exception(f'The value {value} for the parameter "{key}" is above '
                                 f'the maximum threshold ({max_value}).')
             if min_value is not None and value < min_value:
+                if allow_adapt:
+                    return min_value
                 raise Exception(f'The value {value} for the parameter "{key}" is below '
                                 f'the minimum threshold ({min_value}).')
         else:
             assert isinstance(max_value, list)
             assert isinstance(value, list)
-            for min_v, max_v, val in zip(min_value, max_value, value):
-                if max_v is not None and value > max_v:
-                    raise Exception(f'The value {val} for the parameter "{key}" is '
-                                    f'above the maximum threshold ({max_v}).')
-                if min_v is not None and value < min_v:
-                    raise Exception(f'The value {val} for the parameter "{key}" is '
-                                    f'below the minimum threshold ({min_v}).')
+            for i, (min_v, max_v, val) in enumerate(zip(min_value, max_value, value)):
+                if max_v is not None and val > max_v:
+                    if allow_adapt:
+                        value[i] = max_v
+                    else:
+                        raise Exception(f'The value {val} for the parameter "{key}" is '
+                                        f'above the maximum threshold ({max_v}).')
+                if min_v is not None and val < min_v:
+                    if allow_adapt:
+                        value[i] = min_v
+                    else:
+                        raise Exception(f'The value {val} for the parameter "{key}" is '
+                                        f'below the minimum threshold ({min_v}).')
+
+        return value
 
     def _get_parameter_index(self, name, raise_exception=True):
         for index, row in self.parameters.iterrows():

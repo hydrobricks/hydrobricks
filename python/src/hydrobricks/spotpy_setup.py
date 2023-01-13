@@ -34,7 +34,7 @@ class SpotpySetup:
             values = [row[0] for row in x]
             params = self.params
             param_values = dict(zip(names, values))
-            params.set_values(param_values)
+            params.set_values(param_values, allow_adapt=True)
 
             if params.are_constraints_satisfied():
                 break

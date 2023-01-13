@@ -30,6 +30,7 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 
 # Parameters
 parameters = socont.generate_parameters()
+parameters.define_constraint('k_slow_2', '<', 'k_slow_1')
 parameters.add_data_parameter('precip_corr_factor', 0.85, min_value=0.7, max_value=1.3)
 parameters.add_data_parameter('temp_gradients', -0.6, min_value=-1, max_value=0)
 if USE_PRECIP_GRADIENT:

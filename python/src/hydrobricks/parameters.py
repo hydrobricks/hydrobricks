@@ -127,7 +127,7 @@ class ParameterSet:
         constraint = [parameter_1, operator, parameter_2]
         self.constraints.append(constraint)
 
-    def are_constraints_satisfied(self) -> bool:
+    def constraints_satisfied(self) -> bool:
         """
         Check if the constraints between parameters are satisfied.
 
@@ -158,7 +158,37 @@ class ParameterSet:
 
         return True
 
-    def set_values(self, values, allow_adapt=False):
+    def range_satisfied(self) -> bool:
+        """
+        Check if the parameter value ranges are satisfied.
+
+        Returns
+        -------
+        True is ranges are satisfied, False otherwise.
+        """
+
+        for _, row in self.parameters.iterrows():
+            min_value = row['min']
+            max_value = row['max']
+            value = row['value']
+
+            if type(min_value) != list:
+                if max_value is not None and value > max_value:
+                    return False
+                if min_value is not None and value < min_value:
+                    return False
+            else:
+                assert isinstance(max_value, list)
+                assert isinstance(value, list)
+                for min_v, max_v, val in zip(min_value, max_value, value):
+                    if max_v is not None and val > max_v:
+                        return False
+                    if min_v is not None and val < min_v:
+                        return False
+
+        return True
+
+    def set_values(self, values, check_range=True, allow_adapt=False):
         """
         Set the parameter values.
 
@@ -168,14 +198,18 @@ class ParameterSet:
             The values must be provided as a dictionary with the parameter name with the
             related component or one of its aliases as the key.
             Example: {'k': 32, 'A': 300} or {'slow-reservoir:capacity': 300}
+        check_range : bool
+            Check that the parameter value falls into the allowed range.
         allow_adapt : bool
             Allow the parameter values to be adapted to enforce defined constraints
-            (e.g.: min, max)
+            (e.g.: min, max).
         """
         for key in values:
             index = self._get_parameter_index(key)
-            value = self._check_value_range(index, key, values[key],
-                                            allow_adapt=allow_adapt)
+            value = values[key]
+            if check_range:
+                value = self._check_value_range(index, key, value,
+                                                allow_adapt=allow_adapt)
             self.parameters.loc[index, 'value'] = value
 
     def has(self, name):
@@ -303,7 +337,7 @@ class ParameterSet:
                 else:
                     assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
 
-            if self.are_constraints_satisfied():
+            if self.constraints_satisfied():
                 break
 
             if i >= 1000:

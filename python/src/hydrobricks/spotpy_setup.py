@@ -34,9 +34,9 @@ class SpotpySetup:
             values = [row[0] for row in x]
             params = self.params
             param_values = dict(zip(names, values))
-            params.set_values(param_values, allow_adapt=True)
+            params.set_values(param_values, check_range=False)
 
-            if params.are_constraints_satisfied():
+            if params.constraints_satisfied() and params.range_satisfied():
                 break
 
             if i >= 1000:
@@ -48,6 +48,10 @@ class SpotpySetup:
         params = self.params
         param_values = dict(zip(x.name, x.random))
         params.set_values(param_values)
+
+        if not params.constraints_satisfied() or not params.range_satisfied():
+            raise RuntimeError('The parameter constraints are not satisfied.')
+
         model = self.model
         if self.random_forcing:
             forcing = self.forcing

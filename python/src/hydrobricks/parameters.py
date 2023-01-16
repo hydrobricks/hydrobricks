@@ -109,7 +109,7 @@ class ParameterSet:
 
     def define_constraint(self, parameter_1, operator, parameter_2):
         """
-        Define a constraint between 2 parameters (e.g., paramA > paramB)
+        Defines a constraint between 2 parameters (e.g., paramA > paramB)
 
         Parameters
         ----------
@@ -126,6 +126,30 @@ class ParameterSet:
         """
         constraint = [parameter_1, operator, parameter_2]
         self.constraints.append(constraint)
+
+    def remove_constraint(self, parameter_1, operator, parameter_2):
+        """
+        Removes a constraint between 2 parameters (e.g., paramA > paramB)
+
+        Parameters
+        ----------
+        parameter_1 : str
+            The name of the first parameter.
+        operator : str
+            The operator (e.g. '<=').
+        parameter_2 : str
+            The name of the second parameter.
+
+        Examples
+        --------
+        parameter_set.remove_constraint('paramA', '>=', 'paramB')
+        """
+        for i, constraint in enumerate(self.constraints):
+            if parameter_1 == constraint[0] \
+                    and operator == constraint[1] \
+                    and parameter_2 == constraint[2]:
+                del self.constraints[i]
+                return
 
     def constraints_satisfied(self) -> bool:
         """

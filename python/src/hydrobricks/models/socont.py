@@ -79,9 +79,17 @@ class Socont(Model):
                 unit='1/t', aliases=['k_ice'], min_value=0, max_value=1,
                 mandatory=True)
 
-        ps.define_parameter(
-            component='surface-runoff', name='response_factor', unit='1/t',
-            aliases=['k_quick'], min_value=0, max_value=1, mandatory=True)
+        if self.surface_runoff == 'socont_runoff':
+            ps.define_parameter(
+                component='surface-runoff', name='runoff_coefficient', unit='m^(4/3)/s',
+                aliases=['beta'], min_value=100, max_value=30000, mandatory=True)
+            ps.define_parameter(
+                component='surface-runoff', name='slope', unit='°',
+                aliases=['J'], min_value=0, max_value=90, mandatory=True)
+        elif self.surface_runoff == 'linear_storage':
+            ps.define_parameter(
+                component='surface-runoff', name='response_factor', unit='1/t',
+                aliases=['k_quick'], min_value=0, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='slow-reservoir', name='capacity', unit='mm', aliases=['A'],
@@ -106,6 +114,11 @@ class Socont(Model):
                 component='slow-reservoir-2', name='response_factor', unit='1/t',
                 aliases=['k_slow_2', 'k_slow2'], min_value=0, max_value=1,
                 mandatory=True)
+
+            if self.surface_runoff == 'linear_storage':
+                ps.define_constraint('k_slow_1', '<', 'k_quick')
+                ps.define_constraint('k_slow_2', '<', 'k_quick')
+            ps.define_constraint('k_slow_2', '<', 'k_slow_1')
 
         return ps
 

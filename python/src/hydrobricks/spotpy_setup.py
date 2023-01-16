@@ -2,6 +2,7 @@ import importlib
 from datetime import datetime
 
 import HydroErr
+import numpy as np
 import spotpy
 
 
@@ -50,7 +51,7 @@ class SpotpySetup:
         params.set_values(param_values)
 
         if not params.constraints_satisfied() or not params.range_satisfied():
-            raise RuntimeError('The parameter constraints are not satisfied.')
+            return np.random.rand(len(self.obs[self.warmup:]))
 
         model = self.model
         if self.random_forcing:

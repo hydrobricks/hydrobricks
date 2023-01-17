@@ -107,6 +107,13 @@ class ParameterSet:
         prior.name = parameter
         self.parameters.loc[index, 'prior'] = prior
 
+    def list_constraints(self):
+        """
+        List the constraints currently defined.
+        """
+        for constraint in self.constraints:
+            print(' '.join(constraint))
+
     def define_constraint(self, parameter_1, operator, parameter_2):
         """
         Defines a constraint between 2 parameters (e.g., paramA > paramB)

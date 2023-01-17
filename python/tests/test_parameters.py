@@ -2,8 +2,9 @@ import os.path
 import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 
 def test_parameter_creation():
@@ -324,3 +325,38 @@ def test_change_parameter_range(parameter_set):
     parameter_set.change_range('a_snow', 2, 8)
     assert parameter_set.parameters.loc[0].at['min'] == 2
     assert parameter_set.parameters.loc[0].at['max'] == 8
+
+
+@pytest.fixture
+def parameter_set_constraints():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component='reservoir', name='coefficient_1', aliases=['k1'],
+        min_value=0, max_value=1)
+    parameter_set.define_parameter(
+        component='reservoir', name='coefficient_2', aliases=['k2'],
+        min_value=0, max_value=1)
+    parameter_set.define_parameter(
+        component='reservoir', name='coefficient_3', aliases=['k3'],
+        min_value=0, max_value=1)
+    parameter_set.define_constraint('k1', '<', 'k2')
+    parameter_set.define_constraint('k2', '<', 'k3')
+    return parameter_set
+
+
+def test_define_constraints_satisfied(parameter_set_constraints):
+    assert len(parameter_set_constraints.constraints) == 2
+    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.3})
+    assert parameter_set_constraints.constraints_satisfied()
+
+
+def test_define_constraints_not_satisfied(parameter_set_constraints):
+    assert len(parameter_set_constraints.constraints) == 2
+    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.1})
+    assert not parameter_set_constraints.constraints_satisfied()
+
+
+def test_define_constraints_removed(parameter_set_constraints):
+    assert len(parameter_set_constraints.constraints) == 2
+    parameter_set_constraints.remove_constraint('k1', '<', 'k2')
+    assert len(parameter_set_constraints.constraints) == 1

@@ -346,13 +346,13 @@ def parameter_set_constraints():
 
 def test_define_constraints_satisfied(parameter_set_constraints):
     assert len(parameter_set_constraints.constraints) == 2
-    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.3})
+    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.3, 'k3': 0.4})
     assert parameter_set_constraints.constraints_satisfied()
 
 
 def test_define_constraints_not_satisfied(parameter_set_constraints):
     assert len(parameter_set_constraints.constraints) == 2
-    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.1})
+    parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.1, 'k3': 0.4})
     assert not parameter_set_constraints.constraints_satisfied()
 
 

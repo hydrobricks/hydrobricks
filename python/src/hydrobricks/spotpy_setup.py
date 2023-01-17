@@ -1,4 +1,5 @@
 import importlib
+import os
 from datetime import datetime
 
 import HydroErr
@@ -65,7 +66,8 @@ class SpotpySetup:
         if self.dump_outputs:
             now = datetime.now()
             date_time = now.strftime("%Y-%m-%d_%H%M%S")
-            model.dump_outputs(self.dump_dir + date_time)
+            path = os.path.join(self.dump_dir, date_time)
+            model.dump_outputs(path)
 
         return sim[self.warmup:]
 

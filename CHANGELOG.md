@@ -5,12 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.6] - 2023-01-17
+
+### Added
+
+- Addition of some parameter constraints to Socont.
+- Addition of a function to remove a constraint.
+- Addition of the constraints listing.
+
+### Fixed
+
+- Fixing dump path creation in SPOTPY.
+
+
 ## [0.4.5] - 2023-01-16
 
 ### Changed
 
 - Check parameter constraints in SPOTPY and handle non-conforming cases.
- 
+
 
 ## [0.4.4] - 2023-01-13
 

@@ -67,6 +67,7 @@ class SpotpySetup:
             now = datetime.now()
             date_time = now.strftime("%Y-%m-%d_%H%M%S")
             path = os.path.join(self.dump_dir, date_time)
+            os.makedirs(path, exist_ok=True)
             model.dump_outputs(path)
 
         return sim[self.warmup:]

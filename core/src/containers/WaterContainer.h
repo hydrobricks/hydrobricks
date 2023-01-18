@@ -95,7 +95,7 @@ class WaterContainer : public wxObject {
     double GetTargetFillingRatio();
 
     bool IsNotEmpty() {
-        return GetContentWithChanges() > 0.0;
+        return GetContentWithChanges() > EPSILON_F;
     }
 
     bool HasOverflow() {

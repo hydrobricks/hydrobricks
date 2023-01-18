@@ -10,7 +10,8 @@ import spotpy
 class SpotpySetup:
 
     def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None,
-                 invert_obj_func=False, dump_outputs=False, dump_dir=''):
+                 invert_obj_func=False, dump_outputs=False, dump_forcing=False,
+                 dump_dir=''):
         self.model = model
         self.params = params
         self.params_spotpy = params.get_for_spotpy()
@@ -22,6 +23,7 @@ class SpotpySetup:
         self.obj_func = obj_func
         self.invert_obj_func = invert_obj_func
         self.dump_outputs = dump_outputs
+        self.dump_forcing = dump_forcing
         self.dump_dir = dump_dir
         if not self.random_forcing:
             self.model.set_forcing(forcing=forcing)
@@ -55,20 +57,23 @@ class SpotpySetup:
             return np.random.rand(len(self.obs[self.warmup:]))
 
         model = self.model
+        forcing = self.forcing
         if self.random_forcing:
-            forcing = self.forcing
             forcing.apply_defined_spatialization(params, params.allow_changing)
             model.run(parameters=params, forcing=forcing)
         else:
             model.run(parameters=params)
         sim = model.get_outlet_discharge()
 
-        if self.dump_outputs:
+        if self.dump_outputs or self.dump_forcing:
             now = datetime.now()
             date_time = now.strftime("%Y-%m-%d_%H%M%S")
             path = os.path.join(self.dump_dir, date_time)
             os.makedirs(path, exist_ok=True)
-            model.dump_outputs(path)
+            if self.dump_outputs:
+                model.dump_outputs(path)
+            if self.dump_forcing:
+                forcing.create_file(os.path.join(path, 'forcing.nc'))
 
         return sim[self.warmup:]
 

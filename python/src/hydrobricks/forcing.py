@@ -158,6 +158,9 @@ class Forcing(TimeSeries):
                 if elevation < elevation_threshold:
                     unit_values[:, i_unit] = data_raw * (
                             1 + gradient * (elevation - ref_elevation) / 100)
+                elif ref_elevation > elevation_threshold:
+                    unit_values[:, i_unit] = data_raw * (
+                            1 + gradient_2 * (elevation - ref_elevation) / 100)
                 else:
                     precip_below = data_raw * (1 + gradient * (
                             elevation_threshold - ref_elevation) / 100)

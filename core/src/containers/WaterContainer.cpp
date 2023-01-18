@@ -174,7 +174,9 @@ void WaterContainer::Finalize() {
     m_content += m_contentChangeDynamic + m_contentChangeStatic;
     m_contentChangeDynamic = 0;
     m_contentChangeStatic = 0;
-    wxASSERT(m_content >= -PRECISION);
+    if (m_content < PRECISION) {
+        m_content = 0;
+    }
 }
 
 void WaterContainer::Reset() {

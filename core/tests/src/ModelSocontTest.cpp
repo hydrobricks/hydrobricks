@@ -525,5 +525,5 @@ TEST(ModelSocont, WaterBalanceCloses) {
     // Balance
     double balance = discharge + et + storage + snow - precip;
 
-    EXPECT_NEAR(balance, 0.0, 0.000001);
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

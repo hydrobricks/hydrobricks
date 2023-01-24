@@ -202,6 +202,9 @@ class ParameterSet:
             max_value = row['max']
             value = row['value']
 
+            if value is None:
+                return False
+
             if type(min_value) != list:
                 if max_value is not None and value > max_value:
                     return False

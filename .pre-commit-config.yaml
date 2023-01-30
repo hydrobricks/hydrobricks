@@ -29,7 +29,7 @@ repos:
 
 # Sort imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
   - id: isort
     exclude: |
@@ -52,7 +52,7 @@ repos:
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.3.1
+  rev: v1.4.2
   hooks:
   - id: remove-tabs
     exclude: |
@@ -88,7 +88,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v15.0.6
+  rev: v15.0.7
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

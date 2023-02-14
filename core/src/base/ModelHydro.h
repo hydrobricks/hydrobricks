@@ -46,6 +46,8 @@ class ModelHydro : public wxObject {
 
     bool AddBehaviour(Behaviour* behaviour);
 
+    int GetBehavioursNb();
+
     bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     void ClearTimeSeries();

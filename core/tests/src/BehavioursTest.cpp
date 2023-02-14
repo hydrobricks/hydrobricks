@@ -69,13 +69,16 @@ TEST_F(BehavioursInModel, LandCoverChangeWorks) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     BehaviourLandCoverChange behaviour;
-    behaviour.AddChange(GetMJD(2020, 1, 5), 2, "glacier", 80);
+    behaviour.AddChange(GetMJD(2020, 1, 2), 2, "glacier", 60);
+    behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier", 70);
+    behaviour.AddChange(GetMJD(2020, 1, 6), 2, "glacier", 80);
+    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
     EXPECT_TRUE(model.AddBehaviour(&behaviour));
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.5);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f);
 }

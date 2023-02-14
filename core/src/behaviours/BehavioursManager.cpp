@@ -40,6 +40,10 @@ bool BehavioursManager::AddBehaviour(Behaviour* behaviour) {
     return true;
 }
 
+int BehavioursManager::GetBehavioursNb() {
+    return (int)m_behaviours.size();
+}
+
 void BehavioursManager::DateUpdate(double date) {
     if (!m_active) {
         return;

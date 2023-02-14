@@ -21,6 +21,8 @@ class BehavioursManager : public wxObject {
 
     bool AddBehaviour(Behaviour* behaviour);
 
+    int GetBehavioursNb();
+
     void DateUpdate(double date);
 
     HydroUnit* GetHydroUnitById(int id);

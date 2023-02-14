@@ -876,6 +876,10 @@ bool ModelHydro::AddBehaviour(Behaviour* behaviour) {
     return m_behavioursManager.AddBehaviour(behaviour);
 }
 
+int ModelHydro::GetBehavioursNb() {
+    return m_behavioursManager.GetBehavioursNb();
+}
+
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
     TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
     if (!AddTimeSeries(timeSeries)) {

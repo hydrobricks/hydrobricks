@@ -48,7 +48,7 @@ void BehavioursManager::DateUpdate(double date) {
     if (!m_active) {
         return;
     }
-    wxASSERT(m_dates.size() == m_behaviours.size());
+    wxASSERT(m_dates.size() == m_behaviourIndices.size());
 
     while (m_dates.size() > m_cursor && m_dates[m_cursor] <= date) {
         m_behaviours[m_behaviourIndices[m_cursor]]->Apply(date);

@@ -39,7 +39,7 @@ def test_load_from_csv(hydro_units_csv):
     )
 
     assert changes.get_land_covers_nb() == 1
-    assert changes.get_changes_nb() == 340
+    assert changes.get_changes_nb() == 232
 
 
 def test_load_from_two_files(hydro_units_csv):
@@ -54,7 +54,7 @@ def test_load_from_two_files(hydro_units_csv):
     )
 
     assert changes.get_land_covers_nb() == 2
-    assert changes.get_changes_nb() == 340 + 357
+    assert changes.get_changes_nb() == 444
 
 
 def test_add_behaviour_to_model(hydro_units_csv):

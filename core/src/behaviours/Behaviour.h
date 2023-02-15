@@ -20,6 +20,10 @@ class Behaviour : public wxObject {
         return m_dates;
     }
 
+    void IncrementCursor() {
+        m_cursor++;
+    }
+
   protected:
     BehavioursManager* m_manager;
     int m_cursor;

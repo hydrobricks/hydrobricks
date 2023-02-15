@@ -6,7 +6,7 @@
 BehavioursManager::BehavioursManager()
     : m_active(false),
       m_model(nullptr),
-      m_cursor(0) {}
+      m_cursorManager(0) {}
 
 void BehavioursManager::SetModel(ModelHydro* model) {
     m_model = model;
@@ -50,9 +50,12 @@ void BehavioursManager::DateUpdate(double date) {
     }
     wxASSERT(m_dates.size() == m_behaviourIndices.size());
 
-    while (m_dates.size() > m_cursor && m_dates[m_cursor] <= date) {
-        m_behaviours[m_behaviourIndices[m_cursor]]->Apply(date);
-        m_cursor++;
+    while (m_dates.size() > m_cursorManager && m_dates[m_cursorManager] <= date) {
+        if (!m_behaviours[m_behaviourIndices[m_cursorManager]]->Apply(date)) {
+            wxLogError(_("Application of a behaviour failed."));
+        }
+        m_behaviours[m_behaviourIndices[m_cursorManager]]->IncrementCursor();
+        m_cursorManager++;
     }
 }
 

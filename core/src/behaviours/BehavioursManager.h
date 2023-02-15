@@ -30,7 +30,7 @@ class BehavioursManager : public wxObject {
   protected:
     bool m_active;
     ModelHydro* m_model;
-    int m_cursor;
+    int m_cursorManager;
     std::vector<Behaviour*> m_behaviours;
     vecDouble m_dates;
     vecInt m_behaviourIndices;

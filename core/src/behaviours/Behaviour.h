@@ -20,6 +20,10 @@ class Behaviour : public wxObject {
         return m_dates;
     }
 
+    int GetItemsNb() {
+        return (int)m_dates.size();
+    }
+
     void IncrementCursor() {
         m_cursor++;
     }

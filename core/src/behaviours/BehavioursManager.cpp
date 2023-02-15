@@ -44,6 +44,15 @@ int BehavioursManager::GetBehavioursNb() {
     return (int)m_behaviours.size();
 }
 
+int BehavioursManager::GetBehaviourItemsNb() {
+    int items = 0;
+    for (auto behaviour : m_behaviours) {
+        items += behaviour->GetItemsNb();
+    }
+
+    return items;
+}
+
 void BehavioursManager::DateUpdate(double date) {
     if (!m_active) {
         return;

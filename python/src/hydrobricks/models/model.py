@@ -184,6 +184,18 @@ class Model(ABC):
         """
         return self.model.add_behaviour(behaviour.behaviour)
 
+    def get_behaviours_nb(self) -> int:
+        """
+        Get the number of behaviours (types of behaviours) registered in the model.
+        """
+        return self.model.get_behaviours_nb()
+
+    def get_behaviour_items_nb(self) -> int:
+        """
+        Get the number of behaviour items (individual triggers) registered in the model.
+        """
+        return self.model.get_behaviour_items_nb()
+
     def create_config_file(self, directory, name, file_type='both'):
         """
         Create a configuration file describing the model structure.

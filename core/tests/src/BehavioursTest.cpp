@@ -75,6 +75,9 @@ TEST_F(BehavioursInModel, LandCoverChangeWorks) {
     behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
     EXPECT_TRUE(model.AddBehaviour(&behaviour));
 
+    EXPECT_EQ(model.GetBehavioursNb(), 1);
+    EXPECT_EQ(model.GetBehaviourItemsNb(), 4);
+
     EXPECT_TRUE(model.Run());
 
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5f);

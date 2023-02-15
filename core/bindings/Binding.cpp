@@ -73,6 +73,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "model_settings"_a, "basin_settings"_a)
         .def("add_behaviour", &ModelHydro::AddBehaviour, "Adding a behaviour to the model.", "behaviour"_a)
         .def("get_behaviours_nb", &ModelHydro::GetBehavioursNb, "Get the number of behaviours.")
+        .def("get_behaviour_items_nb", &ModelHydro::GetBehaviourItemsNb, "Get the number of behaviour items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)

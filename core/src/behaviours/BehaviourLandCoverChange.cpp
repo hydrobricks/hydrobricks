@@ -15,7 +15,7 @@ void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, const str
     m_areas.push_back(area);
 }
 
-bool BehaviourLandCoverChange::Apply(double date) {
+bool BehaviourLandCoverChange::Apply(double) {
     wxASSERT(m_dates.size() > m_cursor);
     wxASSERT(m_hydroUnitIds.size() > m_cursor);
     wxASSERT(m_areas.size() > m_cursor);
@@ -27,7 +27,7 @@ bool BehaviourLandCoverChange::Apply(double date) {
     double areaFraction = m_areas[m_cursor] / unit->GetArea();
     unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 
-    return false;
+    return true;
 }
 
 int BehaviourLandCoverChange::GetLandCoverId(const string& landCoverName) {

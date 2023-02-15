@@ -1,5 +1,6 @@
 import _hydrobricks as _hb
 import pandas as pd
+import numpy as np
 from hydrobricks import utils
 
 from .behaviour import Behaviour
@@ -50,6 +51,7 @@ class BehaviourLandCoverChange(Behaviour):
         file_content.insert(loc=0, column='hydro_unit', value=0)
 
         self._match_hydro_unit_ids(file_content, hydro_units, match_with)
+        self._remove_rows_with_no_changes(file_content)
         self._extract_changes(area_unit, file_content)
 
     def get_changes_nb(self):
@@ -78,6 +80,17 @@ class BehaviourLandCoverChange(Behaviour):
                 raise ValueError(f'No option "{match_with}" for "match_with".')
             file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, 'id']
 
+    @staticmethod
+    def _remove_rows_with_no_changes(file_content):
+        for row, change in file_content.iterrows():
+            if row < 2:
+                continue
+            diff = change.to_numpy(dtype=float)[2:]
+            diff = diff[0:-1] - diff[1:]
+            for i_diff, v_diff in enumerate(diff):
+                if v_diff == 0:
+                    file_content.iloc[row, i_diff + 3] = np.nan
+
     def _extract_changes(self, area_unit, file_content):
         for col in list(file_content):
             if col == 'hydro_unit' or col == 0:
@@ -89,6 +102,6 @@ class BehaviourLandCoverChange(Behaviour):
             for row in range(2, len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
                 area = float(file_content.loc[row, col])
-                area = utils.area_in_m2(area, area_unit)
-
-                self.behaviour.add_change(mjd, hu_id, land_cover, area)
+                if not np.isnan(area):
+                    area = utils.area_in_m2(area, area_unit)
+                    self.behaviour.add_change(mjd, hu_id, land_cover, area)

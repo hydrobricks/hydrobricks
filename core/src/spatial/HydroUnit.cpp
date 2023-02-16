@@ -178,7 +178,7 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
         total += brick->GetAreaFraction();
     }
 
-    if (total - 1.0 > EPSILON_D) {
+    if (std::fabs(total - 1.0) > EPSILON_D) {
         double diff = total - 1.0;
         if (ground == nullptr) {
             wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));

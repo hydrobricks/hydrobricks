@@ -12,6 +12,6 @@ double FluxSimple::GetAmount() {
 }
 
 void FluxSimple::UpdateFlux(double amount) {
-    wxASSERT(m_fraction == 1.0);
+    wxASSERT(m_fractionTotal == 1.0);
     m_amount = amount;
 }

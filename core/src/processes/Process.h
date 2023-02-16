@@ -90,8 +90,6 @@ class Process : public wxObject {
 
     virtual double* GetValuePointer(const string& name);
 
-    void SetOutputFluxesFraction(double value);
-
     string GetName() {
         return m_name;
     }

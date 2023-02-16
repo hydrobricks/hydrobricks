@@ -124,14 +124,6 @@ double* Process::GetValuePointer(const string&) {
     return nullptr;
 }
 
-void Process::SetOutputFluxesFraction(double value) {
-    for (auto output : m_outputs) {
-        if (output->NeedsWeighting()) {
-            output->MultiplyFraction(value);
-        }
-    }
-}
-
 double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 

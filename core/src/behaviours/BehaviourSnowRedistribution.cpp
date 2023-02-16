@@ -2,6 +2,6 @@
 
 BehaviourSnowRedistribution::BehaviourSnowRedistribution() {}
 
-bool BehaviourSnowRedistribution::Apply(double date) {
+bool BehaviourSnowRedistribution::Apply(double) {
     return false;
 }

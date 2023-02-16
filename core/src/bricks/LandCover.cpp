@@ -14,7 +14,7 @@ void LandCover::SetAreaFraction(double value) {
     for (auto process : m_processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
-                output->MultiplyFraction(value);
+                output->SetFractionLandCover(value);
             }
         }
     }

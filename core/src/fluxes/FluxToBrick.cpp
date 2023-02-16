@@ -16,8 +16,8 @@ double FluxToBrick::GetAmount() {
 
 void FluxToBrick::UpdateFlux(double amount) {
     wxASSERT(m_toBrick);
-    if (m_fraction < 1.0) {
-        m_amount = amount * m_fraction;
+    if (m_fractionTotal < 1.0) {
+        m_amount = amount * m_fractionTotal;
     } else {
         m_amount = amount;
     }

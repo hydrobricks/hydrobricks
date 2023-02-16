@@ -389,7 +389,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetType(output.fluxType);
 
                     // From hydro unit to basin: weight by hydro unit area
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
 
                     // Weight by surface area
                     if (brick->CanHaveAreaFraction()) {
@@ -425,7 +425,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                        flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
                         flux->SetAsStatic();
                     }
 
@@ -455,7 +455,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                        flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
                     }
 
                     targetSplitter->AttachFluxIn(flux);
@@ -531,7 +531,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 flux->SetType(output.fluxType);
 
                 // From hydro unit to basin: weight by hydro unit area
-                flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
 
                 m_subBasin->AttachOutletFlux(flux);
 
@@ -554,7 +554,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetBrick->AttachFluxIn(flux);
@@ -578,7 +578,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetSplitter->AttachFluxIn(flux);

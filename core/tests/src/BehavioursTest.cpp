@@ -129,8 +129,8 @@ TEST_F(BehavioursInModel2LandCovers, LandCoverChangeWorks) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
-    basinSettings.AddLandCover("glacier-ice", "", 0.3);
-    basinSettings.AddLandCover("glacier-debris", "", 0.2);
+    basinSettings.AddLandCover("glacier-ice", "", 0.0);
+    basinSettings.AddLandCover("glacier-debris", "", 0.5);
     basinSettings.AddHydroUnit(2, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier-ice", "", 0.3);
@@ -157,20 +157,36 @@ TEST_F(BehavioursInModel2LandCovers, LandCoverChangeWorks) {
     behaviour.AddChange(GetMJD(2020, 1, 2), 2, "glacier-debris", 30);
     behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier-ice", 10);
     behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier-debris", 40);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 2, "glacier-ice", 0);
     behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier-ice", 20);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier-debris", 10);
+    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier-debris", 30);
+    // Note: changing the ground area will impact the balance here.
+
     EXPECT_TRUE(model.AddBehaviour(&behaviour));
 
     EXPECT_TRUE(model.Run());
 
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier-ice")->GetAreaFraction(), 0.3f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier-debris")->GetAreaFraction(), 0.2f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.6f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier-ice")->GetAreaFraction(), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier-ice")->GetAreaFraction(), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier-debris")->GetAreaFraction(), 0.5f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier-ice")->GetAreaFraction(), 0.1f);
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier-debris")->GetAreaFraction(), 0.4f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.7f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier-ice")->GetAreaFraction(), 0.2f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier-debris")->GetAreaFraction(), 0.1f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier-debris")->GetAreaFraction(), 0.3f);
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 80;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier-ice:melt:output");
+    totalGlacierMelt += logger->GetTotalHydroUnits("glacier-debris:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalWaterStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierMelt;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

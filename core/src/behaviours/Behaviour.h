@@ -14,6 +14,8 @@ class Behaviour : public wxObject {
 
     bool virtual Apply(double date);
 
+    int GetIndexForInsertion(double date);
+
     void SetManager(BehavioursManager* manager) {
         m_manager = manager;
     }

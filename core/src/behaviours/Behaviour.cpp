@@ -13,3 +13,15 @@ bool Behaviour::Apply(double) {
 void Behaviour::Reset() {
     m_cursor = 0;
 }
+
+int Behaviour::GetIndexForInsertion(double date) {
+    int index = 0;
+    for (double storedDate : m_dates) {
+        if (date <= storedDate) {
+            break;
+        }
+        index++;
+    }
+
+    return index;
+}

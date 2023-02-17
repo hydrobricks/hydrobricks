@@ -9,10 +9,12 @@ BehaviourLandCoverChange::BehaviourLandCoverChange() = default;
 void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, const string& landCoverName, double area) {
     int landCoverId = GetLandCoverId(landCoverName);
 
-    m_dates.push_back(date);
-    m_hydroUnitIds.push_back(hydroUnitId);
-    m_landCoverIds.push_back(landCoverId);
-    m_areas.push_back(area);
+    int index = GetIndexForInsertion(date);
+
+    m_dates.insert(m_dates.begin() + index, date);
+    m_hydroUnitIds.insert(m_hydroUnitIds.begin() + index, hydroUnitId);
+    m_landCoverIds.insert(m_landCoverIds.begin() + index, landCoverId);
+    m_areas.insert(m_areas.begin() + index, area);
 }
 
 bool BehaviourLandCoverChange::Apply(double) {

@@ -108,6 +108,8 @@ bool Logger::DumpOutputs(const string& path) {
         return false;
     }
 
+    wxLogMessage(_("Writing output file."));
+
     try {
         string filePath = path;
         filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
@@ -171,6 +173,8 @@ bool Logger::DumpOutputs(const string& path) {
         wxLogError(e.what());
         return false;
     }
+
+    wxLogMessage(_("Output file written."));
 
     return true;
 }

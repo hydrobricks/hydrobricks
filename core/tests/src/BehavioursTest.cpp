@@ -230,4 +230,6 @@ TEST_F(BehavioursInModel2LandCovers, DatesGetSortedCorrectly) {
     for (int i = 0; i < dates.size() - 1; ++i) {
         EXPECT_TRUE(dates[i] <= dates[i + 1]);
     }
+
+    EXPECT_TRUE(model.Run());
 }

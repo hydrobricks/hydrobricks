@@ -31,6 +31,10 @@ class BehavioursManager : public wxObject {
 
     HydroUnit* GetHydroUnitById(int id);
 
+    vecDouble GetDates() {
+        return m_dates;
+    }
+
   protected:
     bool m_active;
     ModelHydro* m_model;

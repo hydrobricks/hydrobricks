@@ -42,7 +42,7 @@ int BehaviourLandCoverChange::GetLandCoverId(const string& landCoverName) {
     // Insert as a new land cover if not found.
     if (landCoverId == -1) {
         m_landCoverNames.push_back(landCoverName);
-        landCoverId = m_landCoverNames.size() - 1;
+        landCoverId = int(m_landCoverNames.size()) - 1;
     }
 
     return landCoverId;

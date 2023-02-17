@@ -77,6 +77,10 @@ class ModelHydro : public wxObject {
         return &m_logger;
     }
 
+    BehavioursManager* GetBehavioursManager() {
+        return &m_behavioursManager;
+    }
+
   protected:
     Processor m_processor;
     SubBasin* m_subBasin;

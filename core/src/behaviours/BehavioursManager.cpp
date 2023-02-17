@@ -26,21 +26,24 @@ bool BehavioursManager::AddBehaviour(Behaviour* behaviour) {
     int behaviourIndex = int(m_behaviours.size());
     m_behaviours.push_back(behaviour);
 
-    if (m_dates.empty()) {
-        m_dates = behaviour->GetDates();
-        m_behaviourIndices = vecInt(m_dates.size(), behaviourIndex);
-    } else {
-        int index = 0;
-        for (auto date : behaviour->GetDates()) {
-            for (int i = index; i < m_dates.size(); ++i) {
-                if (m_dates[i] <= date) {
-                    break;
-                }
-                index++;
-            }
-            m_dates.insert(m_dates.begin() + index, date);
-            m_behaviourIndices.insert(m_behaviourIndices.begin() + index, behaviourIndex);
+    int index = 0;
+    for (auto date : behaviour->GetDates()) {
+        // Reset the index if needed.
+        if (!m_dates.empty() && m_dates[index] > date) {
+            index = 0;
         }
+
+        // Find index to insert the date accordingly.
+        for (int i = index; i < m_dates.size(); ++i) {
+            if (date <= m_dates[i]) {
+                break;
+            }
+            index++;
+        }
+
+        // Insert date and behaviour.
+        m_dates.insert(m_dates.begin() + index, date);
+        m_behaviourIndices.insert(m_behaviourIndices.begin() + index, behaviourIndex);
     }
     m_active = true;
 

@@ -124,6 +124,10 @@ bool Logger::DumpOutputs(const string& path) {
         int dimIdUnit = file.DefDim("hydro_units", (int)m_hydroUnitIds.size());
         int dimIdItemsAgg = file.DefDim("aggregated_values", (int)m_subBasinLabels.size());
         int dimIdItemsDist = file.DefDim("distributed_values", (int)m_hydroUnitLabels.size());
+        int dimIdFractions = 0;
+        if (m_recordFractions) {
+            dimIdFractions = file.DefDim("land_covers", (int)m_hydroUnitFractionLabels.size());
+        }
 
         // Create variables and put data
         int varId = file.DefVarDouble("time", {dimIdTime});
@@ -149,9 +153,19 @@ bool Logger::DumpOutputs(const string& path) {
         file.PutAttText("long_name", "values for each hydrological units", varId);
         file.PutAttText("units", "mm", varId);
 
+        if (m_recordFractions) {
+            varId = file.DefVarDouble("land_cover_fractions", {dimIdFractions, dimIdUnit, dimIdTime}, 3, true);
+            file.PutVar(varId, m_hydroUnitFractions);
+            file.PutAttText("long_name", "land cover fractions for each hydrological units", varId);
+            file.PutAttText("units", "percent", varId);
+        }
+
         // Global attributes
         file.PutAttString("labels_aggregated", m_subBasinLabels);
         file.PutAttString("labels_distributed", m_hydroUnitLabels);
+        if (m_recordFractions) {
+            file.PutAttString("labels_land_covers", m_hydroUnitFractionLabels);
+        }
 
     } catch (std::exception& e) {
         wxLogError(e.what());

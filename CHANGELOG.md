@@ -5,16 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.4.12] - 2023-02-17
-
-### Fixed
-- Fixing issue with dates in land cover behaviours.
-
-
 ## [0.4.11] - 2023-02-17
 
 ### Fixed
 - Fixing issue of behaviour dates not being correctly sorted.
+- Fixing issue with dates in land cover behaviours.
 
 ### Added
 - Resetting the behaviour counters when resetting the model.

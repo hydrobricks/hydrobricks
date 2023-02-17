@@ -814,6 +814,9 @@ bool ModelHydro::Run() {
             return false;
         }
     }
+
+    wxLogMessage(_("Simulation completed."));
+
     return true;
 }
 

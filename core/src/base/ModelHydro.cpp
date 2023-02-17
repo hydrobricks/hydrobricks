@@ -798,6 +798,8 @@ bool ModelHydro::Run() {
 
     m_logger.SaveInitialValues();
 
+    wxLogMessage(_("Simulation starting."));
+
     while (!m_timer.IsOver()) {
         if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));

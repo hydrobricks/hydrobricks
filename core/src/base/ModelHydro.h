@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include "BehavioursManager.h"
 #include "Includes.h"
 #include "Logger.h"
 #include "Processor.h"

@@ -12,6 +12,13 @@ void BehavioursManager::SetModel(ModelHydro* model) {
     m_model = model;
 }
 
+void BehavioursManager::Reset() {
+    m_cursorManager = 0;
+    for (auto behaviour : m_behaviours) {
+        behaviour->Reset();
+    }
+}
+
 bool BehavioursManager::AddBehaviour(Behaviour* behaviour) {
     wxASSERT(behaviour);
     behaviour->SetManager(this);

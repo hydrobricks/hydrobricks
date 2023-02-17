@@ -818,6 +818,7 @@ bool ModelHydro::Run() {
 void ModelHydro::Reset() {
     m_timer.Reset();
     m_logger.Reset();
+    m_behavioursManager.Reset();
     m_subBasin->Reset();
 }
 

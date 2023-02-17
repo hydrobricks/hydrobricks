@@ -13,6 +13,8 @@ class BehavioursManager : public wxObject {
 
     ~BehavioursManager() override = default;
 
+    void Reset();
+
     ModelHydro* GetModel() {
         return m_model;
     }

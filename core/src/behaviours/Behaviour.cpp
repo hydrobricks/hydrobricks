@@ -9,3 +9,7 @@ Behaviour::Behaviour()
 bool Behaviour::Apply(double) {
     return false;
 }
+
+void Behaviour::Reset() {
+    m_cursor = 0;
+}

@@ -10,6 +10,8 @@ class Behaviour : public wxObject {
 
     ~Behaviour() override = default;
 
+    void Reset();
+
     bool virtual Apply(double date);
 
     void SetManager(BehavioursManager* manager) {

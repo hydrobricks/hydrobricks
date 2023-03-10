@@ -7,7 +7,7 @@
 TimeSeries::TimeSeries(VariableType type)
     : m_type(type) {}
 
-bool TimeSeries::Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeries) {
+bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -64,8 +64,7 @@ bool TimeSeries::Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeri
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(
-                        std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+                    forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             } else {
@@ -73,8 +72,7 @@ bool TimeSeries::Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeri
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(
-                        std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+                    forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             }
@@ -118,7 +116,7 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
         auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-        if (!forcingData->SetValues(std::vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
+        if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
             throw InvalidArgument("Time series creation failed.");
         }
         timeSeries->AddData(forcingData, ids[i]);

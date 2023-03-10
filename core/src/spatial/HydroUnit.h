@@ -81,11 +81,11 @@ class HydroUnit : public wxObject {
     Types m_type;
     int m_id;
     double m_area;  // m2
-    std::vector<HydroUnitProperty*> m_properties;
-    std::vector<Brick*> m_bricks;
-    std::vector<LandCover*> m_landCoverBricks;
-    std::vector<Splitter*> m_splitters;
-    std::vector<Forcing*> m_forcing;
+    vector<HydroUnitProperty*> m_properties;
+    vector<Brick*> m_bricks;
+    vector<LandCover*> m_landCoverBricks;
+    vector<Splitter*> m_splitters;
+    vector<Forcing*> m_forcing;
 
   private:
 };

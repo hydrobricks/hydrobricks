@@ -140,7 +140,7 @@ class WaterContainer : public wxObject {
     bool m_infiniteStorage;
     Brick* m_parent;
     Process* m_overflow;
-    std::vector<Flux*> m_inputs;
+    vector<Flux*> m_inputs;
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

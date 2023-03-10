@@ -51,7 +51,7 @@ class Process : public wxObject {
         m_outputs.push_back(flux);
     }
 
-    std::vector<Flux*> GetOutputFluxes() {
+    vector<Flux*> GetOutputFluxes() {
         return m_outputs;
     }
 
@@ -109,7 +109,7 @@ class Process : public wxObject {
   protected:
     string m_name;
     WaterContainer* m_container;
-    std::vector<Flux*> m_outputs;
+    vector<Flux*> m_outputs;
 
     double GetSumChangeRatesOtherProcesses();
 

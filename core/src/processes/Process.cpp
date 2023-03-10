@@ -127,13 +127,13 @@ double* Process::GetValuePointer(const string&) {
 double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 
-    std::vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
+    vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
     for (auto process : otherProcesses) {
         wxASSERT(process);
         if (process == this) {
             continue;
         }
-        std::vector<Flux*> fluxes = process->GetOutputFluxes();
+        vector<Flux*> fluxes = process->GetOutputFluxes();
         for (auto flux : fluxes) {
             wxASSERT(flux);
             sumOtherProcesses += *flux->GetAmountPointer();

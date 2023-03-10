@@ -157,7 +157,7 @@ int Hydrobricks::OnRun() {
         }
 
         // Data
-        std::vector<TimeSeries*> vecTimeSeries;
+        vector<TimeSeries*> vecTimeSeries;
         if (!TimeSeries::Parse(m_dataFile, vecTimeSeries)) {
             return 1;
         }

@@ -88,7 +88,7 @@ class ModelHydro : public wxObject {
     Logger m_logger;
     BehavioursManager m_behavioursManager;
     ParametersUpdater m_parametersUpdater;
-    std::vector<TimeSeries*> m_timeSeries;
+    vector<TimeSeries*> m_timeSeries;
 
   private:
     void BuildModelStructure(SettingsModel& modelSettings);

@@ -30,7 +30,7 @@ class TimeSeriesDistributed : public TimeSeries {
 
   protected:
     vecInt m_unitIds;
-    std::vector<TimeSeriesData*> m_data;
+    vector<TimeSeriesData*> m_data;
 
   private:
 };

@@ -228,7 +228,7 @@ vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) 
 }
 
 void FileNetcdf::PutAttString(const string& attName, const vecStr& values, int varId) {
-    std::vector<const char*> valuesChar;
+    vector<const char*> valuesChar;
     for (const auto& label : values) {
         const char* str = (const char*)label.c_str();
         valuesChar.push_back(str);

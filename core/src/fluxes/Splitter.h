@@ -68,8 +68,8 @@ class Splitter : public wxObject {
 
   protected:
     string m_name;
-    std::vector<Flux*> m_inputs;
-    std::vector<Flux*> m_outputs;
+    vector<Flux*> m_inputs;
+    vector<Flux*> m_outputs;
 
   private:
 };

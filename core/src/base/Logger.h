@@ -82,10 +82,10 @@ class Logger : public wxObject {
     vecStr m_hydroUnitLabels;
     vecAxd m_hydroUnitInitialValues;
     vecAxxd m_hydroUnitValues;
-    std::vector<vecDoublePt> m_hydroUnitValuesPt;
+    vector<vecDoublePt> m_hydroUnitValuesPt;
     vecStr m_hydroUnitFractionLabels;
     vecAxxd m_hydroUnitFractions;
-    std::vector<vecDoublePt> m_hydroUnitFractionsPt;
+    vector<vecDoublePt> m_hydroUnitFractionsPt;
 
   private:
 };

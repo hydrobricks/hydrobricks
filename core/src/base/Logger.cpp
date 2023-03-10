@@ -21,13 +21,13 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     m_hydroUnitLabels = hydroUnitLabels;
     m_hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
-    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
+    m_hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
     if (m_recordFractions) {
         m_hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
         m_hydroUnitFractions = vecAxxd(m_hydroUnitFractionLabels.size(),
                                        axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
-        m_hydroUnitFractionsPt = std::vector<vecDoublePt>(m_hydroUnitFractionLabels.size(),
-                                                          vecDoublePt(hydroUnitIds.size(), nullptr));
+        m_hydroUnitFractionsPt = vector<vecDoublePt>(m_hydroUnitFractionLabels.size(),
+                                                     vecDoublePt(hydroUnitIds.size(), nullptr));
     }
 }
 

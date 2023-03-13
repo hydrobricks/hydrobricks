@@ -484,7 +484,7 @@ class ParameterSet:
         max_value = self.parameters.loc[index, 'max']
         min_value = self.parameters.loc[index, 'min']
 
-        if type(min_value) != list:
+        if not isinstance(min_value, list):
             if max_value is not None and value > max_value:
                 if allow_adapt:
                     return max_value

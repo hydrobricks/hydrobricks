@@ -205,7 +205,7 @@ class ParameterSet:
             if value is None:
                 return False
 
-            if type(min_value) != list:
+            if not isinstance(min_value, list):
                 if max_value is not None and value > max_value:
                     return False
                 if min_value is not None and value < min_value:

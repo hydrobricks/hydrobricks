@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 
 import _hydrobricks as _hb
 import HydroErr
-import pandas as pd
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -134,7 +133,8 @@ class Model(ABC):
         except Exception:
             print("An exception occurred.")
 
-    def cleanup(self):
+    @staticmethod
+    def cleanup():
         _hb.close_log()
 
     def initialize_state_variables(self, parameters, forcing=None):

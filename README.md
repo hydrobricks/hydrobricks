@@ -19,6 +19,6 @@ Wheels are available to install from PyPI (https://pypi.org/project/hydrobricks/
 Install: ```pip install hydrobricks```
 
 ## Resources
-* **Documentation**: https://hydrobricks-doc.readthedocs.io/en/latest/
-* How to build: https://github.com/hydrobricks/hydrobricks/wiki
-* Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
+*   **Documentation**: https://hydrobricks-doc.readthedocs.io/en/latest/
+*   How to build: https://github.com/hydrobricks/hydrobricks/wiki
+*   Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/

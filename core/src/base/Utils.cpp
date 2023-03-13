@@ -47,7 +47,7 @@ void InitLog(const string& path) {
     new wxLogChain(pLogFile);
     wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
                                         HYDROBRICKS_PATCH_VERSION);
-    wxLogMessage("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
+    wxLogMessage("hydrobricks version %s, %s", version, static_cast<const wxChar*>(wxString::FromAscii(__DATE__)));
 }
 
 void CloseLog() {
@@ -139,8 +139,8 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
     int length;
 
     // Initialize first and last variables.
-    first = (T*)start;
-    last = (T*)end;
+    first = const_cast<T*>(start);
+    last = const_cast<T*>(end);
 
     // Check array order
     if (*last > *first) {
@@ -160,9 +160,9 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
         // Check the pointers
         if (last - start < 0) {
-            last = (T*)start;
+            last = const_cast<T*>(start);
         } else if (last - end > 0) {
-            last = (T*)end - 1;
+            last = const_cast<T*>(end) - 1;
         } else if (last - end == 0) {
             last -= 1;
         }
@@ -218,9 +218,9 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
         // Check the pointers
         if (first - start < 0) {
-            first = (T*)start + 1;
+            first = const_cast<T*>(start) + 1;
         } else if (first - end > 0) {
-            first = (T*)end;
+            first = const_cast<T*>(end);
         } else if (first - start == 0) {
             first += 1;
         }

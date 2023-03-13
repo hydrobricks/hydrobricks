@@ -768,8 +768,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
         for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
             HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-            LandCover* brick = dynamic_cast<LandCover*>(
-                unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name));
+            LandCover* brick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.name));
             valPt = brick->GetAreaFractionPointer();
 
             if (valPt == nullptr) {

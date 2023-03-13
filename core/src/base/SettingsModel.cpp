@@ -83,24 +83,16 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
 void SettingsModel::AddLandCoverBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
-    BrickSettings brick;
-    brick.name = name;
-    brick.type = type;
-
     AddHydroUnitBrick(name, type);
     m_selectedStructure->landCoverBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 
     if (SelectHydroUnitSplitterIfFound("rain_splitter")) {
-        AddSplitterOutput(brick.name);
+        AddSplitterOutput(name);
     }
 }
 
 void SettingsModel::AddSurfaceComponentBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
-
-    BrickSettings brick;
-    brick.name = name;
-    brick.type = type;
 
     AddHydroUnitBrick(name, type);
     m_selectedStructure->surfaceComponentBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);

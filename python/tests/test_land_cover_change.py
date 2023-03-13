@@ -82,3 +82,23 @@ def test_behaviour_correctly_set_in_model(hydro_units_csv):
     assert model.add_behaviour(changes)
     assert model.get_behaviours_nb() == 1
     assert model.get_behaviour_items_nb() == 232
+
+
+def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
+    changes = behaviours.BehaviourLandCoverChange()
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
+        hydro_units_csv, area_unit='km2', match_with='elevation'
+    )
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
+        hydro_units_csv, area_unit='km2', match_with='elevation'
+    )
+
+    cover_names = ['ground', 'glacier-ice']
+    cover_types = ['ground', 'glacier']
+    model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
+
+    assert model.add_behaviour(changes)
+    assert model.get_behaviours_nb() == 1
+    assert model.get_behaviour_items_nb() == 444

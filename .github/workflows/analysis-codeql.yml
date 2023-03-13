@@ -54,7 +54,7 @@ jobs:
 
     - name: Setup Conan
       run: |
-        pip install conan
+        pip install conan==1.*
         conan profile new default --detect --force
         conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
         conan profile update settings.compiler.libcxx=libstdc++11 default

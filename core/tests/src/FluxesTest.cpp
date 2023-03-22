@@ -23,9 +23,9 @@ class FluxWeightedModel : public ::testing::Test {
         m_model.GeneratePrecipitationSplitters(false);
 
         // Land cover elements and processes
-        m_model.AddLandCoverBrick("item-1", "generic_land_cover");
+        m_model.AddLandCoverBrick("item_1", "generic_land_cover");
         m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        m_model.AddLandCoverBrick("item-2", "generic_land_cover");
+        m_model.AddLandCoverBrick("item_2", "generic_land_cover");
         m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         // Outlet
@@ -44,8 +44,8 @@ class FluxWeightedModel : public ::testing::Test {
 TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddLandCover("item-1", "", 1.0);
-    basinProp.AddLandCover("item-2", "", 0.0);
+    basinProp.AddLandCover("item_1", "", 1.0);
+    basinProp.AddLandCover("item_2", "", 0.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -100,8 +100,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddLandCover("item-1", "", 0.5);
-    basinProp.AddLandCover("item-2", "", 0.5);
+    basinProp.AddLandCover("item_1", "", 0.5);
+    basinProp.AddLandCover("item_2", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -126,10 +126,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
 
     // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
-    // [0] "item-1:content"
-    // [1] "item-1:outflow:output"
-    // [2] "item-2:content"
-    // [3] "item-2:outflow:output"
+    // [0] "item_1:content"
+    // [1] "item_1:outflow:output"
+    // [2] "item_2:content"
+    // [3] "item_2:outflow:output"
 
     vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput2 = {0.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0};
@@ -160,8 +160,8 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
 TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 100);
-    basinProp.AddLandCover("item-1", "", 0.7);
-    basinProp.AddLandCover("item-2", "", 0.3);
+    basinProp.AddLandCover("item_1", "", 0.7);
+    basinProp.AddLandCover("item_2", "", 0.3);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -216,11 +216,11 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddLandCover("item-1", "", 0.5);
-    basinProp.AddLandCover("item-2", "", 0.5);
+    basinProp.AddLandCover("item_1", "", 0.5);
+    basinProp.AddLandCover("item_2", "", 0.5);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddLandCover("item-1", "", 0.5);
-    basinProp.AddLandCover("item-2", "", 0.5);
+    basinProp.AddLandCover("item_1", "", 0.5);
+    basinProp.AddLandCover("item_2", "", 0.5);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -245,10 +245,10 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
 
     // Check hydro unit values
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
-    // [0] "item-1:content"
-    // [1] "item-1:outflow:output"
-    // [2] "item-2:content"
-    // [3] "item-2:outflow:output"
+    // [0] "item_1:content"
+    // [1] "item_1:outflow:output"
+    // [2] "item_2:content"
+    // [3] "item_2:outflow:output"
 
     vecDouble expectedOutput1 = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedOutput2 = {0.0, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 3.75, 0.0, 0.0};
@@ -283,11 +283,11 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
 TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 150);
-    basinProp.AddLandCover("item-1", "", 2.0 / 3.0);
-    basinProp.AddLandCover("item-2", "", 1.0 / 3.0);
+    basinProp.AddLandCover("item_1", "", 2.0 / 3.0);
+    basinProp.AddLandCover("item_2", "", 1.0 / 3.0);
     basinProp.AddHydroUnit(1, 50);
-    basinProp.AddLandCover("item-1", "", 4.0 / 5.0);
-    basinProp.AddLandCover("item-2", "", 1.0 / 5.0);
+    basinProp.AddLandCover("item_1", "", 4.0 / 5.0);
+    basinProp.AddLandCover("item_2", "", 1.0 / 5.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));

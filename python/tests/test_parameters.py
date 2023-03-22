@@ -221,7 +221,7 @@ def parameter_set():
         component='snowpack', name='melting_temperature', unit='°C',
         min_value=0, max_value=5, default_value=0, mandatory=False)
     parameter_set.define_parameter(
-        component='slow-reservoir', name='capacity', unit='mm', aliases=['A'],
+        component='slow_reservoir', name='capacity', unit='mm', aliases=['A'],
         min_value=0, max_value=3000, mandatory=True)
     parameter_set.set_values({'a_snow': 3, 'A': 200})
     return parameter_set

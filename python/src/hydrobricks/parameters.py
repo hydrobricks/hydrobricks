@@ -37,7 +37,7 @@ class ParameterSet:
         ----------
         component : str
             The component (brick) name to which the parameter refer (e.g., snowpack,
-            glacier, surface-runoff).
+            glacier, surface_runoff).
         name : str
             The name of the parameter in the C++ code of hydrobricks (e.g.,
             degree_day_factor, response_factor).
@@ -230,7 +230,7 @@ class ParameterSet:
         values : dict
             The values must be provided as a dictionary with the parameter name with the
             related component or one of its aliases as the key.
-            Example: {'k': 32, 'A': 300} or {'slow-reservoir:capacity': 300}
+            Example: {'k': 32, 'A': 300} or {'slow_reservoir:capacity': 300}
         check_range : bool
             Check that the parameter value falls into the allowed range.
         allow_adapt : bool

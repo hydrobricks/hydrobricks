@@ -20,11 +20,11 @@ TEST(SettingsBasin, ParseNcFile) {
     EXPECT_TRUE(unitSettings.landCovers[0].type == "ground");
     EXPECT_FLOAT_EQ(unitSettings.landCovers[0].fraction, 0.80616301f);
 
-    EXPECT_TRUE(unitSettings.landCovers[1].name == "glacier-ice");
+    EXPECT_TRUE(unitSettings.landCovers[1].name == "glacier_ice");
     EXPECT_TRUE(unitSettings.landCovers[1].type == "glacier");
     EXPECT_FLOAT_EQ(unitSettings.landCovers[1].fraction, 0.08349901f);
 
-    EXPECT_TRUE(unitSettings.landCovers[2].name == "glacier-debris");
+    EXPECT_TRUE(unitSettings.landCovers[2].name == "glacier_debris");
     EXPECT_TRUE(unitSettings.landCovers[2].type == "glacier");
     EXPECT_FLOAT_EQ(unitSettings.landCovers[2].fraction, 0.11033797f);
 }

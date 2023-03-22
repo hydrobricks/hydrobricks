@@ -28,7 +28,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         return process;
     } else if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:rest-direct" || processSettings.type == "outflow:RestDirect") {
+    } else if (processSettings.type == "outflow:rest_direct" || processSettings.type == "outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "runoff:socont") {
         auto process = new ProcessRunoffSocont(brick->GetWaterContainer());

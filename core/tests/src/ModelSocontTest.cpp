@@ -328,7 +328,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
     m_model.SelectProcess("melt");
     m_model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
-    m_model.SelectHydroUnitBrick("slow-reservoir");
+    m_model.SelectHydroUnitBrick("slow_reservoir");
     m_model.SetBrickParameterValue("capacity", 0);
 
     ModelHydro model(&subBasin);
@@ -497,7 +497,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
     modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
-    modelSettings.SetParameter("slow-reservoir", "capacity", 200);
+    modelSettings.SetParameter("slow_reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
     EXPECT_TRUE(model.IsOk());

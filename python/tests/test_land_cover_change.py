@@ -16,7 +16,7 @@ TEST_FILES_DIR = Path(
 def hydro_units():
     hydro_units = hb.HydroUnits(
         land_cover_types=['ground', 'glacier', 'glacier'],
-        land_cover_names=['ground', 'glacier-ice', 'glacier-debris'])
+        land_cover_names=['ground', 'glacier_ice', 'glacier_debris'])
     return hydro_units
 
 
@@ -26,8 +26,8 @@ def hydro_units_csv(hydro_units):
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
         area_unit='km2', column_elevation='Elevation Bands',
         columns_areas={'ground': 'Sum_Area Non Glacier Band',
-                       'glacier-ice': 'Sum_Area ICE Band',
-                       'glacier-debris': 'Sum_Area Debris Band'})
+                       'glacier_ice': 'Sum_Area ICE Band',
+                       'glacier_debris': 'Sum_Area Debris Band'})
     return hydro_units
 
 
@@ -75,7 +75,7 @@ def test_behaviour_correctly_set_in_model(hydro_units_csv):
         hydro_units_csv, area_unit='km2', match_with='elevation'
     )
 
-    cover_names = ['ground', 'glacier-ice']
+    cover_names = ['ground', 'glacier_ice']
     cover_types = ['ground', 'glacier']
     model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 
@@ -95,7 +95,7 @@ def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
         hydro_units_csv, area_unit='km2', match_with='elevation'
     )
 
-    cover_names = ['ground', 'glacier-ice']
+    cover_names = ['ground', 'glacier_ice']
     cover_types = ['ground', 'glacier']
     model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 

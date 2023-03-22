@@ -58,5 +58,5 @@ def test_build_socont_model_structure():
     model_structure = hb.SettingsModel()
     assert model_structure.generate_socont_structure(
         land_cover_types=['ground', 'glacier', 'glacier'],
-        land_cover_names=['ground', 'glacier-ice', 'glacier-debris'],
+        land_cover_names=['ground', 'glacier_ice', 'glacier_debris'],
         soil_storage_nb=2, surface_runoff='linear_storage')

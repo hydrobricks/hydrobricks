@@ -199,16 +199,16 @@ class Solver2LinearStorages : public ::testing::Test {
         m_model.SetTimer("2020-01-01", "2020-01-20", 1, "day");
 
         // First storage
-        m_model.AddHydroUnitBrick("storage-1", "storage");
+        m_model.AddHydroUnitBrick("storage_1", "storage");
         m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
         m_model.AddProcessParameter("response_factor", 0.5f);
         m_model.AddProcessLogging("output");
-        m_model.AddProcessOutput("storage-2");
+        m_model.AddProcessOutput("storage_2");
 
         // Second storage
-        m_model.AddHydroUnitBrick("storage-2", "storage");
+        m_model.AddHydroUnitBrick("storage_2", "storage");
         m_model.AddBrickLogging("content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
         m_model.AddProcessParameter("response_factor", 0.3f);

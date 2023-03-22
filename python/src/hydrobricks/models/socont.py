@@ -31,11 +31,11 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snow_rain_transition', name='transition_start', unit='°C',
-            min_value=-5, max_value=5, default_value=0, mandatory=False)
+            min_value=-2, max_value=2, default_value=0, mandatory=False)
 
         ps.define_parameter(
             component='snow_rain_transition', name='transition_end', unit='°C',
-            min_value=-5, max_value=5, default_value=2, mandatory=False)
+            min_value=0, max_value=4, default_value=2, mandatory=False)
 
         ps.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d/°C',
@@ -71,12 +71,12 @@ class Socont(Model):
         if has_glacier:
             ps.define_parameter(
                 component='glacier-area-rain-snowmelt-storage', name='response_factor',
-                unit='1/t', aliases=['k_snow'], min_value=0, max_value=1,
+                unit='1/d', aliases=['k_snow'], min_value=0.05, max_value=0.25,
                 mandatory=True)
 
             ps.define_parameter(
                 component='glacier-area-icemelt-storage', name='response_factor',
-                unit='1/t', aliases=['k_ice'], min_value=0, max_value=1,
+                unit='1/d', aliases=['k_ice'], min_value=0.05, max_value=1,
                 mandatory=True)
 
         if self.surface_runoff == 'socont_runoff':
@@ -88,31 +88,26 @@ class Socont(Model):
                 aliases=['J'], min_value=0, max_value=90, mandatory=True)
         elif self.surface_runoff == 'linear_storage':
             ps.define_parameter(
-                component='surface-runoff', name='response_factor', unit='1/t',
-                aliases=['k_quick'], min_value=0, max_value=1, mandatory=True)
+                component='surface-runoff', name='response_factor', unit='1/d',
+                aliases=['k_quick'], min_value=0.05, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='slow-reservoir', name='capacity', unit='mm', aliases=['A'],
-            min_value=0, max_value=3000, mandatory=True)
+            min_value=10, max_value=3000, mandatory=True)
 
-        if self.soil_storage_nb == 1:
-            ps.define_parameter(
-                component='slow-reservoir', name='response_factor', unit='1/t',
-                aliases=['k_slow'], min_value=0, max_value=1, mandatory=True)
+        ps.define_parameter(
+            component='slow-reservoir', name='response_factor', unit='1/d',
+            aliases=['k_slow', 'k_slow_1', 'k_slow1'], min_value=0.001, max_value=1,
+            mandatory=True)
 
-        elif self.soil_storage_nb == 2:
-            ps.define_parameter(
-                component='slow-reservoir', name='response_factor', unit='1/t',
-                aliases=['k_slow_1', 'k_slow1'], min_value=0, max_value=1,
-                mandatory=True)
-
+        if self.soil_storage_nb == 2:
             ps.define_parameter(
                 component='slow-reservoir', name='percolation_rate', unit='mm/d',
                 aliases=['percol'], min_value=0, max_value=10, mandatory=True)
 
             ps.define_parameter(
-                component='slow-reservoir-2', name='response_factor', unit='1/t',
-                aliases=['k_slow_2', 'k_slow2'], min_value=0, max_value=1,
+                component='slow-reservoir-2', name='response_factor', unit='1/d',
+                aliases=['k_slow_2', 'k_slow2'], min_value=0.001, max_value=1,
                 mandatory=True)
 
             if self.surface_runoff == 'linear_storage':

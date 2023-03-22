@@ -31,11 +31,13 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snow_rain_transition', name='transition_start', unit='°C',
-            min_value=-2, max_value=2, default_value=0, mandatory=False)
+            aliases=['prec_t_start'], min_value=-2, max_value=2, default_value=0,
+            mandatory=False)
 
         ps.define_parameter(
             component='snow_rain_transition', name='transition_end', unit='°C',
-            min_value=0, max_value=4, default_value=2, mandatory=False)
+            aliases=['prec_t_end'], min_value=0, max_value=4, default_value=2,
+            mandatory=False)
 
         ps.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d/°C',
@@ -43,7 +45,8 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',
-            min_value=0, max_value=5, default_value=0, mandatory=False)
+            aliases=['melt_t_snow'], min_value=0, max_value=5, default_value=0,
+            mandatory=False)
 
         i_glacier = 0
         has_glacier = False
@@ -65,8 +68,8 @@ class Socont(Model):
 
                 ps.define_parameter(
                     component=cover_name, name='melting_temperature',
-                    unit='°C', min_value=0, max_value=5, default_value=0,
-                    mandatory=False)
+                    unit='°C', aliases=['melt_t_ice'], min_value=0, max_value=5,
+                    default_value=0, mandatory=False)
 
         if has_glacier:
             ps.define_parameter(

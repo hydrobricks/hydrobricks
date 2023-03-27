@@ -54,12 +54,13 @@ class Socont(Model):
             if cover_type == 'glacier':
                 has_glacier = True
                 aliases = ['a_ice']
-                if self.land_cover_types.count('glacier') == 1:
-                    ps.define_constraint('a_snow', '<', aliases[0])
-                elif self.land_cover_types.count('glacier') > 1:
+                if self.land_cover_types.count('glacier') > 1:
                     i_glacier += 1
                     aliases = [f'a_ice_{cover_name.replace("-", "_")}',
-                               f'a_ice_{i_glacier}', f'a_ice{i_glacier}']
+                               f'a_ice_{i_glacier}']
+
+                ps.define_constraint('a_snow', '<', aliases[0])
+                ps.define_constraint('k_snow', '<', 'k_ice')
 
                 ps.define_parameter(
                     component=cover_name, name='degree_day_factor',

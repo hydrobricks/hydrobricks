@@ -165,7 +165,7 @@ bool Logger::DumpOutputs(const string& path) {
         // Global attributes
         file.PutAttString("labels_aggregated", m_subBasinLabels);
         file.PutAttString("labels_distributed", m_hydroUnitLabels);
-        if (m_recordFractions) {
+        if (m_recordFractions && !m_hydroUnitFractionLabels.empty()) {
             file.PutAttString("labels_land_covers", m_hydroUnitFractionLabels);
         }
 

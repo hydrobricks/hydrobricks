@@ -252,8 +252,8 @@ TEST(FileNetcdf, AttString1DIsRead) {
 
     EXPECT_EQ(landCovers.size(), 3);
     EXPECT_TRUE(landCovers[0] == "ground");
-    EXPECT_TRUE(landCovers[1] == "glacier_ice");
-    EXPECT_TRUE(landCovers[2] == "glacier_debris");
+    EXPECT_TRUE(landCovers[1] == "glacier-ice");
+    EXPECT_TRUE(landCovers[2] == "glacier-debris");
 }
 
 TEST(FileNetcdf, AttString1DIsWritten) {
@@ -281,7 +281,7 @@ TEST(FileNetcdf, AttTextIsRead) {
 
     ASSERT_TRUE(file.OpenReadOnly("files/hydro-units-2-glaciers.nc"));
 
-    wxString type = file.GetAttText("type", "glacier_debris");
+    wxString type = file.GetAttText("type", "glacier-debris");
 
     EXPECT_TRUE(type.IsSameAs("glacier"));
 }

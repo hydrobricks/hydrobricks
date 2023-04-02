@@ -1,9 +1,10 @@
 import shutil
 
-import hydrobricks as hb
 import matplotlib.pyplot as plt
 import spotpy
 from setups.socont_sitter import forcing, obs, parameters, socont, tmp_dir
+
+import hydrobricks as hb
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
@@ -14,7 +15,7 @@ spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
                             obj_func='kge_2012', invert_obj_func=True)
 
 # Select number of maximum repetitions and run spotpy
-max_rep = 10000
+max_rep = 4000
 sampler = spotpy.algorithms.sceua(spot_setup, dbname='socont_sitter_SCEUA',
                                   dbformat='csv')
 sampler.sample(max_rep)

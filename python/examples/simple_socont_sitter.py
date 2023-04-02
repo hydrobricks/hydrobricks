@@ -26,7 +26,8 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 
 # Parameters
 parameters = socont.generate_parameters()
-# TODO: parameters.set_values({'A': 100, 'k_slow': 0.01, 'a_snow': 5, ...})
+parameters.set_values({'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
+                       'k_quick': 1, 'percol': 9.8})
 
 # Hydro units
 hydro_units = hb.HydroUnits()
@@ -44,7 +45,7 @@ forcing.load_from_csv(
 forcing.spatialize_temperature(ref_elevation, -0.6)
 forcing.spatialize_pet()
 forcing.spatialize_precipitation(ref_elevation=ref_elevation, gradient=0.05,
-                                 correction_factor=0.85)
+                                 correction_factor=0.75)
 
 # Obs data
 obs = hb.Observations()
@@ -66,3 +67,5 @@ sim_ts = socont.get_outlet_discharge()
 obs_ts = obs.data_raw[0]
 nse = socont.eval('nse', obs_ts)
 kge_2012 = socont.eval('kge_2012', obs_ts)
+
+print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")

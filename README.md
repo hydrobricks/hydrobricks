@@ -1,6 +1,6 @@
 # hydrobricks
 
-> :warning: **This is a very preliminary code base that is not doing much yet...**
+> :warning: **hydrobricks is still in its very early stages and options are limited at this point...**
 
 Modular Hydrological Modelling Framework
 

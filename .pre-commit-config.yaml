@@ -40,7 +40,7 @@ repos:
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.3.1
+  rev: v3.7.0
   hooks:
   - id: pyupgrade
     args: ["--py36-plus"]
@@ -52,7 +52,7 @@ repos:
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.4.2
+  rev: v1.5.1
   hooks:
   - id: remove-tabs
     exclude: |
@@ -88,7 +88,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v16.0.0
+  rev: v16.0.6
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

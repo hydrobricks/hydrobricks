@@ -65,7 +65,7 @@ jobs:
 
     - name: Get dependencies
       working-directory: ${{github.workspace}}/bin
-      run: conan install .. --build=missing
+      run: conan install .. --build=missing -pr:b=default
 
     - name: Configure CMake
       working-directory: ${{github.workspace}}/bin

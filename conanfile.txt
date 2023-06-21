@@ -2,9 +2,10 @@
 wxbase/3.2.1@terranum-conan+wxbase/stable
 netcdf/4.8.1
 eigen/3.4.0
-gtest/1.11.0
+gtest/1.13.0
 yaml-cpp/0.7.0
 zlib/1.2.13
+openssl/3.1.1
 
 [generators]
 cmake

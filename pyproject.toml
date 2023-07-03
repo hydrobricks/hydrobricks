@@ -36,8 +36,8 @@ build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [
-    "sudo dnf update -y",
-    "sudo dnf install perl-IPC-Cmd -y",
+    "dnf update -y",
+    "dnf install perl-IPC-Cmd -y",
     "rm -rf {project}/build/lib.*",
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",

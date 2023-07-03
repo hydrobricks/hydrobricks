@@ -37,7 +37,8 @@ build-verbosity = 3
 [tool.cibuildwheel.linux]
 before-build = [
     "dnf update -y",
-    "dnf install perl-IPC-Cmd perl-Digest-SHA1 -y",
+    "dnf install epel-release -y",
+    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
     "rm -rf {project}/build/lib.*",
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",

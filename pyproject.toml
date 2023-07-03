@@ -4,7 +4,7 @@ requires = [
     "wheel",
     "ninja",
     "cmake>=3.12",
-    "libipc-run-perl"
+    "perl-IPC-Cmd"
 ]
 build-backend = "setuptools.build_meta"
 

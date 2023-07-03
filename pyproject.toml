@@ -3,8 +3,7 @@ requires = [
     "setuptools>=42",
     "wheel",
     "ninja",
-    "cmake>=3.12",
-    "perl-IPC-Cmd"
+    "cmake>=3.12"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -37,6 +36,8 @@ build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [
+    "sudo dnf update -y",
+    "sudo dnf install perl-IPC-Cmd -y",
     "rm -rf {project}/build/lib.*",
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",

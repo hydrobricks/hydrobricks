@@ -117,9 +117,9 @@ long_description = (this_directory / "python" / "README.md").read_text()
 # Setup
 setup(
     name="hydrobricks",
-    version="0.4.11",
+    version="0.5.0",
     author="Pascal Horton",
-    author_email="pascal.horton@giub.unibe",
+    author_email="pascal.horton@unibe.ch",
     description="A modular hydrological modelling framework",
     long_description=long_description,
     long_description_content_type="text/markdown",

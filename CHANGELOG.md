@@ -5,15 +5,40 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
-## 0.4.11 - 2023-02-17
+## 0.5.0 - 2023-07-06
+
+### Breaking changes
+
+-   Removing hyphens for underscores. Any component (including land cover elements) have to use underscores and not hyphens (e.g., glacier_ice instead of glacier-ice, slow_reservoir instead of slow-reservoir)
+
+### Added
+
+-   Adding aliases for all parameters.
+-   Adding examples.
+-   Adding Socont constraints.
+
+### Changed
+
+-   Changing Socont default values.
+-   Upgrading conan builds.
+-   Upgrading C++ minimal version.
+-   Upgrading to Pandas 2.0.
 
 ### Fixed
--   Fixing issue of behaviour dates not being correctly sorted.
--   Fixing issue with dates in land cover behaviours.
+
+-   Code improvements.
+-   There were issues to build the wheel locally (in editable mode).
+
+
+## 0.4.11 - 2023-02-17
 
 ### Added
 -   Resetting the behaviour counters when resetting the model.
 -   Adding land cover fractions to the logger output.
+
+### Fixed
+-   Fixing issue of behaviour dates not being correctly sorted.
+-   Fixing issue with dates in land cover behaviours.
 
 
 ## 0.4.10 - 2023-02-17
@@ -26,14 +51,14 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 ## 0.4.9 - 2023-02-15
 
-### Fixed
-
--   Fixing issue with behaviours not triggering.
-
 ### Added
 
 -   Addition of functionalities for behaviours.
 -   Remove empty changes in land cover changes behaviour.
+
+### Fixed
+
+-   Fixing issue with behaviours not triggering.
 
 
 ## 0.4.8 - 2023-01-18
@@ -136,14 +161,14 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 -   Addition of a catchment preprocessing module to build the elevation bands.
 
-### Fixed
-
--   Fixed issues with the water balance computation.
-
 ### Changed
 
 -   Some Python packages are made optional (e.g., netCDF4) and hydrobricks can be used without these.
 -   The water balance of the Socont model is fully tested.
+
+### Fixed
+
+-   Fixed issues with the water balance computation.
 
 
 ## 0.1.4 - 2022-11-28
@@ -153,14 +178,14 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 -   Addition of functions to extract the water balance components.
 -   Addition of static content change rate (vs dynamic; e.g. for instantaneous fluxes).
 
-### Fixed
-
--   Fixed issues with fluxes and the water balance.
-
 ### Changed
 
 -   The parameter names are now using snake_case.
 -   The fraction assignment has been moved to the model initialization (so it's not forgotten).
+
+### Fixed
+
+-   Fixed issues with fluxes and the water balance.
 
 
 ## 0.1.3 - 2022-11-18
@@ -170,13 +195,13 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 -   Added checks to ensure that each container receiving water has a process attached.
 -   Creation of specific water containers for snow and ice.
 
-### Fixed
-
--   Fixed issue related to processes resolved out of the solver.
-
 ### Changed
 
 -   New approach to surface bricks which are now separated into land use and surface components (e.g., snowpack).
+
+### Fixed
+
+-   Fixed issue related to processes resolved out of the solver.
 
 
 ## 0.1.2 - 2022-11-12

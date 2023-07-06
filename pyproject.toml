@@ -48,7 +48,7 @@ before-build = [
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan profile update settings.compiler.libcxx=libstdc++11 default",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -pr:b=default",
+    "conan install . --build=missing -s build_type=Release -pr:b=default",
 ]
 
 [tool.cibuildwheel.windows]
@@ -58,8 +58,7 @@ before-build = [
     "conan profile new default --detect --force",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -pr:b=default",
-    #"conan install . --build=missing -s build_type=Debug",
+    "conan install . --build=missing -s build_type=Release -pr:b=default",
 ]
 
 [tool.cibuildwheel.macos]
@@ -69,5 +68,5 @@ before-build = [
     "conan profile new default --detect --force",
     "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
     "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -pr:b=default",
+    "conan install . --build=missing -s build_type=Release -pr:b=default",
 ]

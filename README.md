@@ -2,7 +2,7 @@
 
 > :warning: **hydrobricks is still in its very early stages and options are limited at this point...**
 
-Modular Hydrological Modelling Framework
+A modular hydrological modelling framework.
 
 [![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
 [![Core Tests Linux](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml)

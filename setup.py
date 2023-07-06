@@ -101,6 +101,7 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
+        subprocess.check_call(["conan", "install", ext.source_dir, "-s", "build_type=Release", "--build=missing", "-pr:b=default"], cwd=build_temp)
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

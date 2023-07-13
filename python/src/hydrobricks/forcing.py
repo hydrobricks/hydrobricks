@@ -128,7 +128,7 @@ class Forcing(TimeSeries):
 
             if method == 'constant':
                 unit_values[:, i_unit] = data_raw
-                
+
             elif method == 'from_gridded_data':
                 # Interpolate the holes
                 for i in range(len(data_raw[0])):

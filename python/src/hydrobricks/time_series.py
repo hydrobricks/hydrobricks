@@ -169,7 +169,7 @@ class TimeSeries:
         """
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
-            date_format=time_format)
+            date_parser=lambda x: datetime.strptime(x, time_format))
 
         self.time = file_content[column_time]
 

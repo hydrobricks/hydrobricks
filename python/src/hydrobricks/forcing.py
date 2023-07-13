@@ -129,6 +129,12 @@ class Forcing(TimeSeries):
             if method == 'constant':
                 unit_values[:, i_unit] = data_raw
 
+            elif method == 'from_gridded_data':
+                # Interpolate the holes
+                for i in range(len(data_raw[0])):
+                    data_raw[:,i] = pd.Series(data_raw[:,i]).interpolate().tolist()
+                unit_values[:, i_unit] = data_raw[i_unit]
+
             elif method == 'additive_elevation_gradient':
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:

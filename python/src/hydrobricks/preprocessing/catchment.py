@@ -45,7 +45,7 @@ class Catchment:
             print(e)
             return False
 
-    def get_elevation_bands(self, method='isohypse', number=100, distance=50):
+    def get_elevation_bands(self, method='isohypse', number=100, distance=50, min_val=1000, max_val=4000):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -60,6 +60,10 @@ class Catchment:
             Number of bands to create when using the 'quantiles' method.
         distance : int
             Distance (m) between the contour lines when using the 'isohypse' method.
+        min_val : int
+            Minimum elevation of the elevation bands (to homogeneize between runs)
+        max_val : int
+            Maximum elevation of the elevation bands (to homogeneize between runs)
 
         Returns
         -------
@@ -68,6 +72,8 @@ class Catchment:
         if method == 'isohypse':
             min_val = np.nanmin(self.masked_dem_data)
             max_val = np.nanmax(self.masked_dem_data)
+            elevations = np.arange(min_val, max_val + distance, distance)
+        elif method == 'set_isohypses':
             elevations = np.arange(min_val, max_val + distance, distance)
         elif method == 'quantiles':
             elevations = np.nanquantile(self.masked_dem_data,
@@ -88,7 +94,7 @@ class Catchment:
         df['elevation'] = res_elevations
         df['area'] = res_bands
 
-        return df
+        return df, elevations
 
     def get_mean_elevation(self):
         """

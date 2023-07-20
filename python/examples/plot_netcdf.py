@@ -12,6 +12,7 @@ import xarray as xa
 from descartes import PolygonPatch  # https://pypi.org/project/descartes/
 from matplotlib.collections import PatchCollection
 from matplotlib.colorbar import ColorbarBase
+import matplotlib.colors as mcolors
 from matplotlib.colors import LightSource
 from matplotlib.patches import PathPatch, Polygon
 from matplotlib.path import Path
@@ -65,7 +66,7 @@ def plot_Alps(output_filename):
     plt.savefig(output_filename)
     plt.show()
 
-def plot_geology(tif_filename, shapefile, mask, target_crs):
+def plot_geology(tif_filename, shapefile, mask, target_crs, basemap_crs):
     print('Plot shapefiles')
     hatch1 = '..'
     hatch2 = 'OO'
@@ -285,8 +286,8 @@ def plot_geology(tif_filename, shapefile, mask, target_crs):
     norm3 = plt.cm.colors.BoundaryNorm(UG_present_in_mask3, 256)
 
     # DRAW BASEMAP
-    bmap = Basemap(epsg = '4149',
-                resolution = 'l',
+    bmap = Basemap(epsg = basemap_crs, 
+                resolution = 'l', 
                 llcrnrlon = minx, #ulx,
                 llcrnrlat = miny, #lry,
                 urcrnrlon = maxx, #lrx,
@@ -363,10 +364,10 @@ def plot_geology(tif_filename, shapefile, mask, target_crs):
     filename = '/home/anne-laure/Documents/Datasets/OutputFigures/BormioGeologicalMap'
     ax.set_title('Bormio geological map 10k', fontsize=20)
     plt.savefig(filename + '.svg', format="svg", bbox_inches='tight', dpi=30)
-    plt.savefig(filename + '.png', format="png", bbox_inches='tight', dpi=300)
+    plt.savefig(filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
-def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_network, title, target_crs):
+def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_network, title, target_crs, basemap_crs):
     print('Plot shapefiles, the watershed must already be in the correct CRS.')
 
     # WARP SHAPEFILE TO CORRECT CRS
@@ -523,10 +524,10 @@ def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_
             unit_present_in_mask.append(unit)
     unit_present_in_mask = list(set(unit_present_in_mask)) # Get unique values
     unit_present_in_mask.sort()
+    
+    # CREATE COLORMAP
     color_levels = [list(leg_it).index(unit) for unit in unit_present_in_mask]
     color_levels.sort()
-
-    # CREATE COLORMAP
     cmap = plt.cm.RdYlBu
     if len(color_levels) > 1:
         norm = plt.cm.colors.BoundaryNorm(color_levels, 256)
@@ -534,8 +535,8 @@ def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_
         norm = plt.Normalize(0, len(unit_present_in_mask))
 
     # DRAW BASEMAP
-    bmap = Basemap(epsg = '4149',
-                resolution = 'l',
+    bmap = Basemap(epsg = basemap_crs, 
+                resolution = 'l', 
                 llcrnrlon = minx, #ulx,
                 llcrnrlat = miny, #lry,
                 urcrnrlon = maxx, #lrx,
@@ -612,11 +613,11 @@ def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_
     #bmap.drawmapscale(ulx, uly, ulx, uly, 5, fontsize = 14)
 
     ax.set_title(title)
-    plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=300)
-    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=300)
+    plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=100)
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
-def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, source_crs):
+def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, source_crs, basemap_crs):
     print('Plot orthophoto')
 
     # INITIALIZE FIGURE
@@ -649,7 +650,9 @@ def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, sourc
     print('EPSG:' + target_crs)
     print(tif_filename + '_EPSG' + target_crs + '.tif')
 
-    gdal.Warp(tif_filename + '_EPSG' + target_crs + '.tif', tif_filename, dstSRS='EPSG:' + target_crs, srcSRS='EPSG:' + source_crs)
+    gdal.Warp(tif_filename + '_EPSG' + target_crs + '.tif', tif_filename, 
+              dstSRS='EPSG:' + target_crs, srcSRS='EPSG:' + source_crs,
+              resampleAlg = gdal.gdalconst.GRA_Bilinear)
     dem = gdal.Open(tif_filename + '_EPSG' + target_crs + '.tif')
     print(dem)
     #dem = gdal.Open(tif_filename)
@@ -680,8 +683,8 @@ def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, sourc
     masked_orthophoto = np.where(shp_mask3D, rgb, 255)
 
     # DRAW BASEMAP
-    bmap = Basemap(epsg = '4149',
-                resolution = 'l',
+    bmap = Basemap(epsg = basemap_crs, 
+                resolution = 'l', 
                 llcrnrlon = minx, #ulx,
                 llcrnrlat = miny, #lry,
                 urcrnrlon = maxx, #lrx,
@@ -692,8 +695,168 @@ def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, sourc
     bmap.drawparallels(np.arange(40, 50, 0.05), labels=[1,0,0,0], linewidth=0.5)
 
     ax.set_title('Orthophoto ' + year, fontsize=20)
-    plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=300)
-    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=300)
+    plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=100)
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+    
+    
+
+def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask, output_filename, tif_crs, target_crs, title, basemap_crs):
+    print('Plot shapefiles')
+    hatch_debris = '..'
+    
+    # WARP SHAPEFILE TO CORRECT CRS
+    for shapefile in glaciers_dict.values():
+        out_shapefile = shapefile + '_EPSG' + target_crs
+        print(shapefile + '.shp')
+        gdf = gpd.read_file(shapefile + '.shp')
+        gdf.to_crs(epsg=target_crs, inplace=True)
+        gdf.to_file(out_shapefile + '.shp')
+        
+    for shapefile in debris_dict.values():
+        out_shapefile = shapefile + '_EPSG' + target_crs
+        print(shapefile + '.shp')
+        gdf = gpd.read_file(shapefile + '.shp')
+        gdf.to_crs(epsg=target_crs, inplace=True)
+        gdf.to_file(out_shapefile + '.shp')
+    
+    # INITIALIZE FIGURE
+    fig, ax = plt.subplots(figsize=(20,20))
+    ax.set_aspect(1)
+    
+    # OPEN WATERSHED SHAPEFILE, TRANSFORM IT TO A PATH FOR POLYGON CLIPPING AND GET ITS EXTENT FOR DEM CROPPING.
+    sf = shp.Reader(mask)
+    for shape_rec in sf.shapeRecords():
+        vertices = []
+        codes = []
+        pts = shape_rec.shape.points
+        prt = list(shape_rec.shape.parts) + [len(pts)]
+        for i in range(len(prt) - 1):
+            for j in range(prt[i], prt[i+1]):
+                vertices.append((pts[j][0], pts[j][1]))
+            codes += [Path.MOVETO]
+            codes += [Path.LINETO] * (prt[i+1] - prt[i] -2)
+            codes += [Path.CLOSEPOLY]
+        clip = Path(vertices, codes)
+        clip = PathPatch(clip, transform=ax.transData)
+        unzipped = list(zip(*pts))
+        minx = min(list(unzipped[0]))
+        maxx = max(list(unzipped[0]))
+        miny = min(list(unzipped[1]))
+        maxy = max(list(unzipped[1]))
+        print(minx, miny, maxx, maxy)
+    
+    # OPEN TIF AND CROP IT TO MAX EXTENT
+    if tif_crs != basemap_crs:
+        dem = gdal.Warp(tif_filename + '_EPSG' + basemap_crs + '.tif', tif_filename,
+                        dstSRS='EPSG:' + basemap_crs, srcSRS='EPSG:' + tif_crs,
+                        resampleAlg = gdal.gdalconst.GRA_Bilinear)
+    else:
+        dem = gdal.Open(tif_filename)
+    print(tif_filename)
+    print(dem)
+    ulx, xres, _, uly, _, yres  = dem.GetGeoTransform()
+    lrx = ulx + (dem.RasterXSize * xres)
+    lry = uly + (dem.RasterYSize * yres)
+    print('Extent of DEM before cropping:', lrx, lry, ulx, uly)
+    dem = gdal.Translate(tif_filename + 'cropped.tif', dem, projWin = [minx, maxy, maxx, miny])
+    ulx, xres, _, uly, _, yres  = dem.GetGeoTransform()
+    lrx = ulx + (dem.RasterXSize * xres)
+    lry = uly + (dem.RasterYSize * yres)
+    print('Extent of DEM after cropping:', lrx, lry, ulx, uly)
+    print(tif_filename + 'cropped.tif')
+    
+    # CREATE HILLSHADE
+    hillshade = gdal.DEMProcessing('hillshade.tif', dem, 'hillshade', 
+                                   computeEdges = True,
+                                   multiDirectional = True, zFactor=2)
+    hillshade_array = hillshade.GetRasterBand(1).ReadAsArray()
+    
+    # MASK HILLSHADE WITH WATERSHED SHAPEFILE
+    gpd_mask = gpd.read_file(mask)
+    xi = np.linspace(ulx, lrx, dem.RasterXSize)
+    yi = np.linspace(uly, lry, dem.RasterYSize)
+    xi, yi = np.meshgrid(xi, yi)
+    mask_geometry = gpd_mask.dissolve().geometry.item()
+    shp_mask = shapely.vectorized.contains(mask_geometry, xi, yi)
+    masked_hillshade = np.where(shp_mask, hillshade_array, np.nan)
+    
+    # GEOLOGICAL DICTIONNARY
+    # https://stackoverflow.com/questions/48520393/filling-shapefile-polygons-with-a-color-in-matplotlib
+    color_levels = list(glaciers_dict.keys())
+    cmap = plt.cm.RdYlBu
+    if len(color_levels) > 1:
+        norm = plt.cm.colors.BoundaryNorm(color_levels, 256)
+    else:
+        norm = plt.Normalize(0, len(color_levels))
+    
+    # DRAW BASEMAP
+    print(minx, miny, maxx, maxy)
+    bmap = Basemap(epsg = basemap_crs, 
+                resolution = 'l', 
+                llcrnrlon = minx, #ulx,
+                llcrnrlat = miny, #lry,
+                urcrnrlon = maxx, #lrx,
+                urcrnrlat = maxy) #uly)
+    print(ulx, lry, lrx, uly)
+    bmap.imshow(masked_hillshade, cmap='gray', origin='upper')
+    bmap.drawmeridians(np.arange(5, 15, 0.05), labels=[0,0,0,1], linewidth=0.5)
+    bmap.drawparallels(np.arange(40, 50, 0.05), labels=[1,0,0,0], linewidth=0.5)
+    
+    # ADD GEOLOGICAL POLYGONS!
+    for year in glaciers_dict.keys():
+        color = cmap(norm(year))
+        shapefile = glaciers_dict[year]
+        glacier = gpd.GeoDataFrame.from_file(shapefile + '_EPSG' + target_crs + '.shp')
+        
+        glacier_patches = []
+        for poly in glacier.geometry:
+            if poly.geom_type == 'Polygon':
+                mpoly = shapely.ops.transform(bmap, poly)
+                glacier_patches.append(PolygonPatch(mpoly, color=color, linewidth=0.5, alpha=0.5))
+            elif poly.geom_type == 'MultiPolygon':
+                for subpoly in poly:
+                    mpoly = shapely.ops.transform(bmap, poly)
+                    glacier_patches.append(PolygonPatch(mpoly, color=color, linewidth=0.5, alpha=0.5))
+            else:
+                print("'poly' is neither a polygon nor a multi-polygon. Skipping it.")
+        
+        debris_patches = []
+        if year in debris_dict:
+            shapefile = debris_dict[year]
+            debris = gpd.GeoDataFrame.from_file(shapefile + '_EPSG' + target_crs + '.shp')
+            for poly in debris.geometry:
+                if poly.geom_type == 'Polygon':
+                    mpoly = shapely.ops.transform(bmap, poly)
+                    debris_patches.append(PolygonPatch(mpoly, color=color, linewidth=0.5, alpha=0.5))
+                elif poly.geom_type == 'MultiPolygon':
+                    for subpoly in poly:
+                        mpoly = shapely.ops.transform(bmap, poly)
+                        debris_patches.append(PolygonPatch(mpoly, color=color, linewidth=0.5, alpha=0.5))
+                else:
+                    print("'poly' is neither a polygon nor a multi-polygon. Skipping it.") 
+                
+        pc1 = PatchCollection(glacier_patches, match_original=True, edgecolor='k', linewidths=0.5)
+        pc2 = PatchCollection(debris_patches, match_original=True, edgecolor='k', linewidths=0.5, hatch=hatch_debris)
+        ax.add_collection(pc1)
+        ax.add_collection(pc2)
+    
+    # CLIP POLYGONS TO WATERSHED EXTENT
+    for contour in ax.collections:
+        contour.set_clip_path(clip)
+    
+    # ADDING A GEOLOGICAL LEGEND
+    handles = []
+    for year in glaciers_dict.keys():
+        color = cmap(norm(year))
+        handles.append(Polygon([(0,0),(10,0),(0,-10)], facecolor=color,
+                               label=str(year), alpha=0.5, edgecolor='k'))
+    plt.legend(handles=handles, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, fontsize="10")
+    plt.subplots_adjust(right=1)
+    
+    ax.set_title(title, fontsize=20)
+    plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=30)
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
 def example_DEM_plot(tif):
@@ -767,7 +930,15 @@ def pixel2coord(col, row, gt):
     yp = gt[4] * col + gt[5] * row + gt[4] * 0.5 + gt[5] * 0.5 + gt[3]
     return(xp, yp)
 
-def plot_altitude_plots(elevations, *argv):
+def plot_altitude_plots(output_filename, elevations, *argv, through_time=False, time=None):
+    
+    if through_time is True:
+        assert time is not None
+        # CREATE COLORMAP
+        dates = np.genfromtxt(time, delimiter=',', dtype='str')
+        year = dates[:365]
+        cmap = plt.get_cmap('viridis')
+        normalize = mcolors.Normalize(vmin=0, vmax=len(year))
 
     elev = np.loadtxt(elevations, delimiter=',', skiprows=1)
 
@@ -782,14 +953,58 @@ def plot_altitude_plots(elevations, *argv):
         arg3 = argv[i*3+2]
         f = open(arg1)
         header = f.readline()
-        data = np.loadtxt(arg2, delimiter=',')
-        col.plot(data[0], elev[:,1], '-o')
-        data = np.loadtxt(arg1, delimiter=',')
-        col.plot(data[0], elev[:,1], '-o') #, label=header
+        data2 = np.loadtxt(arg2, delimiter=',')
+        data1 = np.loadtxt(arg1, delimiter=',')
+        if through_time is True:
+            for t in range(len(data1[:365])):
+                #col.plot(data2[t], elev[:,1], '-', color=color) # No plotting of the interpolated data
+                col.plot(data1[:365][t], elev[:,1], '-', color=cmap(normalize(t))) # Plotting the raw data
+        else:
+            col.plot(data2[0], elev[:,1], '-o', label='Interpolated data')
+            col.plot(data1[0], elev[:,1], '-o', label='Raw data')
+            plt.legend(loc='upper right', fontsize="6")
         col.set_xlabel(arg3)
         col.set_ylabel('Altitude (m)')
+    
+    if through_time is True:
+        # setup the colorbar
+        scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
+        scalarmappaple.set_array(len(year))
+        cbar = plt.colorbar(scalarmappaple)
+        cbar.ax.text(3, 0.65, 'Day of the year', rotation=90)
+        
     figs.suptitle("Altitudinal input for Hydrobricks")
     figs.tight_layout()
+    
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+    
+def plot_altitudinal_glacial_cover_plots(output_filename, elevation_band_file):
+    
+    elev = np.loadtxt(elevation_band_file, delimiter=',', skiprows=1)
+    
+    figs, axs = plt.subplots(nrows=1, ncols=4, figsize=(10, 4))
+    
+    altitude = axs.T[0]
+    altitude.plot(elev[:,2], elev[:,1], '-o', label='Total area')
+    altitude.set_xlabel('Area (m²)')
+    altitude.set_ylabel('Altitude (m)')
+    
+    debris_area = axs.T[1]
+    debris_area.plot(elev[:,3], elev[:,1], '-o', label='Debris ice cover')
+    
+    clean_ice_area = axs.T[2]
+    clean_ice_area.plot(elev[:,4], elev[:,1], '-o', label='Clean ice cover')
+    
+    bedrock_area = axs.T[3]
+    bedrock_area.plot(elev[:,5], elev[:,1], '-o', label='No glacial cover')
+    
+    plt.legend(loc='upper right', fontsize="6")
+    
+    figs.suptitle("Altitudinal input for Hydrobricks")
+    figs.tight_layout()
+    
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
 def plot_simulated_discharge(time_file, data_file, label):
@@ -878,7 +1093,7 @@ def plot_netcdf(filename, start_datetime, day, title, label, varname, width=5000
 
     plt.show()
 
-def plot_netcdf_with_background_DEM(tif_filename, filename, start_datetime, day, title, varname='Hargreaves ETO', color_label='', cmap=plt.cm.Blues, data_type=1):
+def plot_netcdf_with_background_DEM(tif_filename, filename, start_datetime, day, title, basemap_crs, varname='Hargreaves ETO', color_label='', cmap=plt.cm.Blues, data_type=1):
     dem = gdal.Open(tif_filename)
     ulx, xres, _, uly, _, yres  = dem.GetGeoTransform()
     lrx = ulx + (dem.RasterXSize * xres)
@@ -906,8 +1121,8 @@ def plot_netcdf_with_background_DEM(tif_filename, filename, start_datetime, day,
             date = time[day]
 
     plt.figure(figsize=(15,40))
-    bmap = Basemap(epsg = '4149',
-                resolution = 'l',
+    bmap = Basemap(epsg = basemap_crs, 
+                resolution = 'l', 
                 llcrnrlon = ulx,
                 llcrnrlat = lry,
                 urcrnrlon = lrx,
@@ -947,56 +1162,61 @@ def classify_tif_according_to_elevation_bands(filename, outfile, elevation_thres
 
 
 path = '/home/anne-laure/Documents/Datasets/'
+path1 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/Val_d_Anniviers/"
 results = f'{path}Outputs/'
 it_study_area = '/home/anne-laure/Documents/Datasets/Italy_Study_area/'
+ch_study_area = '/home/anne-laure/Documents/Datasets/Swiss_Study_area/'
 
 ###########################################################################################################################
 
-time = 'Weird time'
-plot_simulated_discharge(time, f"{results}simulated_discharge.csv", 'Simulated discharge (mm/day?)')
+elevation_band_file = '/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/Val_d_Anniviers/elevation_bands.csv'
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/GlacialCover_AltitudinalProfiles'
+plot_altitudinal_glacial_cover_plots(output_filename, elevation_band_file)
 
 ###########################################################################################################################
 
-path1 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/Val_d_Anniviers/"
-elev_bands = f"{path1}elevation_bands.csv"
-plot_altitude_plots(elev_bands, f"{results}spatialized_pet.csv", f"{results}spatialized_pet_interp.csv", 'Modeled potential evapotranspiration (mm/day)',
-                    f"{results}spatialized_temperature.csv", f"{results}spatialized_temperature_interp.csv", 'Temperature (°C)',
-                    f"{results}spatialized_precipitation.csv", f"{results}spatialized_precipitation_interp.csv", 'Precipitation (mm/day)')
-plot_altitude_plots(elev_bands, f"{results}spatialized_pet_HR.csv", f"{results}spatialized_pet_interp_HR.csv", 'Modeled potential evapotranspiration HR (mm/day)',
-                    f"{results}spatialized_temperature_HR.csv", f"{results}spatialized_temperature_interp_HR.csv", 'Temperature HR (°C)',
-                    f"{results}spatialized_precipitation_HR.csv", f"{results}spatialized_precipitation_interp_HR.csv", 'Precipitation HR (mm/day)')
+tif = f'{ch_study_area}StudyAreas_EPSG21781.tif'
+mask = f'{ch_study_area}LaNavisence_Chippis/125595_EPSG4326.shp'
 
-###########################################################################################################################
+main_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
+glaciers_dict = {1850:f'{main_path}inventory_sgi1850_r1992/SGI_1850', 1931:f'{main_path}inventory_sgi1931_r2022/SGI_1931',
+                 1973:f'{main_path}inventory_sgi1973_r1976/SGI_1973', 2010:f'{main_path}inventory_sgi2010_r2010/SGI_2010',
+                 2016:f'{main_path}inventory_sgi2016_r2020/SGI_2016_glaciers'}
+debris_dict = {2016:f'{main_path}inventory_sgi2016_r2020/SGI_2016_debriscover'}
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/Anniviers_MappedGlaciers'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='21781', target_crs='4326', 
+                              title='Mapped glacier extents through time (Swiss Glacier Inventory inventory)', basemap_crs='4326')
 
-plot_Alps(f'{path}OutputFigures/CatchmentLocalisationInTheAlps.png')
+mask = f'{ch_study_area}LaBorgne_Bramois/CHVS-005.shp'
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/Herremence_MappedGlaciers'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='21781', target_crs='4326', 
+                              title='Mapped glacier extents through time (Swiss Glacier Inventory inventory)', basemap_crs='4326')
 
-###########################################################################################################################
 
-main_path = '/home/anne-laure/Documents/Datasets/Italy_maps/bormio/Bormio/'
 tif = f'{it_study_area}dtm_2pt5m_utm_st_whole_StudyArea_4326FromOriginalCRS.tif'
-limits = f'{main_path}limiti_10k_foglio_024_bormio'
-polygons = f'{main_path}poligeo_10k_foglio_024_bormio'
 mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS.shp'
-plot_geology(tif, polygons, mask, target_crs='4326')
 
-main_path = '/home/anne-laure/Documents/Datasets/Italy_maps/Geokatalog.buergernetz.bz.it/'
-tif = f'{it_study_area}dtm_2pt5m_utm_st_whole_StudyArea_4326FromOriginalCRS.tif'
-limits = f'{main_path}FaultsOverview_line/DownloadService/FaultsOverview_line'
-polygons = f'{main_path}GeologicalUnitsOverview_polygon/DownloadService/GeologicalUnitsOverview_polygon'
+main_path = '/home/anne-laure/Documents/Datasets/Italy_GlaciersExtents/SaraSavi/'
+glaciers_dict = {1818:f'{main_path}SuldenGlacier1818_Knoll2009', 1922:f'{main_path}SuldenGlacier1922_fromIGM',
+                 1936:f'{main_path}SuldenGlacier1936_fromIGM', 1945:f'{main_path}SuldenGlacier1945_fromOrthophoto',
+                 1969:f'{main_path}SuldenGlacier1969_fromAerialPhoto', 1985:f'{main_path}SuldenGlacier1985_fromOrthophoto',
+                 2018:f'{main_path}SuldenGlacier2018_fromOrthophoto', 2019:f'{main_path}SuldenGlacier2019_fromOrthophoto',
+                 2021:f'{main_path}SuldenGlacier2021_fromOrthophoto', 2100:f'{main_path}SuldenGlacier2100_Stotter1994'}
+debris_dict = {}
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/Solda_MappedGlaciers_SaraSavi'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='4326', target_crs='4326', 
+                              title='Mapped glacier extents through time (Savi et al., 2021)', basemap_crs='4326')
 
-mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS.shp'
-output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_1km2'
-cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_1km2_1km_georef_EPSG4326.shp'
-plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 1km² of area, max 1km of reach length', target_crs='4326')
-output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_2km2'
-cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_2km2_1km_georef_EPSG4326.shp'
-plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 2km² of area, max 1km of reach length', target_crs='4326')
-output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_5km2'
-cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_5km2_1km_georef_EPSG4326.shp'
-plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 5km² of area, max 1km of reach length', target_crs='4326')
+main_path = '/home/anne-laure/Documents/Datasets/Italy_GlaciersExtents/GlaciersExtents/'
+glaciers_dict = {1997:f'{main_path}GlaciersExtents1997/glaciers_1997_EPSG25832', 2005:f'{main_path}GlaciersExtents2005/glaciers_2015_EPSG25832',
+                 2016:f'{main_path}GlaciersExtents2016_2017/glaciers_2016_2017_EPSG25832b'}
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/Solda_MappedGlaciers_CIVIS'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='4326', target_crs='4326', title='CIVIS data..', basemap_crs='4326')
+
 mask = f'{it_study_area}OutletMazia_WatershedSameAsComiti2019_4326FromOriginalCRS.shp'
-output_filename = f'{path}OutputFigures/Mazia_GlobalGeologicalMap'
-plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title=None, target_crs='4326')
+
+output_filename = '/home/anne-laure/Documents/Datasets/OutputFigures/Mazzia_MappedGlaciers_CIVIS'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='4326', target_crs='4326', title='CIVIS data..', basemap_crs='4326')
 
 ###########################################################################################################################
 
@@ -1009,21 +1229,19 @@ filename = f'{results}Swiss_reproj.tif'
 outfile =  f'{results}Swiss_reproj_classified.tif'
 elev_thres = f"{path1}elevation_thresholds.csv"
 classify_tif_according_to_elevation_bands(filename, outfile, elev_thres)
-print(plt.cm.tab20.colors[:9])
+####
+filename = outfile
 cmap = plt.cm.get_cmap('tab20c', 7) #plt.cm.tab20.colors[:9]
-plot_netcdf_with_background_DEM(tif, outfile, start_datetime, day, title='Reprojected elevation', varname='', color_label='Elevation band N°', cmap=cmap)
+plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='Reprojected elevation', basemap_crs='4149', varname='', color_label='Elevation band N°', cmap=cmap)
 ####
-tif = f"{path1}dem_EPSG4149_reproj.tif"
 filename = f'{results}Swiss_reproj.tif'
-plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='Reprojected elevation', varname='', color_label='Elevation')
+plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='Reprojected elevation', basemap_crs='4149', varname='', color_label='Elevation')
 ####
-tif = f"{path1}dem_EPSG4149_reproj.tif"
 filename = f'{results}CH2018_tas_TestOut.nc'
-plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='Mean temperature (reprojected)', varname='tas', color_label='Mean temperature')
+plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='Mean temperature (reprojected)', basemap_crs='4149', varname='tas', color_label='Mean temperature')
 #####
-tif = f"{path1}dem_EPSG4149_reproj.tif"
 filename = f'{results}CH2018_pet_TestOut.nc'
-plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='CH2018 ETO Hargreaves', varname='pet', color_label='PET (Hargreaves ETO)')
+plot_netcdf_with_background_DEM(tif, filename, start_datetime, day, title='CH2018 ETO Hargreaves', basemap_crs='4149', varname='pet', color_label='PET (Hargreaves ETO)')
 
 
 
@@ -1041,43 +1259,97 @@ plot_netcdf(filename, start_datetime, day, title, label, varname='tasmin')
 
 ###########################################################################################################################
 
+elev_bands = f"{path1}elevation_bands.csv"
+output_filename = f'{path}OutputFigures/Solda_AltitudinalProfiles'
+plot_altitude_plots(output_filename, elev_bands, f"{results}spatialized_pet.csv", f"{results}spatialized_pet_interp.csv", 'Potential evapotranspiration (mm/day)', 
+                    f"{results}spatialized_temperature.csv", f"{results}spatialized_temperature_interp.csv", 'Temperature (°C)', 
+                    f"{results}spatialized_precipitation.csv", f"{results}spatialized_precipitation_interp.csv", 'Precipitation (mm/day)')
+output_filename = f'{path}OutputFigures/Solda_AltitudinalProfilesHR_TroughTime'
+plot_altitude_plots(output_filename, elev_bands, f"{results}spatialized_pet_HR.csv", f"{results}spatialized_pet_interp_HR.csv", 'Potential evapotranspiration HR (mm/day)', 
+                    f"{results}spatialized_temperature_HR.csv", f"{results}spatialized_temperature_interp_HR.csv", 'Temperature HR (°C)', 
+                    f"{results}spatialized_precipitation_HR.csv", f"{results}spatialized_precipitation_interp_HR.csv", 'Precipitation HR (mm/day)', 
+                    through_time=True, time=f"{results}spatialized_time_HR.csv")
+output_filename = f'{path}OutputFigures/Solda_AltitudinalProfilesHR'
+plot_altitude_plots(output_filename, elev_bands, f"{results}spatialized_pet_HR.csv", f"{results}spatialized_pet_interp_HR.csv", 'Potential evapotranspiration HR (mm/day)', 
+                    f"{results}spatialized_temperature_HR.csv", f"{results}spatialized_temperature_interp_HR.csv", 'Temperature HR (°C)', 
+                    f"{results}spatialized_precipitation_HR.csv", f"{results}spatialized_precipitation_interp_HR.csv", 'Precipitation HR (mm/day)')
+
+###########################################################################################################################
+
+time = 'Weird time'
+plot_simulated_discharge(time, f"{results}simulated_discharge.csv", 'Simulated discharge (mm/day?)')
+
+###########################################################################################################################
+
+plot_Alps(f'{path}OutputFigures/CatchmentLocalisationInTheAlps.png')
+
+###########################################################################################################################
+
+tif = f'{it_study_area}dtm_2pt5m_utm_st_whole_StudyArea_4326FromOriginalCRS.tif'
+mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS.shp'
+
+main_path = '/home/anne-laure/Documents/Datasets/Italy_maps/bormio/Bormio/'
+limits = f'{main_path}limiti_10k_foglio_024_bormio'
+polygons = f'{main_path}poligeo_10k_foglio_024_bormio'
+
+plot_geology(tif, polygons, mask, target_crs='4326', basemap_crs='4326')
+
+main_path = '/home/anne-laure/Documents/Datasets/Italy_maps/Geokatalog.buergernetz.bz.it/'
+limits = f'{main_path}FaultsOverview_line/DownloadService/FaultsOverview_line'
+polygons = f'{main_path}GeologicalUnitsOverview_polygon/DownloadService/GeologicalUnitsOverview_polygon'
+
+output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_1km2'
+cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_1km2_1km_georef_EPSG4326.shp'
+plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 1km² of area, max 1km of reach length', target_crs='4326', basemap_crs='4326')
+output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_2km2'
+cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_2km2_1km_georef_EPSG4326.shp'
+plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 2km² of area, max 1km of reach length', target_crs='4326', basemap_crs='4326')
+output_filename = f'{path}OutputFigures/Solda_GlobalGeologicalMap_5km2'
+cascade_network = f'{path}Italy_maps/CASCADE_Networks/RN_Solda_5km2_1km_georef_EPSG4326.shp'
+plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title='Reaches with 5km² of area, max 1km of reach length', target_crs='4326', basemap_crs='4326')
+mask = f'{it_study_area}OutletMazia_WatershedSameAsComiti2019_4326FromOriginalCRS.shp'
+output_filename = f'{path}OutputFigures/Mazia_GlobalGeologicalMap'
+plot_global_geology(tif, polygons, mask, output_filename, cascade_network, title=None, target_crs='4326', basemap_crs='4326')
+
+###########################################################################################################################
+
 mask = f'{it_study_area}OutletMazia_WatershedSameAsComiti2019_4326FromOriginalCRS.shp'
 # gdalwarp */DownloadService/Aerial-2020-RGB.tif Mosaik_2020.tif
 tif = f'{it_study_area}2014-2020/Mazia/Mosaik_2015_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Mazia_Orthophoto2015'
-plot_orthophoto(tif, mask, output_filename, year='2015', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2015', target_crs='4326', source_crs='25832', basemap_crs='4326')
 tif = f'{it_study_area}2014-2020/Mazia/Mosaik_2017_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Mazia_Orthophoto2017'
-plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832', basemap_crs='4326')
 tif = f'{it_study_area}2014-2020/Mazia/Mosaik_2020_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Mazia_Orthophoto2020'
-plot_orthophoto(tif, mask, output_filename, year='2020', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2020', target_crs='4326', source_crs='25832', basemap_crs='4326')
 
 mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS.shp'
 tif = f'{it_study_area}2014-2020/Solda/Mosaik_2020_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Solda_Orthophoto2020'
-plot_orthophoto(tif, mask, output_filename, year='2020', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2020', target_crs='4326', source_crs='25832', basemap_crs='4326')
 tif = f'{it_study_area}2014-2020/Solda/Mosaik_2017_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Solda_Orthophoto2017'
-plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832', basemap_crs='4326')
 tif = f'{it_study_area}2014-2020/Solda/Mosaik_2017_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Solda_Orthophoto2017'
-plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2017', target_crs='4326', source_crs='25832', basemap_crs='4326')
 tif = f'{it_study_area}2014-2020/Solda/Mosaik_2015_upscaled1m.tif'
 # The TIF was too heavy, so I upscaled it to 1 m. AM I USING THE RIGHT METHOD?
 # gdalwarp -tr 1 1 Mosaik_2020.tif Mosaik_2020_upscaled1m.tif -r cubic -overwrite
 output_filename = f'{path}OutputFigures/Solda_Orthophoto2015'
-plot_orthophoto(tif, mask, output_filename, year='2015', target_crs='4326', source_crs='25832')
+plot_orthophoto(tif, mask, output_filename, year='2015', target_crs='4326', source_crs='25832', basemap_crs='4326')
 

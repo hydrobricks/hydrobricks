@@ -1,5 +1,6 @@
 import hydrobricks as hb
 import numpy as np
+import pandas as pd
 
 from .time_series import TimeSeries
 

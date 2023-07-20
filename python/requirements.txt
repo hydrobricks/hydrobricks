@@ -1,4 +1,35 @@
-HydroErr
-numpy
-pandas>=2.0
-pyyaml
+hydroerr==1.24
+numpy==1.24.4
+pandas==2.0.2
+pyyaml==6.0
+
+wheel
+rasterio==1.3.7
+matplotlib==3.7.1
+geopandas==0.13.2
+xarray==2023.6.0
+rioxarray==0.14.1
+matplotlib
+netCDF4==1.6.4
+shapely==1.8.5 # Newer versions (2.*) are not always compatible with the Descartes library
+pyshp==2.3.1
+pygeos==0.14
+basemap==1.3.7
+descartes==1.1.0
+gdal==3.4.1  # The gdal version is important
+
+# WARNING: The descartes library had to be updated BY HAND in patch.py
+# https://stackoverflow.com/questions/75287534/indexerror-descartes-polygonpatch-wtih-shapely
+# https://stackoverflow.com/questions/21824157/how-to-extract-interior-polygon-coordinates-using-shapely
+
+#    vertices = concatenate([
+#        concatenate([asarray(t.exterior.coords)[:, :2]] +
+#                    [asarray(r.coords)[:, :2] for r in t.interiors])
+#        for t in polygon])
+#    codes = concatenate([
+#        concatenate([coding(t.exterior.coords)] +
+#                    [coding(r.coords) for r in t.interiors]) for t in polygon])
+
+
+#  - hydrobricks=0.4.11
+# Clone the online repository, and then use pip install -e .

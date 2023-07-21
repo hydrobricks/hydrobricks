@@ -6,6 +6,7 @@ print(hb.__file__)
 import geopandas as gpd
 import hydrobricks.models as models
 import numpy as np
+import pandas as pd
 import rasterio
 import rioxarray
 import xarray as xa
@@ -138,13 +139,8 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
           x, 'x', y, 'm thus giving pixel areas of', pixel_area, 'm².')
 
     band_nb = len(elevation_thrs[:-1]) #len(self.hydro_units['elevation'])
-    if debris_covered_glaciers != None:
-        debris_area = np.zeros(band_nb)
-        bare_ice_area = np.zeros(band_nb)
-    else:
-        debris_area = np.nan
-        bare_ice_area = np.nan
-
+    debris_area = np.zeros(band_nb)
+    bare_ice_area = np.zeros(band_nb)
     bare_rock_area = np.zeros(band_nb)
     glacier_area = np.zeros(band_nb)
     xds = rioxarray.open_rasterio('/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc')
@@ -169,6 +165,9 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
             topo_mask_debris = xa.where((debris_clipped > elev_min) & (debris_clipped < elev_max), 1, 0)
             debris_area[i] = np.nansum(topo_mask_debris) * pixel_area
             bare_ice_area[i] = glacier_area[i] - debris_area[i]
+        else:
+            debris_area[i] = np.nan
+            bare_ice_area[i] = np.nan
 
     print("After shapefile to raster conversion, the glaciers have {:.1f} km² of bare ice, "
           "{:.1f} km² of debris-covered ice, and {:.1f} km² of bare rock."
@@ -176,12 +175,49 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
 
     return debris_area, bare_ice_area, bare_rock_area, glacier_area
 
+def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, 
+                                      outline, elevation_thrs, results, outline_epsg, target_epsg):
+    # Creates files with land cover evolution as described here: https://hydrobricks.readthedocs.io/en/latest/doc/advanced.html
+    
+    # Creating Empty DataFrame and Storing it in variable df
+    debris_df = pd.DataFrame(index = elevation_bands['elevation'].values)
+    ice_df = pd.DataFrame(index = elevation_bands['elevation'].values)
+    rock_df = pd.DataFrame(index = elevation_bands['elevation'].values)
+    glacier_df = pd.DataFrame(index = elevation_bands['elevation'].values)
+    
+    for whole_glacier, debris_glacier, time in zip(whole_glaciers, debris_glaciers, times):
+        debris, ice, rock, glacier = preprocess_glacier_cover_change(debris_glacier, whole_glacier, outline, 
+                                                                     elevation_thrs, outline_epsg, target_epsg)
+        debris_df[time] = debris
+        ice_df[time] = ice
+        rock_df[time] = rock
+        glacier_df[time] = glacier
+        
+    header = pd.MultiIndex.from_product([['glacier_debris'], list(debris_df.columns.values)], names=['band',''])
+    debris_df.columns = header
+    debris_df.to_csv(f'{results}debris.csv')
+    
+    header = pd.MultiIndex.from_product([['clean_ice'], list(ice_df.columns.values)], names=['band',''])
+    ice_df.columns = header
+    ice_df.to_csv(f'{results}ice.csv')
+    
+    header = pd.MultiIndex.from_product([['no_glacier'], list(rock_df.columns.values)], names=['band',''])
+    rock_df.columns = header
+    rock_df.to_csv(f'{results}rock.csv')
+    
+    header = pd.MultiIndex.from_product([['glacier'], list(glacier_df.columns.values)], names=['band',''])
+    glacier_df.columns = header
+    glacier_df.to_csv(f'{results}glacier.csv')
+    
+    return debris, ice, rock
+
 
 # This script takes the shapefile of a catchment, the associated DEM,
 # and computes the mean elevation and the elevation bands, to finally convert them to CSV files.
 
 path1 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/Val_d_Anniviers/"
 path2 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/"
+path3 = "/home/anne-laure/Documents/Datasets/Swiss_Study_area/LaNavisence_Chippis/"
 results = "/home/anne-laure/Documents/Datasets/Outputs/"
 
 date_input_format = '%Y%m%d'
@@ -189,8 +225,12 @@ date_output_format = '%d/%m/%Y'
 
 dem_path = f"{path1}dem_EPSG21781.tif"
 outline = f"{path1}outline.shp"
-elev_bands = f"{path1}elevation_bands.csv"
-elev_thres = f"{path1}elevation_thresholds.csv"
+#dem_path = f"{path3}StudyAreas_EPSG21781.tif_EPSG4326.tif"
+#outline = f"{path3}125595_EPSG4326.shp"
+
+# RESULT FILES
+elev_bands = f"{results}elevation_bands.csv"
+elev_thres = f"{results}elevation_thresholds.csv"
 var_bands = f"{results}spatialized_"
 output = f"{results}simulated_discharge.csv"
 
@@ -204,22 +244,16 @@ print("Elevation bands:", elevation_bands)
 np.savetxt(elev_thres, elevation_thrs, header='Elevation thresholds')
 
 glacier_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
-whole_glaciers = f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp'
-debris, ice, rock, glacier = preprocess_glacier_cover_change(None, whole_glaciers, outline, elevation_thrs,
-                                                    outline_epsg=21781, target_epsg=21781)
-whole_glaciers = f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp'
-debris, ice, rock, glacier = preprocess_glacier_cover_change(None, whole_glaciers, outline, elevation_thrs,
-                                                    outline_epsg=21781, target_epsg=21781)
-whole_glaciers = f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp'
-debris, ice, rock, glacier = preprocess_glacier_cover_change(None, whole_glaciers, outline, elevation_thrs,
-                                                    outline_epsg=21781, target_epsg=21781)
-whole_glaciers = f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp'
-debris, ice, rock, glacier = preprocess_glacier_cover_change(None, whole_glaciers, outline, elevation_thrs,
-                                                    outline_epsg=21781, target_epsg=21781)
-debris_glaciers = f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp'
-whole_glaciers = f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp'
-debris, ice, rock, glacier = preprocess_glacier_cover_change(debris_glaciers, whole_glaciers, outline, elevation_thrs,
-                                                    outline_epsg=21781, target_epsg=21781)
+whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
+                  f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
+                  f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
+debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
+times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
+
+debris, ice, rock = create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, outline, 
+                                  elevation_thrs, results, outline_epsg=21781, target_epsg=21781)
+
+# FORMAT FOR THE CONSTANT INITIALISATION
 elevation_bands['Area Debris'] = debris
 elevation_bands['Area Ice'] = ice
 elevation_bands['Area Non Glacier'] = rock
@@ -250,7 +284,7 @@ hydro_units.load_from_csv(elev_bands, area_unit='m2', column_elevation='elevatio
 # Meteo data
 forcing = hb.Forcing(hydro_units)
 
-compute_altitudinal_trends = False
+compute_altitudinal_trends = True
 if compute_altitudinal_trends:
     compute_the_elevation_interpolations_HR(forcing, elevation_thrs)
 else:

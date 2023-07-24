@@ -11,6 +11,24 @@ import xarray as xa
 # Warning: we do not homogenize the time format! Should I?
 # The datasets do not have the same spatial resolution: Crespi: 250m; CH2018: 1612m; MeteoSwiss: 776m.
 
+def homogenize_discharge_datasets(stelvio_dataset, output_file, output_daily_mean_file):
+    
+    dateparse = lambda x: datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
+    data = pd.io.parsers.read_csv(stelvio_dataset, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
+                                  na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
+                                  index_col=0)
+    print(data)
+    print(data.dtypes)
+    
+    means = data.groupby(pd.Grouper(freq='1D')).mean()
+    
+    print(means)
+    
+    data.to_csv(output_file)
+    means.to_csv(output_daily_mean_file)
+    
+    print(bjhboö)
+
 def interpolate(nc_filename, regrid_x, regrid_y, out_filename):
     # Opens an existing netCDF file
     print(len(regrid_x), len(regrid_y))
@@ -169,7 +187,11 @@ def main():
     target_eto_CRS = "EPSG:4326" # Needs to be in degrees to compute the evapotranspiration
     target_dem_CRS = "EPSG:21781" # BUT NEEDS TO BE IN METERS TO COMPUTE AREAS FOR HYDROBRICKS
     target_start_datetime = datetime(1900,1,1,0,0,0)
-
+    
+    stelvio_discharge = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Portata_Torbidità_Ponte_Stelvio_2014_oggi/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
+    output_file = f"{results}Stelvio_discharge.csv"
+    output_daily_mean_file = f"{results}Stelvio_daily_mean_discharge.csv"
+    homogenize_discharge_datasets(stelvio_discharge, output_file, output_daily_mean_file)
 
     ##################################################################################################################################
     tif_filename = f'{path}Swiss_Study_area/ValDAnniviers_EPSG21781.tif'

@@ -239,7 +239,7 @@ class Forcing:
         else:
             raise ValueError(f'Unknown method: {method}')
 
-    def _apply_spatialization_from_station_data(self, variable, method='constant',
+    def _apply_spatialization_from_station_data(self, variable, method='default',
                                                 **kwargs):
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
@@ -256,6 +256,17 @@ class Forcing:
         gradient_1 = kwargs.get('gradient_1', None)
         gradient_2 = kwargs.get('gradient_2', None)
         elevation_threshold = kwargs.get('elevation_threshold', None)
+
+        # Specify default methods
+        if method == 'default':
+            if variable == 'temperature':
+                method = 'additive_elevation_gradient'
+            elif variable == 'precipitation':
+                method = 'multiplicative_elevation_gradient'
+            elif variable == 'pet':
+                method = 'constant'
+            else:
+                raise ValueError(f'Unknown default method for variable: {variable}')
 
         if gradient is None:
             gradient = gradient_1

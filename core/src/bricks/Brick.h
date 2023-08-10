@@ -70,6 +70,10 @@ class Brick : public wxObject {
         return false;
     }
 
+    virtual bool IsLandCover() {
+        return false;
+    }
+
     virtual bool IsNull() {
         return false;
     }
@@ -84,7 +88,7 @@ class Brick : public wxObject {
 
     Process* GetProcess(int index);
 
-    std::vector<Process*>& GetProcesses() {
+    vector<Process*>& GetProcesses() {
         return m_processes;
     }
 
@@ -115,7 +119,7 @@ class Brick : public wxObject {
     string m_name;
     bool m_needsSolver;
     WaterContainer* m_container;
-    std::vector<Process*> m_processes;
+    vector<Process*> m_processes;
 
   private:
 };

@@ -28,7 +28,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         return process;
     } else if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:rest-direct" || processSettings.type == "outflow:RestDirect") {
+    } else if (processSettings.type == "outflow:rest_direct" || processSettings.type == "outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "runoff:socont") {
         auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
@@ -124,24 +124,16 @@ double* Process::GetValuePointer(const string&) {
     return nullptr;
 }
 
-void Process::SetOutputFluxesFraction(double value) {
-    for (auto output : m_outputs) {
-        if (output->NeedsWeighting()) {
-            output->MultiplyFraction(value);
-        }
-    }
-}
-
 double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 
-    std::vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
+    vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
     for (auto process : otherProcesses) {
         wxASSERT(process);
         if (process == this) {
             continue;
         }
-        std::vector<Flux*> fluxes = process->GetOutputFluxes();
+        vector<Flux*> fluxes = process->GetOutputFluxes();
         for (auto flux : fluxes) {
             wxASSERT(flux);
             sumOtherProcesses += *flux->GetAmountPointer();

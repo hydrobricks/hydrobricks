@@ -20,8 +20,8 @@ struct HydroUnitSettings {
     int id;
     double area;
     double elevation;
-    std::vector<LandCoverSettings> landCovers;
-    std::vector<SurfaceComponentSettings> surfaceComponents;
+    vector<LandCoverSettings> landCovers;
+    vector<SurfaceComponentSettings> surfaceComponents;
 };
 
 class SettingsBasin : public wxObject {
@@ -73,7 +73,7 @@ class SettingsBasin : public wxObject {
 
   protected:
   private:
-    std::vector<HydroUnitSettings> m_hydroUnits;
+    vector<HydroUnitSettings> m_hydroUnits;
     HydroUnitSettings* m_selectedHydroUnit;
 };
 

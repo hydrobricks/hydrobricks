@@ -17,15 +17,15 @@ void SplitterMultiFluxes::AssignParameters(const SplitterSettings&) {
 }
 
 double* SplitterMultiFluxes::GetValuePointer(const string& name) {
-    if (name == "output-1") {
+    if (name == "output_1") {
         return m_outputs[0]->GetAmountPointer();
-    } else if (name == "output-2") {
+    } else if (name == "output_2") {
         return m_outputs[1]->GetAmountPointer();
-    } else if (name == "output-3") {
+    } else if (name == "output_3") {
         return m_outputs[2]->GetAmountPointer();
-    } else if (name == "output-4") {
+    } else if (name == "output_4") {
         return m_outputs[3]->GetAmountPointer();
-    } else if (name == "output-5") {
+    } else if (name == "output_5") {
         return m_outputs[4]->GetAmountPointer();
     }
 

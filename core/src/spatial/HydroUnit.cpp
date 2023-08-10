@@ -31,6 +31,11 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
 void HydroUnit::AddBrick(Brick* brick) {
     wxASSERT(brick);
     m_bricks.push_back(brick);
+
+    if (brick->IsLandCover()) {
+        auto* landCover = dynamic_cast<LandCover*>(brick);
+        m_landCoverBricks.push_back(landCover);
+    }
 }
 
 void HydroUnit::AddSplitter(Splitter* splitter) {
@@ -97,6 +102,16 @@ Brick* HydroUnit::GetBrick(const string& name) {
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
+LandCover* HydroUnit::GetLandCover(const string& name) {
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == name) {
+            return brick;
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
+}
+
 Splitter* HydroUnit::GetSplitter(int index) {
     wxASSERT(m_splitters.size() > index);
     wxASSERT(m_splitters[index]);
@@ -133,6 +148,47 @@ bool HydroUnit::IsOk() {
     if (m_area <= 0) {
         wxLogError(_("The hydro unit area has not been defined."));
         return false;
+    }
+
+    return true;
+}
+
+bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
+    if ((fraction < 0) || (fraction > 1)) {
+        wxLogError(_("The given fraction (%f) is not in the allowed range [0 .. 1]"), fraction);
+        return false;
+    }
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == name) {
+            brick->SetAreaFraction(fraction);
+            return FixLandCoverFractionsTotal();
+        }
+    }
+    wxLogError(_("Land cover '%s' was not found."), name);
+    return false;
+}
+
+bool HydroUnit::FixLandCoverFractionsTotal() {
+    LandCover* ground = nullptr;
+    double total = 0;
+    for (auto brick : m_landCoverBricks) {
+        if (brick->GetName() == "ground" || brick->GetName() == "generic") {
+            ground = brick;
+        }
+        total += brick->GetAreaFraction();
+    }
+
+    if (std::fabs(total - 1.0) > EPSILON_D) {
+        double diff = total - 1.0;
+        if (ground == nullptr) {
+            wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));
+            return false;
+        }
+        if (ground->GetAreaFraction() < diff) {
+            wxLogError(_("The ground (generic) land cover is not large enough to compensate the area fractions."));
+            return false;
+        }
+        ground->SetAreaFraction(ground->GetAreaFraction() - diff);
     }
 
     return true;

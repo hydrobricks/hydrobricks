@@ -133,6 +133,16 @@ HydroUnit* SubBasin::GetHydroUnit(int index) {
     return m_hydroUnits[index];
 }
 
+HydroUnit* SubBasin::GetHydroUnitById(int id) {
+    for (auto unit : m_hydroUnits) {
+        if (unit->GetId() == id) {
+            return unit;
+        }
+    }
+    wxLogError(_("The hydro unit %d was not found"), id);
+    return nullptr;
+}
+
 vecInt SubBasin::GetHydroUnitIds() {
     vecInt ids;
     ids.reserve(m_hydroUnits.size());
@@ -225,11 +235,6 @@ void SubBasin::AddInputConnector(Connector* connector) {
 void SubBasin::AddOutputConnector(Connector* connector) {
     wxASSERT(connector);
     m_outConnectors.push_back(connector);
-}
-
-void SubBasin::AddBehaviour(Behaviour* behaviour) {
-    wxASSERT(behaviour);
-    m_behaviours.push_back(behaviour);
 }
 
 void SubBasin::AttachOutletFlux(Flux* flux) {

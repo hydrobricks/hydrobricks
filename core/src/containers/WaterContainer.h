@@ -95,7 +95,8 @@ class WaterContainer : public wxObject {
     double GetTargetFillingRatio();
 
     bool IsNotEmpty() {
-        return GetContentWithChanges() > 0.0;
+        double content = GetContentWithChanges();
+        return content > EPSILON_F && content > PRECISION;
     }
 
     bool HasOverflow() {
@@ -139,7 +140,7 @@ class WaterContainer : public wxObject {
     bool m_infiniteStorage;
     Brick* m_parent;
     Process* m_overflow;
-    std::vector<Flux*> m_inputs;
+    vector<Flux*> m_inputs;
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

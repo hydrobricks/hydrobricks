@@ -53,7 +53,8 @@ class Forcing(TimeSeries):
                 self.spatialize(**operation)
 
     def spatialize(self, variable, method='constant', ref_elevation=None, gradient=0,
-                   gradient_2=0, elevation_threshold=None, correction_factor=None):
+                   gradient_1=0, gradient_2=0, elevation_threshold=None,
+                   correction_factor=None):
         """
         Spatializes the provided variable to all hydro units using the defined method.
 
@@ -82,6 +83,8 @@ class Forcing(TimeSeries):
             Gradient of the variable to apply per 100m (e.g., °C/100m).
             Can be a unique value or a list providing a value for every month.
             For method(s): 'elevation_gradient', 'elevation_multi_gradients'
+        gradient_1 : float/list
+            Same as parameter 'gradient'
         gradient_2 : float/list
             Gradient of the variable to apply per 100m (e.g., °C/100m) for the units
             above the elevation threshold defined by 'elevation_threshold'.
@@ -95,6 +98,9 @@ class Forcing(TimeSeries):
         hydro_units = self.hydro_units.reset_index()
         i_col = self.data_name.index(variable)
         data_raw = self.data_raw[i_col].copy()
+
+        if isinstance(gradient, int) and gradient == 0:
+            gradient = gradient_1
 
         # Check inputs
         if method == 'multiplicative_elevation_threshold_gradients':
@@ -152,6 +158,9 @@ class Forcing(TimeSeries):
                 if elevation < elevation_threshold:
                     unit_values[:, i_unit] = data_raw * (
                             1 + gradient * (elevation - ref_elevation) / 100)
+                elif ref_elevation > elevation_threshold:
+                    unit_values[:, i_unit] = data_raw * (
+                            1 + gradient_2 * (elevation - ref_elevation) / 100)
                 else:
                     precip_below = data_raw * (1 + gradient * (
                             elevation_threshold - ref_elevation) / 100)
@@ -210,7 +219,7 @@ class Forcing(TimeSeries):
         gradient : float
             Precipitation gradient (ratio) per 100 m of altitude.
         gradient_1 : float
-            Precipitation gradient (ratio) per 100 m of altitude.
+            Same as parameter 'gradient'
         gradient_2 : float
             Precipitation gradient (ratio) per 100 m of altitude for the units above
             the threshold elevation (optional).

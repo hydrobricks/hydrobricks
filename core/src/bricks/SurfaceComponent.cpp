@@ -17,7 +17,7 @@ void SurfaceComponent::SetAreaFraction(double value) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
                 value *= m_parent->GetAreaFraction();
-                output->MultiplyFraction(value);
+                output->SetFractionLandCover(value);
             }
         }
     }

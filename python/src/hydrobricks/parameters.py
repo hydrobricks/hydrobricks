@@ -1,8 +1,7 @@
 import random
 
-import pandas as pd
-
 import hydrobricks as hb
+import pandas as pd
 
 
 class ParameterSet:
@@ -11,7 +10,7 @@ class ParameterSet:
     def __init__(self):
         self.parameters = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
-                     'min', 'max', 'default_value', 'mandatory'])
+                     'min', 'max', 'default_value', 'mandatory', 'prior'])
         self.constraints = []
         self._allow_changing = []
 
@@ -38,7 +37,7 @@ class ParameterSet:
         ----------
         component : str
             The component (brick) name to which the parameter refer (e.g., snowpack,
-            glacier, surface-runoff).
+            glacier, surface_runoff).
         name : str
             The name of the parameter in the C++ code of hydrobricks (e.g.,
             degree_day_factor, response_factor).
@@ -67,7 +66,7 @@ class ParameterSet:
         new_row = pd.Series(
             {'component': component, 'name': name, 'unit': unit, 'aliases': aliases,
              'value': value, 'min': min_value, 'max': max_value,
-             'default_value': default_value, 'mandatory': mandatory})
+             'default_value': default_value, 'mandatory': mandatory, 'prior': None})
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
@@ -89,9 +88,34 @@ class ParameterSet:
         self.parameters.loc[index, 'min'] = min_value
         self.parameters.loc[index, 'max'] = max_value
 
+    def set_prior(self, parameter, prior):
+        """
+        Change the value range of a parameter.
+
+        Parameters
+        ----------
+        parameter: str
+            Name (or alias) of the parameter
+        prior: spotpy.parameter
+            The prior distribution (instance of spotpy.parameter)
+        """
+        if not hb.has_spotpy:
+            raise ImportError("spotpy is required to do this.")
+
+        index = self._get_parameter_index(parameter)
+        prior.name = parameter
+        self.parameters.loc[index, 'prior'] = prior
+
+    def list_constraints(self):
+        """
+        List the constraints currently defined.
+        """
+        for constraint in self.constraints:
+            print(' '.join(constraint))
+
     def define_constraint(self, parameter_1, operator, parameter_2):
         """
-        Define a constraint between 2 parameters (e.g., paramA > paramB)
+        Defines a constraint between 2 parameters (e.g., paramA > paramB)
 
         Parameters
         ----------
@@ -109,7 +133,31 @@ class ParameterSet:
         constraint = [parameter_1, operator, parameter_2]
         self.constraints.append(constraint)
 
-    def are_constraints_satisfied(self) -> bool:
+    def remove_constraint(self, parameter_1, operator, parameter_2):
+        """
+        Removes a constraint between 2 parameters (e.g., paramA > paramB)
+
+        Parameters
+        ----------
+        parameter_1 : str
+            The name of the first parameter.
+        operator : str
+            The operator (e.g. '<=').
+        parameter_2 : str
+            The name of the second parameter.
+
+        Examples
+        --------
+        parameter_set.remove_constraint('paramA', '>=', 'paramB')
+        """
+        for i, constraint in enumerate(self.constraints):
+            if parameter_1 == constraint[0] \
+                    and operator == constraint[1] \
+                    and parameter_2 == constraint[2]:
+                del self.constraints[i]
+                return
+
+    def constraints_satisfied(self) -> bool:
         """
         Check if the constraints between parameters are satisfied.
 
@@ -140,7 +188,40 @@ class ParameterSet:
 
         return True
 
-    def set_values(self, values):
+    def range_satisfied(self) -> bool:
+        """
+        Check if the parameter value ranges are satisfied.
+
+        Returns
+        -------
+        True is ranges are satisfied, False otherwise.
+        """
+
+        for _, row in self.parameters.iterrows():
+            min_value = row['min']
+            max_value = row['max']
+            value = row['value']
+
+            if value is None:
+                return False
+
+            if not isinstance(min_value, list):
+                if max_value is not None and value > max_value:
+                    return False
+                if min_value is not None and value < min_value:
+                    return False
+            else:
+                assert isinstance(max_value, list)
+                assert isinstance(value, list)
+                for min_v, max_v, val in zip(min_value, max_value, value):
+                    if max_v is not None and val > max_v:
+                        return False
+                    if min_v is not None and val < min_v:
+                        return False
+
+        return True
+
+    def set_values(self, values, check_range=True, allow_adapt=False):
         """
         Set the parameter values.
 
@@ -149,12 +230,20 @@ class ParameterSet:
         values : dict
             The values must be provided as a dictionary with the parameter name with the
             related component or one of its aliases as the key.
-            Example: {'k': 32, 'A': 300} or {'slow-reservoir:capacity': 300}
+            Example: {'k': 32, 'A': 300} or {'slow_reservoir:capacity': 300}
+        check_range : bool
+            Check that the parameter value falls into the allowed range.
+        allow_adapt : bool
+            Allow the parameter values to be adapted to enforce defined constraints
+            (e.g.: min, max).
         """
         for key in values:
             index = self._get_parameter_index(key)
-            self._check_value_range(index, key, values[key])
-            self.parameters.loc[index, 'value'] = values[key]
+            value = values[key]
+            if check_range:
+                value = self._check_value_range(index, key, value,
+                                                allow_adapt=allow_adapt)
+            self.parameters.loc[index, 'value'] = value
 
     def has(self, name):
         """
@@ -281,7 +370,7 @@ class ParameterSet:
                 else:
                     assigned_values.loc[0, key] = self.parameters.loc[index, 'value']
 
-            if self.are_constraints_satisfied():
+            if self.constraints_satisfied():
                 break
 
             if i >= 1000:
@@ -314,14 +403,21 @@ class ParameterSet:
         """
         if not hb.has_spotpy:
             raise ImportError("spotpy is required to do this.")
+
         spotpy_params = []
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
-            spotpy_params.append(
-                hb.spotpy.parameter.Uniform(param_name, low=param['min'],
-                                            high=param['max'])
-            )
+            if param['prior']:
+                spotpy_params.append(
+                    param['prior']
+                )
+            else:
+                spotpy_params.append(
+                    hb.spotpy.parameter.Uniform(param_name, low=param['min'],
+                                                high=param['max'])
+                )
+
         return spotpy_params
 
     def create_file(self, directory, name, file_type='both'):
@@ -384,27 +480,39 @@ class ParameterSet:
                 raise Exception(f'The alias "{alias}" already exists. '
                                 f'It must be unique.')
 
-    def _check_value_range(self, index, key, value):
+    def _check_value_range(self, index, key, value, allow_adapt=False):
         max_value = self.parameters.loc[index, 'max']
         min_value = self.parameters.loc[index, 'min']
 
-        if type(min_value) != list:
+        if not isinstance(min_value, list):
             if max_value is not None and value > max_value:
+                if allow_adapt:
+                    return max_value
                 raise Exception(f'The value {value} for the parameter "{key}" is above '
                                 f'the maximum threshold ({max_value}).')
             if min_value is not None and value < min_value:
+                if allow_adapt:
+                    return min_value
                 raise Exception(f'The value {value} for the parameter "{key}" is below '
                                 f'the minimum threshold ({min_value}).')
         else:
             assert isinstance(max_value, list)
             assert isinstance(value, list)
-            for min_v, max_v, val in zip(min_value, max_value, value):
-                if max_v is not None and value > max_v:
-                    raise Exception(f'The value {val} for the parameter "{key}" is '
-                                    f'above the maximum threshold ({max_v}).')
-                if min_v is not None and value < min_v:
-                    raise Exception(f'The value {val} for the parameter "{key}" is '
-                                    f'below the minimum threshold ({min_v}).')
+            for i, (min_v, max_v, val) in enumerate(zip(min_value, max_value, value)):
+                if max_v is not None and val > max_v:
+                    if allow_adapt:
+                        value[i] = max_v
+                    else:
+                        raise Exception(f'The value {val} for the parameter "{key}" is '
+                                        f'above the maximum threshold ({max_v}).')
+                if min_v is not None and val < min_v:
+                    if allow_adapt:
+                        value[i] = min_v
+                    else:
+                        raise Exception(f'The value {val} for the parameter "{key}" is '
+                                        f'below the minimum threshold ({min_v}).')
+
+        return value
 
     def _get_parameter_index(self, name, raise_exception=True):
         for index, row in self.parameters.iterrows():

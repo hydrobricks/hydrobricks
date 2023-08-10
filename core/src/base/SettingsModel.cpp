@@ -83,24 +83,16 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
 void SettingsModel::AddLandCoverBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
 
-    BrickSettings brick;
-    brick.name = name;
-    brick.type = type;
-
     AddHydroUnitBrick(name, type);
     m_selectedStructure->landCoverBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
 
     if (SelectHydroUnitSplitterIfFound("rain_splitter")) {
-        AddSplitterOutput(brick.name);
+        AddSplitterOutput(name);
     }
 }
 
 void SettingsModel::AddSurfaceComponentBrick(const string& name, const string& type) {
     wxASSERT(m_selectedStructure);
-
-    BrickSettings brick;
-    brick.name = name;
-    brick.type = type;
 
     AddHydroUnitBrick(name, type);
     m_selectedStructure->surfaceComponentBricks.push_back(m_selectedStructure->hydroUnitBricks.size() - 1);
@@ -429,8 +421,8 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
-        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "snowpack");
+        AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
+        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
@@ -454,8 +446,8 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "-snowpack", "snow");
-        AddSurfaceComponentBrick(brickSettings.name + "-snowpack", "snowpack");
+        AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
+        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess);
@@ -816,7 +808,7 @@ bool SettingsModel::ParseParameters(const string& path) {
                             if (nameL1 == "snowpack") {
                                 for (int index : m_selectedStructure->landCoverBricks) {
                                     BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                                    SelectHydroUnitBrick(brickSettings.name + "-snowpack");
+                                    SelectHydroUnitBrick(brickSettings.name + "_snowpack");
                                     SelectProcess(nameL2);
                                     SetProcessParameterValue(nameL3, paramValue);
                                 }
@@ -840,7 +832,7 @@ bool SettingsModel::ParseParameters(const string& path) {
                         if (nameL1 == "snowpack") {
                             for (int index : m_selectedStructure->landCoverBricks) {
                                 BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                                SelectHydroUnitBrick(brickSettings.name + "-snowpack");
+                                SelectHydroUnitBrick(brickSettings.name + "_snowpack");
                                 SelectProcessWithParameter(nameL2);
                                 SetProcessParameterValue(nameL2, paramValue);
                             }
@@ -891,7 +883,7 @@ bool SettingsModel::SetParameter(const string& component, const string& name, fl
         if (component == "snowpack") {
             for (int index : m_selectedStructure->landCoverBricks) {
                 BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                SelectHydroUnitBrick(brickSettings.name + "-snowpack");
+                SelectHydroUnitBrick(brickSettings.name + "_snowpack");
                 SelectProcessWithParameter(name);
                 SetProcessParameterValue(name, value);
             }
@@ -987,12 +979,12 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         if (type == "glacier") {
             // Direct rain and snow melt to linear storage
             SelectHydroUnitBrick(name);
-            AddBrickProcess("outflow-rain-snowmelt", "outflow:direct", "glacier-area-rain-snowmelt-storage");
+            AddBrickProcess("outflow_rain_snowmelt", "outflow:direct", "glacier_area_rain_snowmelt_storage");
 
             // Glacier melt process
             AddBrickParameter("no_melt_when_snow_cover", 1.0);
             AddBrickParameter("infinite_storage", 1.0);
-            AddBrickProcess("melt", "melt:degree_day", "glacier-area-icemelt-storage");
+            AddBrickProcess("melt", "melt:degree_day", "glacier_area_icemelt_storage");
             AddProcessForcing("temperature");
             AddProcessParameter("degree_day_factor", 3.0f);
             AddProcessParameter("melting_temperature", 0.0f);
@@ -1001,21 +993,21 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     }
 
     // Basin storages for contributions from the glacierized area
-    AddSubBasinBrick("glacier-area-rain-snowmelt-storage", "storage");
+    AddSubBasinBrick("glacier_area_rain_snowmelt_storage", "storage");
     AddBrickProcess("outflow", "outflow:linear", "outlet");
     AddProcessParameter("response_factor", 0.2f);
-    AddSubBasinBrick("glacier-area-icemelt-storage", "storage");
+    AddSubBasinBrick("glacier_area_icemelt_storage", "storage");
     AddBrickProcess("outflow", "outflow:linear", "outlet");
     AddProcessParameter("response_factor", 0.2f);
 
     // Infiltration and overflow
     SelectHydroUnitBrick("ground");
-    AddBrickProcess("infiltration", "infiltration:socont", "slow-reservoir");
-    AddBrickProcess("runoff", "outflow:rest-direct", "surface-runoff");
+    AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
+    AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
 
     // Add other bricks
     if (soilStorageNb == 1) {
-        AddHydroUnitBrick("slow-reservoir", "storage");
+        AddHydroUnitBrick("slow_reservoir", "storage");
         AddBrickParameter("capacity", 200.0f);
         AddBrickProcess("et", "et:socont");
         AddProcessForcing("pet");
@@ -1024,23 +1016,23 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
         AddBrickProcess("overflow", "overflow", "outlet");
     } else if (soilStorageNb == 2) {
         wxLogMessage(_("Using 2 soil storages."));
-        AddHydroUnitBrick("slow-reservoir", "storage");
+        AddHydroUnitBrick("slow_reservoir", "storage");
         AddBrickParameter("capacity", 200.0f);
         AddBrickProcess("et", "et:socont");
         AddProcessForcing("pet");
         AddBrickProcess("outflow", "outflow:linear", "outlet");
         AddProcessParameter("response_factor", 0.2f);
-        AddBrickProcess("percolation", "outflow:constant", "slow-reservoir-2");
+        AddBrickProcess("percolation", "outflow:constant", "slow_reservoir_2");
         AddProcessParameter("percolation_rate", 0.1f);
         AddBrickProcess("overflow", "overflow", "outlet");
-        AddHydroUnitBrick("slow-reservoir-2", "storage");
+        AddHydroUnitBrick("slow_reservoir_2", "storage");
         AddBrickProcess("outflow", "outflow:linear", "outlet");
         AddProcessParameter("response_factor", 0.02f);
     } else {
         wxLogError(_("There can be only one or two groundwater storages."));
     }
 
-    AddHydroUnitBrick("surface-runoff", "storage");
+    AddHydroUnitBrick("surface_runoff", "storage");
     if (surfaceRunoff == "socont_runoff") {
         AddBrickProcess("runoff", "runoff:socont", "outlet");
         AddProcessParameter("runoff_coefficient", 500.0f);

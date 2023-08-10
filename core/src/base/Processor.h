@@ -27,7 +27,7 @@ class Processor : public wxObject {
         return &m_stateVariableChanges;
     }
 
-    std::vector<Brick*>* GetIterableBricksVectorPt() {
+    vector<Brick*>* GetIterableBricksVectorPt() {
         return &m_iterableBricks;
     }
 
@@ -45,7 +45,7 @@ class Processor : public wxObject {
     int m_solvableConnectionsNb;
     int m_directConnectionsNb;
     vecDoublePt m_stateVariableChanges;
-    std::vector<Brick*> m_iterableBricks;
+    vector<Brick*> m_iterableBricks;
     axd m_changeRatesNoSolver;
 
   private:

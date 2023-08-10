@@ -65,7 +65,7 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
     if (parser.Found("version")) {
         wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
                                             HYDROBRICKS_PATCH_VERSION);
-        wxPrintf("hydrobricks version %s, %s", version, (const wxChar*)wxString::FromAscii(__DATE__));
+        wxPrintf("hydrobricks version %s, %s", version, static_cast<const wxChar*>(wxString::FromAscii(__DATE__)));
         return false;
     }
 
@@ -157,7 +157,7 @@ int Hydrobricks::OnRun() {
         }
 
         // Data
-        std::vector<TimeSeries*> vecTimeSeries;
+        vector<TimeSeries*> vecTimeSeries;
         if (!TimeSeries::Parse(m_dataFile, vecTimeSeries)) {
             return 1;
         }

@@ -36,7 +36,7 @@ class SnowpackModel : public ::testing::Test {
         m_model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        m_model.AddHydroUnitSplitter("snow-rain", "snow_rain");
+        m_model.AddHydroUnitSplitter("snow_rain", "snow_rain");
         m_model.AddSplitterForcing("precipitation");
         m_model.AddSplitterForcing("temperature");
         m_model.AddSplitterOutput("outlet");            // rain
@@ -226,7 +226,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
         m_model.GenerateSnowpacks("melt:degree_day");
 
         // Snow melt process
-        m_model.SelectHydroUnitBrick("glacier-snowpack");
+        m_model.SelectHydroUnitBrick("glacier_snowpack");
         m_model.AddProcessParameter("degree_day_factor", 2.0f);
         m_model.AddProcessParameter("melting_temperature", 0.0f);
         m_model.AddProcessLogging("output");

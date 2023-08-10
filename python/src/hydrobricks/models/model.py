@@ -2,10 +2,8 @@ import importlib
 import os
 from abc import ABC, abstractmethod
 
+import _hydrobricks as _hb
 import HydroErr
-import pandas as pd
-
-import _hydrobricks as hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -13,6 +11,7 @@ from hydrobricks import utils
 class Model(ABC):
     """Base class for the models"""
 
+    @abstractmethod
     def __init__(self, name=None, **kwargs):
         self.name = name
         self.settings = SettingsModel()
@@ -72,7 +71,7 @@ class Model(ABC):
             self.spatial_structure = spatial_structure
 
             # Initialize log
-            hb.init_log(str(output_path))
+            _hb.init_log(str(output_path))
 
             # Modelling period
             self.settings.set_timer(start_date, end_date, 1, "day")
@@ -134,8 +133,9 @@ class Model(ABC):
         except Exception:
             print("An exception occurred.")
 
-    def cleanup(self):
-        hb.close_log()
+    @staticmethod
+    def cleanup():
+        _hb.close_log()
 
     def initialize_state_variables(self, parameters, forcing=None):
         """
@@ -172,6 +172,29 @@ class Model(ABC):
 
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
+
+    def add_behaviour(self, behaviour) -> bool:
+        """
+        Add a behaviour to the model.
+
+        Parameters
+        ----------
+        behaviour : Behaviour
+            The behaviour object. The dates must be sorted.
+        """
+        return self.model.add_behaviour(behaviour.behaviour)
+
+    def get_behaviours_nb(self) -> int:
+        """
+        Get the number of behaviours (types of behaviours) registered in the model.
+        """
+        return self.model.get_behaviours_nb()
+
+    def get_behaviour_items_nb(self) -> int:
+        """
+        Get the number of behaviour items (individual triggers) registered in the model.
+        """
+        return self.model.get_behaviour_items_nb()
 
     def create_config_file(self, directory, name, file_type='both'):
         """
@@ -241,62 +264,6 @@ class Model(ABC):
             Path to the target file.
         """
         self.model.dump_outputs(path)
-
-    def analyze(self, method, parameters, forcing, observations,
-                metrics, nb_runs=10000):
-        """
-        Perform an analysis of the model parameters.
-
-        Parameters
-        ----------
-        method: str
-            The name of the analysis method to use.
-            Options: monte_carlo
-        parameters: ParameterSet
-            The parameter set to analyze.
-        forcing: Forcing
-            Forcing data object.
-        observations: Observations
-            Observations to compare to.
-        metrics: list
-            List of the metrics to assess.
-            Example: ['nse', 'kge_2012']
-        nb_runs: int
-            Number of assessment to make.
-
-        Returns
-        -------
-        A dataframe containing the parameter values and the corresponding metrics.
-        """
-        if method != 'monte_carlo':
-            raise NotImplementedError
-
-        random_forcing = parameters.needs_random_forcing()
-        parameters_to_assess = parameters.allow_changing
-
-        forcing.apply_defined_spatialization(parameters)
-        if not random_forcing:
-            self.set_forcing(forcing=forcing)
-
-        columns = [*parameters_to_assess, *metrics]
-        tested_params = pd.DataFrame(columns=columns)
-
-        for n in range(nb_runs):
-            print(f'Run {n + 1}/{nb_runs}')
-            assigned_values = parameters.set_random_values(parameters_to_assess)
-
-            if random_forcing:
-                forcing.apply_defined_spatialization(parameters, parameters_to_assess)
-                self.run(parameters=parameters, forcing=forcing)
-            else:
-                self.run(parameters=parameters)
-
-            for metric in metrics:
-                assigned_values[metric] = self.eval(metric, observations)
-
-            tested_params = pd.concat([tested_params, assigned_values])
-
-        return tested_params
 
     def eval(self, metric, observations):
         """

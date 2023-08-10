@@ -28,18 +28,18 @@ struct ProcessSettings {
     string name;
     string type;
     vecStr logItems;
-    std::vector<Parameter*> parameters;
-    std::vector<VariableType> forcing;
-    std::vector<OutputSettings> outputs;
+    vector<Parameter*> parameters;
+    vector<VariableType> forcing;
+    vector<OutputSettings> outputs;
 };
 
 struct SplitterSettings {
     string name;
     string type;
     vecStr logItems;
-    std::vector<Parameter*> parameters;
-    std::vector<VariableType> forcing;
-    std::vector<OutputSettings> outputs;
+    vector<Parameter*> parameters;
+    vector<VariableType> forcing;
+    vector<OutputSettings> outputs;
 };
 
 struct BrickSettings {
@@ -47,20 +47,20 @@ struct BrickSettings {
     string type;
     string parent;
     vecStr logItems;
-    std::vector<Parameter*> parameters;
-    std::vector<VariableType> forcing;
-    std::vector<ProcessSettings> processes;
+    vector<Parameter*> parameters;
+    vector<VariableType> forcing;
+    vector<ProcessSettings> processes;
 };
 
 struct ModelStructure {
     int id;
     vecStr logItems;
-    std::vector<BrickSettings> hydroUnitBricks;
-    std::vector<BrickSettings> subBasinBricks;
+    vector<BrickSettings> hydroUnitBricks;
+    vector<BrickSettings> subBasinBricks;
     vecInt landCoverBricks;
     vecInt surfaceComponentBricks;
-    std::vector<SplitterSettings> hydroUnitSplitters;
-    std::vector<SplitterSettings> subBasinSplitters;
+    vector<SplitterSettings> hydroUnitSplitters;
+    vector<SplitterSettings> subBasinSplitters;
 };
 
 class SettingsModel : public wxObject {
@@ -284,7 +284,7 @@ class SettingsModel : public wxObject {
 
   protected:
     bool m_logAll;
-    std::vector<ModelStructure> m_modelStructures;
+    vector<ModelStructure> m_modelStructures;
     SolverSettings m_solver;
     TimerSettings m_timer;
     ModelStructure* m_selectedStructure;

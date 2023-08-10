@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include "BehavioursManager.h"
 #include "Includes.h"
 #include "Logger.h"
 #include "Processor.h"
@@ -44,6 +45,12 @@ class ModelHydro : public wxObject {
 
     bool AddTimeSeries(TimeSeries* timeSeries);
 
+    bool AddBehaviour(Behaviour* behaviour);
+
+    int GetBehavioursNb();
+
+    int GetBehaviourItemsNb();
+
     bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     void ClearTimeSeries();
@@ -70,12 +77,18 @@ class ModelHydro : public wxObject {
         return &m_logger;
     }
 
+    BehavioursManager* GetBehavioursManager() {
+        return &m_behavioursManager;
+    }
+
   protected:
     Processor m_processor;
     SubBasin* m_subBasin;
     TimeMachine m_timer;
     Logger m_logger;
-    std::vector<TimeSeries*> m_timeSeries;
+    BehavioursManager m_behavioursManager;
+    ParametersUpdater m_parametersUpdater;
+    vector<TimeSeries*> m_timeSeries;
 
   private:
     void BuildModelStructure(SettingsModel& modelSettings);

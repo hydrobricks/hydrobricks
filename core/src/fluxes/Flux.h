@@ -68,8 +68,18 @@ class Flux : public wxObject {
         m_needsWeighting = value;
     }
 
-    void MultiplyFraction(double value) {
-        m_fraction *= value;
+    void SetFractionUnitArea(double value) {
+        m_fractionUnitArea = value;
+        UpdateFractionTotal();
+    }
+
+    void SetFractionLandCover(double value) {
+        m_fractionLandCover = value;
+        UpdateFractionTotal();
+    }
+
+    void UpdateFractionTotal() {
+        m_fractionTotal = m_fractionUnitArea * m_fractionLandCover;
     }
 
     string GetType() {
@@ -85,7 +95,9 @@ class Flux : public wxObject {
     double* m_changeRate;
     bool m_static;
     bool m_needsWeighting;
-    double m_fraction;
+    double m_fractionUnitArea;
+    double m_fractionLandCover;
+    double m_fractionTotal;
     Modifier* m_modifier;
     string m_type;
 

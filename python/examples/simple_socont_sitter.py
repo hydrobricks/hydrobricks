@@ -14,13 +14,6 @@ CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 
-if 'USE_PRECIP_GRADIENT' not in locals() and 'USE_PRECIP_GRADIENT' not in globals():
-    USE_PRECIP_GRADIENT = False
-
-if 'USE_PYET' not in locals() and 'USE_PYET' not in globals():
-    USE_PYET = False
-
-
 with tempfile.TemporaryDirectory() as tmp_dir_name:
     tmp_dir = tmp_dir_name
 
@@ -33,11 +26,8 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 
 # Parameters
 parameters = socont.generate_parameters()
-parameters.define_constraint('k_slow_2', '<', 'k_slow_1')
-parameters.add_data_parameter('precip_corr_factor', 0.85, min_value=0.7, max_value=1.3)
-parameters.add_data_parameter('temp_gradients', -0.6, min_value=-1, max_value=0)
-if USE_PRECIP_GRADIENT:
-    parameters.add_data_parameter('precip_gradient', 0.05, min_value=0, max_value=0.2)
+parameters.set_values({'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
+                       'k_quick': 1, 'percol': 9.8})
 
 # Hydro units
 hydro_units = hb.HydroUnits()
@@ -52,32 +42,30 @@ forcing.load_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
     content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
              'pet': 'pet_sim(mm/day)'})
-
-forcing.define_spatialization(
-    variable='temperature', method='additive_elevation_gradient',
-    ref_elevation=ref_elevation, gradient='param:temp_gradients')
-
-if USE_PYET:
-    forcing.define_spatialization(variable='pet', method='pyet:priestley_taylor')
-else:
-    forcing.define_spatialization(variable='pet', method='constant')
-
-if USE_PRECIP_GRADIENT:
-    forcing.define_spatialization(
-        variable='precipitation', method='multiplicative_elevation_gradient',
-        ref_elevation=ref_elevation, gradient='param:precip_gradient',
-        correction_factor='param:precip_corr_factor'
-    )
-else:
-    forcing.define_spatialization(
-        variable='precipitation', method='constant',
-        correction_factor='param:precip_corr_factor'
-    )
+forcing.spatialize_temperature(ref_elevation, -0.6)
+forcing.spatialize_pet()
+forcing.spatialize_precipitation(ref_elevation=ref_elevation, gradient=0.05,
+                                 correction_factor=0.75)
 
 # Obs data
 obs = hb.Observations()
 obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
                   content={'discharge': 'Discharge (mm/d)'})
 
+# Model setup
 socont.setup(spatial_structure=hydro_units, output_path=str(working_dir),
              start_date='1981-01-01', end_date='2020-12-31')
+
+# Initialize and run the model
+socont.initialize_state_variables(parameters=parameters, forcing=forcing)
+socont.run(parameters=parameters, forcing=forcing)
+
+# Get outlet discharge time series
+sim_ts = socont.get_outlet_discharge()
+
+# Evaluate
+obs_ts = obs.data_raw[0]
+nse = socont.eval('nse', obs_ts)
+kge_2012 = socont.eval('kge_2012', obs_ts)
+
+print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")

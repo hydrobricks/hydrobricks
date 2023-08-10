@@ -5,29 +5,29 @@ snowpack:
   melt:
     degree_day_factor: 2
     melting_temperature: 0
-glacier-ice:
+glacier_ice:
   melt:
     degree_day_factor: 6
     melting_temperature: 0
-glacier-debris:
+glacier_debris:
   melt:
     degree_day_factor: 4
     melting_temperature: 0
-glacier-area-rain-snowmelt-storage:
+glacier_area_rain_snowmelt_storage:
   outflow:
     response_factor: 0.2
-glacier-area-icemelt-storage:
+glacier_area_icemelt_storage:
   outflow:
     response_factor: 0.2
-surface-runoff:
+surface_runoff:
   runoff:
     runoff_coefficient: 500
-slow-reservoir:
+slow_reservoir:
   capacity: 500
   outflow:
     response_factor: 0.2
   percolation:
     percolation_rate: 0.4
-slow-reservoir-2:
+slow_reservoir_2:
   outflow:
     response_factor: 0.01

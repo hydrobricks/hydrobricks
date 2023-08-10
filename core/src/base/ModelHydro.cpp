@@ -13,9 +13,12 @@
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin) {
     m_processor.SetModel(this);
+    m_behavioursManager.SetModel(this);
+    m_timer.SetBehavioursManager(&m_behavioursManager);
+    m_timer.SetParametersUpdater(&m_parametersUpdater);
 }
 
-ModelHydro::~ModelHydro() {}
+ModelHydro::~ModelHydro() = default;
 
 bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
     wxDELETE(m_subBasin);
@@ -386,7 +389,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetType(output.fluxType);
 
                     // From hydro unit to basin: weight by hydro unit area
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
 
                     // Weight by surface area
                     if (brick->CanHaveAreaFraction()) {
@@ -422,7 +425,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                        flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
                         flux->SetAsStatic();
                     }
 
@@ -452,7 +455,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                        flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
                     }
 
                     targetSplitter->AttachFluxIn(flux);
@@ -528,7 +531,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 flux->SetType(output.fluxType);
 
                 // From hydro unit to basin: weight by hydro unit area
-                flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());
+                flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());
 
                 m_subBasin->AttachOutletFlux(flux);
 
@@ -551,7 +554,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetBrick->AttachFluxIn(flux);
@@ -575,7 +578,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->MultiplyFraction(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetFractionUnitArea(unit->GetArea() / m_subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetSplitter->AttachFluxIn(flux);
@@ -765,8 +768,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
         for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
             HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-            LandCover* brick = dynamic_cast<LandCover*>(
-                unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name));
+            LandCover* brick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.name));
             valPt = brick->GetAreaFractionPointer();
 
             if (valPt == nullptr) {
@@ -795,6 +797,8 @@ bool ModelHydro::Run() {
 
     m_logger.SaveInitialValues();
 
+    wxLogMessage(_("Simulation starting."));
+
     while (!m_timer.IsOver()) {
         if (!m_processor.ProcessTimeStep()) {
             wxLogError(_("Failed running the model."));
@@ -809,12 +813,16 @@ bool ModelHydro::Run() {
             return false;
         }
     }
+
+    wxLogMessage(_("Simulation completed."));
+
     return true;
 }
 
 void ModelHydro::Reset() {
     m_timer.Reset();
     m_logger.Reset();
+    m_behavioursManager.Reset();
     m_subBasin->Reset();
 }
 
@@ -867,6 +875,18 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     m_timeSeries.push_back(timeSeries);
 
     return true;
+}
+
+bool ModelHydro::AddBehaviour(Behaviour* behaviour) {
+    return m_behavioursManager.AddBehaviour(behaviour);
+}
+
+int ModelHydro::GetBehavioursNb() {
+    return m_behavioursManager.GetBehavioursNb();
+}
+
+int ModelHydro::GetBehaviourItemsNb() {
+    return m_behavioursManager.GetBehaviourItemsNb();
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {

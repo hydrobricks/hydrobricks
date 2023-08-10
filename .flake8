@@ -1,3 +1,5 @@
 [flake8]
 max-line-length = 88
-per-file-ignores = model.py:F401
+per-file-ignores =
+    model.py:F401
+    spotpy_setup.py:F401

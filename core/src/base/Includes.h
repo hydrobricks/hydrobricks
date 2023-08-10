@@ -79,17 +79,18 @@
 // Typedefs
 //---------------------------------
 
+using std::vector;
 typedef std::string string;
-typedef std::vector<string> vecStr;
-typedef std::vector<int> vecInt;
-typedef std::vector<float> vecFloat;
-typedef std::vector<double> vecDouble;
-typedef std::vector<double*> vecDoublePt;
+typedef vector<string> vecStr;
+typedef vector<int> vecInt;
+typedef vector<float> vecFloat;
+typedef vector<double> vecDouble;
+typedef vector<double*> vecDoublePt;
 typedef Eigen::ArrayXd axd;
 typedef Eigen::ArrayXi axi;
 typedef Eigen::ArrayXXd axxd;
-typedef std::vector<Eigen::ArrayXd> vecAxd;
-typedef std::vector<Eigen::ArrayXXd> vecAxxd;
+typedef vector<Eigen::ArrayXd> vecAxd;
+typedef vector<Eigen::ArrayXXd> vecAxxd;
 
 // A time structure
 typedef struct {

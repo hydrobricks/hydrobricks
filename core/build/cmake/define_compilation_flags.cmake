@@ -28,7 +28,7 @@ elseif (WIN32)
 endif ()
 
 # Global definitions
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (WIN32)

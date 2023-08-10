@@ -7,8 +7,8 @@
   "land_covers": {
     "names": [
       "ground",
-      "glacier-ice",
-      "glacier-debris"
+      "glacier_ice",
+      "glacier_debris"
     ],
     "types": [
       "ground",

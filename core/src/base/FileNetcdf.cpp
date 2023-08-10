@@ -213,7 +213,7 @@ vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) 
     size_t itemsNb;
     CheckNcStatus(nc_inq_attlen(m_ncId, varId, attName.c_str(), &itemsNb));
 
-    char** stringAtt = (char**)malloc(itemsNb * sizeof(char*));
+    char** stringAtt = static_cast<char**>(malloc(itemsNb * sizeof(char*)));
     memset(stringAtt, 0, itemsNb * sizeof(char*));
     CheckNcStatus(nc_get_att_string(m_ncId, varId, attName.c_str(), stringAtt));
 
@@ -228,9 +228,9 @@ vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) 
 }
 
 void FileNetcdf::PutAttString(const string& attName, const vecStr& values, int varId) {
-    std::vector<const char*> valuesChar;
+    vector<const char*> valuesChar;
     for (const auto& label : values) {
-        const char* str = (const char*)label.c_str();
+        const char* str = static_cast<const char*>(label.c_str());
         valuesChar.push_back(str);
     }
     CheckNcStatus(nc_put_att_string(m_ncId, varId, attName.c_str(), values.size(), &valuesChar[0]));

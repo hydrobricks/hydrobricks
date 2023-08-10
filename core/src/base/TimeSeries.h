@@ -11,7 +11,7 @@ class TimeSeries : public wxObject {
 
     ~TimeSeries() override = default;
 
-    static bool Parse(const string& path, std::vector<TimeSeries*>& vecTimeSeries);
+    static bool Parse(const string& path, vector<TimeSeries*>& vecTimeSeries);
 
     static TimeSeries* Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
 

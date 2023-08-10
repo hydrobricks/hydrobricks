@@ -21,13 +21,13 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     m_hydroUnitLabels = hydroUnitLabels;
     m_hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     m_hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
-    m_hydroUnitValuesPt = std::vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
+    m_hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
     if (m_recordFractions) {
         m_hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
         m_hydroUnitFractions = vecAxxd(m_hydroUnitFractionLabels.size(),
                                        axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
-        m_hydroUnitFractionsPt = std::vector<vecDoublePt>(m_hydroUnitFractionLabels.size(),
-                                                          vecDoublePt(hydroUnitIds.size(), nullptr));
+        m_hydroUnitFractionsPt = vector<vecDoublePt>(m_hydroUnitFractionLabels.size(),
+                                                     vecDoublePt(hydroUnitIds.size(), nullptr));
     }
 }
 
@@ -108,6 +108,8 @@ bool Logger::DumpOutputs(const string& path) {
         return false;
     }
 
+    wxLogMessage(_("Writing output file."));
+
     try {
         string filePath = path;
         filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
@@ -124,6 +126,10 @@ bool Logger::DumpOutputs(const string& path) {
         int dimIdUnit = file.DefDim("hydro_units", (int)m_hydroUnitIds.size());
         int dimIdItemsAgg = file.DefDim("aggregated_values", (int)m_subBasinLabels.size());
         int dimIdItemsDist = file.DefDim("distributed_values", (int)m_hydroUnitLabels.size());
+        int dimIdFractions = 0;
+        if (m_recordFractions) {
+            dimIdFractions = file.DefDim("land_covers", (int)m_hydroUnitFractionLabels.size());
+        }
 
         // Create variables and put data
         int varId = file.DefVarDouble("time", {dimIdTime});
@@ -149,14 +155,26 @@ bool Logger::DumpOutputs(const string& path) {
         file.PutAttText("long_name", "values for each hydrological units", varId);
         file.PutAttText("units", "mm", varId);
 
+        if (m_recordFractions) {
+            varId = file.DefVarDouble("land_cover_fractions", {dimIdFractions, dimIdUnit, dimIdTime}, 3, true);
+            file.PutVar(varId, m_hydroUnitFractions);
+            file.PutAttText("long_name", "land cover fractions for each hydrological units", varId);
+            file.PutAttText("units", "percent", varId);
+        }
+
         // Global attributes
         file.PutAttString("labels_aggregated", m_subBasinLabels);
         file.PutAttString("labels_distributed", m_hydroUnitLabels);
+        if (m_recordFractions && !m_hydroUnitFractionLabels.empty()) {
+            file.PutAttString("labels_land_covers", m_hydroUnitFractionLabels);
+        }
 
     } catch (std::exception& e) {
         wxLogError(e.what());
         return false;
     }
+
+    wxLogMessage(_("Output file written."));
 
     return true;
 }

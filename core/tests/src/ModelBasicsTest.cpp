@@ -30,14 +30,14 @@ class ModelBasics : public ::testing::Test {
         m_model2.SetLogAll(true);
         m_model2.SetSolver("euler_explicit");
         m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model2.AddHydroUnitBrick("storage-1", "storage");
+        m_model2.AddHydroUnitBrick("storage_1", "storage");
         m_model2.AddBrickForcing("precipitation");
         m_model2.AddBrickLogging("content");
         m_model2.AddBrickProcess("outflow", "outflow:linear");
         m_model2.AddProcessParameter("response_factor", 0.5f);
         m_model2.AddProcessLogging("output");
-        m_model2.AddProcessOutput("storage-2");
-        m_model2.AddHydroUnitBrick("storage-2", "storage");
+        m_model2.AddProcessOutput("storage_2");
+        m_model2.AddHydroUnitBrick("storage_2", "storage");
         m_model2.AddBrickLogging("content");
         m_model2.AddBrickProcess("outflow", "outflow:linear");
         m_model2.AddProcessParameter("response_factor", 0.3f);

@@ -1,8 +1,9 @@
 import shutil
+
+import hydrobricks as hb
 import matplotlib.pyplot as plt
 import spotpy
-import hydrobricks as hb
-from setups.socont_sitter import parameters, socont, forcing, obs, tmp_dir
+from setups.socont_sitter import forcing, obs, parameters, socont, tmp_dir
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
@@ -10,11 +11,10 @@ parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_
 
 # Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
 spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
-                            obj_func=spotpy.objectivefunctions.nashsutcliffe,
-                            invert_obj_func=True)
+                            obj_func='kge_2012', invert_obj_func=True)
 
 # Select number of maximum repetitions and run spotpy
-max_rep = 10000
+max_rep = 4000
 sampler = spotpy.algorithms.sceua(spot_setup, dbname='socont_sitter_SCEUA',
                                   dbformat='csv')
 sampler.sample(max_rep)

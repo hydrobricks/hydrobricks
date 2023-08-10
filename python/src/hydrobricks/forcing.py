@@ -1,62 +1,58 @@
 import hydrobricks as hb
 import numpy as np
 
-from .time_series import TimeSeries
+from .time_series import TimeSeries1D, TimeSeries2D
 
 
-class Forcing(TimeSeries):
+class Forcing:
     """Class for forcing data"""
 
     def __init__(self, hydro_units):
         super().__init__()
+        self.data1D = TimeSeries1D()
+        self.data2D = TimeSeries2D()
         self.hydro_units = hydro_units.hydro_units
-        self.spatialization_operations = []
+        self.operations = []
 
-    def define_spatialization(self, **kwargs):
+    def load_station_data_from_csv(self, path, column_time, time_format, content):
         """
-        Define the spatialization operations.
+        Read 1D time series data from csv file.
 
         Parameters
         ----------
-        kwargs
-            All the parameters needed by the function spatialize() to perform the
-            spatialization for the given forcing variable.
+        path : str|Path
+            Path to the csv file containing hydro units data.
+        column_time : str
+            Column name containing the time.
+        time_format : str
+            Format of the time
+        content : dict
+            Type of data and column name containing the data.
+            Example: {'precipitation': 'Precipitation (mm)'}
         """
-        self.spatialization_operations.append(kwargs)
+        self.data1D.load_from_csv(path, column_time, time_format, content)
 
-    def apply_defined_spatialization(self, parameters, parameters_to_apply=None):
+    def set_prior_correction(self, **kwargs):
         """
-        Apply the spatialization operations defined by define_spatialization().
+        Define the prior correction operations.
 
         Parameters
         ----------
-        parameters: ParameterSet
-            The parameter object instance.
-        parameters_to_apply: list
-            A list of parameters to apply. The spatialization will only be applied for
-            the variables related to parameters in this list. If None, all variables are
-            spatialized.
+        variable: str
+            Name of the variable to correct.
+        method: str
+            Name of the method to use. Possible values are:
+            * additive: add a constant value
+            * multiplicative: multiply by a constant value
+        correction_factor: float
+            Value of the correction factor (to add or multiply).
         """
-        for operation_ref in self.spatialization_operations:
-            operation = operation_ref.copy()
-            apply_operation = False
-            for key in operation:
-                value = operation[key]
-                if isinstance(value, str) and value.startswith('param:'):
-                    parameter_name = value.replace('param:', '')
-                    operation[key] = parameters.get(parameter_name)
-                    if parameters_to_apply is not None:
-                        if parameter_name in parameters_to_apply:
-                            apply_operation = True
+        kwargs['type'] = 'prior_correction'
+        self.operations.append(kwargs)
 
-            if parameters_to_apply is None or apply_operation:
-                self.spatialize(**operation)
-
-    def spatialize(self, variable, method='constant', ref_elevation=None, gradient=0,
-                   gradient_1=0, gradient_2=0, elevation_threshold=None,
-                   correction_factor=None):
+    def set_spatialization_from_station_data(self, **kwargs):
         """
-        Spatializes the provided variable to all hydro units using the defined method.
+        Define the spatialization operations from station data to all hydro units.
 
         Parameters
         ----------
@@ -77,7 +73,7 @@ class Forcing(TimeSeries):
               Parameters: 'ref_elevation', 'gradient', 'gradient_2',
               'elevation_threshold'
         ref_elevation : float
-            Reference elevation.
+            Reference (station) elevation.
             For method(s): 'elevation_gradient'
         gradient : float/list
             Gradient of the variable to apply per 100m (e.g., °C/100m).
@@ -90,16 +86,178 @@ class Forcing(TimeSeries):
             above the elevation threshold defined by 'elevation_threshold'.
             For method(s): 'elevation_multi_gradients'
         elevation_threshold : int/float
-            Threshold elevation to switch from gradient to gradient_2
-        correction_factor: float
-            Correction factor to apply to the precipitation data before spatialization
+            Threshold elevation to switch from gradient to gradient_2.
+            For method(s): 'elevation_multi_gradients'
         """
-        unit_values = np.zeros((len(self.time), len(self.hydro_units)))
-        hydro_units = self.hydro_units.reset_index()
-        i_col = self.data_name.index(variable)
-        data_raw = self.data_raw[i_col].copy()
+        kwargs['type'] = 'spatialize_from_station'
+        self.operations.append(kwargs)
 
-        if isinstance(gradient, int) and gradient == 0:
+    def set_spatialization_from_gridded_data(self, **kwargs):
+        """
+        Define the spatialization operations from gridded data to all hydro units.
+
+        Parameters
+        ----------
+
+        """
+        kwargs['type'] = 'spatialize_from_grid'
+        self.operations.append(kwargs)
+
+    def set_pet_computation(self, **kwargs):
+        """
+        Define the PET computation operations using the pyet library. The PET will be
+        computed for all hydro units.
+
+        Parameters
+        ----------
+
+        """
+        kwargs['type'] = 'compute_pet'
+        self.operations.append(kwargs)
+
+    def apply_operations(self, parameters, apply_to_all=True):
+        """
+        Apply the pre-defined operations.
+
+        Parameters
+        ----------
+        parameters: ParameterSet
+            The parameter object instance.
+        apply_to_all: bool
+            If True, the operations will be applied to all variables. If False, the
+            operations will only be applied to the variables related to parameters
+            defined in the parameters.allow_changing list. This is useful to avoid
+            re-applying, during the calibration phase, operations that have already
+            been applied previously.
+        """
+        # The operations will be applied in the order defined in the list
+        operation_types = ['prior_correction', 'spatialize_from_station',
+                           'spatialize_from_grid', 'compute_pet']
+
+        for operation_type in operation_types:
+            self._apply_operations_of_type(operation_type, parameters, apply_to_all)
+
+    def create_file(self, path, max_compression=False):
+        """
+        Read hydro units properties from csv file.
+
+        Parameters
+        ----------
+        path : str
+            Path of the file to create.
+        max_compression: bool
+            Option to allow maximum compression for data in file.
+        """
+        if not hb.has_netcdf:
+            raise ImportError("netcdf4 is required to do this.")
+
+        time = self.data2D.get_dates_as_mjd()
+
+        # Create netCDF file
+        nc = hb.Dataset(path, 'w', 'NETCDF4')
+
+        # Dimensions
+        nc.createDimension('hydro_units', len(self.hydro_units))
+        nc.createDimension('time', len(time))
+
+        # Variables
+        var_id = nc.createVariable('id', 'int', ('hydro_units',))
+        var_id[:] = self.hydro_units['id']
+
+        var_time = nc.createVariable('time', 'float32', ('time',))
+        var_time[:] = time
+        var_time.units = 'days since 1858-11-17 00:00:00'
+        var_time.comment = 'Modified Julian Day Numer'
+
+        for index, variable in enumerate(self.data2D.data_name):
+            if max_compression:
+                var_data = nc.createVariable(
+                    variable, 'float32', ('time', 'hydro_units'), zlib=True,
+                    least_significant_digit=3)
+            else:
+                var_data = nc.createVariable(
+                    variable, 'float32', ('time', 'hydro_units'), zlib=True)
+            var_data[:, :] = self.data2D.data[index]
+
+        nc.close()
+
+    def get_total_precipitation(self):
+        i_col = self.data2D.data_name.index('precipitation')
+        data = self.data2D.data[i_col].sum(axis=0)
+        areas = self.hydro_units['area']
+        tot_precip = data * areas / areas.sum()
+        return tot_precip.sum()
+
+    def _apply_operations_of_type(self, operation_type, parameters, apply_to_all):
+        for operation_ref in self.operations:
+            operation = operation_ref.copy()
+
+            if operation['type'] != operation_type:
+                continue
+
+            # Remove the type key
+            operation.pop('type')
+
+            # Extract the operation options
+            apply_operation = False
+            for key in operation:
+                value = operation[key]
+                if isinstance(value, str) and value.startswith('param:'):
+                    parameter_name = value.replace('param:', '')
+                    operation[key] = parameters.get(parameter_name)
+                    if not apply_to_all:  # Restrict to parameters that changed
+                        if parameter_name in parameters.allow_changing:
+                            apply_operation = True
+
+            # Apply the operation (or not)
+            if apply_to_all or apply_operation:
+                if operation_type == 'prior_correction':
+                    self._apply_prior_correction(**operation)
+                elif operation_type == 'spatialize_from_station':
+                    self._apply_spatialization_from_station_data(**operation)
+                elif operation_type == 'spatialize_from_grid':
+                    self._apply_spatialization_from_gridded_data(**operation)
+                elif operation_type == 'compute_pet':
+                    self._apply_pet_computation(**operation)
+                else:
+                    raise ValueError(f'Unknown operation type: {operation_type}')
+
+    def _apply_prior_correction(self, variable, method='multiplicative', **kwargs):
+        idx = self.data1D.data_name.index(variable)
+
+        # Extract kwargs (None if not provided)
+        correction_factor = kwargs.get('correction_factor', None)
+        if correction_factor is None:
+            raise ValueError('Correction factor not provided.')
+
+        if method == 'multiplicative':
+            correction_factor = kwargs['correction_factor']
+            self.data1D.data[idx] *= correction_factor
+        elif method == 'additive':
+            correction_factor = kwargs['correction_factor']
+            self.data1D.data[idx] += correction_factor
+        else:
+            raise ValueError(f'Unknown method: {method}')
+
+    def _apply_spatialization_from_station_data(self, variable, method='constant',
+                                                **kwargs):
+        unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
+        hydro_units = self.hydro_units.reset_index()
+        idx = self.data1D.data_name.index(variable)
+        data_raw = self.data1D.data[idx].copy()
+
+        # Resize the 2D data to match the 1D data
+        assert len(self.data2D.data) == 0
+        self.data2D.data = [None] * len(self.data1D.data)
+
+        # Extract kwargs (None if not provided)
+        ref_elevation = kwargs.get('ref_elevation', None)
+        gradient = kwargs.get('gradient', None)
+        gradient_1 = kwargs.get('gradient_1', None)
+        gradient_2 = kwargs.get('gradient_2', None)
+        elevation_threshold = kwargs.get('elevation_threshold', None)
+
+        if gradient is None:
             gradient = gradient_1
 
         # Check inputs
@@ -109,7 +267,7 @@ class Forcing(TimeSeries):
 
         if method in ['additive_elevation_gradient',
                       'multiplicative_elevation_gradient']:
-            if isinstance(gradient, int) and gradient == 0:
+            if gradient is None:
                 method = 'constant'
 
         if isinstance(gradient, list):
@@ -117,10 +275,6 @@ class Forcing(TimeSeries):
                 raise ValueError(
                     f'The gradient should have a length of 1 or 12. '
                     f'Here: {len(gradient)}')
-
-        # Pre-process (e.g., correction factor)
-        if correction_factor:
-            data_raw = data_raw * correction_factor
 
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():
@@ -132,14 +286,16 @@ class Forcing(TimeSeries):
             elif method == 'additive_elevation_gradient':
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:
-                    unit_values[:, i_unit] = data_raw + gradient * \
-                                                  (elevation - ref_elevation) / 100
+                    unit_values[:, i_unit] = data_raw + gradient * (
+                                elevation - ref_elevation) / 100
                 elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
-                        month = self.time.dt.month == m + 1
+                        month = self.data1D.time.dt.month == m + 1
                         month = month.to_numpy()
                         unit_values[month, i_unit] = data_raw[month] + gradient[m] * (
                                 elevation - ref_elevation) / 100
+                else:
+                    raise ValueError(f'Wrong gradient format: {gradient}')
 
             elif method == 'multiplicative_elevation_gradient':
                 if isinstance(gradient, float) or isinstance(gradient, list) \
@@ -148,11 +304,13 @@ class Forcing(TimeSeries):
                             1 + gradient * (elevation - ref_elevation) / 100)
                 elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
-                        month = self.time.dt.month == m + 1
+                        month = self.data1D.time.dt.month == m + 1
                         month = month.to_numpy()
                         unit_values[month, i_unit] = \
                             data_raw[month] * (1 + gradient[m] * (
                                     elevation - ref_elevation) / 100)
+                else:
+                    raise ValueError(f'Wrong gradient format: {gradient}')
 
             elif method == 'multiplicative_elevation_threshold_gradients':
                 if elevation < elevation_threshold:
@@ -171,128 +329,10 @@ class Forcing(TimeSeries):
         if variable in ['pet', 'precipitation']:
             unit_values[unit_values < 0] = 0
 
-        self.data_spatialized[i_col] = unit_values
+        self.data2D.data[idx] = unit_values
 
-    def spatialize_temperature(self, ref_elevation, lapse):
-        """
-        Spatializes the temperature using a temperature lapse that is either constant
-        or changes for every month.
+    def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
+        pass
 
-        Parameters
-        ----------
-        ref_elevation : float
-            Elevation of the reference station.
-        lapse : float/list
-            Temperature lapse [°C/100m] to compute the temperature for every hydro unit.
-            Can be a unique value or a list providing a value for every month.
-        """
-        self.spatialize('temperature', 'additive_elevation_gradient',
-                        ref_elevation=ref_elevation, gradient=lapse)
-
-    def spatialize_pet(self, ref_elevation=None, gradient=0):
-        """
-        Spatializes the PET using a gradient that is either constant or changes for
-        every month.
-
-        Parameters
-        ----------
-        ref_elevation : float
-            Elevation of the reference station.
-        gradient : float/list
-            Gradient [mm/100m] to compute the PET for every hydro unit.
-            Can be a unique value or a list providing a value for every month.
-        """
-        self.spatialize('pet', 'additive_elevation_gradient',
-                        ref_elevation=ref_elevation, gradient=gradient)
-
-    def spatialize_precipitation(self, ref_elevation, gradient=None, gradient_1=None,
-                                 gradient_2=None, elevation_threshold=None,
-                                 correction_factor=None):
-        """
-        Spatializes the precipitation using a single gradient for the full elevation
-        range or a two-gradients approach with an elevation threshold.
-
-        Parameters
-        ----------
-        ref_elevation : float
-            Elevation of the reference station.
-        gradient : float
-            Precipitation gradient (ratio) per 100 m of altitude.
-        gradient_1 : float
-            Same as parameter 'gradient'
-        gradient_2 : float
-            Precipitation gradient (ratio) per 100 m of altitude for the units above
-            the threshold elevation (optional).
-        elevation_threshold: float
-            Threshold to switch from gradient 1 to gradient 2 (optional).
-        correction_factor: float
-            Correction factor to apply to the precipitation data before spatialization
-        """
-        if not gradient_1 and gradient:
-            gradient_1 = gradient
-
-        if not gradient_1:
-            self.spatialize('precipitation', 'constant',
-                            correction_factor=correction_factor)
-        elif not elevation_threshold:
-            self.spatialize('precipitation', 'multiplicative_elevation_gradient',
-                            ref_elevation=ref_elevation, gradient=gradient_1,
-                            correction_factor=correction_factor)
-        else:
-            self.spatialize('precipitation',
-                            'multiplicative_elevation_threshold_gradients',
-                            ref_elevation=ref_elevation, gradient=gradient_1,
-                            gradient_2=gradient_2,
-                            elevation_threshold=elevation_threshold,
-                            correction_factor=correction_factor)
-
-    def create_file(self, path, max_compression=False):
-        """
-        Read hydro units properties from csv file.
-
-        Parameters
-        ----------
-        path : str
-            Path of the file to create.
-        max_compression: bool
-            Option to allow maximum compression for data in file.
-        """
-        if not hb.has_netcdf:
-            raise ImportError("netcdf4 is required to do this.")
-
-        time = self._date_as_mjd()
-
-        # Create netCDF file
-        nc = hb.Dataset(path, 'w', 'NETCDF4')
-
-        # Dimensions
-        nc.createDimension('hydro_units', len(self.hydro_units))
-        nc.createDimension('time', len(time))
-
-        # Variables
-        var_id = nc.createVariable('id', 'int', ('hydro_units',))
-        var_id[:] = self.hydro_units['id']
-
-        var_time = nc.createVariable('time', 'float32', ('time',))
-        var_time[:] = time
-        var_time.units = 'days since 1858-11-17 00:00:00'
-        var_time.comment = 'Modified Julian Day Numer'
-
-        for index, variable in enumerate(self.data_name):
-            if max_compression:
-                var_data = nc.createVariable(
-                    variable, 'float32', ('time', 'hydro_units'), zlib=True,
-                    least_significant_digit=3)
-            else:
-                var_data = nc.createVariable(
-                    variable, 'float32', ('time', 'hydro_units'), zlib=True)
-            var_data[:, :] = self.data_spatialized[index]
-
-        nc.close()
-
-    def get_total_precipitation(self):
-        i_col = self.data_name.index('precipitation')
-        data = self.data_spatialized[i_col].sum(axis=0)
-        areas = self.hydro_units['area']
-        tot_precip = data * areas / areas.sum()
-        return tot_precip.sum()
+    def _apply_pet_computation(self, **kwargs):
+        pass

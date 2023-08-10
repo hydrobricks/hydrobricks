@@ -9,13 +9,12 @@ class TimeSeries:
         self.data = []
         self.data_name = []
 
-    def _date_as_mjd(self):
+    def get_dates_as_mjd(self):
         return utils.date_as_mjd(self.time)
 
 
 class TimeSeries1D(TimeSeries):
     """Class for generic 1D time series data"""
-
     def __init__(self):
         super().__init__()
 
@@ -48,6 +47,5 @@ class TimeSeries1D(TimeSeries):
 
 class TimeSeries2D(TimeSeries):
     """Class for generic 2D time series data"""
-
     def __init__(self):
         super().__init__()

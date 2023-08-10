@@ -38,12 +38,13 @@ hydro_units.load_from_csv(
 # Meteo data
 ref_elevation = 1250  # Reference altitude for the meteo data
 forcing = hb.Forcing(hydro_units)
-forcing.load_from_csv(
+forcing.load_station_data_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
     content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
              'pet': 'pet_sim(mm/day)'})
 forcing.spatialize_temperature(ref_elevation, -0.6)
 forcing.spatialize_pet()
+forcing.set_prior_correction(variable='precipitation', correction_factor=0.75)
 forcing.spatialize_precipitation(ref_elevation=ref_elevation, gradient=0.05,
                                  correction_factor=0.75)
 

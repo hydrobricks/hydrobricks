@@ -113,7 +113,7 @@ def test_socont_closes_water_balance():
     station_temp_alt = 1250  # Temperature reference altitude
     station_precip_alt = 1250  # Precipitation reference altitude
     forcing = hb.Forcing(hydro_units)
-    forcing.load_from_csv(
+    forcing.load_station_data_from_csv(
         CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})

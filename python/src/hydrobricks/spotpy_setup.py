@@ -17,7 +17,7 @@ class SpotpySetup:
         self.params_spotpy = params.get_for_spotpy()
         self.random_forcing = params.needs_random_forcing()
         self.forcing = forcing
-        self.forcing.apply_defined_spatialization(params)
+        self.forcing.apply_operations(params)
         self.obs = obs.data_raw[0]
         self.warmup = warmup
         self.obj_func = obj_func
@@ -59,7 +59,7 @@ class SpotpySetup:
         model = self.model
         forcing = self.forcing
         if self.random_forcing:
-            forcing.apply_defined_spatialization(params, params.allow_changing)
+            forcing.apply_operations(params, apply_to_all=False)
             model.run(parameters=params, forcing=forcing)
         else:
             model.run(parameters=params)

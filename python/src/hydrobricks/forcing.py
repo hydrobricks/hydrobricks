@@ -1,4 +1,5 @@
 import numpy as np
+import pyet
 
 import hydrobricks as hb
 
@@ -349,5 +350,9 @@ class Forcing:
     def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
         pass
 
-    def _apply_pet_computation(self, **kwargs):
+    def _apply_pet_computation(self, method, **kwargs):
+        # Check that the provided method is a function of pyet
+        if method not in dir(pyet):
+            raise ValueError(f'Unknown method: {method}')
+
         pass

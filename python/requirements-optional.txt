@@ -1,7 +1,6 @@
 geopandas
 matplotlib
 netCDF4
-pyet
 pytest
 rasterio
 shapely

@@ -1,8 +1,10 @@
 from datetime import datetime
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
+import warnings
 import xarray as xa
 from hydrobricks import utils
 
@@ -76,7 +78,8 @@ class TimeSeries:
 
         return var.variables[column_time][0], var.variables[column_time][-1]
 
-    def initialize_from_netcdf_HR(self, path, varname, elev_mask_path, elevation_thrs, tif_CRS, nc_CRS, column_time, time_format, content):
+    def initialize_from_netcdf_HR(self, path, varname, elev_mask_path, outline, outline_epsg, target_epsg, 
+                                  elevation_thrs, tif_CRS, nc_CRS, column_time, time_format, content):
         """
         Initialize time series data from a netcdf file. Uses a DEM in tif format at any resolution.
         The meteorological data is resampled to the DEM resolution using bilinear interpolation.
@@ -121,6 +124,16 @@ class TimeSeries:
         # Homogenize the datasets
         topo = topo.rename({'band': 'time'})
         topo = topo.rename({'band_data': varname})
+        
+        # Read file using gpd.read_file()
+        # Need to correct the EPSG of the outline (wrong metadata)
+        # Convert shapefiles to the target CRS
+        catchment = gpd.read_file(outline)
+        catchment.set_crs(outline_epsg, allow_override=True, inplace=True)
+        catchment.to_crs(target_epsg, inplace=True)
+        
+        # Clip the topographic data to our study catchment to discard outside meteorological values
+        topo = topo.rio.clip(catchment.geometry.values, catchment.crs)
 
         band_nb = len(self.hydro_units['elevation'])
         times = len(var.variables[column_time][:])
@@ -137,12 +150,15 @@ class TimeSeries:
 
         data = np.zeros((band_nb, times))
         for j, time in enumerate(var.variables[column_time][:]):
-            print(time)
+            print(varname, time.data)
             var_uniq = var[varname][j].rio.reproject_match(topo, Resampling=rasterio.enums.Resampling.bilinear)
             for i, elev_min in enumerate(elevation_thrs[:-1]):
                 val = xa.where(all_topo_masks[i], var_uniq, np.nan).to_array() # Mask the meteorological data with the current elevation band.
-                data[i][j] = np.nanmean(val) # Mean the meteorological data in the band.
-                # We do not yet interpolate the holes.
+                # I expect to see RuntimeWarnings in this block due to elevation bands without any data inside
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    data[i][j] = np.nanmean(val) # Mean the meteorological data in the band.
+                    # We do not yet interpolate the holes.
 
         self.time = column
         for col in content:
@@ -179,7 +195,7 @@ class TimeSeries:
             self.data_raw.append(file_content[content[col]].to_numpy())
             self.data_spatialized.append(None)
 
-    def load_spatialized_data_from_csv(self, column, path, time_path, time_format):
+    def load_spatialized_data_from_csv(self, column, path, time_path, time_format, dropindex):
         """
         Read already spatialized time series data from csv file.
         Useful for data that needs a long time to be processed with initialize_from_netcdf_HR()
@@ -199,15 +215,24 @@ class TimeSeries:
         """
         data = np.loadtxt(path, delimiter=',')
 
+        # TEMPORARY - DROP WHERE AREA==0
+        print('TEMP DEBUG', type(data))
+        keepindex = np.delete(list(range(len(data[0]))), dropindex.values)
+        print('TEMP DEBUG', keepindex)
+        d = np.ndarray((len(data), len(keepindex)))
+        for i, day in enumerate(data):
+            d[i,:] = day[keepindex]
+        # TEMPORARY - DROP WHERE AREA==0 - ENDOF
+
         file_content = pd.read_csv(time_path, converters={'time': lambda x: pd.to_datetime(x).strptime(time_format)})
 
-        nb_days = len(data)
+        nb_days = len(d)
         assert len(file_content['# time']) == nb_days
 
         self.time = file_content['# time'] # time2 #file_content[column_time]
         self.data_name.append(column)
         self.data_raw.append(None)
-        self.data_spatialized.append(data)
+        self.data_spatialized.append(d)
 
     def _date_as_mjd(self):
         return utils.date_as_mjd(self.time)

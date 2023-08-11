@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import netCDF4 as nc
 import numpy as np
@@ -10,6 +10,98 @@ import xarray as xa
 # Homogenize my files (reproject and clip to the study area TIF CRS and extent)
 # Warning: we do not homogenize the time format! Should I?
 # The datasets do not have the same spatial resolution: Crespi: 250m; CH2018: 1612m; MeteoSwiss: 776m.
+
+def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_dataset, output_file, output_daily_mean_file, output_hydrobricks_file):
+    
+    ########### The Bertol Inferieur catchment
+    
+    dateparse = lambda x: datetime.strptime(x, '%d.%m.%Y %H:%M')
+    data_BI = pd.io.parsers.read_csv(catchment_dataset, sep=",", decimal=".", skiprows=0, header=0, na_values=np.nan, 
+                                     parse_dates=['Horodatage'], date_parser=dateparse, index_col=0)
+    data_BI.index.name = 'Date'
+    data_BI.columns = ['BIrest'] # There is only the rest of water not taken from the HGDA, VU and BS intakes.
+    
+    ############ Then the subcatchments
+    
+    years_pd = pd.io.parsers.read_csv(subcatchment_datasets['Year'], sep=",", decimal=".", skiprows=0, header=None, na_values=np.nan)
+    years = list(years_pd.values[0])
+    
+    merged_all = data_BI
+    for key, subcatchment_dataset in subcatchment_datasets.items():
+        if key != 'Year':
+            df = pd.read_csv(subcatchment_dataset, sep=",", decimal=".", skiprows=0, header=None)
+            df.to_csv(subcatchment_dataset + '_with_index.csv')
+            
+            dfs = []
+            for i, year in enumerate(years):
+                start_datetime = datetime(year,1,1,0,0,0)
+                dateparse = lambda x: start_datetime + timedelta(minutes=int(x) * 15)
+                yr_data = pd.io.parsers.read_csv(subcatchment_dataset + '_with_index.csv', sep=",", decimal=".", skiprows=1, names=['Date', key],
+                                              na_values=np.nan, usecols=[0, i+1], index_col=None, parse_dates=[0], date_parser=dateparse)
+                dfs.append(yr_data)
+
+            data = pd.concat(dfs, ignore_index=True)
+            data.set_index('Date', inplace=True)
+            
+            ############ Merge all datasets but make sure to discard the dates of BI that are not contained in the others (31 Decembers of bissextile years)
+            BI_but_not_key = data_BI.loc[data_BI.index.difference(data.index)]
+            BI_but_not_key.to_csv(output_file + 'in_BIrest_but_not_in_' + key + '.csv')
+            print ('Data present in BIrest, but not in ' + key, BI_but_not_key)
+            key_but_not_BI = data.loc[data.index.difference(data_BI.index)]
+            key_but_not_BI.to_csv(output_file + 'in_' + key + '_but_not_in_BIrest.csv')
+            print('Data present in ' + key + ', but not in BIrest', key_but_not_BI)
+            
+            intersection_dates = merged_all.index.intersection(data.index)
+            
+            # Only select the data with the common dateindexes
+            merged_all = merged_all.loc[intersection_dates]
+            data = data.loc[intersection_dates]
+            
+            # Add all the data to the same dataframe
+            merged_all = merged_all.merge(data, left_index=True, right_index=True, how='inner')
+                
+    ############ Create a new column with BI plus the water coming from BS, HGDA or VU
+    merged_all["BI"] = merged_all["BIrest"] + merged_all["BS"] + merged_all["HGDA"] + merged_all["VU"]
+    print('merged_all', merged_all)
+    
+    ############ Then the daily mean of all discharge measurements
+    means = merged_all.groupby(pd.Grouper(freq='1D')).mean()
+    print('means_all', means)
+    
+    for key in merged_all:
+        suffix = '_' + key + '.csv'
+        
+        merged_all.to_csv(output_file + suffix, columns=[key])
+        means.to_csv(output_daily_mean_file + suffix, columns=[key], date_format='%d/%m/%Y')
+    
+        if key != "BIrest":
+            filename = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/' + key + '_UpslopeArea_EPSG21781.txt'
+            watershed_area = np.loadtxt(filename, skiprows=1)
+            # Create new pandas DataFrame.
+            subdataframe = means[[key]]
+            m_to_mm = 1000
+            persec_to_perday = 86400
+            subdataframe = subdataframe / watershed_area * m_to_mm * persec_to_perday
+            subdataframe.columns = ['Discharge (mm/d)']
+            subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
+    
+def homogenize_stelvio_discharge_datasets(stelvio_dataset, output_file, output_daily_mean_file):
+    
+    dateparse = lambda x: datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
+    data = pd.io.parsers.read_csv(stelvio_dataset, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
+                                  na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
+                                  index_col=0)
+    # Cannot write directly parse_dates={'Date': ['Date', 'Time']} in the line above, so:
+    data.index.name = "Date"
+    print(data)
+    print(data.dtypes)
+    
+    means = data.groupby(pd.Grouper(freq='1D')).mean()
+    
+    print(means)
+    
+    data.to_csv(output_file)
+    means.to_csv(output_daily_mean_file, date_format='%d/%m/%Y')
 
 def homogenize_discharge_datasets(stelvio_dataset, output_file, output_daily_mean_file):
     
@@ -25,10 +117,8 @@ def homogenize_discharge_datasets(stelvio_dataset, output_file, output_daily_mea
     print(means)
     
     data.to_csv(output_file)
-    means.to_csv(output_daily_mean_file)
+    means.to_csv(output_daily_mean_file, date_format='%d/%m/%Y')
     
-    print(bjhboö)
-
 def interpolate(nc_filename, regrid_x, regrid_y, out_filename):
     # Opens an existing netCDF file
     print(len(regrid_x), len(regrid_y))
@@ -181,20 +271,35 @@ def reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filena
 
 
 def main():
-
+    
     path = '/home/anne-laure/Documents/Datasets/'
+    
     results = f'{path}Outputs/'
     target_eto_CRS = "EPSG:4326" # Needs to be in degrees to compute the evapotranspiration
     target_dem_CRS = "EPSG:21781" # BUT NEEDS TO BE IN METERS TO COMPUTE AREAS FOR HYDROBRICKS
     target_start_datetime = datetime(1900,1,1,0,0,0)
     
-    stelvio_discharge = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Portata_Torbidità_Ponte_Stelvio_2014_oggi/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
+    ########################## Harmonize the Arolla discharge files ##################################################################
+    
+    csv_discharges = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/Extracted_discharge_data/'
+    subcatchment_discharges = {'BS':f'{csv_discharges}Q_Altroclima_BS.csv', 'DB':f'{csv_discharges}Q_Altroclima_DB.csv', 'HGDA':f'{csv_discharges}Q_Altroclima_HGDA.csv', 
+                               'PI':f'{csv_discharges}Q_Altroclima_PI.csv', 'TN':f'{csv_discharges}Q_Altroclima_TN.csv', 'VU':f'{csv_discharges}Q_Altroclima_VU.csv', 
+                               'Year':f'{csv_discharges}Q_Altroclima_year.csv'}
+    main_catchment_discharge = f'{csv_discharges}Bertol_Inferieur_AllDebit.csv'
+    output_file = f"{results}Arolla_15min_discharge"
+    output_daily_mean_file = f"{results}Arolla_daily_mean_discharge"
+    output_hydrobricks_file = f"{results}Arolla_hydrobricks_discharge"
+    homogenize_arolla_discharge_datasets(subcatchment_discharges, main_catchment_discharge, output_file, output_daily_mean_file, output_hydrobricks_file)
+    
+    ########################## Harmonize the Stelvio discharge files #################################################################
+    
+    stelvio_discharge = f'{path}Italy_discharge/PonteStelvio/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
     output_file = f"{results}Stelvio_discharge.csv"
     output_daily_mean_file = f"{results}Stelvio_daily_mean_discharge.csv"
-    homogenize_discharge_datasets(stelvio_discharge, output_file, output_daily_mean_file)
+    homogenize_stelvio_discharge_datasets(stelvio_discharge, output_file, output_daily_mean_file)
 
     ##################################################################################################################################
-    tif_filename = f'{path}Swiss_Study_area/ValDAnniviers_EPSG21781.tif'
+    tif_filename = f'{path}Swiss_Study_area/StudyAreas_EPSG21781.tif'
     reproj_filename = f'{results}Swiss_reproj'
     reproj_resamp_filename = f'{results}Swiss_reproj_resamp'
     tif_CRS = "EPSG:21781" # Christian Kühni confirmed (email) that the DHM25 dataset is in the CRS LV03/CH1903 (EPSG:21781). SURE.

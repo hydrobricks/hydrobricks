@@ -14,7 +14,12 @@ class Forcing:
         self.data1D = TimeSeries1D()
         self.data2D = TimeSeries2D()
         self.hydro_units = hydro_units.hydro_units
-        self.operations = []
+        self._operations = []
+        self._is_initialized = False
+
+    def is_initialized(self):
+        """ Return True if the forcing is initialized. """
+        return self._is_initialized
 
     def load_station_data_from_csv(self, path, column_time, time_format, content):
         """
@@ -50,7 +55,7 @@ class Forcing:
             Value of the correction factor (to add or multiply).
         """
         kwargs['type'] = 'prior_correction'
-        self.operations.append(kwargs)
+        self._operations.append(kwargs)
 
     def set_spatialization_from_station_data(self, **kwargs):
         """
@@ -92,7 +97,7 @@ class Forcing:
             For method(s): 'elevation_multi_gradients'
         """
         kwargs['type'] = 'spatialize_from_station'
-        self.operations.append(kwargs)
+        self._operations.append(kwargs)
 
     def set_spatialization_from_gridded_data(self, **kwargs):
         """
@@ -103,7 +108,7 @@ class Forcing:
 
         """
         kwargs['type'] = 'spatialize_from_grid'
-        self.operations.append(kwargs)
+        self._operations.append(kwargs)
 
     def set_pet_computation(self, **kwargs):
         """
@@ -115,7 +120,7 @@ class Forcing:
 
         """
         kwargs['type'] = 'compute_pet'
-        self.operations.append(kwargs)
+        self._operations.append(kwargs)
 
     def apply_operations(self, parameters, apply_to_all=True):
         """
@@ -138,6 +143,8 @@ class Forcing:
 
         for operation_type in operation_types:
             self._apply_operations_of_type(operation_type, parameters, apply_to_all)
+
+        self._is_initialized = True
 
     def create_file(self, path, max_compression=False):
         """
@@ -191,7 +198,7 @@ class Forcing:
         return tot_precip.sum()
 
     def _apply_operations_of_type(self, operation_type, parameters, apply_to_all):
-        for operation_ref in self.operations:
+        for operation_ref in self._operations:
             operation = operation_ref.copy()
 
             if operation['type'] != operation_type:

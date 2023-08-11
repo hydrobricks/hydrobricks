@@ -1,9 +1,9 @@
 import os
-import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -48,9 +48,9 @@ def test_set_prior_correction(forcing):
     forcing.set_prior_correction(
         variable='precipitation', method='additive',
         correction='param:precip_corr')
-    assert len(forcing.operations) == 1
-    assert forcing.operations[0]['type'] == 'prior_correction'
-    assert forcing.operations[0]['method'] == 'additive'
+    assert len(forcing._operations) == 1
+    assert forcing._operations[0]['type'] == 'prior_correction'
+    assert forcing._operations[0]['method'] == 'additive'
 
 
 def test_set_spatialization_from_station(forcing):
@@ -63,9 +63,9 @@ def test_set_spatialization_from_station(forcing):
         ref_elevation=ref_elevation, gradient='param:precip_gradient',
         correction_factor='param:precip_corr_factor'
     )
-    assert len(forcing.operations) == 2
-    assert forcing.operations[0]['type'] == 'spatialize_from_station'
-    assert forcing.operations[0]['method'] == 'additive_elevation_gradient'
+    assert len(forcing._operations) == 2
+    assert forcing._operations[0]['type'] == 'spatialize_from_station'
+    assert forcing._operations[0]['method'] == 'additive_elevation_gradient'
 
 
 def test_apply_prior_correction_multiplicative(forcing):

@@ -48,7 +48,6 @@ forcing.set_spatialization_from_station_data(
 forcing.set_spatialization_from_station_data(variable='pet')
 forcing.set_prior_correction(variable='precipitation', correction_factor=0.75)
 forcing.set_spatialization_from_station_data(variable='precipitation', gradient=0.05)
-forcing.apply_operations(parameters)
 
 # Obs data
 obs = hb.Observations()

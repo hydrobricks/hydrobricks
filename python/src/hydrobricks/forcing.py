@@ -1,5 +1,6 @@
-import hydrobricks as hb
 import numpy as np
+
+import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 
@@ -169,7 +170,7 @@ class Forcing:
         var_time.units = 'days since 1858-11-17 00:00:00'
         var_time.comment = 'Modified Julian Day Numer'
 
-        for index, variable in enumerate(self.data2D.data_name):
+        for idx, variable in enumerate(self.data2D.data_name):
             if max_compression:
                 var_data = nc.createVariable(
                     variable, 'float32', ('time', 'hydro_units'), zlib=True,
@@ -177,13 +178,13 @@ class Forcing:
             else:
                 var_data = nc.createVariable(
                     variable, 'float32', ('time', 'hydro_units'), zlib=True)
-            var_data[:, :] = self.data2D.data[index]
+            var_data[:, :] = self.data2D.data[idx]
 
         nc.close()
 
     def get_total_precipitation(self):
-        i_col = self.data2D.data_name.index('precipitation')
-        data = self.data2D.data[i_col].sum(axis=0)
+        idx = self.data2D.data_name.index('precipitation')
+        data = self.data2D.data[idx].sum(axis=0)
         areas = self.hydro_units['area']
         tot_precip = data * areas / areas.sum()
         return tot_precip.sum()
@@ -243,12 +244,8 @@ class Forcing:
                                                 **kwargs):
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
-        idx = self.data1D.data_name.index(variable)
-        data_raw = self.data1D.data[idx].copy()
-
-        # Resize the 2D data to match the 1D data
-        assert len(self.data2D.data) == 0
-        self.data2D.data = [None] * len(self.data1D.data)
+        idx_1D = self.data1D.data_name.index(variable)
+        data_raw = self.data1D.data[idx_1D].copy()
 
         # Extract kwargs (None if not provided)
         ref_elevation = kwargs.get('ref_elevation', None)
@@ -340,7 +337,14 @@ class Forcing:
         if variable in ['pet', 'precipitation']:
             unit_values[unit_values < 0] = 0
 
-        self.data2D.data[idx] = unit_values
+        # Store outputs
+        if variable in self.data2D.data_name:
+            idx_2D = self.data2D.data_name.index(variable)
+            self.data2D.data[idx_2D] = unit_values
+        else:
+            self.data2D.data.append(unit_values)
+            self.data2D.data_name.append(variable)
+            self.data2D.time = self.data1D.time
 
     def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
         pass

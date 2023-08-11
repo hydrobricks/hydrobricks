@@ -104,8 +104,9 @@ class CMakeBuild(build_ext):
             os.makedirs(build_temp)
 
         if not skip_conan:
-            subprocess.check_call(["conan", "install", ext.source_dir, "-s", "build_type=Release",
-                                   "--build=missing", "-pr:b=default"], cwd=build_temp)
+            subprocess.check_call(["conan", "install", ext.source_dir, "-s",
+                                   "build_type=Release", "--build=missing",
+                                   "-pr:b=default"], cwd=build_temp)
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 
@@ -134,7 +135,7 @@ setup(
                  },
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",

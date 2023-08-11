@@ -1,3 +1,5 @@
+from enum import StrEnum, auto
+
 import numpy as np
 import pyet
 
@@ -8,6 +10,20 @@ from .time_series import TimeSeries1D, TimeSeries2D
 
 class Forcing:
     """Class for forcing data"""
+
+    class Variable(StrEnum):
+        P = auto()  # Precipitation
+        T = auto()  # Temperature
+        T_MIN = auto()  # Minimum temperature
+        T_MAX = auto()  # Maximum temperature
+        T_DEW_POINT = auto()  # Dew point temperature
+        PET = auto()  # Potential evapotranspiration
+        RH = auto()  # Relative humidity
+        RH_MIN = auto()  # Minimum relative humidity
+        RH_MAX = auto()  # Maximum relative humidity
+        R_NET = auto()  # Net radiation
+        R_SOLAR = auto()  # Solar radiation
+        SD = auto()  # Sunshine duration
 
     def __init__(self, hydro_units):
         super().__init__()
@@ -20,6 +36,48 @@ class Forcing:
     def is_initialized(self):
         """ Return True if the forcing is initialized. """
         return self._is_initialized
+
+    def get_variable_enum(self, variable):
+        """
+        Match the variable name to the enum corresponding value.
+
+        Parameters
+        ----------
+        variable : str
+            Variable name.
+        """
+        if variable in self.Variable.__members__:
+            return self.Variable[variable]
+        else:
+            if variable == 'precipitation':
+                return self.Variable.P
+            elif variable == 'temperature':
+                return self.Variable.T
+            elif (variable == 'temperature_min' or
+                  variable == 'min_temperature'):
+                return self.Variable.T_MIN
+            elif (variable == 'temperature_max' or
+                  variable == 'max_temperature'):
+                return self.Variable.T_MAX
+            elif variable == 'pet':
+                return self.Variable.PET
+            elif variable == 'relative_humidity':
+                return self.Variable.RH
+            elif (variable == 'relative_humidity_min' or
+                  variable == 'min_relative_humidity'):
+                return self.Variable.RH_MIN
+            elif (variable == 'relative_humidity_max' or
+                  variable == 'max_relative_humidity'):
+                return self.Variable.RH_MAX
+            elif variable == 'net_radiation':
+                return self.Variable.R_NET
+            elif variable == 'solar_radiation':
+                return self.Variable.R_SOLAR
+            elif variable == 'sunshine_duration':
+                return self.Variable.SD
+
+            else:
+                raise ValueError(f'Variable {variable} is not recognized.')
 
     def load_station_data_from_csv(self, path, column_time, time_format, content):
         """
@@ -37,6 +95,11 @@ class Forcing:
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
         """
+        # Change the variable names (key) to the enum corresponding values
+        for key in list(content.keys()):
+            enum_val = self.get_variable_enum(key)
+            content[enum_val] = content.pop(key)
+
         self.data1D.load_from_csv(path, column_time, time_format, content)
 
     def set_prior_correction(self, **kwargs):
@@ -191,7 +254,7 @@ class Forcing:
         nc.close()
 
     def get_total_precipitation(self):
-        idx = self.data2D.data_name.index('precipitation')
+        idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
         areas = self.hydro_units['area']
         tot_precip = data * areas / areas.sum()
@@ -232,6 +295,7 @@ class Forcing:
                     raise ValueError(f'Unknown operation type: {operation_type}')
 
     def _apply_prior_correction(self, variable, method='multiplicative', **kwargs):
+        variable = self.get_variable_enum(variable)
         idx = self.data1D.data_name.index(variable)
 
         # Extract kwargs (None if not provided)
@@ -250,6 +314,7 @@ class Forcing:
 
     def _apply_spatialization_from_station_data(self, variable, method='default',
                                                 **kwargs):
+        variable = self.get_variable_enum(variable)
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
         idx_1D = self.data1D.data_name.index(variable)
@@ -264,11 +329,11 @@ class Forcing:
 
         # Specify default methods
         if method == 'default':
-            if variable == 'temperature':
+            if variable == self.Variable.T:
                 method = 'additive_elevation_gradient'
-            elif variable == 'precipitation':
+            elif variable == self.Variable.P:
                 method = 'multiplicative_elevation_gradient'
-            elif variable == 'pet':
+            elif variable == self.Variable.PET:
                 method = 'constant'
             else:
                 raise ValueError(f'Unknown default method for variable: {variable}')
@@ -342,7 +407,7 @@ class Forcing:
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
 
         # Check outputs
-        if variable in ['pet', 'precipitation']:
+        if variable in [self.Variable.PET, self.Variable.P]:
             unit_values[unit_values < 0] = 0
 
         # Store outputs
@@ -355,11 +420,14 @@ class Forcing:
             self.data2D.time = self.data1D.time
 
     def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
+        variable = self.get_variable_enum(variable)
         pass
 
-    def _apply_pet_computation(self, method, **kwargs):
+    def _apply_pet_computation(self, method, use_variables, **kwargs):
         # Check that the provided method is a function of pyet
         if method not in dir(pyet):
             raise ValueError(f'Unknown method: {method}')
+
+        use_variables = [self.get_variable_enum(v) for v in use_variables]
 
         pass

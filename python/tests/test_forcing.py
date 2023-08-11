@@ -38,7 +38,8 @@ def test_forcing_load_station_data_from_csv(hydro_units):
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
     assert len(forcing.data1D.data_name) == 3
-    assert forcing.data1D.data_name == ['precipitation', 'temperature', 'pet']
+    assert forcing.data1D.data_name == [hb.Forcing.Variable.P, hb.Forcing.Variable.T,
+                                        hb.Forcing.Variable.PET]
     assert forcing.data1D.data[0].shape[0] > 0
     assert forcing.data1D.data[1].shape[0] > 0
     assert forcing.data1D.data[2].shape[0] > 0

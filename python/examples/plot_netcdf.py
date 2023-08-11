@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 import geopandas as gpd
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,13 +14,13 @@ import xarray as xa
 from descartes import PolygonPatch  # https://pypi.org/project/descartes/
 from matplotlib.collections import PatchCollection
 from matplotlib.colorbar import ColorbarBase
-import matplotlib.colors as mcolors
 from matplotlib.colors import LightSource
 from matplotlib.patches import PathPatch, Polygon
 from matplotlib.path import Path
 from mpl_toolkits.basemap import Basemap
 from netCDF4 import Dataset as NetCDFFile
 from osgeo import gdal
+from scipy.stats import entropy
 
 # WARNING: This library had to be updated BY HAND
 # https://stackoverflow.com/questions/75287534/indexerror-descartes-polygonpatch-wtih-shapely
@@ -282,9 +283,9 @@ def plot_geology(tif_filename, shapefile, mask, target_crs, basemap_crs):
 
     # CREATE COLORMAP
     cmap = plt.cm.RdYlBu
-    norm1 = plt.cm.colors.BoundaryNorm(UG_present_in_mask1, 256)
-    norm2 = plt.cm.colors.BoundaryNorm(UG_present_in_mask2, 256)
-    norm3 = plt.cm.colors.BoundaryNorm(UG_present_in_mask3, 256)
+    norm1 = plt.cm.colors.BoundaryNorm(UG_present_in_mask1, 256, extend='max')
+    norm2 = plt.cm.colors.BoundaryNorm(UG_present_in_mask2, 256, extend='max')
+    norm3 = plt.cm.colors.BoundaryNorm(UG_present_in_mask3, 256, extend='max')
 
     # DRAW BASEMAP
     bmap = Basemap(epsg = basemap_crs, 
@@ -531,7 +532,7 @@ def plot_global_geology(tif_filename, shapefile, mask, output_filename, cascade_
     color_levels.sort()
     cmap = plt.cm.RdYlBu
     if len(color_levels) > 1:
-        norm = plt.cm.colors.BoundaryNorm(color_levels, 256)
+        norm = plt.cm.colors.BoundaryNorm(color_levels, 256, extend='max')
     else:
         norm = plt.Normalize(0, len(unit_present_in_mask))
 
@@ -708,25 +709,31 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
     
     # WARP SHAPEFILE TO CORRECT CRS
     for shapefile in glaciers_dict.values():
-        out_shapefile = shapefile + '_EPSG' + target_crs
+        out_shapefile = shapefile + '_EPSG' + target_crs + '.shp'
         print(shapefile + '.shp')
         gdf = gpd.read_file(shapefile + '.shp')
         gdf.to_crs(epsg=target_crs, inplace=True)
-        gdf.to_file(out_shapefile + '.shp')
+        gdf.to_file(out_shapefile)
         
     for shapefile in debris_dict.values():
-        out_shapefile = shapefile + '_EPSG' + target_crs
+        out_shapefile = shapefile + '_EPSG' + target_crs + '.shp'
         print(shapefile + '.shp')
         gdf = gpd.read_file(shapefile + '.shp')
         gdf.to_crs(epsg=target_crs, inplace=True)
-        gdf.to_file(out_shapefile + '.shp')
+        gdf.to_file(out_shapefile)
+        
+    out_mask = mask + '_EPSG' + target_crs + '.shp'
+    print(mask + '.shp')
+    gdf = gpd.read_file(mask + '.shp')
+    gdf.to_crs(epsg=target_crs, inplace=True)
+    gdf.to_file(out_mask)
     
     # INITIALIZE FIGURE
     fig, ax = plt.subplots(figsize=(20,20))
     ax.set_aspect(1)
     
     # OPEN WATERSHED SHAPEFILE, TRANSFORM IT TO A PATH FOR POLYGON CLIPPING AND GET ITS EXTENT FOR DEM CROPPING.
-    sf = shp.Reader(mask)
+    sf = shp.Reader(out_mask)
     for shape_rec in sf.shapeRecords():
         vertices = []
         codes = []
@@ -774,7 +781,7 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
     hillshade_array = hillshade.GetRasterBand(1).ReadAsArray()
     
     # MASK HILLSHADE WITH WATERSHED SHAPEFILE
-    gpd_mask = gpd.read_file(mask)
+    gpd_mask = gpd.read_file(out_mask)
     xi = np.linspace(ulx, lrx, dem.RasterXSize)
     yi = np.linspace(uly, lry, dem.RasterYSize)
     xi, yi = np.meshgrid(xi, yi)
@@ -784,10 +791,11 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
     
     # GEOLOGICAL DICTIONNARY
     # https://stackoverflow.com/questions/48520393/filling-shapefile-polygons-with-a-color-in-matplotlib
-    color_levels = list(glaciers_dict.keys())
+    color_levels = [*range(len(glaciers_dict.keys()))]
+    print(color_levels)
     cmap = plt.cm.RdYlBu
     if len(color_levels) > 1:
-        norm = plt.cm.colors.BoundaryNorm(color_levels, 256)
+        norm = plt.cm.colors.BoundaryNorm(color_levels, 256, extend='max')
     else:
         norm = plt.Normalize(0, len(color_levels))
     
@@ -805,8 +813,8 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
     bmap.drawparallels(np.arange(40, 50, 0.05), labels=[1,0,0,0], linewidth=0.5)
     
     # ADD GEOLOGICAL POLYGONS!
-    for year in glaciers_dict.keys():
-        color = cmap(norm(year))
+    for year, i in zip(glaciers_dict.keys(), color_levels):
+        color = cmap(norm(i))
         shapefile = glaciers_dict[year]
         glacier = gpd.GeoDataFrame.from_file(shapefile + '_EPSG' + target_crs + '.shp')
         
@@ -834,9 +842,13 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
                     for subpoly in poly:
                         mpoly = shapely.ops.transform(bmap, poly)
                         debris_patches.append(PolygonPatch(mpoly, color=color, linewidth=0.5, alpha=0.5))
+                elif poly.geom_type == 'Point':
+                    # convert lat and lon to map projection coordinates
+                    lons, lats = bmap(poly.x, poly.y)
+                    bmap.scatter(lons, lats, marker = 'o', color='black', zorder=10)
                 else:
                     print("'poly' is neither a polygon nor a multi-polygon. Skipping it.") 
-                
+                    
         pc1 = PatchCollection(glacier_patches, match_original=True, edgecolor='k', linewidths=0.5)
         pc2 = PatchCollection(debris_patches, match_original=True, edgecolor='k', linewidths=0.5, hatch=hatch_debris)
         ax.add_collection(pc1)
@@ -848,12 +860,14 @@ def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask
     
     # ADDING A GEOLOGICAL LEGEND
     handles = []
-    for year in glaciers_dict.keys():
-        color = cmap(norm(year))
+    for year, i in zip(glaciers_dict.keys(), color_levels):
+        color = cmap(norm(i))
         handles.append(Polygon([(0,0),(10,0),(0,-10)], facecolor=color,
-                               label=str(year), alpha=0.5, edgecolor='k'))
+                               label=year, alpha=0.5, edgecolor='k'))
     plt.legend(handles=handles, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, fontsize="10")
     plt.subplots_adjust(right=1)
+    
+    #bmap.drawmapscale(lon=7.45, lat=46, lon0=7.45, lat0=46, length=1) # ValueError: cannot draw map scale for projection='cyl'
     
     ax.set_title(title, fontsize=20)
     plt.savefig(output_filename + '.svg', format="svg", bbox_inches='tight', dpi=30)
@@ -1053,16 +1067,126 @@ def plot_altitudinal_glacial_cover_plots_through_time(output_filename, input_fol
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
+def plot_shannon_entropy(data_file, output_filename, label, title, header=0, usecol=[0]):
+
+    dateparse = lambda x: datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
+    data = pd.io.parsers.read_csv(data_file, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
+                                  na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
+                                  index_col=0, usecols=[0,1,2])
+    temp_file_solda = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Dati_meteo_Solda/06400MS_Sulden_Solda_LT_10m.Cmd.csv'
+    temp_solda = pd.io.parsers.read_csv(temp_file_solda, sep=";", decimal=",", encoding='cp1252', skiprows=11, header=1, 
+                                  na_values='---', parse_dates={'date': ['Datum', 'Zeit']}, date_parser=dateparse,
+                                  index_col=0, usecols=[0,1,2])
+    temp_solda = temp_solda[data.index[0]:data.index[-1]]
+    temp_file_madriccio = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Dati_meteo_Madriccio/06090SF_Madritsch_Madriccio_LT_10m.Cmd.csv'
+    temp_madriccio = pd.io.parsers.read_csv(temp_file_madriccio, sep=";", decimal=",", encoding='cp1252', skiprows=11, header=1, 
+                                  na_values='---', parse_dates={'date': ['Datum', 'Zeit']}, date_parser=dateparse,
+                                  index_col=0, usecols=[0,1,2])
+    temp_madriccio = temp_madriccio[data.index[0]:data.index[-1]]
+
+    # Compute the mean daily discharge
+    daily_groups = data.groupby(pd.Grouper(freq='1D'))
+    daily_means = daily_groups.mean()
+    arrays = daily_groups.apply(np.array).to_list()
+    daily_distribs = [np.hstack(group) for group in arrays]
+    daily_distribs_div_means = [distrib/mean for distrib, mean in zip(daily_distribs, daily_means.values)]
+    nbs = [np.count_nonzero(~np.isnan(distrib)) for distrib in daily_distribs]
+    
+    entropies = [entropy(distrib) for distrib in daily_distribs]
+    generalised_entropy_indexes = [-entropy(distrib, base=10)/nb for distrib, nb in zip(daily_distribs_div_means, nbs)]
+    gei_range = [-0.015, -0.0147]
+    
+    # Computations on temperature
+    temp_solda_daily_groups = temp_solda.groupby(pd.Grouper(freq='1D'))
+    temp_solda_daily_means = temp_solda_daily_groups.mean()
+    temp_madriccio_daily_groups = temp_madriccio.groupby(pd.Grouper(freq='1D'))
+    temp_madriccio_daily_means = temp_madriccio_daily_groups.mean()
+    
+    # Start with the plots
+    time = range(len(entropies))
+
+    plt.figure(figsize=(5,5))
+    plt.plot(temp_solda_daily_means, generalised_entropy_indexes, '.', markersize=2)
+    plt.ylim(gei_range)
+    plt.xlabel('Mean daily temperature in Solda (°C)')
+    plt.ylabel('Generalised Shannon Entropy Index')
+    plt.title('GSE Index VS Solda Daily Temperatures')
+    plt.tight_layout()
+    plt.savefig(output_filename + '_VSTemperaturesSolda.png', format="png", bbox_inches='tight', dpi=100)
+
+    plt.figure(figsize=(5,5))
+    plt.plot(temp_madriccio_daily_means, generalised_entropy_indexes, '.', markersize=2)
+    plt.ylim(gei_range)
+    plt.xlabel('Mean daily temperature in Madriccio (°C)')
+    plt.ylabel('Generalised Shannon Entropy Index')
+    plt.title('GSE Index VS Madriccio Daily Temperatures')
+    plt.tight_layout()
+    plt.savefig(output_filename + '_VSTemperaturesMadriccio.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+
+    fig, ax1 = plt.subplots(figsize=(15,5))
+    for t in time:
+        ax1.plot([t]*len(daily_distribs[t]), daily_distribs[t], '.', markersize=2, color='black')
+    ax1.set_ylabel('Discharge')
+    ax2 = ax1.twinx()
+    ax2.plot(time, generalised_entropy_indexes, '+', color='red')
+    ax2.set_ylabel('Generalised Shannon Entropy Index')
+    ax2.set_ylim(gei_range)
+    plt.xlabel('Time (day)')
+    plt.title('GSE Index and Discharge in Ponte Stelvio')
+    plt.tight_layout()
+    plt.savefig(output_filename + '_lane_nienow.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+
+    plt.figure(figsize=(15,5))
+    plt.plot(time, entropies)
+    plt.ylim([4.75, 5])
+    plt.xlabel('Time (day)')
+    plt.ylabel(label)
+    plt.title('Shannon Entropy over 10 min discharge data in Ponte Stelvio')
+    plt.tight_layout()
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+
+    plt.figure(figsize=(15,5))
+    plt.plot(time, generalised_entropy_indexes)
+    plt.ylim(gei_range)
+    plt.xlabel('Time (day)')
+    plt.ylabel('Generalised Shannon Entropy Index')
+    plt.title('GSE Index over 10 min discharge data in Ponte Stelvio')
+    plt.tight_layout()
+    plt.savefig(output_filename + '_generalised_shannon_entropy_index.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+
+def plot_simulated_against_observed_discharges(time_file, simulated_discharge, observed_discharge, output_filename, 
+                                               label, title, header=0, usecol=[0]):
+
+    simu_data = pd.io.parsers.read_csv(simulated_discharge, sep=",", header=1, na_values='', usecols=usecol)
+    obse_data = pd.io.parsers.read_csv(observed_discharge, sep=",", header=1, na_values='', usecols=[1])
+    
+    time = range(len(simu_data))
+
+    plt.figure(figsize=(15,5))
+    plt.plot(time, simu_data, '.', markersize=2, color='orange', label='Simulated')
+    plt.plot(time, obse_data, '.', markersize=2, color='blue', label='Observed')
+    plt.xlabel('Time (day)')
+    plt.ylabel(label)
+
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+
 def plot_simulated_discharge(time_file, data_file, output_filename, label, title, header=0, usecol=[0]):
 
     data = pd.io.parsers.read_csv(data_file, sep=",", header=1, na_values='', usecols=usecol)
-    print(data)
 
-    #data = np.loadtxt(data_file, delimiter=',', skiprows=header, usecols=usecol)
     time = range(len(data))
 
-    plt.figure()
-    plt.plot(time, data)
+    plt.figure(figsize=(15,5))
+    plt.plot(time, data, '.', markersize=2)
     plt.xlabel('Time (day)')
     plt.ylabel(label)
 
@@ -1218,10 +1342,57 @@ results = f'{path}Outputs/'
 figures = f'{path}OutputFigures/'
 it_study_area = '/home/anne-laure/Documents/Datasets/Italy_Study_area/'
 ch_study_area = '/home/anne-laure/Documents/Datasets/Swiss_Study_area/'
+ch_arolla_area = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/'
+
+
+##################################### Arolla ##############################################################################
+
+time = 'Weird time'
+catchments = ['BIrest', 'BS', 'DB', 'HGDA', 'PI', 'TN', 'VU', 'BI']
+
+for catchment in catchments:
+    name = f'Arolla_15min_discharge_{catchment}'
+    plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
+                             title=f'Arolla 15min discharge {catchment}', header=1, usecol=[1])
+
+    name = f'Arolla_daily_mean_discharge_{catchment}'
+    plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
+                             title=f'Arolla daily mean discharge {catchment}', header=1, usecol=[1])
+
+    if catchment != "BIrest":
+        simulated_discharge = f'{results}Arolla/{catchment}/simulated_discharge.csv'
+        observed_discharge = f'{results}Arolla_daily_mean_discharge_{catchment}.csv'
+        output_file = f'{figures}simulated_vs_observed_discharges_{catchment}'
+        plot_simulated_against_observed_discharges(time, simulated_discharge, observed_discharge, output_file, 
+                                                   'Discharges (mm/day)', title=f"Simulated and observed discharges in {catchment}")
+
+##################################### Arolla ##############################################################################
+
+tif = f'{ch_arolla_area}FilledDEM.tif'
+mask = f'{ch_arolla_area}Watersheds_on_dhm25/Whole_UpslopeArea_EPSG21781'
+
+watersheds = f'{ch_arolla_area}Watersheds_on_dhm25/'
+outlets = f'{ch_arolla_area}Outlet_locations_on_dhm25/'
+glaciers_dict = {'BI, Bertol Inférieur':f'{watersheds}BI_UpslopeArea_EPSG21781', 'BS, Bertol Supérieur':f'{watersheds}BS_UpslopeArea_EPSG21781',
+                 'DB, Douves Blanches':f'{watersheds}DB_UpslopeArea_EPSG21781',  "HGDA, Haut Glacier d'Arolla":f'{watersheds}HGDA_UpslopeArea_EPSG21781',
+                 'PI, Pièce':f'{watersheds}PI_UpslopeArea_EPSG21781',            'TN, Tsijiore Noive':f'{watersheds}TN_UpslopeArea_EPSG21781', 
+                 'VU, Vuibé':f'{watersheds}VU_UpslopeArea_EPSG21781'}
+debris_dict = {'BI, Bertol Inférieur':f'{outlets}BI_outlet_EPSG21781', 'BS, Bertol Supérieur':f'{outlets}BS_outlet_EPSG21781',
+                 'DB, Douves Blanches':f'{outlets}DB_outlet_EPSG21781',  "HGDA, Haut Glacier d'Arolla":f'{outlets}HGDA_outlet_EPSG21781',
+                 'PI, Pièce':f'{outlets}PI_outlet_EPSG21781',            'TN, Tsijiore Noive':f'{outlets}TN_outlet_EPSG21781', 
+                 'VU, Vuibé':f'{outlets}VU_outlet_EPSG21781'}
+output_filename = f'{ch_arolla_area}Arolla_DischargeCatchments'
+plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='21781', target_crs='4326', 
+                              title='Arolla catchments with available discharge datasets', basemap_crs='4326')
 
 ###########################################################################################################################
 
 time = 'Weird time'
+
+discharge = f'{path}Italy_discharge/Q_precipitation_Solda/Portata_Torbidità_Ponte_Stelvio_2014_oggi/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
+output_file = f'{figures}Stelvio_shannon_entropy'
+plot_shannon_entropy(discharge, output_file, 'Shannon entropy',
+                     title='Ponte Stelvio discharge - Shannon entropy', header=1, usecol=[1])
 
 discharge = f'{results}Stelvio_discharge.csv'
 output_file = f'{figures}Stelvio_discharge'
@@ -1249,7 +1420,7 @@ plot_altitudinal_glacial_cover_plots(output_filename, elevation_band_file)
 ###########################################################################################################################
 
 tif = f'{ch_study_area}StudyAreas_EPSG21781.tif'
-mask = f'{ch_study_area}LaNavisence_Chippis/125595_EPSG4326.shp'
+mask = f'{ch_study_area}LaNavisence_Chippis/125595_EPSG4326'
 
 main_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
 glaciers_dict = {1850:f'{main_path}inventory_sgi1850_r1992/SGI_1850', 1931:f'{main_path}inventory_sgi1931_r2022/SGI_1931',
@@ -1260,14 +1431,14 @@ output_filename = f'{figures}Anniviers_MappedGlaciers'
 plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='21781', target_crs='4326', 
                               title='Mapped glacier extents through time (Swiss Glacier Inventory inventory)', basemap_crs='4326')
 
-mask = f'{ch_study_area}LaBorgne_Bramois/CHVS-005.shp'
+mask = f'{ch_study_area}LaBorgne_Bramois/CHVS-005'
 output_filename = f'{figures}Herremence_MappedGlaciers'
 plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='21781', target_crs='4326', 
                               title='Mapped glacier extents through time (Swiss Glacier Inventory inventory)', basemap_crs='4326')
 
 
 tif = f'{it_study_area}dtm_2pt5m_utm_st_whole_StudyArea_4326FromOriginalCRS.tif'
-mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS.shp'
+mask = f'{it_study_area}OutletSolda_WatershedAbovePonteDiStelvio_4326FromOriginalCRS'
 
 main_path = '/home/anne-laure/Documents/Datasets/Italy_GlaciersExtents/SaraSavi/'
 glaciers_dict = {1818:f'{main_path}SuldenGlacier1818_Knoll2009', 1922:f'{main_path}SuldenGlacier1922_fromIGM',
@@ -1286,7 +1457,7 @@ glaciers_dict = {1997:f'{main_path}GlaciersExtents1997/glaciers_1997_EPSG25832',
 output_filename = f'{figures}Solda_MappedGlaciers_CIVIS'
 plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='4326', target_crs='4326', title='CIVIS data..', basemap_crs='4326')
 
-mask = f'{it_study_area}OutletMazia_WatershedSameAsComiti2019_4326FromOriginalCRS.shp'
+mask = f'{it_study_area}OutletMazia_WatershedSameAsComiti2019_4326FromOriginalCRS'
 
 output_filename = f'{figures}Mazzia_MappedGlaciers_CIVIS'
 plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_filename, tif_crs='4326', target_crs='4326', title='CIVIS data..', basemap_crs='4326')

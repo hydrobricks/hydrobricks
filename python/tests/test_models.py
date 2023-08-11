@@ -2,9 +2,10 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import pytest
+
 import hydrobricks as hb
 import hydrobricks.models as models
-import pytest
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -117,12 +118,16 @@ def test_socont_closes_water_balance():
         CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
-    forcing.spatialize_temperature(station_temp_alt, parameters.get('temp_gradients'))
-    forcing.spatialize_pet()
-    forcing.spatialize_precipitation(
-        ref_elevation=station_precip_alt,
-        gradient=parameters.get('precip_gradient'),
+    forcing.set_spatialization_from_station_data(
+        variable='temperature', ref_elevation=station_temp_alt,
+        gradient=parameters.get('temp_gradients'))
+    forcing.set_spatialization_from_station_data(variable='pet')
+    forcing.set_prior_correction(
+        variable='precipitation',
         correction_factor=parameters.get('precip_correction_factor'))
+    forcing.set_spatialization_from_station_data(
+        variable='precipitation', ref_elevation=station_precip_alt,
+        gradient=parameters.get('precip_gradient'))
 
     socont.setup(spatial_structure=hydro_units, output_path=tmp_dir.name,
                  start_date='1981-01-01', end_date='2020-12-31')

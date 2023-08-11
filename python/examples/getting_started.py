@@ -13,27 +13,24 @@ import xarray as xa
 from hydrobricks.preprocessing import catchment
 
 
-def compute_the_elevation_interpolations_HR(forcing, elevation_thrs):
-
-    tif_filename = f'/home/anne-laure/Documents/Datasets/Swiss_Study_area/ValDAnniviers_EPSG21781.tif'
-    tif_CRS = "EPSG:21781"
-    nc_CRS = "EPSG:21781"
-    start, end = forcing.initialize_from_netcdf_HR('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc', 'pet',
-                                   tif_filename, elevation_thrs, tif_CRS, nc_CRS,
-                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
-                                   content={'pet': 'pet_sim(mm/day)'})
+def compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, 
+                                            forcing, outline, outline_epsg, target_epsg, elevation_thrs, var_bands):
+    start, end = forcing.initialize_from_netcdf_HR(pet_nc_file, 'pet', tif_filename, 
+                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   content={'pet': 'pet_sim(mm/day)'})
     forcing.spatialize('pet','from_gridded_data')
     print('start, end = ', start, end)
-    start, end = forcing.initialize_from_netcdf_HR('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc', 'pr',
-                               tif_filename, elevation_thrs, tif_CRS, nc_CRS,
-                               column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
-                               content={'precipitation': 'precip(mm/day)'})
+    start, end = forcing.initialize_from_netcdf_HR(pr_nc_file, 'pr', tif_filename,
+                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   content={'precipitation': 'precip(mm/day)'})
     forcing.spatialize('precipitation','from_gridded_data')
     print('start, end = ', start, end)
-    start, end = forcing.initialize_from_netcdf_HR('/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc', 'tas',
-                                   tif_filename, elevation_thrs, tif_CRS, nc_CRS,
-                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
-                                   content={'temperature': 'temp(C)'})
+    start, end = forcing.initialize_from_netcdf_HR(tas_nc_file, 'tas', tif_filename, 
+                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   content={'temperature': 'temp(C)'})
     forcing.spatialize('temperature','from_gridded_data')
     print('start, end = ', start, end)
 
@@ -69,7 +66,7 @@ def compute_the_elevation_interpolations(forcing, elevation_thrs):
         np.savetxt(var_bands + name + "_interp.csv", data_interp, delimiter=",", header=name)
     np.savetxt(var_bands + "time.csv", forcing.time, delimiter=",", header='time', fmt="%s")
 
-def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, catchment_shapefile, elevation_thrs, outline_epsg, target_epsg):
+def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, catchment_shapefile, nc_topo_file, elevation_thrs, outline_epsg, target_epsg):
 
     # Read file using gpd.read_file()
     all_glaciers = gpd.read_file(glacier_shapefile)
@@ -131,7 +128,7 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
           "amounting to {:.1f}% of bare ice.".format(bare_ice_area * m2_to_km2, debris_glaciated_area * m2_to_km2, bare_ice_percentage))
 
     #Find pixel size
-    ras = rasterio.open('/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc')
+    ras = rasterio.open(nc_topo_file)
     a = ras.transform
     x, y = abs(a[0]), abs(a[4])
     pixel_area = x * y
@@ -143,7 +140,7 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
     bare_ice_area = np.zeros(band_nb)
     bare_rock_area = np.zeros(band_nb)
     glacier_area = np.zeros(band_nb)
-    xds = rioxarray.open_rasterio('/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc')
+    xds = rioxarray.open_rasterio(nc_topo_file)
 
     catchment_clipped = xds.rio.clip(catchment.geometry.values, catchment.crs)
     glaciers_clipped = xds.rio.clip(glaciers.geometry.values, glaciers.crs)
@@ -176,7 +173,7 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
     return debris_area, bare_ice_area, bare_rock_area, glacier_area
 
 def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, 
-                                      outline, elevation_thrs, results, outline_epsg, target_epsg):
+                                      outline, nc_topo_file, elevation_thrs, results, outline_epsg, target_epsg):
     # Creates files with land cover evolution as described here: https://hydrobricks.readthedocs.io/en/latest/doc/advanced.html
     
     # Creating Empty DataFrame and Storing it in variable df
@@ -187,7 +184,7 @@ def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_gl
     
     for whole_glacier, debris_glacier, time in zip(whole_glaciers, debris_glaciers, times):
         debris, ice, rock, glacier = preprocess_glacier_cover_change(debris_glacier, whole_glacier, outline, 
-                                                                     elevation_thrs, outline_epsg, target_epsg)
+                                                                     nc_topo_file, elevation_thrs, outline_epsg, target_epsg)
         debris_df[time] = debris
         ice_df[time] = ice
         rock_df[time] = rock
@@ -215,48 +212,82 @@ def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_gl
 # This script takes the shapefile of a catchment, the associated DEM,
 # and computes the mean elevation and the elevation bands, to finally convert them to CSV files.
 
-path1 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/Val_d_Anniviers/"
-path2 = "/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/"
-path3 = "/home/anne-laure/Documents/Datasets/Swiss_Study_area/LaNavisence_Chippis/"
-results = "/home/anne-laure/Documents/Datasets/Outputs/"
 
-date_input_format = '%Y%m%d'
-date_output_format = '%d/%m/%Y'
+####### INPUT FILES ################
+catchm = 'BI'
+path = "/home/anne-laure/Documents/Datasets/"
+dem_path = f"{path}Swiss_Study_area/StudyAreas_EPSG21781.tif"
+outline = f"{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/{catchm}_UpslopeArea_EPSG21781.shp" #f"{path}Swiss_Study_area/LaNavisence_Chippis/125595_EPSG21781.shp"
+outline_epsg = 21781
+method = 'set_isohypses' 
+min_val = 1900
+max_val = 3900
+distance = 20
 
-dem_path = f"{path1}dem_EPSG21781.tif"
-outline = f"{path1}outline.shp"
-#dem_path = f"{path3}StudyAreas_EPSG21781.tif_EPSG4326.tif"
-#outline = f"{path3}125595_EPSG4326.shp"
+####### DISCHARGE DATASETS #########
+discharge_file = f"{path}Outputs/Arolla_hydrobricks_discharge_{catchm}.csv" #"/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/discharge.csv"
+column_time = 'Date'
+time_format = '%d/%m/%Y'
+content = {'discharge': 'Discharge (mm/d)'}
 
-# RESULT FILES
-elev_bands = f"{results}elevation_bands.csv"
-elev_thres = f"{results}elevation_thresholds.csv"
-var_bands = f"{results}spatialized_"
-output = f"{results}simulated_discharge.csv"
+####### MODELISATION TIMESPAN ######
+start_date = '1989-01-01'
+end_date = '2014-12-31'
 
-anniviers = catchment.Catchment(outline=outline)
-success = anniviers.extract_dem(dem_path)
-print("DEM extracted:", success)
-mean_elev = anniviers.get_mean_elevation()
-print("Mean elevation:", mean_elev)
-elevation_bands, elevation_thrs = anniviers.get_elevation_bands(method='set_isohypses', min_val=1000, max_val=4000, distance=30)
-print("Elevation bands:", elevation_bands)
-np.savetxt(elev_thres, elevation_thrs, header='Elevation thresholds')
-
+####### CHANGING GLACIER COVER #####
 glacier_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
+nc_topo_file = '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc'
 whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
                   f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
                   f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
 debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
 times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
+target_epsg = 21781
+# BUGS if EPSG:4326...
 
-debris, ice, rock = create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, outline, 
-                                  elevation_thrs, results, outline_epsg=21781, target_epsg=21781)
+####### ELEVATION PROFILES #########
+compute_altitudinal_trends = False
+tif_filename = dem_path
+tif_CRS = "EPSG:21781"
+pet_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc'
+pr_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc'
+tas_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc'
+nc_CRS = "EPSG:21781"
+
+####### RESULT FILES ###############
+results = f"/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchm}/"
+elev_bands = f"{results}elevation_bands.csv"
+elev_thres = f"{results}elevation_thresholds.csv"
+var_bands = f"{results}spatialized_"
+output = f"{results}simulated_discharge.csv"
+stats = f"{results}simulation_stats.csv"
+
+#######################################################################
+
+study_area = catchment.Catchment(outline=outline)
+success = study_area.extract_dem(dem_path)
+print("DEM extracted:", success)
+mean_elev = study_area.get_mean_elevation()
+print("Mean elevation:", mean_elev)
+elevation_bands, elevation_thrs = study_area.get_elevation_bands(method=method, min_val=min_val, max_val=max_val, distance=distance)
+print("Elevation bands:", elevation_bands)
+np.savetxt(elev_thres, elevation_thrs, header='Elevation thresholds')
+
+# FORMAT FOR THE CHANGING INITIALISATION
+debris, ice, rock = create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, outline, nc_topo_file,
+                                                      elevation_thrs, results, outline_epsg=outline_epsg, target_epsg=target_epsg)
 
 # FORMAT FOR THE CONSTANT INITIALISATION
 elevation_bands['Area Debris'] = debris
 elevation_bands['Area Ice'] = ice
 elevation_bands['Area Non Glacier'] = rock
+
+# TEMPORARY - DROP WHERE AREA==0
+null_areas = elevation_bands[elevation_bands['area'] == 0].index
+elevation_bands.drop(null_areas, inplace = True)
+print(null_areas.values)
+# TEMPORARY - DROP WHERE AREA==0 - ENDOF
+
 elevation_bands.to_csv(elev_bands)
 
 # Model structure
@@ -284,35 +315,23 @@ hydro_units.load_from_csv(elev_bands, area_unit='m2', column_elevation='elevatio
 # Meteo data
 forcing = hb.Forcing(hydro_units)
 
-compute_altitudinal_trends = True
 if compute_altitudinal_trends:
-    compute_the_elevation_interpolations_HR(forcing, elevation_thrs)
+    compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, forcing, 
+                                            outline, outline_epsg, target_epsg, elevation_thrs, var_bands)
 else:
-    forcing.load_spatialized_data_from_csv('precipitation', var_bands + "precipitation_interp_HR.csv", var_bands + "time.csv", time_format='%Y-%m-%d')
-    forcing.load_spatialized_data_from_csv('temperature', var_bands + "temperature_interp_HR.csv", var_bands + "time.csv", time_format='%Y-%m-%d')
-    forcing.load_spatialized_data_from_csv('pet', var_bands + "pet_interp_HR.csv", var_bands + "time.csv", time_format='%Y-%m-%d')
-
-#forcing.load_from_csv(
-#    f'{path}meteo.csv', column_time='Date', time_format='%d/%m/%Y',
-#    content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
-#             'pet': 'pet_sim(mm/day)'})
-
-# GERER LE FORMAT DES DATES !!! (dans initialize_from_netcdf)
-#ref_elevation = 1250  # Reference altitude for the meteo data
-#forcing.spatialize_temperature(ref_elevation, -0.6)
-#forcing.spatialize_pet()
-#forcing.spatialize_precipitation(ref_elevation=ref_elevation, gradient=0.05,
-#                                 correction_factor=0.75)
+    forcing.load_spatialized_data_from_csv('precipitation', var_bands + "precipitation_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+    forcing.load_spatialized_data_from_csv('temperature', var_bands + "temperature_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+    forcing.load_spatialized_data_from_csv('pet', var_bands + "pet_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
 
 # Obs data
 obs = hb.Observations()
-obs.load_from_csv(f'{path2}discharge.csv', column_time='Date', time_format='%d/%m/%Y',
-                  content={'discharge': 'Discharge (mm/d)'})
+obs.load_from_csv(discharge_file, column_time=column_time, time_format=time_format,
+                  content=content)
 
 print('Debug 1', flush=True)
 # Model setup
-socont.setup(spatial_structure=hydro_units, output_path=str(f'{path1}outputs'),
-             start_date='1981-01-01', end_date='2020-12-31')
+socont.setup(spatial_structure=hydro_units, output_path=str(results),
+             start_date=start_date, end_date=end_date)
 
 print('Debug 2', flush=True)
 # Initialize and run the model
@@ -321,7 +340,22 @@ print('Debug 3', flush=True)
 socont.run(parameters=parameters, forcing=forcing)
 print('Debug 4', flush=True)
 
-# Get outlet discharge time series
+ # Water balance
+precip_total = forcing.get_total_precipitation()
+discharge_total = socont.get_total_outlet_discharge()
+et_total = socont.get_total_et()
+storage_change = socont.get_total_water_storage_changes()
+snow_change = socont.get_total_snow_storage_changes()   # GET THE SNOW COVER??? HOW DO I INITIALIZE IT???
+balance = discharge_total + et_total + storage_change + snow_change - precip_total
+print('precip_total', precip_total)
+print('discharge_total', discharge_total)
+print('et_total', et_total)
+print('storage_change', storage_change)
+print('snow_change', snow_change)
+print('balance', balance)
+#assert balance == pytest.approx(0, abs=1e-8)
+
+# Get outlet discharge time series. WHAT IS THE DIFFERENCE WITH TOTAL OUTLET DISCHARGE???!!!
 sim_ts = socont.get_outlet_discharge()
 print('Debug 5', flush=True)
 np.savetxt(output, sim_ts, header='Simulated outlet discharge time series')
@@ -332,6 +366,10 @@ print('Debug 6', flush=True)
 nse = socont.eval('nse', obs_ts)
 print('Debug 7', flush=True)
 kge_2012 = socont.eval('kge_2012', obs_ts)
+
+with open(stats, 'w') as f:
+    f.write(f'nse, {nse:.3f}\n')
+    f.write(f'kge_2012, {kge_2012:.3f}')
 
 print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
 print('End')

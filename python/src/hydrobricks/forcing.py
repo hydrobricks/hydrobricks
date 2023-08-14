@@ -1,7 +1,7 @@
 from enum import StrEnum, auto
 
 import numpy as np
-import pyet
+import pandas as pd
 
 import hydrobricks as hb
 
@@ -441,15 +441,23 @@ class Forcing:
         pyet_args = self._extract_lat_elevation_options(kwargs, pyet_args, use)
         use = self._remove_lat_elevation_options(use)
         self._check_variables_available(use)
-        pyet_args = self._set_pyet_variables_data(pyet_args, use)
 
-        tmean = pyet_args['tmean']
-        xy = np.exp(tmean / 16)
+        # Loop over the hydro units to compute the PET (pyet xarray implementation not
+        # working as expected in multiplicative operations)
+        pet = np.zeros((len(self.data2D.time), len(self.hydro_units)))
+        for i_unit, unit in self.hydro_units.iterrows():
+            if 'elevation' in use:
+                pyet_args['elevation'] = unit['elevation']
+            pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
+            pet[:, i_unit] = self._compute_pet(method, pyet_args)
 
-        pet = self._compute_pet(method, pyet_args)
-
-        self.data2D.data.append(pet)
-        self.data2D.data_name.append(self.Variable.PET)
+        # Store outputs
+        if self.Variable.PET not in self.data2D.data_name:
+            self.data2D.data.append(pet)
+            self.data2D.data_name.append(self.Variable.PET)
+        else:
+            idx = self.data2D.data_name.index(self.Variable.PET)
+            self.data2D.data[idx] = pet
 
     @staticmethod
     def _compute_pet(method, pyet_args):
@@ -496,7 +504,7 @@ class Forcing:
         else:
             raise ValueError(f'Unknown PET method: {method}')
 
-    def _set_pyet_variables_data(self, pyet_args, use):
+    def _set_pyet_variables_data(self, pyet_args, use, i_unit):
         for v in use:
             v = self.get_variable_enum(v)
             idx = self.data2D.data_name.index(v)
@@ -514,10 +522,8 @@ class Forcing:
                 self.Variable.PRESSURE: 'pressure',
             }
 
-            pyet_args[pyet_var_name.get(v)] = hb.xr.DataArray(
-                np.expand_dims(self.data2D.data[idx], -1),
-                dims=['time', 'hydro_units', 'fake_dim'],
-                coords={'time': self.data2D.time})
+            pyet_args[pyet_var_name.get(v)] = pd.Series(
+                self.data2D.data[idx][:, i_unit], index=self.data2D.time)
 
         return pyet_args
 

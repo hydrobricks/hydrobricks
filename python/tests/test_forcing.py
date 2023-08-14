@@ -200,3 +200,5 @@ def test_apply_pet_computation_hamon(forcing, parameters):
     forcing.set_pet_computation(
         method='Hamon', use=['t', 'lat'], lat=47.3)
     forcing.apply_operations(parameters)
+    assert len(forcing.data2D.data) == 2
+    assert 'pet' in forcing.data2D.data_name

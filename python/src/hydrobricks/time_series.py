@@ -23,6 +23,68 @@ class TimeSeries1D(TimeSeries):
     def __init__(self):
         super().__init__()
 
+    def load_from_csv(self, path, column_time, time_format, content):
+        """
+        Read time series data from csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the csv file containing hydro units data.
+        column_time : str
+            Column name containing the time.
+        time_format : str
+            Format of the time
+        content : dict
+            Type of data and column name containing the data.
+            Example: {'precipitation': 'Precipitation (mm)'}
+        """
+        file_content = pd.read_csv(
+            path, parse_dates=[column_time],
+            date_parser=lambda x: datetime.strptime(x, time_format))
+
+        self.time = file_content[column_time]
+
+        for col in content:
+            self.data_name.append(col)
+            self.data.append(file_content[content[col]].to_numpy())
+
+
+class TimeSeries2D(TimeSeries):
+    """Class for generic 2D time series data"""
+    def __init__(self):
+        super().__init__()
+
+    def load_from_csv(self, column, path, time_path, time_format):
+        """
+        Read already spatialized time series data from csv file.
+        Useful for data that needs a long time to be processed with initialize_from_netcdf_HR()
+        or initialize_from_netcdf() and can be stored as csv file.
+
+        Parameters
+        ----------
+        column : str
+            Name of the data to be loaded.
+        path : str|Path
+            Path to the csv file containing hydro units data.
+        time_path : dict
+            Type of data and column name containing the data.
+            Example: {'precipitation': 'Precipitation (mm)'}
+        time_format : str
+            Format of the time
+        """
+        data = np.loadtxt(path, delimiter=',')
+
+        file_content = pd.read_csv(time_path, converters={'time': lambda x: pd.to_datetime(x).strptime(time_format)})
+
+        nb_days = len(data)
+        assert len(file_content['# time']) == nb_days
+
+        self.time = file_content['# time'] # time2 #file_content[column_time]
+        self.data_name.append(column)
+        self.data_raw.append(None)
+        self.data_spatialized.append(data)
+
     def initialize_from_netcdf(self, path, varname, elev_mask_path, elevation_thrs, column_time, time_format, content):
         """
         Initialize time series data from a netcdf file.
@@ -158,64 +220,3 @@ class TimeSeries1D(TimeSeries):
             self.data_spatialized.append(None)
 
         return var.variables[column_time][0], var.variables[column_time][-1]
-
-    def load_from_csv(self, path, column_time, time_format, content):
-        """
-        Read time series data from csv file.
-
-        Parameters
-        ----------
-        path : str|Path
-            Path to the csv file containing hydro units data.
-        column_time : str
-            Column name containing the time.
-        time_format : str
-            Format of the time
-        content : dict
-            Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
-        """
-        file_content = pd.read_csv(
-            path, parse_dates=[column_time],
-            date_parser=lambda x: datetime.strptime(x, time_format))
-
-        self.time = file_content[column_time]
-
-        for col in content:
-            self.data_name.append(col)
-            self.data.append(file_content[content[col]].to_numpy())
-
-    def load_spatialized_data_from_csv(self, column, path, time_path, time_format):
-        """
-        Read already spatialized time series data from csv file.
-        Useful for data that needs a long time to be processed with initialize_from_netcdf_HR()
-        or initialize_from_netcdf() and can be stored as csv file.
-
-        Parameters
-        ----------
-        column : str
-            Name of the data to be loaded.
-        path : str|Path
-            Path to the csv file containing hydro units data.
-        time_path : dict
-            Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
-        time_format : str
-            Format of the time
-        """
-        data = np.loadtxt(path, delimiter=',')
-
-        file_content = pd.read_csv(time_path, converters={'time': lambda x: pd.to_datetime(x).strptime(time_format)})
-
-        nb_days = len(data)
-        assert len(file_content['# time']) == nb_days
-
-        self.time = file_content['# time'] # time2 #file_content[column_time]
-        self.data_name.append(column)
-        self.data_raw.append(None)
-        self.data_spatialized.append(data)
-
-class TimeSeries2D(TimeSeries):
-    """Class for generic 2D time series data"""
-    def __init__(self):
-        super().__init__()

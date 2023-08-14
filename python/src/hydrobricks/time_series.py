@@ -2,8 +2,8 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import rasterio
-import xarray as xa
+
+import hydrobricks as hb
 from hydrobricks import utils
 
 
@@ -82,8 +82,7 @@ class TimeSeries2D(TimeSeries):
 
         self.time = file_content['# time'] # time2 #file_content[column_time]
         self.data_name.append(column)
-        self.data_raw.append(None)
-        self.data_spatialized.append(data)
+        self.data.append(data)
 
     def initialize_from_netcdf(self, path, varname, elev_mask_path, elevation_thrs, column_time, time_format, content):
         """
@@ -110,8 +109,8 @@ class TimeSeries2D(TimeSeries):
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
         """
-        var = xa.open_dataset(path)
-        topo = xa.open_dataset(elev_mask_path)
+        var = hb.xr.open_dataset(path)
+        topo = hb.xr.open_dataset(elev_mask_path)
 
         # Homogenize the datasets
         var = var.drop_vars('spatial_ref')
@@ -129,19 +128,18 @@ class TimeSeries2D(TimeSeries):
         data = np.zeros((band_nb, times))
         for i, elev_min in enumerate(elevation_thrs[:-1]):
             elev_max = elevation_thrs[i+1]
-            topo_mask = xa.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
-            topo_mask_3d = xa.concat([topo_mask] * times, dim=column_time) # Multiply by the depth of the meteorological time serie.
+            topo_mask = hb.xr.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
+            topo_mask_3d = hb.xr.concat([topo_mask] * times, dim=column_time) # Multiply by the depth of the meteorological time serie.
             topo_mask_3d = topo_mask_3d.assign_coords(time=var.variables[column_time][:]) # Assign the times to these sheets.
 
-            val = xa.where(topo_mask_3d, var, np.nan) # Mask the meteorological data with the current elevation band.
-            data[i] = xa.DataArray.mean(val, dim=["x", "y"], skipna=True)[varname].to_numpy() # Mean the meteorological data in the band.
+            val = hb.xr.where(topo_mask_3d, var, np.nan) # Mask the meteorological data with the current elevation band.
+            data[i] = hb.xr.DataArray.mean(val, dim=["x", "y"], skipna=True)[varname].to_numpy() # Mean the meteorological data in the band.
             # We do not yet interpolate the holes.
 
         self.time = column
         for col in content:
             self.data_name.append(col)
-            self.data_raw.append(data)
-            self.data_spatialized.append(None)
+            self.data.append(data)
 
         return var.variables[column_time][0], var.variables[column_time][-1]
 
@@ -174,8 +172,8 @@ class TimeSeries2D(TimeSeries):
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
         """
-        var = xa.open_dataset(path)
-        topo = xa.open_dataset(elev_mask_path)
+        var = hb.xr.open_dataset(path)
+        topo = hb.xr.open_dataset(elev_mask_path)
         if var.rio.crs == nc_CRS:
             print("CRS is indeed", var.rio.crs)
         else:
@@ -201,22 +199,21 @@ class TimeSeries2D(TimeSeries):
         all_topo_masks = []
         for i, elev_min in enumerate(elevation_thrs[:-1]):
             elev_max = elevation_thrs[i+1]
-            topo_mask = xa.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
+            topo_mask = hb.xr.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
             all_topo_masks.append(topo_mask)
 
         data = np.zeros((band_nb, times))
         for j, time in enumerate(var.variables[column_time][:]):
             print(time)
-            var_uniq = var[varname][j].rio.reproject_match(topo, Resampling=rasterio.enums.Resampling.bilinear)
+            var_uniq = var[varname][j].rio.reproject_match(topo, Resampling=hb.rasterio.enums.Resampling.bilinear)
             for i, elev_min in enumerate(elevation_thrs[:-1]):
-                val = xa.where(all_topo_masks[i], var_uniq, np.nan).to_array() # Mask the meteorological data with the current elevation band.
+                val = hb.xr.where(all_topo_masks[i], var_uniq, np.nan).to_array() # Mask the meteorological data with the current elevation band.
                 data[i][j] = np.nanmean(val) # Mean the meteorological data in the band.
                 # We do not yet interpolate the holes.
 
         self.time = column
         for col in content:
             self.data_name.append(col)
-            self.data_raw.append(data)
-            self.data_spatialized.append(None)
+            self.data.append(data)
 
         return var.variables[column_time][0], var.variables[column_time][-1]

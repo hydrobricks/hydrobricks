@@ -57,8 +57,15 @@ except ImportError:
 else:
     has_pyet = True
 
+try:
+    import xarray as xr
+except ImportError:
+    has_xarray = False
+else:
+    has_xarray = True
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'init', 'init_log', 'close_log', 'set_debug_log_level', 'set_max_log_level',
            'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask',
-           'SpotpySetup', 'spotpy', 'pyet')
+           'SpotpySetup', 'spotpy', 'pyet', 'xr')

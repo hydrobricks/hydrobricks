@@ -86,7 +86,7 @@ class Catchment:
         for i in range(len(elevations) - 1):
             n_cells = np.count_nonzero(
                 np.logical_and(self.masked_dem_data >= elevations[i],
-                               self.masked_dem_data <= elevations[i + 1]))
+                               self.masked_dem_data < elevations[i + 1]))
             res_bands[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
             res_elevations[i] = round(float(np.mean(elevations[i:i+2])), 2)
 

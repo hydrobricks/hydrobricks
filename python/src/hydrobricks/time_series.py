@@ -9,12 +9,19 @@ from hydrobricks import utils
 
 class TimeSeries:
     """Class for generic time series data"""
-
     def __init__(self):
         self.time = []
-        self.data_raw = []
-        self.data_spatialized = []
+        self.data = []
         self.data_name = []
+
+    def get_dates_as_mjd(self):
+        return utils.date_as_mjd(self.time)
+
+
+class TimeSeries1D(TimeSeries):
+    """Class for generic 1D time series data"""
+    def __init__(self):
+        super().__init__()
 
     def initialize_from_netcdf(self, path, varname, elev_mask_path, elevation_thrs, column_time, time_format, content):
         """
@@ -176,8 +183,7 @@ class TimeSeries:
 
         for col in content:
             self.data_name.append(col)
-            self.data_raw.append(file_content[content[col]].to_numpy())
-            self.data_spatialized.append(None)
+            self.data.append(file_content[content[col]].to_numpy())
 
     def load_spatialized_data_from_csv(self, column, path, time_path, time_format):
         """
@@ -209,5 +215,7 @@ class TimeSeries:
         self.data_raw.append(None)
         self.data_spatialized.append(data)
 
-    def _date_as_mjd(self):
-        return utils.date_as_mjd(self.time)
+class TimeSeries2D(TimeSeries):
+    """Class for generic 2D time series data"""
+    def __init__(self):
+        super().__init__()

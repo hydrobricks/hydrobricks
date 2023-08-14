@@ -3,6 +3,7 @@ requires = [
     "setuptools>=42",
     "wheel",
     "ninja",
+    "conan==1.*",
     "cmake>=3.12"
 ]
 build-backend = "setuptools.build_meta"
@@ -21,11 +22,11 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest pyyaml numpy pandas netCDF4 HydroErr"
+test-requires = "pytest pyyaml numpy pandas netCDF4 HydroErr pyet"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

@@ -50,8 +50,15 @@ else:
     has_spotpy = True
     from .spotpy_setup import SpotpySetup
 
+try:
+    import pyet
+except ImportError:
+    has_pyet = False
+else:
+    has_pyet = True
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'init', 'init_log', 'close_log', 'set_debug_log_level', 'set_max_log_level',
            'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask',
-           'SpotpySetup', 'spotpy')
+           'SpotpySetup', 'spotpy', 'pyet')

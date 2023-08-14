@@ -2,8 +2,9 @@ import importlib
 import os
 from abc import ABC, abstractmethod
 
-import _hydrobricks as _hb
 import HydroErr
+
+import _hydrobricks as _hb
 from _hydrobricks import ModelHydro, SettingsModel
 from hydrobricks import utils
 
@@ -19,7 +20,7 @@ class Model(ABC):
         self.spatial_structure = None
         self.allowed_kwargs = {'solver', 'record_all', 'land_cover_types',
                                'land_cover_names'}
-        self.initialized = False
+        self._is_initialized = False
 
         # Default options
         self.solver = 'heun_explicit'
@@ -60,7 +61,7 @@ class Model(ABC):
         ------
         The predicted discharge time series
         """
-        if self.initialized:
+        if self._is_initialized:
             raise RuntimeError('The model has already been initialized. '
                                'Please create a new instance.')
 
@@ -81,7 +82,7 @@ class Model(ABC):
                     self.settings, spatial_structure.settings):
                 raise RuntimeError('Basin creation failed.')
 
-            self.initialized = True
+            self._is_initialized = True
 
         except RuntimeError:
             print("A runtime exception occurred.")
@@ -105,12 +106,15 @@ class Model(ABC):
         ------
         The predicted discharge time series
         """
-        if not self.initialized:
+        if not self._is_initialized:
             raise RuntimeError('The model has not been initialized. '
                                'Please run setup() first.')
 
         try:
             self.model.reset()
+
+            if forcing is not None and not forcing.is_initialized():
+                forcing.apply_operations(parameters)
 
             self._set_parameters(parameters)
             self._set_forcing(forcing)
@@ -161,9 +165,9 @@ class Model(ABC):
             The forcing data.
         """
         self.model.clear_time_series()
-        time = utils.date_as_mjd(forcing.time.to_numpy())
+        time = utils.date_as_mjd(forcing.data2D.time.to_numpy())
         ids = self.spatial_structure.get_ids().to_numpy()
-        for data_name, data in zip(forcing.data_name, forcing.data_spatialized):
+        for data_name, data in zip(forcing.data2D.data_name, forcing.data2D.data):
             if data is None:
                 raise RuntimeError(f'The forcing {data_name} has not '
                                    f'been spatialized.')

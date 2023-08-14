@@ -104,13 +104,12 @@ def test_set_prior_correction(forcing):
 
 
 def test_set_spatialization_from_station(forcing):
-    ref_elevation = 1250  # Reference altitude for the meteo data
     forcing.set_spatialization_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
-        ref_elevation=ref_elevation, gradient='param:temp_gradients')
+        ref_elevation=1250, gradient='param:temp_gradients')
     forcing.set_spatialization_from_station_data(
         variable='precipitation', method='multiplicative_elevation_gradient',
-        ref_elevation=ref_elevation, gradient='param:precip_gradient',
+        ref_elevation=1250, gradient='param:precip_gradient',
         correction_factor='param:precip_corr_factor'
     )
     assert len(forcing._operations) == 2
@@ -182,12 +181,22 @@ def test_apply_pet_computation_wrong_variable_name(forcing, parameters):
         forcing.apply_operations(parameters)
 
 
-def test_apply_pet_computation(forcing, parameters):
+def test_apply_pet_computation_variables_not_available(forcing, parameters):
     if not hb.has_pyet:
         return
     forcing.set_pet_computation(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'],
-        lat=45)
+        lat=47.3)
+    with pytest.raises(ValueError):
+        forcing.apply_operations(parameters)
+
+
+def test_apply_pet_computation_hamon(forcing, parameters):
+    if not hb.has_pyet:
+        return
+    forcing.set_spatialization_from_station_data(
+        variable='temperature', method='additive_elevation_gradient',
+        ref_elevation=1250, gradient=-0.6)
+    forcing.set_pet_computation(
+        method='Hamon', use=['t', 'lat'], lat=47.3)
     forcing.apply_operations(parameters)
-
-

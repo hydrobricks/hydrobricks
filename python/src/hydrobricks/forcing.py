@@ -12,20 +12,20 @@ class Forcing:
     """Class for forcing data"""
 
     class Variable(StrEnum):
-        P = auto()  # Precipitation
-        T = auto()  # Temperature
-        T_MIN = auto()  # Minimum temperature
-        T_MAX = auto()  # Maximum temperature
-        T_DEW_POINT = auto()  # Dew point temperature
-        PET = auto()  # Potential evapotranspiration
-        RH = auto()  # Relative humidity
-        RH_MIN = auto()  # Minimum relative humidity
-        RH_MAX = auto()  # Maximum relative humidity
-        R_NET = auto()  # Net radiation
-        R_SOLAR = auto()  # Solar radiation
-        SD = auto()  # Sunshine duration
-        WIND = auto()  # Wind speed
-        PRESSURE = auto()  # Atmospheric pressure
+        P = auto()  # Precipitation [mm]
+        T = auto()  # Temperature [°C]
+        T_MIN = auto()  # Minimum temperature [°C]
+        T_MAX = auto()  # Maximum temperature [°C]
+        T_DEW_POINT = auto()  # Dew point temperature [°C]
+        PET = auto()  # Potential evapotranspiration [mm]
+        RH = auto()  # Relative humidity [%]
+        RH_MIN = auto()  # Minimum relative humidity [%]
+        RH_MAX = auto()  # Maximum relative humidity [%]
+        R_NET = auto()  # Net radiation [MJ m-2 d-1]
+        R_SOLAR = auto()  # Solar radiation [MJ m-2 d-1]
+        SD = auto()  # Sunshine duration [h]
+        WIND = auto()  # Wind speed [m s-1]
+        PRESSURE = auto()  # Atmospheric pressure [kPa]
 
     def __init__(self, hydro_units):
         super().__init__()
@@ -337,15 +337,8 @@ class Forcing:
         variable = self.get_variable_enum(variable)
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()
-        idx_1D = self.data1D.data_name.index(variable)
-        data_raw = self.data1D.data[idx_1D].copy()
-
-        # Extract kwargs (None if not provided)
-        ref_elevation = kwargs.get('ref_elevation', None)
-        gradient = kwargs.get('gradient', None)
-        gradient_1 = kwargs.get('gradient_1', None)
-        gradient_2 = kwargs.get('gradient_2', None)
-        elevation_threshold = kwargs.get('elevation_threshold', None)
+        idx_1d = self.data1D.data_name.index(variable)
+        data_raw = self.data1D.data[idx_1d].copy()
 
         # Specify default methods
         if method == 'default':
@@ -358,18 +351,13 @@ class Forcing:
             else:
                 raise ValueError(f'Unknown default method for variable: {variable}')
 
-        if gradient is None:
-            gradient = gradient_1
+        # Extract kwargs (None if not provided)
+        ref_elevation = kwargs.get('ref_elevation', None)
+        gradient = kwargs.get('gradient', None)
 
         # Check inputs
-        if method == 'multiplicative_elevation_threshold_gradients':
-            if not elevation_threshold:
-                method = 'multiplicative_elevation_gradient'
-
-        if method in ['additive_elevation_gradient',
-                      'multiplicative_elevation_gradient']:
-            if gradient is None:
-                method = 'constant'
+        if gradient is None:
+            gradient = kwargs.get('gradient_1', None)
 
         if isinstance(gradient, list):
             if len(gradient) not in [1, 12]:
@@ -414,6 +402,8 @@ class Forcing:
                     raise ValueError(f'Wrong gradient format: {gradient}')
 
             elif method == 'multiplicative_elevation_threshold_gradients':
+                gradient_2 = kwargs.get('gradient_2', None)
+                elevation_threshold = kwargs.get('elevation_threshold', None)
                 if elevation < elevation_threshold:
                     unit_values[:, i_unit] = data_raw * (
                             1 + gradient * (elevation - ref_elevation) / 100)
@@ -432,8 +422,8 @@ class Forcing:
 
         # Store outputs
         if variable in self.data2D.data_name:
-            idx_2D = self.data2D.data_name.index(variable)
-            self.data2D.data[idx_2D] = unit_values
+            idx_2d = self.data2D.data_name.index(variable)
+            self.data2D.data[idx_2d] = unit_values
         else:
             self.data2D.data.append(unit_values)
             self.data2D.data_name.append(variable)
@@ -443,11 +433,130 @@ class Forcing:
         variable = self.get_variable_enum(variable)
         pass
 
-    def _apply_pet_computation(self, method, use_variables, **kwargs):
-        # Check that the provided method is a function of pyet
-        if method not in dir(pyet):
-            raise ValueError(f'Unknown method: {method}')
+    def _apply_pet_computation(self, method, use, **kwargs):
+        if not hb.has_pyet:
+            raise ImportError("pyet is required to do this.")
 
-        use_variables = [self.get_variable_enum(v) for v in use_variables]
+        pyet_args = {}
+        pyet_args = self._extract_lat_elevation_options(kwargs, pyet_args, use)
+        use = self._remove_lat_elevation_options(use)
+        self._check_variables_available(use)
+        pyet_args = self._set_pyet_variables_data(pyet_args, use)
 
-        pass
+        tmean = pyet_args['tmean']
+        xy = np.exp(tmean / 16)
+
+        pet = self._compute_pet(method, pyet_args)
+
+        self.data2D.data.append(pet)
+        self.data2D.data_name.append(self.Variable.PET)
+
+    @staticmethod
+    def _compute_pet(method, pyet_args):
+        if method in ['Penman', 'penman']:
+            return hb.pyet.penman(**pyet_args)
+        elif method in ['Penman-Monteith', 'pm']:
+            return hb.pyet.pm(**pyet_args)
+        elif method in ['ASCE-PM', 'pm_asce']:
+            return hb.pyet.pm_asce(**pyet_args)
+        elif method in ['FAO-56', 'pm_fao56']:
+            return hb.pyet.pm_fao56(**pyet_args)
+        elif method in ['Priestley-Taylor', 'priestley_taylor']:
+            return hb.pyet.priestley_taylor(**pyet_args)
+        elif method in ['Kimberly-Penman', 'kimberly_penman']:
+            return hb.pyet.kimberly_penman(**pyet_args)
+        elif method in ['Thom-Oliver', 'thom_oliver']:
+            return hb.pyet.thom_oliver(**pyet_args)
+        elif method in ['Blaney-Criddle', 'blaney_criddle']:
+            return hb.pyet.blaney_criddle(**pyet_args)
+        elif method in ['Hamon', 'hamon']:
+            return hb.pyet.hamon(**pyet_args)
+        elif method in ['Romanenko', 'romanenko']:
+            return hb.pyet.romanenko(**pyet_args)
+        elif method in ['Linacre', 'linacre']:
+            return hb.pyet.linacre(**pyet_args)
+        elif method in ['Haude', 'haude']:
+            return hb.pyet.haude(**pyet_args)
+        elif method in ['Turc', 'turc']:
+            return hb.pyet.turc(**pyet_args)
+        elif method in ['Jensen-Haise', 'jensen_haise']:
+            return hb.pyet.jensen_haise(**pyet_args)
+        elif method in ['McGuinness-Bordne', 'mcguinness_bordne']:
+            return hb.pyet.mcguinness_bordne(**pyet_args)
+        elif method in ['Hargreaves', 'hargreaves']:
+            return hb.pyet.hargreaves(**pyet_args)
+        elif method in ['FAO-24 radiation', 'fao_24']:
+            return hb.pyet.fao_24(**pyet_args)
+        elif method in ['Abtew', 'abtew']:
+            return hb.pyet.abtew(**pyet_args)
+        elif method in ['Makkink', 'makkink']:
+            return hb.pyet.makkink(**pyet_args)
+        elif method in ['Oudin', 'oudin']:
+            return hb.pyet.oudin(**pyet_args)
+        else:
+            raise ValueError(f'Unknown PET method: {method}')
+
+    def _set_pyet_variables_data(self, pyet_args, use):
+        for v in use:
+            v = self.get_variable_enum(v)
+            idx = self.data2D.data_name.index(v)
+            pyet_var_name = {
+                self.Variable.T: 'tmean',
+                self.Variable.T_MIN: 'tmin',
+                self.Variable.T_MAX: 'tmax',
+                self.Variable.T_DEW_POINT: 'tdew',
+                self.Variable.RH: 'rh',
+                self.Variable.RH_MIN: 'rhmin',
+                self.Variable.RH_MAX: 'rhmax',
+                self.Variable.R_NET: 'rn',
+                self.Variable.R_SOLAR: 'rs',
+                self.Variable.WIND: 'wind',
+                self.Variable.PRESSURE: 'pressure',
+            }
+
+            pyet_args[pyet_var_name.get(v)] = hb.xr.DataArray(
+                np.expand_dims(self.data2D.data[idx], -1),
+                dims=['time', 'hydro_units', 'fake_dim'],
+                coords={'time': self.data2D.time})
+
+        return pyet_args
+
+    def _check_variables_available(self, use):
+        # Check if all variables are available
+        use = [self.get_variable_enum(v) for v in use]
+        for v in use:
+            if v not in self.data2D.data_name:
+                raise ValueError(f"Variable {v} is not available.")
+
+    def _extract_lat_elevation_options(self, kwargs, pyet_args, use):
+        use_lat = False
+        use_elevation = False
+
+        # Extract latitude and elevation from the use list
+        for u in use:
+            if u == 'latitude':
+                use_lat = True
+            elif u == 'lat':
+                use_lat = True
+            elif u == 'elevation':
+                use_elevation = True
+
+        # Set latitude and elevation to the pyet arguments
+        if use_lat:
+            # Latitude must be provided in the arguments
+            if 'latitude' in kwargs:
+                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['latitude'])
+            elif 'lat' in kwargs:
+                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['lat'])
+            else:
+                raise ValueError("Latitude [°] must be provided in the arguments.")
+        if use_elevation:
+            pyet_args['elevation'] = hb.xr.DataArray(self.hydro_units['elevation'])
+
+        return pyet_args
+
+    @staticmethod
+    def _remove_lat_elevation_options(use):
+        # Remove latitude and elevation from the list
+        use = [u for u in use if u not in ['latitude', 'lat', 'elevation']]
+        return use

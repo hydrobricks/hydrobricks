@@ -57,7 +57,7 @@ except ImportError:
 else:
     has_pyet = True
     try:
-        import xarray
+        import xarray as xr
     except ImportError:
         raise ImportError('pyet requires xarray to be installed')
 

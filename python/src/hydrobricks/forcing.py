@@ -1,9 +1,8 @@
 from enum import StrEnum, auto
 
+import hydrobricks as hb
 import numpy as np
 import pandas as pd
-
-import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 

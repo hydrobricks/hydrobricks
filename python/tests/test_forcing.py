@@ -1,9 +1,8 @@
 import os
 from pathlib import Path
 
-import pytest
-
 import hydrobricks as hb
+import pytest
 
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),

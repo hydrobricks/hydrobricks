@@ -40,7 +40,7 @@ repos:
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.8.0
+  rev: v3.10.1
   hooks:
   - id: pyupgrade
     args: ["--py36-plus"]
@@ -52,7 +52,7 @@ repos:
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.5.1
+  rev: v1.5.3
   hooks:
   - id: remove-tabs
     exclude: |
@@ -63,7 +63,7 @@ repos:
 
 # Flake 8
 - repo: https://github.com/PyCQA/flake8
-  rev: 6.0.0
+  rev: 6.1.0
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]

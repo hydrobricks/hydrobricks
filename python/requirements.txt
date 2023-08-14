@@ -1,5 +1,4 @@
 HydroErr
 numpy
 pandas>=2.0
-pyet
 pyyaml

@@ -24,6 +24,8 @@ class Forcing:
         R_NET = auto()  # Net radiation
         R_SOLAR = auto()  # Solar radiation
         SD = auto()  # Sunshine duration
+        WIND = auto()  # Wind speed
+        PRESSURE = auto()  # Atmospheric pressure
 
     def __init__(self, hydro_units):
         super().__init__()
@@ -49,35 +51,49 @@ class Forcing:
         if variable in self.Variable.__members__:
             return self.Variable[variable]
         else:
-            if variable == 'precipitation':
+            if variable in ['precipitation', 'precip', 'p']:
                 return self.Variable.P
-            elif variable == 'temperature':
+            elif variable in ['temperature', 'temp', 't']:
                 return self.Variable.T
-            elif (variable == 'temperature_min' or
-                  variable == 'min_temperature'):
+            elif variable in ['temperature_min', 'min_temperature', 't_min', 'tmin']:
                 return self.Variable.T_MIN
-            elif (variable == 'temperature_max' or
-                  variable == 'max_temperature'):
+            elif variable in ['temperature_max', 'max_temperature', 't_max', 'tmax']:
                 return self.Variable.T_MAX
-            elif variable == 'pet':
+            elif variable in ['pet']:
                 return self.Variable.PET
-            elif variable == 'relative_humidity':
+            elif variable in ['relative_humidity', 'rh']:
                 return self.Variable.RH
-            elif (variable == 'relative_humidity_min' or
-                  variable == 'min_relative_humidity'):
+            elif variable in ['relative_humidity_min', 'min_relative_humidity',
+                              'rh_min', 'rhmin']:
                 return self.Variable.RH_MIN
-            elif (variable == 'relative_humidity_max' or
-                  variable == 'max_relative_humidity'):
+            elif variable in ['relative_humidity_max', 'max_relative_humidity',
+                              'rh_max', 'rhmax']:
                 return self.Variable.RH_MAX
-            elif variable == 'net_radiation':
+            elif variable in ['net_radiation', 'r_net', 'r_n', 'rn']:
                 return self.Variable.R_NET
-            elif variable == 'solar_radiation':
+            elif variable in ['solar_radiation', 'r_solar', 'r_s', 'rs']:
                 return self.Variable.R_SOLAR
-            elif variable == 'sunshine_duration':
+            elif variable in ['sunshine_duration', 'sd']:
                 return self.Variable.SD
+            elif variable in ['wind_speed', 'wind']:
+                return self.Variable.WIND
+            elif variable in ['pressure']:
+                return self.Variable.PRESSURE
 
             else:
                 raise ValueError(f'Variable {variable} is not recognized.')
+
+    def _can_be_negative(self, variable):
+        if variable in [self.Variable.P, self.Variable.PET, self.Variable.RH,
+                        self.Variable.RH_MIN, self.Variable.RH_MAX, self.Variable.R_NET,
+                        self.Variable.R_SOLAR, self.Variable.SD, self.Variable.WIND,
+                        self.Variable.PRESSURE]:
+            return False
+        elif variable in [self.Variable.T, self.Variable.T_MIN, self.Variable.T_MAX,
+                          self.Variable.T_DEW_POINT]:
+            return True
+        else:
+            raise ValueError(f'Undefined if variable {variable} can be negative.')
 
     def load_station_data_from_csv(self, path, column_time, time_format, content):
         """
@@ -407,7 +423,7 @@ class Forcing:
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
 
         # Check outputs
-        if variable in [self.Variable.PET, self.Variable.P]:
+        if not self._can_be_negative(variable):
             unit_values[unit_values < 0] = 0
 
         # Store outputs

@@ -8,7 +8,7 @@ import hydrobricks.models as models
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
@@ -40,14 +40,14 @@ ref_elevation = 1250  # Reference altitude for the meteo data
 forcing = hb.Forcing(hydro_units)
 forcing.load_station_data_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
-    content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
-             'pet': 'pet_sim(mm/day)'})
+    content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)'})
 
 forcing.set_spatialization_from_station_data(
     variable='temperature', ref_elevation=ref_elevation, gradient=-0.6)
-forcing.set_spatialization_from_station_data(variable='pet')
 forcing.set_prior_correction(variable='precipitation', correction_factor=0.75)
-forcing.set_spatialization_from_station_data(variable='precipitation', gradient=0.05)
+forcing.set_spatialization_from_station_data(
+    variable='precipitation', ref_elevation=ref_elevation, gradient=0.05)
+forcing.set_pet_computation(method='Hamon', use=['t', 'lat'], lat=47.3)
 
 # Obs data
 obs = hb.Observations()

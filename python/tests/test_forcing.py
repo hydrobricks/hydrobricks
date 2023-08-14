@@ -121,7 +121,7 @@ def test_set_pet_computation(forcing):
     forcing.set_pet_computation(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     assert len(forcing._operations) == 1
-    assert forcing._operations[0]['type'] == 'pet_computation'
+    assert forcing._operations[0]['type'] == 'compute_pet'
     assert forcing._operations[0]['method'] == 'Priestley-Taylor'
 
 
@@ -201,4 +201,28 @@ def test_apply_pet_computation_hamon(forcing, parameters):
         method='Hamon', use=['t', 'lat'], lat=47.3)
     forcing.apply_operations(parameters)
     assert len(forcing.data2D.data) == 2
+    assert 'pet' in forcing.data2D.data_name
+
+
+def test_apply_pet_computation_linacre(forcing, parameters):
+    if not hb.has_pyet:
+        return
+    # Faking tmin and tmax
+    forcing.data1D.data_name.append(forcing.Variable.T_MIN)
+    forcing.data1D.data.append(forcing.data1D.data[1] - 5)
+    forcing.data1D.data_name.append(forcing.Variable.T_MAX)
+    forcing.data1D.data.append(forcing.data1D.data[1] + 5)
+    forcing.set_spatialization_from_station_data(
+        variable='temperature', method='additive_elevation_gradient',
+        ref_elevation=1250, gradient=-0.6)
+    forcing.set_spatialization_from_station_data(
+        variable='tmin', method='additive_elevation_gradient',
+        ref_elevation=1250, gradient=-0.6)
+    forcing.set_spatialization_from_station_data(
+        variable='tmax', method='additive_elevation_gradient',
+        ref_elevation=1250, gradient=-0.6)
+    forcing.set_pet_computation(
+        method='Linacre', use=['t', 'tmin', 'tmax', 'lat', 'elevation'], lat=47.3)
+    forcing.apply_operations(parameters)
+    assert len(forcing.data2D.data) == 4
     assert 'pet' in forcing.data2D.data_name

@@ -56,8 +56,8 @@ forcing.load_station_data_from_csv(
              'pet': 'pet_sim(mm/day)'})
 
 forcing.set_spatialization_from_station_data(
-    variable='temperature', method='additive_elevation_gradient',
-    ref_elevation=ref_elevation, gradient='param:temp_gradients')
+    variable='temperature', ref_elevation=ref_elevation,
+    gradient='param:temp_gradients')
 
 if use_pyet:
     forcing.set_pet_computation(method='priestley_taylor')
@@ -69,8 +69,8 @@ forcing.set_prior_correction(
 )
 if use_precip_gradient:
     forcing.set_spatialization_from_station_data(
-        variable='precipitation', method='multiplicative_elevation_gradient',
-        ref_elevation=ref_elevation, gradient='param:precip_gradient',
+        variable='precipitation', ref_elevation=ref_elevation,
+        gradient='param:precip_gradient',
     )
 else:
     forcing.set_spatialization_from_station_data(

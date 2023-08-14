@@ -198,7 +198,11 @@ class Forcing:
         ----------
 
         """
+        if not hb.has_pyet:
+            raise ImportError("pyet is required to do this.")
+
         kwargs['type'] = 'compute_pet'
+
         self._operations.append(kwargs)
 
     def apply_operations(self, parameters, apply_to_all=True):

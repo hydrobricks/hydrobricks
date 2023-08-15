@@ -45,7 +45,8 @@ class Catchment:
             print(e)
             return False
 
-    def get_elevation_bands(self, method='isohypse', number=100, distance=50, min_val=1000, max_val=4000):
+    def get_elevation_bands(self, method='isohypse', number=100, distance=50,
+                            min_elevation=None, max_elevation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -56,25 +57,25 @@ class Catchment:
             'isohypse' = fixed contour intervals (provide the 'distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'number' parameter)
-        number : int
+        number : int, optional
             Number of bands to create when using the 'quantiles' method.
-        distance : int
+        distance : int, optional
             Distance (m) between the contour lines when using the 'isohypse' method.
-        min_val : int
-            Minimum elevation of the elevation bands (to homogeneize between runs)
-        max_val : int
-            Maximum elevation of the elevation bands (to homogeneize between runs)
+        min_elevation : int, optional
+            Minimum elevation of the elevation bands (to homogeneize between runs).
+        max_elevation : int, optional
+            Maximum elevation of the elevation bands (to homogeneize between runs).
 
         Returns
         -------
         A dataframe with the elevation bands.
         """
         if method == 'isohypse':
-            min_val = np.nanmin(self.masked_dem_data)
-            max_val = np.nanmax(self.masked_dem_data)
-            elevations = np.arange(min_val, max_val + distance, distance)
-        elif method == 'set_isohypses':
-            elevations = np.arange(min_val, max_val + distance, distance)
+            if min_elevation is None:
+                min_elevation = np.nanmin(self.masked_dem_data)
+            if max_elevation is None:
+                max_elevation = np.nanmax(self.masked_dem_data)
+            elevations = np.arange(min_elevation, max_elevation + distance, distance)
         elif method == 'quantiles':
             elevations = np.nanquantile(self.masked_dem_data,
                                         np.linspace(0, 1, num=number))
@@ -83,18 +84,25 @@ class Catchment:
 
         res_bands = np.zeros(len(elevations) - 1)
         res_elevations = np.zeros(len(elevations) - 1)
+        min_elevations = np.zeros(len(elevations) - 1)
+        max_elevations = np.zeros(len(elevations) - 1)
         for i in range(len(elevations) - 1):
             n_cells = np.count_nonzero(
                 np.logical_and(self.masked_dem_data >= elevations[i],
                                self.masked_dem_data < elevations[i + 1]))
             res_bands[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
-            res_elevations[i] = round(float(np.mean(elevations[i:i+2])), 2)
+            res_elevations[i] = round(float(np.mean(elevations[i:i + 2])), 2)
+            min_elevations[i] = round(float(elevations[i]), 2)
+            max_elevations[i] = round(float(elevations[i + 1]), 2)
 
-        df = pd.DataFrame(columns=['elevation', 'area'])
+        df = pd.DataFrame(columns=['elevation', 'elevation_min',
+                                   'elevation_max', 'area'])
         df['elevation'] = res_elevations
+        df['elevation_min'] = min_elevations
+        df['elevation_max'] = max_elevations
         df['area'] = res_bands
 
-        return df, elevations
+        return df
 
     def get_mean_elevation(self):
         """

@@ -171,26 +171,26 @@ def test_apply_spatialization_from_station_data_precipitation(forcing, parameter
                                             len(forcing.hydro_units))
 
 
-def test_apply_pet_computation_wrong_variable_name(forcing, parameters):
+def test_apply_pet_computation_wrong_variable_name(forcing):
     if not hb.has_pyet:
         return
     forcing.set_pet_computation(
         method='Priestley-Taylor', use=['xy', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     with pytest.raises(ValueError):
-        forcing.apply_operations(parameters)
+        forcing.apply_operations()
 
 
-def test_apply_pet_computation_variables_not_available(forcing, parameters):
+def test_apply_pet_computation_variables_not_available(forcing):
     if not hb.has_pyet:
         return
     forcing.set_pet_computation(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'],
         lat=47.3)
     with pytest.raises(ValueError):
-        forcing.apply_operations(parameters)
+        forcing.apply_operations()
 
 
-def test_apply_pet_computation_hamon(forcing, parameters):
+def test_apply_pet_computation_hamon(forcing):
     if not hb.has_pyet:
         return
     forcing.set_spatialization_from_station_data(
@@ -198,12 +198,12 @@ def test_apply_pet_computation_hamon(forcing, parameters):
         ref_elevation=1250, gradient=-0.6)
     forcing.set_pet_computation(
         method='Hamon', use=['t', 'lat'], lat=47.3)
-    forcing.apply_operations(parameters)
+    forcing.apply_operations()
     assert len(forcing.data2D.data) == 2
     assert 'pet' in forcing.data2D.data_name
 
 
-def test_apply_pet_computation_linacre(forcing, parameters):
+def test_apply_pet_computation_linacre(forcing):
     if not hb.has_pyet:
         return
     # Faking tmin and tmax
@@ -222,6 +222,6 @@ def test_apply_pet_computation_linacre(forcing, parameters):
         ref_elevation=1250, gradient=-0.6)
     forcing.set_pet_computation(
         method='Linacre', use=['t', 'tmin', 'tmax', 'lat', 'elevation'], lat=47.3)
-    forcing.apply_operations(parameters)
+    forcing.apply_operations()
     assert len(forcing.data2D.data) == 4
     assert 'pet' in forcing.data2D.data_name

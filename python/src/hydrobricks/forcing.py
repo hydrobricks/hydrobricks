@@ -216,7 +216,7 @@ class Forcing:
 
         self._operations.append(kwargs)
 
-    def apply_operations(self, parameters, apply_to_all=True):
+    def apply_operations(self, parameters=None, apply_to_all=True):
         """
         Apply the pre-defined operations.
 
@@ -291,7 +291,8 @@ class Forcing:
         tot_precip = data * areas / areas.sum()
         return tot_precip.sum()
 
-    def _apply_operations_of_type(self, operation_type, parameters, apply_to_all):
+    def _apply_operations_of_type(self, operation_type, parameters=None,
+                                  apply_to_all=True):
         for operation_ref in self._operations:
             operation = operation_ref.copy()
 
@@ -306,6 +307,10 @@ class Forcing:
             for key in operation:
                 value = operation[key]
                 if isinstance(value, str) and value.startswith('param:'):
+                    if parameters is None:
+                        raise ValueError('A parameters object must be provided '
+                                         'to apply the operations as it is '
+                                         f'required by the "{value}" option.')
                     parameter_name = value.replace('param:', '')
                     operation[key] = parameters.get(parameter_name)
                     if not apply_to_all:  # Restrict to parameters that changed

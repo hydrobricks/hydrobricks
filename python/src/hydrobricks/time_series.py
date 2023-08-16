@@ -40,7 +40,7 @@ class TimeSeries1D(TimeSeries):
         """
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
-            date_parser=lambda x: datetime.strptime(x, time_format))
+            date_format=time_format)
 
         self.time = file_content[column_time]
 
@@ -54,7 +54,7 @@ class TimeSeries2D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def load_from_csv(self, column, path, time_path, time_format):
+    def load_from_csv(self, column, path, time_format):
         """
         Read already spatialized time series data from csv file.
         Useful for data that needs a long time to be processed with initialize_from_netcdf_HR()
@@ -66,15 +66,14 @@ class TimeSeries2D(TimeSeries):
             Name of the data to be loaded.
         path : str|Path
             Path to the csv file containing hydro units data.
-        time_path : dict
-            Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
         time_format : str
             Format of the time
         """
         data = np.loadtxt(path, delimiter=',')
 
-        file_content = pd.read_csv(time_path, converters={'time': lambda x: pd.to_datetime(x).strptime(time_format)})
+        file_content = pd.read_csv(
+            path, parse_dates=['time'],
+            date_format=time_format)
 
         nb_days = len(data)
         assert len(file_content['# time']) == nb_days

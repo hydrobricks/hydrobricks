@@ -2,8 +2,9 @@ import os.path
 import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 
 def test_parameter_creation():
@@ -27,7 +28,7 @@ def test_define_parameter():
 
 def test_define_parameter_min_max_mismatch():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d',
             aliases=['a_snow', 'sdd'], min_value=3, max_value=2)
@@ -55,11 +56,11 @@ def test_define_parameter_with_list_after_float():
 
 def test_define_parameter_min_max_mismatch_types():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         parameter_set.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d',
             aliases=['a_snow', 'sdd'], min_value=0, max_value=[1, 2])
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         parameter_set.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d',
             aliases=['a_snow', 'sdd'], min_value=[1, 2], max_value=3)
@@ -67,7 +68,7 @@ def test_define_parameter_min_max_mismatch_types():
 
 def test_define_parameter_min_max_mismatch_list_size():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d',
             aliases=['a_snow', 'sdd'], min_value=[0, 0], max_value=[1, 2, 3])
@@ -75,7 +76,7 @@ def test_define_parameter_min_max_mismatch_list_size():
 
 def test_define_parameter_min_max_mismatch_in_list():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d',
             aliases=['a_snow', 'sdd'], min_value=[3, 4], max_value=[1, 2])
@@ -123,7 +124,7 @@ def test_define_parameter_alias_already_used():
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d',
         aliases=['as', 'sd'])
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.define_parameter(
             component='glacier', name='degree_day_factor', unit='mm/d',
             aliases=['as', 'gdd'])
@@ -171,7 +172,7 @@ def test_set_parameter_value_not_found():
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d', aliases=['as'])
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.set_values({'xy': 2})
 
 
@@ -180,7 +181,7 @@ def test_set_parameter_value_too_low():
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d', aliases=['as'],
         min_value=2, max_value=6)
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.set_values({'as': 1})
 
 
@@ -189,7 +190,7 @@ def test_set_parameter_value_too_high():
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d', aliases=['as'],
         min_value=2, max_value=6)
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.set_values({'as': 10})
 
 
@@ -198,7 +199,7 @@ def test_set_parameter_value_with_list_too_low():
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d', aliases=['as'],
         min_value=[0, 1], max_value=[2, 3])
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.set_values({'as': [1, 0]})
 
 
@@ -207,7 +208,7 @@ def test_set_parameter_value_with_list_too_high():
     parameter_set.define_parameter(
         component='snowpack', name='degree_day_factor', unit='mm/d', aliases=['as'],
         min_value=[0, 1], max_value=[2, 3])
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         parameter_set.set_values({'as': [1, 5]})
 
 
@@ -229,13 +230,13 @@ def parameter_set():
 
 def test_create_json_parameter_file_created(parameter_set):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        parameter_set.create_file(tmp_dir, 'parameters', 'json')
+        parameter_set.save_as(tmp_dir, 'parameters', 'json')
         assert os.path.isfile(Path(tmp_dir) / 'parameters.json')
 
 
 def test_create_json_parameter_file_content(parameter_set):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        parameter_set.create_file(tmp_dir, 'parameters', 'json')
+        parameter_set.save_as(tmp_dir, 'parameters', 'json')
         txt = Path(tmp_dir + '/parameters.json').read_text()
         assert '"degree_day_factor": 3' in txt
         assert '"capacity": 200' in txt
@@ -243,13 +244,13 @@ def test_create_json_parameter_file_content(parameter_set):
 
 def test_create_yaml_parameter_file_created(parameter_set):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        parameter_set.create_file(tmp_dir, 'parameters', 'yaml')
+        parameter_set.save_as(tmp_dir, 'parameters', 'yaml')
         assert os.path.isfile(Path(tmp_dir) / 'parameters.yaml')
 
 
 def test_create_yaml_parameter_file_content(parameter_set):
     with tempfile.TemporaryDirectory() as tmp_dir:
-        parameter_set.create_file(tmp_dir, 'parameters', 'yaml')
+        parameter_set.save_as(tmp_dir, 'parameters', 'yaml')
         txt = Path(tmp_dir + '/parameters.yaml').read_text()
         assert 'degree_day_factor: 3' in txt
         assert 'capacity: 200' in txt

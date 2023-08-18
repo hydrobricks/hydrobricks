@@ -1,6 +1,7 @@
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
+
+import hydrobricks as hb
 from _hydrobricks import SettingsBasin
 from hydrobricks import utils
 
@@ -73,7 +74,7 @@ class HydroUnits:
 
         self._populate_binding_instance()
 
-    def create_file(self, path):
+    def save_as(self, path):
         """
         Create a file containing the hydro unit properties. Such a file can be used in
         the command-line version of hydrobricks.
@@ -132,12 +133,12 @@ class HydroUnits:
 
     def _check_land_cover_areas_match(self, columns_areas):
         if len(columns_areas) != len(self.land_cover_names):
-            raise Exception('The length of the provided "columns_areas" do not match '
-                            'the size ot the land cover names.')
+            raise ValueError('The length of the provided "columns_areas" do not match '
+                             'the size ot the land cover names.')
         for col in columns_areas:
             if col not in self.land_cover_names:
-                raise Exception(f'The land cover "{col}" was not found in the '
-                                f'defined land covers.')
+                raise ValueError(f'The land cover "{col}" was not found in the '
+                                 f'defined land covers.')
 
     def _compute_area_portions(self, area_values):
         # Compute total area
@@ -157,7 +158,7 @@ class HydroUnits:
             return
 
         if land_cover_types is None or land_cover_names is None:
-            raise Exception('The land cover name or type is undefined.')
+            raise ValueError('The land cover name or type is undefined.')
 
         if len(land_cover_types) != len(land_cover_names):
-            raise Exception('The length of the land cover types & names do not match.')
+            raise ValueError('The length of the land cover types & names do not match.')

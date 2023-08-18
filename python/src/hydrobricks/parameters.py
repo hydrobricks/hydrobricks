@@ -1,7 +1,8 @@
 import random
 
-import hydrobricks as hb
 import pandas as pd
+
+import hydrobricks as hb
 
 
 class ParameterSet:
@@ -374,7 +375,7 @@ class ParameterSet:
                 break
 
             if i >= 1000:
-                raise RuntimeError('The parameter constraints could not be satisfied.')
+                raise ValueError('The parameter constraints could not be satisfied.')
 
         return assigned_values
 
@@ -388,7 +389,7 @@ class ParameterSet:
         """
         for param in self.allow_changing:
             if not self.has(param):
-                raise RuntimeError(f'The parameter {param} was not found.')
+                raise ValueError(f'The parameter {param} was not found.')
             if self.is_for_forcing(param):
                 return True
         return False
@@ -420,7 +421,7 @@ class ParameterSet:
 
         return spotpy_params
 
-    def create_file(self, directory, name, file_type='both'):
+    def save_as(self, directory, name, file_type='both'):
         """
         Create a configuration file containing the parameter values.
 
@@ -454,21 +455,21 @@ class ParameterSet:
 
         if not isinstance(min_value, list) and not isinstance(max_value, list):
             if max_value < min_value:
-                raise Exception(f'The provided min value ({min_value} is greater than '
-                                f'the max value ({max_value}).')
+                raise ValueError(f'The provided min value ({min_value} is greater than '
+                                 f'the max value ({max_value}).')
             return
 
         if not isinstance(min_value, list) or not isinstance(max_value, list):
-            raise Exception('Mixing lists and floats for the definition of '
+            raise TypeError('Mixing lists and floats for the definition of '
                             'min/max values')
 
         if len(min_value) != len(max_value):
-            raise Exception('The length of the min/max lists are not equal.')
+            raise ValueError('The length of the min/max lists are not equal.')
 
         for min_v, max_v in zip(min_value, max_value):
             if max_v < min_v:
-                raise Exception(f'The provided min value ({min_v} in list is greater '
-                                f'than the max value ({max_v}).')
+                raise ValueError(f'The provided min value ({min_v} in list is greater '
+                                 f'than the max value ({max_v}).')
 
     def _check_aliases_uniqueness(self, aliases):
         if aliases is None:
@@ -477,8 +478,8 @@ class ParameterSet:
         existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
         for alias in aliases:
             if alias in existing_aliases:
-                raise Exception(f'The alias "{alias}" already exists. '
-                                f'It must be unique.')
+                raise ValueError(f'The alias "{alias}" already exists. '
+                                 f'It must be unique.')
 
     def _check_value_range(self, index, key, value, allow_adapt=False):
         max_value = self.parameters.loc[index, 'max']
@@ -488,13 +489,13 @@ class ParameterSet:
             if max_value is not None and value > max_value:
                 if allow_adapt:
                     return max_value
-                raise Exception(f'The value {value} for the parameter "{key}" is above '
-                                f'the maximum threshold ({max_value}).')
+                raise ValueError(f'The value {value} for the parameter "{key}" is '
+                                 f'above the maximum threshold ({max_value}).')
             if min_value is not None and value < min_value:
                 if allow_adapt:
                     return min_value
-                raise Exception(f'The value {value} for the parameter "{key}" is below '
-                                f'the minimum threshold ({min_value}).')
+                raise ValueError(f'The value {value} for the parameter "{key}" is '
+                                 f'below the minimum threshold ({min_value}).')
         else:
             assert isinstance(max_value, list)
             assert isinstance(value, list)
@@ -503,14 +504,14 @@ class ParameterSet:
                     if allow_adapt:
                         value[i] = max_v
                     else:
-                        raise Exception(f'The value {val} for the parameter "{key}" is '
-                                        f'above the maximum threshold ({max_v}).')
+                        raise ValueError(f'The value {val} for the parameter "{key}" '
+                                         f'is above the maximum threshold ({max_v}).')
                 if min_v is not None and val < min_v:
                     if allow_adapt:
                         value[i] = min_v
                     else:
-                        raise Exception(f'The value {val} for the parameter "{key}" is '
-                                        f'below the minimum threshold ({min_v}).')
+                        raise ValueError(f'The value {val} for the parameter "{key}" '
+                                         f'is below the minimum threshold ({min_v}).')
 
         return value
 
@@ -521,6 +522,6 @@ class ParameterSet:
                 return index
 
         if raise_exception:
-            raise Exception(f'The parameter "{name}" was not found')
+            raise ValueError(f'The parameter "{name}" was not found')
 
         return None

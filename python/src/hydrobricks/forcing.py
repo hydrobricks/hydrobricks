@@ -250,9 +250,9 @@ class Forcing:
 
         self._is_initialized = True
 
-    def create_file(self, path, max_compression=False):
+    def save_as(self, path, max_compression=False):
         """
-        Read hydro units properties from csv file.
+        Create a netCDF file with the data.
 
         Parameters
         ----------
@@ -387,9 +387,8 @@ class Forcing:
 
         if isinstance(gradient, list):
             if len(gradient) not in [1, 12]:
-                raise ValueError(
-                    f'The gradient should have a length of 1 or 12. '
-                    f'Here: {len(gradient)}')
+                raise ValueError(f'The gradient should have a length of 1 or 12. '
+                                 f'Here: {len(gradient)}')
 
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():

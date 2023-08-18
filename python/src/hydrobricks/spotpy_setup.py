@@ -73,7 +73,7 @@ class SpotpySetup:
             if self.dump_outputs:
                 model.dump_outputs(path)
             if self.dump_forcing:
-                forcing.create_file(os.path.join(path, 'forcing.nc'))
+                forcing.save_as(os.path.join(path, 'forcing.nc'))
 
         return sim[self.warmup:]
 

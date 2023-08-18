@@ -135,7 +135,7 @@ setup(
                  },
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.11",
+    python_requires=">=3.8",
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",

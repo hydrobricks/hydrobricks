@@ -1,8 +1,18 @@
-from enum import StrEnum, auto
+import sys
 
-import hydrobricks as hb
+if sys.version_info < (3, 11):
+    try:
+        from strenum import StrEnum, auto
+    except ImportError:
+        raise ImportError("Please install the 'StrEnum' package to use StrEnum "
+                          "on Python versions prior to 3.11.")
+else:
+    from enum import StrEnum, auto
+
 import numpy as np
 import pandas as pd
+
+import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 
@@ -391,7 +401,7 @@ class Forcing:
             elif method == 'from_gridded_data':
                 # Interpolate the holes
                 for i in range(len(data_raw[0])):
-                    data_raw[:,i] = pd.Series(data_raw[:,i]).interpolate().tolist()
+                    data_raw[:, i] = pd.Series(data_raw[:, i]).interpolate().tolist()
                 unit_values[:, i_unit] = data_raw[i_unit]
 
             elif method == 'additive_elevation_gradient':
@@ -400,7 +410,7 @@ class Forcing:
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw + gradient * (
-                                elevation - ref_elevation) / 100
+                            elevation - ref_elevation) / 100
                 elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
                         month = self.data1D.time.dt.month == m + 1

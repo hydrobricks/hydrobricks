@@ -9,9 +9,11 @@ if sys.version_info < (3, 11):
 else:
     from enum import StrEnum, auto
 
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
+from cftime import num2date
+
+import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 
@@ -263,6 +265,11 @@ class Forcing:
         if not hb.has_netcdf:
             raise ImportError("netcdf4 is required to do this.")
 
+        if not self.is_initialized():
+            print("Applying operations before saving...")
+            self.apply_operations()
+            self._is_initialized = True
+
         time = self.data2D.get_dates_as_mjd()
 
         # Create netCDF file
@@ -290,6 +297,46 @@ class Forcing:
                 var_data = nc.createVariable(
                     variable, 'float32', ('time', 'hydro_units'), zlib=True)
             var_data[:, :] = self.data2D.data[idx]
+
+        nc.close()
+
+    def load_from(self, path):
+        """
+        Load data from a netCDF file created using save_as().
+
+        Parameters
+        ----------
+        path : str
+            Path of the file to read.
+        """
+        if not hb.has_netcdf:
+            raise ImportError("netcdf4 is required to do this.")
+
+        # Open netCDF file
+        nc = hb.Dataset(path, 'r', 'NETCDF4')
+
+        # Check that hydro units are the same
+        hydro_units_nc = nc.variables['id'][:]
+        if not np.array_equal(hydro_units_nc, self.hydro_units['id']):
+            raise ValueError("The hydrological units in the netCDF file are not "
+                             "the same as those in the forcing object. The netCDF file "
+                             "contains hydrological units with ids: "
+                             f"{hydro_units_nc}. The model contains hydrological "
+                             f"units with ids: {self.hydro_units['id']}.")
+
+        # Load time
+        ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
+        self.data2D.time = [pd.Timestamp(dt.year, dt.month, dt.day) for dt in ts]
+        self.data2D.time = pd.Series(self.data2D.time)
+
+        # Load variable names
+        self.data2D.data_name = [self.get_variable_enum(var) for var in nc.variables
+                                 if var not in ['id', 'time']]
+
+        # Load data
+        self.data2D.data = []
+        for variable in self.data2D.data_name:
+            self.data2D.data.append(nc.variables[variable][:])
 
         nc.close()
 

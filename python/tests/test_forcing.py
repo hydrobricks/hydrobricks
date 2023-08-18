@@ -1,8 +1,10 @@
 import os
+import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -108,8 +110,7 @@ def test_set_spatialization_from_station(forcing):
         ref_elevation=1250, gradient='param:temp_gradients')
     forcing.set_spatialization_from_station_data(
         variable='precipitation', method='multiplicative_elevation_gradient',
-        ref_elevation=1250, gradient='param:precip_gradient',
-        correction_factor='param:precip_corr_factor'
+        ref_elevation=1250, gradient='param:precip_gradient'
     )
     assert len(forcing._operations) == 2
     assert forcing._operations[0]['type'] == 'spatialize_from_station'
@@ -224,4 +225,38 @@ def test_apply_pet_computation_linacre(forcing):
         method='Linacre', use=['t', 'tmin', 'tmax', 'lat', 'elevation'], lat=47.3)
     forcing.apply_operations()
     assert len(forcing.data2D.data) == 4
-    assert 'pet' in forcing.data2D.data_name
+    assert 'pet' in forcing.data2D.data_name6
+
+
+def test_create_file(forcing):
+    if not hb.has_netcdf:
+        return
+
+    forcing.set_spatialization_from_station_data(
+        variable='temperature', ref_elevation=1250, gradient=-0.6)
+    forcing.set_spatialization_from_station_data(
+        variable='precipitation', ref_elevation=1250, gradient=0.05)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        forcing.save_as(tmp_dir + '/test.nc')
+        assert os.path.isfile(tmp_dir + '/test.nc')
+
+
+def test_load_file(forcing, hydro_units):
+    if not hb.has_netcdf:
+        return
+
+    forcing.set_spatialization_from_station_data(
+        variable='temperature', ref_elevation=1250, gradient=-0.6)
+    forcing.set_spatialization_from_station_data(
+        variable='precipitation', ref_elevation=1250, gradient=0.05)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        forcing.save_as(tmp_dir + '/test.nc')
+        forcing2 = hb.Forcing(hydro_units=hydro_units)
+        forcing2.load_from(tmp_dir + '/test.nc')
+        assert forcing2.data2D.data_name == forcing.data2D.data_name
+        assert len(forcing2.data2D.time) == len(forcing.data2D.time)
+        assert forcing2.data2D.time[0] == forcing.data2D.time[0]
+        assert forcing2.data2D.data[0].shape == forcing.data2D.data[0].shape
+        assert forcing2.data2D.data[1].shape == forcing.data2D.data[1].shape

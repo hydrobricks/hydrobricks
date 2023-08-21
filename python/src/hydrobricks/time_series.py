@@ -79,7 +79,7 @@ class TimeSeries:
         return var.variables[column_time][0], var.variables[column_time][-1]
 
     def initialize_from_netcdf_HR(self, path, varname, elev_mask_path, outline, outline_epsg, target_epsg, 
-                                  elevation_thrs, tif_CRS, nc_CRS, column_time, time_format, content):
+                                  elevation_bands, tif_CRS, nc_CRS, column_time, time_format, content):
         """
         Initialize time series data from a netcdf file. Uses a DEM in tif format at any resolution.
         The meteorological data is resampled to the DEM resolution using bilinear interpolation.
@@ -141,9 +141,11 @@ class TimeSeries:
         column = pd.Series(var.variables[column_time][:])
         column = column.dt.strftime(time_format)
 
-        assert len(elevation_thrs) == band_nb + 1
+        thrs_min = elevation_bands.elevation_thrs_min.values
+        thrs_max = elevation_bands.elevation_thrs_max.values
+        assert len(thrs_min) == band_nb + 1
         all_topo_masks = []
-        for i, elev_min in enumerate(elevation_thrs[:-1]):
+        for i, (elev_min, elev_max) in enumerate(zip(thrs_min, thrs_max)):
             elev_max = elevation_thrs[i+1]
             topo_mask = xa.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
             all_topo_masks.append(topo_mask)
@@ -168,7 +170,7 @@ class TimeSeries:
 
         return var.variables[column_time][0], var.variables[column_time][-1]
 
-    def load_from_csv(self, path, column_time, time_format, content):
+    def load_from_csv(self, path, column_time, time_format, content, start_date=None, end_date=None):
         """
         Read time series data from csv file.
 
@@ -187,6 +189,10 @@ class TimeSeries:
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
             date_parser=lambda x: datetime.strptime(x, time_format))
+        
+        if start_date and end_date:
+            mask = (file_content[column_time] >= start_date) & (file_content[column_time] <= end_date)
+            file_content = file_content.loc[mask]
 
         self.time = file_content[column_time]
 

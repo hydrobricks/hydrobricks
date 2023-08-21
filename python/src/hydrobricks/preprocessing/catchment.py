@@ -83,18 +83,28 @@ class Catchment:
 
         res_bands = np.zeros(len(elevations) - 1)
         res_elevations = np.zeros(len(elevations) - 1)
+        res_elevation_thrs_min = np.zeros(len(elevations) - 1)
+        res_elevation_thrs_max = np.zeros(len(elevations) - 1)
         for i in range(len(elevations) - 1):
             n_cells = np.count_nonzero(
                 np.logical_and(self.masked_dem_data >= elevations[i],
                                self.masked_dem_data <= elevations[i + 1]))
             res_bands[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
             res_elevations[i] = round(float(np.mean(elevations[i:i+2])), 2)
+            res_elevation_thrs_min[i] = elevations[i]
+            res_elevation_thrs_max[i] = elevations[i + 1]
 
-        df = pd.DataFrame(columns=['elevation', 'area'])
+        df = pd.DataFrame(columns=['elevation_thrs_min', 'elevation_thrs_max', 'elevation', 'area'])
+        df['elevation_thrs_min'] = res_elevation_thrs_min
+        df['elevation_thrs_max'] = res_elevation_thrs_max
         df['elevation'] = res_elevations
         df['area'] = res_bands
+        
+        null_areas = df[df['area'] == 0].index
+        df.drop(null_areas, inplace = True)
+        print('Suppressed the following bands since the areas are NULL:', null_areas.values)
 
-        return df, elevations
+        return df, null_areas
 
     def get_mean_elevation(self):
         """

@@ -9,10 +9,11 @@ if sys.version_info < (3, 11):
 else:
     from enum import StrEnum, auto
 
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
 from cftime import num2date
+
+import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 
@@ -127,7 +128,7 @@ class Forcing:
 
         self.data1D.load_from_csv(path, column_time, time_format, content)
 
-    def set_prior_correction(self, **kwargs):
+    def correct_station_data(self, **kwargs):
         """
         Define the prior correction operations.
 
@@ -145,7 +146,7 @@ class Forcing:
         kwargs['type'] = 'prior_correction'
         self._operations.append(kwargs)
 
-    def set_spatialization_from_station_data(self, **kwargs):
+    def spatialize_from_station_data(self, **kwargs):
         """
         Define the spatialization operations from station data to all hydro units.
 
@@ -187,7 +188,7 @@ class Forcing:
         kwargs['type'] = 'spatialize_from_station'
         self._operations.append(kwargs)
 
-    def set_spatialization_from_gridded_data(self, **kwargs):
+    def spatialize_from_gridded_data(self, **kwargs):
         """
         Define the spatialization operations from gridded data to all hydro units.
 
@@ -198,7 +199,7 @@ class Forcing:
         kwargs['type'] = 'spatialize_from_grid'
         self._operations.append(kwargs)
 
-    def set_pet_computation(self, **kwargs):
+    def compute_pet(self, **kwargs):
         """
         Define the PET computation operations using the pyet library. The PET will be
         computed for all hydro units.

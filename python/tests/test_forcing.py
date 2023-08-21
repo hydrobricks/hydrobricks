@@ -96,7 +96,7 @@ def test_forcing_load_station_data_from_csv(hydro_units):
 
 
 def test_set_prior_correction(forcing):
-    forcing.set_prior_correction(
+    forcing.correct_station_data(
         variable='precipitation', method='additive',
         correction='param:precip_corr')
     assert len(forcing._operations) == 1
@@ -105,10 +105,10 @@ def test_set_prior_correction(forcing):
 
 
 def test_set_spatialization_from_station(forcing):
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
         ref_elevation=1250, gradient='param:temp_gradients')
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', method='multiplicative_elevation_gradient',
         ref_elevation=1250, gradient='param:precip_gradient'
     )
@@ -118,7 +118,7 @@ def test_set_spatialization_from_station(forcing):
 
 
 def test_set_pet_computation(forcing):
-    forcing.set_pet_computation(
+    forcing.compute_pet(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     assert len(forcing._operations) == 1
     assert forcing._operations[0]['type'] == 'compute_pet'
@@ -127,7 +127,7 @@ def test_set_pet_computation(forcing):
 
 def test_apply_prior_correction_multiplicative(forcing, parameters):
     parameters.add_data_parameter('precip_corr_factor', 0.85)
-    forcing.set_prior_correction(
+    forcing.correct_station_data(
         variable='precipitation', method='multiplicative',
         correction_factor='param:precip_corr_factor')
     sum_before = forcing.data1D.data[0].sum()
@@ -138,7 +138,7 @@ def test_apply_prior_correction_multiplicative(forcing, parameters):
 
 def test_apply_prior_correction_additive(forcing, parameters):
     parameters.add_data_parameter('temp_corr_factor', 1.1)
-    forcing.set_prior_correction(
+    forcing.correct_station_data(
         variable='temperature', method='additive',
         correction_factor='param:temp_corr_factor')
     sum_before = forcing.data1D.data[1].sum()
@@ -150,7 +150,7 @@ def test_apply_prior_correction_additive(forcing, parameters):
 
 def test_apply_spatialization_from_station_data_temperature(forcing, parameters):
     parameters.add_data_parameter('temp_gradients', -0.6)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', ref_elevation=1250,
         gradient='param:temp_gradients')
     forcing.apply_operations(parameters)
@@ -163,7 +163,7 @@ def test_apply_spatialization_from_station_data_temperature(forcing, parameters)
 
 def test_apply_spatialization_from_station_data_precipitation(forcing, parameters):
     parameters.add_data_parameter('precip_gradient', 1.1)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=1250,
         gradient='param:precip_gradient')
     forcing.apply_operations(parameters)
@@ -175,7 +175,7 @@ def test_apply_spatialization_from_station_data_precipitation(forcing, parameter
 def test_apply_pet_computation_wrong_variable_name(forcing):
     if not hb.has_pyet:
         return
-    forcing.set_pet_computation(
+    forcing.compute_pet(
         method='Priestley-Taylor', use=['xy', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     with pytest.raises(ValueError):
         forcing.apply_operations()
@@ -184,7 +184,7 @@ def test_apply_pet_computation_wrong_variable_name(forcing):
 def test_apply_pet_computation_variables_not_available(forcing):
     if not hb.has_pyet:
         return
-    forcing.set_pet_computation(
+    forcing.compute_pet(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'],
         lat=47.3)
     with pytest.raises(ValueError):
@@ -194,10 +194,10 @@ def test_apply_pet_computation_variables_not_available(forcing):
 def test_apply_pet_computation_hamon(forcing):
     if not hb.has_pyet:
         return
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
         ref_elevation=1250, gradient=-0.6)
-    forcing.set_pet_computation(
+    forcing.compute_pet(
         method='Hamon', use=['t', 'lat'], lat=47.3)
     forcing.apply_operations()
     assert len(forcing.data2D.data) == 2
@@ -212,16 +212,16 @@ def test_apply_pet_computation_linacre(forcing):
     forcing.data1D.data.append(forcing.data1D.data[1] - 5)
     forcing.data1D.data_name.append(forcing.Variable.T_MAX)
     forcing.data1D.data.append(forcing.data1D.data[1] + 5)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
         ref_elevation=1250, gradient=-0.6)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='tmin', method='additive_elevation_gradient',
         ref_elevation=1250, gradient=-0.6)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='tmax', method='additive_elevation_gradient',
         ref_elevation=1250, gradient=-0.6)
-    forcing.set_pet_computation(
+    forcing.compute_pet(
         method='Linacre', use=['t', 'tmin', 'tmax', 'lat', 'elevation'], lat=47.3)
     forcing.apply_operations()
     assert len(forcing.data2D.data) == 4
@@ -232,9 +232,9 @@ def test_create_file(forcing):
     if not hb.has_netcdf:
         return
 
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', ref_elevation=1250, gradient=-0.6)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=1250, gradient=0.05)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -246,9 +246,9 @@ def test_load_file(forcing, hydro_units):
     if not hb.has_netcdf:
         return
 
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', ref_elevation=1250, gradient=-0.6)
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=1250, gradient=0.05)
 
     with tempfile.TemporaryDirectory() as tmp_dir:

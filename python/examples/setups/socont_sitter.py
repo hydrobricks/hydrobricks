@@ -14,13 +14,8 @@ CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 
-use_precip_gradient = False
-if 'USE_PRECIP_GRADIENT' in locals() or 'USE_PRECIP_GRADIENT' in globals():
-    use_precip_gradient = USE_PRECIP_GRADIENT
-
-use_pyet = False
-if 'USE_PYET' in locals() or 'USE_PYET' in globals():
-    use_pyet = USE_PYET
+use_precip_gradient = globals().get('USE_PRECIP_GRADIENT', False)
+use_pyet = globals().get('USE_PYET', False)
 
 
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -55,25 +50,25 @@ forcing.load_station_data_from_csv(
     content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
              'pet': 'pet_sim(mm/day)'})
 
-forcing.set_spatialization_from_station_data(
+forcing.spatialize_from_station_data(
     variable='temperature', ref_elevation=ref_elevation,
     gradient='param:temp_gradients')
 
 if use_pyet:
-    forcing.set_pet_computation(method='priestley_taylor')
+    forcing.compute_pet(method='priestley_taylor')
 else:
-    forcing.set_spatialization_from_station_data(variable='pet', method='constant')
+    forcing.spatialize_from_station_data(variable='pet', method='constant')
 
-forcing.set_prior_correction(
+forcing.correct_station_data(
     variable='precipitation', correction_factor='param:precip_corr_factor'
 )
 if use_precip_gradient:
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=ref_elevation,
         gradient='param:precip_gradient',
     )
 else:
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', method='constant'
     )
 

@@ -65,8 +65,15 @@ except ImportError:
 else:
     has_xarray = True
 
+try:
+    import rioxarray as rxr
+except ImportError:
+    has_rioxarray = False
+else:
+    has_rioxarray = True
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'Catchment', 'init', 'init_log', 'close_log', 'set_debug_log_level',
            'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
-           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'xr')
+           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'xr', 'rxr')

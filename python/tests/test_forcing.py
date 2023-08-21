@@ -12,6 +12,11 @@ CATCHMENT_DIR = Path(
 )
 
 
+def has_gridded_data_packages() -> bool:
+    return (hb.has_rasterio and hb.has_geopandas and hb.has_shapely
+            and hb.has_netcdf and hb.has_rioxarray)
+
+
 @pytest.fixture
 def hydro_units():
     # Preparation of the hydro units
@@ -95,7 +100,7 @@ def test_forcing_load_station_data_from_csv(hydro_units):
     assert forcing.data1D.data[2].shape[0] > 0
 
 
-def test_set_prior_correction(forcing):
+def test_correct_station_data(forcing):
     forcing.correct_station_data(
         variable='precipitation', method='additive',
         correction='param:precip_corr')
@@ -104,7 +109,7 @@ def test_set_prior_correction(forcing):
     assert forcing._operations[0]['method'] == 'additive'
 
 
-def test_set_spatialization_from_station(forcing):
+def test_spatialize_from_station_data(forcing):
     forcing.spatialize_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
         ref_elevation=1250, gradient='param:temp_gradients')
@@ -117,7 +122,7 @@ def test_set_spatialization_from_station(forcing):
     assert forcing._operations[0]['method'] == 'additive_elevation_gradient'
 
 
-def test_set_pet_computation(forcing):
+def test_compute_pet(forcing):
     forcing.compute_pet(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     assert len(forcing._operations) == 1
@@ -260,3 +265,19 @@ def test_load_file(forcing, hydro_units):
         assert forcing2.data2D.time[0] == forcing.data2D.time[0]
         assert forcing2.data2D.data[0].shape == forcing.data2D.data[0].shape
         assert forcing2.data2D.data[1].shape == forcing.data2D.data[1].shape
+
+
+def test_regrid_from_netcdf_single_file_unit_ids_raster(hydro_units):
+    if not has_gridded_data_packages():
+        return
+
+    forcing = hb.Forcing(hydro_units)
+    forcing.spatialize_from_gridded_data(
+        variable='precipitation', path=CATCHMENT_DIR / 'gridded_precip.nc',
+        data_crs=2056, var_name='RhiresD', dim_x='E', dim_y='N',
+        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif')
+    forcing.apply_operations()
+
+    assert len(forcing.data2D.data) == 1
+    assert forcing.data2D.data[0].shape[0] == 36
+    assert forcing.data2D.data[0].shape[1] == 3

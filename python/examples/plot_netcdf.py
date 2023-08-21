@@ -6,6 +6,7 @@ import geopandas as gpd
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 import shapefile as shp
 import shapely
@@ -994,6 +995,36 @@ def plot_altitude_plots(output_filename, elevations, *argv, through_time=False, 
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
     
+def plot_glacial_cover_changes(rock_filename, glacier_filename, output_file):
+    
+    rock_data = pd.io.parsers.read_csv(rock_filename, sep=",", header=1, na_values='NaN', index_col=0)
+    glacier_data = pd.io.parsers.read_csv(glacier_filename, sep=",", header=1, na_values='NaN', index_col=0)
+    
+    area_sums = rock_data + glacier_data
+    rock_percentage = rock_data / area_sums
+    glacier_percentage = glacier_data / area_sums
+    
+    glacier_sums = glacier_percentage.mean() * 100
+    rock_sums = rock_percentage.mean() * 100
+    
+    time = pd.to_datetime(rock_sums.index).strftime('%Y')
+    
+    figs, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+    
+    axs.plot(time, glacier_sums.values, '-', color='black')
+    axs.set_xlabel('Time')
+    axs.set_ylabel('Glacial cover (%)')
+    
+    stepsize = 10
+    start, end = axs.get_xlim()
+    axs.xaxis.set_ticks(np.arange(start, end, stepsize))
+    
+    figs.suptitle("Glacial cover input for Hydrobricks")
+    figs.tight_layout()
+    
+    plt.savefig(output_file, format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+    
 def plot_altitudinal_glacial_cover_plots(output_filename, elevation_band_file):
     
     elev = np.loadtxt(elevation_band_file, delimiter=',', skiprows=1)
@@ -1073,12 +1104,12 @@ def plot_shannon_entropy(data_file, output_filename, label, title, header=0, use
     data = pd.io.parsers.read_csv(data_file, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
                                   na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
                                   index_col=0, usecols=[0,1,2])
-    temp_file_solda = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Dati_meteo_Solda/06400MS_Sulden_Solda_LT_10m.Cmd.csv'
+    temp_file_solda = '/home/anne-laure/Documents/Datasets/Italy_discharge/Dati_meteo_Solda/06400MS_Sulden_Solda_LT_10m.Cmd.csv'
     temp_solda = pd.io.parsers.read_csv(temp_file_solda, sep=";", decimal=",", encoding='cp1252', skiprows=11, header=1, 
                                   na_values='---', parse_dates={'date': ['Datum', 'Zeit']}, date_parser=dateparse,
                                   index_col=0, usecols=[0,1,2])
     temp_solda = temp_solda[data.index[0]:data.index[-1]]
-    temp_file_madriccio = '/home/anne-laure/Documents/Datasets/Italy_discharge/Q_precipitation_Solda/Dati_meteo_Madriccio/06090SF_Madritsch_Madriccio_LT_10m.Cmd.csv'
+    temp_file_madriccio = '/home/anne-laure/Documents/Datasets/Italy_discharge/Dati_meteo_Madriccio/06090SF_Madritsch_Madriccio_LT_10m.Cmd.csv'
     temp_madriccio = pd.io.parsers.read_csv(temp_file_madriccio, sep=";", decimal=",", encoding='cp1252', skiprows=11, header=1, 
                                   na_values='---', parse_dates={'date': ['Datum', 'Zeit']}, date_parser=dateparse,
                                   index_col=0, usecols=[0,1,2])
@@ -1179,16 +1210,28 @@ def plot_simulated_against_observed_discharges(time_file, simulated_discharge, o
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
-def plot_simulated_discharge(time_file, data_file, output_filename, label, title, header=0, usecol=[0]):
+def plot_simulated_discharge(time_file, data_file, output_filename, label, title, header=0, usecol=[0, 1], time_format='%Y-%m-%d %H:%M:%S'):
 
-    data = pd.io.parsers.read_csv(data_file, sep=",", header=1, na_values='', usecols=usecol)
+    data = pd.io.parsers.read_csv(data_file, sep=",", header=header, na_values='', usecols=usecol)
+    print(data)
+    column_time = 'Date'
+    file_content = pd.read_csv(data_file, sep=",", header=header, na_values='', usecols=usecol, index_col=0, 
+                               parse_dates=[column_time], date_parser=lambda x: datetime.strptime(x, time_format))
+    print(file_content)
 
     time = range(len(data))
+    time = pd.to_datetime(file_content.index).strftime('%Y-%m-%d %H:%M')
+    print(time)
 
-    plt.figure(figsize=(15,5))
-    plt.plot(time, data, '.', markersize=2)
+    fig = plt.figure(figsize=(15,5))
+    ax = fig.add_subplot(111)
+    plt.plot(time, file_content, '.', markersize=2)
     plt.xlabel('Time (day)')
     plt.ylabel(label)
+    
+    stepsize = 10000
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(start, end, stepsize))
 
     plt.title(title)
     plt.tight_layout()
@@ -1344,7 +1387,6 @@ it_study_area = '/home/anne-laure/Documents/Datasets/Italy_Study_area/'
 ch_study_area = '/home/anne-laure/Documents/Datasets/Swiss_Study_area/'
 ch_arolla_area = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/'
 
-
 ##################################### Arolla ##############################################################################
 
 time = 'Weird time'
@@ -1353,18 +1395,31 @@ catchments = ['BIrest', 'BS', 'DB', 'HGDA', 'PI', 'TN', 'VU', 'BI']
 for catchment in catchments:
     name = f'Arolla_15min_discharge_{catchment}'
     plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
-                             title=f'Arolla 15min discharge {catchment}', header=1, usecol=[1])
+                             title=f'Arolla 15min discharge {catchment}', header=0, usecol=[0, 1])
 
     name = f'Arolla_daily_mean_discharge_{catchment}'
     plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
-                             title=f'Arolla daily mean discharge {catchment}', header=1, usecol=[1])
+                             title=f'Arolla daily mean discharge {catchment}', header=0, usecol=[0, 1], time_format='%d/%m/%Y')
 
     if catchment != "BIrest":
         simulated_discharge = f'{results}Arolla/{catchment}/simulated_discharge.csv'
-        observed_discharge = f'{results}Arolla_daily_mean_discharge_{catchment}.csv'
-        output_file = f'{figures}simulated_vs_observed_discharges_{catchment}'
-        plot_simulated_against_observed_discharges(time, simulated_discharge, observed_discharge, output_file, 
+        if os.path.exists(simulated_discharge):
+            observed_discharge = f'{results}Arolla_daily_mean_discharge_{catchment}.csv'
+            output_file = f'{figures}simulated_vs_observed_discharges_{catchment}'
+            plot_simulated_against_observed_discharges(time, simulated_discharge, observed_discharge, output_file, 
                                                    'Discharges (mm/day)', title=f"Simulated and observed discharges in {catchment}")
+
+##################################### Arolla ## Glacial cover #############################################################
+
+catchments = ['BS', 'DB', 'HGDA', 'PI', 'TN', 'VU', 'BI']
+
+for catchment in catchments:
+    catch_path = f'/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchment}/'
+    output_file = f'/home/anne-laure/Documents/Datasets/OutputFigures/Arolla/{catchment}/Glacial_cover_evolution.png'
+
+    rock = f'{catch_path}rock_yearly_interp.csv'
+    glacier = f'{catch_path}glacier_yearly_interp.csv'
+    plot_glacial_cover_changes(rock, glacier, output_file)
 
 ##################################### Arolla ##############################################################################
 
@@ -1389,7 +1444,7 @@ plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_file
 
 time = 'Weird time'
 
-discharge = f'{path}Italy_discharge/Q_precipitation_Solda/Portata_Torbidità_Ponte_Stelvio_2014_oggi/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
+discharge = f'{path}Italy_discharge/PonteStelvio/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
 output_file = f'{figures}Stelvio_shannon_entropy'
 plot_shannon_entropy(discharge, output_file, 'Shannon entropy',
                      title='Ponte Stelvio discharge - Shannon entropy', header=1, usecol=[1])

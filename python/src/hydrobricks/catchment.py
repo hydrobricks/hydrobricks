@@ -14,6 +14,7 @@ class Catchment:
             raise ImportError("geopandas is required to do this.")
         if not hb.has_shapely:
             raise ImportError("shapely is required to do this.")
+        self.crs = None
         self.outline = None
         self.dem = None
         self.masked_dem_data = None
@@ -35,6 +36,7 @@ class Catchment:
         try:
             geoms = [hb.mapping(self.outline)]
             with hb.rasterio.open(dem_path) as src:
+                self._check_crs(src)
                 self.dem = src
                 self.masked_dem_data, _ = hb.mask(src, geoms, crop=True)
                 self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
@@ -119,5 +121,24 @@ class Catchment:
         if not outline:
             return
         shapefile = hb.gpd.read_file(outline)
+        self._check_crs(shapefile)
         geoms = shapefile.geometry.values
         self.outline = geoms[0]
+
+    def _check_crs(self, data):
+        data_crs = self._get_crs_from_file(data)
+        if self.crs is None:
+            self.crs = data_crs
+        else:
+            if self.crs != data_crs:
+                raise ValueError("The CRS of the data does not match the CRS of the "
+                                 "catchment.")
+
+    @staticmethod
+    def _get_crs_from_file(data):
+        if isinstance(data, hb.rasterio.DatasetReader):
+            return data.crs
+        elif isinstance(data, hb.gpd.GeoDataFrame):
+            return data.crs
+        else:
+            raise ValueError("Unknown data format.")

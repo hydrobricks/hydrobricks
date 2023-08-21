@@ -46,8 +46,8 @@ class Catchment:
             print(e)
             return False
 
-    def get_elevation_bands(self, method='isohypse', number=100, distance=50,
-                            min_elevation=None, max_elevation=None):
+    def create_elevation_bands(self, method='isohypse', number=100, distance=50,
+                               min_elevation=None, max_elevation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -63,9 +63,9 @@ class Catchment:
         distance : int, optional
             Distance (m) between the contour lines when using the 'isohypse' method.
         min_elevation : int, optional
-            Minimum elevation of the elevation bands (to homogeneize between runs).
+            Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
-            Maximum elevation of the elevation bands (to homogeneize between runs).
+            Maximum elevation of the elevation bands (to homogenize between runs).
 
         Returns
         -------

@@ -2,8 +2,9 @@ import os
 import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -224,7 +225,7 @@ def test_apply_pet_computation_linacre(forcing):
         method='Linacre', use=['t', 'tmin', 'tmax', 'lat', 'elevation'], lat=47.3)
     forcing.apply_operations()
     assert len(forcing.data2D.data) == 4
-    assert 'pet' in forcing.data2D.data_name6
+    assert 'pet' in forcing.data2D.data_name
 
 
 def test_create_file(forcing):

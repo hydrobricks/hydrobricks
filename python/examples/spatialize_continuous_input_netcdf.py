@@ -20,6 +20,7 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
                                      parse_dates=['Horodatage'], date_parser=dateparse, index_col=0)
     data_BI.index.name = 'Date'
     data_BI.columns = ['BIrest'] # There is only the rest of water not taken from the HGDA, VU and BS intakes.
+    data_BI.iloc[:,0] = np.where(data_BI.iloc[:,0] < 0.08, np.nan, data_BI.iloc[:,0])
     
     ############ Then the subcatchments
     
@@ -42,6 +43,7 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
 
             data = pd.concat(dfs, ignore_index=True)
             data.set_index('Date', inplace=True)
+            data.iloc[:,0] = np.where(data.iloc[:,0] < 0.08, np.nan, data.iloc[:,0])
             
             ############ Merge all datasets but make sure to discard the dates of BI that are not contained in the others (31 Decembers of bissextile years)
             BI_but_not_key = data_BI.loc[data_BI.index.difference(data.index)]

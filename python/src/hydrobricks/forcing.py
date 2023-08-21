@@ -9,11 +9,10 @@ if sys.version_info < (3, 11):
 else:
     from enum import StrEnum, auto
 
+import hydrobricks as hb
 import numpy as np
 import pandas as pd
 from cftime import num2date
-
-import hydrobricks as hb
 
 from .time_series import TimeSeries1D, TimeSeries2D
 

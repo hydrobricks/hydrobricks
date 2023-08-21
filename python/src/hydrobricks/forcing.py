@@ -443,12 +443,6 @@ class Forcing:
             if method == 'constant':
                 unit_values[:, i_unit] = data_raw
 
-            elif method == 'from_gridded_data':
-                # Interpolate the holes
-                for i in range(len(data_raw[0])):
-                    data_raw[:, i] = pd.Series(data_raw[:, i]).interpolate().tolist()
-                unit_values[:, i_unit] = data_raw[i_unit]
-
             elif method == 'additive_elevation_gradient':
                 if ref_elevation is None:
                     raise ValueError('Reference elevation not provided.')
@@ -513,9 +507,27 @@ class Forcing:
             self.data2D.data_name.append(variable)
             self.data2D.time = self.data1D.time
 
-    def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
+    def _apply_spatialization_from_gridded_data(self, variable, method='default',
+                                                **kwargs):
         variable = self.get_variable_enum(variable)
-        pass
+
+        # Specify default methods
+        if method == 'default':
+            method = 'regrid_from_netcdf'
+
+        if method == 'regrid_from_netcdf':
+            path = kwargs.get('path', None)
+            file_pattern = kwargs.get('file_pattern', None)
+            var_name = kwargs.get('var_name', None)
+            var_time = kwargs.get('var_time', None)
+            catchment = kwargs.get('catchment', None)
+            raster_hydro_units = kwargs.get('raster_hydro_units', None)
+            self.data2D.regrid_from_netcdf(
+                path, file_pattern=file_pattern, var_name=var_name, var_time=var_time,
+                catchment=catchment, raster_hydro_units=raster_hydro_units)
+            self.data2D.data_name.append(variable)
+        else:
+            raise ValueError(f'Unknown method: {method}')
 
     def _apply_pet_computation(self, method, use, **kwargs):
         if not hb.has_pyet:

@@ -1,34 +1,37 @@
 from datetime import datetime
+from hydrobricks.preprocessing import catchment
 
-import hydrobricks as hb
-
-print(hb.__file__)
 import geopandas as gpd
+import hydrobricks as hb
+import hydrobricks.behaviours as behaviours
 import hydrobricks.models as models
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rasterio
 import rioxarray
+import spotpy
 import xarray as xa
-from hydrobricks.preprocessing import catchment
+
+print(hb.__file__)
 
 
 def compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, 
-                                            forcing, outline, outline_epsg, target_epsg, elevation_thrs, var_bands):
+                                            forcing, outline, outline_epsg, target_epsg, elevation_bands, var_bands):
     start, end = forcing.initialize_from_netcdf_HR(pet_nc_file, 'pet', tif_filename, 
-                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
                                                    column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                                    content={'pet': 'pet_sim(mm/day)'})
     forcing.spatialize('pet','from_gridded_data')
     print('start, end = ', start, end)
     start, end = forcing.initialize_from_netcdf_HR(pr_nc_file, 'pr', tif_filename,
-                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
                                                    column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                                    content={'precipitation': 'precip(mm/day)'})
     forcing.spatialize('precipitation','from_gridded_data')
     print('start, end = ', start, end)
     start, end = forcing.initialize_from_netcdf_HR(tas_nc_file, 'tas', tif_filename, 
-                                                   outline, outline_epsg, target_epsg, elevation_thrs, tif_CRS, nc_CRS,
+                                                   outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
                                                    column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                                    content={'temperature': 'temp(C)'})
     forcing.spatialize('temperature','from_gridded_data')
@@ -66,7 +69,7 @@ def compute_the_elevation_interpolations(forcing, elevation_thrs):
         np.savetxt(var_bands + name + "_interp.csv", data_interp, delimiter=",", header=name)
     np.savetxt(var_bands + "time.csv", forcing.time, delimiter=",", header='time', fmt="%s")
 
-def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, catchment_shapefile, nc_topo_file, elevation_thrs, outline_epsg, target_epsg):
+def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, catchment_shapefile, nc_topo_file, elevation_bands, outline_epsg, target_epsg):
 
     # Read file using gpd.read_file()
     all_glaciers = gpd.read_file(glacier_shapefile)
@@ -134,8 +137,11 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
     pixel_area = x * y
     print('The dataset in', glaciers.crs, 'has a spatial resolution of',
           x, 'x', y, 'm thus giving pixel areas of', pixel_area, 'm².')
+    
+    thrs_min = elevation_bands.elevation_thrs_min.values
+    thrs_max = elevation_bands.elevation_thrs_max.values
 
-    band_nb = len(elevation_thrs[:-1]) #len(self.hydro_units['elevation'])
+    band_nb = len(thrs_min) #len(self.hydro_units['elevation'])
     debris_area = np.zeros(band_nb)
     bare_ice_area = np.zeros(band_nb)
     bare_rock_area = np.zeros(band_nb)
@@ -148,8 +154,7 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
     if debris_covered_glaciers != None:
         debris_clipped = xds.rio.clip(debris_glaciers.geometry.values, debris_glaciers.crs)
 
-    for i, elev_min in enumerate(elevation_thrs[:-1]):
-        elev_max = elevation_thrs[i+1]
+    for i, (elev_min, elev_max) in enumerate(zip(thrs_min, thrs_max)):
         topo_mask_catchm = xa.where((catchment_clipped > elev_min) & (catchment_clipped < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
         topo_mask_glacie = xa.where((glaciers_clipped > elev_min) & (glaciers_clipped < elev_max), 1, 0)
 
@@ -172,204 +177,347 @@ def preprocess_glacier_cover_change(debris_covered_glaciers, glacier_shapefile, 
 
     return debris_area, bare_ice_area, bare_rock_area, glacier_area
 
+def write_land_cover_evolution_files(varname, df, filename):
+    
+    header = pd.MultiIndex.from_product([[varname], list(df.columns.values)], names=['bands',''])
+    df.columns = header
+    df.to_csv(f'{filename}.csv')
+    
+    # The order is very important:
+    dates = list(list(zip(*df.columns.values))[1])
+    df.columns = dates
+    df = df.transpose()
+    df.index = pd.to_datetime(df.index)
+    df_reindexed = df.reindex(pd.date_range(start=df.index.min(), end=df.index.max(), freq='YS'))
+    df_reindexed = df_reindexed.interpolate(method='linear')
+    df_reindexed.index = df_reindexed.index.strftime('%d/%m/%Y')
+    df_reindexed = df_reindexed.transpose()
+    header = pd.MultiIndex.from_product([[varname], list(df_reindexed.columns.values)], names=['bands',''])
+    df_reindexed.columns = header
+    df_reindexed.to_csv(f'{filename}_yearly_interp.csv')
+
 def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, 
-                                      outline, nc_topo_file, elevation_thrs, results, outline_epsg, target_epsg):
+                                      outline, nc_topo_file, results, outline_epsg, target_epsg):
     # Creates files with land cover evolution as described here: https://hydrobricks.readthedocs.io/en/latest/doc/advanced.html
     
     # Creating Empty DataFrame and Storing it in variable df
-    debris_df = pd.DataFrame(index = elevation_bands['elevation'].values)
-    ice_df = pd.DataFrame(index = elevation_bands['elevation'].values)
-    rock_df = pd.DataFrame(index = elevation_bands['elevation'].values)
-    glacier_df = pd.DataFrame(index = elevation_bands['elevation'].values)
+    debris_df = pd.DataFrame(index = elevation_bands['elevation'].values.astype(int))
+    ice_df = pd.DataFrame(index = elevation_bands['elevation'].values.astype(int))
+    rock_df = pd.DataFrame(index = elevation_bands['elevation'].values.astype(int))
+    glacier_df = pd.DataFrame(index = elevation_bands['elevation'].values.astype(int))
     
     for whole_glacier, debris_glacier, time in zip(whole_glaciers, debris_glaciers, times):
-        debris, ice, rock, glacier = preprocess_glacier_cover_change(debris_glacier, whole_glacier, outline, 
-                                                                     nc_topo_file, elevation_thrs, outline_epsg, target_epsg)
+        debris, ice, rock, glacier = preprocess_glacier_cover_change(debris_glacier, whole_glacier, outline, nc_topo_file, 
+                                                                     elevation_bands, outline_epsg, target_epsg)
         debris_df[time] = debris
         ice_df[time] = ice
         rock_df[time] = rock
         glacier_df[time] = glacier
         
-    header = pd.MultiIndex.from_product([['glacier_debris'], list(debris_df.columns.values)], names=['band',''])
-    debris_df.columns = header
-    debris_df.to_csv(f'{results}debris.csv')
+    write_land_cover_evolution_files('glacier_debris', debris_df, f'{results}debris')
+    write_land_cover_evolution_files('glacier_ice', ice_df, f'{results}ice')
+    write_land_cover_evolution_files('ground', rock_df, f'{results}rock')
+    write_land_cover_evolution_files('glacier', glacier_df, f'{results}glacier')
     
-    header = pd.MultiIndex.from_product([['clean_ice'], list(ice_df.columns.values)], names=['band',''])
-    ice_df.columns = header
-    ice_df.to_csv(f'{results}ice.csv')
+    first_debris = debris_df[debris_df.columns[0]].values
+    first_ice = ice_df[ice_df.columns[0]].values
+    first_rock = rock_df[rock_df.columns[0]].values
+    first_glacier = glacier_df[glacier_df.columns[0]].values
     
-    header = pd.MultiIndex.from_product([['no_glacier'], list(rock_df.columns.values)], names=['band',''])
-    rock_df.columns = header
-    rock_df.to_csv(f'{results}rock.csv')
-    
-    header = pd.MultiIndex.from_product([['glacier'], list(glacier_df.columns.values)], names=['band',''])
-    glacier_df.columns = header
-    glacier_df.to_csv(f'{results}glacier.csv')
-    
-    return debris, ice, rock
+    return first_debris, first_ice, first_rock, first_glacier
 
 
 # This script takes the shapefile of a catchment, the associated DEM,
 # and computes the mean elevation and the elevation bands, to finally convert them to CSV files.
 
 
-####### INPUT FILES ################
-catchm = 'BI'
-path = "/home/anne-laure/Documents/Datasets/"
-dem_path = f"{path}Swiss_Study_area/StudyAreas_EPSG21781.tif"
-outline = f"{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/{catchm}_UpslopeArea_EPSG21781.shp" #f"{path}Swiss_Study_area/LaNavisence_Chippis/125595_EPSG21781.shp"
-outline_epsg = 21781
-method = 'set_isohypses' 
-min_val = 1900
-max_val = 3900
-distance = 20
+def main_script(catchm):
 
-####### DISCHARGE DATASETS #########
-discharge_file = f"{path}Outputs/Arolla_hydrobricks_discharge_{catchm}.csv" #"/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/discharge.csv"
-column_time = 'Date'
-time_format = '%d/%m/%Y'
-content = {'discharge': 'Discharge (mm/d)'}
+    ####### INPUT FILES ################
+    path = "/home/anne-laure/Documents/Datasets/"
+    dem_path = f"{path}Swiss_Study_area/StudyAreas_EPSG21781.tif"
+    outline = f"{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/{catchm}_UpslopeArea_EPSG21781.shp" #f"{path}Swiss_Study_area/LaNavisence_Chippis/125595_EPSG21781.shp"
+    outline_epsg = 21781
+    method = 'set_isohypses' 
+    min_val = 1900
+    max_val = 3900
+    distance = 20
+    
+    ####### DISCHARGE DATASETS #########
+    discharge_file = f"{path}Outputs/Arolla_hydrobricks_discharge_{catchm}.csv" #"/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/discharge.csv"
+    column_time = 'Date'
+    time_format = '%d/%m/%Y'
+    content = {'discharge': 'Discharge (mm/d)'}
+    
+    ####### MODELISATION TIMESPAN ######
+    start_date = '2009-01-01' #'1989-01-01'
+    end_date = '2014-12-31'
+    
+    ####### MODELISATION PARAMETERS ####
+    inversion = True
+    inversed_params = ['A', 'a_snow', 'k_slow_1', 'k_slow_2', 
+                       'k_quick', 'percol',
+                       'a_ice', 'k_snow', 'k_ice'] # 'precip_corr_factor'
+    obj_func = 'mse' #'kge_2012' #'nse'
+    # Select the number of maximum repetitions
+    warmup = 5 #365
+    max_rep = 10 #10000
+    algorithm = 'SCEUA' # 'MC' # The result filename depends on this algorithm name.
+    # else
+    set_params = {'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
+                  'k_quick': 1, 'percol': 9.8}
+    
+    ####### CHANGING GLACIER COVER #####
+    with_debris = False
+    glacier_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
+    nc_topo_file = '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc'
+    whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
+                      f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
+                      f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
+    debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
+    times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
+    target_epsg = 21781
+    # BUGS if EPSG:4326...
+    
+    ####### ELEVATION PROFILES #########
+    compute_altitudinal_trends = False
+    tif_filename = dem_path
+    tif_CRS = "EPSG:21781"
+    pet_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc'
+    pr_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc'
+    tas_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc'
+    nc_CRS = "EPSG:21781"
+    
+    ####### RESULT FILES ###############
+    results = f"/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchm}/"
+    figures = f"/home/anne-laure/Documents/Datasets/OutputFigures/Arolla/{catchm}/"
+    elev_bands = f"{results}elevation_bands.csv"
+    elev_thres_min = f"{results}elevation_threshold_mins.csv"
+    elev_thres_max = f"{results}elevation_threshold_maxs.csv"
+    var_bands = f"{results}spatialized_"
+    output = f"{results}simulated_discharge.csv"
+    output2 = f"{results}best_fit_simulated_discharge"
+    stats = f"{results}simulation_stats.csv"
+    stats2 = f"{results}best_fit_simulation_stats"
+    
+    #######################################################################
+    
+    study_area = catchment.Catchment(outline=outline)
+    success = study_area.extract_dem(dem_path)
+    print("DEM extracted:", success)
+    mean_elev = study_area.get_mean_elevation()
+    print("Mean elevation:", mean_elev)
+    elevation_bands, null_areas = study_area.get_elevation_bands(method=method, min_val=min_val, max_val=max_val, distance=distance)
+    print("Elevation bands:", elevation_bands)
+    
+    np.savetxt(elev_thres_min, elevation_bands.elevation_thrs_min.values, header='Elevation thresholds min')
+    np.savetxt(elev_thres_max, elevation_bands.elevation_thrs_max.values, header='Elevation thresholds max')
+    
+    # FORMAT FOR THE CHANGING INITIALISATION
+    debris, ice, rock, glacier = create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, outline, nc_topo_file,
+                                                                   results, outline_epsg=outline_epsg, target_epsg=target_epsg)
+    
+    # FORMAT FOR THE CONSTANT INITIALISATION
+    if with_debris == True:
+        elevation_bands['Area Debris'] = debris
+        elevation_bands['Area Ice'] = ice
+    else:
+        elevation_bands['Area Glacier'] = glacier
+    elevation_bands['Area Ground'] = rock
+    
+    elevation_bands.to_csv(elev_bands)
+    
+    if with_debris:
+        land_cover_names = ['ground', 'glacier_ice', 'glacier_debris']
+        land_cover_types = ['ground', 'glacier', 'glacier']
+    else:
+        land_cover_names = ['ground', 'glacier']
+        land_cover_types = ['ground', 'glacier']
+    
+    # Model structure
+    socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
+                           land_cover_names=land_cover_names,
+                           land_cover_types=land_cover_types,
+                           record_all=False)
+    
+    # Parameters
+    parameters = socont.generate_parameters()
+    if inversion:
+        parameters.allow_changing = inversed_params
+    else:
+        parameters.set_values(set_params)
+    
+    # Hydro units
+    hydro_units = hb.HydroUnits(land_cover_types, land_cover_names)
+    if with_debris:
+        hydro_units.load_from_csv(
+           elev_bands, area_unit='m2', column_elevation='elevation',
+           columns_areas={'ground': 'Area Ground',
+                          'glacier_ice': 'Area Ice',
+                          'glacier_debris': 'Area Debris'})
+    else:
+        hydro_units.load_from_csv(
+           elev_bands, area_unit='m2', column_elevation='elevation',
+           columns_areas={'ground': 'Area Ground',
+                          'glacier': 'Area Glacier'})
+    
+    # Meteo data
+    forcing = hb.Forcing(hydro_units)
+    
+    changes = behaviours.BehaviourLandCoverChange()
+    changes.load_from_csv(f'{results}rock.csv', hydro_units, area_unit='m2', match_with='elevation')
+    changes.load_from_csv(f'{results}glacier.csv', hydro_units, area_unit='m2', match_with='elevation')
+    socont.add_behaviour(changes)
+    
+    
+    if compute_altitudinal_trends:
+        compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, forcing, 
+                                                outline, outline_epsg, target_epsg, elevation_bands, var_bands)
+    else:
+        forcing.load_spatialized_data_from_csv('precipitation', var_bands + "precipitation_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+        forcing.load_spatialized_data_from_csv('temperature', var_bands + "temperature_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+        forcing.load_spatialized_data_from_csv('pet', var_bands + "pet_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+    
+    # Obs data
+    obs = hb.Observations()
+    obs.load_from_csv(discharge_file, column_time=column_time, time_format=time_format,
+                      content=content, start_date=start_date, end_date=end_date)
+    
+    
+    
+    print('Debug 1', flush=True)
+    # Model setup
+    socont.setup(spatial_structure=hydro_units, output_path=str(results),
+                 start_date=start_date, end_date=end_date)
+    
+    if inversion:
+        if obj_func == 'mse':
+            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, obj_func=obj_func)
+        elif obj_func == 'kge_2012':
+            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, obj_func=obj_func, invert_obj_func=True)
+        elif obj_func == 'nse':
+            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, 
+                                        obj_func=spotpy.objectivefunctions.nashsutcliffe)
+        else:
+            print('Error: Objective function not yet registered as either Invert or not.')
+        
+        # Run spotpy
+        if algorithm == 'SCEUA':
+            result_filename = f"{results}socont_SCEUA_{obj_func}"
+            sampler = spotpy.algorithms.sceua(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
+        elif algorithm == 'MC':
+            result_filename = f"{results}socont_MC_{obj_func}"
+            sampler = spotpy.algorithms.mc(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
+        else:
+            print('Error: No SPOTPY algorithm was defined!')
+        sampler.sample(max_rep)
+        
+        # Load the results
+        result = sampler.getdata()
+        
+        # Plot parameter interaction
+        spotpy.analyser.plot_parameterInteraction(result)
+        plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
+        plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
+        
+        #######################################################################
+    
+        # Load the results
+        result = spotpy.analyser.load_csv_results(result_filename)
+        
+        # Plot evolution
+        fig_evolution = plt.figure(figsize=(9, 5))
+        plt.plot(-result['like1'])
+        plt.ylabel(obj_func)
+        plt.xlabel('Iteration')
+        plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.svg', format="svg", bbox_inches='tight', dpi=30)
+        plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.png', format="png", bbox_inches='tight', dpi=100)
+        
+        # Get best results
+        # Each row is a simulation result. The first columns are the parameters used.
+        # The 'simulation_x' columns are the discharges modeled for each day.
+        best_index, best_obj_func = spotpy.analyser.get_minlikeindex(result)
+        best_model_run = result[best_index]
+        fields = [word for word in best_model_run.dtype.names if not word.startswith('sim')]
+        best_params = list(best_model_run[fields])
+        header = ['Minimal objective value'] + inversed_params
+        with open(f"{stats2}_{algorithm}_{obj_func}.csv", 'w') as f:
+            for name, param in zip(header, best_params):
+                f.write(f'{name}, {param:.8f}\n')
+        fields = [word for word in best_model_run.dtype.names if word.startswith('sim')]
+        best_simulation = list(best_model_run[fields])
+        np.savetxt(f"{output2}_{algorithm}_{obj_func}.csv", best_simulation, header='Best fit simulated outlet discharge time series')
+        
+        # Plot simulation
+        fig_simulation = plt.figure(figsize=(16, 9))
+        ax = plt.subplot(1, 1, 1)
+        ax.plot(best_simulation, color='black', linestyle='solid',
+                label='Best obj. func.=' + str(best_obj_func))
+        ax.plot(spot_setup.evaluation(), 'r.', markersize=3, label='Observation data')
+        plt.xlabel('Number of Observation Points')
+        plt.ylabel('Discharge [l s-1]')
+        plt.legend(loc='upper right')
+        plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
+        plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
+        
+        #######################################################################
+        
+        # Plot posterior parameter distribution # ERROR RIGHT NOW: ValueError: `dataset` input should have multiple elements.
+        posterior = spotpy.analyser.get_posterior(result, percentage=10)
+        #spotpy.analyser.plot_parameterInteraction(posterior)
+        #plt.tight_layout()
+        #plt.show()
+        print('End')
+        
+    
+    else:
+        print('Debug 2', flush=True)
+        # Initialize and run the model
+        socont.initialize_state_variables(parameters=parameters, forcing=forcing)
+        print('Debug 3', flush=True)
+        socont.run(parameters=parameters, forcing=forcing)
+        print('Debug 4', flush=True)
+        
+         # Water balance
+        precip_total = forcing.get_total_precipitation()
+        discharge_total = socont.get_total_outlet_discharge()
+        et_total = socont.get_total_et()
+        storage_change = socont.get_total_water_storage_changes()
+        snow_change = socont.get_total_snow_storage_changes()   # GET THE SNOW COVER??? HOW DO I INITIALIZE IT???
+        balance = discharge_total + et_total + storage_change + snow_change - precip_total
+        print('precip_total', precip_total)
+        print('discharge_total', discharge_total)
+        print('et_total', et_total)
+        print('storage_change', storage_change)
+        print('snow_change', snow_change)
+        print('balance', balance)
+        #assert balance == pytest.approx(0, abs=1e-8)
+        
+        # Get outlet discharge time series. WHAT IS THE DIFFERENCE WITH TOTAL OUTLET DISCHARGE???!!!
+        sim_ts = socont.get_outlet_discharge()
+        print('Debug 5', flush=True)
+        np.savetxt(output, sim_ts, header='Simulated outlet discharge time series')
+        
+        # Evaluate
+        obs_ts = obs.data_raw[0]
+        print('Debug 6', flush=True)
+        nse = socont.eval('nse', obs_ts)
+        print('Debug 7', flush=True)
+        kge_2012 = socont.eval('kge_2012', obs_ts)
+        
+        with open(stats, 'w') as f:
+            f.write(f'nse, {nse:.3f}\n')
+            f.write(f'kge_2012, {kge_2012:.3f}')
+        
+        print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
+        print('End')
+        
+        
+        
 
-####### MODELISATION TIMESPAN ######
-start_date = '1989-01-01'
-end_date = '2014-12-31'
+catchments = ['BI', 'BS', 'DB', 'HGDA', 'PI', 'TN', 'VU']
+#catchments = ['BS']
+for catchm in catchments:
+    main_script(catchm)
 
-####### CHANGING GLACIER COVER #####
-glacier_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
-nc_topo_file = '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc'
-whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
-                  f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
-                  f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
-debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
-times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
-target_epsg = 21781
-# BUGS if EPSG:4326...
 
-####### ELEVATION PROFILES #########
-compute_altitudinal_trends = False
-tif_filename = dem_path
-tif_CRS = "EPSG:21781"
-pet_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc'
-pr_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc'
-tas_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc'
-nc_CRS = "EPSG:21781"
-
-####### RESULT FILES ###############
-results = f"/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchm}/"
-elev_bands = f"{results}elevation_bands.csv"
-elev_thres = f"{results}elevation_thresholds.csv"
-var_bands = f"{results}spatialized_"
-output = f"{results}simulated_discharge.csv"
-stats = f"{results}simulation_stats.csv"
-
-#######################################################################
-
-study_area = catchment.Catchment(outline=outline)
-success = study_area.extract_dem(dem_path)
-print("DEM extracted:", success)
-mean_elev = study_area.get_mean_elevation()
-print("Mean elevation:", mean_elev)
-elevation_bands, elevation_thrs = study_area.get_elevation_bands(method=method, min_val=min_val, max_val=max_val, distance=distance)
-print("Elevation bands:", elevation_bands)
-np.savetxt(elev_thres, elevation_thrs, header='Elevation thresholds')
-
-# FORMAT FOR THE CHANGING INITIALISATION
-debris, ice, rock = create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_glaciers, times, outline, nc_topo_file,
-                                                      elevation_thrs, results, outline_epsg=outline_epsg, target_epsg=target_epsg)
-
-# FORMAT FOR THE CONSTANT INITIALISATION
-elevation_bands['Area Debris'] = debris
-elevation_bands['Area Ice'] = ice
-elevation_bands['Area Non Glacier'] = rock
-
-# TEMPORARY - DROP WHERE AREA==0
-null_areas = elevation_bands[elevation_bands['area'] == 0].index
-elevation_bands.drop(null_areas, inplace = True)
-print(null_areas.values)
-# TEMPORARY - DROP WHERE AREA==0 - ENDOF
-
-elevation_bands.to_csv(elev_bands)
-
-# Model structure
-socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
-                       record_all=False)
-
-# Parameters
-parameters = socont.generate_parameters()
-parameters.set_values({'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
-                       'k_quick': 1, 'percol': 9.8})
-
-land_cover_names = ['ground', 'glacier_ice', 'glacier_debris']
-land_cover_types = ['ground', 'glacier', 'glacier']
-
-# Hydro units
-#hydro_units = hb.HydroUnits(land_cover_types, land_cover_names)
-#hydro_units.load_from_csv(
-#   elev_bands, area_unit='m2', column_elevation='elevation',
-#   columns_areas={'ground': 'Area Non Glacier',
-#                  'glacier_ice': 'Area Ice',
-#                  'glacier_debris': 'Area Debris'})
-hydro_units = hb.HydroUnits()
-hydro_units.load_from_csv(elev_bands, area_unit='m2', column_elevation='elevation', column_area='area')
-
-# Meteo data
-forcing = hb.Forcing(hydro_units)
-
-if compute_altitudinal_trends:
-    compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, forcing, 
-                                            outline, outline_epsg, target_epsg, elevation_thrs, var_bands)
-else:
-    forcing.load_spatialized_data_from_csv('precipitation', var_bands + "precipitation_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
-    forcing.load_spatialized_data_from_csv('temperature', var_bands + "temperature_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
-    forcing.load_spatialized_data_from_csv('pet', var_bands + "pet_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
-
-# Obs data
-obs = hb.Observations()
-obs.load_from_csv(discharge_file, column_time=column_time, time_format=time_format,
-                  content=content)
-
-print('Debug 1', flush=True)
-# Model setup
-socont.setup(spatial_structure=hydro_units, output_path=str(results),
-             start_date=start_date, end_date=end_date)
-
-print('Debug 2', flush=True)
-# Initialize and run the model
-socont.initialize_state_variables(parameters=parameters, forcing=forcing)
-print('Debug 3', flush=True)
-socont.run(parameters=parameters, forcing=forcing)
-print('Debug 4', flush=True)
-
- # Water balance
-precip_total = forcing.get_total_precipitation()
-discharge_total = socont.get_total_outlet_discharge()
-et_total = socont.get_total_et()
-storage_change = socont.get_total_water_storage_changes()
-snow_change = socont.get_total_snow_storage_changes()   # GET THE SNOW COVER??? HOW DO I INITIALIZE IT???
-balance = discharge_total + et_total + storage_change + snow_change - precip_total
-print('precip_total', precip_total)
-print('discharge_total', discharge_total)
-print('et_total', et_total)
-print('storage_change', storage_change)
-print('snow_change', snow_change)
-print('balance', balance)
-#assert balance == pytest.approx(0, abs=1e-8)
-
-# Get outlet discharge time series. WHAT IS THE DIFFERENCE WITH TOTAL OUTLET DISCHARGE???!!!
-sim_ts = socont.get_outlet_discharge()
-print('Debug 5', flush=True)
-np.savetxt(output, sim_ts, header='Simulated outlet discharge time series')
-
-# Evaluate
-obs_ts = obs.data_raw[0]
-print('Debug 6', flush=True)
-nse = socont.eval('nse', obs_ts)
-print('Debug 7', flush=True)
-kge_2012 = socont.eval('kge_2012', obs_ts)
-
-with open(stats, 'w') as f:
-    f.write(f'nse, {nse:.3f}\n')
-    f.write(f'kge_2012, {kge_2012:.3f}')
-
-print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
-print('End')

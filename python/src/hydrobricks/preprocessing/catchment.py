@@ -1,6 +1,7 @@
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
+
+import hydrobricks as hb
 
 
 class Catchment:

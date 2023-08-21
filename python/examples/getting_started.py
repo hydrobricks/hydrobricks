@@ -4,11 +4,12 @@ import hydrobricks as hb
 
 print(hb.__file__)
 import geopandas as gpd
-import hydrobricks.models as models
 import numpy as np
 import rasterio
 import rioxarray
 import xarray as xa
+
+import hydrobricks.models as models
 from hydrobricks.preprocessing import catchment
 
 

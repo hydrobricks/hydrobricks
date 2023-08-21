@@ -43,7 +43,7 @@ repos:
   rev: v3.10.1
   hooks:
   - id: pyupgrade
-    args: ["--py36-plus"]
+    args: ["--py38-plus"]
     exclude: |
       (?x)^(
           ^docs|

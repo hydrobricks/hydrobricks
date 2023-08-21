@@ -1,4 +1,5 @@
 import os.path
+import tempfile
 from pathlib import Path
 
 import hydrobricks as hb
@@ -54,3 +55,14 @@ def test_get_mean_elevation():
     catchment.extract_dem(CATCHMENT_DEM)
     mean_elevation = catchment.get_mean_elevation()
     assert 1200 < mean_elevation < 1300
+
+
+def test_save_unit_ids_raster():
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.create_elevation_bands(method='isohypse', distance=50)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
+        assert (Path(tmp_dir) / 'unit_ids.tif').exists()

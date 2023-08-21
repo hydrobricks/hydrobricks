@@ -18,7 +18,12 @@ class Catchment:
         self.outline = None
         self.dem = None
         self.masked_dem_data = None
+        self.unit_ids = None
         self._extract_outline(outline)
+
+    def __del__(self):
+        if self.dem is not None:
+            self.dem.close()
 
     def extract_dem(self, dem_path) -> bool:
         """
@@ -35,11 +40,13 @@ class Catchment:
         """
         try:
             geoms = [hb.mapping(self.outline)]
-            with hb.rasterio.open(dem_path) as src:
-                self._check_crs(src)
-                self.dem = src
-                self.masked_dem_data, _ = hb.mask(src, geoms, crop=True)
-                self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
+            src = hb.rasterio.open(dem_path)
+            self._check_crs(src)
+            self.dem = src
+            self.masked_dem_data, _ = hb.mask(src, geoms, crop=True)
+            self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
+            if len(self.masked_dem_data.shape) == 3:
+                self.masked_dem_data = self.masked_dem_data[0]
             return True
         except ValueError as e:
             print(e)
@@ -76,8 +83,10 @@ class Catchment:
         if method == 'isohypse':
             if min_elevation is None:
                 min_elevation = np.nanmin(self.masked_dem_data)
+                min_elevation = min_elevation - (min_elevation % distance)
             if max_elevation is None:
                 max_elevation = np.nanmax(self.masked_dem_data)
+                max_elevation = max_elevation + (distance - max_elevation % distance)
             elevations = np.arange(min_elevation, max_elevation + distance, distance)
         elif method == 'quantiles':
             elevations = np.nanquantile(self.masked_dem_data,
@@ -85,24 +94,33 @@ class Catchment:
         else:
             raise ValueError
 
+        self.unit_ids = np.zeros(self.masked_dem_data.shape)
         res_bands = np.zeros(len(elevations) - 1)
         res_elevations = np.zeros(len(elevations) - 1)
-        min_elevations = np.zeros(len(elevations) - 1)
-        max_elevations = np.zeros(len(elevations) - 1)
+        res_elevations_min = np.zeros(len(elevations) - 1)
+        res_elevations_max = np.zeros(len(elevations) - 1)
         for i in range(len(elevations) - 1):
-            n_cells = np.count_nonzero(
-                np.logical_and(self.masked_dem_data >= elevations[i],
-                               self.masked_dem_data < elevations[i + 1]))
+            mask_unit = np.logical_and(self.masked_dem_data >= elevations[i],
+                                       self.masked_dem_data < elevations[i + 1])
+            # Check that all cells in unit_ids are 0
+            assert np.count_nonzero(self.unit_ids[mask_unit]) == 0
+            # Set the unit id
+            self.unit_ids[mask_unit] = i + 1
+            # Compute the area of the unit
+            n_cells = np.count_nonzero(mask_unit)
             res_bands[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
+            # Compute the mean elevation of the unit
             res_elevations[i] = round(float(np.mean(elevations[i:i + 2])), 2)
-            min_elevations[i] = round(float(elevations[i]), 2)
-            max_elevations[i] = round(float(elevations[i + 1]), 2)
+            res_elevations_min[i] = round(float(elevations[i]), 2)
+            res_elevations_max[i] = round(float(elevations[i + 1]), 2)
+
+        self.unit_ids = self.unit_ids.astype(hb.rasterio.uint16)
 
         df = pd.DataFrame(columns=['elevation', 'elevation_min',
                                    'elevation_max', 'area'])
         df['elevation'] = res_elevations
-        df['elevation_min'] = min_elevations
-        df['elevation_max'] = max_elevations
+        df['elevation_min'] = res_elevations_min
+        df['elevation_max'] = res_elevations_max
         df['area'] = res_bands
 
         return df
@@ -116,6 +134,29 @@ class Catchment:
         The catchment mean elevation.
         """
         return np.nanmean(self.masked_dem_data)
+
+    def save_unit_ids_raster(self, path):
+        """
+        Save the unit ids raster to a file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.unit_ids is None:
+            raise ValueError("No unit ids raster to save.")
+
+        # Create the profile
+        profile = self.dem.profile
+        profile.update(
+            dtype=hb.rasterio.uint16,
+            count=1,
+            compress='lzw',
+            nodata=0)
+
+        with hb.rasterio.open(path, 'w', **profile) as dst:
+            dst.write(self.unit_ids, 1)
 
     def _extract_outline(self, outline):
         if not outline:

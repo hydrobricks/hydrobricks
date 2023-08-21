@@ -497,6 +497,9 @@ class Forcing:
                     unit_values[:, i_unit] = precip_below * (
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
 
+            else:
+                raise ValueError(f'Unknown method: {method}')
+
         # Check outputs
         if not self._can_be_negative(variable):
             unit_values[unit_values < 0] = 0

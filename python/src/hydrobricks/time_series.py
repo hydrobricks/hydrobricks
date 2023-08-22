@@ -1,3 +1,4 @@
+import time
 import warnings
 from pathlib import Path
 
@@ -169,11 +170,14 @@ class TimeSeries2D(TimeSeries):
         # Rename spatial dimensions
         data_var = data_var.rename({dim_x: 'x', dim_y: 'y'})
 
+        # Time the computation
+        start_time = time.time()
+
         # Extract each time step
-        for t, time in enumerate(self.time):
+        for t, date in enumerate(self.time):
             # Print message very 20 time steps
             if t % 20 == 0:
-                print(f"Extracting {time}")
+                print(f"Extracting {date}")
 
             # Reproject
             with warnings.catch_warnings():
@@ -189,6 +193,10 @@ class TimeSeries2D(TimeSeries):
                 data[u][t] = np.nanmean(val)
 
         self.data.append(data)
+
+        # Print elapsed time
+        elapsed_time = time.time() - start_time
+        print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
     @staticmethod
     def _parse_crs(data, file_crs):

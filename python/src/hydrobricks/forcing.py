@@ -2,17 +2,17 @@ import sys
 
 if sys.version_info < (3, 11):
     try:
-        from strenum import StrEnum
+        from strenum import StrEnum, LowercaseStrEnum
     except ImportError:
         raise ImportError("Please install the 'StrEnum' package to use StrEnum "
                           "on Python versions prior to 3.11.")
 else:
     from enum import StrEnum
 
-from enum import auto
 import numpy as np
 import pandas as pd
 from cftime import num2date
+from enum import auto
 
 import hydrobricks as hb
 
@@ -22,7 +22,12 @@ from .time_series import TimeSeries1D, TimeSeries2D
 class Forcing:
     """Class for forcing data"""
 
-    class Variable(StrEnum):
+    if sys.version_info < (3, 11):
+        StrEnumClass = LowercaseStrEnum
+    else:
+        StrEnumClass = StrEnum
+
+    class Variable(StrEnumClass):
         P = auto()  # Precipitation [mm]
         T = auto()  # Temperature [°C]
         T_MIN = auto()  # Minimum temperature [°C]

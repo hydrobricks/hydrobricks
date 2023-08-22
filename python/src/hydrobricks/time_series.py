@@ -1,3 +1,6 @@
+import os
+import time
+import concurrent.futures
 import warnings
 from pathlib import Path
 
@@ -136,7 +139,7 @@ class TimeSeries2D(TimeSeries):
 
         # Get list of time steps
         time_nc = nc_data.variables[dim_time][:]
-        if not self.time:
+        if len(self.time) == 0:
             self.time = pd.Series(time_nc)
         else:
             # Check if the time steps are the same
@@ -152,6 +155,7 @@ class TimeSeries2D(TimeSeries):
 
         # Initialize data array
         data = np.zeros((unit_ids_nb, len(self.time)))
+        self.data.append(data)
 
         # Drop other variables
         other_coords = [v for v in nc_data.coords if v not in [dim_time, dim_x, dim_y]]
@@ -169,24 +173,43 @@ class TimeSeries2D(TimeSeries):
         # Rename spatial dimensions
         data_var = data_var.rename({dim_x: 'x', dim_y: 'y'})
 
-        # Extract each time step
-        for t, time in enumerate(self.time):
-            print(f"Extracting {time}")
+        # Time the computation
+        start_time = time.time()
 
-            # Reproject
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                data_var_t = data_var[t].rio.reproject_match(
-                    unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
+        # Create a ThreadPoolExecutor with a specified number of threads
+        num_threads = os.cpu_count()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            # Submit the tasks for each time step to the executor
+            futures = [executor.submit(self._extract_time_step_data, data_var,
+                                       unit_id_masks, unit_ids, unit_ids_nb, t)
+                       for t in range(len(self.time))]
 
-            # Extract data for each unit
-            for u in range(unit_ids_nb):
-                # Mask the meteorological data with the hydro unit.
-                val = hb.xr.where(unit_id_masks[u], data_var_t, np.nan).to_numpy()
-                # Mean the meteorological data in the unit.
-                data[u][t] = np.nanmean(val)
+            # Wait for all tasks to complete
+            concurrent.futures.wait(futures)
 
-        self.data.append(data)
+        # Print elapsed time
+        elapsed_time = time.time() - start_time
+        print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
+
+    def _extract_time_step_data(self, data_var, unit_id_masks, unit_ids, unit_ids_nb, t):
+        date = self.time[t]
+
+        # Print message very 20 time steps
+        if t % 20 == 0:
+            print(f"Extracting {date}")
+
+        # Reproject
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            data_var_t = data_var[t].rio.reproject_match(
+                unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
+
+        # Extract data for each unit
+        for u in range(unit_ids_nb):
+            # Mask the meteorological data with the hydro unit.
+            val = hb.xr.where(unit_id_masks[u], data_var_t, np.nan).to_numpy()
+            # Mean the meteorological data in the unit.
+            self.data[-1][u][t] = np.nanmean(val)
 
     @staticmethod
     def _parse_crs(data, file_crs):

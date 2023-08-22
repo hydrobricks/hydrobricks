@@ -1,8 +1,8 @@
 import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 import os
 import time
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np

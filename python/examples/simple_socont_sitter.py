@@ -42,12 +42,12 @@ forcing.load_station_data_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
     content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)'})
 
-forcing.set_spatialization_from_station_data(
+forcing.spatialize_from_station_data(
     variable='temperature', ref_elevation=ref_elevation, gradient=-0.6)
-forcing.set_prior_correction(variable='precipitation', correction_factor=0.75)
-forcing.set_spatialization_from_station_data(
+forcing.correct_station_data(variable='precipitation', correction_factor=0.75)
+forcing.spatialize_from_station_data(
     variable='precipitation', ref_elevation=ref_elevation, gradient=0.05)
-forcing.set_pet_computation(method='Hamon', use=['t', 'lat'], lat=47.3)
+forcing.compute_pet(method='Hamon', use=['t', 'lat'], lat=47.3)
 
 # Obs data
 obs = hb.Observations()

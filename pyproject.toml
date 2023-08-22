@@ -13,6 +13,7 @@ line-length = 88
 
 [tool.isort]
 profile = "black"
+known_first_party = ["_hydrobricks", "hydrobricks", "hydrobricks.*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -26,7 +27,7 @@ test-requires = "pytest pyyaml numpy pandas netCDF4 HydroErr pyet"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

@@ -118,14 +118,14 @@ def test_socont_closes_water_balance():
         CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='temperature', ref_elevation=station_temp_alt,
         gradient=parameters.get('temp_gradients'))
-    forcing.set_spatialization_from_station_data(variable='pet')
-    forcing.set_prior_correction(
+    forcing.spatialize_from_station_data(variable='pet')
+    forcing.correct_station_data(
         variable='precipitation',
         correction_factor=parameters.get('precip_correction_factor'))
-    forcing.set_spatialization_from_station_data(
+    forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=station_precip_alt,
         gradient=parameters.get('precip_gradient'))
 

@@ -1,7 +1,17 @@
-from enum import StrEnum, auto
+import sys
+
+if sys.version_info < (3, 11):
+    try:
+        from strenum import StrEnum, auto
+    except ImportError:
+        raise ImportError("Please install the 'StrEnum' package to use StrEnum "
+                          "on Python versions prior to 3.11.")
+else:
+    from enum import StrEnum, auto
 
 import numpy as np
 import pandas as pd
+from cftime import num2date
 
 import hydrobricks as hb
 
@@ -118,33 +128,33 @@ class Forcing:
 
         self.data1D.load_from_csv(path, column_time, time_format, content)
 
-    def set_prior_correction(self, **kwargs):
+    def correct_station_data(self, **kwargs):
         """
         Define the prior correction operations.
 
         Parameters
         ----------
-        variable: str
+        variable : str
             Name of the variable to correct.
-        method: str
+        method : str
             Name of the method to use. Possible values are:
             * additive: add a constant value
             * multiplicative: multiply by a constant value
-        correction_factor: float
+        correction_factor : float
             Value of the correction factor (to add or multiply).
         """
         kwargs['type'] = 'prior_correction'
         self._operations.append(kwargs)
 
-    def set_spatialization_from_station_data(self, **kwargs):
+    def spatialize_from_station_data(self, **kwargs):
         """
         Define the spatialization operations from station data to all hydro units.
 
         Parameters
         ----------
-        variable: str
+        variable : str
             Name of the variable to spatialize.
-        method: str
+        method : str
             Name of the method to use. Can be:
             * constant: the same value will be used
             * additive_elevation_gradient: use of an additive elevation gradient that
@@ -178,36 +188,59 @@ class Forcing:
         kwargs['type'] = 'spatialize_from_station'
         self._operations.append(kwargs)
 
-    def set_spatialization_from_gridded_data(self, **kwargs):
+    def spatialize_from_gridded_data(self, **kwargs):
         """
         Define the spatialization operations from gridded data to all hydro units.
 
         Parameters
         ----------
-
+        variable : str
+            Name of the variable to spatialize.
+        method : str
+            Name of the method to use. Can be:
+            * regrid_from_netcdf: regrid data from a single or multiple netCDF files.
+        path : str|Path
+            Path to the file containing the data or to a folder containing multiple
+            files.
+        file_pattern : str, optional
+            Pattern of the files to read. If None, the path is considered to be
+            a single file.
+        data_crs : int, optional
+            CRS (as EPSG id) of the data file. If None, the CRS is read from the file.
+        var_name : str
+            Name of the variable to read.
+        dim_time : str
+            Name of the time dimension.
+        dim_x : str
+            Name of the x dimension.
+        dim_y : str
+            Name of the y dimension.
+        raster_hydro_units : str|Path
+            Path to a raster containing the hydro unit ids to use for the
+            spatialization.
         """
         kwargs['type'] = 'spatialize_from_grid'
         self._operations.append(kwargs)
 
-    def set_pet_computation(self, **kwargs):
+    def compute_pet(self, **kwargs):
         """
         Define the PET computation operations using the pyet library. The PET will be
         computed for all hydro units.
 
         Parameters
         ----------
-        method: str
+        method : str
             Name of the method to use. Possible values are those provided in the
             table from the pyet documentation: https://pypi.org/project/pyet/. The
             method name or the pyet function name can be used.
-        use: list
+        use : list
             List of the meteorological variables to use to compute the PET. Only the
             variables listed here will be used. The variables must be named according
             to pyet naming convention (see pyet API documentation:
             https://pyet.readthedocs.io/en/latest/api/index.html).
             These variables must be available (data loaded in forcing) and spatialized.
             Example: use=['t', 'tmin', 'tmax', 'lat', 'elevation']
-        other options: see pyet documentation for function-specific options. These
+        other options : see pyet documentation for function-specific options. These
             options will be passed to the pyet function.
         """
         if not hb.has_pyet:
@@ -217,15 +250,15 @@ class Forcing:
 
         self._operations.append(kwargs)
 
-    def apply_operations(self, parameters, apply_to_all=True):
+    def apply_operations(self, parameters=None, apply_to_all=True):
         """
         Apply the pre-defined operations.
 
         Parameters
         ----------
-        parameters: ParameterSet
+        parameters : ParameterSet
             The parameter object instance.
-        apply_to_all: bool
+        apply_to_all : bool
             If True, the operations will be applied to all variables. If False, the
             operations will only be applied to the variables related to parameters
             defined in the parameters.allow_changing list. This is useful to avoid
@@ -241,19 +274,24 @@ class Forcing:
 
         self._is_initialized = True
 
-    def create_file(self, path, max_compression=False):
+    def save_as(self, path, max_compression=False):
         """
-        Read hydro units properties from csv file.
+        Create a netCDF file with the data.
 
         Parameters
         ----------
-        path : str
+        path : str|Path
             Path of the file to create.
-        max_compression: bool
+        max_compression : bool
             Option to allow maximum compression for data in file.
         """
         if not hb.has_netcdf:
             raise ImportError("netcdf4 is required to do this.")
+
+        if not self.is_initialized():
+            print("Applying operations before saving...")
+            self.apply_operations()
+            self._is_initialized = True
 
         time = self.data2D.get_dates_as_mjd()
 
@@ -285,6 +323,46 @@ class Forcing:
 
         nc.close()
 
+    def load_from(self, path):
+        """
+        Load data from a netCDF file created using save_as().
+
+        Parameters
+        ----------
+        path : str
+            Path of the file to read.
+        """
+        if not hb.has_netcdf:
+            raise ImportError("netcdf4 is required to do this.")
+
+        # Open netCDF file
+        nc = hb.Dataset(path, 'r', 'NETCDF4')
+
+        # Check that hydro units are the same
+        hydro_units_nc = nc.variables['id'][:]
+        if not np.array_equal(hydro_units_nc, self.hydro_units['id']):
+            raise ValueError("The hydrological units in the netCDF file are not "
+                             "the same as those in the forcing object. The netCDF file "
+                             "contains hydrological units with ids: "
+                             f"{hydro_units_nc}. The model contains hydrological "
+                             f"units with ids: {self.hydro_units['id']}.")
+
+        # Load time
+        ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
+        self.data2D.time = [pd.Timestamp(dt.year, dt.month, dt.day) for dt in ts]
+        self.data2D.time = pd.Series(self.data2D.time)
+
+        # Load variable names
+        self.data2D.data_name = [self.get_variable_enum(var) for var in nc.variables
+                                 if var not in ['id', 'time']]
+
+        # Load data
+        self.data2D.data = []
+        for variable in self.data2D.data_name:
+            self.data2D.data.append(nc.variables[variable][:])
+
+        nc.close()
+
     def get_total_precipitation(self):
         idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
@@ -292,7 +370,8 @@ class Forcing:
         tot_precip = data * areas / areas.sum()
         return tot_precip.sum()
 
-    def _apply_operations_of_type(self, operation_type, parameters, apply_to_all):
+    def _apply_operations_of_type(self, operation_type, parameters=None,
+                                  apply_to_all=True):
         for operation_ref in self._operations:
             operation = operation_ref.copy()
 
@@ -307,6 +386,10 @@ class Forcing:
             for key in operation:
                 value = operation[key]
                 if isinstance(value, str) and value.startswith('param:'):
+                    if parameters is None:
+                        raise ValueError('A parameters object must be provided '
+                                         'to apply the operations as it is '
+                                         f'required by the "{value}" option.')
                     parameter_name = value.replace('param:', '')
                     operation[key] = parameters.get(parameter_name)
                     if not apply_to_all:  # Restrict to parameters that changed
@@ -373,9 +456,8 @@ class Forcing:
 
         if isinstance(gradient, list):
             if len(gradient) not in [1, 12]:
-                raise ValueError(
-                    f'The gradient should have a length of 1 or 12. '
-                    f'Here: {len(gradient)}')
+                raise ValueError(f'The gradient should have a length of 1 or 12. '
+                                 f'Here: {len(gradient)}')
 
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():
@@ -390,7 +472,7 @@ class Forcing:
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw + gradient * (
-                                elevation - ref_elevation) / 100
+                            elevation - ref_elevation) / 100
                 elif isinstance(gradient, list) and len(gradient) == 12:
                     for m in range(12):
                         month = self.data1D.time.dt.month == m + 1
@@ -432,6 +514,9 @@ class Forcing:
                     unit_values[:, i_unit] = precip_below * (
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
 
+            else:
+                raise ValueError(f'Unknown method: {method}')
+
         # Check outputs
         if not self._can_be_negative(variable):
             unit_values[unit_values < 0] = 0
@@ -445,9 +530,30 @@ class Forcing:
             self.data2D.data_name.append(variable)
             self.data2D.time = self.data1D.time
 
-    def _apply_spatialization_from_gridded_data(self, variable, **kwargs):
+    def _apply_spatialization_from_gridded_data(self, variable, method='default',
+                                                **kwargs):
         variable = self.get_variable_enum(variable)
-        pass
+
+        # Specify default methods
+        if method == 'default':
+            method = 'regrid_from_netcdf'
+
+        if method == 'regrid_from_netcdf':
+            path = kwargs.get('path', None)
+            file_pattern = kwargs.get('file_pattern', None)
+            data_crs = kwargs.get('data_crs', None)
+            var_name = kwargs.get('var_name', None)
+            dim_time = kwargs.get('dim_time', 'time')
+            dim_x = kwargs.get('dim_x', 'x')
+            dim_y = kwargs.get('dim_y', 'y')
+            raster_hydro_units = kwargs.get('raster_hydro_units', None)
+            self.data2D.regrid_from_netcdf(
+                path, file_pattern=file_pattern, data_crs=data_crs, var_name=var_name,
+                dim_time=dim_time, dim_x=dim_x, dim_y=dim_y,
+                raster_hydro_units=raster_hydro_units)
+            self.data2D.data_name.append(variable)
+        else:
+            raise ValueError(f'Unknown method: {method}')
 
     def _apply_pet_computation(self, method, use, **kwargs):
         if not hb.has_pyet:

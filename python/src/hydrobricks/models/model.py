@@ -293,8 +293,8 @@ class Model(ABC):
 
     @abstractmethod
     def generate_parameters(self):
-        raise Exception(f'Parameters cannot be generated for the base model '
-                        f'(named {self.name}).')
+        raise RuntimeError(f'Parameters cannot be generated for the base model '
+                           f'(named {self.name}).')
 
     def _set_options(self, kwargs):
         if 'solver' in kwargs:

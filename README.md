@@ -7,7 +7,7 @@ A modular hydrological modelling framework.
 [![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
 [![GitHub release](https://img.shields.io/github/v/release/hydrobricks/hydrobricks)](https://github.com/hydrobricks/hydrobricks/releases)
 [![PyPI](https://img.shields.io/pypi/v/hydrobricks)](https://pypi.org/project/hydrobricks/)
-![Static Badge](https://img.shields.io/badge/python-%3E%3D3.11-blue)
+![Static Badge](https://img.shields.io/badge/python-%3E%3D3.8-blue)
 [![Core Tests Linux](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml)
 [![Python Wheels](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml)
 [![Core Doxygen](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-doxygen.yml)

@@ -2,8 +2,9 @@ import os
 import tempfile
 from pathlib import Path
 
-import hydrobricks as hb
 import pytest
+
+import hydrobricks as hb
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -21,13 +22,13 @@ def test_hydro_units_creation_with_land_covers():
 
 
 def test_hydro_units_creation_with_land_covers_mismatch():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
                       land_cover_names=None)
 
 
 def test_hydro_units_creation_with_land_covers_size_mismatch():
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
                       land_cover_names=['ground', 'glacier'])
 
@@ -41,7 +42,7 @@ def hydro_units():
 
 
 def test_load_from_csv_wrong_unit(hydro_units):
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         hydro_units.load_from_csv(
             TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
             area_unit='mi', column_elevation='Elevation Bands')
@@ -85,4 +86,4 @@ def test_create_file(hydro_units_csv):
         return
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        hydro_units_csv.create_file(tmp_dir + '/test.nc')
+        hydro_units_csv.save_as(tmp_dir + '/test.nc')

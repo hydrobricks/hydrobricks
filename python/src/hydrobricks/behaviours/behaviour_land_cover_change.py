@@ -1,6 +1,7 @@
-import _hydrobricks as _hb
 import numpy as np
 import pandas as pd
+
+import _hydrobricks as _hb
 from hydrobricks import utils
 
 from .behaviour import Behaviour

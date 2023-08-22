@@ -1,3 +1,5 @@
+import warnings
+
 from _hydrobricks import (
     close_log,
     init,
@@ -7,6 +9,7 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
+from .catchment import Catchment
 from .forcing import Forcing
 from .hydro_units import HydroUnits
 from .observations import Observations
@@ -14,7 +17,9 @@ from .parameters import ParameterSet
 from .time_series import TimeSeries
 
 try:
+    warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
     from netCDF4 import Dataset
+    warnings.resetwarnings()
 except ImportError:
     has_netcdf = False
 else:
@@ -57,8 +62,22 @@ except ImportError:
 else:
     has_pyet = True
 
+try:
+    import xarray as xr
+except ImportError:
+    has_xarray = False
+else:
+    has_xarray = True
+
+try:
+    import rioxarray as rxr
+except ImportError:
+    has_rioxarray = False
+else:
+    has_rioxarray = True
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'init', 'init_log', 'close_log', 'set_debug_log_level', 'set_max_log_level',
-           'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask',
-           'SpotpySetup', 'spotpy', 'pyet')
+           'Catchment', 'init', 'init_log', 'close_log', 'set_debug_log_level',
+           'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
+           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'xr', 'rxr')

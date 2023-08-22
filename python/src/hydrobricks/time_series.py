@@ -171,7 +171,9 @@ class TimeSeries2D(TimeSeries):
 
         # Extract each time step
         for t, time in enumerate(self.time):
-            print(f"Extracting {time}")
+            # Print message very 20 time steps
+            if t % 20 == 0:
+                print(f"Extracting {time}")
 
             # Reproject
             with warnings.catch_warnings():

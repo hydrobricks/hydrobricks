@@ -127,9 +127,9 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 
 VariableType TimeSeries::MatchVariableType(const string& varName) {
     VariableType varType;
-    if (StringsMatch(varName, "precipitation")) {
+    if (StringsMatch(varName, "precipitation") || StringsMatch(varName, "p")) {
         varType = Precipitation;
-    } else if (StringsMatch(varName, "temperature")) {
+    } else if (StringsMatch(varName, "temperature") || StringsMatch(varName, "t")) {
         varType = Temperature;
     } else if (StringsMatch(varName, "pet") || StringsMatch(varName, "etp")) {
         varType = PET;

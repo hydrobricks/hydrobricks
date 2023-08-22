@@ -3,6 +3,7 @@ requires = [
     "setuptools>=42",
     "wheel",
     "ninja",
+    "conan==1.*",
     "cmake>=3.12"
 ]
 build-backend = "setuptools.build_meta"
@@ -12,6 +13,7 @@ line-length = 88
 
 [tool.isort]
 profile = "black"
+known_first_party = ["_hydrobricks", "hydrobricks", "hydrobricks.*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -21,7 +23,7 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest pyyaml numpy pandas netCDF4 HydroErr"
+test-requires = "pytest pyyaml numpy pandas netCDF4 HydroErr pyet"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]

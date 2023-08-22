@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 
+import pytest
+
 import hydrobricks as hb
 import hydrobricks.behaviours as behaviours
 import hydrobricks.models as models
-import pytest
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),

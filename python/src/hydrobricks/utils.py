@@ -127,7 +127,7 @@ class Timer:
     def start(self):
         """Start a new timer."""
         if self._start_time is not None:
-            raise Exception("Timer is running. Use .stop() to stop it")
+            raise RuntimeError("Timer is running. Use .stop() to stop it")
 
         self._start_time = time.perf_counter()
 
@@ -137,7 +137,7 @@ class Timer:
             return
 
         if self._start_time is None:
-            raise Exception("Timer is not running. Use .start() to start it")
+            raise RuntimeError("Timer is not running. Use .start() to start it")
 
         # Calculate elapsed time
         self.last = time.perf_counter() - self._start_time

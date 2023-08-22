@@ -104,8 +104,9 @@ class CMakeBuild(build_ext):
             os.makedirs(build_temp)
 
         if not skip_conan:
-            subprocess.check_call(["conan", "install", ext.source_dir, "-s", "build_type=Release",
-                                   "--build=missing", "-pr:b=default"], cwd=build_temp)
+            subprocess.check_call(["conan", "install", ext.source_dir, "-s",
+                                   "build_type=Release", "--build=missing",
+                                   "-pr:b=default"], cwd=build_temp)
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 
@@ -125,11 +126,9 @@ setup(
     long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("_hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
-    packages=['hydrobricks', 'hydrobricks.models', 'hydrobricks.preprocessing',
-              'hydrobricks.behaviours'],
+    packages=['hydrobricks', 'hydrobricks.models', 'hydrobricks.behaviours'],
     package_dir={'hydrobricks': 'python/src/hydrobricks',
                  'hydrobricks.models': 'python/src/hydrobricks/models',
-                 'hydrobricks.preprocessing': 'python/src/hydrobricks/preprocessing',
                  'hydrobricks.behaviours': 'python/src/hydrobricks/behaviours',
                  },
     zip_safe=False,

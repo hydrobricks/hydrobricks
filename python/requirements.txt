@@ -1,4 +1,6 @@
+cftime
 HydroErr
 numpy
 pandas>=2.0
 pyyaml
+StrEnum

@@ -1,9 +1,10 @@
 import shutil
 
-import hydrobricks as hb
 import matplotlib.pyplot as plt
 import spotpy
 from setups.socont_sitter import forcing, obs, parameters, socont, tmp_dir
+
+import hydrobricks as hb
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',

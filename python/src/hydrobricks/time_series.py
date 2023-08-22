@@ -136,7 +136,13 @@ class TimeSeries2D(TimeSeries):
 
         # Get list of time steps
         time_nc = nc_data.variables[dim_time][:]
-        self.time = pd.Series(time_nc)
+        if not self.time:
+            self.time = pd.Series(time_nc)
+        else:
+            # Check if the time steps are the same
+            if not np.array_equal(self.time, time_nc):
+                raise ValueError("The time steps of the netcdf file do not match "
+                                 "the time steps of the hydro units data.")
 
         # Extract the unit id masks
         unit_id_masks = []
@@ -163,18 +169,20 @@ class TimeSeries2D(TimeSeries):
         # Rename spatial dimensions
         data_var = data_var.rename({dim_x: 'x', dim_y: 'y'})
 
-        # Reproject
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            data_var = data_var.rio.reproject_match(
-                unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
-
         # Extract each time step
         for t, time in enumerate(self.time):
             print(f"Extracting {time}")
+
+            # Reproject
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                data_var_t = data_var[t].rio.reproject_match(
+                    unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
+
+            # Extract data for each unit
             for u in range(unit_ids_nb):
                 # Mask the meteorological data with the hydro unit.
-                val = hb.xr.where(unit_id_masks[u], data_var[t], np.nan).to_numpy()
+                val = hb.xr.where(unit_id_masks[u], data_var_t, np.nan).to_numpy()
                 # Mean the meteorological data in the unit.
                 data[u][t] = np.nanmean(val)
 

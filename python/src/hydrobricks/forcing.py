@@ -134,13 +134,13 @@ class Forcing:
 
         Parameters
         ----------
-        variable: str
+        variable : str
             Name of the variable to correct.
-        method: str
+        method : str
             Name of the method to use. Possible values are:
             * additive: add a constant value
             * multiplicative: multiply by a constant value
-        correction_factor: float
+        correction_factor : float
             Value of the correction factor (to add or multiply).
         """
         kwargs['type'] = 'prior_correction'
@@ -152,9 +152,9 @@ class Forcing:
 
         Parameters
         ----------
-        variable: str
+        variable : str
             Name of the variable to spatialize.
-        method: str
+        method : str
             Name of the method to use. Can be:
             * constant: the same value will be used
             * additive_elevation_gradient: use of an additive elevation gradient that
@@ -194,7 +194,30 @@ class Forcing:
 
         Parameters
         ----------
-
+        variable : str
+            Name of the variable to spatialize.
+        method : str
+            Name of the method to use. Can be:
+            * regrid_from_netcdf: regrid data from a single or multiple netCDF files.
+        path : str|Path
+            Path to the file containing the data or to a folder containing multiple
+            files.
+        file_pattern : str, optional
+            Pattern of the files to read. If None, the path is considered to be
+            a single file.
+        data_crs : int, optional
+            CRS (as EPSG id) of the data file. If None, the CRS is read from the file.
+        var_name : str
+            Name of the variable to read.
+        dim_time : str
+            Name of the time dimension.
+        dim_x : str
+            Name of the x dimension.
+        dim_y : str
+            Name of the y dimension.
+        raster_hydro_units : str|Path
+            Path to a raster containing the hydro unit ids to use for the
+            spatialization.
         """
         kwargs['type'] = 'spatialize_from_grid'
         self._operations.append(kwargs)
@@ -206,18 +229,18 @@ class Forcing:
 
         Parameters
         ----------
-        method: str
+        method : str
             Name of the method to use. Possible values are those provided in the
             table from the pyet documentation: https://pypi.org/project/pyet/. The
             method name or the pyet function name can be used.
-        use: list
+        use : list
             List of the meteorological variables to use to compute the PET. Only the
             variables listed here will be used. The variables must be named according
             to pyet naming convention (see pyet API documentation:
             https://pyet.readthedocs.io/en/latest/api/index.html).
             These variables must be available (data loaded in forcing) and spatialized.
             Example: use=['t', 'tmin', 'tmax', 'lat', 'elevation']
-        other options: see pyet documentation for function-specific options. These
+        other options : see pyet documentation for function-specific options. These
             options will be passed to the pyet function.
         """
         if not hb.has_pyet:
@@ -233,9 +256,9 @@ class Forcing:
 
         Parameters
         ----------
-        parameters: ParameterSet
+        parameters : ParameterSet
             The parameter object instance.
-        apply_to_all: bool
+        apply_to_all : bool
             If True, the operations will be applied to all variables. If False, the
             operations will only be applied to the variables related to parameters
             defined in the parameters.allow_changing list. This is useful to avoid
@@ -259,7 +282,7 @@ class Forcing:
         ----------
         path : str
             Path of the file to create.
-        max_compression: bool
+        max_compression : bool
             Option to allow maximum compression for data in file.
         """
         if not hb.has_netcdf:

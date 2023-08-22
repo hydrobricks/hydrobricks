@@ -280,3 +280,19 @@ def test_regrid_from_netcdf_single_file(hydro_units):
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape[0] == 36
     assert forcing.data2D.data[0].shape[1] == 3
+
+
+def test_regrid_from_netcdf_multiple_files(hydro_units):
+    if not has_gridded_data_packages():
+        return
+
+    forcing = hb.Forcing(hydro_units)
+    forcing.spatialize_from_gridded_data(
+        variable='precipitation', path=CATCHMENT_DIR, file_pattern='*_precip.nc',
+        data_crs=2056, var_name='RhiresD', dim_x='E', dim_y='N',
+        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif')
+    forcing.apply_operations()
+
+    assert len(forcing.data2D.data) == 1
+    assert forcing.data2D.data[0].shape[0] == 36
+    assert forcing.data2D.data[0].shape[1] == 3

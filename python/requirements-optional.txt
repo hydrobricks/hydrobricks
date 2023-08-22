@@ -1,3 +1,4 @@
+dask
 geopandas
 matplotlib
 netCDF4

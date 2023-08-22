@@ -9,7 +9,7 @@ from hydrobricks import utils
 class HydroUnits:
     """Class for the hydro units"""
 
-    def __init__(self, land_cover_types=None, land_cover_names=None):
+    def __init__(self, land_cover_types=None, land_cover_names=None, data=None):
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
@@ -23,8 +23,11 @@ class HydroUnits:
         if land_cover_names:
             land_cover_cols = [f'{self.prefix_fraction}{item}' for item in
                                land_cover_names]
-        columns = ['id', 'area', 'elevation'] + land_cover_cols
-        self.hydro_units = pd.DataFrame(columns=columns)
+        if data is not None:
+            self._set_units_data(data)
+        else:
+            columns = ['id', 'area', 'elevation'] + land_cover_cols
+            self.hydro_units = pd.DataFrame(columns=columns)
 
     def load_from_csv(self, path, area_unit, column_elevation=None, column_area=None,
                       column_fractions=None, columns_areas=None):
@@ -151,6 +154,19 @@ class HydroUnits:
         self.hydro_units['area'] = area
         for idx, cover_name in enumerate(self.land_cover_names):
             self.hydro_units[self.prefix_fraction + cover_name] = fractions[:, idx]
+
+    def _set_units_data(self, data):
+        assert isinstance(data, pd.DataFrame)
+        assert 'area' in data.columns
+        assert 'elevation' in data.columns
+
+        if 'id' not in data.columns:
+            data['id'] = range(1, 1 + len(data))
+
+        self.hydro_units = data
+        idx = self.prefix_fraction + 'ground'
+        self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
+        self._populate_binding_instance()
 
     @staticmethod
     def _check_land_cover_definitions(land_cover_types, land_cover_names):

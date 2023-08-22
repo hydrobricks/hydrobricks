@@ -109,6 +109,7 @@ class TimeSeries2D(TimeSeries):
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
         # Get netCDF dataset
+        print(f"Reading netcdf file(s) from {path}...")
         if file_pattern is None:
             nc_data = hb.xr.open_dataset(path)
         else:

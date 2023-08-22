@@ -35,7 +35,6 @@ def test_elevation_bands_isohypses():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     bands = catchment.create_elevation_bands(method='isohypse', distance=50)
-    # bands.to_csv('elevation_bands.csv')
     assert 74430000 < bands['area'].sum() < 74450000
 
 

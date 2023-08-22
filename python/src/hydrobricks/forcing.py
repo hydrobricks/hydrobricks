@@ -280,7 +280,7 @@ class Forcing:
 
         Parameters
         ----------
-        path : str
+        path : str|Path
             Path of the file to create.
         max_compression : bool
             Option to allow maximum compression for data in file.

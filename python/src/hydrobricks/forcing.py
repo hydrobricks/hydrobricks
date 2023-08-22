@@ -10,6 +10,7 @@ else:
     from enum import StrEnum
 
 from enum import auto
+
 import numpy as np
 import pandas as pd
 from cftime import num2date

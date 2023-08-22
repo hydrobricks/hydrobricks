@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 ### Breaking changes
 
--   Many changes in the Forcing class: 
+-   Many changes in the Forcing class:
     -   load_from_csv() was renamed to load_station_data_from_csv().
     -   define_spatialization() was renamed to spatialize_from_station_data() and is only meant for spatialization from station data.
     -   correct_station_data() was added and is to be used for applying a correction factor, for example.

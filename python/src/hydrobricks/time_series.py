@@ -1,6 +1,7 @@
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import os
 import time
-import concurrent.futures
 import warnings
 from pathlib import Path
 
@@ -107,7 +108,7 @@ class TimeSeries2D(TimeSeries):
 
         # Get unit ids
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
             unit_ids = hb.rxr.open_rasterio(raster_hydro_units)
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
@@ -129,7 +130,7 @@ class TimeSeries2D(TimeSeries):
             print("The CRS of the netcdf file does not match the CRS of the "
                   "hydro unit ids raster. Reprojection will be done.")
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
                 unit_ids = unit_ids.rio.reproject(f'epsg:{data_crs}')
 
         # Get list of hydro unit ids
@@ -167,7 +168,7 @@ class TimeSeries2D(TimeSeries):
         # Specify the CRS if not specified
         if data_var.rio.crs is None:
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
                 data_var.rio.write_crs(f'epsg:{data_crs}', inplace=True)
 
         # Rename spatial dimensions
@@ -178,31 +179,29 @@ class TimeSeries2D(TimeSeries):
 
         # Create a ThreadPoolExecutor with a specified number of threads
         num_threads = os.cpu_count()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            # Submit the tasks for each time step to the executor
-            futures = [executor.submit(self._extract_time_step_data, data_var,
-                                       unit_id_masks, unit_ids, unit_ids_nb, t)
-                       for t in range(len(self.time))]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+            with ThreadPoolExecutor(max_workers=num_threads) as executor:
+                # Submit the tasks for each time step to the executor
+                futures = [executor.submit(self._extract_time_step_data, data_var,
+                                           unit_id_masks, unit_ids, unit_ids_nb, t)
+                           for t in range(len(self.time))]
 
-            # Wait for all tasks to complete
-            concurrent.futures.wait(futures)
+                # Wait for all tasks to complete
+                concurrent.futures.wait(futures)
 
         # Print elapsed time
         elapsed_time = time.time() - start_time
         print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
 
     def _extract_time_step_data(self, data_var, unit_id_masks, unit_ids, unit_ids_nb, t):
-        date = self.time[t]
-
         # Print message very 20 time steps
         if t % 20 == 0:
-            print(f"Extracting {date}")
+            print(f"Extracting {self.time[t]}")
 
         # Reproject
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            data_var_t = data_var[t].rio.reproject_match(
-                unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
+        data_var_t = data_var[t].rio.reproject_match(
+            unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
 
         # Extract data for each unit
         for u in range(unit_ids_nb):

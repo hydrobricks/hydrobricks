@@ -3,3 +3,4 @@ numpy
 pandas>=2.0
 pyyaml
 StrEnum
+cftime

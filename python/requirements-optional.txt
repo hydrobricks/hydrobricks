@@ -7,4 +7,3 @@ rasterio
 rioxarray
 shapely
 spotpy
-xarray

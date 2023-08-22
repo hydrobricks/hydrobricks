@@ -108,10 +108,10 @@ class TimeSeries2D(TimeSeries):
 
         # Get netCDF dataset
         if file_pattern is None:
-            nc_data = hb.xr.open_dataset(path)
+            nc_data = hb.rxr.open_dataset(path)
         else:
             files = sorted(Path(path).glob(file_pattern))
-            nc_data = hb.xr.open_mfdataset(files)
+            nc_data = hb.rxr.open_mfdataset(files)
 
         # Get CRS of the netcdf file
         data_crs = self._parse_crs(nc_data, data_crs)
@@ -138,7 +138,7 @@ class TimeSeries2D(TimeSeries):
         # Extract the unit id masks
         unit_id_masks = []
         for unit_id in unit_ids_list:
-            unit_id_mask = hb.xr.where(unit_ids == unit_id, 1, 0)
+            unit_id_mask = hb.rxr.where(unit_ids == unit_id, 1, 0)
             unit_id_masks.append(unit_id_mask)
 
         # Initialize data array
@@ -171,7 +171,7 @@ class TimeSeries2D(TimeSeries):
             print(f"Extracting {time}")
             for u in range(unit_ids_nb):
                 # Mask the meteorological data with the hydro unit.
-                val = hb.xr.where(unit_id_masks[u], data_var[t], np.nan).to_numpy()
+                val = hb.rxr.where(unit_id_masks[u], data_var[t], np.nan).to_numpy()
                 # Mean the meteorological data in the unit.
                 data[u][t] = np.nanmean(val)
 

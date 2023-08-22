@@ -13,8 +13,7 @@ CATCHMENT_DIR = Path(
 
 
 def has_gridded_data_packages() -> bool:
-    return (hb.has_rasterio and hb.has_geopandas and hb.has_shapely
-            and hb.has_netcdf and hb.has_rioxarray)
+    return hb.has_rasterio and hb.has_netcdf and hb.has_rioxarray and hb.has_xarray
 
 
 @pytest.fixture
@@ -267,7 +266,7 @@ def test_load_file(forcing, hydro_units):
         assert forcing2.data2D.data[1].shape == forcing.data2D.data[1].shape
 
 
-def test_regrid_from_netcdf_single_file_unit_ids_raster(hydro_units):
+def test_regrid_from_netcdf_single_file(hydro_units):
     if not has_gridded_data_packages():
         return
 

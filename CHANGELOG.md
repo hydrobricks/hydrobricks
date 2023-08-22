@@ -5,6 +5,37 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
+## 0.6.0 - 2023-08-22
+
+### Breaking changes
+
+-   Many changes in the Forcing class: 
+    -   load_from_csv() was renamed to load_station_data_from_csv().
+    -   define_spatialization() was renamed to spatialize_from_station_data() and is only meant for spatialization from station data.
+    -   correct_station_data() was added and is to be used for applying a correction factor, for example.
+    -   spatialize_from_gridded_data() was added to load data from gridded netCDF files.
+    -   compute_pet() was added and uses the pyet package.
+    -   The operations are not performed immediately, but only applied when apply_operations() is called, which is done automatically before the model run or before saving the forcing data to a netcdf file.
+-   The Catchment class is now part of the main module.
+
+### Added
+
+-   Adding the spatialization from gridded data with spatialize_from_gridded_data().
+-   Adding PET computation using the pyet library. New function: compute_pet().
+-   The forcing data can now be loaded from the dumped netCDF file with load_from().
+
+### Changed
+
+-   Refactoring of the Forcing and TimeSeries classes to separate 1D and 2D data.
+-   Enums are used to specify the Forcing variables.
+-   The Catchment class is now part of the main module.
+-   The Catchment class can generate a geotiff of the hydro unit ids with save_unit_ids_raster()
+
+### Fixed
+
+-   Fixing issue in elevation bands creation.
+
+
 ## 0.5.0 - 2023-07-06
 
 ### Breaking changes

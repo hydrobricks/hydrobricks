@@ -429,6 +429,11 @@ class Forcing:
 
     def _apply_spatialization_from_station_data(self, variable, method='default',
                                                 **kwargs):
+        # Checking that the correction_factor option is not used here anymore
+        if 'correction_factor' in kwargs:
+            raise ValueError('The correction_factor option is to be used only '
+                             'in the correct_station_data() method.')
+
         variable = self.get_variable_enum(variable)
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
         hydro_units = self.hydro_units.reset_index()

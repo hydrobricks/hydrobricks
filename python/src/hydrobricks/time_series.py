@@ -144,9 +144,19 @@ class TimeSeries2D(TimeSeries):
             self.time = pd.Series(time_nc)
         else:
             # Check if the time steps are the same
-            if not np.array_equal(self.time, time_nc):
-                raise ValueError("The time steps of the netcdf file do not match "
-                                 "the time steps of the hydro units data.")
+            if len(self.time) != len(time_nc):
+                raise ValueError(f"The length of the netcdf time series "
+                                 f"({len(time_nc)}) does not match the one from the "
+                                 f"hydro units data ({len(self.time)}).")
+            if self.time[0] != time_nc[0]:
+                raise ValueError(f"The first time step of the netcdf time series "
+                                 f"({time_nc[0].data}) does not match the one from the "
+                                 f"hydro units data ({self.time[0]}).")
+            if self.time[len(self.time) - 1] != time_nc[len(time_nc) - 1]:
+                raise ValueError(f"The last time step of the netcdf time series "
+                                 f"({time_nc[len(time_nc) - 1].data}) does not match "
+                                 f"the one from the hydro units data "
+                                 f"({self.time[len(self.time) - 1]}).")
 
         # Extract the unit id masks
         unit_id_masks = []

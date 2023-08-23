@@ -67,10 +67,9 @@ class TimeSeries2D(TimeSeries):
                            dim_time='time', dim_x='x', dim_y='y',
                            raster_hydro_units=None):
         """
-        Regrid time series data from netcdf files.
-        The spatialization is done using a raster of hydro unit ids.
-        The meteorological data is resampled to the DEM resolution using bilinear
-        interpolation.
+        Regrid time series data from netcdf files. The spatialization is done using a
+        raster of hydro unit ids. The meteorological data is resampled to the DEM
+        resolution.
 
         Parameters
         ----------
@@ -211,7 +210,7 @@ class TimeSeries2D(TimeSeries):
 
         # Reproject
         data_var_t = data_var[t].rio.reproject_match(
-            unit_ids, Resampling=hb.rasterio.enums.Resampling.bilinear)
+            unit_ids, Resampling=hb.rasterio.enums.Resampling.average)
 
         # Extract data for each unit
         for u in range(unit_ids_nb):

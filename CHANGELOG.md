@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
+## 0.6.1 - 2023-08-23
+
+### Fixed
+
+-   Fixing an issue with the data container shape when using the spatialization from gridded data.
+
+
 ## 0.6.0 - 2023-08-22
 
 ### Breaking changes
@@ -33,7 +40,7 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 ### Fixed
 
--   Fixing issue in elevation bands creation.
+-   Fixing an issue with the elevation range condition in the elevation bands creation.
 
 
 ## 0.5.0 - 2023-07-06

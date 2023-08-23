@@ -218,7 +218,7 @@ class TimeSeries2D(TimeSeries):
             # Mask the meteorological data with the hydro unit.
             val = hb.xr.where(unit_id_masks[u], data_var_t, np.nan).to_numpy()
             # Mean the meteorological data in the unit.
-            self.data[-1][u][t] = np.nanmean(val)
+            self.data[-1][t][u] = np.nanmean(val)
 
     @staticmethod
     def _parse_crs(data, file_crs):

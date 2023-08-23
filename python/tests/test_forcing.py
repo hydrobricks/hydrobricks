@@ -278,8 +278,8 @@ def test_regrid_from_netcdf_single_file(hydro_units):
     forcing.apply_operations()
 
     assert len(forcing.data2D.data) == 1
-    assert forcing.data2D.data[0].shape[0] == 36
-    assert forcing.data2D.data[0].shape[1] == 3
+    assert forcing.data2D.data[0].shape[0] == 3
+    assert forcing.data2D.data[0].shape[1] == 36
 
 
 def test_regrid_from_netcdf_multiple_files(hydro_units):
@@ -294,5 +294,5 @@ def test_regrid_from_netcdf_multiple_files(hydro_units):
     forcing.apply_operations()
 
     assert len(forcing.data2D.data) == 1
-    assert forcing.data2D.data[0].shape[0] == 36
-    assert forcing.data2D.data[0].shape[1] == 3
+    assert forcing.data2D.data[0].shape[0] == 3
+    assert forcing.data2D.data[0].shape[1] == 36

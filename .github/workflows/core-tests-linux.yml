@@ -108,6 +108,10 @@ jobs:
         working-directory: ${{github.workspace}}/bin
         run: lcov --list hydrobricks-coverage.info
 
-      - name: Sending to Codecov
-        working-directory: ${{github.workspace}}/bin
-        run: bash <(curl -s https://codecov.io/bash) -f hydrobricks-coverage.info || echo "Codecov did not collect coverage reports"
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          flags: core
+          files: ${{github.workspace}}/bin/hydrobricks-coverage.info

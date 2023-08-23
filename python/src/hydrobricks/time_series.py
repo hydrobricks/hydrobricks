@@ -165,7 +165,7 @@ class TimeSeries2D(TimeSeries):
             unit_id_masks.append(unit_id_mask)
 
         # Initialize data array
-        data = np.zeros((unit_ids_nb, len(self.time)))
+        data = np.zeros((len(self.time), unit_ids_nb))
         self.data.append(data)
 
         # Drop other variables

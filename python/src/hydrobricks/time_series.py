@@ -65,7 +65,8 @@ class TimeSeries2D(TimeSeries):
 
     def regrid_from_netcdf(self, path, file_pattern=None, data_crs=None, var_name=None,
                            dim_time='time', dim_x='x', dim_y='y',
-                           raster_hydro_units=None):
+                           raster_hydro_units=None, method='weights',
+                           weights_block_size=100):
         """
         Regrid time series data from netcdf files. The spatialization is done using a
         raster of hydro unit ids. The meteorological data is resampled to the DEM
@@ -92,6 +93,12 @@ class TimeSeries2D(TimeSeries):
         raster_hydro_units : str|Path
             Path to a raster containing the hydro unit ids to use for the
             spatialization.
+        method : str
+            Method to use for the spatialization. Can be 'reproject' or 'weights'.
+            It does not change the result but the 'weights' method is faster.
+        weights_block_size : int
+            Size of the block of time steps to use for the 'weights' method.
+            Default: 100.
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required for 'regrid_from_netcdf'.")
@@ -188,11 +195,10 @@ class TimeSeries2D(TimeSeries):
 
         num_threads = os.cpu_count()
 
-        method = 2
-        if method == 1:
+        if method == 'reproject':
             # Create a ThreadPoolExecutor with a specified number of threads
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+                warnings.simplefilter('ignore')  # Ignoring a warning from pyproj
                 with ThreadPoolExecutor(max_workers=num_threads) as executor:
                     # Submit the tasks for each time step to the executor
                     futures = [executor.submit(self._extract_time_step_data_reproject,
@@ -203,7 +209,7 @@ class TimeSeries2D(TimeSeries):
                     # Wait for all tasks to complete
                     concurrent.futures.wait(futures)
 
-        elif method == 2:
+        elif method == 'weights':
             # Create a xarray variable containing the data cell indices
             data_idx = data_var[0].copy()
             data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)
@@ -233,17 +239,20 @@ class TimeSeries2D(TimeSeries):
                 # Add the mask to the list
                 unit_weights.append(weights_mask)
 
-            block_size = 1000
-            n_steps = 1 + np.ceil(len(self.time) / block_size).astype(int)
+            n_steps = 1 + np.ceil(len(self.time) / weights_block_size).astype(int)
 
             with ThreadPoolExecutor(max_workers=num_threads) as executor:
                 # Submit the tasks for each time step to the executor
                 futures = [executor.submit(self._extract_time_step_data_weights,
-                                           data_var, unit_weights, t_block, block_size)
+                                           data_var, unit_weights, t_block,
+                                           weights_block_size)
                            for t_block in range(n_steps)]
 
                 # Wait for all tasks to complete
                 concurrent.futures.wait(futures)
+
+        else:
+            raise ValueError(f"Unknown method '{method}'.")
 
         # Print elapsed time
         elapsed_time = time.time() - start_time

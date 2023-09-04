@@ -159,6 +159,65 @@ class Catchment:
 
         return df
 
+    def get_hydro_units_attributes(self):
+        """
+        Extract the hydro units attributes.
+
+        Returns
+        -------
+        A dataframe with the hydro units attributes.
+        """
+        if not hb.has_pyproj:
+            raise ImportError("pyproj is required to do this.")
+
+        if self.slope is None or self.aspect is None:
+            self.calculate_slope_aspect()
+
+        unit_ids = np.unique(self.unit_ids)
+        unit_ids = unit_ids[unit_ids != 0]
+
+        res_area = np.zeros(len(unit_ids))
+        res_elevations_min = np.zeros(len(unit_ids))
+        res_elevations_max = np.zeros(len(unit_ids))
+        res_elevations_mean = np.zeros(len(unit_ids))
+        res_slope = np.zeros(len(unit_ids))
+        res_aspect = np.zeros(len(unit_ids))
+        re_lat = np.zeros(len(unit_ids))
+        re_lon = np.zeros(len(unit_ids))
+
+        for i, unit_id in enumerate(unit_ids):
+            mask_unit = self.unit_ids == unit_id
+
+            # Compute the area of the unit
+            n_cells = np.count_nonzero(mask_unit)
+            res_area[i] = round(n_cells * self.dem.res[0] * self.dem.res[1], 2)
+
+            # Compute the mean elevation of the unit
+            res_elevations_min[i] = self._extract_unit_min_elevation(mask_unit)
+            res_elevations_max[i] = self._extract_unit_max_elevation(mask_unit)
+            res_elevations_mean[i] = self._extract_unit_mean_elevation(mask_unit)
+
+            # Compute the slope and aspect of the unit
+            res_slope[i] = self._extract_unit_mean_slope(mask_unit)
+            res_aspect[i] = self._extract_unit_mean_aspect(mask_unit)
+
+            # Calculate the mean unit coordinates in lat/lon
+            re_lat[i], re_lon[i] = self._extract_unit_mean_lat_lon(mask_unit)
+
+        df = pd.DataFrame(columns=['elevation', 'elevation_min',
+                                   'elevation_max', 'area'])
+        df['elevation'] = res_elevations_mean
+        df['elevation_min'] = res_elevations_min
+        df['elevation_max'] = res_elevations_max
+        df['elevation_mean'] = res_elevations_mean
+        df['area'] = res_area
+        df['slope'] = res_slope
+        df['aspect'] = res_aspect
+        df['latitude'] = re_lat
+        df['longitude'] = re_lon
+
+        return df
+
     def get_mean_elevation(self):
         """
         Get the catchment mean elevation.
@@ -205,6 +264,29 @@ class Catchment:
         with hb.rasterio.open(path, 'w', **profile) as dst:
             dst.write(self.unit_ids, 1)
 
+    def load_unit_ids_from_raster(self, path):
+        """
+        Load hydro units from a raster file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the raster file containing the hydro unit ids.
+        """
+        if not hb.has_rasterio:
+            raise ImportError("rasterio is required to do this.")
+
+        with hb.rasterio.open(path) as src:
+            self._check_crs(src)
+            geoms = [hb.mapping(self.outline)]
+            self.unit_ids, _ = hb.mask(src, geoms, crop=False)
+            self.unit_ids[self.unit_ids == src.nodata] = 0
+
+            if len(self.unit_ids.shape) == 3:
+                self.unit_ids = self.unit_ids[0]
+
+            self.unit_ids = self.unit_ids.astype(hb.rasterio.uint16)
+
     def _extract_outline(self, outline):
         if not outline:
             return
@@ -228,6 +310,12 @@ class Catchment:
 
     def _extract_unit_mean_elevation(self, mask_unit):
         return round(float(np.nanmean(self.masked_dem_data[mask_unit])), 2)
+
+    def _extract_unit_min_elevation(self, mask_unit):
+        return round(float(np.nanmin(self.masked_dem_data[mask_unit])), 2)
+
+    def _extract_unit_max_elevation(self, mask_unit):
+        return round(float(np.nanmax(self.masked_dem_data[mask_unit])), 2)
 
     def _extract_unit_mean_lat_lon(self, mask_unit):
         # Get rows and cols of the unit

@@ -84,7 +84,6 @@ def test_load_units_from_raster():
 
 
 def test_load_units_from_raster_prepare_attributes():
-
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     df1 = catchment.create_elevation_bands(method='isohypse', distance=50)
@@ -101,3 +100,11 @@ def test_load_units_from_raster_prepare_attributes():
         assert np.allclose(df1['elevation_mean'], df2['elevation_mean'])
         assert np.allclose(df1['slope'], df2['slope'])
         assert np.allclose(df1['aspect'], df2['aspect'])
+
+
+def test_discretize_by_elevation_and_aspect():
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    df = catchment.discretize_by(criteria=['elevation', 'aspect'],
+                                 elevation_method='isohypse', elevation_distance=100)
+    assert len(df) == 72  # 4 classes were empty

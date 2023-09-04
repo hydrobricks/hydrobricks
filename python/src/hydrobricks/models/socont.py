@@ -42,7 +42,7 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-            aliases=['a_snow'], min_value=1, max_value=12, mandatory=True)
+            aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',

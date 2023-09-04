@@ -102,8 +102,6 @@ class TimeSeries2D(TimeSeries):
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required for 'regrid_from_netcdf'.")
-        if not hb.has_xarray:
-            raise ImportError("rioxarray is required for 'regrid_from_netcdf'.")
         if not hb.has_rioxarray:
             raise ImportError("rioxarray is required for 'regrid_from_netcdf'.")
         if not hb.has_netcdf:

@@ -63,6 +63,13 @@ else:
     has_pyet = True
 
 try:
+    import pyproj
+except ImportError:
+    has_pyproj = False
+else:
+    has_pyproj = True
+
+try:
     import xarray as xr
 except ImportError:
     has_xarray = False
@@ -75,9 +82,23 @@ except ImportError:
     has_rioxarray = False
 else:
     has_rioxarray = True
+    if not has_xarray:
+        raise ImportError("xarray is required to use rioxarray.")
+
+try:
+    import xrspatial as xrs
+except ImportError:
+    has_xrspatial = False
+else:
+    has_xrspatial = True
+    if not has_xarray:
+        raise ImportError("xarray is required to use xrspatial.")
+    if not has_rioxarray:
+        raise ImportError("rioxarray is required to use xrspatial.")
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'Catchment', 'init', 'init_log', 'close_log', 'set_debug_log_level',
            'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
-           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'xr', 'rxr')
+           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr',
+           'xrs')

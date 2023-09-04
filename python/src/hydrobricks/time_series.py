@@ -214,8 +214,10 @@ class TimeSeries2D(TimeSeries):
             data_idx = data_idx.astype(float)
 
             # Reproject the data cell indices to the hydro unit raster
-            data_idx_reproj = data_idx.rio.reproject_match(
-                unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')  # Ignoring a warning from pyproj
+                data_idx_reproj = data_idx.rio.reproject_match(
+                    unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
 
             # Create the masks (with the original data shape) for each unit with the
             # weights to apply to the gridded data contributing to the unit

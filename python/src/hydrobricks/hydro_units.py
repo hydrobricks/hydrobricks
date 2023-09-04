@@ -29,7 +29,7 @@ class HydroUnits:
             columns = ['id', 'area', 'elevation'] + land_cover_cols
             self.hydro_units = pd.DataFrame(columns=columns)
 
-    def load_from_csv(self, path, column_elevation='elevation', column_area='area',
+    def load_from_csv(self, path, column_elevation=None, column_area=None,
                       area_unit='m2', column_fractions=None, columns_areas=None,
                       column_slope=None, column_aspect=None, column_lat=None,
                       column_lon=None):
@@ -65,8 +65,16 @@ class HydroUnits:
         file_content = pd.read_csv(path)
 
         self.hydro_units['id'] = range(1, 1 + len(file_content))
-        self.hydro_units['elevation'] = file_content[column_elevation]
-        self.hydro_units['area'] = file_content[column_area]
+
+        if column_elevation is not None:
+            self.hydro_units['elevation'] = file_content[column_elevation]
+        elif 'elevation' in file_content.columns:
+            self.hydro_units['elevation'] = file_content['elevation']
+
+        if column_area is not None:
+            self.hydro_units['area'] = file_content[column_area]
+        elif 'area' in file_content.columns:
+            self.hydro_units['area'] = file_content['area']
 
         if column_slope is not None:
             self.hydro_units['slope'] = file_content[column_slope]

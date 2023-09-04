@@ -599,7 +599,7 @@ class Forcing:
             if use_unit_elevation:
                 pyet_args['elevation'] = unit['elevation']
             if use_unit_latitude:
-                pyet_args['lat'] = unit['latitude']
+                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'])
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 

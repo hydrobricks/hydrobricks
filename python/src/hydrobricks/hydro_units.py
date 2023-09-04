@@ -29,8 +29,10 @@ class HydroUnits:
             columns = ['id', 'area', 'elevation'] + land_cover_cols
             self.hydro_units = pd.DataFrame(columns=columns)
 
-    def load_from_csv(self, path, area_unit, column_elevation=None, column_area=None,
-                      column_fractions=None, columns_areas=None):
+    def load_from_csv(self, path, column_elevation='elevation', column_area='area',
+                      area_unit='m2', column_fractions=None, columns_areas=None,
+                      column_slope=None, column_aspect=None, column_lat=None,
+                      column_lon=None):
         """
         Read hydro units properties from csv file.
 
@@ -38,27 +40,53 @@ class HydroUnits:
         ----------
         path : str|Path
             Path to the csv file containing hydro units data.
-        area_unit: str
-            Unit for the area values: "m2" or "km2"
-        column_elevation : str
+        column_elevation : str, optional
             Column name containing the elevation values in [m] (optional).
-        column_area : str
+            Default: elevation
+        column_area : str, optional
             Column name containing the area values (optional).
-        column_fractions : dict
+            Default: area
+        column_fractions : dict, optional
             Column name containing the area fraction values for each land cover
             (optional).
-        columns_areas : dict
+        columns_areas : dict, optional
             Column name containing the area values for each land cover (optional).
+        area_unit: str, optional
+            Unit for the area values: "m2" or "km2"
+        column_slope : str, optional
+            Column name containing the slope values in degree (optional).
+        column_aspect : str, optional
+            Column name containing the aspect values in degree (optional).
+        column_lat : str, optional
+            Column name containing the latitude values (optional).
+        column_lon : str, optional
+            Column name containing the longitude values (optional).
         """
         file_content = pd.read_csv(path)
 
         self.hydro_units['id'] = range(1, 1 + len(file_content))
+        self.hydro_units['elevation'] = file_content[column_elevation]
+        self.hydro_units['area'] = file_content[column_area]
 
-        if column_elevation is not None:
-            self.hydro_units['elevation'] = file_content[column_elevation]
+        if column_slope is not None:
+            self.hydro_units['slope'] = file_content[column_slope]
+        elif 'slope' in file_content.columns:
+            self.hydro_units['slope'] = file_content['slope']
 
-        if column_area is not None:
-            self.hydro_units['area'] = file_content[column_area]
+        if column_aspect is not None:
+            self.hydro_units['aspect'] = file_content[column_aspect]
+        elif 'aspect' in file_content.columns:
+            self.hydro_units['aspect'] = file_content['aspect']
+
+        if column_lat is not None:
+            self.hydro_units['latitude'] = file_content[column_lat]
+        elif 'latitude' in file_content.columns:
+            self.hydro_units['latitude'] = file_content['latitude']
+
+        if column_lon is not None:
+            self.hydro_units['longitude'] = file_content[column_lon]
+        elif 'longitude' in file_content.columns:
+            self.hydro_units['longitude'] = file_content['longitude']
 
         if column_fractions is not None:
             raise NotImplementedError
@@ -128,7 +156,14 @@ class HydroUnits:
 
     def _populate_binding_instance(self):
         for _, row in self.hydro_units.iterrows():
-            self.settings.add_hydro_unit(int(row['id']), row['area'], row['elevation'])
+            slope = np.nan
+            if 'slope' in self.hydro_units.columns:
+                slope = row['slope']
+            aspect = np.nan
+            if 'aspect' in self.hydro_units.columns:
+                aspect = row['aspect']
+            self.settings.add_hydro_unit(int(row['id']), row['area'], row['elevation'],
+                                         slope, aspect)
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = row[self.prefix_fraction + cover_name]

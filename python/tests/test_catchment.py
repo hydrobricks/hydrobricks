@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import numpy as np
 from pathlib import Path
 
 import hydrobricks as hb
@@ -65,3 +66,45 @@ def test_save_unit_ids_raster():
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
         assert (Path(tmp_dir) / 'unit_ids.tif').exists()
+
+
+def test_load_units_from_raster():
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.create_elevation_bands(method='isohypse', distance=50)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
+
+        catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
+        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2.load_unit_ids_from_raster(Path(tmp_dir) / 'unit_ids.tif')
+        assert np.allclose(catchment2.unit_ids, catchment.unit_ids)
+
+
+def test_load_units_from_raster_prepare_attributes():
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    df1 = catchment.create_elevation_bands(method='isohypse', distance=50)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
+
+        catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
+        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2.load_unit_ids_from_raster(Path(tmp_dir) / 'unit_ids.tif')
+        df2 = catchment2.get_hydro_units_attributes()
+
+        assert np.allclose(df1['area'], df2['area'])
+        assert np.allclose(df1['elevation_mean'], df2['elevation_mean'])
+        assert np.allclose(df1['slope'], df2['slope'])
+        assert np.allclose(df1['aspect'], df2['aspect'])
+
+
+def test_discretize_by_elevation_and_aspect():
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    df = catchment.discretize_by(criteria=['elevation', 'aspect'],
+                                 elevation_method='isohypse', elevation_distance=100)
+    assert len(df) == 72  # 4 classes were empty

@@ -208,6 +208,14 @@ class FileNetcdf : public wxObject {
     void PutVar(int varId, const vecAxxd& values);
 
     /**
+     * Check if a variable exists.
+     *
+     * @param varName The variable name.
+     * @return True if the attribute exists, false otherwise.
+     */
+    bool HasVar(const string& varName);
+
+    /**
      * Check if an attribute exists.
      *
      * @param attName The attribute name.

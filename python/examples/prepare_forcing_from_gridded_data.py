@@ -43,7 +43,7 @@ forcing.spatialize_from_gridded_data(
     variable='temperature', path=(Path(FORCING_DIR) / 'TabsD_v2.0_swiss.lv95'),
     file_pattern='TabsD_ch01r.swiss.lv95_*.nc', data_crs=2056, var_name='TabsD',
     dim_x='E', dim_y='N', raster_hydro_units=working_dir / 'unit_ids.tif')
-forcing.compute_pet(method='Hamon', use=['t', 'lat'], lat=47.3)
+forcing.compute_pet(method='Hamon', use=['t', 'lat'])
 
 # Save forcing to a netcdf file
 forcing.save_as(working_dir / 'forcing.nc')

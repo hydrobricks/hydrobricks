@@ -247,6 +247,9 @@ class Forcing:
             https://pyet.readthedocs.io/en/latest/api/index.html).
             These variables must be available (data loaded in forcing) and spatialized.
             Example: use=['t', 'tmin', 'tmax', 'lat', 'elevation']
+        lat : float, optional
+            Latitude of the catchment. If not provided, the latitude computed for each
+            hydro unit will be used.
         other options : see pyet documentation for function-specific options. These
             options will be passed to the pyet function.
         """
@@ -571,12 +574,21 @@ class Forcing:
         if not hb.has_pyet:
             raise ImportError("pyet is required to do this.")
 
-        use_elevation = False
-        if 'elevation' in use:
-            use_elevation = True
-
         pyet_args = {}
-        pyet_args = self._extract_lat_option(kwargs, pyet_args, use)
+
+        use_unit_elevation = False
+        use_unit_latitude = False
+        if 'elevation' in use:
+            use_unit_elevation = True
+        if 'latitude' in use or 'lat' in use:
+            # If latitude provided in the arguments
+            if 'latitude' in kwargs:
+                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['latitude'])
+            elif 'lat' in kwargs:
+                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['lat'])
+            else:
+                use_unit_latitude = True
+
         use = self._remove_lat_elevation_options(use)
         self._check_variables_available(use)
 
@@ -584,8 +596,10 @@ class Forcing:
         # not working as expected in multiplicative operations)
         pet = np.zeros((len(self.data2D.time), len(self.hydro_units)))
         for i_unit, unit in self.hydro_units.iterrows():
-            if use_elevation:
+            if use_unit_elevation:
                 pyet_args['elevation'] = unit['elevation']
+            if use_unit_latitude:
+                pyet_args['lat'] = unit['latitude']
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 
@@ -671,20 +685,6 @@ class Forcing:
         for v in use:
             if v not in self.data2D.data_name:
                 raise ValueError(f"Variable {v} is not available.")
-
-    @staticmethod
-    def _extract_lat_option(kwargs, pyet_args, use):
-        # Set latitude and elevation to the pyet arguments
-        if 'latitude' in use or 'lat' in use:
-            # Latitude must be provided in the arguments
-            if 'latitude' in kwargs:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['latitude'])
-            elif 'lat' in kwargs:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['lat'])
-            else:
-                raise ValueError("Latitude [°] must be provided in the arguments.")
-
-        return pyet_args
 
     @staticmethod
     def _remove_lat_elevation_options(use):

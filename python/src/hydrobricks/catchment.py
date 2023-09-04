@@ -173,7 +173,7 @@ class Catchment:
         """
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
-        xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop('band')[0]
+        xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
         self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
         self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 

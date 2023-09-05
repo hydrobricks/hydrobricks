@@ -69,7 +69,7 @@ class HydroUnit : public wxObject {
         m_id = id;
     }
 
-    double GetArea() {
+    double GetArea() const {
         return m_area;
     }
 

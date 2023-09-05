@@ -9,9 +9,9 @@ class Urban : public LandCover {
     Urban();
 
     /**
-     * @copydoc Brick::AssignParameters()
+     * @copydoc Brick::SetParameters()
      */
-    void AssignParameters(const BrickSettings& brickSettings) override;
+    void SetParameters(const BrickSettings& brickSettings) override;
 
     void ApplyConstraints(double timeStep) override;
 

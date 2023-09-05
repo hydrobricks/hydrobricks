@@ -24,7 +24,7 @@ class Brick : public wxObject {
      *
      * @param brickSettings settings of the brick containing the parameters.
      */
-    virtual void AssignParameters(const BrickSettings& brickSettings);
+    virtual void SetParameters(const BrickSettings& brickSettings);
 
     /**
      * Attach incoming flux.

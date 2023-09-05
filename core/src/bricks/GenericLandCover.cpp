@@ -3,8 +3,8 @@
 GenericLandCover::GenericLandCover()
     : LandCover() {}
 
-void GenericLandCover::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void GenericLandCover::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
 }
 
 void GenericLandCover::ApplyConstraints(double timeStep) {

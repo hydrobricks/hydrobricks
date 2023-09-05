@@ -12,7 +12,7 @@ bool SplitterMultiFluxes::IsOk() {
     return true;
 }
 
-void SplitterMultiFluxes::AssignParameters(const SplitterSettings&) {
+void SplitterMultiFluxes::SetParameters(const SplitterSettings&) {
     // No parameter
 }
 

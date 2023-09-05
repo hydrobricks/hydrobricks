@@ -7,6 +7,7 @@
 #include "SettingsModel.h"
 
 class Brick;
+class HydroUnit;
 class WaterContainer;
 
 class Process : public wxObject {
@@ -31,11 +32,19 @@ class Process : public wxObject {
     static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
 
     /**
+     * Set the properties of the hydro unit.
+     *
+     * @param unit the related hydro unit.
+     * @param brick the related brick.
+     */
+    virtual void SetHydroUnitProperties(const HydroUnit* unit, const Brick* brick);
+
+    /**
      * Assign the parameters to the process.
      *
      * @param processSettings settings of the process containing the parameters.
      */
-    virtual void AssignParameters(const ProcessSettings& processSettings);
+    virtual void SetParameters(const ProcessSettings& processSettings);
 
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();

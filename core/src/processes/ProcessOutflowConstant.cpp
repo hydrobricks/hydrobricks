@@ -7,8 +7,8 @@ ProcessOutflowConstant::ProcessOutflowConstant(WaterContainer* container)
     : ProcessOutflow(container),
       m_rate(nullptr) {}
 
-void ProcessOutflowConstant::AssignParameters(const ProcessSettings& processSettings) {
-    Process::AssignParameters(processSettings);
+void ProcessOutflowConstant::SetParameters(const ProcessSettings& processSettings) {
+    Process::SetParameters(processSettings);
     if (HasParameter(processSettings, "percolation_rate")) {
         m_rate = GetParameterValuePointer(processSettings, "percolation_rate");
     } else {

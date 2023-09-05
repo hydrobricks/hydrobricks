@@ -3,8 +3,8 @@
 Vegetation::Vegetation()
     : LandCover() {}
 
-void Vegetation::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void Vegetation::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
 }
 
 void Vegetation::ApplyConstraints(double timeStep) {

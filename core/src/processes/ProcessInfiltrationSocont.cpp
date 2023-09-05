@@ -6,8 +6,8 @@
 ProcessInfiltrationSocont::ProcessInfiltrationSocont(WaterContainer* container)
     : ProcessInfiltration(container) {}
 
-void ProcessInfiltrationSocont::AssignParameters(const ProcessSettings& processSettings) {
-    Process::AssignParameters(processSettings);
+void ProcessInfiltrationSocont::SetParameters(const ProcessSettings& processSettings) {
+    Process::SetParameters(processSettings);
 }
 
 vecDouble ProcessInfiltrationSocont::GetRates() {

@@ -12,9 +12,14 @@ class ProcessRunoffSocont : public ProcessOutflow {
     ~ProcessRunoffSocont() override = default;
 
     /**
-     * @copydoc Process::AssignParameters()
+     * @copydoc Process::SetHydroUnitProperties()
      */
-    void AssignParameters(const ProcessSettings& processSettings) override;
+    void SetHydroUnitProperties(const HydroUnit* unit, const Brick* brick) override;
+
+    /**
+     * @copydoc Process::SetParameters()
+     */
+    void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
     float* m_slope; // [ratio]

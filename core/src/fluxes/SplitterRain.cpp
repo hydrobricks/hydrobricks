@@ -13,7 +13,7 @@ bool SplitterRain::IsOk() {
     return true;
 }
 
-void SplitterRain::AssignParameters(const SplitterSettings&) {
+void SplitterRain::SetParameters(const SplitterSettings&) {
     //
 }
 

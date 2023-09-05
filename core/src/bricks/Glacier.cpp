@@ -16,8 +16,8 @@ void Glacier::SaveAsInitialState() {
     m_ice->SaveAsInitialState();
 }
 
-void Glacier::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void Glacier::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
         if (GetParameterValuePointer(brickSettings, "infinite_storage")) {
             m_ice->SetAsInfiniteStorage();

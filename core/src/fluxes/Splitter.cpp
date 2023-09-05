@@ -10,7 +10,7 @@ Splitter::Splitter() {}
 Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
     if (splitterSettings.type == "snow_rain") {
         auto splitter = new SplitterSnowRain();
-        splitter->AssignParameters(splitterSettings);
+        splitter->SetParameters(splitterSettings);
         return splitter;
     } else if (splitterSettings.type == "rain") {
         return new SplitterRain();

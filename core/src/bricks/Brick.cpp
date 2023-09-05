@@ -62,7 +62,7 @@ bool Brick::IsOk() {
     return m_container->IsOk();
 }
 
-void Brick::AssignParameters(const BrickSettings& brickSettings) {
+void Brick::SetParameters(const BrickSettings& brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
         m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }

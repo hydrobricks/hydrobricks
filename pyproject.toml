@@ -23,7 +23,7 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest cftime HydroErr numpy pandas>=2.0 pyyaml StrEnum dask geopandas netCDF4 pyet rasterio rioxarray shapely xarray"
+test-requires = "pytest cftime HydroErr numpy pandas>=2.0 pyyaml StrEnum dask geopandas netCDF4 pyet rasterio rioxarray shapely xarray xarray-spatial"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]

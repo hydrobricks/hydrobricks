@@ -17,46 +17,47 @@ print(hb.__file__)
 
 
 def compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, 
-                                            forcing, outline, outline_epsg, target_epsg, elevation_bands, var_bands):
+                                            forcing, outline, outline_epsg, target_epsg, elevation_bands, var_bands, 
+                                            meteo_data):
     start, end = forcing.initialize_from_netcdf_HR(pet_nc_file, 'pet', tif_filename, 
                                                    outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
-                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   column_time='time', time_format='%Y-%m-%d',
                                                    content={'pet': 'pet_sim(mm/day)'})
     forcing.spatialize('pet','from_gridded_data')
     print('start, end = ', start, end)
     start, end = forcing.initialize_from_netcdf_HR(pr_nc_file, 'pr', tif_filename,
                                                    outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
-                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   column_time='time', time_format='%Y-%m-%d',
                                                    content={'precipitation': 'precip(mm/day)'})
     forcing.spatialize('precipitation','from_gridded_data')
     print('start, end = ', start, end)
     start, end = forcing.initialize_from_netcdf_HR(tas_nc_file, 'tas', tif_filename, 
                                                    outline, outline_epsg, target_epsg, elevation_bands, tif_CRS, nc_CRS,
-                                                   column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
+                                                   column_time='time', time_format='%Y-%m-%d',
                                                    content={'temperature': 'temp(C)'})
     forcing.spatialize('temperature','from_gridded_data')
     print('start, end = ', start, end)
 
     for name, data in zip(forcing.data_name, forcing.data_raw):
-        np.savetxt(var_bands + name + "_HR.csv", data.T, delimiter=",", header=name)
+        np.savetxt(var_bands + name + f"_HR_{meteo_data}.csv", data.T, delimiter=",", header=name)
     for name, data_interp in zip(forcing.data_name, forcing.data_spatialized):
-        np.savetxt(var_bands + name + "_interp_HR.csv", data_interp, delimiter=",", header=name)
-    np.savetxt(var_bands + "time_HR.csv", forcing.time, delimiter=",", header='time', fmt="%s")
+        np.savetxt(var_bands + name + f"_interp_HR_{meteo_data}.csv", data_interp, delimiter=",", header=name)
+    np.savetxt(var_bands + f"time_HR_{meteo_data}.csv", forcing.time, delimiter=",", header='time', fmt="%s")
 
 def compute_the_elevation_interpolations(forcing, elevation_thrs):
-    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc', 'pet',
+    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_Out.nc', 'pet',
                                    '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj_resamp.nc', elevation_thrs,
                                    column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                    content={'pet': 'pet_sim(mm/day)'})
     forcing.spatialize('pet','from_gridded_data')
     print('start, end = ', start, end)
-    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc', 'pr',
+    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_Out.nc', 'pr',
                                '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj_resamp.nc', elevation_thrs,
                                column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                content={'precipitation': 'precip(mm/day)'})
     forcing.spatialize('precipitation','from_gridded_data')
     print('start, end = ', start, end)
-    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc', 'tas',
+    start, end = forcing.initialize_from_netcdf('/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_Out.nc', 'tas',
                                    '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj_resamp.nc', elevation_thrs,
                                    column_time='time', time_format='%Y-%m-%d', #ref_start_datetime=datetime(1900,1,1,0,0,0),
                                    content={'temperature': 'temp(C)'})
@@ -231,66 +232,120 @@ def create_land_cover_evolution_files(elevation_bands, whole_glaciers, debris_gl
 # and computes the mean elevation and the elevation bands, to finally convert them to CSV files.
 
 
-def main_script(catchm):
+def main_script(catchm, area):
 
     ####### INPUT FILES ################
     path = "/home/anne-laure/Documents/Datasets/"
-    dem_path = f"{path}Swiss_Study_area/StudyAreas_EPSG21781.tif"
-    outline = f"{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/{catchm}_UpslopeArea_EPSG21781.shp" #f"{path}Swiss_Study_area/LaNavisence_Chippis/125595_EPSG21781.shp"
-    outline_epsg = 21781
-    method = 'set_isohypses' 
-    min_val = 1900
-    max_val = 3900
-    distance = 20
+    if area == 'Arolla':
+        dem_path = f"{path}Swiss_Study_area/StudyAreas_EPSG21781.tif"
+        outline = f"{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/{catchm}_UpslopeArea_EPSG21781/out.shp" #f"{path}Swiss_Study_area/LaNavisence_Chippis/125595_EPSG21781.shp"
+        outline_epsg = 21781
+        method = 'set_isohypses' 
+        min_val = 1900
+        max_val = 3900
+        distance = 40
+    elif area == 'Solda':
+        dem_path = f"{path}Italy_Study_area/dtm_25m_utm_st_whole_StudyArea_OriginalCRS_filled.tif"
+        outline = f"{path}Italy_discharge/Watersheds/{catchm}_UpslopeArea_EPSG25832/out.shp"
+        outline_epsg = 25832
+        method = 'set_isohypses' 
+        min_val = 1100
+        max_val = 3900
+        distance = 70
     
     ####### DISCHARGE DATASETS #########
-    discharge_file = f"{path}Outputs/Arolla_hydrobricks_discharge_{catchm}.csv" #"/home/anne-laure/eclipse-workspace/eclipse-workspace/GSM-SOCONT/tests/files/catchments/ch_sitter_appenzell/discharge.csv"
+    discharge_file = f"{path}Outputs/ObservedDischarges/{area}_hydrobricks_discharge_{catchm}.csv"
     column_time = 'Date'
     time_format = '%d/%m/%Y'
     content = {'discharge': 'Discharge (mm/d)'}
     
     ####### MODELISATION TIMESPAN ######
-    start_date = '2009-01-01' #'1989-01-01'
-    end_date = '2014-12-31'
+    if area == 'Arolla':
+        start_date = '2009-01-01' #'1989-01-01'
+        end_date = '2014-12-31'
+    elif area == 'Solda':
+        if catchm == 'PS':
+            start_date = '2014-01-10'
+            end_date = '2018-12-31' # Can't go later ('2021-12-22') since Crespi's data ends in 2018.
+        elif catchm == 'SGF':
+            start_date = '2017-06-29'
+            end_date = '2020-05-25'
+        elif catchm == 'TF':
+            start_date = '2017-06-20'
+            end_date = '2019-10-16'
+        elif catchm == 'ZA':
+            start_date = '2017-06-21'
+            end_date = '2018-11-14'
     
     ####### MODELISATION PARAMETERS ####
     inversion = True
-    inversed_params = ['A', 'a_snow', 'k_slow_1', 'k_slow_2', 
-                       'k_quick', 'percol',
-                       'a_ice', 'k_snow', 'k_ice'] # 'precip_corr_factor'
-    obj_func = 'mse' #'kge_2012' #'nse'
-    # Select the number of maximum repetitions
-    warmup = 5 #365
-    max_rep = 10 #10000
-    algorithm = 'SCEUA' # 'MC' # The result filename depends on this algorithm name.
-    # else
-    set_params = {'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
-                  'k_quick': 1, 'percol': 9.8}
+    with_debris = False
+    compute_altitudinal_trends = True
+    run_model = False
+    meteo_data = "Crespi" # Choose between "CH2018", "CrespiEtAl", "MeteoSwiss"
+    if area == 'Arolla':
+        assert(meteo_data == "MeteoSwiss" or meteo_data == "CH2018")
+    elif area == 'Solda':
+        assert(meteo_data == "Crespi")
+    if inversion:
+        if with_debris:
+            inversed_params = ['A', 'a_snow', 'k_slow_1', 'k_slow_2', 
+                               'k_quick', 'percol',
+                               'a_ice_1', 'a_ice_2', 'k_snow', 'k_ice'] # 'precip_corr_factor'
+        else:
+            inversed_params = ['A', 'a_snow', 'k_slow_1', 'k_slow_2', 
+                               'k_quick', 'percol',
+                               'a_ice', 'k_snow', 'k_ice'] # 'precip_corr_factor'
+        # Select the number of maximum repetitions
+        warmup = 365 # The first year is completely ignored, as it is just the water accumulating in the right places 
+        # (it's usual in hydrological modeling), and all of the rest of the years is used for calibration (aka. evaluation).
+        max_rep = 10000 #10 #10000
+        algorithm = 'SCEUA' # 'SCEUA' 'MC' # The result filename depends on this algorithm name.
+        # As SCE-UA is minizing the objective function we need a objective function that gets better with decreasing values.
+        obj_func = 'kge_2012' #'kge_2012' #'nse' #'mse'
+        invert_obj_func=True
+    else:
+        set_params = {'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
+                      'k_quick': 1, 'percol': 9.8}
     
     ####### CHANGING GLACIER COVER #####
-    with_debris = False
-    glacier_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
-    nc_topo_file = '/home/anne-laure/Documents/Datasets/Outputs/Swiss_reproj.nc'
-    whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
-                      f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
-                      f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
-    debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
-    times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
-    target_epsg = 21781
-    # BUGS if EPSG:4326...
+    if area == 'Arolla':
+        glacier_path = f'{path}Swiss_GlaciersExtents/'
+        nc_topo_file = f'{path}Outputs/{meteo_data}_Swiss_reproj.nc'
+        whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp', f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
+                          f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp', f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
+                          f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
+        debris_glaciers = [None, None, None, None, f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
+        times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
+        target_epsg = 21781
+        # BUGS if EPSG:4326...
+    elif area == 'Solda':
+        glacier_path = f'{path}Italy_GlaciersExtents/'
+        nc_topo_file = f'{path}Outputs/{meteo_data}_Italy_reproj.nc'
+        whole_glaciers = [f'{glacier_path}SaraSavi/SuldenGlacier1985_fromOrthophoto_EPSG25832.shp', f'{glacier_path}GlaciersExtents/GlaciersExtents1997/glaciers_1997_EPSG25832.shp',
+                          f'{glacier_path}GlaciersExtents/GlaciersExtents2005/glaciers_2015_EPSG25832.shp', f'{glacier_path}GlaciersExtents/GlaciersExtents2016_2017/glaciers_2016_2017_EPSG25832.shp',
+                          f'{glacier_path}SaraSavi/SuldenGlacier2018_fromOrthophoto_EPSG25832.shp']
+        debris_glaciers = [None, None, None, None, None]
+        times = ['01/01/1985', '01/01/1997', '01/01/2005', '01/01/2016', '01/01/2018']
+        target_epsg = 25832
     
     ####### ELEVATION PROFILES #########
-    compute_altitudinal_trends = False
+    meteo_start_date = None
+    meteo_end_date = None
     tif_filename = dem_path
-    tif_CRS = "EPSG:21781"
-    pet_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pet_TestOut.nc'
-    pr_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_pr_TestOut.nc'
-    tas_nc_file = '/home/anne-laure/Documents/Datasets/Outputs/CH2018_tas_TestOut.nc'
-    nc_CRS = "EPSG:21781"
+    if area == 'Arolla':
+        tif_CRS = "EPSG:21781"
+        nc_CRS = "EPSG:21781"
+    elif area == 'Solda':
+        tif_CRS = "EPSG:25832"
+        nc_CRS = "EPSG:25832"
+    pet_nc_file = f'{path}Outputs/{meteo_data}_pet_Out.nc'
+    pr_nc_file = f'{path}Outputs/{meteo_data}_pr_Out.nc'
+    tas_nc_file = f'{path}Outputs/{meteo_data}_tas_Out.nc'
     
     ####### RESULT FILES ###############
-    results = f"/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchm}/"
-    figures = f"/home/anne-laure/Documents/Datasets/OutputFigures/Arolla/{catchm}/"
+    results = f"{path}Outputs/{area}/{catchm}/"
+    figures = f"{path}OutputFigures/{area}/{catchm}/"
     elev_bands = f"{results}elevation_bands.csv"
     elev_thres_min = f"{results}elevation_threshold_mins.csv"
     elev_thres_max = f"{results}elevation_threshold_maxs.csv"
@@ -366,158 +421,216 @@ def main_script(catchm):
     
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(f'{results}rock.csv', hydro_units, area_unit='m2', match_with='elevation')
-    changes.load_from_csv(f'{results}glacier.csv', hydro_units, area_unit='m2', match_with='elevation')
+    if with_debris:
+        changes.load_from_csv(f'{results}debris.csv', hydro_units, area_unit='m2', match_with='elevation')
+        changes.load_from_csv(f'{results}ice.csv', hydro_units, area_unit='m2', match_with='elevation')
+    else:
+        changes.load_from_csv(f'{results}glacier.csv', hydro_units, area_unit='m2', match_with='elevation')
     socont.add_behaviour(changes)
     
     
     if compute_altitudinal_trends:
         compute_the_elevation_interpolations_HR(tif_filename, tif_CRS, pet_nc_file, pr_nc_file, tas_nc_file, nc_CRS, forcing, 
-                                                outline, outline_epsg, target_epsg, elevation_bands, var_bands)
+                                                outline, outline_epsg, target_epsg, elevation_bands, var_bands, 
+                                                meteo_data)
     else:
-        forcing.load_spatialized_data_from_csv('precipitation', var_bands + "precipitation_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
-        forcing.load_spatialized_data_from_csv('temperature', var_bands + "temperature_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
-        forcing.load_spatialized_data_from_csv('pet', var_bands + "pet_interp_HR.csv", var_bands + "time_HR.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+        forcing.load_spatialized_data_from_csv('precipitation', var_bands + f"precipitation_interp_HR_{meteo_data}.csv", var_bands + f"time_HR_{meteo_data}.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+        forcing.load_spatialized_data_from_csv('temperature', var_bands + f"temperature_interp_HR_{meteo_data}.csv", var_bands + f"time_HR_{meteo_data}.csv", time_format='%Y-%m-%d', dropindex=null_areas)
+        forcing.load_spatialized_data_from_csv('pet', var_bands + f"pet_interp_HR_{meteo_data}.csv", var_bands + f"time_HR_{meteo_data}.csv", time_format='%Y-%m-%d', dropindex=null_areas)
     
-    # Obs data
-    obs = hb.Observations()
-    obs.load_from_csv(discharge_file, column_time=column_time, time_format=time_format,
-                      content=content, start_date=start_date, end_date=end_date)
+    if run_model:
     
-    
-    
-    print('Debug 1', flush=True)
-    # Model setup
-    socont.setup(spatial_structure=hydro_units, output_path=str(results),
-                 start_date=start_date, end_date=end_date)
-    
-    if inversion:
-        if obj_func == 'mse':
-            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, obj_func=obj_func)
-        elif obj_func == 'kge_2012':
-            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, obj_func=obj_func, invert_obj_func=True)
-        elif obj_func == 'nse':
-            spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, 
-                                        obj_func=spotpy.objectivefunctions.nashsutcliffe)
+        # Obs data
+        obs = hb.Observations()
+        obs.load_from_csv(discharge_file, column_time=column_time, time_format=time_format,
+                          content=content, start_date=start_date, end_date=end_date)
+        
+        
+        
+        print('Debug 1', flush=True)
+        # Model setup
+        socont.setup(spatial_structure=hydro_units, output_path=str(results),
+                     start_date=start_date, end_date=end_date)
+        
+        if inversion:
+            if obj_func == 'mse' or obj_func == 'kge_2012':
+                spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, 
+                                            obj_func=obj_func, 
+                                            invert_obj_func=invert_obj_func)
+            elif obj_func == 'nse':
+                spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=warmup, 
+                                            obj_func=spotpy.objectivefunctions.nashsutcliffe, 
+                                            invert_obj_func=invert_obj_func)
+            else:
+                print('Error: Objective function not yet registered as either Invert or not.')
+            
+            # Run spotpy
+            if algorithm == 'SCEUA':
+                result_filename = f"{results}socont_SCEUA_{obj_func}"
+                sampler = spotpy.algorithms.sceua(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
+            elif algorithm == 'MC':
+                result_filename = f"{results}socont_MC_{obj_func}"
+                sampler = spotpy.algorithms.mc(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
+            else:
+                print('Error: No SPOTPY algorithm was defined!')
+            sampler.sample(max_rep)
+            
+            # Load the results
+            result = sampler.getdata()
+            
+            # Plot parameter interaction
+            spotpy.analyser.plot_parameterInteraction(result)
+            plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
+            plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
+            
+            #######################################################################
+        
+            # Load the results
+            result = spotpy.analyser.load_csv_results(result_filename)
+            
+            # Plot evolution
+            fig_evolution = plt.figure(figsize=(9, 5))
+            if invert_obj_func:
+                plt.plot(-result['like1'])
+            else:
+                plt.plot(result['like1'])
+            plt.ylabel(obj_func)
+            plt.xlabel('Iteration')
+            plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.svg', format="svg", bbox_inches='tight', dpi=30)
+            plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.png', format="png", bbox_inches='tight', dpi=100)
+            
+            # Get best results
+            # Each row is a simulation result. The first columns are the parameters used.
+            # The 'simulation_x' columns are the discharges modeled for each day.
+            best_index, best_obj_func = spotpy.analyser.get_minlikeindex(result)
+            best_model_run = result[best_index]
+            fields = [word for word in best_model_run.dtype.names if not word.startswith('sim')]
+            best_params = list(best_model_run[fields])
+            header = ['Minimal objective value'] + inversed_params
+            with open(f"{stats2}_{algorithm}_{obj_func}.csv", 'w') as f:
+                for name, param in zip(header, best_params):
+                    f.write(f'{name}, {param:.8f}\n')
+            fields = [word for word in best_model_run.dtype.names if word.startswith('sim')]
+            best_simulation = list(best_model_run[fields])
+            np.savetxt(f"{output2}_{algorithm}_{obj_func}.csv", best_simulation, header='Best fit simulated outlet discharge time series')
+            
+            # Plot simulation
+            fig_simulation = plt.figure(figsize=(20, 9))
+            ax = plt.subplot(1, 1, 1)
+            ax.plot(best_simulation, color='black', linestyle='solid', label='Best obj. func.=' + str(best_obj_func))
+            ax.plot(spot_setup.evaluation(), 'r:', markersize=3, label='Observation data')
+            plt.xlabel('Number of Observation Points')
+            plt.ylabel('Discharge [mm/d]')
+            plt.legend(loc='upper right')
+            plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
+            plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
+            
+            #######################################################################
+            
+            # Plot posterior parameter distribution # ERROR RIGHT NOW: ValueError: `dataset` input should have multiple elements.
+            posterior = spotpy.analyser.get_posterior(result, percentage=10)
+            #spotpy.analyser.plot_parameterInteraction(posterior)
+            #plt.tight_layout()
+            #plt.show()
+            print('End')
+            
+        
         else:
-            print('Error: Objective function not yet registered as either Invert or not.')
-        
-        # Run spotpy
-        if algorithm == 'SCEUA':
-            result_filename = f"{results}socont_SCEUA_{obj_func}"
-            sampler = spotpy.algorithms.sceua(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
-        elif algorithm == 'MC':
-            result_filename = f"{results}socont_MC_{obj_func}"
-            sampler = spotpy.algorithms.mc(spot_setup, dbname=result_filename, dbformat='csv', save_sim=True)
-        else:
-            print('Error: No SPOTPY algorithm was defined!')
-        sampler.sample(max_rep)
-        
-        # Load the results
-        result = sampler.getdata()
-        
-        # Plot parameter interaction
-        spotpy.analyser.plot_parameterInteraction(result)
-        plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
-        plt.savefig(f'{figures}parameter_interaction_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
-        
-        #######################################################################
-    
-        # Load the results
-        result = spotpy.analyser.load_csv_results(result_filename)
-        
-        # Plot evolution
-        fig_evolution = plt.figure(figsize=(9, 5))
-        plt.plot(-result['like1'])
-        plt.ylabel(obj_func)
-        plt.xlabel('Iteration')
-        plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.svg', format="svg", bbox_inches='tight', dpi=30)
-        plt.savefig(f'{figures}{obj_func}_comparison_{algorithm}.png', format="png", bbox_inches='tight', dpi=100)
-        
-        # Get best results
-        # Each row is a simulation result. The first columns are the parameters used.
-        # The 'simulation_x' columns are the discharges modeled for each day.
-        best_index, best_obj_func = spotpy.analyser.get_minlikeindex(result)
-        best_model_run = result[best_index]
-        fields = [word for word in best_model_run.dtype.names if not word.startswith('sim')]
-        best_params = list(best_model_run[fields])
-        header = ['Minimal objective value'] + inversed_params
-        with open(f"{stats2}_{algorithm}_{obj_func}.csv", 'w') as f:
-            for name, param in zip(header, best_params):
-                f.write(f'{name}, {param:.8f}\n')
-        fields = [word for word in best_model_run.dtype.names if word.startswith('sim')]
-        best_simulation = list(best_model_run[fields])
-        np.savetxt(f"{output2}_{algorithm}_{obj_func}.csv", best_simulation, header='Best fit simulated outlet discharge time series')
-        
-        # Plot simulation
-        fig_simulation = plt.figure(figsize=(16, 9))
-        ax = plt.subplot(1, 1, 1)
-        ax.plot(best_simulation, color='black', linestyle='solid',
-                label='Best obj. func.=' + str(best_obj_func))
-        ax.plot(spot_setup.evaluation(), 'r.', markersize=3, label='Observation data')
-        plt.xlabel('Number of Observation Points')
-        plt.ylabel('Discharge [l s-1]')
-        plt.legend(loc='upper right')
-        plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.svg', format="svg", bbox_inches='tight', dpi=30)
-        plt.savefig(f'{figures}discharge_{algorithm}_{obj_func}.png', format="png", bbox_inches='tight', dpi=100)
-        
-        #######################################################################
-        
-        # Plot posterior parameter distribution # ERROR RIGHT NOW: ValueError: `dataset` input should have multiple elements.
-        posterior = spotpy.analyser.get_posterior(result, percentage=10)
-        #spotpy.analyser.plot_parameterInteraction(posterior)
-        #plt.tight_layout()
-        #plt.show()
-        print('End')
-        
-    
-    else:
-        print('Debug 2', flush=True)
-        # Initialize and run the model
-        socont.initialize_state_variables(parameters=parameters, forcing=forcing)
-        print('Debug 3', flush=True)
-        socont.run(parameters=parameters, forcing=forcing)
-        print('Debug 4', flush=True)
-        
-         # Water balance
-        precip_total = forcing.get_total_precipitation()
-        discharge_total = socont.get_total_outlet_discharge()
-        et_total = socont.get_total_et()
-        storage_change = socont.get_total_water_storage_changes()
-        snow_change = socont.get_total_snow_storage_changes()   # GET THE SNOW COVER??? HOW DO I INITIALIZE IT???
-        balance = discharge_total + et_total + storage_change + snow_change - precip_total
-        print('precip_total', precip_total)
-        print('discharge_total', discharge_total)
-        print('et_total', et_total)
-        print('storage_change', storage_change)
-        print('snow_change', snow_change)
-        print('balance', balance)
-        #assert balance == pytest.approx(0, abs=1e-8)
-        
-        # Get outlet discharge time series. WHAT IS THE DIFFERENCE WITH TOTAL OUTLET DISCHARGE???!!!
-        sim_ts = socont.get_outlet_discharge()
-        print('Debug 5', flush=True)
-        np.savetxt(output, sim_ts, header='Simulated outlet discharge time series')
-        
-        # Evaluate
-        obs_ts = obs.data_raw[0]
-        print('Debug 6', flush=True)
-        nse = socont.eval('nse', obs_ts)
-        print('Debug 7', flush=True)
-        kge_2012 = socont.eval('kge_2012', obs_ts)
-        
-        with open(stats, 'w') as f:
-            f.write(f'nse, {nse:.3f}\n')
-            f.write(f'kge_2012, {kge_2012:.3f}')
-        
-        print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
-        print('End')
+            print('Debug 2', flush=True)
+            # Initialize and run the model
+            socont.initialize_state_variables(parameters=parameters, forcing=forcing)
+            print('Debug 3', flush=True)
+            socont.run(parameters=parameters, forcing=forcing)
+            print('Debug 4', flush=True)
+            
+             # Water balance
+            precip_total = forcing.get_total_precipitation()
+            discharge_total = socont.get_total_outlet_discharge()
+            et_total = socont.get_total_et()
+            storage_change = socont.get_total_water_storage_changes()
+            snow_change = socont.get_total_snow_storage_changes()   # GET THE SNOW COVER??? HOW DO I INITIALIZE IT???
+            balance = discharge_total + et_total + storage_change + snow_change - precip_total
+            print('precip_total', precip_total)
+            print('discharge_total', discharge_total)
+            print('et_total', et_total)
+            print('storage_change', storage_change)
+            print('snow_change', snow_change)
+            print('balance', balance)
+            #assert balance == pytest.approx(0, abs=1e-8)
+            
+            # Get outlet discharge time series. WHAT IS THE DIFFERENCE WITH TOTAL OUTLET DISCHARGE???!!!
+            sim_ts = socont.get_outlet_discharge()
+            print('Debug 5', flush=True)
+            np.savetxt(output, sim_ts, header='Simulated outlet discharge time series')
+            
+            # Evaluate
+            obs_ts = obs.data_raw[0]
+            print('Debug 6', flush=True)
+            nse = socont.eval('nse', obs_ts)
+            print('Debug 7', flush=True)
+            kge_2012 = socont.eval('kge_2012', obs_ts)
+            
+            with open(stats, 'w') as f:
+                f.write(f'nse, {nse:.3f}\n')
+                f.write(f'kge_2012, {kge_2012:.3f}')
+            
+            print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
+            print('End')
         
         
         
 
 catchments = ['BI', 'BS', 'DB', 'HGDA', 'PI', 'TN', 'VU']
-#catchments = ['BS']
+catchments = ['TF', 'ZA'] #['PS', 'SGF', 'TF', 'ZA']
+area = 'Solda' # 'Arolla', 'Solda'
 for catchm in catchments:
-    main_script(catchm)
+    main_script(catchm, area)
 
+# Load the results
+inversed_params = ['A', 'a_snow', 'k_slow_1', 'k_slow_2', 
+                           'k_quick', 'percol',
+                           'a_ice', 'k_snow', 'k_ice']
+obj_func = 'kge_2012'
+algorithm = 'SCEUA'
+results = f"/home/anne-laure/Documents/Datasets/Outputs/Arolla/{catchm}/"
+figures = f"/home/anne-laure/Documents/Datasets/OutputFigures/Arolla/{catchm}/"
+result_filename = f"{results}socont_{algorithm}_{obj_func}"
+stats2 = f"{results}best_fit_simulation_stats"
+result = spotpy.analyser.load_csv_results(result_filename)
+print('result:', result)
+
+# Plot evolution
+fig_evolution = plt.figure(figsize=(9, 5))
+plt.plot(-result['like1'])
+plt.ylabel(obj_func)
+plt.xlabel('Iteration')
+plt.show()
+
+# Get best results
+# Each row is a simulation result. The first columns are the parameters used.
+# The 'simulation_x' columns are the discharges modeled for each day.
+best_index, best_obj_func = spotpy.analyser.get_maxlikeindex(result)
+print('best_index, best_obj_func:', best_index, best_obj_func)
+best_model_run = result[best_index][0]
+print('best_model_run:', best_model_run)
+fields = [word for word in best_model_run.dtype.names if not word.startswith('sim')]
+best_params = list(best_model_run[fields])
+header = ['Minimal objective value'] + inversed_params
+#with open(f"{stats2}_{algorithm}_{obj_func}.csv", 'w') as f:
+#    for name, param in zip(header, best_params):
+#        f.write(f'{name}, {param:.8f}\n')
+fields = [word for word in best_model_run.dtype.names if word.startswith('sim')]
+best_simulation = list(best_model_run[fields])
+print('best_simulation:', best_simulation)
+
+# Plot simulation
+fig_simulation = plt.figure(figsize=(20, 9))
+ax = plt.subplot(1, 1, 1)
+ax.plot(best_simulation, color='black', linestyle='solid',
+        label='Best obj. func.=' + str(best_obj_func))
+#ax.plot(spot_setup.evaluation(), 'r:', markersize=3, label='Observation data')
+plt.xlabel('Number of Observation Points')
+plt.ylabel('Discharge [mm/d]')
+plt.legend(loc='upper right')
+plt.show()
 

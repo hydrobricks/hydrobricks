@@ -11,7 +11,8 @@ import xarray as xa
 # Warning: we do not homogenize the time format! Should I?
 # The datasets do not have the same spatial resolution: Crespi: 250m; CH2018: 1612m; MeteoSwiss: 776m.
 
-def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_dataset, output_file, output_daily_mean_file, output_hydrobricks_file):
+def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_dataset, path, area_txt,
+                                         output_file, output_daily_mean_file, output_hydrobricks_file):
     
     ########### The Bertol Inferieur catchment
     
@@ -20,7 +21,7 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
                                      parse_dates=['Horodatage'], date_parser=dateparse, index_col=0)
     data_BI.index.name = 'Date'
     data_BI.columns = ['BIrest'] # There is only the rest of water not taken from the HGDA, VU and BS intakes.
-    data_BI.iloc[:,0] = np.where(data_BI.iloc[:,0] < 0.08, np.nan, data_BI.iloc[:,0])
+    #data_BI.iloc[:,0] = np.where(data_BI.iloc[:,0] < 0.08, np.nan, data_BI.iloc[:,0])
     
     ############ Then the subcatchments
     
@@ -43,7 +44,7 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
 
             data = pd.concat(dfs, ignore_index=True)
             data.set_index('Date', inplace=True)
-            data.iloc[:,0] = np.where(data.iloc[:,0] < 0.08, np.nan, data.iloc[:,0])
+            #data.iloc[:,0] = np.where(data.iloc[:,0] < 0.08, np.nan, data.iloc[:,0])
             
             ############ Merge all datasets but make sure to discard the dates of BI that are not contained in the others (31 Decembers of bissextile years)
             BI_but_not_key = data_BI.loc[data_BI.index.difference(data.index)]
@@ -61,7 +62,10 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
             
             # Add all the data to the same dataframe
             merged_all = merged_all.merge(data, left_index=True, right_index=True, how='inner')
-                
+    
+    ############ Correct the values of Vuibe (VU) for the late summer of 2011 (will be transmitted to BI as well...)
+    merged_all["VU"].loc['2011-08-26':'2011-12-31'] = np.nan
+    
     ############ Create a new column with BI plus the water coming from BS, HGDA or VU
     merged_all["BI"] = merged_all["BIrest"] + merged_all["BS"] + merged_all["HGDA"] + merged_all["VU"]
     print('merged_all', merged_all)
@@ -77,7 +81,7 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
         means.to_csv(output_daily_mean_file + suffix, columns=[key], date_format='%d/%m/%Y')
     
         if key != "BIrest":
-            filename = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/' + key + '_UpslopeArea_EPSG21781.txt'
+            filename = path + key + area_txt
             watershed_area = np.loadtxt(filename, skiprows=1)
             # Create new pandas DataFrame.
             subdataframe = means[[key]]
@@ -87,40 +91,91 @@ def homogenize_arolla_discharge_datasets(subcatchment_datasets, catchment_datase
             subdataframe.columns = ['Discharge (mm/d)']
             subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
     
-def homogenize_stelvio_discharge_datasets(stelvio_dataset, output_file, output_daily_mean_file):
+def homogenize_stelvio_discharge_datasets(stelvio_dataset, path, area_txt,
+                                          output_file, output_daily_mean_file, output_hydrobricks_file):
     
     dateparse = lambda x: datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
     data = pd.io.parsers.read_csv(stelvio_dataset, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
                                   na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
                                   index_col=0)
-    # Cannot write directly parse_dates={'Date': ['Date', 'Time']} in the line above, so:
-    data.index.name = "Date"
-    print(data)
-    print(data.dtypes)
+    data.index.name = "Date" # Since cannot write directly parse_dates={'Date': ['Date', 'Time']} in the line above.
+    key = 'PS'
+    suffix = '_' + key + '.csv'
     
     means = data.groupby(pd.Grouper(freq='1D')).mean()
+    data.to_csv(output_file + suffix)
+    means.to_csv(output_daily_mean_file + suffix, date_format='%d/%m/%Y')
+    filename = path + key + area_txt
+    watershed_area = np.loadtxt(filename, skiprows=1)
+    m_to_mm = 1000
+    persec_to_perday = 86400
+    subdataframe = means['Value [m³/s]'] / watershed_area * m_to_mm * persec_to_perday
+    subdataframe.name = 'Discharge (mm/d)'
+    subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
     
-    print(means)
+def homogenize_trafoi_discharge_datasets(trafoi_dataset, path, area_txt,
+                                         output_file, output_daily_mean_file, output_hydrobricks_file):
     
-    data.to_csv(output_file)
-    means.to_csv(output_daily_mean_file, date_format='%d/%m/%Y')
+    dateparse = lambda x: datetime.strptime(x, '%m/%d/%Y %H:%M')
+    data = pd.io.parsers.read_csv(trafoi_dataset, sep=",", decimal=".", skiprows=0, header=0, 
+                                  na_values='NaN', parse_dates=['date_DS5_Trafoi_solar'], date_parser=dateparse,
+                                  index_col=0)
+    key = 'TF'
+    suffix = '_' + key + '.csv'
+    
+    means = data.groupby(pd.Grouper(freq='1D')).mean()
+    data.to_csv(output_file + suffix)
+    means.to_csv(output_daily_mean_file + suffix, date_format='%d/%m/%Y')
+    filename = path + key + area_txt
+    watershed_area = np.loadtxt(filename, skiprows=1)
+    m_to_mm = 1000
+    persec_to_perday = 86400
+    subdataframe = means['discharge_Trafoi_calculated_m3s'] / watershed_area * m_to_mm * persec_to_perday
+    subdataframe.name = 'Discharge (mm/d)'
+    subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
+    
+def homogenize_solda_gf_discharge_datasets(solda_gf_dataset, path, area_txt,
+                                           output_file, output_daily_mean_file, output_hydrobricks_file):
+    
+    dateparse = lambda x: datetime.strptime(x, '%m/%d/%Y %H:%M')
+    data = pd.io.parsers.read_csv(solda_gf_dataset, sep=",", decimal=".", skiprows=0, header=0, 
+                                  na_values='NaN', parse_dates=['solar time'], date_parser=dateparse,
+                                  index_col=0)
+    key = 'SGF'
+    suffix = '_' + key + '.csv'
+    
+    means = data.groupby(pd.Grouper(freq='1D')).mean()
+    data.to_csv(output_file + suffix)
+    means.to_csv(output_daily_mean_file + suffix, date_format='%d/%m/%Y')
+    filename = path + key + area_txt
+    watershed_area = np.loadtxt(filename, skiprows=1)
+    m_to_mm = 1000
+    persec_to_perday = 86400
+    subdataframe = means['discharge (m3/s)'] / watershed_area * m_to_mm * persec_to_perday
+    subdataframe.name = 'Discharge (mm/d)'
+    subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
+    
+def homogenize_zaybach_discharge_datasets(zaybach_dataset, path, area_txt,
+                                           output_file, output_daily_mean_file, output_hydrobricks_file):
+    
+    dateparse = lambda x: datetime.strptime(x, '%m/%d/%Y %H:%M')
+    data = pd.io.parsers.read_csv(zaybach_dataset, sep=",", decimal=".", skiprows=0, header=0, 
+                                  na_values='', parse_dates=['solar time'], date_parser=dateparse,
+                                  index_col=0)
+    key = 'ZA'
+    suffix = '_' + key + '.csv'
+    
+    means = data.groupby(pd.Grouper(freq='1D')).mean()
+    data.to_csv(output_file + suffix)
+    means.to_csv(output_daily_mean_file + suffix, date_format='%d/%m/%Y')
+    filename = path + key + area_txt
+    watershed_area = np.loadtxt(filename, skiprows=1)
+    m_to_mm = 1000
+    persec_to_perday = 86400
+    subdataframe = means['discharge (m3/s)'] / watershed_area * m_to_mm * persec_to_perday
+    subdataframe.name = 'Discharge (mm/d)'
+    subdataframe.to_csv(output_hydrobricks_file + suffix, date_format='%d/%m/%Y')
 
-def homogenize_discharge_datasets(stelvio_dataset, output_file, output_daily_mean_file):
-    
-    dateparse = lambda x: datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
-    data = pd.io.parsers.read_csv(stelvio_dataset, sep=";", decimal=",", encoding='cp1252', skiprows=15, header=1, 
-                                  na_values='---', parse_dates={'date': ['Date', 'Time']}, date_parser=dateparse,
-                                  index_col=0)
-    print(data)
-    print(data.dtypes)
-    
-    means = data.groupby(pd.Grouper(freq='1D')).mean()
-    
-    print(means)
-    
-    data.to_csv(output_file)
-    means.to_csv(output_daily_mean_file, date_format='%d/%m/%Y')
-    
 def interpolate(nc_filename, regrid_x, regrid_y, out_filename):
     # Opens an existing netCDF file
     print(len(regrid_x), len(regrid_y))
@@ -213,6 +268,8 @@ def reproject_netcdf_to_new_crs_and_save(nc_filename, nc_CRS, proj_CRS, out_file
     # Once the NetCDF file is clipped and small enough, we can reproject it.
     nc = xa.open_dataset(nc_filename, decode_coords="all")
     assign_EPSG_without_saving(nc, nc_CRS)
+    
+    print(nc.variables['x'][:])
 
     # Reproject to the new CRS. I tried to use the reproject_match() function but it takes too much memory.
     nc_in_proj_crs = nc.rio.reproject(proj_CRS, Resampling=rasterio.enums.Resampling.bilinear)
@@ -226,6 +283,12 @@ def homogenize_the_time(nc_filename, start_datetime, ref_start_datetime):
         ds = nc.Dataset(nc_filename, 'a')
         diff_days = start_datetime - ref_start_datetime
         ds['time'][:] += diff_days.days
+        print('ln', ds['time'].getncattr("long_name"))
+        print(ds['time'].getncattr("units"))
+        ds['time'].setncattr("long_name", "days since " + ref_start_datetime.strftime('%Y-%m-%d'))
+        ds['time'].setncattr("units", "days since " + ref_start_datetime.strftime('%Y-%m-%d'))
+        print('ln', ds['time'].getncattr("long_name"))
+        print(ds['time'].getncattr("units"))
         ds.close() # file saved to disk
 
 def reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS,
@@ -244,20 +307,38 @@ def reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filena
 
     ncf = xa.open_dataset(nc_filename, decode_coords="all")
     assign_EPSG_without_saving(ncf, nc_CRS)
+    
+    print(ncf)
 
     # Homogenize the dataset variables (names and numbers)
     if xy_lonlat_EN == "xy":
         del ncf.x.encoding["contiguous"] # Workaround to a weird bug that happens with Crespi's dataset (cf. https://github.com/pydata/xarray/issues/1849)
         del ncf.y.encoding["contiguous"]
         ncf = ncf.rename({'DATE': 'time'})
+        if 'tmin' in ncf.data_vars:
+            ncf = ncf.rename({'tmin': 'tasmin'})
+        elif 'tmax' in ncf.data_vars:
+            ncf = ncf.rename({'tmax': 'tasmax'})
+        elif 'temperature' in ncf.data_vars:
+            ncf = ncf.rename({'temperature': 'tas'})
+        elif 'precipitation' in ncf.data_vars:
+            ncf = ncf.rename({'precipitation': 'pr'})
     elif xy_lonlat_EN == "lonlat":
         ncf = ncf.rename({'lon': 'x', 'lat': 'y'})
     elif xy_lonlat_EN == "EN":
         ncf = ncf.rename({'E': 'x', 'N': 'y'})
         ncf = ncf.drop_vars(['lat', 'lon'])
     elif xy_lonlat_EN == "chxchy":
+        if 'TminD' in ncf.data_vars:
+            ncf = ncf.rename({'TminD': 'tasmin'})
+        elif 'TmaxD' in ncf.data_vars:
+            ncf = ncf.rename({'TmaxD': 'tasmax'})
+        elif 'TabsD' in ncf.data_vars:
+            ncf = ncf.rename({'TabsD': 'tas'})
+        elif 'RhiresD' in ncf.data_vars:
+            ncf = ncf.rename({'RhiresD': 'pr'})
         ncf = ncf.rename({'chx': 'x', 'chy': 'y'})
-        ncf = ncf.drop_vars(['dummy', 'lat', 'lon'])
+        ncf = ncf.drop_vars(['lat', 'lon'])
     else:
         print("xy_or_lonlat should be either set to 'xy', 'lonlat' or 'EN'. Here it is set to", xy_lonlat_EN)
 
@@ -269,7 +350,7 @@ def reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filena
 
     homogenize_the_time(out_filename, start_datetime, ref_start_datetime)
 
-    #interpolate(out_filename, regrid_x, regrid_y, f'/home/anne-laure/Documents/Datasets/Outputs/CrespiTestOut222.nc')
+    #interpolate(out_filename, regrid_x, regrid_y, f'/home/anne-laure/Documents/Datasets/Outputs/Crespi_Out222.nc')
 
 
 def main():
@@ -277,9 +358,25 @@ def main():
     path = '/home/anne-laure/Documents/Datasets/'
     
     results = f'{path}Outputs/'
-    target_eto_CRS = "EPSG:4326" # Needs to be in degrees to compute the evapotranspiration
-    target_dem_CRS = "EPSG:21781" # BUT NEEDS TO BE IN METERS TO COMPUTE AREAS FOR HYDROBRICKS
     target_start_datetime = datetime(1900,1,1,0,0,0)
+
+    ##################################################################################################################################
+    
+    ########################## Harmonize the Stelvio discharge files #################################################################
+    
+    stelvio_discharge = f'{path}Italy_discharge/Original_discharge_data/PonteStelvio/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
+    trafoi_discharge = f'{path}Italy_discharge/Extracted_discharge_data/data_station_Trafoi_stagePLS_turbidityDS5_all.csv'
+    solda_gf_discharge = f'{path}Italy_discharge/Extracted_discharge_data/discharge_Solda_glacierfront_all_2017_2018_2019_2020.csv'
+    zaybach_discharge = f'{path}Italy_discharge/Extracted_discharge_data/Discharge_Zaybach2017-18.csv'
+    watershed_path = f'{path}Italy_discharge/Watersheds/'
+    area_txt = '_UpslopeArea_EPSG25832.txt'
+    output_file = f"{results}ObservedDischarges/Solda_discharge"
+    output_daily_mean_file = f"{results}ObservedDischarges/Solda_daily_mean_discharge"
+    output_hydrobricks_file = f"{results}ObservedDischarges/Solda_hydrobricks_discharge"
+    homogenize_stelvio_discharge_datasets(stelvio_discharge, watershed_path, area_txt, output_file, output_daily_mean_file, output_hydrobricks_file)
+    homogenize_trafoi_discharge_datasets(trafoi_discharge, watershed_path, area_txt, output_file, output_daily_mean_file, output_hydrobricks_file)
+    homogenize_solda_gf_discharge_datasets(solda_gf_discharge, watershed_path, area_txt, output_file, output_daily_mean_file, output_hydrobricks_file)
+    homogenize_zaybach_discharge_datasets(zaybach_discharge, watershed_path, area_txt, output_file, output_daily_mean_file, output_hydrobricks_file)
     
     ########################## Harmonize the Arolla discharge files ##################################################################
     
@@ -288,93 +385,168 @@ def main():
                                'PI':f'{csv_discharges}Q_Altroclima_PI.csv', 'TN':f'{csv_discharges}Q_Altroclima_TN.csv', 'VU':f'{csv_discharges}Q_Altroclima_VU.csv', 
                                'Year':f'{csv_discharges}Q_Altroclima_year.csv'}
     main_catchment_discharge = f'{csv_discharges}Bertol_Inferieur_AllDebit.csv'
-    output_file = f"{results}Arolla_15min_discharge"
-    output_daily_mean_file = f"{results}Arolla_daily_mean_discharge"
-    output_hydrobricks_file = f"{results}Arolla_hydrobricks_discharge"
-    homogenize_arolla_discharge_datasets(subcatchment_discharges, main_catchment_discharge, output_file, output_daily_mean_file, output_hydrobricks_file)
-    
-    ########################## Harmonize the Stelvio discharge files #################################################################
-    
-    stelvio_discharge = f'{path}Italy_discharge/PonteStelvio/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
-    output_file = f"{results}Stelvio_discharge.csv"
-    output_daily_mean_file = f"{results}Stelvio_daily_mean_discharge.csv"
-    homogenize_stelvio_discharge_datasets(stelvio_discharge, output_file, output_daily_mean_file)
+    watershed_path = f'{path}Swiss_discharge/Arolla_discharge/Watersheds_on_dhm25/'
+    area_txt = '_UpslopeArea_EPSG21781.txt'
+    output_file = f"{results}ObservedDischarges/Arolla_15min_discharge"
+    output_daily_mean_file = f"{results}ObservedDischarges/Arolla_daily_mean_discharge"
+    output_hydrobricks_file = f"{results}ObservedDischarges/Arolla_hydrobricks_discharge"
+    homogenize_arolla_discharge_datasets(subcatchment_discharges, main_catchment_discharge, watershed_path, area_txt,
+                                         output_file, output_daily_mean_file, output_hydrobricks_file)
 
-    ##################################################################################################################################
+    ########################## Harmonize Crespi datasets #############################################################################
+    
+    #gdalwarp -overwrite -s_srs "PROJCRS["""ETRF_1989_UTM_Zone_32N""",BASEGEOGCRS["""ETRF89""",DATUM["""European Terrestrial Reference Frame 1989""",ELLIPSOID["""GRS 1980""",6378137,298.257223563,LENGTHUNIT["""metre""",1]]],PRIMEM["""Greenwich""",0,ANGLEUNIT["""degree""",0.0174532925199433]],ID["""EPSG""",9059]],CONVERSION["""Transverse Mercator""",METHOD["""Transverse Mercator""",ID["""EPSG""",9807]],PARAMETER["""Latitude of natural origin""",0,ANGLEUNIT["""degree""",0.0174532925199433],ID["""EPSG""",8801]],PARAMETER["""Longitude of natural origin""",9,ANGLEUNIT["""degree""",0.0174532925199433],ID["""EPSG""",8802]],PARAMETER["""Scale factor at natural origin""",0.9996,SCALEUNIT["""unity""",1],ID["""EPSG""",8805]],PARAMETER["""False easting""",500000,LENGTHUNIT["""metre""",1],ID["""EPSG""",8806]],PARAMETER["""False northing""",0,LENGTHUNIT["""metre""",1],ID["""EPSG""",8807]]],CS[Cartesian,2],AXIS["""easting""",east,ORDER[1],LENGTHUNIT["""metre""",1,ID["""EPSG""",9001]]],AXIS["""northing""",north,ORDER[2],LENGTHUNIT["""metre""",1,ID["""EPSG""",9001]]]]" -t_srs "PROJCRS["""ETRF_1989_UTM_Zone_32N""",BASEGEOGCRS["""ETRF89""",DATUM["""European Terrestrial Reference Frame 1989""",ELLIPSOID["""GRS 1980""",6378137,298.257223563,LENGTHUNIT["""metre""",1]]],PRIMEM["""Greenwich""",0,ANGLEUNIT["""degree""",0.0174532925199433]],ID["""EPSG""",9059]],CONVERSION["""Transverse Mercator""",METHOD["""Transverse Mercator""",ID["""EPSG""",9807]],PARAMETER["""Latitude of natural origin""",0,ANGLEUNIT["""degree""",0.0174532925199433],ID["""EPSG""",8801]],PARAMETER["""Longitude of natural origin""",9,ANGLEUNIT["""degree""",0.0174532925199433],ID["""EPSG""",8802]],PARAMETER["""Scale factor at natural origin""",0.9996,SCALEUNIT["""unity""",1],ID["""EPSG""",8805]],PARAMETER["""False easting""",500000,LENGTHUNIT["""metre""",1],ID["""EPSG""",8806]],PARAMETER["""False northing""",0,LENGTHUNIT["""metre""",1],ID["""EPSG""",8807]]],CS[Cartesian,2],AXIS["""easting""",east,ORDER[1],LENGTHUNIT["""metre""",1,ID["""EPSG""",9001]]],AXIS["""northing""",north,ORDER[2],LENGTHUNIT["""metre""",1,ID["""EPSG""",9001]]]]" -tr 25.0 25.0 -r bilinear -of GTiff /home/anne-laure/Documents/Datasets/Italy_Study_area/dtm_2pt5m_utm_st_whole_StudyArea_OriginalCRS.tif /tmp/processing_vFpCqu/eb6aabf4e69346af9f3b7154880bf79f/OUTPUT.tif
+    # gdalwarp -overwrite -s_srs EPSG:25832 -t_srs EPSG:25832 -tr 25.0 25.0 -r bilinear -of GTiff 
+    # /home/anne-laure/Documents/Datasets/Italy_Study_area/dtm_2pt5m_utm_st_whole_StudyArea_OriginalCRS.tif 
+    # /home/anne-laure/Documents/Datasets/Italy_Study_area/dtm_25m_utm_st_whole_StudyArea_OriginalCRS.tif
+    
+    tif_filename = f'{path}Italy_Study_area/dtm_25m_utm_st_whole_StudyArea_OriginalCRS_filled.tif'
+    tif_CRS = "EPSG:25832"
+    start_datetime = datetime(1970,1,1,0,0,0)
+    # Crespi gdalinfo: DATE#long_name=days since 1970-01-01 DATE#units=days since 1970-01-01 00:00:00 +00:00
+    
+    nc_CRS = "EPSG:32632" # A. C. confirmed that the data is in WGS 84 / UTM 32N. SURE.
+    target_eto_CRS = "EPSG:4326" # Needs to be in degrees to compute the evapotranspiration
+    target_dem_CRS = "EPSG:25832" # BUT NEEDS TO BE IN METERS TO COMPUTE AREAS FOR HYDROBRICKS
+    reproj_filename = f'{results}Crespi_Italy_reproj'
+    reproj_resamp_filename = f'{results}Crespi_Italy_reproj_resamp'
+    
+    nc_filename = f'{path}Italy_Past_Crespi-etal_2020_allfiles/CATCHMENT_DAILYTMIN_1980_2022.nc'
+    clipped_filename = f'{results}Crespi_tasmin_Clipped.nc'
+    out_filename_tmp = f'{results}Crespi_tasmin_Out_epsg4326_tmp.nc'
+    out_filename = f'{results}Crespi_tasmin_Out_epsg4326.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='xy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename_tmp)
+    ds = xa.open_dataset(out_filename_tmp)
+    sliced = ds.sel(time=slice('1980-01-01', '2018-12-31')) # Slice to the time extent of min and max for pet computations...
+    sliced.to_netcdf(out_filename)
+
+    nc_filename = f'{path}Italy_Past_Crespi-etal_2020_allfiles/CATCHMENT_DAILYTMAX_1980_2022.nc'
+    clipped_filename = f'{results}Crespi_tasmax_Clipped.nc'
+    out_filename_tmp = f'{results}Crespi_tasmax_Out_epsg4326_tmp.nc'
+    out_filename = f'{results}Crespi_tasmax_Out_epsg4326.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='xy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename_tmp)
+    ds = xa.open_dataset(out_filename_tmp)
+    sliced = ds.sel(time=slice('1980-01-01', '2018-12-31')) # Slice to the time extent of min and max for pet computations...
+    sliced.to_netcdf(out_filename)
+
+    nc_filename = f'{path}Italy_Past_Crespi-etal_2020_allfiles/DailySeries_1980_2018_MeanTemp.nc'
+    clipped_filename = f'{results}Crespi_tas_Clipped.nc'
+    out_filename1 = f'{results}Crespi_tas_Out_epsg4326.nc'
+    out_filename2 = f'{results}Crespi_tas_Out.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='xy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename1)
+    reproject_netcdf_to_new_crs_and_save(out_filename1, target_eto_CRS, target_dem_CRS, out_filename2)
+
+    create_elevation_mask(tif_filename, tif_CRS, out_filename2, target_dem_CRS, reproj_filename, reproj_resamp_filename)
+
+    nc_filename = f'{path}Italy_Past_Crespi-etal_2020_allfiles/DailySeries_1980_2018_Prec.nc'
+    clipped_filename = f'{results}Crespi_pr_Clipped.nc'
+    out_filename1 = f'{results}Crespi_pr_Out_epsg4326.nc'
+    out_filename2 = f'{results}Crespi_pr_Out.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='xy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename1)
+    reproject_netcdf_to_new_crs_and_save(out_filename1, target_eto_CRS, target_dem_CRS, out_filename2)
+    print(bvhua)
+
+    ########################## Harmonize MeteoSwiss datasets #########################################################################
+
+    #nc_filename = f'{path}Swiss_Past_MeteoSwiss/TEST_RhiresD_ch01h.swiss.lv95_200508210000_200508230000.nc'
+    #nc_CRS = "EPSG:2056"  # CH1903+ convention introduced with LV95, EPSG:2056 (?)
+    #clipped_filename = f'{results}MeteoSwiss_Clipped.nc'
+    #out_filename = f'{results}MeteoSwiss_Out.nc'
+    #reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='EN')
+    #reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_CRS, out_filename)
+
+    # NEED TO MERGE FIRST THE NETCDF FILES WITH:
+    # cdo mergetime RhiresD_ch01r.swisscors_????01010000_????12310000.nc RhiresD_ch01r.swisscors_all.nc
+
     tif_filename = f'{path}Swiss_Study_area/StudyAreas_EPSG21781.tif'
-    reproj_filename = f'{results}Swiss_reproj'
-    reproj_resamp_filename = f'{results}Swiss_reproj_resamp'
     tif_CRS = "EPSG:21781" # Christian Kühni confirmed (email) that the DHM25 dataset is in the CRS LV03/CH1903 (EPSG:21781). SURE.
     # Check this page for the CRS, because the doc PDF is wrong!!! -> https://www.swisstopo.admin.ch/de/geodata/height/dhm25.html#technische_details
     start_datetime = datetime(1900,1,1,0,0,0)
     # CH2018 gdalinfo: time#units=days since 1900-1-1 00:00:00
-    # Crespi gdalinfo: DATE#long_name=days since 1970-01-01 DATE#units=days since 1970-01-01 00:00:00 +00:00
     # TabsD (MeteoSwiss) gdalinfo: time#units=days since 1900-01-01 00:00:00
-
-    ##################################################################################################################################
-
-    #nc_filename = f'{path}Swiss_Past_MeteoSwiss/TEST_RhiresD_ch01h.swiss.lv95_200508210000_200508230000.nc'
-    #nc_CRS = "EPSG:2056"  # CH1903+ convention introduced with LV95, EPSG:2056 (?)
-    #clipped_filename = f'{results}MeteoSwissTestClipped.nc'
-    #out_filename = f'{results}MeteoSwissTestOut.nc'
-    #reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='EN')
-    #reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_CRS, out_filename)
-
-    nc_filename = f'{path}Swiss_Past_MeteoSwiss/RhiresD_1961_2017_ch01r.swisscors/RhiresD_ch01r.swisscors_196101010000_196112310000.nc'
     nc_CRS = "EPSG:21781"  # CH1903+ convention introduced with LV95, EPSG:2056 (?) # NOT WORKING
-    clipped_filename = f'{results}MeteoSwissClipped.nc'
-    out_filename = f'{results}MeteoSwissOut.nc'
+    target_eto_CRS = "EPSG:4326" # Needs to be in degrees to compute the evapotranspiration
+    target_dem_CRS = "EPSG:21781" # BUT NEEDS TO BE IN METERS TO COMPUTE AREAS FOR HYDROBRICKS
+    reproj_filename = f'{results}MeteoSwiss_Swiss_reproj'
+    reproj_resamp_filename = f'{results}MeteoSwiss_Swiss_reproj_resamp'
+    
+    nc_filename = f'{path}Swiss_Past_MeteoSwiss/OldVersion/TminD_1971_2017_ch01r.swisscors/TminD_ch01r.swisscors_all.nc'
+    clipped_filename = f'{results}MeteoSwiss_tasmin_Clipped.nc'
+    out_filename = f'{results}MeteoSwiss_tasmin_Out_epsg4326.nc'
     reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='chxchy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename)
+
+    nc_filename = f'{path}Swiss_Past_MeteoSwiss/OldVersion/TmaxD_1971_2017_ch01r.swisscors/TmaxD_ch01r.swisscors_all.nc'
+    clipped_filename = f'{results}MeteoSwiss_tasmax_Clipped.nc'
+    out_filename = f'{results}MeteoSwiss_tasmax_Out_epsg4326.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='chxchy')
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename)
+
+    nc_filename = f'{path}Swiss_Past_MeteoSwiss/OldVersion/TabsD_1961_2017_ch01r.swisscors/TabsD_ch01r.swisscors_all.nc'
+    clipped_filename_tmp = f'{results}MeteoSwiss_tas_Clipped_temp.nc'
+    clipped_filename = f'{results}MeteoSwiss_tas_Clipped.nc'
+    out_filename1 = f'{results}MeteoSwiss_tas_Out_epsg4326.nc'
+    out_filename2 = f'{results}MeteoSwiss_tas_Out.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename_tmp, xy_lonlat_EN='chxchy')
+    # Slice to the time extent of min and max for pet computations, and fill the missing year...
+    ds = xa.open_dataset(clipped_filename_tmp)
+    full_time_index = pd.date_range(start=ds.time.values[0], end=ds.time.values[-1], freq="D")
+    ds = ds.reindex({"time": full_time_index}, fill_value=0)
+    sliced = ds.sel(time=slice('1971-01-01', '2017-12-31'))
+    sliced.to_netcdf(clipped_filename)
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename1)
+    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_dem_CRS, out_filename2)
+
+    create_elevation_mask(tif_filename, tif_CRS, out_filename2, target_dem_CRS, reproj_filename, reproj_resamp_filename)
+
+    nc_filename = f'{path}Swiss_Past_MeteoSwiss/OldVersion/RhiresD_1961_2017_ch01r.swisscors/RhiresD_ch01r.swisscors_all.nc'
+    clipped_filename_tmp = f'{results}MeteoSwiss_pr_Clipped_tmp.nc'
+    clipped_filename = f'{results}MeteoSwiss_pr_Clipped.nc'
+    out_filename = f'{results}MeteoSwiss_pr_Out.nc'
+    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename_tmp, xy_lonlat_EN='chxchy')
+    # Slice to the time extent of min and max.
+    ds = xa.open_dataset(clipped_filename_tmp)
+    sliced = ds.sel(time=slice('1971-01-01', '2017-12-31'))
+    sliced.to_netcdf(clipped_filename)
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_dem_CRS, out_filename)
 
-    ##################################################################################################################################
-
-    nc_filename = f'{path}Swiss_Future_CH2018/CH2018_tasmin_SMHI-RCA_ECEARTH_EUR11_RCP26_QMgrid_1981-2099.nc'
+    ########################## Harmonize CH2018 datasets #############################################################################
+    
     nc_CRS = "EPSG:4150" # CRS for the CH2018 is the CH1903+ EPSG:4150 -> cf CH2018_documentation_localized_v1.2.pdf
     # (Or the CH1903+ convention introduced with LV95?? EPSG:2056?? -> but does not seem to work)
-    clipped_filename = f'{results}CH2018_tasmin_TestClipped.nc'
-    out_filename = f'{results}CH2018_tasmin_TestOut_epsg4326.nc'
+    reproj_filename = f'{results}CH2018_Swiss_reproj'
+    reproj_resamp_filename = f'{results}CH2018_Swiss_reproj_resamp'
+
+    nc_filename = f'{path}Swiss_Future_CH2018/CH2018_tasmin_SMHI-RCA_ECEARTH_EUR11_RCP26_QMgrid_1981-2099.nc'
+    clipped_filename = f'{results}CH2018_tasmin_Clipped.nc'
+    out_filename = f'{results}CH2018_tasmin_Out_epsg4326.nc'
     reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='lonlat')
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename)
     #
     nc_filename = f'{path}Swiss_Future_CH2018/CH2018_tasmax_SMHI-RCA_ECEARTH_EUR11_RCP26_QMgrid_1981-2099.nc'
-    clipped_filename = f'{results}CH2018_tasmax_TestClipped.nc'
-    out_filename = f'{results}CH2018_tasmax_TestOut_epsg4326.nc'
+    clipped_filename = f'{results}CH2018_tasmax_Clipped.nc'
+    out_filename = f'{results}CH2018_tasmax_Out_epsg4326.nc'
     reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='lonlat')
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename)
     #
     nc_filename = f'{path}Swiss_Future_CH2018/CH2018_tas_SMHI-RCA_ECEARTH_EUR11_RCP26_QMgrid_1981-2099.nc'
-    clipped_filename = f'{results}CH2018_tas_TestClipped.nc'
-    out_filename1 = f'{results}CH2018_tas_TestOut_epsg4326.nc'
-    out_filename2 = f'{results}CH2018_tas_TestOut.nc'
+    clipped_filename = f'{results}CH2018_tas_Clipped.nc'
+    out_filename1 = f'{results}CH2018_tas_Out_epsg4326.nc'
+    out_filename2 = f'{results}CH2018_tas_Out.nc'
     reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='lonlat')
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_eto_CRS, out_filename1)
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_dem_CRS, out_filename2)
 
-    create_elevation_mask(tif_filename, tif_CRS, f'{results}CH2018_tas_TestOut.nc', target_dem_CRS, reproj_filename, reproj_resamp_filename)
+    create_elevation_mask(tif_filename, tif_CRS, out_filename2, target_dem_CRS, reproj_filename, reproj_resamp_filename)
     #
     nc_filename = f'{path}Swiss_Future_CH2018/CH2018_pr_SMHI-RCA_ECEARTH_EUR11_RCP26_QMgrid_1981-2099.nc'
-    clipped_filename = f'{results}CH2018_pr_TestClipped.nc'
-    out_filename = f'{results}CH2018_pr_TestOut.nc'
+    clipped_filename = f'{results}CH2018_pr_Clipped.nc'
+    out_filename = f'{results}CH2018_pr_Out.nc'
     reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='lonlat')
-    reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_dem_CRS, out_filename)
-
-    print('TEST 1')
-    reproj_resamp_netcdf = f'{results}CH2018_pr_TestOut_HR'
-    resample_netcdf_to_tif_resolution(tif_filename, tif_CRS, out_filename, target_dem_CRS, reproj_resamp_netcdf)
-    print('TEST 2')
-
-    ##################################################################################################################################
-
-    tif_filename = f'{path}Italy_Study_area/Sulden_Saldur_EPSG4326.tif'
-    tif_CRS = "EPSG:4326" # SURE
-    start_datetime = datetime(1970,1,1,0,0,0)
-
-    nc_filename = f'{path}Italy_Past_Crespi-etal_2020_allfiles/DailySeries_1980_2018_MeanTemp.nc'
-    nc_CRS = "EPSG:32632" # A. C. confirmed that the data is in WGS 84 / UTM 32N. SURE.
-    clipped_filename = f'{results}CrespiTestClipped.nc'
-    out_filename = f'{results}CrespiTestOut.nc'
-    reproject_tif_and_clip_netcdf_to_tif_extent(tif_filename, tif_CRS, nc_filename, nc_CRS, start_datetime, target_start_datetime, clipped_filename, xy_lonlat_EN='xy')
     reproject_netcdf_to_new_crs_and_save(clipped_filename, nc_CRS, target_dem_CRS, out_filename)
 
     ##################################################################################################################################

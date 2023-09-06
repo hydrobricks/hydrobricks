@@ -2,6 +2,7 @@
 import sys
 from datetime import datetime
 
+import netCDF4 as nc
 import numpy as np
 import rasterio
 import rioxarray  # Needed otherwise I get 'AttributeError: 'DataArray' object has no attribute 'rio''
@@ -77,7 +78,7 @@ def saving_evapotranspiration_netcdf(eto, xs, ys, times, CRS, dem_CRS, output_fi
     ds.rio.write_crs(CRS, inplace=True)
     ds.to_netcdf(output_filename)
     print_info(verbose, output_filename, ds)
-
+    
     # Reproject to the DEM CRS, in meters.
     ds_proj_crs = ds.rio.reproject(dem_CRS, Resampling=rasterio.enums.Resampling.bilinear)
     # Unfortunately, the projection in one way then another results in slight differences, so we need to assign the original corrdinates.
@@ -90,36 +91,31 @@ def saving_evapotranspiration_netcdf(eto, xs, ys, times, CRS, dem_CRS, output_fi
 
     ds.close()
 
-
 verbose = False
 path = '/home/anne-laure/Documents/Datasets/'
 results = f'{path}Outputs/'
-input_data = "CH2018" # Choose between "CH2018", "CrespiEtAl", "MeteoSwiss"
+input_data = "Crespi" # Choose between "CH2018", "Crespi", "MeteoSwiss"
 
-if input_data == "CH2018":
-    exact_coord = f'{results}CH2018_tas_TestOut.nc'
-    filename_mean = f'{results}CH2018_tas_TestOut_epsg4326.nc'
-    filename_min = f'{results}CH2018_tasmin_TestOut_epsg4326.nc'
-    filename_max = f'{results}CH2018_tasmax_TestOut_epsg4326.nc'
-    varname_mean = 'tas'
-    varname_min = 'tasmin'
-    varname_max = 'tasmax'
-    output_filename = f'{results}CH2018_pet_TestOut_epsg4326.nc'
-    output_filename2 = f'{results}CH2018_pet_TestOut.nc'
+varname_mean = 'tas'
+varname_min = 'tasmin'
+varname_max = 'tasmax'
 
-elif input_data == "MeteoSwiss":
-    filename_mean = f'{path}Swiss_Past_MeteoSwiss/TabsD_ch01r.swiss.lv95_202009280000_202009290000.nc' # RhiresD_ch02h.lonlat_200508210000_200508230000.nc'
-    filename_min = f'{path}Swiss_Past_MeteoSwiss/TnormM9120_ch01r.swiss.lv95_000001010000_000012010000.nc'
-    filename_max = f'{path}Swiss_Past_MeteoSwiss/TnormM9120_ch01r.swiss.lv95_000001010000_000012010000.nc'
-
-    output_filename = f'{results}ETOHargreavesFrom{input_data}.nc'
+exact_coord = f'{results}{input_data}_tas_Out.nc'
+filename_mean = f'{results}{input_data}_tas_Out_epsg4326.nc' # RhiresD_ch02h.lonlat_200508210000_200508230000.nc'
+filename_min = f'{results}{input_data}_tasmin_Out_epsg4326.nc'
+filename_max = f'{results}{input_data}_tasmax_Out_epsg4326.nc'
+output_filename = f'{results}{input_data}_pet_Out_epsg4326.nc'
+output_filename2 = f'{results}{input_data}_pet_Out.nc'
 
 # SLOW: change to matrix computations
 eto, xs, ys, times = compute_evapotranspiration(filename_mean, varname_mean,
                                                 filename_min, varname_min,
                                                 filename_max, varname_max, verbose)
 eto_CRS = 'EPSG:4326'
-DEM_CRS = 'EPSG:21781'
+if input_data == "MeteoSwiss" or input_data == "CH2018":
+    DEM_CRS = 'EPSG:21781'
+elif input_data == "Crespi":
+    DEM_CRS = 'EPSG:25832'
 saving_evapotranspiration_netcdf(eto, xs, ys, times, eto_CRS, DEM_CRS, output_filename, output_filename2, exact_coord)
 
 

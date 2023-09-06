@@ -8,11 +8,13 @@ SettingsBasin::SettingsBasin()
 
 SettingsBasin::~SettingsBasin() {}
 
-void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
+void SettingsBasin::AddHydroUnit(int id, double area, double elevation, double slope, double aspect) {
     HydroUnitSettings unit;
     unit.id = id;
     unit.area = area;
     unit.elevation = elevation;
+    unit.slope = slope;
+    unit.aspect = aspect;
     m_hydroUnits.push_back(unit);
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
@@ -59,12 +61,26 @@ bool SettingsBasin::Parse(const string& path) {
         // Get elevations
         vecFloat elevations = file.GetVarFloat1D("elevation", unitsNb);
 
+        // Get slopes
+        vecFloat slopes = vecFloat(unitsNb, NAN_F);
+        if (file.HasVar("slope")) {
+            slopes = file.GetVarFloat1D("slope", unitsNb);
+        }
+
+        // Get aspects
+        vecFloat aspects = vecFloat(unitsNb, NAN_F);
+        if (file.HasVar("aspect")) {
+            aspects = file.GetVarFloat1D("aspect", unitsNb);
+        }
+
         // Store hydro units
         for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
             HydroUnitSettings unit;
             unit.id = ids[iUnit];
             unit.area = areas[iUnit];
             unit.elevation = elevations[iUnit];
+            unit.slope = slopes[iUnit];
+            unit.aspect = aspects[iUnit];
             m_hydroUnits.push_back(unit);
         }
 

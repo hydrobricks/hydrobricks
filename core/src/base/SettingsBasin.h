@@ -20,6 +20,8 @@ struct HydroUnitSettings {
     int id;
     double area;
     double elevation;
+    double slope;
+    double aspect;
     vector<LandCoverSettings> landCovers;
     vector<SurfaceComponentSettings> surfaceComponents;
 };
@@ -30,7 +32,7 @@ class SettingsBasin : public wxObject {
 
     ~SettingsBasin() override;
 
-    void AddHydroUnit(int id, double area, double elevation = 0.0);
+    void AddHydroUnit(int id, double area, double elevation = NAN_D, double slope = NAN_D, double aspect = NAN_D);
 
     void AddLandCover(const string& name, const string& type = "", double fraction = 1.0);
 

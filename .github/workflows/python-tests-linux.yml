@@ -1,0 +1,99 @@
+name: Python Tests Linux
+
+on: [push]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v3.1.0
+
+    - name: Install system libraries
+      run: sudo apt-get install tree
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache Conan libs
+      id: cache-conan
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.conan
+        key: ${{ runner.os }}-conan
+
+    - name: Setup Conan
+      run: |
+        pip install conan==1.*
+        conan profile new default --detect --force
+        conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
+        conan profile update settings.compiler.libcxx=libstdc++11 default
+        conan config set general.revisions_enabled=1
+
+    - name: Install requirements
+      run: |
+        pip install -r python/requirements.txt
+        pip install -r python/requirements-optional.txt
+
+    - name: Install the package
+      run: pip install .
+
+    - name: Test
+      run: pytest ./python/tests
+
+  code-coverage:
+    runs-on: ubuntu-22.04
+
+    env:
+      CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
+
+    steps:
+      - uses: actions/checkout@v3.1.0
+
+      - name: Install system libraries
+        run: sudo apt-get install tree lcov python3
+
+      - name: Cache Conan libs
+        id: cache-conan
+        uses: actions/cache@v3
+        with:
+          path: /home/runner/.conan
+          key: ${{ runner.os }}-conan
+
+      - name: Setup Conan
+        run: |
+          pip install conan==1.*
+          conan profile new default --detect --force
+          conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
+          conan profile update settings.compiler.libcxx=libstdc++11 default
+          conan config set general.revisions_enabled=1
+
+      - name: Install requirements
+        run: |
+          pip install -r python/requirements.txt
+          pip install -r python/requirements-optional.txt
+          pip install coverage pytest-cov
+
+      - name: Install the package
+        run: pip install .
+
+      - name: Test with coverage
+        run: pytest --cov=hydrobricks ./python/tests --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          flags: python
+          files: coverage.xml

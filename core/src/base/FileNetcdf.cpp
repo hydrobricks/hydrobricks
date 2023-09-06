@@ -195,6 +195,12 @@ void FileNetcdf::PutVar(int varId, const vecAxxd& values) {
     }
 }
 
+bool FileNetcdf::HasVar(const string& varName) {
+    int varId;
+
+    return nc_inq_varid(m_ncId, varName.c_str(), &varId) != NC_ENOTVAR;
+}
+
 bool FileNetcdf::HasAtt(const string& attName, const string& varName) {
     int varId = NC_GLOBAL;
     if (!varName.empty()) {

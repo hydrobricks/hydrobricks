@@ -21,10 +21,11 @@ class Socont(Model):
             if not self.settings.generate_socont_structure(
                     self.land_cover_types, self.land_cover_names,
                     self.soil_storage_nb, self.surface_runoff):
-                raise Exception('Socont model initialization failed.')
+                raise RuntimeError('Socont model initialization failed.')
 
         except RuntimeError as err:
-            raise Exception(f'Socont model initialization raised an exception: {err}')
+            raise RuntimeError(f'Socont model initialization raised '
+                               f'an exception: {err}')
 
     def generate_parameters(self):
         ps = ParameterSet()
@@ -41,7 +42,7 @@ class Socont(Model):
 
         ps.define_parameter(
             component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-            aliases=['a_snow'], min_value=1, max_value=12, mandatory=True)
+            aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',

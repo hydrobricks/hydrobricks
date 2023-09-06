@@ -1,7 +1,13 @@
+dask
 geopandas
 matplotlib
 netCDF4
+pyet
+pyproj
 pytest
 rasterio
+rioxarray
 shapely
 spotpy
+xarray
+xarray-spatial

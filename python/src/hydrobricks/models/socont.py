@@ -54,10 +54,13 @@ class Socont(Model):
             if cover_type == 'glacier':
                 has_glacier = True
                 aliases = ['a_ice']
+                melt_aliases = ['melt_t_ice']
                 if self.land_cover_types.count('glacier') > 1:
                     i_glacier += 1
                     aliases = [f'a_ice_{cover_name.replace("-", "_")}',
                                f'a_ice_{i_glacier}']
+                    melt_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                                    f'melt_t_ice_{i_glacier}']
 
                 ps.define_constraint('a_snow', '<', aliases[0])
                 ps.define_constraint('k_snow', '<', 'k_ice')
@@ -69,7 +72,7 @@ class Socont(Model):
 
                 ps.define_parameter(
                     component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=['melt_t_ice'], min_value=0, max_value=5,
+                    unit='°C', aliases=melt_aliases, min_value=0, max_value=5,
                     default_value=0, mandatory=False)
 
         if has_glacier:

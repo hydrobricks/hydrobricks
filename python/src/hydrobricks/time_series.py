@@ -143,10 +143,10 @@ class TimeSeries:
 
         thrs_min = elevation_bands.elevation_thrs_min.values
         thrs_max = elevation_bands.elevation_thrs_max.values
-        assert len(thrs_min) == band_nb + 1
+        assert len(thrs_min) == band_nb
+        assert len(thrs_max) == band_nb
         all_topo_masks = []
         for i, (elev_min, elev_max) in enumerate(zip(thrs_min, thrs_max)):
-            elev_max = elevation_thrs[i+1]
             topo_mask = xa.where((topo > elev_min) & (topo < elev_max), 1, 0) # Elevation band set to 1, rest to 0.
             all_topo_masks.append(topo_mask)
 
@@ -154,7 +154,7 @@ class TimeSeries:
         for j, time in enumerate(var.variables[column_time][:]):
             print(varname, time.data)
             var_uniq = var[varname][j].rio.reproject_match(topo, Resampling=rasterio.enums.Resampling.bilinear)
-            for i, elev_min in enumerate(elevation_thrs[:-1]):
+            for i, elev_min in enumerate(thrs_min):
                 val = xa.where(all_topo_masks[i], var_uniq, np.nan).to_array() # Mask the meteorological data with the current elevation band.
                 # I expect to see RuntimeWarnings in this block due to elevation bands without any data inside
                 with warnings.catch_warnings():
@@ -201,7 +201,7 @@ class TimeSeries:
             self.data_raw.append(file_content[content[col]].to_numpy())
             self.data_spatialized.append(None)
 
-    def load_spatialized_data_from_csv(self, column, path, time_path, time_format, dropindex):
+    def load_spatialized_data_from_csv(self, column, path, time_path, time_format, dropindex, start_date=None, end_date=None):
         """
         Read already spatialized time series data from csv file.
         Useful for data that needs a long time to be processed with initialize_from_netcdf_HR()
@@ -221,24 +221,20 @@ class TimeSeries:
         """
         data = np.loadtxt(path, delimiter=',')
 
-        # TEMPORARY - DROP WHERE AREA==0
-        print('TEMP DEBUG', type(data))
-        keepindex = np.delete(list(range(len(data[0]))), dropindex.values)
-        print('TEMP DEBUG', keepindex)
-        d = np.ndarray((len(data), len(keepindex)))
-        for i, day in enumerate(data):
-            d[i,:] = day[keepindex]
-        # TEMPORARY - DROP WHERE AREA==0 - ENDOF
-
         file_content = pd.read_csv(time_path, converters={'time': lambda x: pd.to_datetime(x).strptime(time_format)})
 
-        nb_days = len(d)
+        if start_date and end_date:
+            mask = (file_content['# time'] >= start_date) & (file_content['# time'] <= end_date)
+            file_content = file_content.loc[mask]
+            data = data[mask]
+
+        nb_days = len(data)
         assert len(file_content['# time']) == nb_days
 
         self.time = file_content['# time'] # time2 #file_content[column_time]
         self.data_name.append(column)
         self.data_raw.append(None)
-        self.data_spatialized.append(d)
+        self.data_spatialized.append(data)
 
     def _date_as_mjd(self):
         return utils.date_as_mjd(self.time)

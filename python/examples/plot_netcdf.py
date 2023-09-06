@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import seaborn as sns
 import shapefile as shp
 import shapely
 import shapely.vectorized
@@ -702,8 +703,6 @@ def plot_orthophoto(tif_filename, mask, output_filename, year, target_crs, sourc
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
     
-    
-
 def plot_map_glacial_cover_change(tif_filename, glaciers_dict, debris_dict, mask, output_filename, tif_crs, target_crs, title, basemap_crs):
     print('Plot shapefiles')
     hatch_debris = '..'
@@ -1189,7 +1188,7 @@ def plot_shannon_entropy(data_file, output_filename, label, title, header=0, use
     plt.savefig(output_filename + '_generalised_shannon_entropy_index.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
-def plot_simulated_against_observed_discharges(time_file, simulated_discharge, observed_discharge, output_filename, 
+def plot_simulated_against_observed_discharges(simulated_discharge, observed_discharge, output_filename, 
                                                label, title, header=0, usecol=[0]):
 
     simu_data = pd.io.parsers.read_csv(simulated_discharge, sep=",", header=1, na_values='', usecols=usecol)
@@ -1210,7 +1209,7 @@ def plot_simulated_against_observed_discharges(time_file, simulated_discharge, o
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
-def plot_simulated_discharge(time_file, data_file, output_filename, label, title, header=0, usecol=[0, 1], time_format='%Y-%m-%d %H:%M:%S'):
+def plot_simulated_discharge(data_file, output_filename, label, title, header=0, usecol=[0, 1], time_format='%Y-%m-%d %H:%M:%S'):
 
     data = pd.io.parsers.read_csv(data_file, sep=",", header=header, na_values='', usecols=usecol)
     print(data)
@@ -1239,6 +1238,44 @@ def plot_simulated_discharge(time_file, data_file, output_filename, label, title
     plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
     plt.show()
 
+def plot_simulation_stats_of_all_subcatchments(catchments, path, files, output_filename):
+    
+    dfs = []
+    for catchment in catchments:
+        df = pd.read_csv(path + catchment + files, usecols=[0,1,2,3,4,5,6,7,8,9])
+        dfs.append(df)
+        
+    merged_dfs = pd.concat(dfs, keys=catchments, names=["Catchment"]).reset_index()
+    
+    variables = ['like1', 'parA', 'para_snow', 'park_slow_1',
+       'park_slow_2', 'park_quick', 'parpercol', 'para_ice', 'park_snow',
+       'park_ice']
+    labels = ['like1', 'A', 'a_snow', 'k_slow_1',
+       'k_slow_2', 'k_quick', 'percol', 'a_ice', 'k_snow',
+       'k_ice']
+    my_pal = {"BS": "paleturquoise", "DB": "moccasin", "HGDA": "paleturquoise", 'PI': "moccasin", 
+              'TN': "moccasin", 'VU': "paleturquoise", 'BI': "mediumturquoise"}
+    
+    fig, axes = plt.subplots(5, 2, figsize=(10, 16), sharey='row')
+    
+    for var, label, axcol in zip(variables, labels, axes.flatten()):
+        sns.violinplot(data=merged_dfs, x="Catchment", y=var, ax=axcol, palette=my_pal)
+        axcol.set_ylabel(label)
+    axcol.set_xlabel("Catchments")
+    
+    plt.tight_layout()
+    
+    plt.savefig(output_filename + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+    
+    for var, label in zip(variables, labels):
+        fig, ax = plt.subplots()
+        sns.violinplot(data=merged_dfs, x="Catchment", y=var, ax=ax, palette=my_pal)
+        ax.set_ylabel(label)
+        ax.set_xlabel("Catchments")
+        plt.savefig(output_filename + '_' + var + '.png', format="png", bbox_inches='tight', dpi=100)
+    plt.show()
+    
 def plot_netcdf(filename, start_datetime, day, title, label, varname, width=500000, height=350000, data_type=1):
 
     nc = NetCDFFile(filename)
@@ -1387,26 +1424,30 @@ it_study_area = '/home/anne-laure/Documents/Datasets/Italy_Study_area/'
 ch_study_area = '/home/anne-laure/Documents/Datasets/Swiss_Study_area/'
 ch_arolla_area = '/home/anne-laure/Documents/Datasets/Swiss_discharge/Arolla_discharge/'
 
+
+catchments = ['BS', 'DB', 'HGDA', 'PI', 'TN', 'VU', 'BI']
+plot_simulation_stats_of_all_subcatchments(catchments, '/home/anne-laure/Documents/Datasets/Outputs/Arolla/', 
+                                           '/socont_SCEUA_kge_2012.csv', f'{figures}Comparison_stats')
+
 ##################################### Arolla ##############################################################################
 
-time = 'Weird time'
 catchments = ['BIrest', 'BS', 'DB', 'HGDA', 'PI', 'TN', 'VU', 'BI']
 
 for catchment in catchments:
     name = f'Arolla_15min_discharge_{catchment}'
-    plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
+    plot_simulated_discharge(f'{results}ObservedDischarges/{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
                              title=f'Arolla 15min discharge {catchment}', header=0, usecol=[0, 1])
 
     name = f'Arolla_daily_mean_discharge_{catchment}'
-    plot_simulated_discharge(time, f'{results}{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
+    plot_simulated_discharge(f'{results}ObservedDischarges/{name}.csv', f'{figures}{name}', 'Discharge (m³/s)', 
                              title=f'Arolla daily mean discharge {catchment}', header=0, usecol=[0, 1], time_format='%d/%m/%Y')
 
     if catchment != "BIrest":
         simulated_discharge = f'{results}Arolla/{catchment}/simulated_discharge.csv'
         if os.path.exists(simulated_discharge):
-            observed_discharge = f'{results}Arolla_daily_mean_discharge_{catchment}.csv'
+            observed_discharge = f'{results}ObservedDischarges/Arolla_daily_mean_discharge_{catchment}.csv'
             output_file = f'{figures}simulated_vs_observed_discharges_{catchment}'
-            plot_simulated_against_observed_discharges(time, simulated_discharge, observed_discharge, output_file, 
+            plot_simulated_against_observed_discharges(simulated_discharge, observed_discharge, output_file, 
                                                    'Discharges (mm/day)', title=f"Simulated and observed discharges in {catchment}")
 
 ##################################### Arolla ## Glacial cover #############################################################
@@ -1423,15 +1464,15 @@ for catchment in catchments:
 
 ##################################### Arolla ##############################################################################
 
-tif = f'{ch_arolla_area}FilledDEM.tif'
-mask = f'{ch_arolla_area}Watersheds_on_dhm25/Whole_UpslopeArea_EPSG21781'
+tif = f'{ch_study_area}StudyAreas_EPSG21781_filled.tif'
+mask = f'{ch_arolla_area}Watersheds_on_dhm25/Whole_UpslopeArea_EPSG21781/out'
 
 watersheds = f'{ch_arolla_area}Watersheds_on_dhm25/'
 outlets = f'{ch_arolla_area}Outlet_locations_on_dhm25/'
-glaciers_dict = {'BI, Bertol Inférieur':f'{watersheds}BI_UpslopeArea_EPSG21781', 'BS, Bertol Supérieur':f'{watersheds}BS_UpslopeArea_EPSG21781',
-                 'DB, Douves Blanches':f'{watersheds}DB_UpslopeArea_EPSG21781',  "HGDA, Haut Glacier d'Arolla":f'{watersheds}HGDA_UpslopeArea_EPSG21781',
-                 'PI, Pièce':f'{watersheds}PI_UpslopeArea_EPSG21781',            'TN, Tsijiore Noive':f'{watersheds}TN_UpslopeArea_EPSG21781', 
-                 'VU, Vuibé':f'{watersheds}VU_UpslopeArea_EPSG21781'}
+glaciers_dict = {'BI, Bertol Inférieur':f'{watersheds}BI_UpslopeArea_EPSG21781/out', 'BS, Bertol Supérieur':f'{watersheds}BS_UpslopeArea_EPSG21781/out',
+                 'DB, Douves Blanches':f'{watersheds}DB_UpslopeArea_EPSG21781/out',  "HGDA, Haut Glacier d'Arolla":f'{watersheds}HGDA_UpslopeArea_EPSG21781/out',
+                 'PI, Pièce':f'{watersheds}PI_UpslopeArea_EPSG21781/out',            'TN, Tsijiore Noive':f'{watersheds}TN_UpslopeArea_EPSG21781/out', 
+                 'VU, Vuibé':f'{watersheds}VU_UpslopeArea_EPSG21781/out'}
 debris_dict = {'BI, Bertol Inférieur':f'{outlets}BI_outlet_EPSG21781', 'BS, Bertol Supérieur':f'{outlets}BS_outlet_EPSG21781',
                  'DB, Douves Blanches':f'{outlets}DB_outlet_EPSG21781',  "HGDA, Haut Glacier d'Arolla":f'{outlets}HGDA_outlet_EPSG21781',
                  'PI, Pièce':f'{outlets}PI_outlet_EPSG21781',            'TN, Tsijiore Noive':f'{outlets}TN_outlet_EPSG21781', 
@@ -1442,8 +1483,6 @@ plot_map_glacial_cover_change(tif, glaciers_dict, debris_dict, mask, output_file
 
 ###########################################################################################################################
 
-time = 'Weird time'
-
 discharge = f'{path}Italy_discharge/PonteStelvio/Bonfrisco_20211222/07770PG_Suldenbach-Stilfserbrücke_RioSolda-PonteStelvio_Q_10m.Cmd.RunOff.csv'
 output_file = f'{figures}Stelvio_shannon_entropy'
 plot_shannon_entropy(discharge, output_file, 'Shannon entropy',
@@ -1451,15 +1490,15 @@ plot_shannon_entropy(discharge, output_file, 'Shannon entropy',
 
 discharge = f'{results}Stelvio_discharge.csv'
 output_file = f'{figures}Stelvio_discharge'
-plot_simulated_discharge(time, discharge, output_file, 'Discharge (m³/s)',
+plot_simulated_discharge(discharge, output_file, 'Discharge (m³/s)',
                          title='Ponte Stelvio 10 min discharge', header=1, usecol=[1])
 discharge = f'{results}Stelvio_daily_mean_discharge.csv'
 output_file = f'{figures}Stelvio_daily_mean_discharge'
-plot_simulated_discharge(time, discharge, output_file, 'Discharge (m³/s)',  
+plot_simulated_discharge(discharge, output_file, 'Discharge (m³/s)',  
                          title='Ponte Stelvio daily mean discharge', header=1, usecol=[1])
 discharge = f'{results}simulated_discharge.csv'
 output_file = f'{figures}simulated_discharge'
-plot_simulated_discharge(time, discharge, output_file, 'Simulated discharge (mm/day?)', 
+plot_simulated_discharge(discharge, output_file, 'Simulated discharge (mm/day?)', 
                          title="Simulated Hydrobricks discharge")
 
 ###########################################################################################################################
@@ -1477,7 +1516,7 @@ plot_altitudinal_glacial_cover_plots(output_filename, elevation_band_file)
 tif = f'{ch_study_area}StudyAreas_EPSG21781.tif'
 mask = f'{ch_study_area}LaNavisence_Chippis/125595_EPSG4326'
 
-main_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtent/'
+main_path = '/home/anne-laure/Documents/Datasets/Swiss_GlaciersExtents/'
 glaciers_dict = {1850:f'{main_path}inventory_sgi1850_r1992/SGI_1850', 1931:f'{main_path}inventory_sgi1931_r2022/SGI_1931',
                  1973:f'{main_path}inventory_sgi1973_r1976/SGI_1973', 2010:f'{main_path}inventory_sgi2010_r2010/SGI_2010',
                  2016:f'{main_path}inventory_sgi2016_r2020/SGI_2016_glaciers'}

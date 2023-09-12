@@ -58,11 +58,11 @@ void Process::Reset() {
     }
 }
 
-void Process::SetHydroUnitProperties(const HydroUnit* unit, const Brick* brick) {
+void Process::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) {
     // Nothing to do...
 }
 
-void Process::SetParameters(const ProcessSettings &processSettings) {
+void Process::SetParameters(const ProcessSettings& processSettings) {
     // Nothing to do...
 }
 

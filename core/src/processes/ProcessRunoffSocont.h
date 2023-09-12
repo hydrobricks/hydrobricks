@@ -5,6 +5,8 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+class HydroUnit;
+
 class ProcessRunoffSocont : public ProcessOutflow {
   public:
     explicit ProcessRunoffSocont(WaterContainer* container);
@@ -14,7 +16,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     /**
      * @copydoc Process::SetHydroUnitProperties()
      */
-    void SetHydroUnitProperties(const HydroUnit* unit, const Brick* brick) override;
+    void SetHydroUnitProperties(HydroUnit* unit, Brick* brick) override;
 
     /**
      * @copydoc Process::SetParameters()
@@ -22,10 +24,14 @@ class ProcessRunoffSocont : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* m_slope; // [ratio]
-    float* m_beta;  // []
+    float m_slope;           // []
+    float* m_beta;           // []
+    double* m_areaFraction;  // []
+    double m_areaUnit;       // [m^2]
 
     vecDouble GetRates() override;
+
+    double GetArea();
 
   private:
 };

@@ -13,10 +13,30 @@ class Brick : public wxObject {
 
     ~Brick() override;
 
+    /**
+     * Factory method to create a brick.
+     *
+     * @param brickSettings settings of the brick.
+     * @return the created brick.
+     */
     static Brick* Factory(const BrickSettings& brickSettings);
 
+    /**
+     * Check if the brick has a parameter with the provided name.
+     *
+     * @param brickSettings settings of the brick containing the parameters.
+     * @param name name of the parameter to check.
+     * @return true if the brick has a parameter with the provided name.
+     */
     static bool HasParameter(const BrickSettings& brickSettings, const string& name);
 
+    /**
+     * Get the pointer to the parameter value.
+     *
+     * @param brickSettings settings of the brick containing the parameters.
+     * @param name name of the parameter.
+     * @return pointer to the parameter value.
+     */
     static float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
 
     /**

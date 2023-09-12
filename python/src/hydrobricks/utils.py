@@ -1,6 +1,7 @@
 import datetime
 import json
 import pint
+import pint_pandas
 import time
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pandas as pd
 import yaml
 
 ureg = pint.UnitRegistry()
+pint_pandas.PintType.ureg.default_format = "P~"
 
 
 def validate_kwargs(kwargs, allowed_kwargs):

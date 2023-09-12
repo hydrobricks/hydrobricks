@@ -8,6 +8,7 @@ from _hydrobricks import SettingsBasin
 from hydrobricks import utils
 
 ureg = pint.UnitRegistry()
+pint_pandas.PintType.ureg.default_format = "P~"
 
 
 class HydroUnits:

@@ -1,6 +1,7 @@
 import itertools
 import math
 import pint
+import pint_pandas
 import warnings
 
 import numpy as np
@@ -9,6 +10,7 @@ import pandas as pd
 import hydrobricks as hb
 
 ureg = pint.UnitRegistry()
+pint_pandas.PintType.ureg.default_format = "P~"
 
 
 class Catchment:
@@ -28,7 +30,7 @@ class Catchment:
         self.slope = None
         self.aspect = None
         self.map_unit_ids = None
-        self.hydro_units = pd.DataFrame(columns=['elevation', 'area'])
+        self.hydro_units = None
         self._extract_outline(outline)
 
     def __del__(self):
@@ -218,12 +220,18 @@ class Catchment:
         self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
         if res_elevation:
-            self.hydro_units['elevation'] = res_elevation
-            self.hydro_units['elevation_min'] = res_elevation_min
-            self.hydro_units['elevation_max'] = res_elevation_max
+            df = pd.DataFrame(
+                {
+                    "elevation": pd.Series(res_elevation, dtype="pint[m]"),
+                    "elevation_min": pd.Series(res_elevation_min, dtype="pint[m]"),
+                    "elevation_max": pd.Series(res_elevation_max, dtype="pint[m]"),
+                }
+            )
+            self._append_hydro_unit_properties(df)
 
         if res_aspect_class:
-            self.hydro_units['aspect_class'] = res_aspect_class
+            df = pd.DataFrame({"aspect_class": pd.Series(res_aspect_class)})
+            self._append_hydro_unit_properties(df)
 
         self.get_hydro_units_attributes()
 
@@ -280,16 +288,26 @@ class Catchment:
             res_lon.append(lon)
 
         if 'elevation' not in self.hydro_units.columns:
-            self.hydro_units['elevation'] = res_elevation
-            self.hydro_units['elevation_min'] = res_elevation_min
-            self.hydro_units['elevation_max'] = res_elevation_max
+            df = pd.DataFrame(
+                {
+                    "elevation": pd.Series(res_elevation, dtype="pint[m]"),
+                    "elevation_min": pd.Series(res_elevation_min, dtype="pint[m]"),
+                    "elevation_max": pd.Series(res_elevation_max, dtype="pint[m]"),
+                }
+            )
+            self._append_hydro_unit_properties(df)
 
-        self.hydro_units['elevation_mean'] = res_elevation_mean
-        self.hydro_units['area'] = res_area
-        self.hydro_units['slope'] = res_slope
-        self.hydro_units['aspect'] = res_aspect
-        self.hydro_units['latitude'] = res_lat
-        self.hydro_units['longitude'] = res_lon
+        df = pd.DataFrame(
+            {
+                "elevation_mean": pd.Series(res_elevation_mean, dtype="pint[m]"),
+                "area": pd.Series(res_area, dtype="pint[m^2]"),
+                "slope": pd.Series(res_slope, dtype="pint[deg]"),
+                "aspect": pd.Series(res_aspect, dtype="pint[deg]"),
+                "latitude": pd.Series(res_lat, dtype="pint[deg]"),
+                "longitude": pd.Series(res_lon, dtype="pint[deg]"),
+            }
+        )
+        self._append_hydro_unit_properties(df)
 
         return self.hydro_units
 
@@ -311,7 +329,7 @@ class Catchment:
             raise ImportError("xarray-spatial is required to do this.")
 
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
@@ -329,9 +347,8 @@ class Catchment:
             raise ValueError("No hydro units to save.")
 
         # Save to csv file with units in the header
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=pint.UnitStrippedWarning)
-            self.hydro_units.to_csv(path, header=True, index=False)
+        df = self.hydro_units.pint.dequantify()
+        df.to_csv(path, header=True, index=False)
 
     def save_unit_ids_raster(self, path):
         """
@@ -425,6 +442,12 @@ class Catchment:
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
+
+    def _append_hydro_unit_properties(self, df):
+        if self.hydro_units is None:
+            self.hydro_units = df
+        else:
+            self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
     def _check_crs(self, data):
         data_crs = self._get_crs_from_file(data)

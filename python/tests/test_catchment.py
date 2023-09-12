@@ -81,7 +81,7 @@ def test_load_units_from_raster():
         catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
         catchment2.extract_dem(CATCHMENT_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir) / 'unit_ids.tif')
-        assert np.allclose(catchment2.unit_ids, catchment.unit_ids)
+        assert np.allclose(catchment2.map_unit_ids, catchment.map_unit_ids)
 
 
 def test_load_units_from_raster_prepare_attributes():

@@ -30,7 +30,7 @@ double ProcessRunoffSocont::GetArea() {
         return m_areaUnit * *m_areaFraction;
     }
 
-    return m_areaUnit
+    return m_areaUnit;
 }
 
 vecDouble ProcessRunoffSocont::GetRates() {

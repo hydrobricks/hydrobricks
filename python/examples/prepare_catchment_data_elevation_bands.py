@@ -27,12 +27,12 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.calculate_slope_aspect()
 
 # Create elevation bands
-bands = catchment.create_elevation_bands(method='isohypse', distance=50)
+catchment.create_elevation_bands(method='isohypse', distance=50)
 
 # Save elevation bands to a raster
 catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')
 
 # Save the elevation band properties to a csv file
-bands.to_csv(working_dir / 'bands.csv')
+catchment.save_hydro_units_to_csv(working_dir / 'bands.csv')
 
 print(f"Files saved to: {working_dir}")

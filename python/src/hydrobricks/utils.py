@@ -1,11 +1,14 @@
 import datetime
 import json
+import pint
 import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yaml
+
+ureg = pint.UnitRegistry()
 
 
 def validate_kwargs(kwargs, allowed_kwargs):
@@ -30,19 +33,27 @@ def dump_config_file(content, directory, name, file_type='yaml'):
             outfile.write(json_object)
 
 
+def get_unit(unit):
+    """Get the unit from a string."""
+    if unit is None:
+        return None
+    if isinstance(unit, ureg.Unit):
+        return unit
+    if isinstance(unit, str):
+        if unit in ureg:
+            return ureg[unit]
+        if unit == 'm2':
+            return ureg['m^2']
+        if unit == 'km2':
+            return ureg['km^2']
+
+    return None
+
+
 def date_as_mjd(date):
     if isinstance(date, pd.Timestamp):
         return date.to_julian_date() - 2400000.5
     return pd.DatetimeIndex(date).to_julian_date() - 2400000.5
-
-
-def area_in_m2(area, unit):
-    if unit == 'm' or unit == 'm2':
-        return area
-    elif unit == 'km' or unit == 'km2':
-        return area * 1000 * 1000
-    else:
-        raise ValueError(f'The area unit "{unit}" is not supported.')
 
 
 def jd_to_date(jd):

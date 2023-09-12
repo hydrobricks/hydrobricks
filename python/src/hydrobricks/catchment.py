@@ -1,11 +1,14 @@
 import itertools
 import math
+import pint
 import warnings
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
+
+ureg = pint.UnitRegistry()
 
 
 class Catchment:
@@ -82,13 +85,9 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
-
-        Returns
-        -------
-        A dataframe with the elevation bands.
         """
-        return self.discretize_by('elevation', method, number, distance,
-                                  min_elevation, max_elevation)
+        self.discretize_by('elevation', method, number, distance,
+                           min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
                       elevation_distance=50, min_elevation=None, max_elevation=None):
@@ -114,10 +113,6 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
-
-        Returns
-        -------
-        A dataframe with the hydro units properties.
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -232,8 +227,6 @@ class Catchment:
 
         self.get_hydro_units_attributes()
 
-        return self.hydro_units
-
     def get_hydro_units_attributes(self):
         """
         Extract the hydro units attributes.
@@ -250,6 +243,8 @@ class Catchment:
 
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
+
+        self.hydro_units.insert(loc=0, column='id', value=unit_ids)
 
         res_area = []
         res_elevation = []
@@ -320,6 +315,23 @@ class Catchment:
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+
+    def save_hydro_units_to_csv(self, path):
+        """
+        Save the hydro units to a csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.hydro_units is None:
+            raise ValueError("No hydro units to save.")
+
+        # Save to csv file with units in the header
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=pint.UnitStrippedWarning)
+            self.hydro_units.to_csv(path, header=True, index=False)
 
     def save_unit_ids_raster(self, path):
         """

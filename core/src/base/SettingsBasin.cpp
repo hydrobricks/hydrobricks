@@ -6,15 +6,12 @@
 SettingsBasin::SettingsBasin()
     : m_selectedHydroUnit(nullptr) {}
 
-SettingsBasin::~SettingsBasin() {}
+SettingsBasin::~SettingsBasin() = default;
 
-void SettingsBasin::AddHydroUnit(int id, double area, double elevation, double slope, double aspect) {
+void SettingsBasin::AddHydroUnit(int id, double area) {
     HydroUnitSettings unit;
     unit.id = id;
     unit.area = area;
-    unit.elevation = elevation;
-    unit.slope = slope;
-    unit.aspect = aspect;
     m_hydroUnits.push_back(unit);
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
@@ -26,6 +23,25 @@ void SettingsBasin::AddLandCover(const string& name, const string& type, double 
     element.type = type;
     element.fraction = fraction;
     m_selectedHydroUnit->landCovers.push_back(element);
+}
+
+void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value, const string& unit) {
+    wxASSERT(m_selectedHydroUnit);
+
+    HydroUnitPropertyDouble property;
+    property.name = name;
+    property.value = value;
+    property.unit = unit;
+    m_selectedHydroUnit->propertiesDouble.push_back(property);
+}
+
+void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string& value) {
+    wxASSERT(m_selectedHydroUnit);
+
+    HydroUnitPropertyString property;
+    property.name = name;
+    property.value = value;
+    m_selectedHydroUnit->propertiesString.push_back(property);
 }
 
 void SettingsBasin::SelectUnit(int index) {
@@ -58,29 +74,11 @@ bool SettingsBasin::Parse(const string& path) {
         // Get areas
         vecDouble areas = file.GetVarDouble1D("area", unitsNb);
 
-        // Get elevations
-        vecFloat elevations = file.GetVarFloat1D("elevation", unitsNb);
-
-        // Get slopes
-        vecFloat slopes = vecFloat(unitsNb, NAN_F);
-        if (file.HasVar("slope")) {
-            slopes = file.GetVarFloat1D("slope", unitsNb);
-        }
-
-        // Get aspects
-        vecFloat aspects = vecFloat(unitsNb, NAN_F);
-        if (file.HasVar("aspect")) {
-            aspects = file.GetVarFloat1D("aspect", unitsNb);
-        }
-
         // Store hydro units
         for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
             HydroUnitSettings unit;
             unit.id = ids[iUnit];
             unit.area = areas[iUnit];
-            unit.elevation = elevations[iUnit];
-            unit.slope = slopes[iUnit];
-            unit.aspect = aspects[iUnit];
             m_hydroUnits.push_back(unit);
         }
 
@@ -99,6 +97,35 @@ bool SettingsBasin::Parse(const string& path) {
                 m_hydroUnits[iUnit].landCovers.push_back(element);
             }
         }
+
+        // Extract other variables
+        int varsNb = file.GetVarsNb();
+        int dimIdHydroUnits = file.GetDimId("hydro_units");
+
+        for (int iVar = 0; iVar < varsNb; ++iVar) {
+            // Get variable name
+            string varName = file.GetVarName(iVar);
+
+            if (varName == "id" || varName == "area") {
+                continue;
+            }
+
+            vecInt dimId = file.GetVarDimIds(iVar, 1);
+            if (dimId[0] != dimIdHydroUnits) {
+                continue;
+            }
+
+            vecDouble values = file.GetVarDouble1D(varName, unitsNb);
+
+            for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
+                HydroUnitPropertyDouble prop;
+                prop.name = varName;
+                prop.value = values[iUnit];
+                prop.unit = "";
+                m_hydroUnits[iUnit].propertiesDouble.push_back(prop);
+            }
+        }
+
 
     } catch (std::exception& e) {
         wxLogError(e.what());

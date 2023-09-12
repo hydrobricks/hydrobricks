@@ -8,6 +8,8 @@
 #include "LandCover.h"
 #include "Splitter.h"
 
+struct HydroUnitSettings;
+
 class HydroUnit : public wxObject {
   public:
     enum Types {
@@ -25,7 +27,13 @@ class HydroUnit : public wxObject {
 
     void SaveAsInitialState();
 
+    void SetProperties(HydroUnitSettings& unitSettings);
+
     void AddProperty(HydroUnitProperty* property);
+
+    double GetPropertyDouble(const string& name, const string& unit = "");
+
+    string GetPropertyString(const string& name);
 
     void AddBrick(Brick* brick);
 

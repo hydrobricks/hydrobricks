@@ -12,7 +12,10 @@ TEST(SettingsBasin, ParseNcFile) {
 
     EXPECT_EQ(unitSettings.id, 84);
     EXPECT_EQ(unitSettings.area, 3018000.0);
-    EXPECT_EQ(unitSettings.elevation, 4454.0);
+
+    EXPECT_GE(unitSettings.propertiesDouble.size(), 1);
+    EXPECT_TRUE(unitSettings.propertiesDouble[0].name == "elevation");
+    EXPECT_TRUE(unitSettings.propertiesDouble[0].value == 4454.0);
 
     EXPECT_EQ(unitSettings.landCovers.size(), 3);
 

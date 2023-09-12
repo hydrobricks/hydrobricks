@@ -1,9 +1,13 @@
+import pint
+import pint_pandas
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
 from hydrobricks import utils
+
+ureg = pint.UnitRegistry()
 
 
 class HydroUnits:
@@ -30,18 +34,18 @@ class HydroUnits:
             self.hydro_units = pd.DataFrame(columns=columns)
 
     def load_from_csv(self, path, column_elevation=None, column_area=None,
-                      area_unit='m2', column_fractions=None, columns_areas=None,
-                      column_slope=None, column_aspect=None, column_lat=None,
-                      column_lon=None):
+                      column_fractions=None, columns_areas=None, other_columns=None):
         """
-        Read hydro units properties from csv file.
+        Read hydro units properties from csv file. The file must contain two header
+        rows. The first row contains the column names and the second row contains the
+        units. The file must contain at a minimum the units area.
 
         Parameters
         ----------
         path : str|Path
             Path to the csv file containing hydro units data.
         column_elevation : str, optional
-            Column name containing the elevation values in [m] (optional).
+            Column name containing the elevation values (optional).
             Default: elevation
         column_area : str, optional
             Column name containing the area values (optional).
@@ -51,18 +55,14 @@ class HydroUnits:
             (optional).
         columns_areas : dict, optional
             Column name containing the area values for each land cover (optional).
-        area_unit: str, optional
-            Unit for the area values: "m2" or "km2"
-        column_slope : str, optional
-            Column name containing the slope values in degree (optional).
-        column_aspect : str, optional
-            Column name containing the aspect values in degree (optional).
-        column_lat : str, optional
-            Column name containing the latitude values (optional).
-        column_lon : str, optional
-            Column name containing the longitude values (optional).
+        other_columns: dict, optional
+            Column name containing other values to import (optional). The key is the
+            property name and the value is the name of the column in the csv file.
+            Example: {'slope': 'Slope', 'aspect': 'Aspect'}
         """
-        file_content = pd.read_csv(path)
+        file_content = pd.read_csv(path, header=[0, 1])
+        self._check_column_names(file_content)
+        file_content = file_content.pint.quantify(level=-1)
 
         self.hydro_units['id'] = range(1, 1 + len(file_content))
 
@@ -76,25 +76,9 @@ class HydroUnits:
         elif 'area' in file_content.columns:
             self.hydro_units['area'] = file_content['area']
 
-        if column_slope is not None:
-            self.hydro_units['slope'] = file_content[column_slope]
-        elif 'slope' in file_content.columns:
-            self.hydro_units['slope'] = file_content['slope']
-
-        if column_aspect is not None:
-            self.hydro_units['aspect'] = file_content[column_aspect]
-        elif 'aspect' in file_content.columns:
-            self.hydro_units['aspect'] = file_content['aspect']
-
-        if column_lat is not None:
-            self.hydro_units['latitude'] = file_content[column_lat]
-        elif 'latitude' in file_content.columns:
-            self.hydro_units['latitude'] = file_content['latitude']
-
-        if column_lon is not None:
-            self.hydro_units['longitude'] = file_content[column_lon]
-        elif 'longitude' in file_content.columns:
-            self.hydro_units['longitude'] = file_content['longitude']
+        if other_columns is not None:
+            for prop, col in other_columns.items():
+                self.hydro_units[prop] = file_content[col]
 
         if column_fractions is not None:
             raise NotImplementedError
@@ -109,7 +93,7 @@ class HydroUnits:
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
-        self.hydro_units['area'] = utils.area_in_m2(self.hydro_units['area'], area_unit)
+        self.hydro_units['area'] = self.hydro_units['area'].pint.to('m^2')
 
         self._populate_binding_instance()
 
@@ -163,19 +147,44 @@ class HydroUnits:
         return self.hydro_units['id']
 
     def _populate_binding_instance(self):
+        # List properties to be set
+        properties = self.hydro_units.columns.tolist()
+        properties = [p for p in properties if p not in ['id', 'area']]
+        properties = [p for p in properties if 'fraction-' not in p]
+
         for _, row in self.hydro_units.iterrows():
-            slope = np.nan
-            if 'slope' in self.hydro_units.columns:
-                slope = row['slope']
-            aspect = np.nan
-            if 'aspect' in self.hydro_units.columns:
-                aspect = row['aspect']
-            self.settings.add_hydro_unit(int(row['id']), row['area'], row['elevation'],
-                                         slope, aspect)
+            self.settings.add_hydro_unit(int(row['id']), row['area'].magnitude)
+            for prop in properties:
+                if isinstance(row[prop], str):
+                    self.settings.add_hydro_unit_property_str(prop, row[prop])
+                else:
+                    self.settings.add_hydro_unit_property_double(
+                        prop, row[prop].magnitude, self._get_unit(row[prop]))
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = row[self.prefix_fraction + cover_name]
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
+
+    def _check_column_names(self, file_content):
+        # Rename unnamed columns to 'No Unit'
+        new_column_names = []
+        for i, col in enumerate(file_content.columns):
+            if 'Unnamed' in col[0] or 'Unnamed' in col[1]:
+                new_column_names.append(('No Name', 'No Unit'))
+            else:
+                self._check_unit(col[1])
+                new_column_names.append(col)
+
+        file_content.columns = pd.MultiIndex.from_tuples(new_column_names)
+
+    @staticmethod
+    def _check_unit(unit):
+        if unit not in ureg:
+            raise ValueError(f'The unit "{unit}" is not recognized by pint.')
+
+    @staticmethod
+    def _get_unit(prop):
+        return str(prop.units) if hasattr(prop, 'units') else None
 
     def _check_land_cover_areas_match(self, columns_areas):
         if len(columns_areas) != len(self.land_cover_names):

@@ -1,7 +1,8 @@
 import os.path
 import tempfile
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 import hydrobricks as hb
 

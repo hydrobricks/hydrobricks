@@ -67,38 +67,38 @@ class Forcing:
         """
         if variable in self.Variable.__members__:
             return self.Variable[variable]
-        else:
-            if variable in ['precipitation', 'precip', 'p']:
-                return self.Variable.P
-            elif variable in ['temperature', 'temp', 't']:
-                return self.Variable.T
-            elif variable in ['temperature_min', 'min_temperature', 't_min', 'tmin']:
-                return self.Variable.T_MIN
-            elif variable in ['temperature_max', 'max_temperature', 't_max', 'tmax']:
-                return self.Variable.T_MAX
-            elif variable in ['pet']:
-                return self.Variable.PET
-            elif variable in ['relative_humidity', 'rh']:
-                return self.Variable.RH
-            elif variable in ['relative_humidity_min', 'min_relative_humidity',
-                              'rh_min', 'rhmin']:
-                return self.Variable.RH_MIN
-            elif variable in ['relative_humidity_max', 'max_relative_humidity',
-                              'rh_max', 'rhmax']:
-                return self.Variable.RH_MAX
-            elif variable in ['net_radiation', 'r_net', 'r_n', 'rn']:
-                return self.Variable.R_NET
-            elif variable in ['solar_radiation', 'r_solar', 'r_s', 'rs']:
-                return self.Variable.R_SOLAR
-            elif variable in ['sunshine_duration', 'sd']:
-                return self.Variable.SD
-            elif variable in ['wind_speed', 'wind']:
-                return self.Variable.WIND
-            elif variable in ['pressure']:
-                return self.Variable.PRESSURE
 
-            else:
-                raise ValueError(f'Variable {variable} is not recognized.')
+        if variable in ['precipitation', 'precip', 'p']:
+            return self.Variable.P
+        elif variable in ['temperature', 'temp', 't']:
+            return self.Variable.T
+        elif variable in ['temperature_min', 'min_temperature', 't_min', 'tmin']:
+            return self.Variable.T_MIN
+        elif variable in ['temperature_max', 'max_temperature', 't_max', 'tmax']:
+            return self.Variable.T_MAX
+        elif variable in ['pet']:
+            return self.Variable.PET
+        elif variable in ['relative_humidity', 'rh']:
+            return self.Variable.RH
+        elif variable in ['relative_humidity_min', 'min_relative_humidity', 'rh_min',
+                          'rhmin']:
+            return self.Variable.RH_MIN
+        elif variable in ['relative_humidity_max', 'max_relative_humidity', 'rh_max',
+                          'rhmax']:
+            return self.Variable.RH_MAX
+        elif variable in ['net_radiation', 'r_net', 'r_n', 'rn']:
+            return self.Variable.R_NET
+        elif variable in ['solar_radiation', 'r_solar', 'r_s', 'rs']:
+            return self.Variable.R_SOLAR
+        elif variable in ['sunshine_duration', 'sd']:
+            return self.Variable.SD
+        elif variable in ['wind_speed', 'wind']:
+            return self.Variable.WIND
+        elif variable in ['pressure']:
+            return self.Variable.PRESSURE
+
+        else:
+            raise ValueError(f'Variable {variable} is not recognized.')
 
     def _can_be_negative(self, variable):
         if variable in [self.Variable.P, self.Variable.PET, self.Variable.RH,
@@ -475,8 +475,7 @@ class Forcing:
                                  f'Here: {len(gradient)}')
 
         # Apply methods
-        for i_unit in self.hydro_units.index:
-            unit = self.hydro_units.loc[i_unit]
+        for i_unit, unit in hydro_units.iterrows():
 
             elevation = unit['elevation']
 

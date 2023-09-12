@@ -2,7 +2,5 @@ cftime
 HydroErr
 numpy
 pandas>=2.0
-pint
-pint-pandas
 pyyaml
 StrEnum

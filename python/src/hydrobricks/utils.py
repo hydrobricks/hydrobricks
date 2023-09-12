@@ -1,16 +1,11 @@
 import datetime
 import json
-import pint
-import pint_pandas
 import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yaml
-
-ureg = pint.UnitRegistry()
-pint_pandas.PintType.ureg.default_format = "P~"
 
 
 def validate_kwargs(kwargs, allowed_kwargs):
@@ -33,23 +28,6 @@ def dump_config_file(content, directory, name, file_type='yaml'):
         json_object = json.dumps(content, indent=2)
         with open(directory / f'{name}.json', 'w') as outfile:
             outfile.write(json_object)
-
-
-def get_unit(unit):
-    """Get the unit from a string."""
-    if unit is None:
-        return None
-    if isinstance(unit, ureg.Unit):
-        return unit
-    if isinstance(unit, str):
-        if unit in ureg:
-            return ureg[unit]
-        if unit == 'm2':
-            return ureg['m^2']
-        if unit == 'km2':
-            return ureg['km^2']
-
-    return None
 
 
 def date_as_mjd(date):

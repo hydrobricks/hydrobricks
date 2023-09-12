@@ -1,16 +1,10 @@
 import itertools
 import math
-import pint
-import pint_pandas
 import warnings
 
 import numpy as np
-import pandas as pd
 
 import hydrobricks as hb
-
-ureg = pint.UnitRegistry()
-pint_pandas.PintType.ureg.default_format = "P~"
 
 
 class Catchment:
@@ -30,7 +24,7 @@ class Catchment:
         self.slope = None
         self.aspect = None
         self.map_unit_ids = None
-        self.hydro_units = None
+        self.hydro_units = hb.HydroUnits()
         self._extract_outline(outline)
 
     def __del__(self):
@@ -220,18 +214,12 @@ class Catchment:
         self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
         if res_elevation:
-            df = pd.DataFrame(
-                {
-                    "elevation": pd.Series(res_elevation, dtype="pint[m]"),
-                    "elevation_min": pd.Series(res_elevation_min, dtype="pint[m]"),
-                    "elevation_max": pd.Series(res_elevation_max, dtype="pint[m]"),
-                }
-            )
-            self._append_hydro_unit_properties(df)
+            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
+            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
+            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
 
         if res_aspect_class:
-            df = pd.DataFrame({"aspect_class": pd.Series(res_aspect_class)})
-            self._append_hydro_unit_properties(df)
+            self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
 
         self.get_hydro_units_attributes()
 
@@ -252,10 +240,8 @@ class Catchment:
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
 
-        if self.hydro_units is None:
-            self.hydro_units = pd.DataFrame({'id': pd.Series(unit_ids)})
-        elif 'id' not in self.hydro_units.columns:
-            self.hydro_units.insert(loc=0, column='id', value=unit_ids)
+        if 'id' not in self.hydro_units.hydro_units.columns:
+            self.hydro_units.add_property(('id', '-'), unit_ids, set_first=True)
 
         res_area = []
         res_elevation = []
@@ -267,7 +253,7 @@ class Catchment:
         res_lat = []
         res_lon = []
 
-        for i, unit_id in enumerate(unit_ids):
+        for _, unit_id in enumerate(unit_ids):
             mask_unit = self.map_unit_ids == unit_id
 
             # Compute the area of the unit
@@ -276,7 +262,7 @@ class Catchment:
 
             # Compute the mean elevation of the unit
             res_elevation_mean.append(self._extract_unit_mean_elevation(mask_unit))
-            if 'elevation' not in self.hydro_units.columns:
+            if not self.hydro_units.has('elevation'):
                 res_elevation.append(self._extract_unit_mean_elevation(mask_unit))
                 res_elevation_min.append(self._extract_unit_min_elevation(mask_unit))
                 res_elevation_max.append(self._extract_unit_max_elevation(mask_unit))
@@ -290,27 +276,17 @@ class Catchment:
             res_lat.append(lat)
             res_lon.append(lon)
 
-        if 'elevation' not in self.hydro_units.columns:
-            df = pd.DataFrame(
-                {
-                    "elevation": pd.Series(res_elevation, dtype="pint[m]"),
-                    "elevation_min": pd.Series(res_elevation_min, dtype="pint[m]"),
-                    "elevation_max": pd.Series(res_elevation_max, dtype="pint[m]"),
-                }
-            )
-            self._append_hydro_unit_properties(df)
+        if not self.hydro_units.has('elevation'):
+            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
+            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
+            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
 
-        df = pd.DataFrame(
-            {
-                "elevation_mean": pd.Series(res_elevation_mean, dtype="pint[m]"),
-                "area": pd.Series(res_area, dtype="pint[m^2]"),
-                "slope": pd.Series(res_slope, dtype="pint[deg]"),
-                "aspect": pd.Series(res_aspect, dtype="pint[deg]"),
-                "latitude": pd.Series(res_lat, dtype="pint[deg]"),
-                "longitude": pd.Series(res_lon, dtype="pint[deg]"),
-            }
-        )
-        self._append_hydro_unit_properties(df)
+        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation)
+        self.hydro_units.add_property(('area', 'm2'), res_area)
+        self.hydro_units.add_property(('slope', 'deg'), res_slope)
+        self.hydro_units.add_property(('aspect', 'deg'), res_aspect)
+        self.hydro_units.add_property(('latitude', 'deg'), res_lat)
+        self.hydro_units.add_property(('longitude', 'deg'), res_lon)
 
         return self.hydro_units
 
@@ -336,22 +312,6 @@ class Catchment:
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
-
-    def save_hydro_units_to_csv(self, path):
-        """
-        Save the hydro units to a csv file.
-
-        Parameters
-        ----------
-        path : str|Path
-            Path to the output file.
-        """
-        if self.hydro_units is None:
-            raise ValueError("No hydro units to save.")
-
-        # Save to csv file with units in the header
-        df = self.hydro_units.pint.dequantify()
-        df.to_csv(path, header=True, index=False)
 
     def save_unit_ids_raster(self, path):
         """
@@ -445,12 +405,6 @@ class Catchment:
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
-
-    def _append_hydro_unit_properties(self, df):
-        if self.hydro_units is None:
-            self.hydro_units = df
-        else:
-            self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
     def _check_crs(self, data):
         data_crs = self._get_crs_from_file(data)

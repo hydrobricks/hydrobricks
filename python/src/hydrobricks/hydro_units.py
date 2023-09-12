@@ -1,14 +1,8 @@
-import pint
-import pint_pandas
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
-from hydrobricks import utils
-
-ureg = pint.UnitRegistry()
-pint_pandas.PintType.ureg.default_format = "P~"
 
 
 class HydroUnits:
@@ -25,14 +19,12 @@ class HydroUnits:
         self.land_cover_names = land_cover_names
         self.prefix_fraction = 'fraction-'
         land_cover_cols = []
-        if land_cover_names:
-            land_cover_cols = [f'{self.prefix_fraction}{item}' for item in
-                               land_cover_names]
+        for item in land_cover_names:
+            land_cover_cols.append((f'{self.prefix_fraction}{item}', 'fraction'))
         if data is not None:
             self._set_units_data(data)
         else:
-            columns = ['id', 'area', 'elevation'] + land_cover_cols
-            self.hydro_units = pd.DataFrame(columns=columns)
+            self.hydro_units = pd.DataFrame(columns=land_cover_cols)
 
     def load_from_csv(self, path, column_elevation=None, column_area=None,
                       column_fractions=None, columns_areas=None, other_columns=None):
@@ -63,23 +55,26 @@ class HydroUnits:
         """
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
-        file_content = file_content.pint.quantify(level=-1)
 
-        self.hydro_units['id'] = range(1, 1 + len(file_content))
+        self.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
 
         if column_elevation is not None:
-            self.hydro_units['elevation'] = file_content[column_elevation]
+            vals, unit = self._get_column_values_unit(column_elevation, file_content)
+            self.add_property(('elevation', unit), vals)
         elif 'elevation' in file_content.columns:
-            self.hydro_units['elevation'] = file_content['elevation']
+            vals, unit = self._get_column_values_unit('elevation', file_content)
+            self.add_property(('elevation', unit), vals)
 
         if column_area is not None:
-            self.hydro_units['area'] = file_content[column_area]
+            vals, unit = self._get_column_values_unit(column_area, file_content)
+            self.add_property(('area', unit), vals)
         elif 'area' in file_content.columns:
-            self.hydro_units['area'] = file_content['area']
+            vals, unit = self._get_column_values_unit('area', file_content)
+            self.add_property(('area', unit), vals)
 
         if other_columns is not None:
             for prop, col in other_columns.items():
-                self.hydro_units[prop] = file_content[col]
+                self.add_property((prop[0], prop[1]), col)
 
         if column_fractions is not None:
             raise NotImplementedError
@@ -94,9 +89,24 @@ class HydroUnits:
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
-        self.hydro_units['area'] = self.hydro_units['area'].pint.to('m^2')
+        self.hydro_units['area'] = hb.change_unit(self.hydro_units['area'], 'm^2')
 
         self._populate_binding_instance()
+
+    def save_to_csv(self, path):
+        """
+        Save the hydro units to a csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.hydro_units is None:
+            raise ValueError("No hydro units to save.")
+
+        # Save to csv file with units in the header
+        self.hydro_units.to_csv(path, header=True, index=False)
 
     def save_as(self, path):
         """
@@ -141,11 +151,40 @@ class HydroUnits:
 
         nc.close()
 
+    def has(self, prop):
+        """
+        Check if the hydro units have a given property.
+
+        Parameters
+        ----------
+        prop : str
+            The property to check.
+
+        Returns
+        -------
+        bool
+            True if the property is present, False otherwise.
+        """
+        return prop in self.hydro_units.columns
+
     def get_ids(self):
         """
         Get the hydro unit ids.
         """
         return self.hydro_units['id']
+
+    def add_property(self, column_tuple, values, set_first=False):
+        df = pd.DataFrame({'data': values},
+                          columns=pd.MultiIndex.from_tuples(
+                              [column_tuple], names=['Property', 'Unit']))
+
+        if self.hydro_units is None:
+            self.hydro_units = df
+        else:
+            if set_first:
+                self.hydro_units = pd.concat([df, self.hydro_units], axis=1)
+            else:
+                self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
     def _populate_binding_instance(self):
         # List properties to be set
@@ -168,22 +207,24 @@ class HydroUnits:
                 fraction = row[self.prefix_fraction + cover_name]
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
-    def _check_column_names(self, file_content):
+    @staticmethod
+    def _check_column_names(file_content):
         # Rename unnamed columns to 'No Unit'
         new_column_names = []
         for i, col in enumerate(file_content.columns):
-            if 'Unnamed' in col[0] or 'Unnamed' in col[1]:
-                new_column_names.append(('No Name', 'No Unit'))
-            else:
-                self._check_unit(col[1])
-                new_column_names.append(col)
+            name = col[0]
+            if name is None or name in ['-', '', ' '] or 'Unnamed' in name:
+                name = f'{i}'
+            unit = str(hb.get_unit_enum(col[1]))
+            new_column_names.append((name, unit))
 
         file_content.columns = pd.MultiIndex.from_tuples(new_column_names)
 
     @staticmethod
-    def _check_unit(unit):
-        if unit not in ureg:
-            raise ValueError(f'The unit "{unit}" is not recognized by pint.')
+    def _get_column_values_unit(column_name, df):
+        col = df.loc[:, column_name]
+        unit = col.columns.values[0]
+        return col.values.flatten(), unit
 
     @staticmethod
     def _get_unit(prop):

@@ -36,8 +36,9 @@ def test_elevation_bands_isohypses():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    bands = catchment.create_elevation_bands(method='isohypse', distance=50)
-    assert 74430000 < bands['area'].sum() < 74450000
+    catchment.create_elevation_bands(method='isohypse', distance=50)
+    area_sum = catchment.hydro_units['area'].sum()
+    assert 74430000 < area_sum.dequantify() < 74450000
 
 
 def test_elevation_bands_quantiles():
@@ -45,8 +46,9 @@ def test_elevation_bands_quantiles():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    bands = catchment.create_elevation_bands(method='quantiles', number=25)
-    assert 74430000 < bands['area'].sum() < 74450000
+    catchment.create_elevation_bands(method='quantiles', number=25)
+    area_sum = catchment.hydro_units['area'].sum()
+    assert 74430000 < area_sum.dequantify() < 74450000
 
 
 def test_get_mean_elevation():
@@ -87,7 +89,8 @@ def test_load_units_from_raster():
 def test_load_units_from_raster_prepare_attributes():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    df1 = catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='isohypse', distance=50)
+    df1 = catchment.hydro_units
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
@@ -106,6 +109,6 @@ def test_load_units_from_raster_prepare_attributes():
 def test_discretize_by_elevation_and_aspect():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    df = catchment.discretize_by(criteria=['elevation', 'aspect'],
-                                 elevation_method='isohypse', elevation_distance=100)
-    assert len(df) == 72  # 4 classes were empty
+    catchment.discretize_by(criteria=['elevation', 'aspect'],
+                            elevation_method='isohypse', elevation_distance=100)
+    assert len(catchment.hydro_units) == 72  # 4 classes were empty

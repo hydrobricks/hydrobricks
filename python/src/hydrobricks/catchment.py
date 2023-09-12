@@ -252,7 +252,10 @@ class Catchment:
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
 
-        self.hydro_units.insert(loc=0, column='id', value=unit_ids)
+        if self.hydro_units is None:
+            self.hydro_units = pd.DataFrame({'id': pd.Series(unit_ids)})
+        elif 'id' not in self.hydro_units.columns:
+            self.hydro_units.insert(loc=0, column='id', value=unit_ids)
 
         res_area = []
         res_elevation = []

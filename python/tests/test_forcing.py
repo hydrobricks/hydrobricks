@@ -22,7 +22,7 @@ def hydro_units():
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
         CATCHMENT_DIR / 'elevation_bands.csv',
-        area_unit='m2', column_elevation='elevation', column_area='area')
+        column_elevation='elevation', column_area='area')
     return hydro_units
 
 

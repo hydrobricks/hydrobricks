@@ -153,14 +153,16 @@ class HydroUnits:
         properties = [p for p in properties if p not in ['id', 'area']]
         properties = [p for p in properties if 'fraction-' not in p]
 
-        for _, row in self.hydro_units.iterrows():
+        for index in self.hydro_units.index:
+            row = self.hydro_units.loc[index]
             self.settings.add_hydro_unit(int(row['id']), row['area'].magnitude)
             for prop in properties:
                 if isinstance(row[prop], str):
                     self.settings.add_hydro_unit_property_str(prop, row[prop])
                 else:
+                    unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop, row[prop].magnitude, self._get_unit(row[prop]))
+                        prop, row[prop].magnitude, unit)
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = row[self.prefix_fraction + cover_name]

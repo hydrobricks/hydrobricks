@@ -475,7 +475,9 @@ class Forcing:
                                  f'Here: {len(gradient)}')
 
         # Apply methods
-        for i_unit, unit in hydro_units.iterrows():
+        for i_unit in self.hydro_units.index:
+            unit = self.hydro_units.loc[i_unit]
+
             elevation = unit['elevation']
 
             if method == 'constant':

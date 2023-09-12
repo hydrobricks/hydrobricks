@@ -41,18 +41,11 @@ def hydro_units():
     return hydro_units
 
 
-def test_load_from_csv_wrong_unit(hydro_units):
-    with pytest.raises(ValueError):
-        hydro_units.load_from_csv(
-            TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
-            area_unit='mi', column_elevation='Elevation Bands')
-
-
 @pytest.fixture
 def hydro_units_csv(hydro_units):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
-        area_unit='km', column_elevation='Elevation Bands',
+        column_elevation='Elevation Bands',
         columns_areas={'ground': 'Sum_Area Non Glacier Band',
                        'glacier_ice': 'Sum_Area ICE Band',
                        'glacier_debris': 'Sum_Area Debris Band'})

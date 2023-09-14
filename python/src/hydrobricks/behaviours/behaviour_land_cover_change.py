@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 
 import _hydrobricks as _hb
-from hydrobricks import utils
+import hydrobricks as hb
 
+from ..units import Unit, convert_unit
 from .behaviour import Behaviour
 
 
@@ -74,12 +75,13 @@ class BehaviourLandCoverChange(Behaviour):
             if row < 2:
                 continue
             if match_with == 'elevation':
-                idx_id = hu_df.index[hu_df.elevation == int(change[0])].to_list()[0]
+                elevation_values = hu_df[('elevation', 'm')].values
+                idx_id = hu_df.index[elevation_values == int(change[0])].to_list()[0]
             elif match_with == 'id':
                 idx_id = int(change[0])
             else:
                 raise ValueError(f'No option "{match_with}" for "match_with".')
-            file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, 'id']
+            file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, ('id', '-')]
 
     @staticmethod
     def _remove_rows_with_no_changes(file_content):
@@ -98,11 +100,11 @@ class BehaviourLandCoverChange(Behaviour):
                 continue
             land_cover = file_content.loc[0, col]
             date = pd.Timestamp(file_content.loc[1, col])
-            mjd = utils.date_as_mjd(date)
+            mjd = hb.utils.date_as_mjd(date)
 
             for row in range(2, len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
                 area = float(file_content.loc[row, col])
                 if not np.isnan(area):
-                    area = utils.area_in_m2(area, area_unit)
+                    area = convert_unit(area, area_unit, Unit.M2)
                     self.behaviour.add_change(mjd, hu_id, land_cover, area)

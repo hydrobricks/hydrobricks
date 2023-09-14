@@ -54,24 +54,30 @@ def hydro_units_csv(hydro_units):
 
 def test_load_from_csv(hydro_units_csv):
     hu = hydro_units_csv.hydro_units
-    assert hu.loc[0].at['id'] == 1
-    assert hu.loc[10].at['id'] == 11
-    assert hu.loc[20].at['id'] == 21
-    assert hu.loc[0].at['area'] == pytest.approx(2408000, abs=0.001)
-    assert hu.loc[10].at['area'] == pytest.approx(2806000, abs=0.001)
-    assert hu.loc[20].at['area'] == pytest.approx(1483000, abs=0.001)
-    assert hu.loc[0].at['elevation'] == 3986
-    assert hu.loc[10].at['elevation'] == 4346
-    assert hu.loc[20].at['elevation'] == 4706
-    assert hu.loc[0].at['fraction-ground'] == 1
-    assert hu.loc[10].at['fraction-ground'] == pytest.approx(0.918, abs=0.001)
-    assert hu.loc[20].at['fraction-ground'] == pytest.approx(0.770, abs=0.001)
-    assert hu.loc[0].at['fraction-glacier_ice'] == 0
-    assert hu.loc[10].at['fraction-glacier_ice'] == pytest.approx(0.018, abs=0.001)
-    assert hu.loc[20].at['fraction-glacier_ice'] == pytest.approx(0.206, abs=0.001)
-    assert hu.loc[0].at['fraction-glacier_debris'] == 0
-    assert hu.loc[10].at['fraction-glacier_debris'] == pytest.approx(0.062, abs=0.001)
-    assert hu.loc[20].at['fraction-glacier_debris'] == pytest.approx(0.023, abs=0.001)
+    assert hu.loc[0].at['id'].values == 1
+    assert hu.loc[10].at['id'].values == 11
+    assert hu.loc[20].at['id'].values == 21
+    assert hu.loc[0].at['area'].values == pytest.approx(2408000, abs=0.001)
+    assert hu.loc[10].at['area'].values == pytest.approx(2806000, abs=0.001)
+    assert hu.loc[20].at['area'].values == pytest.approx(1483000, abs=0.001)
+    assert hu.loc[0].at['elevation'].values == 3986
+    assert hu.loc[10].at['elevation'].values == 4346
+    assert hu.loc[20].at['elevation'].values == 4706
+    assert hu.loc[0].at['fraction-ground'].values == 1
+    assert (hu.loc[10].at['fraction-ground'].values ==
+            pytest.approx(0.918, abs=0.001))
+    assert (hu.loc[20].at['fraction-ground'].values ==
+            pytest.approx(0.770, abs=0.001))
+    assert hu.loc[0].at['fraction-glacier_ice'].values == 0
+    assert (hu.loc[10].at['fraction-glacier_ice'].values ==
+            pytest.approx(0.018, abs=0.001))
+    assert (hu.loc[20].at['fraction-glacier_ice'].values ==
+            pytest.approx(0.206, abs=0.001))
+    assert hu.loc[0].at['fraction-glacier_debris'].values == 0
+    assert (hu.loc[10].at['fraction-glacier_debris'].values ==
+            pytest.approx(0.062, abs=0.001))
+    assert (hu.loc[20].at['fraction-glacier_debris'].values ==
+            pytest.approx(0.023, abs=0.001))
 
 
 def test_create_file(hydro_units_csv):

@@ -106,6 +106,26 @@ def get_unit_enum(unit):
         raise ValueError(f"Unknown unit: {unit}")
 
 
+def get_unit_from_df_column(df):
+    """
+    Get the unit of a dataframe column.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to get the unit from.
+
+    Returns
+    -------
+    Unit
+        The unit of the dataframe.
+    """
+    if len(df.columns) != 1:
+        raise ValueError("Only single column dataframes are supported.")
+
+    return get_unit_enum(df.columns[0])
+
+
 def convert_unit_df(df, new_unit):
     """
     Convert a dataframe (single column) to a new unit. The unit of the dataframe
@@ -123,11 +143,7 @@ def convert_unit_df(df, new_unit):
     pd.DataFrame
         The converted dataframe.
     """
-    columns = df.columns
-    if len(columns) != 1:
-        raise ValueError("Only single column dataframes are supported.")
-
-    unit_from = get_unit_enum(columns[0])
+    unit_from = get_unit_from_df_column(df)
     unit_to = get_unit_enum(new_unit)
     if unit_from == unit_to:
         return df

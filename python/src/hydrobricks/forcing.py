@@ -350,12 +350,13 @@ class Forcing:
 
         # Check that hydro units are the same
         hydro_units_nc = nc.variables['id'][:]
-        if not np.array_equal(hydro_units_nc, self.hydro_units['id'].to_numpy()):
+        hydro_units_def = self.hydro_units[('id', '-')].values
+        if not np.array_equal(hydro_units_nc, hydro_units_def):
             raise ValueError("The hydrological units in the netCDF file are not "
                              "the same as those in the forcing object. The netCDF file "
                              "contains hydrological units with ids: "
                              f"{hydro_units_nc}. The model contains hydrological "
-                             f"units with ids: {self.hydro_units['id']}.")
+                             f"units with ids: {hydro_units_def}.")
 
         # Load time
         ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
@@ -376,7 +377,7 @@ class Forcing:
     def get_total_precipitation(self):
         idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
-        areas = self.hydro_units['area']
+        areas = self.hydro_units[('area', 'm2')]
         tot_precip = data * areas / areas.sum()
         return tot_precip.sum()
 
@@ -477,7 +478,7 @@ class Forcing:
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():
 
-            elevation = unit['elevation'].iloc[0]
+            elevation = unit['elevation'].values
 
             if method == 'constant':
                 unit_values[:, i_unit] = data_raw
@@ -598,9 +599,9 @@ class Forcing:
         pet = np.zeros((len(self.data2D.time), len(self.hydro_units)))
         for i_unit, unit in self.hydro_units.iterrows():
             if use_unit_elevation:
-                pyet_args['elevation'] = unit['elevation'].iloc[0]
+                pyet_args['elevation'] = unit['elevation'].values
             if use_unit_latitude:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'].iloc[0])
+                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'].values)
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 

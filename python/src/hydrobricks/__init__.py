@@ -15,7 +15,7 @@ from .hydro_units import HydroUnits
 from .observations import Observations
 from .parameters import ParameterSet
 from .time_series import TimeSeries
-from .units import Unit, change_unit, get_unit_enum
+from .units import Unit, convert_unit, convert_unit_df, get_unit_enum
 
 try:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
@@ -99,7 +99,7 @@ else:
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'Catchment', 'Unit', 'get_unit_enum', 'change_unit', 'init', 'init_log',
-           'close_log', 'set_debug_log_level', 'set_max_log_level',
+           'Catchment', 'Unit', 'get_unit_enum', 'convert_unit', 'convert_unit_df',
+           'init', 'init_log', 'close_log', 'set_debug_log_level', 'set_max_log_level',
            'set_message_log_level', 'Dataset', 'rasterio', 'gpd', 'mapping', 'mask',
            'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr', 'xrs')

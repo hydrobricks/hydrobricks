@@ -89,7 +89,8 @@ class HydroUnits:
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
-        self.hydro_units['area'] = hb.change_unit(self.hydro_units['area'], 'm^2')
+        self.hydro_units['area'] = hb.convert_unit_df(
+            self.hydro_units['area'], hb.Unit.M2)
 
         self._populate_binding_instance()
 
@@ -174,9 +175,8 @@ class HydroUnits:
         return self.hydro_units['id']
 
     def add_property(self, column_tuple, values, set_first=False):
-        df = pd.DataFrame({'data': values},
-                          columns=pd.MultiIndex.from_tuples(
-                              [column_tuple], names=['Property', 'Unit']))
+        df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples(
+            [column_tuple], names=['Property', 'Unit']))
 
         if self.hydro_units is None:
             self.hydro_units = df
@@ -186,25 +186,44 @@ class HydroUnits:
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
+    def check_land_cover_fractions_not_empty(self):
+        """
+        Check that the land cover fractions are not empty. If there is a single one
+        (e.g. ground), set them to 1.
+        """
+        if len(self.land_cover_names) == 1:
+            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1
+            return
+
+        for cover_name in self.land_cover_names:
+            field_name = self.prefix_fraction + cover_name
+            if self.hydro_units[field_name].isnull().values.any():
+                raise ValueError(f'The land cover "{cover_name}" contains NaN values.')
+
     def _populate_binding_instance(self):
         # List properties to be set
-        properties = self.hydro_units.columns.tolist()
-        properties = [p for p in properties if p not in ['id', 'area']]
-        properties = [p for p in properties if 'fraction-' not in p]
+        properties = []
+        for prop in self.hydro_units.columns.tolist():
+            if prop[0] in ['id', 'area']:
+                continue
+            if 'fraction-' in prop[0]:
+                continue
+            properties.append(prop[0])
 
         for index in self.hydro_units.index:
             row = self.hydro_units.loc[index]
-            self.settings.add_hydro_unit(int(row['id']), row['area'].magnitude)
+            self.settings.add_hydro_unit(int(row['id'].iloc[0]),
+                                         float(row['area'].iloc[0]))
             for prop in properties:
                 if isinstance(row[prop], str):
                     self.settings.add_hydro_unit_property_str(prop, row[prop])
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop, row[prop].magnitude, unit)
+                        prop, float(row[prop].iloc[0]), unit)
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
-                fraction = row[self.prefix_fraction + cover_name]
+                fraction = float(row[self.prefix_fraction + cover_name].iloc[0])
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     @staticmethod
@@ -228,7 +247,7 @@ class HydroUnits:
 
     @staticmethod
     def _get_unit(prop):
-        return str(prop.units) if hasattr(prop, 'units') else None
+        return str(prop.index[0])
 
     def _check_land_cover_areas_match(self, columns_areas):
         if len(columns_areas) != len(self.land_cover_names):

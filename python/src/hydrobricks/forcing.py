@@ -350,7 +350,7 @@ class Forcing:
 
         # Check that hydro units are the same
         hydro_units_nc = nc.variables['id'][:]
-        if not np.array_equal(hydro_units_nc, self.hydro_units['id']):
+        if not np.array_equal(hydro_units_nc, self.hydro_units['id'].to_numpy()):
             raise ValueError("The hydrological units in the netCDF file are not "
                              "the same as those in the forcing object. The netCDF file "
                              "contains hydrological units with ids: "
@@ -477,7 +477,7 @@ class Forcing:
         # Apply methods
         for i_unit, unit in hydro_units.iterrows():
 
-            elevation = unit['elevation']
+            elevation = unit['elevation'].iloc[0]
 
             if method == 'constant':
                 unit_values[:, i_unit] = data_raw
@@ -598,9 +598,9 @@ class Forcing:
         pet = np.zeros((len(self.data2D.time), len(self.hydro_units)))
         for i_unit, unit in self.hydro_units.iterrows():
             if use_unit_elevation:
-                pyet_args['elevation'] = unit['elevation']
+                pyet_args['elevation'] = unit['elevation'].iloc[0]
             if use_unit_latitude:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'])
+                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'].iloc[0])
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 

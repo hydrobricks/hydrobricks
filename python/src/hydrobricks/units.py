@@ -58,6 +58,9 @@ def get_unit_enum(unit):
     if unit in Unit.__members__:
         return Unit[unit]
 
+    # Remove brackets, parentheses and spaces
+    unit = remove_chars(unit, '([{<)]}> ')
+
     if unit in ['-', ''] or 'Unnamed' in unit:
         return Unit.NO_UNIT
 
@@ -101,3 +104,125 @@ def get_unit_enum(unit):
         return Unit.KPA
     else:
         raise ValueError(f"Unknown unit: {unit}")
+
+
+def convert_unit_df(df, new_unit):
+    """
+    Convert a dataframe (single column) to a new unit. The unit of the dataframe
+    must be specified in the name of the column (using tuples).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to convert.
+    new_unit : Unit|str
+        The unit to convert to.
+
+    Returns
+    -------
+    pd.DataFrame
+        The converted dataframe.
+    """
+    columns = df.columns
+    if len(columns) != 1:
+        raise ValueError("Only single column dataframes are supported.")
+
+    unit_from = get_unit_enum(columns[0])
+    unit_to = get_unit_enum(new_unit)
+    if unit_from == unit_to:
+        return df
+
+    return convert_unit(df, unit_from, unit_to)
+
+
+def convert_unit(value, unit_from, unit_to):
+    """
+    Convert a value from one unit to another.
+
+    Parameters
+    ----------
+    value : float
+        The value to convert.
+    unit_from : Unit|str
+        The unit of the value.
+    unit_to : Unit|str
+        The unit to convert to.
+
+    Returns
+    -------
+    float|pd.DataFrame
+        The converted value.
+    """
+    if isinstance(unit_from, str):
+        unit_from = get_unit_enum(unit_from)
+    if isinstance(unit_to, str):
+        unit_to = get_unit_enum(unit_to)
+
+    if unit_from == unit_to:
+        return value
+
+    if unit_from == Unit.MM:
+        if unit_to == Unit.M:
+            return value / 1000
+    elif unit_from == Unit.M:
+        if unit_to == Unit.MM:
+            return value * 1000
+        elif unit_to == Unit.KM:
+            return value / 1000
+    elif unit_from == Unit.KM:
+        if unit_to == Unit.M:
+            return value * 1000
+    elif unit_from == Unit.M2:
+        if unit_to == Unit.KM2:
+            return value / 1000000
+    elif unit_from == Unit.KM2:
+        if unit_to == Unit.M2:
+            return value * 1000000
+    elif unit_from == Unit.DAY:
+        if unit_to == Unit.H:
+            return value * 24
+        elif unit_to == Unit.S:
+            return value * 86400
+    elif unit_from == Unit.H:
+        if unit_to == Unit.DAY:
+            return value / 24
+        elif unit_to == Unit.S:
+            return value * 3600
+    elif unit_from == Unit.S:
+        if unit_to == Unit.DAY:
+            return value / 86400
+        elif unit_to == Unit.H:
+            return value / 3600
+    elif unit_from == Unit.MM_D:
+        if unit_to == Unit.MM_H:
+            return value / 24
+    elif unit_from == Unit.MM_H:
+        if unit_to == Unit.MM_D:
+            return value * 24
+
+    raise ValueError(f"Conversion from {unit_from} to {unit_to} not implemented.")
+
+
+def remove_chars(input_string, chars_to_remove):
+    """
+    Remove characters from a string.
+
+    Parameters
+    ----------
+    input_string : str
+        The string to remove characters from.
+    chars_to_remove : str
+        The characters to remove.
+
+    Returns
+    -------
+    str
+        The string with the characters removed.
+    """
+    result = ""
+
+    for char in input_string:
+        if char not in chars_to_remove:
+            result += char
+
+    return result

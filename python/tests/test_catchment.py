@@ -37,8 +37,8 @@ def test_elevation_bands_isohypses():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='isohypse', distance=50)
-    area_sum = catchment.hydro_units['area'].sum()
-    assert 74430000 < area_sum.dequantify() < 74450000
+    area_sum = catchment.hydro_units.hydro_units['area'].sum()
+    assert 74430000 < area_sum.iloc[0] < 74450000
 
 
 def test_elevation_bands_quantiles():
@@ -47,8 +47,8 @@ def test_elevation_bands_quantiles():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='quantiles', number=25)
-    area_sum = catchment.hydro_units['area'].sum()
-    assert 74430000 < area_sum.dequantify() < 74450000
+    area_sum = catchment.hydro_units.hydro_units['area'].sum()
+    assert 74430000 < area_sum.iloc[0] < 74450000
 
 
 def test_get_mean_elevation():
@@ -90,7 +90,7 @@ def test_load_units_from_raster_prepare_attributes():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='isohypse', distance=50)
-    df1 = catchment.hydro_units
+    df1 = catchment.hydro_units.hydro_units
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
@@ -98,7 +98,7 @@ def test_load_units_from_raster_prepare_attributes():
         catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
         catchment2.extract_dem(CATCHMENT_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir) / 'unit_ids.tif')
-        df2 = catchment2.get_hydro_units_attributes()
+        df2 = catchment2.get_hydro_units_attributes().hydro_units
 
         assert np.allclose(df1['area'], df2['area'])
         assert np.allclose(df1['elevation_mean'], df2['elevation_mean'])
@@ -111,4 +111,4 @@ def test_discretize_by_elevation_and_aspect():
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.discretize_by(criteria=['elevation', 'aspect'],
                             elevation_method='isohypse', elevation_distance=100)
-    assert len(catchment.hydro_units) == 72  # 4 classes were empty
+    assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty

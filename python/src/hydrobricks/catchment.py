@@ -229,7 +229,7 @@ class Catchment:
 
         Returns
         -------
-        A dataframe with the hydro units attributes.
+        The hydro units attributes.
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -281,12 +281,14 @@ class Catchment:
             self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
             self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
 
-        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation)
+        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation_mean)
         self.hydro_units.add_property(('area', 'm2'), res_area)
         self.hydro_units.add_property(('slope', 'deg'), res_slope)
         self.hydro_units.add_property(('aspect', 'deg'), res_aspect)
         self.hydro_units.add_property(('latitude', 'deg'), res_lat)
         self.hydro_units.add_property(('longitude', 'deg'), res_lon)
+
+        self.hydro_units.check_land_cover_fractions_not_empty()
 
         return self.hydro_units
 
@@ -312,6 +314,20 @@ class Catchment:
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+
+    def save_hydro_units_to_csv(self, path):
+        """
+        Save the hydro units to a csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.hydro_units is None:
+            raise ValueError("No hydro units to save.")
+
+        self.hydro_units.save_to_csv(path)
 
     def save_unit_ids_raster(self, path):
         """

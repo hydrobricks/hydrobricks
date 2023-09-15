@@ -15,7 +15,7 @@ class SplitterMultiFluxes : public Splitter {
      */
     bool IsOk() override;
 
-    void AssignParameters(const SplitterSettings& splitterSettings) override;
+    void SetParameters(const SplitterSettings& splitterSettings) override;
 
     double* GetValuePointer(const string& name) override;
 

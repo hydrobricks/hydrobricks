@@ -107,7 +107,7 @@ def test_socont_closes_water_balance():
     # Preparation of the hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        CATCHMENT_BANDS, area_unit='m2', column_elevation='elevation',
+        CATCHMENT_BANDS, column_elevation='elevation',
         column_area='area')
 
     # Preparation of the forcing data

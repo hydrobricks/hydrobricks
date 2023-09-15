@@ -34,7 +34,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
 
         HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
         auto unit = new HydroUnit(unitSettings.area);
-        unit->SetId(unitSettings.id);
+        unit->SetProperties(unitSettings);
         AddHydroUnit(unit);
     }
 }

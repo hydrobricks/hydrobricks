@@ -7,8 +7,8 @@ ProcessOutflowLinear::ProcessOutflowLinear(WaterContainer* container)
     : ProcessOutflow(container),
       m_responseFactor(nullptr) {}
 
-void ProcessOutflowLinear::AssignParameters(const ProcessSettings& processSettings) {
-    Process::AssignParameters(processSettings);
+void ProcessOutflowLinear::SetParameters(const ProcessSettings& processSettings) {
+    Process::SetParameters(processSettings);
     m_responseFactor = GetParameterValuePointer(processSettings, "response_factor");
 }
 

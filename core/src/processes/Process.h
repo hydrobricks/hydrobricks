@@ -7,6 +7,7 @@
 #include "SettingsModel.h"
 
 class Brick;
+class HydroUnit;
 class WaterContainer;
 
 class Process : public wxObject {
@@ -15,8 +16,18 @@ class Process : public wxObject {
 
     ~Process() override = default;
 
+    /**
+     * Factory method to create a process.
+     *
+     * @param processSettings settings of the process.
+     * @param brick the related brick.
+     * @return the created process.
+     */
     static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
 
+    /**
+     * Reset all the fluxes connected to the process.
+     */
     void Reset();
 
     /**
@@ -26,16 +37,31 @@ class Process : public wxObject {
      */
     virtual bool IsOk() = 0;
 
+    /**
+     * Check if the process has a parameter with the provided name.
+     *
+     * @param processSettings settings of the process containing the parameters.
+     * @param name name of the parameter to check.
+     * @return true if the process has a parameter with the provided name.
+     */
     static bool HasParameter(const ProcessSettings& processSettings, const string& name);
 
     static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+
+    /**
+     * Set the properties of the hydro unit.
+     *
+     * @param unit the related hydro unit.
+     * @param brick the related brick.
+     */
+    virtual void SetHydroUnitProperties(HydroUnit* unit, Brick* brick);
 
     /**
      * Assign the parameters to the process.
      *
      * @param processSettings settings of the process containing the parameters.
      */
-    virtual void AssignParameters(const ProcessSettings& processSettings);
+    virtual void SetParameters(const ProcessSettings& processSettings);
 
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();

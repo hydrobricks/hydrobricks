@@ -3,8 +3,8 @@
 Urban::Urban()
     : LandCover() {}
 
-void Urban::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void Urban::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
 }
 
 void Urban::ApplyConstraints(double timeStep) {

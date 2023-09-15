@@ -3,6 +3,6 @@
 Storage::Storage()
     : Brick() {}
 
-void Storage::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void Storage::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
 }

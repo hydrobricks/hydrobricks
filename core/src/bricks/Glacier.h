@@ -15,9 +15,9 @@ class Glacier : public LandCover {
     void SaveAsInitialState() override;
 
     /**
-     * @copydoc Brick::AssignParameters()
+     * @copydoc Brick::SetParameters()
      */
-    void AssignParameters(const BrickSettings& brickSettings) override;
+    void SetParameters(const BrickSettings& brickSettings) override;
 
     void AttachFluxIn(Flux* flux) override;
 

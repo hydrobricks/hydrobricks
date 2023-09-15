@@ -16,14 +16,24 @@ struct SurfaceComponentSettings {
     double fraction;
 };
 
+struct HydroUnitPropertyDouble {
+    string name;
+    double value;
+    string unit;
+};
+
+struct HydroUnitPropertyString {
+    string name;
+    string value;
+};
+
 struct HydroUnitSettings {
     int id;
     double area;
-    double elevation;
-    double slope;
-    double aspect;
     vector<LandCoverSettings> landCovers;
     vector<SurfaceComponentSettings> surfaceComponents;
+    vector<HydroUnitPropertyDouble> propertiesDouble;
+    vector<HydroUnitPropertyString> propertiesString;
 };
 
 class SettingsBasin : public wxObject {
@@ -32,9 +42,13 @@ class SettingsBasin : public wxObject {
 
     ~SettingsBasin() override;
 
-    void AddHydroUnit(int id, double area, double elevation = NAN_D, double slope = NAN_D, double aspect = NAN_D);
+    void AddHydroUnit(int id, double area);
 
     void AddLandCover(const string& name, const string& type = "", double fraction = 1.0);
+
+    void AddHydroUnitPropertyDouble(const string& name, double value, const string& unit = "");
+
+    void AddHydroUnitPropertyString(const string& name, const string& value);
 
     void SelectUnit(int index);
 

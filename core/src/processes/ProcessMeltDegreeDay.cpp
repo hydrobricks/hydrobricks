@@ -26,8 +26,8 @@ bool ProcessMeltDegreeDay::IsOk() {
     return true;
 }
 
-void ProcessMeltDegreeDay::AssignParameters(const ProcessSettings& processSettings) {
-    Process::AssignParameters(processSettings);
+void ProcessMeltDegreeDay::SetParameters(const ProcessSettings& processSettings) {
+    Process::SetParameters(processSettings);
     m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor");
     m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 }

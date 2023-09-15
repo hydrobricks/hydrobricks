@@ -3,7 +3,8 @@ import pandas as pd
 
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
-from hydrobricks import utils
+
+from .units import Unit, convert_unit_df, get_unit_enum, get_unit_from_df_column
 
 
 class HydroUnits:
@@ -20,28 +21,26 @@ class HydroUnits:
         self.land_cover_names = land_cover_names
         self.prefix_fraction = 'fraction-'
         land_cover_cols = []
-        if land_cover_names:
-            land_cover_cols = [f'{self.prefix_fraction}{item}' for item in
-                               land_cover_names]
+        for item in land_cover_names:
+            land_cover_cols.append((f'{self.prefix_fraction}{item}', 'fraction'))
         if data is not None:
             self._set_units_data(data)
         else:
-            columns = ['id', 'area', 'elevation'] + land_cover_cols
-            self.hydro_units = pd.DataFrame(columns=columns)
+            self.hydro_units = pd.DataFrame(columns=land_cover_cols)
 
     def load_from_csv(self, path, column_elevation=None, column_area=None,
-                      area_unit='m2', column_fractions=None, columns_areas=None,
-                      column_slope=None, column_aspect=None, column_lat=None,
-                      column_lon=None):
+                      column_fractions=None, columns_areas=None, other_columns=None):
         """
-        Read hydro units properties from csv file.
+        Read hydro units properties from csv file. The file must contain two header
+        rows. The first row contains the column names and the second row contains the
+        units. The file must contain at a minimum the units area.
 
         Parameters
         ----------
         path : str|Path
             Path to the csv file containing hydro units data.
         column_elevation : str, optional
-            Column name containing the elevation values in [m] (optional).
+            Column name containing the elevation values (optional).
             Default: elevation
         column_area : str, optional
             Column name containing the area values (optional).
@@ -51,50 +50,33 @@ class HydroUnits:
             (optional).
         columns_areas : dict, optional
             Column name containing the area values for each land cover (optional).
-        area_unit: str, optional
-            Unit for the area values: "m2" or "km2"
-        column_slope : str, optional
-            Column name containing the slope values in degree (optional).
-        column_aspect : str, optional
-            Column name containing the aspect values in degree (optional).
-        column_lat : str, optional
-            Column name containing the latitude values (optional).
-        column_lon : str, optional
-            Column name containing the longitude values (optional).
+        other_columns: dict, optional
+            Column name containing other values to import (optional). The key is the
+            property name and the value is the name of the column in the csv file.
+            Example: {'slope': 'Slope', 'aspect': 'Aspect'}
         """
-        file_content = pd.read_csv(path)
+        file_content = pd.read_csv(path, header=[0, 1])
+        self._check_column_names(file_content)
 
-        self.hydro_units['id'] = range(1, 1 + len(file_content))
+        self.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
 
         if column_elevation is not None:
-            self.hydro_units['elevation'] = file_content[column_elevation]
+            vals, unit = self._get_column_values_unit(column_elevation, file_content)
+            self.add_property(('elevation', unit), vals)
         elif 'elevation' in file_content.columns:
-            self.hydro_units['elevation'] = file_content['elevation']
+            vals, unit = self._get_column_values_unit('elevation', file_content)
+            self.add_property(('elevation', unit), vals)
 
         if column_area is not None:
-            self.hydro_units['area'] = file_content[column_area]
+            vals, unit = self._get_column_values_unit(column_area, file_content)
+            self.add_property(('area', unit), vals)
         elif 'area' in file_content.columns:
-            self.hydro_units['area'] = file_content['area']
+            vals, unit = self._get_column_values_unit('area', file_content)
+            self.add_property(('area', unit), vals)
 
-        if column_slope is not None:
-            self.hydro_units['slope'] = file_content[column_slope]
-        elif 'slope' in file_content.columns:
-            self.hydro_units['slope'] = file_content['slope']
-
-        if column_aspect is not None:
-            self.hydro_units['aspect'] = file_content[column_aspect]
-        elif 'aspect' in file_content.columns:
-            self.hydro_units['aspect'] = file_content['aspect']
-
-        if column_lat is not None:
-            self.hydro_units['latitude'] = file_content[column_lat]
-        elif 'latitude' in file_content.columns:
-            self.hydro_units['latitude'] = file_content['latitude']
-
-        if column_lon is not None:
-            self.hydro_units['longitude'] = file_content[column_lon]
-        elif 'longitude' in file_content.columns:
-            self.hydro_units['longitude'] = file_content['longitude']
+        if other_columns is not None:
+            for prop, col in other_columns.items():
+                self.add_property((prop[0], prop[1]), col)
 
         if column_fractions is not None:
             raise NotImplementedError
@@ -102,16 +84,42 @@ class HydroUnits:
         if columns_areas is not None:
             self._check_land_cover_areas_match(columns_areas)
             area_values = np.zeros(shape=(len(file_content), len(columns_areas)))
+            area_unit = None
             for idx, cover in enumerate(self.land_cover_names):
-                area_values[:, idx] = file_content[columns_areas[cover]]
-            self._compute_area_portions(area_values)
+                area_values[:, idx] = file_content[columns_areas[cover]].values[:, 0]
+                area_unit_idx = file_content[columns_areas[cover]].columns.values[0]
+                if area_unit is None:
+                    area_unit = area_unit_idx
+                elif area_unit != area_unit_idx:
+                    raise ValueError('The area units do not match.')
+            self._compute_area_portions(area_values, area_unit)
         else:
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
-        self.hydro_units['area'] = utils.area_in_m2(self.hydro_units['area'], area_unit)
+        if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
+            new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
+            area_idx = self.hydro_units.columns.get_loc('area')
+            self.hydro_units.drop(self.hydro_units.columns[area_idx], axis=1,
+                                  inplace=True)
+            self.hydro_units[('area', 'm2')] = new_area
 
         self._populate_binding_instance()
+
+    def save_to_csv(self, path):
+        """
+        Save the hydro units to a csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.hydro_units is None:
+            raise ValueError("No hydro units to save.")
+
+        # Save to csv file with units in the header
+        self.hydro_units.to_csv(path, header=True, index=False)
 
     def save_as(self, path):
         """
@@ -156,26 +164,101 @@ class HydroUnits:
 
         nc.close()
 
+    def has(self, prop):
+        """
+        Check if the hydro units have a given property.
+
+        Parameters
+        ----------
+        prop : str
+            The property to check.
+
+        Returns
+        -------
+        bool
+            True if the property is present, False otherwise.
+        """
+        return prop in self.hydro_units.columns
+
     def get_ids(self):
         """
         Get the hydro unit ids.
         """
         return self.hydro_units['id']
 
+    def add_property(self, column_tuple, values, set_first=False):
+        df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples(
+            [column_tuple], names=['Property', 'Unit']))
+
+        if self.hydro_units is None:
+            self.hydro_units = df
+        else:
+            if set_first:
+                self.hydro_units = pd.concat([df, self.hydro_units], axis=1)
+            else:
+                self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
+
+    def check_land_cover_fractions_not_empty(self):
+        """
+        Check that the land cover fractions are not empty. If there is a single one
+        (e.g. ground), set them to 1.
+        """
+        if len(self.land_cover_names) == 1:
+            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1
+            return
+
+        for cover_name in self.land_cover_names:
+            field_name = self.prefix_fraction + cover_name
+            if self.hydro_units[field_name].isnull().values.any():
+                raise ValueError(f'The land cover "{cover_name}" contains NaN values.')
+
     def _populate_binding_instance(self):
+        # List properties to be set
+        properties = []
+        for prop in self.hydro_units.columns.tolist():
+            if prop[0] in ['id', 'area']:
+                continue
+            if 'fraction-' in prop[0]:
+                continue
+            properties.append(prop[0])
+
         for _, row in self.hydro_units.iterrows():
-            slope = np.nan
-            if 'slope' in self.hydro_units.columns:
-                slope = row['slope']
-            aspect = np.nan
-            if 'aspect' in self.hydro_units.columns:
-                aspect = row['aspect']
-            self.settings.add_hydro_unit(int(row['id']), row['area'], row['elevation'],
-                                         slope, aspect)
+            self.settings.add_hydro_unit(int(row['id'].values),
+                                         float(row['area'].values))
+            for prop in properties:
+                if isinstance(row[prop].values, str):
+                    self.settings.add_hydro_unit_property_str(prop, row[prop].values)
+                else:
+                    unit = self._get_unit(row[prop])
+                    self.settings.add_hydro_unit_property_double(
+                        prop, float(row[prop].values), unit)
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
-                fraction = row[self.prefix_fraction + cover_name]
+                fraction = float(row[self.prefix_fraction + cover_name].values)
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
+
+    @staticmethod
+    def _check_column_names(file_content):
+        # Rename unnamed columns to 'No Unit'
+        new_column_names = []
+        for i, col in enumerate(file_content.columns):
+            name = col[0]
+            if name is None or name in ['-', '', ' '] or 'Unnamed' in name:
+                name = f'{i}'
+            unit = str(get_unit_enum(col[1]))
+            new_column_names.append((name, unit))
+
+        file_content.columns = pd.MultiIndex.from_tuples(new_column_names)
+
+    @staticmethod
+    def _get_column_values_unit(column_name, df):
+        col = df.loc[:, column_name]
+        unit = col.columns.values[0]
+        return col.values.flatten(), unit
+
+    @staticmethod
+    def _get_unit(prop):
+        return str(prop.index[0])
 
     def _check_land_cover_areas_match(self, columns_areas):
         if len(columns_areas) != len(self.land_cover_names):
@@ -186,7 +269,7 @@ class HydroUnits:
                 raise ValueError(f'The land cover "{col}" was not found in the '
                                  f'defined land covers.')
 
-    def _compute_area_portions(self, area_values):
+    def _compute_area_portions(self, area_values, area_unit):
         # Compute total area
         area = np.sum(area_values, axis=1)
 
@@ -194,9 +277,10 @@ class HydroUnits:
         fractions = area_values / area[:, None]
 
         # Insert the results in the dataframe
-        self.hydro_units['area'] = area
+        self.hydro_units[('area', area_unit)] = area
         for idx, cover_name in enumerate(self.land_cover_names):
-            self.hydro_units[self.prefix_fraction + cover_name] = fractions[:, idx]
+            field_name = self.prefix_fraction + cover_name
+            self.hydro_units[(field_name, 'fraction')] = fractions[:, idx]
 
     def _set_units_data(self, data):
         assert isinstance(data, pd.DataFrame)

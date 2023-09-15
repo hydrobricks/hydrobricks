@@ -12,9 +12,9 @@ class ProcessOutflowOverflow : public ProcessOutflow {
     ~ProcessOutflowOverflow() override = default;
 
     /**
-     * @copydoc Process::AssignParameters()
+     * @copydoc Process::SetParameters()
      */
-    void AssignParameters(const ProcessSettings& processSettings) override;
+    void SetParameters(const ProcessSettings& processSettings) override;
 
     void StoreInOutgoingFlux(double* rate, int index) override;
 

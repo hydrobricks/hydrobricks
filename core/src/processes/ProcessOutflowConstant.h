@@ -12,9 +12,9 @@ class ProcessOutflowConstant : public ProcessOutflow {
     ~ProcessOutflowConstant() override = default;
 
     /**
-     * @copydoc Process::AssignParameters()
+     * @copydoc Process::SetParameters()
      */
-    void AssignParameters(const ProcessSettings& processSettings) override;
+    void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
     float* m_rate;  // [mm/d]

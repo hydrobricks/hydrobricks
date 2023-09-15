@@ -1,5 +1,7 @@
 #include "HydroUnit.h"
 
+#include "SettingsBasin.h"
+
 HydroUnit::HydroUnit(double area, Types type)
     : m_type(type),
       m_id(UNDEFINED),
@@ -8,6 +10,9 @@ HydroUnit::HydroUnit(double area, Types type)
 HydroUnit::~HydroUnit() {
     for (auto forcing : m_forcing) {
         wxDELETE(forcing);
+    }
+    for (auto property : m_properties) {
+        wxDELETE(property);
     }
 }
 
@@ -23,9 +28,41 @@ void HydroUnit::SaveAsInitialState() {
     }
 }
 
+void HydroUnit::SetProperties(HydroUnitSettings &unitSettings) {
+    m_id = unitSettings.id;
+
+    for (const auto& unitProperty : unitSettings.propertiesDouble) {
+        AddProperty(new HydroUnitProperty(unitProperty.name, unitProperty.value, unitProperty.unit));
+    }
+
+    for (const auto& unitProperty : unitSettings.propertiesString) {
+        AddProperty(new HydroUnitProperty(unitProperty.name, unitProperty.value));
+    }
+}
+
 void HydroUnit::AddProperty(HydroUnitProperty* property) {
     wxASSERT(property);
     m_properties.push_back(property);
+}
+
+double HydroUnit::GetPropertyDouble(const string &name, const string &unit) {
+    for (auto property : m_properties) {
+        if (property->GetName() == name) {
+            return property->GetValue(unit);
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
+}
+
+string HydroUnit::GetPropertyString(const string &name) {
+    for (auto property : m_properties) {
+        if (property->GetName() == name) {
+            return property->GetValueString();
+        }
+    }
+
+    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
 void HydroUnit::AddBrick(Brick* brick) {

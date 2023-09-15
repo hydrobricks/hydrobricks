@@ -28,7 +28,7 @@ void HydroUnit::SaveAsInitialState() {
     }
 }
 
-void HydroUnit::SetProperties(HydroUnitSettings &unitSettings) {
+void HydroUnit::SetProperties(HydroUnitSettings& unitSettings) {
     m_id = unitSettings.id;
 
     for (const auto& unitProperty : unitSettings.propertiesDouble) {
@@ -45,7 +45,7 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
     m_properties.push_back(property);
 }
 
-double HydroUnit::GetPropertyDouble(const string &name, const string &unit) {
+double HydroUnit::GetPropertyDouble(const string& name, const string& unit) {
     for (auto property : m_properties) {
         if (property->GetName() == name) {
             return property->GetValue(unit);
@@ -55,7 +55,7 @@ double HydroUnit::GetPropertyDouble(const string &name, const string &unit) {
     throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
-string HydroUnit::GetPropertyString(const string &name) {
+string HydroUnit::GetPropertyString(const string& name) {
     for (auto property : m_properties) {
         if (property->GetName() == name) {
             return property->GetValueString();

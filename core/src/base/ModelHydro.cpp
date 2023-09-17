@@ -86,7 +86,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         // Create the brick
         Brick* brick = Brick::Factory(brickSettings);
         brick->SetName(brickSettings.name);
-        brick->AssignParameters(brickSettings);
+        brick->SetParameters(brickSettings);
         m_subBasin->AddBrick(brick);
 
         // Create the processes
@@ -96,6 +96,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
 
             Process* process = Process::Factory(processSettings, brick);
             process->SetName(processSettings.name);
+            process->SetParameters(processSettings);
             brick->AddProcess(process);
 
             if (processSettings.type == "overflow") {
@@ -172,7 +173,7 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
 
     Brick* brick = Brick::Factory(brickSettings);
     brick->SetName(brickSettings.name);
-    brick->AssignParameters(brickSettings);
+    brick->SetParameters(brickSettings);
     unit->AddBrick(brick);
 
     BuildForcingConnections(brickSettings, unit, brick);
@@ -184,6 +185,8 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
 
         Process* process = Process::Factory(processSettings, brick);
         process->SetName(processSettings.name);
+        process->SetHydroUnitProperties(unit, brick);
+        process->SetParameters(processSettings);
         brick->AddProcess(process);
 
         if (processSettings.type == "overflow") {
@@ -200,14 +203,14 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
         modelSettings.SelectSubBasinBrick(iBrick);
         BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
         Brick* brick = m_subBasin->GetBrick(iBrick);
-        brick->AssignParameters(brickSettings);
+        brick->SetParameters(brickSettings);
 
         // Update the processes
         for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
             Process* process = brick->GetProcess(iProcess);
-            process->AssignParameters(processSettings);
+            process->SetParameters(processSettings);
         }
     }
 
@@ -216,7 +219,7 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
         SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
         Splitter* splitter = m_subBasin->GetSplitter(iSplitter);
-        splitter->AssignParameters(splitterSettings);
+        splitter->SetParameters(splitterSettings);
     }
 }
 
@@ -229,14 +232,14 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
-            brick->AssignParameters(brickSettings);
+            brick->SetParameters(brickSettings);
 
             // Update the processes
             for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
                 modelSettings.SelectProcess(iProcess);
                 ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
                 Process* process = brick->GetProcess(iProcess);
-                process->AssignParameters(processSettings);
+                process->SetParameters(processSettings);
             }
         }
 
@@ -245,7 +248,7 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
             SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
             Splitter* splitter = unit->GetSplitter(iSplitter);
-            splitter->AssignParameters(splitterSettings);
+            splitter->SetParameters(splitterSettings);
         }
     }
 }

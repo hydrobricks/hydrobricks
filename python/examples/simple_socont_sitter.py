@@ -26,14 +26,13 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 
 # Parameters
 parameters = socont.generate_parameters()
-parameters.set_values({'A': 458, 'a_snow': 1.8, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
+parameters.set_values({'A': 458, 'a_snow': 2, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
                        'k_quick': 1, 'percol': 9.8})
 
 # Hydro units
 hydro_units = hb.HydroUnits()
 hydro_units.load_from_csv(
-    CATCHMENT_BANDS, area_unit='m2', column_elevation='elevation',
-    column_area='area')
+    CATCHMENT_BANDS, column_elevation='elevation', column_area='area')
 
 # Meteo data
 ref_elevation = 1250  # Reference altitude for the meteo data

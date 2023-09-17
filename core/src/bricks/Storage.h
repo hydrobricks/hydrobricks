@@ -9,9 +9,9 @@ class Storage : public Brick {
     Storage();
 
     /**
-     * @copydoc Brick::AssignParameters()
+     * @copydoc Brick::SetParameters()
      */
-    void AssignParameters(const BrickSettings& brickSettings) override;
+    void SetParameters(const BrickSettings& brickSettings) override;
 
   protected:
   private:

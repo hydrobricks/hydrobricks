@@ -112,7 +112,7 @@ class TimeSeries2D(TimeSeries):
 
         # Get unit ids
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             unit_ids = hb.rxr.open_rasterio(raster_hydro_units)
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
@@ -134,7 +134,7 @@ class TimeSeries2D(TimeSeries):
             print("The CRS of the netcdf file does not match the CRS of the "
                   "hydro unit ids raster. Reprojection will be done.")
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 unit_ids = unit_ids.rio.reproject(f'epsg:{data_crs}')
 
         # Get list of hydro unit ids
@@ -182,7 +182,7 @@ class TimeSeries2D(TimeSeries):
         # Specify the CRS if not specified
         if data_var.rio.crs is None:
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 data_var.rio.write_crs(f'epsg:{data_crs}', inplace=True)
 
         # Rename spatial dimensions
@@ -196,7 +196,7 @@ class TimeSeries2D(TimeSeries):
         if method == 'reproject':
             # Create a ThreadPoolExecutor with a specified number of threads
             with warnings.catch_warnings():
-                warnings.simplefilter('ignore')  # Ignoring a warning from pyproj
+                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 with ThreadPoolExecutor(max_workers=num_threads) as executor:
                     # Submit the tasks for each time step to the executor
                     futures = [executor.submit(self._extract_time_step_data_reproject,
@@ -215,7 +215,7 @@ class TimeSeries2D(TimeSeries):
 
             # Reproject the data cell indices to the hydro unit raster
             with warnings.catch_warnings():
-                warnings.simplefilter('ignore')  # Ignoring a warning from pyproj
+                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 data_idx_reproj = data_idx.rio.reproject_match(
                     unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
 

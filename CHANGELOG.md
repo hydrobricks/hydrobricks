@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
+## 0.6.2 - 2023-09-15
+
+### Breaking changes
+
+-   The csv files defining the hydro units (e.g., elevation bands) properties have now to include the units of the values (e.g., m for elevation) below the column title.
+
+### Added
+
+-   Adding the computation of the slope and aspect from the DEM.
+-   Transferring slope and aspect values to the hydrological model (e.g., for Socont quick discharge using the unit slope).
+-   Any hydro unit property can now be extracted from data and provided to the hydrological model (flexible generic approach).
+-   Adding the computation of the mean latitude and longitude for each hydro unit and allow using it for the PET computation.
+-   Adding an extraction of the forcing using a faster weighted approach.
+-   Addition of an example script for the catchment data preparation.
+-   Allow loading unit ids from raster.
+-   Adding a hydro unit discretization by elevation and aspect (separately or combined; with an example script).
+
+### Changed
+
+-   Refactoring catchment attributes parsing.
+-   The csv files defining the hydro units (e.g., elevation bands) properties have now to include the units of the values (e.g., m for elevation) below the column title.
+
+### Fixed
+
+-   Socont quick discharge has been fixed.
+
+
 ## 0.6.1 - 2023-08-23
 
 ### Fixed

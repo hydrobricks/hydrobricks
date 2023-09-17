@@ -3,7 +3,6 @@ import math
 import warnings
 
 import numpy as np
-import pandas as pd
 
 import hydrobricks as hb
 
@@ -24,7 +23,8 @@ class Catchment:
         self.masked_dem_data = None
         self.slope = None
         self.aspect = None
-        self.unit_ids = None
+        self.map_unit_ids = None
+        self.hydro_units = hb.HydroUnits()
         self._extract_outline(outline)
 
     def __del__(self):
@@ -81,13 +81,9 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
-
-        Returns
-        -------
-        A dataframe with the elevation bands.
         """
-        return self.discretize_by('elevation', method, number, distance,
-                                  min_elevation, max_elevation)
+        self.discretize_by('elevation', method, number, distance,
+                           min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
                       elevation_distance=50, min_elevation=None, max_elevation=None):
@@ -113,10 +109,6 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
-
-        Returns
-        -------
-        A dataframe with the hydro units properties.
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -127,7 +119,7 @@ class Catchment:
         if self.slope is None or self.aspect is None:
             self.calculate_slope_aspect()
 
-        self.unit_ids = np.zeros(self.masked_dem_data.shape)
+        self.map_unit_ids = np.zeros(self.masked_dem_data.shape)
 
         # Create a dict to store the criteria
         criteria_dict = {}
@@ -156,15 +148,10 @@ class Catchment:
         if 'aspect' in criteria:
             criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
-        res_area = []
         res_elevation = []
         res_elevation_min = []
         res_elevation_max = []
-        res_elevation_mean = []
-        res_slope = []
-        res_aspect = []
-        res_lat = []
-        res_lon = []
+        res_aspect_class = []
 
         combinations = list(itertools.product(*criteria_dict.values()))
         combinations_keys = criteria_dict.keys()
@@ -177,79 +164,64 @@ class Catchment:
 
             for criterion_name, criterion in zip(combinations_keys, criteria):
                 if criterion_name == 'elevation':
-                    m_elev = np.logical_and(
+                    mask_elev = np.logical_and(
                         self.masked_dem_data >= criterion[0],
                         self.masked_dem_data < criterion[1])
-                    mask_unit = np.logical_and(mask_unit, m_elev)
+                    mask_unit = np.logical_and(mask_unit, mask_elev)
                 elif criterion_name == 'aspect':
                     if criterion == 'N':
-                        m_aspect = np.logical_or(
+                        mask_aspect = np.logical_or(
                             np.logical_and(self.aspect >= 315, self.aspect <= 360),
                             np.logical_and(self.aspect >= 0, self.aspect < 45))
                     elif criterion == 'E':
-                        m_aspect = np.logical_and(self.aspect >= 45, self.aspect < 135)
+                        mask_aspect = np.logical_and(self.aspect >= 45,
+                                                     self.aspect < 135)
                     elif criterion == 'S':
-                        m_aspect = np.logical_and(self.aspect >= 135, self.aspect < 225)
+                        mask_aspect = np.logical_and(self.aspect >= 135,
+                                                     self.aspect < 225)
                     elif criterion == 'W':
-                        m_aspect = np.logical_and(self.aspect >= 225, self.aspect < 315)
+                        mask_aspect = np.logical_and(self.aspect >= 225,
+                                                     self.aspect < 315)
                     else:
                         raise ValueError("Unknown aspect value.")
-                    mask_unit = np.logical_and(mask_unit, m_aspect)
+                    mask_unit = np.logical_and(mask_unit, mask_aspect)
 
             # If the unit is empty, skip it
             if np.count_nonzero(mask_unit) == 0:
                 continue
 
             # Check that all cells in unit_ids are 0
-            assert np.count_nonzero(self.unit_ids[mask_unit]) == 0
+            assert np.count_nonzero(self.map_unit_ids[mask_unit]) == 0
 
             # Set the unit id
-            self.unit_ids[mask_unit] = unit_id
+            self.map_unit_ids[mask_unit] = unit_id
 
-            # Compute the area of the unit
-            n_cells = np.count_nonzero(mask_unit)
-            res_area.append(round(n_cells * self.dem.res[0] * self.dem.res[1], 2))
-
-            # Compute the mean elevation of the unit
-            res_elevation_mean.append(self._extract_unit_mean_elevation(mask_unit))
+            # Set the mean elevation of the unit if elevation is a criterion
             if 'elevation' in criteria_dict.keys():
                 i = list(combinations_keys).index('elevation')
                 elevations = criteria[i]
                 res_elevation.append(round(float(np.mean(elevations)), 2))
                 res_elevation_min.append(round(float(elevations[0]), 2))
                 res_elevation_max.append(round(float(elevations[1]), 2))
-            else:
-                res_elevation_min.append(self._extract_unit_min_elevation(mask_unit))
-                res_elevation_max.append(self._extract_unit_max_elevation(mask_unit))
-                res_elevation_mean.append(self._extract_unit_mean_elevation(mask_unit))
 
-            # Compute the slope and aspect of the unit
-            res_slope.append(self._extract_unit_mean_slope(mask_unit))
-            res_aspect.append(self._extract_unit_mean_aspect(mask_unit))
-
-            # Calculate the mean unit coordinates in lat/lon
-            lat, lon = self._extract_unit_mean_lat_lon(mask_unit)
-            res_lat.append(lat)
-            res_lon.append(lon)
+            # Get the aspect class if aspect is a criterion
+            if 'aspect' in criteria_dict.keys():
+                i = list(combinations_keys).index('aspect')
+                res_aspect_class.append(criteria[i])
 
             unit_id += 1
 
-        self.unit_ids = self.unit_ids.astype(hb.rasterio.uint16)
+        self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-        df = pd.DataFrame(columns=['elevation', 'elevation_min', 'elevation_max',
-                                   'elevation_mean', 'area', 'slope', 'aspect',
-                                   'latitude', 'longitude'])
-        df['elevation'] = res_elevation
-        df['elevation_min'] = res_elevation_min
-        df['elevation_max'] = res_elevation_max
-        df['elevation_mean'] = res_elevation_mean
-        df['area'] = res_area
-        df['slope'] = res_slope
-        df['aspect'] = res_aspect
-        df['latitude'] = res_lat
-        df['longitude'] = res_lon
+        if res_elevation:
+            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
+            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
+            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
 
-        return df
+        if res_aspect_class:
+            self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
+
+        self.get_hydro_units_attributes()
 
     def get_hydro_units_attributes(self):
         """
@@ -257,7 +229,7 @@ class Catchment:
 
         Returns
         -------
-        A dataframe with the hydro units attributes.
+        The hydro units attributes.
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -265,29 +237,35 @@ class Catchment:
         if self.slope is None or self.aspect is None:
             self.calculate_slope_aspect()
 
-        unit_ids = np.unique(self.unit_ids)
+        unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
 
+        if 'id' not in self.hydro_units.hydro_units.columns:
+            self.hydro_units.add_property(('id', '-'), unit_ids, set_first=True)
+
         res_area = []
+        res_elevation = []
+        res_elevation_mean = []
         res_elevation_min = []
         res_elevation_max = []
-        res_elevation_mean = []
         res_slope = []
         res_aspect = []
         res_lat = []
         res_lon = []
 
-        for i, unit_id in enumerate(unit_ids):
-            mask_unit = self.unit_ids == unit_id
+        for _, unit_id in enumerate(unit_ids):
+            mask_unit = self.map_unit_ids == unit_id
 
             # Compute the area of the unit
             n_cells = np.count_nonzero(mask_unit)
             res_area.append(round(n_cells * self.dem.res[0] * self.dem.res[1], 2))
 
             # Compute the mean elevation of the unit
-            res_elevation_min.append(self._extract_unit_min_elevation(mask_unit))
-            res_elevation_max.append(self._extract_unit_max_elevation(mask_unit))
             res_elevation_mean.append(self._extract_unit_mean_elevation(mask_unit))
+            if not self.hydro_units.has('elevation'):
+                res_elevation.append(self._extract_unit_mean_elevation(mask_unit))
+                res_elevation_min.append(self._extract_unit_min_elevation(mask_unit))
+                res_elevation_max.append(self._extract_unit_max_elevation(mask_unit))
 
             # Compute the slope and aspect of the unit
             res_slope.append(self._extract_unit_mean_slope(mask_unit))
@@ -298,20 +276,21 @@ class Catchment:
             res_lat.append(lat)
             res_lon.append(lon)
 
-        df = pd.DataFrame(columns=['elevation', 'elevation_min', 'elevation_max',
-                                   'elevation_mean', 'area', 'slope', 'aspect',
-                                   'latitude', 'longitude'])
-        df['elevation'] = res_elevation_mean
-        df['elevation_min'] = res_elevation_min
-        df['elevation_max'] = res_elevation_max
-        df['elevation_mean'] = res_elevation_mean
-        df['area'] = res_area
-        df['slope'] = res_slope
-        df['aspect'] = res_aspect
-        df['latitude'] = res_lat
-        df['longitude'] = res_lon
+        if not self.hydro_units.has('elevation'):
+            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
+            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
+            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
 
-        return df
+        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation_mean)
+        self.hydro_units.add_property(('area', 'm2'), res_area)
+        self.hydro_units.add_property(('slope', 'deg'), res_slope)
+        self.hydro_units.add_property(('aspect', 'deg'), res_aspect)
+        self.hydro_units.add_property(('latitude', 'deg'), res_lat)
+        self.hydro_units.add_property(('longitude', 'deg'), res_lon)
+
+        self.hydro_units.check_land_cover_fractions_not_empty()
+
+        return self.hydro_units
 
     def get_mean_elevation(self):
         """
@@ -331,10 +310,24 @@ class Catchment:
             raise ImportError("xarray-spatial is required to do this.")
 
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Ignoring a warning from pyproj
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+
+    def save_hydro_units_to_csv(self, path):
+        """
+        Save the hydro units to a csv file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the output file.
+        """
+        if self.hydro_units is None:
+            raise ValueError("No hydro units to save.")
+
+        self.hydro_units.save_to_csv(path)
 
     def save_unit_ids_raster(self, path):
         """
@@ -345,7 +338,7 @@ class Catchment:
         path : str|Path
             Path to the output file.
         """
-        if self.unit_ids is None:
+        if self.map_unit_ids is None:
             raise ValueError("No unit ids raster to save.")
 
         # Create the profile
@@ -357,7 +350,7 @@ class Catchment:
             nodata=0)
 
         with hb.rasterio.open(path, 'w', **profile) as dst:
-            dst.write(self.unit_ids, 1)
+            dst.write(self.map_unit_ids, 1)
 
     def load_unit_ids_from_raster(self, path):
         """
@@ -374,13 +367,13 @@ class Catchment:
         with hb.rasterio.open(path) as src:
             self._check_crs(src)
             geoms = [hb.mapping(self.outline)]
-            self.unit_ids, _ = hb.mask(src, geoms, crop=False)
-            self.unit_ids[self.unit_ids == src.nodata] = 0
+            self.map_unit_ids, _ = hb.mask(src, geoms, crop=False)
+            self.map_unit_ids[self.map_unit_ids == src.nodata] = 0
 
-            if len(self.unit_ids.shape) == 3:
-                self.unit_ids = self.unit_ids[0]
+            if len(self.map_unit_ids.shape) == 3:
+                self.map_unit_ids = self.map_unit_ids[0]
 
-            self.unit_ids = self.unit_ids.astype(hb.rasterio.uint16)
+            self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
     def _extract_outline(self, outline):
         if not outline:

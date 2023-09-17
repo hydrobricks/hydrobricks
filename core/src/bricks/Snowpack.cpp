@@ -16,8 +16,8 @@ void Snowpack::SaveAsInitialState() {
     m_snow->SaveAsInitialState();
 }
 
-void Snowpack::AssignParameters(const BrickSettings& brickSettings) {
-    Brick::AssignParameters(brickSettings);
+void Snowpack::SetParameters(const BrickSettings& brickSettings) {
+    Brick::SetParameters(brickSettings);
 }
 
 void Snowpack::AttachFluxIn(Flux* flux) {

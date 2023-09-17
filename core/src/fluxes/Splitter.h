@@ -26,7 +26,7 @@ class Splitter : public wxObject {
      *
      * @param splitterSettings settings of the splitter containing the parameters.
      */
-    virtual void AssignParameters(const SplitterSettings& splitterSettings) = 0;
+    virtual void SetParameters(const SplitterSettings& splitterSettings) = 0;
 
     float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
 

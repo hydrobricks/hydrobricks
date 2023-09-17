@@ -14,7 +14,7 @@ class SplitterSnowRain : public Splitter {
      */
     bool IsOk() override;
 
-    void AssignParameters(const SplitterSettings& splitterSettings) override;
+    void SetParameters(const SplitterSettings& splitterSettings) override;
 
     void AttachForcing(Forcing* forcing) override;
 

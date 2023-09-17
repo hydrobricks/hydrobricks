@@ -14,7 +14,7 @@ jobs:
       BUILD_TYPE: Release
 
     steps:
-    - uses: actions/checkout@v3.1.0
+    - uses: actions/checkout@v4
 
     - name: Install libraries
       run: sudo apt-get install tree python3
@@ -65,7 +65,7 @@ jobs:
       CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
 
     steps:
-      - uses: actions/checkout@v3.1.0
+      - uses: actions/checkout@v4
 
       - name: Install libraries
         run: sudo apt-get install tree lcov python3

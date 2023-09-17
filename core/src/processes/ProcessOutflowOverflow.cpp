@@ -6,8 +6,8 @@
 ProcessOutflowOverflow::ProcessOutflowOverflow(WaterContainer* container)
     : ProcessOutflow(container) {}
 
-void ProcessOutflowOverflow::AssignParameters(const ProcessSettings& processSettings) {
-    Process::AssignParameters(processSettings);
+void ProcessOutflowOverflow::SetParameters(const ProcessSettings& processSettings) {
+    Process::SetParameters(processSettings);
 }
 
 vecDouble ProcessOutflowOverflow::GetRates() {

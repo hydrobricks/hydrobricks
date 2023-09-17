@@ -9,9 +9,9 @@ class Vegetation : public LandCover {
     Vegetation();
 
     /**
-     * @copydoc Brick::AssignParameters()
+     * @copydoc Brick::SetParameters()
      */
-    void AssignParameters(const BrickSettings& brickSettings) override;
+    void SetParameters(const BrickSettings& brickSettings) override;
 
     void ApplyConstraints(double timeStep) override;
 

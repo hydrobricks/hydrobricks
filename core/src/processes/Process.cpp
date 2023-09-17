@@ -2,6 +2,7 @@
 
 #include "Brick.h"
 #include "Glacier.h"
+#include "HydroUnit.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessMeltDegreeDay.h"
@@ -19,21 +20,15 @@ Process::Process(WaterContainer* container)
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     if (processSettings.type == "outflow:linear") {
-        auto process = new ProcessOutflowLinear(brick->GetWaterContainer());
-        process->AssignParameters(processSettings);
-        return process;
+        return new ProcessOutflowLinear(brick->GetWaterContainer());
     } else if (processSettings.type == "outflow:constant") {
-        auto process = new ProcessOutflowConstant(brick->GetWaterContainer());
-        process->AssignParameters(processSettings);
-        return process;
+        return new ProcessOutflowConstant(brick->GetWaterContainer());
     } else if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "outflow:rest_direct" || processSettings.type == "outflow:RestDirect") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "runoff:socont") {
-        auto process = new ProcessRunoffSocont(brick->GetWaterContainer());
-        process->AssignParameters(processSettings);
-        return process;
+        return new ProcessRunoffSocont(brick->GetWaterContainer());
     } else if (processSettings.type == "infiltration:socont") {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
     } else if (processSettings.type == "overflow") {
@@ -43,14 +38,10 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     } else if (processSettings.type == "melt:degree_day" || processSettings.type == "Melt:DegreeDay") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            auto process = new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
-            process->AssignParameters(processSettings);
-            return process;
+            return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
         } else if (brick->IsGlacier()) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            auto process = new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
-            process->AssignParameters(processSettings);
-            return process;
+            return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
         } else {
             throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
         }
@@ -67,7 +58,11 @@ void Process::Reset() {
     }
 }
 
-void Process::AssignParameters(const ProcessSettings&) {
+void Process::SetHydroUnitProperties(HydroUnit*, Brick*) {
+    // Nothing to do...
+}
+
+void Process::SetParameters(const ProcessSettings&) {
     // Nothing to do...
 }
 

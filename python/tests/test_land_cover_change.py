@@ -25,7 +25,7 @@ def hydro_units():
 def hydro_units_csv(hydro_units):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
-        area_unit='km2', column_elevation='Elevation Bands',
+        column_elevation='Elevation Bands',
         columns_areas={'ground': 'Sum_Area Non Glacier Band',
                        'glacier_ice': 'Sum_Area ICE Band',
                        'glacier_debris': 'Sum_Area Debris Band'})

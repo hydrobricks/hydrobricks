@@ -54,26 +54,27 @@ class Socont(Model):
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             if cover_type == 'glacier':
                 has_glacier = True
-                aliases = ['a_ice']
-                melt_aliases = ['melt_t_ice']
+                a_aliases = ['a_ice']
+                t_aliases = ['melt_t_ice']
                 if self.land_cover_types.count('glacier') > 1:
                     i_glacier += 1
-                    aliases = [f'a_ice_{cover_name.replace("-", "_")}',
-                               f'a_ice_{i_glacier}']
-                    melt_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                                    f'melt_t_ice_{i_glacier}']
+                    a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
+                                 f'a_ice_{i_glacier}']
+                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                                 f'melt_t_ice_{i_glacier}',
+                                 'melt_t_ice']
 
-                ps.define_constraint('a_snow', '<', aliases[0])
+                ps.define_constraint('a_snow', '<', a_aliases[0])
                 ps.define_constraint('k_snow', '<', 'k_ice')
 
                 ps.define_parameter(
                     component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=aliases, min_value=5, max_value=20,
+                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20,
                     mandatory=True)
 
                 ps.define_parameter(
                     component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=melt_aliases, min_value=0, max_value=5,
+                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
                     default_value=0, mandatory=False)
 
         if has_glacier:

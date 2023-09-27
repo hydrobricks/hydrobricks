@@ -67,12 +67,13 @@ class HydroUnits:
             vals, unit = self._get_column_values_unit('elevation', file_content)
             self.add_property(('elevation', unit), vals)
 
-        if column_area is not None:
-            vals, unit = self._get_column_values_unit(column_area, file_content)
-            self.add_property(('area', unit), vals)
-        elif 'area' in file_content.columns:
-            vals, unit = self._get_column_values_unit('area', file_content)
-            self.add_property(('area', unit), vals)
+        if columns_areas is None:
+            if column_area is not None:
+                vals, unit = self._get_column_values_unit(column_area, file_content)
+                self.add_property(('area', unit), vals)
+            elif 'area' in file_content.columns:
+                vals, unit = self._get_column_values_unit('area', file_content)
+                self.add_property(('area', unit), vals)
 
         if other_columns is not None:
             for prop, col in other_columns.items():

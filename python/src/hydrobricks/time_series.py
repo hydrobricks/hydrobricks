@@ -30,7 +30,7 @@ class TimeSeries1D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def load_from_csv(self, path, column_time, time_format, content):
+    def load_from_csv(self, path, column_time, time_format, content, start_date=None, end_date=None):
         """
         Read time series data from csv file.
 
@@ -49,6 +49,10 @@ class TimeSeries1D(TimeSeries):
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
             date_format=time_format)
+
+        if start_date and end_date:
+            mask = (file_content[column_time] >= start_date) & (file_content[column_time] <= end_date)
+            file_content = file_content.loc[mask]
 
         self.time = file_content[column_time]
 

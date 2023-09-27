@@ -126,7 +126,6 @@ bool SettingsBasin::Parse(const string& path) {
             }
         }
 
-
     } catch (std::exception& e) {
         wxLogError(e.what());
         return false;

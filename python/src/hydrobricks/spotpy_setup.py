@@ -18,7 +18,7 @@ class SpotpySetup:
         self.random_forcing = params.needs_random_forcing()
         self.forcing = forcing
         self.forcing.apply_operations(params)
-        self.obs = obs.data_raw[0]
+        self.obs = obs.data
         self.warmup = warmup
         self.obj_func = obj_func
         self.invert_obj_func = invert_obj_func

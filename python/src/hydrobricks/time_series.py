@@ -190,7 +190,10 @@ class TimeSeries2D(TimeSeries):
                 data_var.rio.write_crs(f'epsg:{data_crs}', inplace=True)
 
         # Rename spatial dimensions
-        data_var = data_var.rename({dim_x: 'x', dim_y: 'y'})
+        if dim_x != 'x':
+            data_var = data_var.rename({dim_x: 'x'})
+        if dim_y != 'y':
+            data_var = data_var.rename({dim_y: 'y'})
 
         # Time the computation
         start_time = time.time()

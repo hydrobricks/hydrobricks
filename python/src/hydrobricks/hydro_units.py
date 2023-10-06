@@ -40,19 +40,18 @@ class HydroUnits:
         path : str|Path
             Path to the csv file containing hydro units data.
         column_elevation : str, optional
-            Column name containing the elevation values (optional).
+            Column name containing the elevation values.
             Default: elevation
         column_area : str, optional
-            Column name containing the area values (optional).
+            Column name containing the area values.
             Default: area
         column_fractions : dict, optional
-            Column name containing the area fraction values for each land cover
-            (optional).
+            Column name containing the area fraction values for each land cover.
         columns_areas : dict, optional
-            Column name containing the area values for each land cover (optional).
+            Column name containing the area values for each land cover.
         other_columns: dict, optional
-            Column name containing other values to import (optional). The key is the
-            property name and the value is the name of the column in the csv file.
+            Column name containing other values to import. The key is the property name
+            and the value is the name of the column in the csv file.
             Example: {'slope': 'Slope', 'aspect': 'Aspect'}
         """
         file_content = pd.read_csv(path, header=[0, 1])
@@ -67,20 +66,9 @@ class HydroUnits:
             vals, unit = self._get_column_values_unit('elevation', file_content)
             self.add_property(('elevation', unit), vals)
 
-        if columns_areas is None:
-            if column_area is not None:
-                vals, unit = self._get_column_values_unit(column_area, file_content)
-                self.add_property(('area', unit), vals)
-            elif 'area' in file_content.columns:
-                vals, unit = self._get_column_values_unit('area', file_content)
-                self.add_property(('area', unit), vals)
-
-        if other_columns is not None:
-            for prop, col in other_columns.items():
-                self.add_property((prop[0], prop[1]), col)
-
-        if column_fractions is not None:
-            raise NotImplementedError
+        if column_area is not None and columns_areas is not None:
+            raise ValueError('The "column_area" and "columns_areas" cannot be '
+                             'provided at the same time.')
 
         if columns_areas is not None:
             self._check_land_cover_areas_match(columns_areas)
@@ -95,8 +83,21 @@ class HydroUnits:
                     raise ValueError('The area units do not match.')
             self._compute_area_portions(area_values, area_unit)
         else:
+            if column_area is not None:
+                vals, unit = self._get_column_values_unit(column_area, file_content)
+                self.add_property(('area', unit), vals)
+            elif 'area' in file_content.columns:
+                vals, unit = self._get_column_values_unit('area', file_content)
+                self.add_property(('area', unit), vals)
             idx = self.prefix_fraction + 'ground'
             self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
+
+        if other_columns is not None:
+            for prop, col in other_columns.items():
+                self.add_property((prop[0], prop[1]), col)
+
+        if column_fractions is not None:
+            raise NotImplementedError
 
         if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)

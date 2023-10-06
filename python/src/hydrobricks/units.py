@@ -39,6 +39,7 @@ class Unit(StrEnumClass):
     FRAC = auto()  # [fraction]
     MJ_M2_D = auto()  # [MJ m-2 d-1]
     KPA = auto()  # [kPa]
+    DEG = auto()  # [degree]
 
 
 def get_unit_enum(unit):
@@ -102,6 +103,8 @@ def get_unit_enum(unit):
         return Unit.MJ_M2_D
     elif unit in ['kPa', 'kilopascal']:
         return Unit.KPA
+    elif unit in ['deg', 'degree', 'degrees']:
+        return Unit.DEG
     else:
         raise ValueError(f"Unknown unit: {unit}")
 

@@ -378,7 +378,7 @@ class Forcing:
         idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
         areas = self.hydro_units[('area', 'm2')]
-        tot_precip = data * areas / areas.sum()
+        tot_precip = data * areas.values / areas.sum()
         return tot_precip.sum()
 
     def _apply_operations_of_type(self, operation_type, parameters=None,

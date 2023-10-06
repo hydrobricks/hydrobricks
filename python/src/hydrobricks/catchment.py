@@ -293,6 +293,8 @@ class Catchment:
 
         self.hydro_units.check_land_cover_fractions_not_empty()
 
+        self.area = sum(res_area)
+
         return self.hydro_units
 
     def get_mean_elevation(self):
@@ -378,8 +380,9 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-    def create_behaviour_land_cover_change(self, whole_glaciers, debris_glaciers,
-                                           times, with_debris=False):
+    def create_behaviour_land_cover_change_for_glaciers(self, whole_glaciers,
+                                                        debris_glaciers, times,
+                                                        with_debris=False):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
@@ -396,8 +399,8 @@ class Catchment:
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
         times : str|list
-            Date of the land cover, in the format: dd/mm/yyyy.
-        with_debris : boolean, optional
+            Date of the land cover, in the format: yyyy-mm-dd.
+        with_debris : bool, optional
             True if the simulation requires debris-covered and clean-ice area
             computations, False otherwise.
 
@@ -407,8 +410,6 @@ class Catchment:
             A BehaviourLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
         """
-        if not hb.has_pandas:
-            raise ImportError("pandas is required to do this.")
 
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0] - 1

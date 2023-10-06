@@ -28,3 +28,13 @@ Install: ```pip install hydrobricks```
 *   **Documentation**: https://hydrobricks.readthedocs.io/en/latest/
 *   How to build: https://github.com/hydrobricks/hydrobricks/wiki
 *   Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
+
+## Contribute
+
+We very much welcome contribution to hydrobricks! To do so:
+1. Fork the repo
+2. Code something
+3. Push your contribution to your forked repo
+4. Create a pull request
+
+Thank you!

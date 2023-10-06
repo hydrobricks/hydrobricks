@@ -41,13 +41,6 @@ else:
     has_geopandas = True
 
 try:
-    import pandas as pd
-except ImportError:
-    has_pandas = False
-else:
-    has_pandas = True
-
-try:
     from shapely.geometry import mapping
 except ImportError:
     has_shapely = False

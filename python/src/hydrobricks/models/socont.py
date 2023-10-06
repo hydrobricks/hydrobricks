@@ -61,8 +61,7 @@ class Socont(Model):
                     a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
                                  f'a_ice_{i_glacier}']
                     t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                                 f'melt_t_ice_{i_glacier}',
-                                 'melt_t_ice']
+                                 f'melt_t_ice_{i_glacier}']
 
                 ps.define_constraint('a_snow', '<', a_aliases[0])
                 ps.define_constraint('k_snow', '<', 'k_ice')

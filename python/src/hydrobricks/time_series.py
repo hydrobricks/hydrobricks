@@ -30,7 +30,8 @@ class TimeSeries1D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def load_from_csv(self, path, column_time, time_format, content):
+    def load_from_csv(self, path, column_time, time_format, content, start_date=None,
+                      end_date=None):
         """
         Read time series data from csv file.
 
@@ -45,10 +46,21 @@ class TimeSeries1D(TimeSeries):
         content : dict
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
+        start_date : datetime, optional
+            Start date of the time series (used to select the period of interest).
+            If None, the first date of the file is used.
+        end_date : datetime, optional
+            End date of the time series (used to select the period of interest).
+            If None, the last date of the file is used.
         """
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
             date_format=time_format)
+
+        if start_date and end_date:
+            file_content = file_content.loc[
+                (file_content[column_time] >= start_date) &
+                (file_content[column_time] <= end_date)]
 
         self.time = file_content[column_time]
 
@@ -186,7 +198,10 @@ class TimeSeries2D(TimeSeries):
                 data_var.rio.write_crs(f'epsg:{data_crs}', inplace=True)
 
         # Rename spatial dimensions
-        data_var = data_var.rename({dim_x: 'x', dim_y: 'y'})
+        if dim_x != 'x':
+            data_var = data_var.rename({dim_x: 'x'})
+        if dim_y != 'y':
+            data_var = data_var.rename({dim_y: 'y'})
 
         # Time the computation
         start_time = time.time()

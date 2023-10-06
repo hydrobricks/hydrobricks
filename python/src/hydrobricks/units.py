@@ -25,6 +25,7 @@ class Unit(StrEnumClass):
     KM = auto()  # [km]
     M2 = auto()  # [m2]
     KM2 = auto()  # [km2]
+    DEG = auto()  # [degree] for lat/lon
     YEAR = auto()  # [year]
     MONTH = auto()  # [month]
     DAY = auto()  # [day]
@@ -74,6 +75,8 @@ def get_unit_enum(unit):
         return Unit.M2
     elif unit in ['km2', 'km^2', 'km**2', 'square kilometer']:
         return Unit.KM2
+    elif unit in ['deg', 'degree', 'degrees']:
+        return Unit.DEG
     elif unit in ['year', 'years']:
         return Unit.YEAR
     elif unit in ['month', 'months']:

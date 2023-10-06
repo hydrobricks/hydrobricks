@@ -38,7 +38,7 @@ class BehaviourLandCoverChange(Behaviour):
         Example of a file (with areas in km2)
         -----------------
         elevation   glacier      glacier      glacier      glacier      glacier
-                    01/08/2020   01/08/2025   01/08/2030   01/08/2035   01/08/2040
+                    2020-08-01   2025-08-01   2030-08-01   2035-08-01   2040-08-01
         4274        0.013        0.003        0            0            0
         4310        0.019        0.009        0            0            0
         4346        0.052        0.042        0.032        0.022        0.012

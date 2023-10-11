@@ -7,7 +7,7 @@ import hydrobricks as hb
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', '..', 'tests', 'files', 'catchments'
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
@@ -27,8 +27,7 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.calculate_slope_aspect()
 
 # Create elevation bands
-catchment.discretize_by(criteria=['elevation', 'aspect'], elevation_method='isohypse',
-                        elevation_distance=100)
+catchment.create_elevation_bands(method='isohypse', distance=50)
 
 # Save elevation bands to a raster
 catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')

@@ -26,7 +26,7 @@ catchment.extract_dem(CATCHMENT_DEM)
 # Compute the slope and aspect
 catchment.calculate_slope_aspect()
 
-# Create elevation bands
+# Discretize the catchment by elevation and aspect
 catchment.discretize_by(criteria=['elevation', 'aspect'], elevation_method='isohypse',
                         elevation_distance=100)
 

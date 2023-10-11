@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
+from hydrobricks.units import convert_unit, Unit
 
 
 class Catchment:
@@ -411,8 +412,20 @@ class Catchment:
             extracted from the shapefiles.
         """
 
+        if not hb.has_geopandas:
+            raise ImportError("geopandas is required to do this.")
+
+        if self.map_unit_ids is None:
+            raise ValueError("The catchment has not been discretized "
+                             "(unit ids map missing).")
+
+        # Get the unit ids
         unit_ids = np.unique(self.map_unit_ids)
-        unit_ids = unit_ids[unit_ids != 0] - 1
+        unit_ids = unit_ids[unit_ids != 0]
+
+
+
+        unit_ids = unit_ids - 1
 
         debris_df = pd.DataFrame(index=unit_ids)
         ice_df = pd.DataFrame(index=unit_ids)
@@ -499,40 +512,42 @@ class Catchment:
             Area covered by glacier for each HydroUnit.
         """
 
+        # Clip the glaciers to the catchment extent
         all_glaciers = hb.gpd.read_file(whole_glaciers_shapefile)
         all_glaciers.to_crs(self.crs, inplace=True)
         glaciers = hb.gpd.clip(all_glaciers, self.outline)
 
+        # Compute the glaciated area of the catchment
         glaciated_area = self._compute_area(glaciers)
-        bare_rock_area = self.area - glaciated_area
-        glaciated_percentage = glaciated_area / self.area * 100
+        non_glaciated_area = self.area - glaciated_area
 
+        # Compute the debris-covered area of the glacier
+        debris_glaciers = None
         if debris_glaciers_shapefile is not None:
             all_debris_glaciers = hb.gpd.read_file(debris_glaciers_shapefile)
             all_debris_glaciers.to_crs(self.crs, inplace=True)
-            debris_glaciers = hb.gpd.clip(all_debris_glaciers, self.outline)
-            debris_glaciers_only = hb.gpd.clip(debris_glaciers, glaciers)
+            debris_glaciers = hb.gpd.clip(all_debris_glaciers, glaciers)
 
-            debris_glaciated_area = self._compute_area(debris_glaciers_only)
+        # Display some glacier statistics
+        m2 = Unit.M2
+        km2 = Unit.KM2
+        print(f"The catchment has an area of {convert_unit(self.area, m2, km2):.1f} km²"
+              f", from which {convert_unit(glaciated_area, m2, km2):.1f} km² are "
+              f"glaciated, and {convert_unit(non_glaciated_area, m2, km2):.1f} km² are "
+              f"non glaciated.")
+
+        print(f"The catchment is {glaciated_area / self.area * 100:.1f}% glaciated.")
+
+        if debris_glaciers_shapefile is not None:
+            debris_glaciated_area = self._compute_area(debris_glaciers)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
+            print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
+                  f"of bare ice, and {convert_unit(debris_glaciated_area, m2, km2):.1f}"
+                  f" km² of debris-covered ice, thus amounting to "
+                  f"{bare_ice_percentage:.1f}% of bare ice.")
 
-        else:
-            debris_glaciated_area = np.nan
-            bare_ice_area = np.nan
-            bare_ice_percentage = np.nan
 
-        m2_to_km2 = 1 / 1000000
-        print("The catchment has an area of {:.1f} km², from which "
-              "{:.1f} km² are glaciated, and {:.1f} km² are bare rock."
-              "".format(self.area * m2_to_km2, glaciated_area * m2_to_km2,
-                        bare_rock_area * m2_to_km2))
-        print(f"The catchment is thus {glaciated_percentage:.1f}% glaciated.")
-        if debris_glaciers_shapefile is not None:
-            print("The glaciers have {:.1f} km² of bare ice, and {:.1f} km² "
-                  "of debris-covered ice, thus amounting to {:.1f}% of bare ice."
-                  "".format(bare_ice_area * m2_to_km2, debris_glaciated_area *
-                            m2_to_km2, bare_ice_percentage))
 
         # Find pixel size
         a = self.dem.transform
@@ -558,16 +573,16 @@ class Catchment:
             mask_unit = self.map_unit_ids == unit_id
             unit_area = np.sum(mask_unit) * pixel_area
 
-            id = unit_id - 1
+            idx = unit_id - 1
 
             topo_mask_glacier = glaciers_clipped[mask_unit]
-            glacier_area[id] = np.count_nonzero(topo_mask_glacier) * pixel_area
-            bare_rock_area[id] = unit_area - glacier_area[id]
+            glacier_area[idx] = np.count_nonzero(topo_mask_glacier) * pixel_area
+            bare_rock_area[idx] = unit_area - glacier_area[idx]
 
             if debris_glaciers_shapefile is not None:
                 topo_mask_debris = debris_clipped[mask_unit]
-                debris_area[id] = np.count_nonzero(topo_mask_debris) * pixel_area
-                bare_ice_area[id] = glacier_area[id] - debris_area[id]
+                debris_area[idx] = np.count_nonzero(topo_mask_debris) * pixel_area
+                bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
                 print("After shapefile to raster conversion, the glaciers have "
                       "{:.1f} km² of bare ice, {:.1f} km² of debris-covered ice,"
@@ -576,8 +591,8 @@ class Catchment:
                                 np.sum(debris_area) * m2_to_km2,
                                 np.sum(bare_rock_area) * m2_to_km2))
             else:
-                debris_area[id] = np.nan
-                bare_ice_area[id] = np.nan
+                debris_area[idx] = np.nan
+                bare_ice_area[idx] = np.nan
 
         return debris_area, bare_ice_area, bare_rock_area, glacier_area
 

@@ -8,6 +8,14 @@ import pandas as pd
 import hydrobricks as hb
 from hydrobricks.units import convert_unit, Unit
 
+if hb.has_shapely:
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+    from shapely.geometry import mapping
+
+if hb.has_rasterio:
+    from rasterio.mask import mask
+
 
 class Catchment:
     """Creation of catchment-related data"""
@@ -49,11 +57,11 @@ class Catchment:
         True if successful, False otherwise.
         """
         try:
-            geoms = [hb.mapping(self.outline)]
+            geoms = [mapping(self.outline)]
             src = hb.rasterio.open(dem_path)
             self._check_crs(src)
             self.dem = src
-            self.masked_dem_data, _ = hb.mask(src, geoms, crop=False)
+            self.masked_dem_data, _ = mask(src, geoms, crop=False)
             self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
             if len(self.masked_dem_data.shape) == 3:
                 self.masked_dem_data = self.masked_dem_data[0]
@@ -372,8 +380,8 @@ class Catchment:
 
         with hb.rasterio.open(path) as src:
             self._check_crs(src)
-            geoms = [hb.mapping(self.outline)]
-            self.map_unit_ids, _ = hb.mask(src, geoms, crop=False)
+            geoms = [mapping(self.outline)]
+            self.map_unit_ids, _ = mask(src, geoms, crop=False)
             self.map_unit_ids[self.map_unit_ids == src.nodata] = 0
 
             if len(self.map_unit_ids.shape) == 3:
@@ -599,8 +607,8 @@ class Catchment:
     def _mask_dem(self, shapefile, nodata):
         geoms = []
         for geo in shapefile.geometry.values:
-            geoms.append(hb.mapping(geo))
-        dem_clipped, _ = hb.mask(self.dem, geoms, crop=False)
+            geoms.append(mapping(geo))
+        dem_clipped, _ = mask(self.dem, geoms, crop=False)
         dem_clipped[dem_clipped == self.dem.nodata] = nodata
         if len(dem_clipped.shape) == 3:
             dem_clipped = dem_clipped[0]

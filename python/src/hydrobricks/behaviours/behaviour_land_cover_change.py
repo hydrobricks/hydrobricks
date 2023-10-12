@@ -156,13 +156,6 @@ class BehaviourLandCoverChange(Behaviour):
         debris_df = pd.DataFrame(index=range(n_unit_ids))
         other_df = pd.DataFrame(index=range(n_unit_ids))
 
-        elevations = catchment.get_hydro_units_elevations()
-
-        glacier_df[0] = elevations
-        ice_df[0] = elevations
-        debris_df[0] = elevations
-        other_df[0] = elevations
-
         for i, (whole_glacier, debris_glacier) in \
                 enumerate(zip(whole_glaciers, debris_glaciers), 1):
             glacier, ice, debris, other = \
@@ -179,28 +172,23 @@ class BehaviourLandCoverChange(Behaviour):
         debris_df = self._format_dataframe(debris_df, times, 'glacier_debris')
         other_df = self._format_dataframe(other_df, times, 'ground')
 
-        changes = hb.behaviours.BehaviourLandCoverChange()
         if with_debris:
-            changes._match_hydro_unit_ids(debris_df, hydro_units,
-                                          match_with='elevation')
-            changes._remove_rows_with_no_changes(debris_df)
-            changes._extract_changes(area_unit="m2", file_content=debris_df)
+            self._match_hydro_unit_ids(debris_df, hydro_units, match_with='id')
+            self._remove_rows_with_no_changes(debris_df)
+            self._extract_changes(area_unit="m2", file_content=debris_df)
 
-            changes._match_hydro_unit_ids(ice_df, hydro_units,
-                                          match_with='elevation')
-            changes._remove_rows_with_no_changes(ice_df)
-            changes._extract_changes(area_unit="m2", file_content=ice_df)
+            self._match_hydro_unit_ids(ice_df, hydro_units, match_with='id')
+            self._remove_rows_with_no_changes(ice_df)
+            self._extract_changes(area_unit="m2", file_content=ice_df)
 
         else:
-            changes._match_hydro_unit_ids(glacier_df, hydro_units,
-                                          match_with='elevation')
-            changes._remove_rows_with_no_changes(glacier_df)
-            changes._extract_changes(area_unit="m2", file_content=glacier_df)
+            self._match_hydro_unit_ids(glacier_df, hydro_units, match_with='id')
+            self._remove_rows_with_no_changes(glacier_df)
+            self._extract_changes(area_unit="m2", file_content=glacier_df)
 
-        changes._match_hydro_unit_ids(other_df, hydro_units,
-                                      match_with='elevation')
-        changes._remove_rows_with_no_changes(other_df)
-        changes._extract_changes(area_unit="m2", file_content=other_df)
+        self._match_hydro_unit_ids(other_df, hydro_units, match_with='id')
+        self._remove_rows_with_no_changes(other_df)
+        self._extract_changes(area_unit="m2", file_content=other_df)
 
         # Initialization of the cover before any change.
         hydro = hydro_units.hydro_units
@@ -210,8 +198,6 @@ class BehaviourLandCoverChange(Behaviour):
         else:
             hydro[('area_glacier', 'm2')] = glacier_df[glacier_df.columns[2]].values[2:]
         hydro[('area_ground', 'm2')] = other_df[other_df.columns[2]].values[2:]
-
-        return changes
 
     def _extract_glacier_cover_change(self, catchment, whole_glaciers_shapefile,
                                       debris_glaciers_shapefile, method='vectorial'):

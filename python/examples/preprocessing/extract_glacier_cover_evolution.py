@@ -43,7 +43,7 @@ whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp',
 debris_glaciers = [None, None, None, None,
                    f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
 
-times = ['01/01/1850', '01/01/1931', '01/01/1973', '01/01/2010', '01/01/2016']
+times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
 
 with_debris = True
 
@@ -54,7 +54,7 @@ whole_glaciers = [f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp'
 
 debris_glaciers = [f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
 
-times = ['01/01/2016']
+times = ['2016-01-01']
 
 changes = BehaviourLandCoverChange.create_behaviour_for_glaciers(
     catchment, whole_glaciers, debris_glaciers, times, with_debris, method='raster')

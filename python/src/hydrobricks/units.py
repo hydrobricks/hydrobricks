@@ -160,7 +160,7 @@ def convert_unit(value, unit_from, unit_to):
 
     Parameters
     ----------
-    value : float
+    value : float|floating
         The value to convert.
     unit_from : Unit|str
         The unit of the value.

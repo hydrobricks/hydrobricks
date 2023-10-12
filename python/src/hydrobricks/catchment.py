@@ -9,12 +9,13 @@ import hydrobricks as hb
 from hydrobricks.units import convert_unit, Unit
 
 if hb.has_shapely:
-    from shapely.geometry import shape
+    from shapely.geometry import box, shape
     from shapely.ops import unary_union
     from shapely.geometry import mapping
 
 if hb.has_rasterio:
     from rasterio.mask import mask
+    from rasterio.features import geometry_window
 
 
 class Catchment:
@@ -495,7 +496,8 @@ class Catchment:
         return changes
 
     def _extract_glacier_cover_change(self, whole_glaciers_shapefile,
-                                      debris_glaciers_shapefile):
+                                      debris_glaciers_shapefile,
+                                      method='vectorial'):
         """
         Extract the glacier cover changes from shapefiles.
 
@@ -507,6 +509,10 @@ class Catchment:
         debris_glaciers_shapefile : str|Path
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
+        method : str, optional
+            The method to extract the glacier cover changes:
+            'vectorial' = vectorial extraction (more precise)
+            'raster' = raster extraction (faster)
 
         Returns
         -------
@@ -514,11 +520,13 @@ class Catchment:
             Area covered by debris-covered glacier for each HydroUnit.
         bare_ice_area : array
             Area covered by clean-ice glacier for each HydroUnit.
-        bare_rock_area : array
+        other_area : array
             Area covered by rock for each HydroUnit.
         glacier_area : array
             Area covered by glacier for each HydroUnit.
         """
+        if method not in ['vectorial', 'raster']:
+            raise ValueError("Unknown method.")
 
         # Clip the glaciers to the catchment extent
         all_glaciers = hb.gpd.read_file(whole_glaciers_shapefile)
@@ -530,11 +538,11 @@ class Catchment:
         non_glaciated_area = self.area - glaciated_area
 
         # Compute the debris-covered area of the glacier
-        debris_glaciers = None
+        glaciers_debris = None
         if debris_glaciers_shapefile is not None:
             all_debris_glaciers = hb.gpd.read_file(debris_glaciers_shapefile)
             all_debris_glaciers.to_crs(self.crs, inplace=True)
-            debris_glaciers = hb.gpd.clip(all_debris_glaciers, glaciers)
+            glaciers_debris = hb.gpd.clip(all_debris_glaciers, glaciers)
 
         # Display some glacier statistics
         m2 = Unit.M2
@@ -547,7 +555,7 @@ class Catchment:
         print(f"The catchment is {glaciated_area / self.area * 100:.1f}% glaciated.")
 
         if debris_glaciers_shapefile is not None:
-            debris_glaciated_area = self._compute_area(debris_glaciers)
+            debris_glaciated_area = self._compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
             print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
@@ -555,63 +563,120 @@ class Catchment:
                   f" km² of debris-covered ice, thus amounting to "
                   f"{bare_ice_percentage:.1f}% of bare ice.")
 
+        # Extract the pixel size
+        x_size, y_size = abs(self.dem.transform[0]), abs(self.dem.transform[4])
+        px_area = x_size * y_size
 
+        # Define the method to extract the pixels touching the glaciers
+        if method == 'vectorial':
+            all_touched = True  # Needs to be True to include partly-covered pixels
+        else:
+            all_touched = False
+            print(f"The dataset in the CRS {glaciers.crs} has a spatial resolution of "
+                  f"{x_size} m, {y_size} m thus giving pixel areas "
+                  f"of {px_area} m².")
 
-        # Find pixel size
-        a = self.dem.transform
-        x, y = abs(a[0]), abs(a[4])
-        pixel_area = x * y
-        print('The dataset in', glaciers.crs, 'has a spatial resolution of',
-              x, 'x', y, 'm thus giving pixel areas of', pixel_area, 'm².')
-
-        glaciers_clipped = self._mask_dem(glaciers, 0)
+        # Get the glacier mask
+        glaciers_mask = self._mask_dem(glaciers, 0, all_touched=all_touched)
+        debris_mask = None
         if debris_glaciers_shapefile is not None:
-            debris_clipped = self._mask_dem(debris_glaciers, 0)
+            debris_mask = self._mask_dem(glaciers_debris, 0, all_touched=all_touched)
 
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
-        unit_nb = len(unit_ids)
 
-        debris_area = np.zeros(unit_nb)
-        bare_ice_area = np.zeros(unit_nb)
-        bare_rock_area = np.zeros(unit_nb)
-        glacier_area = np.zeros(unit_nb)
+        glacier_area = np.ones(len(unit_ids)) * np.nan
+        bare_ice_area = np.ones(len(unit_ids)) * np.nan
+        debris_area = np.ones(len(unit_ids)) * np.nan
+        other_area = np.ones(len(unit_ids)) * np.nan
 
-        for _, unit_id in enumerate(unit_ids):
+        for idx, unit_id in enumerate(unit_ids):
             mask_unit = self.map_unit_ids == unit_id
-            unit_area = np.sum(mask_unit) * pixel_area
+            unit_area = np.sum(mask_unit) * px_area
 
-            idx = unit_id - 1
+            if method == 'vectorial':
+                # Create an empty list to store the intersecting geometries
+                intersecting_geom_glaciers = []
+                intersecting_geom_debris = []
 
-            topo_mask_glacier = glaciers_clipped[mask_unit]
-            glacier_area[idx] = np.count_nonzero(topo_mask_glacier) * pixel_area
-            bare_rock_area[idx] = unit_area - glacier_area[idx]
+                # Iterate through the rows and columns of the raster
+                for i in range(self.dem.height):
+                    for j in range(self.dem.width):
+                        # Check if there is a glacier pixel
+                        if glaciers_mask[i, j] == 0:
+                            continue
 
-            if debris_glaciers_shapefile is not None:
-                topo_mask_debris = debris_clipped[mask_unit]
-                debris_area[idx] = np.count_nonzero(topo_mask_debris) * pixel_area
-                bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
+                        # Check if the pixel value matches the target value
+                        if self.map_unit_ids[i, j] != unit_id:
+                            continue
 
-                print("After shapefile to raster conversion, the glaciers have "
-                      "{:.1f} km² of bare ice, {:.1f} km² of debris-covered ice,"
-                      " and {:.1f} km² of bare rock."
-                      "".format(np.sum(bare_ice_area) * m2_to_km2,
-                                np.sum(debris_area) * m2_to_km2,
-                                np.sum(bare_rock_area) * m2_to_km2))
-            else:
-                debris_area[idx] = np.nan
-                bare_ice_area[idx] = np.nan
+                        # Create a polygon for the pixel
+                        xy = self.dem.xy(i, j)
+                        x_min = xy[0] - x_size/2
+                        y_min = xy[1] - y_size/2
+                        x_max = xy[0] + x_size/2
+                        y_max = xy[1] + y_size/2
+                        pixel_geo = box(x_min, y_min, x_max, y_max)
 
-        return debris_area, bare_ice_area, bare_rock_area, glacier_area
+                        # Iterate through glacier polygons and find intersections
+                        for index, glacier_geom in glaciers.iterrows():
+                            intersection = pixel_geo.intersection(
+                                glacier_geom['geometry'])
+                            if not intersection.is_empty:
+                                intersecting_geom_glaciers.append(intersection)
 
-    def _mask_dem(self, shapefile, nodata):
+                        # Iterate through debris polygons and find intersections
+                        if debris_glaciers_shapefile is not None:
+                            for index, debris_geom in glaciers_debris.iterrows():
+                                intersection = pixel_geo.intersection(
+                                    debris_geom['geometry'])
+                                if not intersection.is_empty:
+                                    intersecting_geom_debris.append(intersection)
+
+                if len(intersecting_geom_glaciers) > 0:
+                    # Create a single geometry from all intersecting geometries
+                    merged_geometry = unary_union(intersecting_geom_glaciers)
+
+                    # Calculate the total area of the merged geometry
+                    glacier_area[idx] = merged_geometry.area
+
+                if len(intersecting_geom_debris) > 0:
+                    # Create a single geometry from all intersecting geometries
+                    merged_geometry = unary_union(intersecting_geom_debris)
+
+                    # Calculate the total area of the merged geometry
+                    debris_area[idx] = merged_geometry.area
+                    bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
+
+            elif method == 'raster':
+                glacier_area[idx] = np.count_nonzero(
+                    glaciers_mask[mask_unit]) * px_area
+
+                if debris_glaciers_shapefile is not None:
+                    debris_area[idx] = np.count_nonzero(
+                        debris_mask[mask_unit]) * px_area
+                    bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
+
+            other_area[idx] = unit_area - glacier_area[idx]
+
+        print(f"After shapefile extraction (method: {method}), the glaciers have "
+              f"{convert_unit(np.nansum(bare_ice_area), m2, km2):.1f} km² of bare ice, "
+              f"{convert_unit(np.nansum(debris_area), m2, km2):.1f} km² of "
+              f"debris-covered ice, and "
+              f"{convert_unit(np.nansum(other_area), m2, km2):.1f} km² of "
+              f"non-glaciated area.")
+
+        return debris_area, bare_ice_area, other_area, glacier_area
+
+    def _mask_dem(self, shapefile, nodata, all_touched=False):
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
-        dem_clipped, _ = mask(self.dem, geoms, crop=False)
+        dem_clipped, _ = mask(self.dem, geoms, crop=False, all_touched=all_touched)
         dem_clipped[dem_clipped == self.dem.nodata] = nodata
         if len(dem_clipped.shape) == 3:
             dem_clipped = dem_clipped[0]
+
         return dem_clipped
 
     def _extract_area(self, outline):

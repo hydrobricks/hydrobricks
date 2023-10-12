@@ -9,13 +9,6 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
-from .catchment import Catchment
-from .forcing import Forcing
-from .hydro_units import HydroUnits
-from .observations import Observations
-from .parameters import ParameterSet
-from .time_series import TimeSeries
-
 try:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
     from netCDF4 import Dataset
@@ -94,6 +87,13 @@ else:
         raise ImportError("xarray is required to use xrspatial.")
     if not has_rioxarray:
         raise ImportError("rioxarray is required to use xrspatial.")
+
+from .catchment import Catchment
+from .forcing import Forcing
+from .hydro_units import HydroUnits
+from .observations import Observations
+from .parameters import ParameterSet
+from .time_series import TimeSeries
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',

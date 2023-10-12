@@ -104,6 +104,16 @@ def mjd_to_datetime(mjd):
     return date
 
 
+def compute_area(shapefile):
+    """Compute the area of a shapefile in square meters."""
+    area = 0
+    for _, row in shapefile.iterrows():
+        poly_area = row.geometry.area
+        area += poly_area
+
+    return area
+
+
 class Timer:
     """Timer to time code execution. Based on: https://pypi.org/project/codetiming/"""
 

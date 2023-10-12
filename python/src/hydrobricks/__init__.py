@@ -88,6 +88,7 @@ else:
     if not has_rioxarray:
         raise ImportError("rioxarray is required to use xrspatial.")
 
+from . import utils
 from .catchment import Catchment
 from .forcing import Forcing
 from .hydro_units import HydroUnits
@@ -97,7 +98,7 @@ from .time_series import TimeSeries
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'Catchment', 'init', 'init_log', 'close_log', 'set_debug_log_level',
+           'Catchment', 'utils', 'init', 'init_log', 'close_log', 'set_debug_log_level',
            'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
            'shapely', 'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr',
            'xrs')

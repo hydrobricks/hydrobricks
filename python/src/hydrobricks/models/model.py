@@ -6,8 +6,7 @@ import HydroErr
 
 import _hydrobricks as _hb
 from _hydrobricks import ModelHydro, SettingsModel
-from hydrobricks import utils
-
+import hydrobricks as hb
 
 class Model(ABC):
     """Base class for the models"""
@@ -122,7 +121,7 @@ class Model(ABC):
             if not self.model.is_ok():
                 raise RuntimeError('Model is not OK.')
 
-            timer = utils.Timer()
+            timer = hb.utils.Timer()
             timer.start()
 
             if not self.model.run():
@@ -165,7 +164,7 @@ class Model(ABC):
             The forcing data.
         """
         self.model.clear_time_series()
-        time = utils.date_as_mjd(forcing.data2D.time.to_numpy())
+        time = hb.utils.date_as_mjd(forcing.data2D.time.to_numpy())
         ids = self.spatial_structure.get_ids().to_numpy()
         for data_name, data in zip(forcing.data2D.data_name, forcing.data2D.data):
             if data is None:
@@ -226,7 +225,7 @@ class Model(ABC):
             },
             'logger': 'all' if self.record_all else ''
         }
-        utils.dump_config_file(settings, directory, name, file_type)
+        hb.utils.dump_config_file(settings, directory, name, file_type)
 
     def get_outlet_discharge(self):
         """
@@ -311,7 +310,7 @@ class Model(ABC):
 
     def _validate_kwargs(self, kwargs):
         # Validate optional keyword arguments.
-        utils.validate_kwargs(kwargs, self.allowed_kwargs)
+        hb.utils.validate_kwargs(kwargs, self.allowed_kwargs)
 
     @abstractmethod
     def _get_specific_options(self):

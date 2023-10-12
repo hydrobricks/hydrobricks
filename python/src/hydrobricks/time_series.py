@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks import utils
 
 
 class TimeSeries:
@@ -21,7 +20,7 @@ class TimeSeries:
         self.data_name = []
 
     def get_dates_as_mjd(self):
-        return utils.date_as_mjd(self.time)
+        return hb.utils.date_as_mjd(self.time)
 
 
 class TimeSeries1D(TimeSeries):

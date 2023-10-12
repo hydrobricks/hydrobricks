@@ -254,7 +254,7 @@ class BehaviourLandCoverChange(Behaviour):
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
-        glaciated_area = self._compute_area(glaciers)
+        glaciated_area = hb.utils.compute_area(glaciers)
         non_glaciated_area = catchment.area - glaciated_area
 
         # Compute the debris-covered area of the glacier
@@ -276,7 +276,7 @@ class BehaviourLandCoverChange(Behaviour):
               f"glaciated.")
 
         if debris_glaciers_shapefile is not None:
-            debris_glaciated_area = self._compute_area(glaciers_debris)
+            debris_glaciated_area = hb.utils.compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
             print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
@@ -414,15 +414,6 @@ class BehaviourLandCoverChange(Behaviour):
             dem_masked = dem_masked[0]
 
         return dem_masked
-
-    @staticmethod
-    def _compute_area(shapefile):
-        area = 0
-        for _, row in shapefile.iterrows():
-            poly_area = row.geometry.area
-            area += poly_area
-
-        return area
 
     @staticmethod
     def _format_dataframe(df, times, cover_name):

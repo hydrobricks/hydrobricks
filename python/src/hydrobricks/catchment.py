@@ -475,7 +475,7 @@ class Catchment:
             return
         shapefile = hb.gpd.read_file(outline)
         self._check_crs(shapefile)
-        area = self._compute_area(shapefile)
+        area = hb.utils.compute_area(shapefile)
         self.area = area
 
     def _extract_outline(self, outline):

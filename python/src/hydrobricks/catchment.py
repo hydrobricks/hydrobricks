@@ -390,9 +390,9 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-    def create_behaviour_land_cover_change_for_glaciers(self, whole_glaciers,
-                                                        debris_glaciers, times,
-                                                        with_debris=False):
+    def create_behaviour_land_cover_change_for_glaciers(
+            self, whole_glaciers, debris_glaciers, times, with_debris=False,
+            method='vectorial'):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
@@ -413,6 +413,10 @@ class Catchment:
         with_debris : bool, optional
             True if the simulation requires debris-covered and clean-ice area
             computations, False otherwise.
+        method : str, optional
+            The method to extract the glacier cover changes:
+            'vectorial' = vectorial extraction (more precise)
+            'raster' = raster extraction (faster)
 
         Returns
         -------
@@ -432,14 +436,17 @@ class Catchment:
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
 
+        n_unit_ids = len(unit_ids)
 
 
-        unit_ids = unit_ids - 1
+        method = 'raster'
 
-        glacier_df = pd.DataFrame(index=unit_ids)
-        ice_df = pd.DataFrame(index=unit_ids)
-        debris_df = pd.DataFrame(index=unit_ids)
-        other_df = pd.DataFrame(index=unit_ids)
+
+
+        glacier_df = pd.DataFrame(index=range(n_unit_ids))
+        ice_df = pd.DataFrame(index=range(n_unit_ids))
+        debris_df = pd.DataFrame(index=range(n_unit_ids))
+        other_df = pd.DataFrame(index=range(n_unit_ids))
 
         glacier_df[0] = self.hydro_units.hydro_units.elevation
         ice_df[0] = self.hydro_units.hydro_units.elevation
@@ -449,7 +456,8 @@ class Catchment:
         for i, (whole_glacier, debris_glacier) in \
                 enumerate(zip(whole_glaciers, debris_glaciers), 1):
             glacier, ice, debris, other = \
-                self._extract_glacier_cover_change(whole_glacier, debris_glacier)
+                self._extract_glacier_cover_change(
+                    whole_glacier, debris_glacier, method=method)
 
             glacier_df[i] = glacier
             ice_df[i] = ice
@@ -773,9 +781,8 @@ class Catchment:
 
     @staticmethod
     def _format_dataframe(df, times, cover_name):
-        df.loc[-0.5] = [np.nan] + times
-        df = df.sort_index().reset_index(drop=True)
-        df.loc[-0.5] = ['bands'] + [cover_name] * len(times)
+        df.loc[-1] = [np.nan] + times
+        df.loc[-2] = ['bands'] + [cover_name] * len(times)
         df = df.sort_index().reset_index(drop=True)
         df.insert(loc=0, column='hydro_unit', value=0)
         return df

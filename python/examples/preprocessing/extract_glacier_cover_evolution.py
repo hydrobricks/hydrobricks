@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 import hydrobricks as hb
+from hydrobricks.behaviours import BehaviourLandCoverChange
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -55,10 +56,8 @@ debris_glaciers = [f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.
 
 times = ['01/01/2016']
 
-
-changes = catchment.create_behaviour_land_cover_change_for_glaciers(
-    whole_glaciers, debris_glaciers,
-    times, with_debris)
+changes = BehaviourLandCoverChange.create_behaviour_for_glaciers(
+    catchment, whole_glaciers, debris_glaciers, times, with_debris, method='raster')
 
 
 

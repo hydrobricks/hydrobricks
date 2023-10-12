@@ -436,30 +436,30 @@ class Catchment:
 
         unit_ids = unit_ids - 1
 
-        debris_df = pd.DataFrame(index=unit_ids)
-        ice_df = pd.DataFrame(index=unit_ids)
-        rock_df = pd.DataFrame(index=unit_ids)
         glacier_df = pd.DataFrame(index=unit_ids)
+        ice_df = pd.DataFrame(index=unit_ids)
+        debris_df = pd.DataFrame(index=unit_ids)
+        other_df = pd.DataFrame(index=unit_ids)
 
-        debris_df[0] = self.hydro_units.hydro_units.elevation
-        ice_df[0] = self.hydro_units.hydro_units.elevation
         glacier_df[0] = self.hydro_units.hydro_units.elevation
-        rock_df[0] = self.hydro_units.hydro_units.elevation
+        ice_df[0] = self.hydro_units.hydro_units.elevation
+        debris_df[0] = self.hydro_units.hydro_units.elevation
+        other_df[0] = self.hydro_units.hydro_units.elevation
 
         for i, (whole_glacier, debris_glacier) in \
                 enumerate(zip(whole_glaciers, debris_glaciers), 1):
-            debris, ice, rock, glacier = \
+            glacier, ice, debris, other = \
                 self._extract_glacier_cover_change(whole_glacier, debris_glacier)
 
-            debris_df[i] = debris
-            ice_df[i] = ice
             glacier_df[i] = glacier
-            rock_df[i] = rock
+            ice_df[i] = ice
+            debris_df[i] = debris
+            other_df[i] = other
 
-        debris_df = self._format_dataframe(debris_df, times, 'glacier_debris')
-        ice_df = self._format_dataframe(ice_df, times, 'glacier_ice')
         glacier_df = self._format_dataframe(glacier_df, times, 'glacier')
-        rock_df = self._format_dataframe(rock_df, times, 'ground')
+        ice_df = self._format_dataframe(ice_df, times, 'glacier_ice')
+        debris_df = self._format_dataframe(debris_df, times, 'glacier_debris')
+        other_df = self._format_dataframe(other_df, times, 'ground')
 
         changes = hb.behaviours.BehaviourLandCoverChange()
         if with_debris:
@@ -479,10 +479,10 @@ class Catchment:
             changes._remove_rows_with_no_changes(glacier_df)
             changes._extract_changes(area_unit="m2", file_content=glacier_df)
 
-        changes._match_hydro_unit_ids(rock_df, self.hydro_units,
+        changes._match_hydro_unit_ids(other_df, self.hydro_units,
                                       match_with='elevation')
-        changes._remove_rows_with_no_changes(rock_df)
-        changes._extract_changes(area_unit="m2", file_content=rock_df)
+        changes._remove_rows_with_no_changes(other_df)
+        changes._extract_changes(area_unit="m2", file_content=other_df)
 
         # Initialization of the cover before any change.
         hydro = self.hydro_units.hydro_units
@@ -491,7 +491,7 @@ class Catchment:
             hydro[('area_ice', 'm2')] = ice_df[ice_df.columns[2]].values[2:]
         else:
             hydro[('area_glacier', 'm2')] = glacier_df[glacier_df.columns[2]].values[2:]
-        hydro[('area_ground', 'm2')] = rock_df[rock_df.columns[2]].values[2:]
+        hydro[('area_ground', 'm2')] = other_df[other_df.columns[2]].values[2:]
 
         return changes
 
@@ -516,14 +516,14 @@ class Catchment:
 
         Returns
         -------
-        debris_area : array
-            Area covered by debris-covered glacier for each HydroUnit.
-        bare_ice_area : array
-            Area covered by clean-ice glacier for each HydroUnit.
-        other_area : array
-            Area covered by rock for each HydroUnit.
         glacier_area : array
             Area covered by glacier for each HydroUnit.
+        bare_ice_area : array
+            Area covered by clean-ice glacier for each HydroUnit.
+        debris_area : array
+            Area covered by debris-covered glacier for each HydroUnit.
+        other_area : array
+            Area covered by rock for each HydroUnit.
         """
         if method not in ['vectorial', 'raster']:
             raise ValueError("Unknown method.")
@@ -532,6 +532,13 @@ class Catchment:
         all_glaciers = hb.gpd.read_file(whole_glaciers_shapefile)
         all_glaciers.to_crs(self.crs, inplace=True)
         glaciers = hb.gpd.clip(all_glaciers, self.outline)
+
+        # Merge the glacier polygons
+        glaciers['new_col'] = 0
+        glaciers = glaciers.dissolve(by='new_col', as_index=False)
+
+        # Drop all columns except the geometry
+        glaciers = glaciers[['geometry']]
 
         # Compute the glaciated area of the catchment
         glaciated_area = self._compute_area(glaciers)
@@ -543,6 +550,13 @@ class Catchment:
             all_debris_glaciers = hb.gpd.read_file(debris_glaciers_shapefile)
             all_debris_glaciers.to_crs(self.crs, inplace=True)
             glaciers_debris = hb.gpd.clip(all_debris_glaciers, glaciers)
+
+            # Merge the glacier debris polygons
+            glaciers_debris['new_col'] = 0
+            glaciers_debris = glaciers_debris.dissolve(by='new_col', as_index=False)
+
+            # Drop all columns except the geometry
+            glaciers_debris = glaciers_debris[['geometry']]
 
         # Display some glacier statistics
         m2 = Unit.M2
@@ -585,16 +599,20 @@ class Catchment:
         unit_ids = np.unique(self.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
 
-        glacier_area = np.ones(len(unit_ids)) * np.nan
-        bare_ice_area = np.ones(len(unit_ids)) * np.nan
-        debris_area = np.ones(len(unit_ids)) * np.nan
-        other_area = np.ones(len(unit_ids)) * np.nan
+        glacier_area = np.zeros(len(unit_ids))
+        bare_ice_area = np.zeros(len(unit_ids))
+        debris_area = np.zeros(len(unit_ids))
+        other_area = np.zeros(len(unit_ids))
 
         for idx, unit_id in enumerate(unit_ids):
             mask_unit = self.map_unit_ids == unit_id
             unit_area = np.sum(mask_unit) * px_area
 
             if method == 'vectorial':
+                warnings.filterwarnings(
+                    "ignore", category=RuntimeWarning,
+                    message="invalid value encountered in intersection")
+
                 # Create an empty list to store the intersecting geometries
                 intersecting_geom_glaciers = []
                 intersecting_geom_debris = []
@@ -633,20 +651,21 @@ class Catchment:
                                 if not intersection.is_empty:
                                     intersecting_geom_debris.append(intersection)
 
+                warnings.resetwarnings()
+
                 if len(intersecting_geom_glaciers) > 0:
                     # Create a single geometry from all intersecting geometries
                     merged_geometry = unary_union(intersecting_geom_glaciers)
-
                     # Calculate the total area of the merged geometry
                     glacier_area[idx] = merged_geometry.area
 
                 if len(intersecting_geom_debris) > 0:
                     # Create a single geometry from all intersecting geometries
                     merged_geometry = unary_union(intersecting_geom_debris)
-
                     # Calculate the total area of the merged geometry
                     debris_area[idx] = merged_geometry.area
-                    bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
+
+                bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
             elif method == 'raster':
                 glacier_area[idx] = np.count_nonzero(
@@ -660,13 +679,13 @@ class Catchment:
             other_area[idx] = unit_area - glacier_area[idx]
 
         print(f"After shapefile extraction (method: {method}), the glaciers have "
-              f"{convert_unit(np.nansum(bare_ice_area), m2, km2):.1f} km² of bare ice, "
-              f"{convert_unit(np.nansum(debris_area), m2, km2):.1f} km² of "
+              f"{convert_unit(np.sum(bare_ice_area), m2, km2):.1f} km² of bare ice, "
+              f"{convert_unit(np.sum(debris_area), m2, km2):.1f} km² of "
               f"debris-covered ice, and "
-              f"{convert_unit(np.nansum(other_area), m2, km2):.1f} km² of "
+              f"{convert_unit(np.sum(other_area), m2, km2):.1f} km² of "
               f"non-glaciated area.")
 
-        return debris_area, bare_ice_area, other_area, glacier_area
+        return glacier_area, bare_ice_area, debris_area, other_area
 
     def _mask_dem(self, shapefile, nodata, all_touched=False):
         geoms = []

@@ -411,6 +411,64 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
+    def get_dem_x_resolution(self):
+        """
+        Get the DEM x resolution.
+
+        Returns
+        -------
+        The DEM x resolution.
+        """
+        return abs(self.dem.transform[0])
+
+    def get_dem_y_resolution(self):
+        """
+        Get the DEM y resolution.
+
+        Returns
+        -------
+        The DEM y resolution.
+        """
+        return abs(self.dem.transform[4])
+
+    def get_dem_pixel_area(self):
+        """
+        Get the DEM pixel area.
+
+        Returns
+        -------
+        The DEM pixel area.
+        """
+        return self.get_dem_x_resolution() * self.get_dem_y_resolution()
+
+    def create_dem_pixel_geometry(self, i, j):
+        """
+        Create a shapely geometry of the DEM pixel.
+
+        Parameters
+        ----------
+        i : int
+            The row of the pixel.
+        j : int
+            The column of the pixel.
+
+        Returns
+        -------
+        The shapely geometry of the pixel.
+        """
+        if not hb.has_shapely:
+            raise ImportError("shapely is required to do this.")
+
+        xy = self.dem.xy(i, j)
+        x_size = self.get_dem_x_resolution()
+        y_size = self.get_dem_y_resolution()
+        x_min = xy[0] - x_size / 2
+        y_min = xy[1] - y_size / 2
+        x_max = xy[0] + x_size / 2
+        y_max = xy[1] + y_size / 2
+
+        return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
+
     def _extract_area(self, outline):
         # The outline has to be given in meters.
         if not outline:

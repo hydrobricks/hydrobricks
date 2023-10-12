@@ -9,12 +9,14 @@ from ..units import Unit, convert_unit
 from .behaviour import Behaviour
 
 if hb.has_shapely:
-    from shapely.geometry import box, shape
     from shapely.ops import unary_union
     from shapely.geometry import mapping
 
 if hb.has_rasterio:
     from rasterio.mask import mask
+
+m2 = Unit.M2
+km2 = Unit.KM2
 
 
 class BehaviourLandCoverChange(Behaviour):
@@ -249,13 +251,7 @@ class BehaviourLandCoverChange(Behaviour):
         all_glaciers = hb.gpd.read_file(whole_glaciers_shapefile)
         all_glaciers.to_crs(catchment.crs, inplace=True)
         glaciers = hb.gpd.clip(all_glaciers, catchment.outline)
-
-        # Merge the glacier polygons
-        glaciers['new_col'] = 0
-        glaciers = glaciers.dissolve(by='new_col', as_index=False)
-
-        # Drop all columns except the geometry
-        glaciers = glaciers[['geometry']]
+        glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
         glaciated_area = self._compute_area(glaciers)
@@ -267,17 +263,9 @@ class BehaviourLandCoverChange(Behaviour):
             all_debris_glaciers = hb.gpd.read_file(debris_glaciers_shapefile)
             all_debris_glaciers.to_crs(catchment.crs, inplace=True)
             glaciers_debris = hb.gpd.clip(all_debris_glaciers, glaciers)
-
-            # Merge the glacier debris polygons
-            glaciers_debris['new_col'] = 0
-            glaciers_debris = glaciers_debris.dissolve(by='new_col', as_index=False)
-
-            # Drop all columns except the geometry
-            glaciers_debris = glaciers_debris[['geometry']]
+            glaciers_debris = self._simplify_df_geometries(glaciers_debris)
 
         # Display some glacier statistics
-        m2 = Unit.M2
-        km2 = Unit.KM2
         print(f"The catchment has an area of "
               f"{convert_unit(catchment.area, m2, km2):.1f} km², from which "
               f"{convert_unit(glaciated_area, m2, km2):.1f} km² are glaciated, "
@@ -297,9 +285,9 @@ class BehaviourLandCoverChange(Behaviour):
                   f"{bare_ice_percentage:.1f}% of bare ice.")
 
         # Extract the pixel size
-        x_size = abs(catchment.dem.transform[0])
-        y_size = abs(catchment.dem.transform[4])
-        px_area = x_size * y_size
+        x_size = catchment.get_dem_x_resolution()
+        y_size = catchment.get_dem_y_resolution()
+        px_area = catchment.get_dem_pixel_area()
 
         # Define the method to extract the pixels touching the glaciers
         if method == 'vectorial':
@@ -311,10 +299,12 @@ class BehaviourLandCoverChange(Behaviour):
                   f"of {px_area} m².")
 
         # Get the glacier mask
-        glaciers_mask = self._mask_dem(glaciers, 0, all_touched=all_touched)
+        glaciers_mask = self._mask_dem(catchment, glaciers, 0,
+                                       all_touched=all_touched)
         debris_mask = None
         if debris_glaciers_shapefile is not None:
-            debris_mask = self._mask_dem(glaciers_debris, 0, all_touched=all_touched)
+            debris_mask = self._mask_dem(catchment, glaciers_debris, 0,
+                                         all_touched=all_touched)
 
         unit_ids = np.unique(catchment.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
@@ -334,8 +324,8 @@ class BehaviourLandCoverChange(Behaviour):
                     message="invalid value encountered in intersection")
 
                 # Create an empty list to store the intersecting geometries
-                intersecting_geom_glaciers = []
-                intersecting_geom_debris = []
+                intersecting_glaciers = []
+                intersecting_debris = []
 
                 # Iterate through the rows and columns of the raster
                 for i in range(catchment.dem.height):
@@ -349,42 +339,23 @@ class BehaviourLandCoverChange(Behaviour):
                             continue
 
                         # Create a polygon for the pixel
-                        xy = catchment.dem.xy(i, j)
-                        x_min = xy[0] - x_size/2
-                        y_min = xy[1] - y_size/2
-                        x_max = xy[0] + x_size/2
-                        y_max = xy[1] + y_size/2
-                        pixel_geo = box(x_min, y_min, x_max, y_max)
+                        pixel_geo = catchment.create_dem_pixel_geometry(i, j)
 
                         # Iterate through glacier polygons and find intersections
-                        for index, glacier_geom in glaciers.iterrows():
-                            intersection = pixel_geo.intersection(
-                                glacier_geom['geometry'])
-                            if not intersection.is_empty:
-                                intersecting_geom_glaciers.append(intersection)
+                        self._get_intersections(pixel_geo, glaciers,
+                                                intersecting_glaciers)
 
                         # Iterate through debris polygons and find intersections
                         if debris_glaciers_shapefile is not None:
-                            for index, debris_geom in glaciers_debris.iterrows():
-                                intersection = pixel_geo.intersection(
-                                    debris_geom['geometry'])
-                                if not intersection.is_empty:
-                                    intersecting_geom_debris.append(intersection)
+                            self._get_intersections(pixel_geo, glaciers_debris,
+                                                    intersecting_debris)
 
                 warnings.resetwarnings()
 
-                if len(intersecting_geom_glaciers) > 0:
-                    # Create a single geometry from all intersecting geometries
-                    merged_geometry = unary_union(intersecting_geom_glaciers)
-                    # Calculate the total area of the merged geometry
-                    glacier_area[idx] = merged_geometry.area
-
-                if len(intersecting_geom_debris) > 0:
-                    # Create a single geometry from all intersecting geometries
-                    merged_geometry = unary_union(intersecting_geom_debris)
-                    # Calculate the total area of the merged geometry
-                    debris_area[idx] = merged_geometry.area
-
+                glacier_area[idx] = self._compute_intersection_area(
+                    intersecting_glaciers)
+                debris_area[idx] = self._compute_intersection_area(
+                    intersecting_debris)
                 bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
             elif method == 'raster':
@@ -407,16 +378,42 @@ class BehaviourLandCoverChange(Behaviour):
 
         return glacier_area, bare_ice_area, debris_area, other_area
 
-    def _mask_dem(self, shapefile, nodata, all_touched=False):
+    @staticmethod
+    def _compute_intersection_area(intersecting_geoms):
+        if len(intersecting_geoms) > 0:
+            # Create a single geometry from all intersecting geometries
+            merged_geometry = unary_union(intersecting_geoms)
+
+            return merged_geometry.area
+
+    @staticmethod
+    def _get_intersections(pixel_geo, objects, intersecting_geoms):
+        for index, obj in objects.iterrows():
+            intersection = pixel_geo.intersection(obj['geometry'])
+            if not intersection.is_empty:
+                intersecting_geoms.append(intersection)
+
+    @staticmethod
+    def _simplify_df_geometries(df):
+        # Merge the polygons
+        df['new_col'] = 0
+        df = df.dissolve(by='new_col', as_index=False)
+        # Drop all columns except the geometry
+        df = df[['geometry']]
+
+        return df
+
+    @staticmethod
+    def _mask_dem(catchment, shapefile, nodata, all_touched=False):
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
-        dem_clipped, _ = mask(self.dem, geoms, crop=False, all_touched=all_touched)
-        dem_clipped[dem_clipped == self.dem.nodata] = nodata
-        if len(dem_clipped.shape) == 3:
-            dem_clipped = dem_clipped[0]
+        dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=all_touched)
+        dem_masked[dem_masked == catchment.dem.nodata] = nodata
+        if len(dem_masked.shape) == 3:
+            dem_masked = dem_masked[0]
 
-        return dem_clipped
+        return dem_masked
 
     @staticmethod
     def _compute_area(shapefile):

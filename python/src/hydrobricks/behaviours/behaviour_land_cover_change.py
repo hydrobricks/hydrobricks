@@ -137,35 +137,57 @@ class BehaviourLandCoverChange(Behaviour):
     def _create_behaviour_for_glaciers(self, catchment, whole_glaciers, debris_glaciers,
                                        times, with_debris, method):
 
+        if len(whole_glaciers) != len(times):
+            raise ValueError("The number of shapefiles and dates must be equal.")
+
+        if with_debris and len(debris_glaciers) != len(times):
+            raise ValueError("The number of shapefiles and dates must be equal.")
+
         # Get the hydro units
         n_unit_ids = catchment.get_hydro_units_nb()
         hydro_units = catchment.hydro_units
 
+        # Create the dataframe
+        changes_df = pd.DataFrame(index=range(n_unit_ids + 2))
+        changes_df.insert(loc=0, column='hydro_unit', value=0)
+        ids = hydro_units.hydro_units.id.values.squeeze()
+        changes_df.hydro_unit.iloc[2:n_unit_ids + 2] = ids
+
+        # Extract the glacier cover changes
+        glacier_areas = np.zeros((n_unit_ids, len(times)))
+        ice_areas = np.zeros((n_unit_ids, len(times)))
+        debris_areas = np.zeros((n_unit_ids, len(times)))
+        other_areas = np.zeros((n_unit_ids, len(times)))
+
+        # Parse the files
+        for i, (whole_glacier, debris_glacier) in enumerate(
+                zip(whole_glaciers, debris_glaciers)):
+            glacier, ice, debris, other = self._extract_glacier_cover_change(
+                catchment, whole_glacier, debris_glacier, method=method)
+
+            glacier_areas[:, i] = glacier
+            ice_areas[:, i] = ice
+            debris_areas[:, i] = debris
+            other_areas[:, i] = other
+
+        # Add the glacier cover changes to the dataframe
+        for i, time in enumerate(times):
 
 
 
+            changes_df.insert(loc=i + 1, column=time, value=0)
+            changes_df[time].iloc[2:n_unit_ids + 2] = glacier_areas[:, i]
 
 
 
+        #self._remove_rows_with_no_changes(changes_df)
+        #self._extract_changes(area_unit, file_content)
 
-
-
-
-        glacier_df = pd.DataFrame(index=range(n_unit_ids))
-        ice_df = pd.DataFrame(index=range(n_unit_ids))
-        debris_df = pd.DataFrame(index=range(n_unit_ids))
-        other_df = pd.DataFrame(index=range(n_unit_ids))
-
-        for i, (whole_glacier, debris_glacier) in \
-                enumerate(zip(whole_glaciers, debris_glaciers), 1):
-            glacier, ice, debris, other = \
-                self._extract_glacier_cover_change(catchment,
-                    whole_glacier, debris_glacier, method=method)
-
-            glacier_df[i] = glacier
-            ice_df[i] = ice
-            debris_df[i] = debris
-            other_df[i] = other
+        #def _format_dataframe(df, times, cover_name):
+        #    df.loc[-1] = [np.nan] + times
+        #    df.loc[-2] = ['bands'] + [cover_name] * len(times)
+        #    df = df.sort_index().reset_index(drop=True)
+        #    df.insert(loc=0, column='hydro_unit', value=0)
 
         glacier_df = self._format_dataframe(glacier_df, times, 'glacier')
         ice_df = self._format_dataframe(ice_df, times, 'glacier_ice')
@@ -173,21 +195,13 @@ class BehaviourLandCoverChange(Behaviour):
         other_df = self._format_dataframe(other_df, times, 'ground')
 
         if with_debris:
-            self._match_hydro_unit_ids(debris_df, hydro_units, match_with='id')
-            self._remove_rows_with_no_changes(debris_df)
             self._extract_changes(area_unit="m2", file_content=debris_df)
 
-            self._match_hydro_unit_ids(ice_df, hydro_units, match_with='id')
-            self._remove_rows_with_no_changes(ice_df)
             self._extract_changes(area_unit="m2", file_content=ice_df)
 
         else:
-            self._match_hydro_unit_ids(glacier_df, hydro_units, match_with='id')
-            self._remove_rows_with_no_changes(glacier_df)
             self._extract_changes(area_unit="m2", file_content=glacier_df)
 
-        self._match_hydro_unit_ids(other_df, hydro_units, match_with='id')
-        self._remove_rows_with_no_changes(other_df)
         self._extract_changes(area_unit="m2", file_content=other_df)
 
         # Initialization of the cover before any change.
@@ -400,15 +414,6 @@ class BehaviourLandCoverChange(Behaviour):
             dem_masked = dem_masked[0]
 
         return dem_masked
-
-    @staticmethod
-    def _format_dataframe(df, times, cover_name):
-        df.loc[-1] = [np.nan] + times
-        df.loc[-2] = ['bands'] + [cover_name] * len(times)
-        df = df.sort_index().reset_index(drop=True)
-        df.insert(loc=0, column='hydro_unit', value=0)
-
-        return df
 
     @staticmethod
     def _match_hydro_unit_ids(file_content, hydro_units, match_with):

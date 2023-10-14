@@ -73,7 +73,7 @@ class BehaviourLandCoverChange(Behaviour):
 
         self._match_hydro_unit_ids(file_content, hydro_units, match_with)
         self._remove_rows_with_no_changes(file_content)
-        self._extract_changes(area_unit, file_content)
+        self._populate_bounded_instance(area_unit, file_content)
 
     def get_changes_nb(self):
         """
@@ -93,9 +93,7 @@ class BehaviourLandCoverChange(Behaviour):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
-        changes to the BehaviourLandCoverChange object. Finally, initialize
-        the HydroUnits cover with the first cover values of the
-        BehaviourLandCoverChange object.
+        changes to the BehaviourLandCoverChange object.
 
         Parameters
         ----------
@@ -180,7 +178,7 @@ class BehaviourLandCoverChange(Behaviour):
             changes_df.loc[2:, changes_df.columns[-1]] = other
 
         # Populate the bounded instance
-        self._extract_changes('m2', changes_df)
+        self._populate_bounded_instance('m2', changes_df)
 
         return changes_df
 
@@ -424,7 +422,7 @@ class BehaviourLandCoverChange(Behaviour):
                 if v_diff == 0:
                     file_content.iloc[row, i_diff + 3] = np.nan
 
-    def _extract_changes(self, area_unit, file_content):
+    def _populate_bounded_instance(self, area_unit, file_content):
         for col in list(file_content):
             if col == 'hydro_unit' or col == 0:
                 continue

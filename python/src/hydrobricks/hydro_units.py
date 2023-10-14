@@ -106,7 +106,7 @@ class HydroUnits:
                                   inplace=True)
             self.hydro_units[('area', 'm2')] = new_area
 
-        self._populate_binding_instance()
+        self._populate_bounded_instance()
 
     def save_to_csv(self, path):
         """
@@ -214,7 +214,24 @@ class HydroUnits:
             if self.hydro_units[field_name].isnull().values.any():
                 raise ValueError(f'The land cover "{cover_name}" contains NaN values.')
 
-    def _populate_binding_instance(self):
+    def initialize_from_land_cover_change(self, land_cover_change):
+        """
+        Initialize the hydro units from a land cover change object.
+
+        Parameters
+        ----------
+        land_cover_change : pd.DataFrame
+            The land cover change dataframe.
+        """
+        # List the land cover names
+        # land_cover_names = land_cover_change.iloc[0, :].values.tolist()
+
+        # TODO: needs to be implemented
+        raise NotImplementedError
+
+        self._populate_bounded_instance()
+
+    def _populate_bounded_instance(self):
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():
@@ -295,7 +312,7 @@ class HydroUnits:
         self.hydro_units = data
         idx = self.prefix_fraction + 'ground'
         self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
-        self._populate_binding_instance()
+        self._populate_bounded_instance()
 
     @staticmethod
     def _check_land_cover_definitions(land_cover_types, land_cover_names):

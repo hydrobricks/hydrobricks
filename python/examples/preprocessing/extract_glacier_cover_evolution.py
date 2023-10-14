@@ -48,4 +48,9 @@ changes_df.to_csv(working_dir / 'changes_glacier.csv', header=False)
 
 # And can be loaded again to be used in hydrobricks later
 changes_bis = BehaviourLandCoverChange.load_from_csv(
-    working_dir / 'changes_glacier.csv')
+    working_dir / 'changes_glacier.csv', hydro_units=catchment.hydro_units,
+    area_unit='m2')
+
+# Finally, initialize the HydroUnits cover with the first cover values of the
+# BehaviourLandCoverChange object.
+catchment.initialize_from_land_cover_change(changes_df)

@@ -469,6 +469,20 @@ class Catchment:
 
         return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
 
+    def initialize_from_land_cover_change(self, land_cover_change):
+        """
+        Initialize the HydroUnits cover from a land cover change object.
+
+        Parameters
+        ----------
+        land_cover_change : pd.DataFrame
+            The land cover change dataframe.
+        """
+        if self.map_unit_ids is None:
+            raise ValueError("No hydro units to initialize.")
+
+        self.hydro_units.initialize_from_land_cover_change(land_cover_change)
+
     def _extract_area(self, outline):
         # The outline has to be given in meters.
         if not outline:

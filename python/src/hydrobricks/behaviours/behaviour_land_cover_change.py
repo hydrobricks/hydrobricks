@@ -1,4 +1,5 @@
 import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -9,8 +10,8 @@ from ..units import Unit, convert_unit
 from .behaviour import Behaviour
 
 if hb.has_shapely:
-    from shapely.ops import unary_union
     from shapely.geometry import mapping
+    from shapely.ops import unary_union
 
 if hb.has_rasterio:
     from rasterio.mask import mask
@@ -80,7 +81,7 @@ class BehaviourLandCoverChange(Behaviour):
         return self.behaviour.get_land_covers_nb()
 
     @staticmethod
-    def create_behaviour_for_glaciers(catchment, whole_glaciers, debris_glaciers,
+    def create_behaviour_for_glaciers(catchment, full_glaciers, debris_glaciers,
                                       times, with_debris=False, method='vectorial'):
         """
         Extract the glacier cover changes from shapefiles, creates a
@@ -93,7 +94,7 @@ class BehaviourLandCoverChange(Behaviour):
         ----------
         catchment : Catchment
             The catchment to extract the glacier cover changes for.
-        whole_glaciers : str|Path
+        full_glaciers : str|Path
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
         debris_glaciers : str|Path
@@ -114,6 +115,8 @@ class BehaviourLandCoverChange(Behaviour):
         changes : BehaviourLandCoverChange
             A BehaviourLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
+        changes_df : DataFrame
+            A dataframe containing the cover areas extracted from the shapefiles.
         """
 
         if not hb.has_geopandas:
@@ -128,16 +131,15 @@ class BehaviourLandCoverChange(Behaviour):
                              "(hydro units missing).")
 
         changes = hb.behaviours.BehaviourLandCoverChange()
-        changes._create_behaviour_for_glaciers(catchment, whole_glaciers,
-                                               debris_glaciers, times,
-                                               with_debris, method)
+        changes_df = changes._create_behaviour_for_glaciers(
+            catchment, full_glaciers, debris_glaciers, times, with_debris, method)
 
-        return changes
+        return changes, changes_df
 
-    def _create_behaviour_for_glaciers(self, catchment, whole_glaciers, debris_glaciers,
+    def _create_behaviour_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
                                        times, with_debris, method):
 
-        if len(whole_glaciers) != len(times):
+        if len(full_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
 
         if with_debris and len(debris_glaciers) != len(times):
@@ -153,68 +155,30 @@ class BehaviourLandCoverChange(Behaviour):
         ids = hydro_units.hydro_units.id.values.squeeze()
         changes_df.hydro_unit.iloc[2:n_unit_ids + 2] = ids
 
-        # Extract the glacier cover changes
-        glacier_areas = np.zeros((n_unit_ids, len(times)))
-        ice_areas = np.zeros((n_unit_ids, len(times)))
-        debris_areas = np.zeros((n_unit_ids, len(times)))
-        other_areas = np.zeros((n_unit_ids, len(times)))
-
         # Parse the files
-        for i, (whole_glacier, debris_glacier) in enumerate(
-                zip(whole_glaciers, debris_glaciers)):
+        for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
             glacier, ice, debris, other = self._extract_glacier_cover_change(
-                catchment, whole_glacier, debris_glacier, method=method)
+                catchment, glacier_shp, debris_shp, method=method)
 
-            glacier_areas[:, i] = glacier
-            ice_areas[:, i] = ice
-            debris_areas[:, i] = debris
-            other_areas[:, i] = other
+            if with_debris:
+                self._add_column_to_dataframe(changes_df, 'glacier_ice', time)
+                changes_df.loc[2:, changes_df.columns[-1]] = ice
+                self._add_column_to_dataframe(changes_df, 'glacier_debris', time)
+                changes_df.loc[2:, changes_df.columns[-1]] = debris
+            else:
+                self._add_column_to_dataframe(changes_df, 'glacier', time)
+                changes_df.loc[2:, changes_df.columns[-1]] = glacier
 
-        # Add the glacier cover changes to the dataframe
-        for i, time in enumerate(times):
+            self._add_column_to_dataframe(changes_df, 'ground', time)
+            changes_df.loc[2:, changes_df.columns[-1]] = other
 
+        # Populate the bounded instance
+        self._extract_changes('m2', changes_df)
 
+        return changes_df
 
-            changes_df.insert(loc=i + 1, column=time, value=0)
-            changes_df[time].iloc[2:n_unit_ids + 2] = glacier_areas[:, i]
-
-
-
-        #self._remove_rows_with_no_changes(changes_df)
-        #self._extract_changes(area_unit, file_content)
-
-        #def _format_dataframe(df, times, cover_name):
-        #    df.loc[-1] = [np.nan] + times
-        #    df.loc[-2] = ['bands'] + [cover_name] * len(times)
-        #    df = df.sort_index().reset_index(drop=True)
-        #    df.insert(loc=0, column='hydro_unit', value=0)
-
-        glacier_df = self._format_dataframe(glacier_df, times, 'glacier')
-        ice_df = self._format_dataframe(ice_df, times, 'glacier_ice')
-        debris_df = self._format_dataframe(debris_df, times, 'glacier_debris')
-        other_df = self._format_dataframe(other_df, times, 'ground')
-
-        if with_debris:
-            self._extract_changes(area_unit="m2", file_content=debris_df)
-
-            self._extract_changes(area_unit="m2", file_content=ice_df)
-
-        else:
-            self._extract_changes(area_unit="m2", file_content=glacier_df)
-
-        self._extract_changes(area_unit="m2", file_content=other_df)
-
-        # Initialization of the cover before any change.
-        hydro = hydro_units.hydro_units
-        if with_debris:
-            hydro[('area_debris', 'm2')] = debris_df[debris_df.columns[2]].values[2:]
-            hydro[('area_ice', 'm2')] = ice_df[ice_df.columns[2]].values[2:]
-        else:
-            hydro[('area_glacier', 'm2')] = glacier_df[glacier_df.columns[2]].values[2:]
-        hydro[('area_ground', 'm2')] = other_df[other_df.columns[2]].values[2:]
-
-    def _extract_glacier_cover_change(self, catchment, whole_glaciers_shapefile,
-                                      debris_glaciers_shapefile, method='vectorial'):
+    def _extract_glacier_cover_change(self, catchment, glaciers_shapefile,
+                                      debris_shapefile, method='vectorial'):
         """
         Extract the glacier cover changes from shapefiles.
 
@@ -222,10 +186,10 @@ class BehaviourLandCoverChange(Behaviour):
         ----------
         catchment : Catchment
             The catchment to extract the glacier cover changes for.
-        whole_glaciers_shapefile : str|Path
+        glaciers_shapefile : str|Path
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_glaciers_shapefile : str|Path
+        debris_shapefile : str|Path
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
         method : str, optional
@@ -248,7 +212,7 @@ class BehaviourLandCoverChange(Behaviour):
             raise ValueError("Unknown method.")
 
         # Clip the glaciers to the catchment extent
-        all_glaciers = hb.gpd.read_file(whole_glaciers_shapefile)
+        all_glaciers = hb.gpd.read_file(glaciers_shapefile)
         all_glaciers.to_crs(catchment.crs, inplace=True)
         glaciers = hb.gpd.clip(all_glaciers, catchment.outline)
         glaciers = self._simplify_df_geometries(glaciers)
@@ -259,8 +223,8 @@ class BehaviourLandCoverChange(Behaviour):
 
         # Compute the debris-covered area of the glacier
         glaciers_debris = None
-        if debris_glaciers_shapefile is not None:
-            all_debris_glaciers = hb.gpd.read_file(debris_glaciers_shapefile)
+        if debris_shapefile is not None:
+            all_debris_glaciers = hb.gpd.read_file(debris_shapefile)
             all_debris_glaciers.to_crs(catchment.crs, inplace=True)
             glaciers_debris = hb.gpd.clip(all_debris_glaciers, glaciers)
             glaciers_debris = self._simplify_df_geometries(glaciers_debris)
@@ -275,7 +239,7 @@ class BehaviourLandCoverChange(Behaviour):
         print(f"The catchment is {glaciated_area / catchment.area * 100:.1f}% "
               f"glaciated.")
 
-        if debris_glaciers_shapefile is not None:
+        if debris_shapefile is not None:
             debris_glaciated_area = hb.utils.compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
@@ -302,7 +266,7 @@ class BehaviourLandCoverChange(Behaviour):
         glaciers_mask = self._mask_dem(catchment, glaciers, 0,
                                        all_touched=all_touched)
         debris_mask = None
-        if debris_glaciers_shapefile is not None:
+        if debris_shapefile is not None:
             debris_mask = self._mask_dem(catchment, glaciers_debris, 0,
                                          all_touched=all_touched)
 
@@ -323,9 +287,8 @@ class BehaviourLandCoverChange(Behaviour):
                     "ignore", category=RuntimeWarning,
                     message="invalid value encountered in intersection")
 
-                # Create an empty list to store the intersecting geometries
-                intersecting_glaciers = []
-                intersecting_debris = []
+                # Create an empty list to store the pixel geometries
+                pixels_geoms = []
 
                 # Iterate through the rows and columns of the raster
                 for i in range(catchment.dem.height):
@@ -340,29 +303,31 @@ class BehaviourLandCoverChange(Behaviour):
 
                         # Create a polygon for the pixel
                         pixel_geo = catchment.create_dem_pixel_geometry(i, j)
+                        pixels_geoms.append(pixel_geo)
 
-                        # Iterate through glacier polygons and find intersections
-                        self._get_intersections(pixel_geo, glaciers,
-                                                intersecting_glaciers)
+                unit_geoms = unary_union(pixels_geoms)
 
-                        # Iterate through debris polygons and find intersections
-                        if debris_glaciers_shapefile is not None:
-                            self._get_intersections(pixel_geo, glaciers_debris,
-                                                    intersecting_debris)
+                # Iterate through glacier polygons and find intersections
+                inters_glaciers = []
+                if len(pixels_geoms) > 0:
+                    self._get_intersections(unit_geoms, glaciers, inters_glaciers)
+
+                # Iterate through debris polygons and find intersections
+                inters_debris = []
+                if len(pixels_geoms) > 0 and debris_shapefile is not None:
+                    self._get_intersections(unit_geoms, glaciers_debris, inters_debris)
 
                 warnings.resetwarnings()
 
-                glacier_area[idx] = self._compute_intersection_area(
-                    intersecting_glaciers)
-                debris_area[idx] = self._compute_intersection_area(
-                    intersecting_debris)
+                glacier_area[idx] = self._compute_intersection_area(inters_glaciers)
+                debris_area[idx] = self._compute_intersection_area(inters_debris)
                 bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
             elif method == 'raster':
                 glacier_area[idx] = np.count_nonzero(
                     glaciers_mask[mask_unit]) * px_area
 
-                if debris_glaciers_shapefile is not None:
+                if debris_shapefile is not None:
                     debris_area[idx] = np.count_nonzero(
                         debris_mask[mask_unit]) * px_area
                     bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
@@ -379,16 +344,27 @@ class BehaviourLandCoverChange(Behaviour):
         return glacier_area, bare_ice_area, debris_area, other_area
 
     @staticmethod
-    def _compute_intersection_area(intersecting_geoms):
-        if len(intersecting_geoms) > 0:
-            # Create a single geometry from all intersecting geometries
-            merged_geometry = unary_union(intersecting_geoms)
+    def _add_column_to_dataframe(changes_df, land_cover, time):
+        # Add column with an incremental index
+        changes_df[len(changes_df.columns)] = 0
+        # Add the land cover name to the first row
+        changes_df.loc[0, changes_df.columns[-1]] = land_cover
+        # Add the date to the second row
+        changes_df.loc[1, changes_df.columns[-1]] = time
 
-            return merged_geometry.area
+    @staticmethod
+    def _compute_intersection_area(intersecting_geoms):
+        if len(intersecting_geoms) == 0:
+            return 0
+
+        # Create a single geometry from all intersecting geometries
+        merged_geometry = unary_union(intersecting_geoms)
+
+        return merged_geometry.area
 
     @staticmethod
     def _get_intersections(pixel_geo, objects, intersecting_geoms):
-        for index, obj in objects.iterrows():
+        for _, obj in objects.iterrows():
             intersection = pixel_geo.intersection(obj['geometry'])
             if not intersection.is_empty:
                 intersecting_geoms.append(intersection)

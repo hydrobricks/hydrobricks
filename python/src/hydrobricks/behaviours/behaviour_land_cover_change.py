@@ -82,7 +82,7 @@ class BehaviourLandCoverChange(Behaviour):
 
     @staticmethod
     def create_behaviour_for_glaciers(catchment, full_glaciers, debris_glaciers,
-                                      times, with_debris=False, method='vectorial'):
+                                      times, with_debris=False, method='vector'):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
@@ -107,7 +107,7 @@ class BehaviourLandCoverChange(Behaviour):
             computations, False otherwise.
         method : str, optional
             The method to extract the glacier cover changes:
-            'vectorial' = vectorial extraction (more precise)
+            'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
 
         Returns
@@ -178,7 +178,7 @@ class BehaviourLandCoverChange(Behaviour):
         return changes_df
 
     def _extract_glacier_cover_change(self, catchment, glaciers_shapefile,
-                                      debris_shapefile, method='vectorial'):
+                                      debris_shapefile, method='vector'):
         """
         Extract the glacier cover changes from shapefiles.
 
@@ -194,7 +194,7 @@ class BehaviourLandCoverChange(Behaviour):
             glaciers.
         method : str, optional
             The method to extract the glacier cover changes:
-            'vectorial' = vectorial extraction (more precise)
+            'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
 
         Returns
@@ -208,7 +208,7 @@ class BehaviourLandCoverChange(Behaviour):
         other_area : array
             Area covered by rock for each HydroUnit.
         """
-        if method not in ['vectorial', 'raster']:
+        if method not in ['vector', 'raster']:
             raise ValueError("Unknown method.")
 
         # Clip the glaciers to the catchment extent
@@ -254,7 +254,7 @@ class BehaviourLandCoverChange(Behaviour):
         px_area = catchment.get_dem_pixel_area()
 
         # Define the method to extract the pixels touching the glaciers
-        if method == 'vectorial':
+        if method == 'vector':
             all_touched = True  # Needs to be True to include partly-covered pixels
         else:
             all_touched = False
@@ -282,7 +282,7 @@ class BehaviourLandCoverChange(Behaviour):
             mask_unit = catchment.map_unit_ids == unit_id
             unit_area = np.sum(mask_unit) * px_area
 
-            if method == 'vectorial':
+            if method == 'vector':
                 warnings.filterwarnings(
                     "ignore", category=RuntimeWarning,
                     message="invalid value encountered in intersection")

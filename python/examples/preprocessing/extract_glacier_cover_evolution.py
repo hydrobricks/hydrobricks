@@ -12,6 +12,7 @@ TEST_FILES_DIR = Path(
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
+GLACIERS_DIR = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -27,50 +28,24 @@ catchment.extract_dem(CATCHMENT_DEM)
 # Create elevation bands
 catchment.create_elevation_bands(method='isohypse', distance=50)
 
-
-
-
-
-
-glacier_path = f'D:/Projects/Hydrobricks/Swiss glaciers extents/'
-
-whole_glaciers = [f'{glacier_path}inventory_sgi1850_r1992/SGI_1850.shp',
-                  f'{glacier_path}inventory_sgi1931_r2022/SGI_1931.shp',
-                  f'{glacier_path}inventory_sgi1973_r1976/SGI_1973.shp',
-                  f'{glacier_path}inventory_sgi2010_r2010/SGI_2010.shp',
-                  f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
-
-debris_glaciers = [None, None, None, None,
-                   f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
-
+# List the files and dates
+glaciers = [f'{GLACIERS_DIR}/sgi_1850.shp',
+            f'{GLACIERS_DIR}/sgi_1931.shp',
+            f'{GLACIERS_DIR}/sgi_1973.shp',
+            f'{GLACIERS_DIR}/sgi_2010.shp',
+            f'{GLACIERS_DIR}/sgi_2016.shp']
+glaciers_debris = [None, None, None, None,
+                   f'{GLACIERS_DIR}/sgi_2016_debriscover.shp']
 times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
 
-with_debris = True
+# Create the behaviour land cover change object and the corresponding dataframe
+changes, changes_df = BehaviourLandCoverChange.create_behaviour_for_glaciers(
+    catchment, glaciers, glaciers_debris, times, with_debris=True, method='vector')
 
+# The 'changes' object can be directly used in hydrobricks: model.add_behaviour(changes)
+# The dataframe can be saved as csv (without column names)
+changes_df.to_csv(working_dir / 'changes_glacier.csv', header=False)
 
-
-
-whole_glaciers = [f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_glaciers.shp']
-
-debris_glaciers = [f'{glacier_path}inventory_sgi2016_r2020/SGI_2016_debriscover.shp']
-
-times = ['2016-01-01']
-
-changes = BehaviourLandCoverChange.create_behaviour_for_glaciers(
-    catchment, whole_glaciers, debris_glaciers, times, with_debris, method='raster')
-
-
-
-
-
-# Create elevation bands
-catchment.discretize_by(criteria=['elevation', 'aspect'], elevation_method='isohypse',
-                        elevation_distance=100)
-
-# Save elevation bands to a raster
-catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')
-
-# Save the elevation band properties to a csv file
-catchment.save_hydro_units_to_csv(working_dir / 'bands.csv')
-
-print(f"Files saved to: {working_dir}")
+# And can be loaded again to be used in hydrobricks later
+changes_bis = BehaviourLandCoverChange.load_from_csv(
+    working_dir / 'changes_glacier.csv')

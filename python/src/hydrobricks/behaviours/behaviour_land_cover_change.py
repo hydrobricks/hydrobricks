@@ -27,7 +27,8 @@ class BehaviourLandCoverChange(Behaviour):
         super().__init__()
         self.behaviour = _hb.BehaviourLandCoverChange()
 
-    def load_from_csv(self, path, hydro_units, area_unit, match_with='elevation'):
+    @staticmethod
+    def load_from_csv(path, hydro_units, area_unit, match_with='elevation'):
         """
         Read hydro units properties from csv file. The first column of the file must
         contain the information to identify the hydro unit id, such as the id or the
@@ -61,6 +62,12 @@ class BehaviourLandCoverChange(Behaviour):
         4526        0.341        0.331        0.321        0.311        0.301
         4562        0.613        0.603        0.593        0.583        0.573
         """
+        changes = hb.behaviours.BehaviourLandCoverChange()
+        changes._load_from_csv(path, hydro_units, area_unit, match_with)
+
+        return changes
+
+    def _load_from_csv(self, path, hydro_units, area_unit, match_with):
         file_content = pd.read_csv(path, header=None)
         file_content.insert(loc=0, column='hydro_unit', value=0)
 

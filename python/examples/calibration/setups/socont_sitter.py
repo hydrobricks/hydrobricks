@@ -37,8 +37,7 @@ if use_precip_gradient:
     parameters.add_data_parameter('precip_gradient', 0.05, min_value=0, max_value=0.2)
 
 # Hydro units
-hydro_units = hb.HydroUnits()
-hydro_units.load_from_csv(
+hydro_units = hb.HydroUnits.load_from_csv(
     CATCHMENT_BANDS, area_unit='m2', column_elevation='elevation',
     column_area='area')
 
@@ -73,9 +72,9 @@ else:
     )
 
 # Obs data
-obs = hb.Observations()
-obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
-                  content={'discharge': 'Discharge (mm/d)'})
+obs = hb.Observations.load_from_csv(
+    CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
+    content={'discharge': 'Discharge (mm/d)'})
 
 socont.setup(spatial_structure=hydro_units, output_path=str(working_dir),
              start_date='1981-01-01', end_date='2020-12-31')

@@ -30,8 +30,7 @@ parameters.set_values({'A': 458, 'a_snow': 2, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
                        'k_quick': 1, 'percol': 9.8})
 
 # Hydro units
-hydro_units = hb.HydroUnits()
-hydro_units.load_from_csv(
+hydro_units = hb.HydroUnits.load_from_csv(
     CATCHMENT_BANDS, column_elevation='elevation', column_area='area')
 
 # Meteo data
@@ -49,9 +48,9 @@ forcing.spatialize_from_station_data(
 forcing.compute_pet(method='Hamon', use=['t', 'lat'], lat=47.3)
 
 # Obs data
-obs = hb.Observations()
-obs.load_from_csv(CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
-                  content={'discharge': 'Discharge (mm/d)'})
+obs = hb.Observations.load_from_csv(
+    CATCHMENT_DISCHARGE, column_time='Date', time_format='%d/%m/%Y',
+    content={'discharge': 'Discharge (mm/d)'})
 
 # Model setup
 socont.setup(spatial_structure=hydro_units, output_path=str(working_dir),

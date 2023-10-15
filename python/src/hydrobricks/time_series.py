@@ -29,7 +29,8 @@ class TimeSeries1D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def load_from_csv(self, path, column_time, time_format, content, start_date=None,
+    @classmethod
+    def load_from_csv(cls, path, column_time, time_format, content, start_date=None,
                       end_date=None):
         """
         Read time series data from csv file.
@@ -51,6 +52,11 @@ class TimeSeries1D(TimeSeries):
         end_date : datetime, optional
             End date of the time series (used to select the period of interest).
             If None, the last date of the file is used.
+
+        Returns
+        -------
+        TimeSeries1D
+            Time series object.
         """
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
@@ -61,11 +67,14 @@ class TimeSeries1D(TimeSeries):
                 (file_content[column_time] >= start_date) &
                 (file_content[column_time] <= end_date)]
 
-        self.time = file_content[column_time]
+        ts = cls()
+        ts.time = file_content[column_time]
 
         for col in content:
-            self.data_name.append(col)
-            self.data.append(file_content[content[col]].to_numpy())
+            ts.data_name.append(col)
+            ts.data.append(file_content[content[col]].to_numpy())
+
+        return ts
 
 
 class TimeSeries2D(TimeSeries):

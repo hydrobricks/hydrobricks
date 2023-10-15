@@ -27,8 +27,8 @@ class BehaviourLandCoverChange(Behaviour):
         super().__init__()
         self.behaviour = _hb.BehaviourLandCoverChange()
 
-    @staticmethod
-    def load_from_csv(path, hydro_units, area_unit, match_with='elevation'):
+    @classmethod
+    def load_from_csv(cls, path, hydro_units, area_unit, match_with='elevation'):
         """
         Read hydro units properties from csv file. The first column of the file must
         contain the information to identify the hydro unit id, such as the id or the
@@ -48,6 +48,11 @@ class BehaviourLandCoverChange(Behaviour):
         match_with : str
             Information used to identify the hydro units. Options: 'elevation', 'id'
 
+        Returns
+        -------
+        changes : BehaviourLandCoverChange
+            A BehaviourLandCoverChange object
+
         Example of a file (with areas in km2)
         -----------------
         elevation   glacier      glacier      glacier      glacier      glacier
@@ -62,7 +67,7 @@ class BehaviourLandCoverChange(Behaviour):
         4526        0.341        0.331        0.321        0.311        0.301
         4562        0.613        0.603        0.593        0.583        0.573
         """
-        changes = hb.behaviours.BehaviourLandCoverChange()
+        changes = cls()
         changes._load_from_csv(path, hydro_units, area_unit, match_with)
 
         return changes
@@ -87,8 +92,8 @@ class BehaviourLandCoverChange(Behaviour):
         """
         return self.behaviour.get_land_covers_nb()
 
-    @staticmethod
-    def create_behaviour_for_glaciers(catchment, full_glaciers, debris_glaciers,
+    @classmethod
+    def create_behaviour_for_glaciers(cls, catchment, full_glaciers, debris_glaciers,
                                       times, with_debris=False, method='vector'):
         """
         Extract the glacier cover changes from shapefiles, creates a
@@ -135,7 +140,7 @@ class BehaviourLandCoverChange(Behaviour):
             raise ValueError("The catchment has not been discretized "
                              "(hydro units missing).")
 
-        changes = hb.behaviours.BehaviourLandCoverChange()
+        changes = cls()
         changes_df = changes._create_behaviour_for_glaciers(
             catchment, full_glaciers, debris_glaciers, times, with_debris, method)
 

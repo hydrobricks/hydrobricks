@@ -74,9 +74,23 @@ class BehaviourLandCoverChange(Behaviour):
 
     def _load_from_csv(self, path, hydro_units, area_unit, match_with):
         file_content = pd.read_csv(path, header=None)
-        file_content.insert(loc=0, column='hydro_unit', value=0)
+        if match_with == 'id':
+            # Look for 'hydro_unit(s)', 'id(s)', or 'unit(s)' in the 1st row
+            for col in file_content.columns:
+                if not isinstance(file_content[col][0], str):
+                    continue
+                if file_content[col][0].lower() in ['hydro_unit', 'hydro_units', 'id',
+                                                    'ids', 'unit', 'units']:
+                    # Rename the column
+                    file_content.rename(columns={col: 'hydro_unit'}, inplace=True)
+                    break
+            else:
+                raise ValueError("The first row of the file must contain a 'hydro_unit'"
+                                 " or 'id' column.")
+        else:
+            file_content.insert(loc=0, column='hydro_unit', value=0)
+            self._match_hydro_unit_ids(file_content, hydro_units, match_with)
 
-        self._match_hydro_unit_ids(file_content, hydro_units, match_with)
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(area_unit, file_content)
 
@@ -94,7 +108,8 @@ class BehaviourLandCoverChange(Behaviour):
 
     @classmethod
     def create_behaviour_for_glaciers(cls, catchment, full_glaciers, debris_glaciers,
-                                      times, with_debris=False, method='vector'):
+                                      times, with_debris=False, method='vector',
+                                      interpolate_yearly=True):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
@@ -119,14 +134,20 @@ class BehaviourLandCoverChange(Behaviour):
             The method to extract the glacier cover changes:
             'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
+        interpolate_yearly : bool, optional
+            True if the changes should be interpolated to a yearly time step,
+            False otherwise (no interpolation).
 
         Returns
         -------
         changes : BehaviourLandCoverChange
             A BehaviourLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
-        changes_df : DataFrame
-            A dataframe containing the cover areas extracted from the shapefiles.
+        changes_df : DataFrame list
+            A list of the dataframes containing the cover areas extracted from the
+            shapefiles. If with_debris is True, the list contains 3 dataframes:
+            [glacier_ice, glacier_debris, ground]. If with_debris is False, the list
+            contains 2 dataframes: [glacier, ground].
         """
 
         if not hb.has_geopandas:
@@ -142,12 +163,13 @@ class BehaviourLandCoverChange(Behaviour):
 
         changes = cls()
         changes_df = changes._create_behaviour_for_glaciers(
-            catchment, full_glaciers, debris_glaciers, times, with_debris, method)
+            catchment, full_glaciers, debris_glaciers, times, with_debris, method,
+            interpolate_yearly)
 
         return changes, changes_df
 
     def _create_behaviour_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
-                                       times, with_debris, method):
+                                       times, with_debris, method, interpolate_yearly):
 
         if len(full_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
@@ -159,33 +181,66 @@ class BehaviourLandCoverChange(Behaviour):
         n_unit_ids = catchment.get_hydro_units_nb()
         hydro_units = catchment.hydro_units
 
-        # Create the dataframe
-        changes_df = pd.DataFrame(index=range(n_unit_ids + 2))
-        changes_df.insert(loc=0, column='hydro_unit', value=0)
-        ids = hydro_units.hydro_units.id.values.squeeze()
-        changes_df.hydro_unit.iloc[2:n_unit_ids + 2] = ids
+        # Create the dataframes
+        glacier_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
+        ice_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
+        debris_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
+        ground_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
 
         # Parse the files
+        glacier_np = np.zeros((n_unit_ids, len(times)))
+        ice_np = np.zeros((n_unit_ids, len(times)))
+        debris_np = np.zeros((n_unit_ids, len(times)))
+        ground_np = np.zeros((n_unit_ids, len(times)))
         for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
+            print(f"Extracting glacier cover changes for {time}...")
             glacier, ice, debris, other = self._extract_glacier_cover_change(
                 catchment, glacier_shp, debris_shp, method=method)
+            glacier_np[:, times.index(time)] = glacier
+            ice_np[:, times.index(time)] = ice
+            debris_np[:, times.index(time)] = debris
+            ground_np[:, times.index(time)] = other
 
+        # Interpolate the data to yearly time steps
+        times_full = pd.to_datetime(times)
+        if interpolate_yearly:
             if with_debris:
-                self._add_column_to_dataframe(changes_df, 'glacier_ice', time)
-                changes_df.loc[2:, changes_df.columns[-1]] = ice
-                self._add_column_to_dataframe(changes_df, 'glacier_debris', time)
-                changes_df.loc[2:, changes_df.columns[-1]] = debris
+                ice_np, _ = self._interpolate_yearly(ice_np, times)
+                debris_np, _ = self._interpolate_yearly(debris_np, times)
             else:
-                self._add_column_to_dataframe(changes_df, 'glacier', time)
-                changes_df.loc[2:, changes_df.columns[-1]] = glacier
+                glacier_np, _ = self._interpolate_yearly(glacier_np, times)
+            ground_np, times_full = self._interpolate_yearly(ground_np, times)
 
-            self._add_column_to_dataframe(changes_df, 'ground', time)
-            changes_df.loc[2:, changes_df.columns[-1]] = other
+        # Add the columns to the dataframes
+        for time in times_full:
+            if with_debris:
+                self._add_column_to_dataframe(ice_df, 'glacier_ice', time)
+                self._add_column_to_dataframe(debris_df, 'glacier_debris', time)
+            else:
+                self._add_column_to_dataframe(glacier_df, 'glacier', time)
+
+            self._add_column_to_dataframe(ground_df, 'ground', time)
+
+        # Set data to the dataframes
+        if with_debris:
+            ice_df.loc[2:, ice_df.columns[-1]] = ice_np
+            debris_df.loc[2:, debris_df.columns[-1]] = debris_np
+        else:
+            glacier_df.loc[2:, glacier_df.columns[-1]] = glacier_np
+        ground_df.loc[2:, ground_df.columns[-1]] = ground_np
 
         # Populate the bounded instance
-        self._populate_bounded_instance('m2', changes_df)
+        if with_debris:
+            self._populate_bounded_instance('m2', ice_df)
+            self._populate_bounded_instance('m2', debris_df)
+        else:
+            self._populate_bounded_instance('m2', glacier_df)
+        self._populate_bounded_instance('m2', ground_df)
 
-        return changes_df
+        if with_debris:
+            return [ice_df, debris_df, ground_df]
+        else:
+            return [glacier_df, ground_df]
 
     def _extract_glacier_cover_change(self, catchment, glaciers_shapefile,
                                       debris_shapefile, method='vector'):
@@ -354,6 +409,29 @@ class BehaviourLandCoverChange(Behaviour):
         return glacier_area, bare_ice_area, debris_area, other_area
 
     @staticmethod
+    def _interpolate_yearly(data, times):
+        # Transform the times to datetime instances
+        times_dt = pd.to_datetime(times)
+        times_full = pd.date_range(times_dt[0], times_dt[-1], freq='YS')
+
+        # Create an array with the interpolated values
+        data_full = np.zeros((data.shape[0], len(times_full)))
+        for idx, _ in enumerate(data):
+            data_full[idx, :] = np.interp(times_full, times_dt, data[idx, :])
+
+        return data_full, times_full
+
+    @staticmethod
+    def _create_new_change_dataframe(hydro_units, n_unit_ids):
+        changes_df = pd.DataFrame(index=range(n_unit_ids + 2))
+        changes_df.insert(loc=0, column='hydro_unit', value=0)
+        ids = hydro_units.hydro_units.id.values.squeeze()
+        changes_df.hydro_unit.iloc[0] = 'hydro_unit'
+        changes_df.hydro_unit.iloc[1] = '-'
+        changes_df.hydro_unit.iloc[2:n_unit_ids + 2] = ids
+        return changes_df
+
+    @staticmethod
     def _add_column_to_dataframe(changes_df, land_cover, time):
         # Add column with an incremental index
         changes_df[len(changes_df.columns)] = 0
@@ -410,8 +488,6 @@ class BehaviourLandCoverChange(Behaviour):
             if match_with == 'elevation':
                 elevation_values = hu_df[('elevation', 'm')].values
                 idx_id = hu_df.index[elevation_values == int(change[0])].to_list()[0]
-            elif match_with == 'id':
-                idx_id = int(change[0])
             else:
                 raise ValueError(f'No option "{match_with}" for "match_with".')
             file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, ('id', '-')]

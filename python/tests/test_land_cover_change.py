@@ -234,4 +234,5 @@ def test_extract_glacier_cover_evolution_interpolate(catchment_gletsch, changes_
 
     # The sum by column should be equal to the total area of the catchment
     changes_sum = df[0].sum(axis=0) + df[1].sum(axis=0)
-    assert changes_sum[1] == pytest.approx(catchment_gletsch.area, rel=0.001)
+    assert changes_sum.iloc[1] == pytest.approx(catchment_gletsch.area, rel=0.001)
+    assert changes_sum.iloc[5] == pytest.approx(catchment_gletsch.area, rel=0.001)

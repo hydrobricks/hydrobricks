@@ -9,13 +9,6 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
-from .catchment import Catchment
-from .forcing import Forcing
-from .hydro_units import HydroUnits
-from .observations import Observations
-from .parameters import ParameterSet
-from .time_series import TimeSeries
-
 try:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
     from netCDF4 import Dataset
@@ -30,7 +23,6 @@ try:
 except ImportError:
     has_rasterio = False
 else:
-    from rasterio.mask import mask
     has_rasterio = True
 
 try:
@@ -41,7 +33,7 @@ else:
     has_geopandas = True
 
 try:
-    from shapely.geometry import mapping
+    import shapely
 except ImportError:
     has_shapely = False
 else:
@@ -96,9 +88,17 @@ else:
     if not has_rioxarray:
         raise ImportError("rioxarray is required to use xrspatial.")
 
+from . import utils
+from .catchment import Catchment
+from .forcing import Forcing
+from .hydro_units import HydroUnits
+from .observations import Observations
+from .parameters import ParameterSet
+from .time_series import TimeSeries
+
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'Catchment', 'init', 'init_log', 'close_log', 'set_debug_log_level',
+           'Catchment', 'utils', 'init', 'init_log', 'close_log', 'set_debug_log_level',
            'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
-           'mapping', 'mask', 'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr',
+           'shapely', 'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr',
            'xrs')

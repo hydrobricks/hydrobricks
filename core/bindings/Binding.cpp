@@ -47,7 +47,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",
              "name"_a, "value"_a)
         .def("add_hydro_unit_property_double", &SettingsBasin::AddHydroUnitPropertyDouble, "Set a hydro unit property.",
-             "name"_a, "value"_a, "unit"_a);
+             "name"_a, "value"_a, "unit"_a)
+        .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
     py::class_<SubBasin>(m, "SubBasin")
         .def(py::init<>())

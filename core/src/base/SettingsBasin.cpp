@@ -44,6 +44,11 @@ void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string&
     m_selectedHydroUnit->propertiesString.push_back(property);
 }
 
+void SettingsBasin::Clear() {
+    m_hydroUnits.clear();
+    m_selectedHydroUnit = nullptr;
+}
+
 void SettingsBasin::SelectUnit(int index) {
     wxASSERT(m_hydroUnits.size() > index);
     m_selectedHydroUnit = &m_hydroUnits[index];

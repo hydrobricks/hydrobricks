@@ -31,6 +31,8 @@ def dump_config_file(content, directory, name, file_type='yaml'):
 
 
 def date_as_mjd(date):
+    if isinstance(date, str):
+        return pd.to_datetime(date).to_julian_date() - 2400000.5
     if isinstance(date, pd.Timestamp):
         return date.to_julian_date() - 2400000.5
     return pd.DatetimeIndex(date).to_julian_date() - 2400000.5
@@ -102,6 +104,16 @@ def mjd_to_datetime(mjd):
                                       hour[idx], minute[idx], 0, 0)
 
     return date
+
+
+def compute_area(shapefile):
+    """Compute the area of a shapefile in square meters."""
+    area = 0
+    for _, row in shapefile.iterrows():
+        poly_area = row.geometry.area
+        area += poly_area
+
+    return area
 
 
 class Timer:

@@ -50,6 +50,8 @@ class SettingsBasin : public wxObject {
 
     void AddHydroUnitPropertyString(const string& name, const string& value);
 
+    void Clear();
+
     void SelectUnit(int index);
 
     bool Parse(const string& path);

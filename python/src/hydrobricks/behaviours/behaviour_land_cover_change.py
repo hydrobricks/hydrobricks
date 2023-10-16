@@ -385,7 +385,8 @@ class BehaviourLandCoverChange(Behaviour):
                 if debris_shapefile is not None:
                     debris_area[idx] = np.count_nonzero(
                         debris_mask[mask_unit]) * px_area
-                    bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
+
+                bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
             other_area[idx] = unit_area - glacier_area[idx]
 

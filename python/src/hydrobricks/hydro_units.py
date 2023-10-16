@@ -28,8 +28,7 @@ class HydroUnits:
         else:
             self.hydro_units = pd.DataFrame(columns=land_cover_cols)
 
-    @classmethod
-    def load_from_csv(cls, path, column_elevation=None, column_area=None,
+    def load_from_csv(self, path, column_elevation=None, column_area=None,
                       column_fractions=None, columns_areas=None, other_columns=None):
         """
         Read hydro units properties from csv file. The file must contain two header
@@ -54,67 +53,60 @@ class HydroUnits:
             Column name containing other values to import. The key is the property name
             and the value is the name of the column in the csv file.
             Example: {'slope': 'Slope', 'aspect': 'Aspect'}
-
-        Returns
-        -------
-        HydroUnits
-            The hydro units object.
         """
-        hu = cls()
         file_content = pd.read_csv(path, header=[0, 1])
-        hu._check_column_names(file_content)
+        self._check_column_names(file_content)
 
-        hu.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
+        self.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
 
         if column_elevation is not None:
-            vals, unit = hu._get_column_values_unit(column_elevation, file_content)
-            hu.add_property(('elevation', unit), vals)
+            vals, unit = self._get_column_values_unit(column_elevation, file_content)
+            self.add_property(('elevation', unit), vals)
         elif 'elevation' in file_content.columns:
-            vals, unit = hu._get_column_values_unit('elevation', file_content)
-            hu.add_property(('elevation', unit), vals)
+            vals, unit = self._get_column_values_unit('elevation', file_content)
+            self.add_property(('elevation', unit), vals)
 
         if column_area is not None and columns_areas is not None:
             raise ValueError('The "column_area" and "columns_areas" cannot be '
                              'provided at the same time.')
 
         if columns_areas is not None:
-            hu._check_land_cover_areas_match(columns_areas)
+            self._check_land_cover_areas_match(columns_areas)
             area_values = np.zeros(shape=(len(file_content), len(columns_areas)))
             area_unit = None
-            for idx, cover in enumerate(hu.land_cover_names):
+            for idx, cover in enumerate(self.land_cover_names):
                 area_values[:, idx] = file_content[columns_areas[cover]].values[:, 0]
                 area_unit_idx = file_content[columns_areas[cover]].columns.values[0]
                 if area_unit is None:
                     area_unit = area_unit_idx
                 elif area_unit != area_unit_idx:
                     raise ValueError('The area units do not match.')
-            hu._compute_area_portions(area_values, area_unit)
+            self._compute_area_portions(area_values, area_unit)
         else:
             if column_area is not None:
-                vals, unit = hu._get_column_values_unit(column_area, file_content)
-                hu.add_property(('area', unit), vals)
+                vals, unit = self._get_column_values_unit(column_area, file_content)
+                self.add_property(('area', unit), vals)
             elif 'area' in file_content.columns:
-                vals, unit = hu._get_column_values_unit('area', file_content)
-                hu.add_property(('area', unit), vals)
-            idx = hu.prefix_fraction + 'ground'
-            hu.hydro_units[idx] = np.ones(len(hu.hydro_units['area']))
+                vals, unit = self._get_column_values_unit('area', file_content)
+                self.add_property(('area', unit), vals)
+            idx = self.prefix_fraction + 'ground'
+            self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
 
         if other_columns is not None:
             for prop, col in other_columns.items():
-                hu.add_property((prop[0], prop[1]), col)
+                self.add_property((prop[0], prop[1]), col)
 
         if column_fractions is not None:
             raise NotImplementedError
 
-        if get_unit_from_df_column(hu.hydro_units['area']) != Unit.M2:
-            new_area = convert_unit_df(hu.hydro_units['area'], Unit.M2)
-            area_idx = hu.hydro_units.columns.get_loc('area')
-            hu.hydro_units.drop(hu.hydro_units.columns[area_idx], axis=1, inplace=True)
-            hu.hydro_units[('area', 'm2')] = new_area
+        if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
+            new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
+            area_idx = self.hydro_units.columns.get_loc('area')
+            self.hydro_units.drop(self.hydro_units.columns[area_idx], axis=1,
+                                  inplace=True)
+            self.hydro_units[('area', 'm2')] = new_area
 
-        hu._populate_bounded_instance()
-
-        return hu
+        self._populate_bounded_instance()
 
     def save_to_csv(self, path):
         """

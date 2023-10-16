@@ -52,11 +52,6 @@ class BehaviourLandCoverChange(Behaviour):
         match_with : str
             Information used to identify the hydro units. Options: 'elevation', 'id'
 
-        Returns
-        -------
-        changes : BehaviourLandCoverChange
-            A BehaviourLandCoverChange object
-
         Example of a file (with areas in km2)
         -----------------
         elevation   2020-08-01   2025-08-01   2030-08-01   2035-08-01   2040-08-01
@@ -162,7 +157,7 @@ class BehaviourLandCoverChange(Behaviour):
             raise ValueError("The catchment has not been discretized "
                              "(hydro units missing).")
 
-        changes = cls()
+        changes = hb.behaviours.BehaviourLandCoverChange()
         changes_df = changes._create_behaviour_for_glaciers(
             catchment, full_glaciers, debris_glaciers, times, with_debris, method,
             interpolate_yearly)

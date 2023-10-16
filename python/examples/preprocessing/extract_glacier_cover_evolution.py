@@ -22,7 +22,8 @@ os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 
 # Prepare catchment data
-catchment = hb.Catchment(CATCHMENT_OUTLINE)
+catchment = hb.Catchment(CATCHMENT_OUTLINE, land_cover_types=['ground', 'glacier'],
+                         land_cover_names=['ground', 'glacier'])
 catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
@@ -56,6 +57,5 @@ changes_glacier.load_from_csv(
     land_cover='glacier', area_unit='m2', match_with='id')
 
 # Finally, initialize the HydroUnits cover with the first cover values of the
-# BehaviourLandCoverChange object.
-catchment.initialize_from_land_cover_change(changes_df[0])
-catchment.initialize_from_land_cover_change(changes_df[1])
+# BehaviourLandCoverChange object (no need to do it for the ground land cover type).
+catchment.initialize_area_from_land_cover_change('glacier', changes_df[0])

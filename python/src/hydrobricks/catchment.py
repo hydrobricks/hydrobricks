@@ -14,9 +14,44 @@ if hb.has_rasterio:
 
 
 class Catchment:
-    """Creation of catchment-related data"""
+    """
+    Creation of catchment-related data
 
-    def __init__(self, outline=None):
+    Parameters
+    ----------
+    outline : str|Path
+        Path to the outline of the catchment.
+    land_cover_types : list, optional
+        The land cover types of the catchment.
+    land_cover_names : list, optional
+        The land cover names of the catchment.
+    hydro_units_data : pd.DataFrame, optional
+        The hydro units data of the catchment.
+
+    Attributes
+    ----------
+    area : float
+        The area of the catchment.
+    crs : str
+        The crs of the catchment outline.
+    outline : shapely.geometry.Polygon
+        The outline of the catchment.
+    dem : rasterio.DatasetReader
+        The DEM of the catchment.
+    masked_dem_data : np.ndarray
+        The masked DEM data of the catchment.
+    slope : np.ndarray
+        The slope map of the catchment.
+    aspect : np.ndarray
+        The aspect map of the catchment.
+    map_unit_ids : np.ndarray
+        The unit ids as a numpy array matching the DEM extent.
+    hydro_units : HydroUnits
+        The hydro units of the catchment.
+    """
+
+    def __init__(self, outline=None, land_cover_types=None, land_cover_names=None,
+                 hydro_units_data=None):
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_geopandas:
@@ -31,7 +66,8 @@ class Catchment:
         self.slope = None
         self.aspect = None
         self.map_unit_ids = None
-        self.hydro_units = hb.HydroUnits()
+        self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
+                                         hydro_units_data)
         self._extract_outline(outline)
         self._extract_area(outline)
 
@@ -229,6 +265,7 @@ class Catchment:
         if res_aspect_class:
             self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
 
+        self._initialize_land_cover_fractions()
         self.get_hydro_units_attributes()
 
     def get_hydro_units_nb(self):
@@ -469,19 +506,29 @@ class Catchment:
 
         return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
 
-    def initialize_from_land_cover_change(self, land_cover_change):
+    def initialize_area_from_land_cover_change(self, land_cover_name,
+                                               land_cover_change):
         """
-        Initialize the HydroUnits cover from a land cover change object.
+        Initialize the HydroUnits cover area from a land cover change object.
 
         Parameters
         ----------
+        land_cover_name : str
+            The name of the land cover to initialize.
         land_cover_change : pd.DataFrame
             The land cover change dataframe.
         """
         if self.map_unit_ids is None:
             raise ValueError("No hydro units to initialize.")
 
-        self.hydro_units.initialize_from_land_cover_change(land_cover_change)
+        if land_cover_name == 'ground':
+            raise ValueError("You should not initialize the 'ground' land cover type.")
+
+        self.hydro_units.initialize_from_land_cover_change(
+            land_cover_name, land_cover_change)
+
+    def _initialize_land_cover_fractions(self):
+        self.hydro_units.initialize_land_cover_fractions()
 
     def _extract_area(self, outline):
         # The outline has to be given in meters.

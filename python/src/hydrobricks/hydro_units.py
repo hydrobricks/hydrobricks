@@ -8,7 +8,27 @@ from .units import Unit, convert_unit_df, get_unit_enum, get_unit_from_df_column
 
 
 class HydroUnits:
-    """Class for the hydro units"""
+    """
+    Class for the hydro units
+
+    Parameters
+    ----------
+    land_cover_types : list, optional
+        List of land cover types. Default: ['ground']
+    land_cover_names : list, optional
+        List of land cover names. Default: ['ground']
+    data : pd.DataFrame, optional
+        Dataframe containing the hydro units data.
+
+    Attributes
+    ----------
+    land_cover_types : list
+        List of land cover types. Default: ['ground']
+    land_cover_names : list
+        List of land cover names. Default: ['ground']
+    hydro_units : pd.DataFrame
+        Dataframe containing the hydro units data.
+    """
 
     def __init__(self, land_cover_types=None, land_cover_names=None, data=None):
         self.settings = SettingsBasin()
@@ -214,24 +234,39 @@ class HydroUnits:
             if self.hydro_units[field_name].isnull().values.any():
                 raise ValueError(f'The land cover "{cover_name}" contains NaN values.')
 
-    def initialize_from_land_cover_change(self, land_cover_change):
+    def initialize_land_cover_fractions(self):
+        # Set the land cover fractions of 'ground' to 1 and the rest to 0
+        for cover_name in self.land_cover_names:
+            field_name = self.prefix_fraction + cover_name
+            self.hydro_units[(field_name, 'fraction')] = 0
+        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1
+
+    def initialize_from_land_cover_change(self, land_cover_name, land_cover_change):
         """
-        Initialize the hydro units from a land cover change object.
+        Initialize the hydro units from the first values of a land cover change
+        dataframe.
 
         Parameters
         ----------
+        land_cover_name : str
+            The name of the land cover to initialize.
         land_cover_change : pd.DataFrame
             The land cover change dataframe.
         """
-        # List the land cover names
-        # land_cover_names = land_cover_change.iloc[0, :].values.tolist()
+        # Land cover fraction column name
+        field_name = self.prefix_fraction + land_cover_name
+        ground_name = self.prefix_fraction + 'ground'
 
-        # TODO: needs to be implemented
-        raise NotImplementedError
+        land_cover_area = land_cover_change.iloc[:, 1].values
+        land_cover_fraction = land_cover_area / self.hydro_units[('area', 'm2')]
+        self.hydro_units[(field_name, 'fraction')] = land_cover_fraction
+        self.hydro_units[(ground_name, 'fraction')] -= land_cover_fraction
 
         self._populate_bounded_instance()
 
     def _populate_bounded_instance(self):
+        self.settings.clear()
+
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():

@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,32 @@ def hydro_units_csv(hydro_units):
                        'glacier_ice': 'Sum_Area ICE Band',
                        'glacier_debris': 'Sum_Area Debris Band'})
     return hydro_units
+
+
+@pytest.fixture
+def catchment_gletsch():
+    catchment = hb.Catchment(
+        TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'outline.shp',
+        land_cover_types=['ground', 'glacier'],
+        land_cover_names=['ground', 'glacier'])
+    catchment.extract_dem(
+        TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'dem.tif')
+    catchment.create_elevation_bands(method='isohypse', distance=50)
+
+    return catchment
+
+
+@pytest.fixture
+def changes_data():
+    glacier_dir = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'glaciers'
+    glaciers = [f'{glacier_dir}/sgi_1850.shp',
+                f'{glacier_dir}/sgi_1931.shp',
+                f'{glacier_dir}/sgi_1973.shp',
+                f'{glacier_dir}/sgi_2010.shp',
+                f'{glacier_dir}/sgi_2016.shp']
+    times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
+
+    return [glaciers, times]
 
 
 def test_load_from_csv(hydro_units_csv):
@@ -122,3 +149,87 @@ def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
     assert model.add_behaviour(changes)
     assert model.get_behaviours_nb() == 1
     assert model.get_behaviour_items_nb() == 444
+
+
+def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data):
+    files = changes_data[0]
+    times = changes_data[1]
+
+    # Create the behaviour land cover change object and the corresponding dataframe
+    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+        catchment_gletsch, times, files, with_debris=False, method='raster',
+        interpolate_yearly=False)
+
+    assert changes.get_land_covers_nb() == 1
+    df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
+    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+
+    assert len(df) == 2
+    assert df[0].shape == (38, 6)
+    assert df[1].shape == (38, 6)
+    assert df[0].columns[0] == 'hydro_unit'
+    assert df[0].columns[1] == '1850-01-01'
+    assert df[0].columns[2] == '1931-01-01'
+    assert df[0].columns[3] == '1973-01-01'
+    assert df[0].columns[4] == '2010-01-01'
+    assert df[0].columns[5] == '2016-01-01'
+
+    # The sum by column should be equal to the total area of the catchment
+    changes_sum = df[0].sum(axis=0) + df[1].sum(axis=0)
+    assert changes_sum[1] == pytest.approx(catchment_gletsch.area, rel=0.001)
+
+
+def test_extract_glacier_cover_evolution_vector(catchment_gletsch, changes_data):
+    files = changes_data[0]
+    times = changes_data[1]
+
+    # Create the behaviour land cover change object and the corresponding dataframe
+    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+        catchment_gletsch, times, files, with_debris=False, method='vector',
+        interpolate_yearly=False)
+
+    assert changes.get_land_covers_nb() == 1
+    df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
+    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+
+    assert len(df) == 2
+    assert df[0].shape == (38, 6)
+    assert df[1].shape == (38, 6)
+    assert df[0].columns[0] == 'hydro_unit'
+    assert df[0].columns[1] == '1850-01-01'
+    assert df[0].columns[2] == '1931-01-01'
+    assert df[0].columns[3] == '1973-01-01'
+    assert df[0].columns[4] == '2010-01-01'
+    assert df[0].columns[5] == '2016-01-01'
+
+    # The sum by column should be equal to the total area of the catchment
+    changes_sum = df[0].sum(axis=0) + df[1].sum(axis=0)
+    assert changes_sum[1] == pytest.approx(catchment_gletsch.area, rel=0.001)
+
+
+def test_extract_glacier_cover_evolution_interpolate(catchment_gletsch, changes_data):
+    files = changes_data[0]
+    times = changes_data[1]
+
+    # Create the behaviour land cover change object and the corresponding dataframe
+    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+        catchment_gletsch, times, files, with_debris=False, method='raster',
+        interpolate_yearly=True)
+
+    assert changes.get_land_covers_nb() == 1
+    df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
+    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+
+    assert len(df) == 2
+    assert df[0].shape == (38, 168)
+    assert df[1].shape == (38, 168)
+    assert df[0].columns[0] == 'hydro_unit'
+    assert df[0].columns[1] == '1850-01-01'
+    assert df[0].columns[2] == '1851-01-01'
+    assert df[0].columns[3] == '1852-01-01'
+    assert df[0].columns[4] == '1853-01-01'
+    assert df[0].columns[5] == '1854-01-01'
+
+    # The sum by column should be equal to the total area of the catchment
+    changes_sum = df[0].sum(axis=0) + df[1].sum(axis=0)
+    assert changes_sum[1] == pytest.approx(catchment_gletsch.area, rel=0.001)

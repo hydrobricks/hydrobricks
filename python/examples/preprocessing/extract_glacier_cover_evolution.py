@@ -41,7 +41,8 @@ times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
 
 # Create the behaviour land cover change object and the corresponding dataframe
 changes, changes_df = BehaviourLandCoverChange.create_behaviour_for_glaciers(
-    catchment, glaciers, glaciers_debris, times, with_debris=False, method='raster')
+    catchment, times, glaciers, glaciers_debris, with_debris=False, method='raster',
+    interpolate_yearly=True)
 
 # The 'changes' object can be directly used in hydrobricks:
 # model.add_behaviour(changes)

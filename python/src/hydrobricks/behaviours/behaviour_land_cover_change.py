@@ -98,9 +98,9 @@ class BehaviourLandCoverChange(Behaviour):
         return self.behaviour.get_land_covers_nb()
 
     @classmethod
-    def create_behaviour_for_glaciers(cls, catchment, full_glaciers, debris_glaciers,
-                                      times, with_debris=False, method='vector',
-                                      interpolate_yearly=True):
+    def create_behaviour_for_glaciers(cls, catchment, times, full_glaciers,
+                                      debris_glaciers=None, with_debris=False,
+                                      method='vector', interpolate_yearly=True):
         """
         Extract the glacier cover changes from shapefiles, creates a
         BehaviourLandCoverChange object, and assign the computed land cover
@@ -110,14 +110,14 @@ class BehaviourLandCoverChange(Behaviour):
         ----------
         catchment : Catchment
             The catchment to extract the glacier cover changes for.
+        times : str|list
+            Date of the land cover, in the format: yyyy-mm-dd.
         full_glaciers : str|Path
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_glaciers : str|Path
+        debris_glaciers : str|Path, optional
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
-        times : str|list
-            Date of the land cover, in the format: yyyy-mm-dd.
         with_debris : bool, optional
             True if the simulation requires debris-covered and clean-ice area
             computations, False otherwise.
@@ -165,8 +165,14 @@ class BehaviourLandCoverChange(Behaviour):
         if len(full_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
 
+        if with_debris and debris_glaciers is None:
+            raise ValueError("The debris shapefiles must be provided.")
+
         if with_debris and len(debris_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
+
+        if not with_debris and debris_glaciers is None:
+            debris_glaciers = [None] * len(times)
 
         # Get the hydro units
         n_unit_ids = catchment.get_hydro_units_nb()
@@ -222,9 +228,12 @@ class BehaviourLandCoverChange(Behaviour):
 
         # Populate the bounded instance (not needed for the ground type)
         if with_debris:
+            self._remove_rows_with_no_changes(ice_df)
             self._populate_bounded_instance('glacier_ice', 'm2', ice_df)
+            self._remove_rows_with_no_changes(debris_df)
             self._populate_bounded_instance('glacier_debris', 'm2', debris_df)
         else:
+            self._remove_rows_with_no_changes(glacier_df)
             self._populate_bounded_instance('glacier', 'm2', glacier_df)
 
         if with_debris:
@@ -473,11 +482,11 @@ class BehaviourLandCoverChange(Behaviour):
     @staticmethod
     def _remove_rows_with_no_changes(file_content):
         for row, change in file_content.iterrows():
-            diff = change.to_numpy(dtype=float)[2:]
+            diff = change.to_numpy(dtype=float)[1:]
             diff = diff[0:-1] - diff[1:]
             for i_diff, v_diff in enumerate(diff):
                 if v_diff == 0:
-                    file_content.iloc[row, i_diff + 3] = np.nan
+                    file_content.iloc[row, i_diff + 2] = np.nan
 
     def _populate_bounded_instance(self, land_cover, area_unit, file_content):
         for col in list(file_content):

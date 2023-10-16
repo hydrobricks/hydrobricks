@@ -7,19 +7,11 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 ## 0.6.3 - UNDER WORK
 
-### Breaking changes
+### Added
 
--   The functions 'load_from_csv' shall be called from the class and not from an instance. For example, the code
-    ```
-    hb.HydroUnits()
-    hydro_units.load_from_csv(...)
-    ```
-    becomes
-    ```
-    hydro_units = hb.HydroUnits.load_from_csv(...)
-    ```
-    This is valid for HydroUnits, Observations, and BehaviourLandCoverChange.
+### Changed
 
+### Fixed
 
 
 ## 0.6.2 - 2023-09-15

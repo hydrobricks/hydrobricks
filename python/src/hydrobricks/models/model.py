@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 import HydroErr
 
 import _hydrobricks as _hb
-from _hydrobricks import ModelHydro, SettingsModel
 import hydrobricks as hb
+from _hydrobricks import ModelHydro, SettingsModel
+
 
 class Model(ABC):
     """Base class for the models"""

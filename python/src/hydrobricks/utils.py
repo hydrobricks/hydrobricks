@@ -31,6 +31,8 @@ def dump_config_file(content, directory, name, file_type='yaml'):
 
 
 def date_as_mjd(date):
+    if isinstance(date, str):
+        return pd.to_datetime(date).to_julian_date() - 2400000.5
     if isinstance(date, pd.Timestamp):
         return date.to_julian_date() - 2400000.5
     return pd.DatetimeIndex(date).to_julian_date() - 2400000.5

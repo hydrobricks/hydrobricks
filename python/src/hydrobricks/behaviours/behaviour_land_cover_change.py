@@ -28,14 +28,16 @@ class BehaviourLandCoverChange(Behaviour):
         self.behaviour = _hb.BehaviourLandCoverChange()
 
     @classmethod
-    def load_from_csv(cls, path, hydro_units, area_unit, match_with='elevation'):
+    def load_from_csv(cls, path, hydro_units, land_cover, area_unit,
+                      match_with='elevation'):
         """
-        Read hydro units properties from csv file. The first column of the file must
-        contain the information to identify the hydro unit id, such as the id or the
-        elevation (when using elevation bands). The next columns must contain the
-        changes at different dates for each hydro unit. The first line must contain
-        the name of the land cover to change. The second line must contain the date
-        of the change in a format easily parsed by Python.
+        Read land cover changes from a csv file. Such file should contain the
+        changes for a single land cover. Multiple files can be loaded consecutively.
+        The first column of the file must contain the information to identify the hydro
+        unit id, such as the id or the elevation (when using elevation bands).
+        The next columns must contain the changes at different dates for each hydro
+        unit. The first line must contain the dates of the changes in a format easily
+        parsed by Python (i.e. YYYY-MM-DD).
 
         Parameters
         ----------
@@ -43,6 +45,8 @@ class BehaviourLandCoverChange(Behaviour):
             Path to the csv file containing hydro units data.
         hydro_units : HydroUnits
             The hydro units to match the land cover changes against.
+        land_cover : str
+            Name of the land cover to change.
         area_unit: str
             Unit for the area values: "m2" or "km2"
         match_with : str
@@ -55,8 +59,7 @@ class BehaviourLandCoverChange(Behaviour):
 
         Example of a file (with areas in km2)
         -----------------
-        elevation   glacier      glacier      glacier      glacier      glacier
-                    2020-08-01   2025-08-01   2030-08-01   2035-08-01   2040-08-01
+        elevation   2020-08-01   2025-08-01   2030-08-01   2035-08-01   2040-08-01
         4274        0.013        0.003        0            0            0
         4310        0.019        0.009        0            0            0
         4346        0.052        0.042        0.032        0.022        0.012
@@ -68,31 +71,29 @@ class BehaviourLandCoverChange(Behaviour):
         4562        0.613        0.603        0.593        0.583        0.573
         """
         changes = cls()
-        changes._load_from_csv(path, hydro_units, area_unit, match_with)
+        changes._load_from_csv(path, hydro_units, land_cover, area_unit, match_with)
 
         return changes
 
-    def _load_from_csv(self, path, hydro_units, area_unit, match_with):
-        file_content = pd.read_csv(path, header=None)
+    def _load_from_csv(self, path, hydro_units, land_cover, area_unit, match_with):
+        file_content = pd.read_csv(path)
         if match_with == 'id':
-            # Look for 'hydro_unit(s)', 'id(s)', or 'unit(s)' in the 1st row
-            for col in file_content.columns:
-                if not isinstance(file_content[col][0], str):
-                    continue
-                if file_content[col][0].lower() in ['hydro_unit', 'hydro_units', 'id',
-                                                    'ids', 'unit', 'units']:
-                    # Rename the column
-                    file_content.rename(columns={col: 'hydro_unit'}, inplace=True)
-                    break
-            else:
-                raise ValueError("The first row of the file must contain a 'hydro_unit'"
-                                 " or 'id' column.")
+            # Check that the first column contains hydro unit ids
+            col_1 = file_content.iloc[:, 0]
+            id_min = hydro_units.hydro_units.id.min()
+            id_max = hydro_units.hydro_units.id.max()
+            if col_1.min() < id_min or col_1.max() > id_max:
+                raise ValueError("The first column of the file does not contain the "
+                                 "hydro unit ids.")
+            # Set the first column name to 'hydro_unit'
+            file_content.rename(columns={file_content.columns[0]: 'hydro_unit'},
+                                inplace=True)
         else:
             file_content.insert(loc=0, column='hydro_unit', value=0)
             self._match_hydro_unit_ids(file_content, hydro_units, match_with)
 
         self._remove_rows_with_no_changes(file_content)
-        self._populate_bounded_instance(area_unit, file_content)
+        self._populate_bounded_instance(land_cover, area_unit, file_content)
 
     def get_changes_nb(self):
         """
@@ -212,30 +213,29 @@ class BehaviourLandCoverChange(Behaviour):
             ground_np, times_full = self._interpolate_yearly(ground_np, times)
 
         # Add the columns to the dataframes
-        for time in times_full:
-            if with_debris:
-                self._add_column_to_dataframe(ice_df, 'glacier_ice', time)
-                self._add_column_to_dataframe(debris_df, 'glacier_debris', time)
-            else:
-                self._add_column_to_dataframe(glacier_df, 'glacier', time)
-
-            self._add_column_to_dataframe(ground_df, 'ground', time)
+        times_full_str = [time.strftime('%Y-%m-%d') for time in times_full]
+        empty_df = pd.DataFrame(columns=times_full_str)
+        if with_debris:
+            ice_df = pd.concat([ice_df, empty_df.copy()], axis=1)
+            debris_df = pd.concat([debris_df, empty_df.copy()], axis=1)
+        else:
+            glacier_df = pd.concat([glacier_df, empty_df.copy()], axis=1)
+        ground_df = pd.concat([ground_df, empty_df.copy()], axis=1)
 
         # Set data to the dataframes
         if with_debris:
-            ice_df.loc[2:, ice_df.columns[-1]] = ice_np
-            debris_df.loc[2:, debris_df.columns[-1]] = debris_np
+            ice_df.iloc[:, 1:] = ice_np
+            debris_df.iloc[:, 1:] = debris_np
         else:
-            glacier_df.loc[2:, glacier_df.columns[-1]] = glacier_np
-        ground_df.loc[2:, ground_df.columns[-1]] = ground_np
+            glacier_df.iloc[:, 1:] = glacier_np
+        ground_df.iloc[:, 1:] = ground_np
 
-        # Populate the bounded instance
+        # Populate the bounded instance (not needed for the ground type)
         if with_debris:
-            self._populate_bounded_instance('m2', ice_df)
-            self._populate_bounded_instance('m2', debris_df)
+            self._populate_bounded_instance('glacier_ice', 'm2', ice_df)
+            self._populate_bounded_instance('glacier_debris', 'm2', debris_df)
         else:
-            self._populate_bounded_instance('m2', glacier_df)
-        self._populate_bounded_instance('m2', ground_df)
+            self._populate_bounded_instance('glacier', 'm2', glacier_df)
 
         if with_debris:
             return [ice_df, debris_df, ground_df]
@@ -423,22 +423,11 @@ class BehaviourLandCoverChange(Behaviour):
 
     @staticmethod
     def _create_new_change_dataframe(hydro_units, n_unit_ids):
-        changes_df = pd.DataFrame(index=range(n_unit_ids + 2))
+        changes_df = pd.DataFrame(index=range(n_unit_ids))
         changes_df.insert(loc=0, column='hydro_unit', value=0)
         ids = hydro_units.hydro_units.id.values.squeeze()
-        changes_df.hydro_unit.iloc[0] = 'hydro_unit'
-        changes_df.hydro_unit.iloc[1] = '-'
-        changes_df.hydro_unit.iloc[2:n_unit_ids + 2] = ids
+        changes_df.hydro_unit.iloc[:] = ids
         return changes_df
-
-    @staticmethod
-    def _add_column_to_dataframe(changes_df, land_cover, time):
-        # Add column with an incremental index
-        changes_df[len(changes_df.columns)] = 0
-        # Add the land cover name to the first row
-        changes_df.loc[0, changes_df.columns[-1]] = land_cover
-        # Add the date to the second row
-        changes_df.loc[1, changes_df.columns[-1]] = time
 
     @staticmethod
     def _compute_intersection_area(intersecting_geoms):
@@ -483,8 +472,6 @@ class BehaviourLandCoverChange(Behaviour):
     def _match_hydro_unit_ids(file_content, hydro_units, match_with):
         hu_df = hydro_units.hydro_units
         for row, change in file_content.iterrows():
-            if row < 2:
-                continue
             if match_with == 'elevation':
                 elevation_values = hu_df[('elevation', 'm')].values
                 idx_id = hu_df.index[elevation_values == int(change[0])].to_list()[0]
@@ -495,23 +482,20 @@ class BehaviourLandCoverChange(Behaviour):
     @staticmethod
     def _remove_rows_with_no_changes(file_content):
         for row, change in file_content.iterrows():
-            if row < 2:
-                continue
             diff = change.to_numpy(dtype=float)[2:]
             diff = diff[0:-1] - diff[1:]
             for i_diff, v_diff in enumerate(diff):
                 if v_diff == 0:
                     file_content.iloc[row, i_diff + 3] = np.nan
 
-    def _populate_bounded_instance(self, area_unit, file_content):
+    def _populate_bounded_instance(self, land_cover, area_unit, file_content):
         for col in list(file_content):
             if col == 'hydro_unit' or col == 0:
                 continue
-            land_cover = file_content.loc[0, col]
-            date = pd.Timestamp(file_content.loc[1, col])
-            mjd = hb.utils.date_as_mjd(date)
+            # Extract date from column name
+            mjd = hb.utils.date_as_mjd(col)
 
-            for row in range(2, len(file_content[col])):
+            for row in range(len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
                 area = float(file_content.loc[row, col])
                 if not np.isnan(area):

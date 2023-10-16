@@ -42,15 +42,19 @@ times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
 changes, changes_df = BehaviourLandCoverChange.create_behaviour_for_glaciers(
     catchment, glaciers, glaciers_debris, times, with_debris=False, method='raster')
 
-# The 'changes' object can be directly used in hydrobricks: model.add_behaviour(changes)
+# The 'changes' object can be directly used in hydrobricks:
+# model.add_behaviour(changes)
+
 # The dataframe can be saved as csv (without column names)
-changes_df[0].to_csv(working_dir / 'changes_glacier.csv', header=False)
+changes_df[0].to_csv(working_dir / 'changes_glacier.csv', index=False)
+changes_df[1].to_csv(working_dir / 'changes_ground.csv', index=False)
 
 # And can be loaded again to be used in hydrobricks later
-changes_bis = BehaviourLandCoverChange.load_from_csv(
+changes_glacier = BehaviourLandCoverChange.load_from_csv(
     working_dir / 'changes_glacier.csv', hydro_units=catchment.hydro_units,
-    area_unit='m2', match_with='id')
+    land_cover='glacier', area_unit='m2', match_with='id')
 
 # Finally, initialize the HydroUnits cover with the first cover values of the
 # BehaviourLandCoverChange object.
-catchment.initialize_from_land_cover_change(changes_df)
+catchment.initialize_from_land_cover_change(changes_df[0])
+catchment.initialize_from_land_cover_change(changes_df[1])

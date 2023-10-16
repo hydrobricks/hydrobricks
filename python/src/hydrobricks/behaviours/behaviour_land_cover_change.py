@@ -473,11 +473,12 @@ class BehaviourLandCoverChange(Behaviour):
         hu_df = hydro_units.hydro_units
         for row, change in file_content.iterrows():
             if match_with == 'elevation':
-                elevation_values = hu_df[('elevation', 'm')].values
-                idx_id = hu_df.index[elevation_values == int(change[1])].to_list()[0]
+                elevation_values = hu_df[('elevation', 'm')].to_numpy(dtype=np.int64)
+                value = int(change[1])
+                idx_id = hu_df.index[elevation_values == value].to_list()[0]
             else:
                 raise ValueError(f'No option "{match_with}" for "match_with".')
-            file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, ('id', '-')]
+            file_content.at[row, 'hydro_unit'] = hu_df.at[idx_id, ('id', '-')]
 
     @staticmethod
     def _remove_rows_with_no_changes(file_content):

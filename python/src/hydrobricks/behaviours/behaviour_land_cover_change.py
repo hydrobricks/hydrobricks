@@ -474,7 +474,7 @@ class BehaviourLandCoverChange(Behaviour):
         for row, change in file_content.iterrows():
             if match_with == 'elevation':
                 elevation_values = hu_df[('elevation', 'm')].to_numpy(dtype=np.int64)
-                value = int(change[1])
+                value = int(change.iloc[1])
                 idx_id = hu_df.index[elevation_values == value].to_list()[0]
             else:
                 raise ValueError(f'No option "{match_with}" for "match_with".')

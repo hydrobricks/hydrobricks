@@ -27,8 +27,7 @@ class BehaviourLandCoverChange(Behaviour):
         super().__init__()
         self.behaviour = _hb.BehaviourLandCoverChange()
 
-    @classmethod
-    def load_from_csv(cls, path, hydro_units, land_cover, area_unit,
+    def load_from_csv(self, path, hydro_units, land_cover, area_unit,
                       match_with='elevation'):
         """
         Read land cover changes from a csv file. Such file should contain the
@@ -65,18 +64,12 @@ class BehaviourLandCoverChange(Behaviour):
         4526        0.341        0.331        0.321        0.311        0.301
         4562        0.613        0.603        0.593        0.583        0.573
         """
-        changes = cls()
-        changes._load_from_csv(path, hydro_units, land_cover, area_unit, match_with)
-
-        return changes
-
-    def _load_from_csv(self, path, hydro_units, land_cover, area_unit, match_with):
         file_content = pd.read_csv(path)
         if match_with == 'id':
             # Check that the first column contains hydro unit ids
             col_1 = file_content.iloc[:, 0]
-            id_min = hydro_units.hydro_units.id.min()
-            id_max = hydro_units.hydro_units.id.max()
+            id_min = hydro_units.hydro_units[('id', '-')].min()
+            id_max = hydro_units.hydro_units[('id', '-')].max()
             if col_1.min() < id_min or col_1.max() > id_max:
                 raise ValueError("The first column of the file does not contain the "
                                  "hydro unit ids.")
@@ -86,6 +79,8 @@ class BehaviourLandCoverChange(Behaviour):
         else:
             file_content.insert(loc=0, column='hydro_unit', value=0)
             self._match_hydro_unit_ids(file_content, hydro_units, match_with)
+            # Drop 2nd column (e.g., elevation)
+            file_content.drop(file_content.columns[1], axis=1, inplace=True)
 
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(land_cover, area_unit, file_content)
@@ -469,7 +464,7 @@ class BehaviourLandCoverChange(Behaviour):
         for row, change in file_content.iterrows():
             if match_with == 'elevation':
                 elevation_values = hu_df[('elevation', 'm')].values
-                idx_id = hu_df.index[elevation_values == int(change[0])].to_list()[0]
+                idx_id = hu_df.index[elevation_values == int(change[1])].to_list()[0]
             else:
                 raise ValueError(f'No option "{match_with}" for "match_with".')
             file_content.loc[row, 'hydro_unit'] = hu_df.loc[idx_id, ('id', '-')]

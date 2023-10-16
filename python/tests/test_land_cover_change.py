@@ -36,7 +36,20 @@ def test_load_from_csv(hydro_units_csv):
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='elevation'
+    )
+
+    assert changes.get_land_covers_nb() == 1
+    assert changes.get_changes_nb() == 232
+
+
+def test_load_from_csv_by_id(hydro_units_csv):
+    changes = behaviours.BehaviourLandCoverChange()
+    changes.load_from_csv(
+        TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice_with_ids.csv',
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='id'
     )
 
     assert changes.get_land_covers_nb() == 1
@@ -47,11 +60,13 @@ def test_load_from_two_files(hydro_units_csv):
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='elevation'
     )
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_debris', area_unit='km2',
+        match_with='elevation'
     )
 
     assert changes.get_land_covers_nb() == 2
@@ -62,7 +77,8 @@ def test_add_behaviour_to_model(hydro_units_csv):
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='elevation'
     )
 
     model = models.Socont()
@@ -73,7 +89,8 @@ def test_behaviour_correctly_set_in_model(hydro_units_csv):
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='elevation'
     )
 
     cover_names = ['ground', 'glacier_ice']
@@ -89,15 +106,17 @@ def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
     changes = behaviours.BehaviourLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        match_with='elevation'
     )
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
-        hydro_units_csv, area_unit='km2', match_with='elevation'
+        hydro_units_csv, land_cover='glacier_debris', area_unit='km2',
+        match_with='elevation'
     )
 
-    cover_names = ['ground', 'glacier_ice']
-    cover_types = ['ground', 'glacier']
+    cover_names = ['ground', 'glacier_ice', 'glacier_debris']
+    cover_types = ['ground', 'glacier', 'glacier']
     model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 
     assert model.add_behaviour(changes)

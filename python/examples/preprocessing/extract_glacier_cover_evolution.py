@@ -50,7 +50,8 @@ changes_df[0].to_csv(working_dir / 'changes_glacier.csv', index=False)
 changes_df[1].to_csv(working_dir / 'changes_ground.csv', index=False)
 
 # And can be loaded again to be used in hydrobricks later
-changes_glacier = BehaviourLandCoverChange.load_from_csv(
+changes_glacier = BehaviourLandCoverChange()
+changes_glacier.load_from_csv(
     working_dir / 'changes_glacier.csv', hydro_units=catchment.hydro_units,
     land_cover='glacier', area_unit='m2', match_with='id')
 

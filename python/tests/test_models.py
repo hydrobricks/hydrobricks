@@ -148,3 +148,33 @@ def test_socont_closes_water_balance():
         tmp_dir.cleanup()
     except Exception:
         print('Could not remove temporary directory.')
+
+
+def test_error_is_raised_if_parameter_missing():
+    tmp_dir = tempfile.TemporaryDirectory()
+
+    # Model options
+    socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
+                           record_all=True)
+
+    # Parameters
+    parameters = socont.generate_parameters()
+    parameters.set_values({'a_snow': 3, 'k_quick': 0.05, 'A': 200, 'k_slow_1': 0.001})
+
+    # Preparation of the hydro units
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        CATCHMENT_BANDS, column_elevation='elevation',
+        column_area='area')
+
+    socont.setup(spatial_structure=hydro_units, output_path=tmp_dir.name,
+                 start_date='1981-01-01', end_date='2020-12-31')
+
+    with pytest.raises(RuntimeError, match=r"Some parameters were not defined*"):
+        socont.run(parameters=parameters)
+
+    socont.cleanup()
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        print('Could not remove temporary directory.')

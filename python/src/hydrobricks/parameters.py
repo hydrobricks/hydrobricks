@@ -278,6 +278,33 @@ class ParameterSet:
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, 'value']
 
+    def is_ok(self):
+        """
+        Check if all the parameters are defined and have a value.
+
+        Returns
+        -------
+        True if all parameters are defined and have a value, False otherwise.
+        """
+        for _, row in self.parameters.iterrows():
+            if row['value'] is None:
+                return False
+        return True
+
+    def get_undefined(self):
+        """
+        Get the undefined parameters.
+
+        Returns
+        ------
+        A list of the undefined parameter names.
+        """
+        undefined = []
+        for _, row in self.parameters.iterrows():
+            if row['value'] is None:
+                undefined.append(row['name'])
+        return undefined
+
     def get_model_parameters(self):
         """
         Get the model-only parameters (excluding data-related parameters).

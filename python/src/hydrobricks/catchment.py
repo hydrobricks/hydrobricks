@@ -1,6 +1,7 @@
 import itertools
 import math
 import warnings
+import pathlib
 
 import numpy as np
 
@@ -52,12 +53,18 @@ class Catchment:
 
     def __init__(self, outline=None, land_cover_types=None, land_cover_names=None,
                  hydro_units_data=None):
+        # Check that the required packages are installed
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_geopandas:
             raise ImportError("geopandas is required to do this.")
         if not hb.has_shapely:
             raise ImportError("shapely is required to do this.")
+
+        # Check that the outline file exists if provided
+        if outline is not None and not pathlib.Path(outline).is_file():
+            raise FileNotFoundError(f"File {outline} does not exist.")
+
         self.area = None
         self.crs = None
         self.outline = None
@@ -88,6 +95,9 @@ class Catchment:
         -------
         True if successful, False otherwise.
         """
+        if not pathlib.Path(dem_path).is_file():
+            raise FileNotFoundError(f"File {dem_path} does not exist.")
+
         try:
             geoms = [mapping(self.outline)]
             src = hb.rasterio.open(dem_path)
@@ -267,6 +277,7 @@ class Catchment:
 
         self._initialize_land_cover_fractions()
         self.get_hydro_units_attributes()
+        self.hydro_units.populate_bounded_instance()
 
     def get_hydro_units_nb(self):
         """

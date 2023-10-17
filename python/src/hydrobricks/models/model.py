@@ -110,6 +110,10 @@ class Model(ABC):
             raise RuntimeError('The model has not been initialized. '
                                'Please run setup() first.')
 
+        if not parameters.is_ok():
+            raise RuntimeError('Some parameters were not defined: '
+                               f'{",".join(parameters.get_undefined())}.')
+
         try:
             self.model.reset()
 

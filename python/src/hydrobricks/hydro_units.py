@@ -126,7 +126,7 @@ class HydroUnits:
                                   inplace=True)
             self.hydro_units[('area', 'm2')] = new_area
 
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
     def save_to_csv(self, path):
         """
@@ -262,9 +262,9 @@ class HydroUnits:
         self.hydro_units[(field_name, 'fraction')] = land_cover_fraction
         self.hydro_units[(ground_name, 'fraction')] -= land_cover_fraction
 
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
-    def _populate_bounded_instance(self):
+    def populate_bounded_instance(self):
         self.settings.clear()
 
         # List properties to be set
@@ -347,7 +347,7 @@ class HydroUnits:
         self.hydro_units = data
         idx = self.prefix_fraction + 'ground'
         self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
     @staticmethod
     def _check_land_cover_definitions(land_cover_types, land_cover_names):

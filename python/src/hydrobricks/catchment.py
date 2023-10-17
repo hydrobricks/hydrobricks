@@ -1,7 +1,7 @@
 import itertools
 import math
-import warnings
 import pathlib
+import warnings
 
 import numpy as np
 

@@ -39,9 +39,9 @@ vecDouble ProcessRunoffSocont::GetRates() {
     // The storage shape is the ratio between the water depth at the bottom and the average water depth -> 2.
     double storageShape = 2.0;
     // h is the water depth at the bottom of the plane != average water depth
-    double h = m_container->GetContentWithChanges() * storageShape * 1000;  // [m]
-    double qquick = *m_beta * pow(m_slope, 0.5) * pow(h, 5 / 3);            // [m^3/s]
-    const double dt = 86400;                                                // [s] number of seconds in a day
+    const double dt = 86400; // [s] number of seconds in a day
+    double h = m_container->GetContentWithChanges() * storageShape / (1000 * dt); // [m]
+    double qquick = *m_beta * pow(m_slope, 0.5) * pow(h, 5 / 3); // [m^3/s]
     // Computation in two steps:
     // double dh = (qquick / GetArea()) * dt * m_storageShape; // [m/d] dh at the plane bottom
     // double runoff = 1000 * dh / m_storageShape ; // [mm/d]

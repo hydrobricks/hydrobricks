@@ -1035,8 +1035,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     AddHydroUnitBrick("surface_runoff", "storage");
     if (surfaceRunoff == "socont_runoff") {
         AddBrickProcess("runoff", "runoff:socont", "outlet");
-        AddProcessParameter("runoff_coefficient", 500.0f);
-        AddProcessParameter("slope", 0.5f);
+        AddProcessParameter("beta", 500.0f);
     } else if (surfaceRunoff == "linear_storage") {
         wxLogMessage(_("Using a linear storage for the quick flow."));
         AddBrickProcess("outflow", "outflow:linear", "outlet");

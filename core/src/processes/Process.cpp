@@ -6,6 +6,7 @@
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessMeltDegreeDay.h"
+#include "ProcessMeltRadiation.h"
 #include "ProcessOutflowConstant.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
@@ -42,6 +43,16 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         } else if (brick->IsGlacier()) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
+        } else {
+            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+        }
+    } else if (processSettings.type == "melt:radiation" || processSettings.type == "Melt:Radiation") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessMeltRadiation(snowBrick->GetSnowContainer());
+        } else if (brick->IsGlacier()) {
+            auto glacierBrick = dynamic_cast<Glacier*>(brick);
+            return new ProcessMeltRadiation(glacierBrick->GetIceContainer());
         } else {
             throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
         }

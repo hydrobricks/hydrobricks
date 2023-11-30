@@ -474,7 +474,6 @@ class Catchment:
         incidence_angle = np.arccos((np.cos(zenith_rad) * np.cos(slope_rad)) + \
                                     (np.sin(zenith_rad) * np.sin(slope_rad) * \
                                      np.cos(azimuth_rad - aspect_rad)))
-        #print('incidence_angle', incidence_angle, 'OK - results verified until here')
         # Angle of incidence matrix
         incidence_angle[incidence_angle > 90 * TO_RAD] = 90 * TO_RAD
         
@@ -515,7 +514,6 @@ class Catchment:
         # for all years (same result)
         jd = times.strftime('%j').to_numpy().astype(int)
         jd_unique = np.unique(jd)
-        print('jd_unique', jd_unique, type(jd_unique))
         
         mean_height = self.get_mean_elevation()
         
@@ -556,9 +554,6 @@ class Catchment:
         daily_pot_radiation = np.empty((len(jd_unique), self.slope.shape[0], self.slope.shape[1]))
         daily_pot_radiation.fill(np.NaN)
             
-        test_incidence_angle = np.empty((len(jd_unique), self.slope.shape[0], self.slope.shape[1]))
-        test_incidence_angle.fill(np.NaN)
-        
         for i in range(len(jd_unique)):
             print('Day', jd_unique[i])
             # List of hour angles throughout the day.
@@ -583,17 +578,13 @@ class Catchment:
             # Potential radiation over the time intervals defined with time_interval
             inter_pot_radiation = np.empty((len(zenith), self.slope.shape[0], self.slope.shape[1]))
             inter_pot_radiation.fill(np.NaN)
-            tes_incidence_angle = np.empty((len(zenith), self.slope.shape[0], self.slope.shape[1]))
-            tes_incidence_angle.fill(np.NaN)
             
             for j in range(len(zenith)):
                 incidence_angle = self.calculate_angle_of_incidence(zenith[j], self.slope, Az[j], self.aspect)
                 potential_radiation = self.calculate_Hock_equation(mean_height, atm_tra, jd_unique[i], zenith[j], incidence_angle)
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
-                tes_incidence_angle[j, :, :] = incidence_angle.copy()
                 
             daily_pot_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
-            test_incidence_angle[i, :, :] = np.nanmean(tes_incidence_angle, axis=0)
         
         # Get the indices of jd_unique that match the values of jd
         indices = np.where(jd_unique[:, None] == jd)[1]
@@ -605,13 +596,6 @@ class Catchment:
         ys = np.array(ys).reshape(self.masked_dem_data.shape)[:, 0]
         
         self.saving_potential_radiation_netcdf(whole_daily_pot_radiation, xs, ys, times, self.dem.crs, output_filename)
-        path = "/home/anne-laure/Documents/Datasets/Outputs/"
-        self.saving_potential_radiation_netcdf(test_incidence_angle, xs, ys, times, self.dem.crs, f"{path}MeanIncidenceAngle.nc")
-        self.saving_potential_radiation_netcdf(zenith[-2], xs, ys, times, self.dem.crs, f"{path}LastZenith.nc")
-        self.saving_potential_radiation_netcdf(Az[-2], xs, ys, [0], self.dem.crs, f"{path}LastAzimuth.nc")
-        self.saving_potential_radiation_netcdf([self.slope], xs, ys, [0], self.dem.crs, f"{path}Slope.nc")
-        self.saving_potential_radiation_netcdf([self.aspect], xs, ys, [0], self.dem.crs, f"{path}Aspect.nc")
-        print("END")
         
     def saving_potential_radiation_netcdf(self, radiation, xs, ys, times, CRS, output_filename):
 

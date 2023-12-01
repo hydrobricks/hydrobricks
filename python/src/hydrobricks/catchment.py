@@ -99,7 +99,7 @@ class Catchment:
             raise FileNotFoundError(f"File {dem_path} does not exist.")
 
         try:
-            geoms = [mapping(self.outline)]
+            geoms = [mapping(polygon) for polygon in self.outline]
             src = hb.rasterio.open(dem_path)
             self._check_crs(src)
             self.dem = src
@@ -556,7 +556,7 @@ class Catchment:
         shapefile = hb.gpd.read_file(outline)
         self._check_crs(shapefile)
         geoms = shapefile.geometry.values
-        self.outline = geoms[0]
+        self.outline = geoms
 
     def _extract_unit_mean_aspect(self, mask_unit):
         aspect_rad = np.radians(self.aspect[mask_unit])

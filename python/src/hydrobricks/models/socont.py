@@ -12,20 +12,100 @@ class Socont(Model):
         # Default options
         self.soil_storage_nb = 1
         self.surface_runoff = 'socont_runoff'
+        self.snow_melt_process = 'melt:degree_day'
 
         self._add_allowed_kwargs(['soil_storage_nb', 'surface_runoff'])
         self._validate_kwargs(kwargs)
         self._set_options(kwargs)
 
         try:
-            if not self.settings.generate_socont_structure(
-                    self.land_cover_types, self.land_cover_names,
-                    self.soil_storage_nb, self.surface_runoff):
+            if not self.generate_structure():
                 raise RuntimeError('Socont model initialization failed.')
 
         except RuntimeError as err:
             raise RuntimeError(f'Socont model initialization raised '
                                f'an exception: {err}')
+
+    def generate_structure(self):
+        # Check allowed land cover types: ground, glacier
+        for cover_type in self.land_cover_types:
+            if cover_type not in ['ground', 'glacier']:
+                raise RuntimeError(f'The land cover {cover_type} is not used in Socont')
+
+        # Generate basic elements
+        self.settings.generate_base_structure(
+            self.land_cover_names, self.land_cover_types, self.snow_melt_process)
+
+        # Add surface-related processes
+        for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
+            if cover_type == 'glacier':
+                # Direct rain and snow melt to linear storage
+                self.settings.select_hydro_unit_brick(cover_name)
+                self.settings.add_brick_process(
+                    'outflow_rain_snowmelt', 'outflow:direct',
+                    'glacier_area_rain_snowmelt_storage')
+
+                # Glacier melt process
+                self.settings.add_brick_parameter('no_melt_when_snow_cover', True)
+                self.settings.add_brick_parameter('infinite_storage', True)
+                self.settings.add_brick_process(
+                    'melt', 'melt:degree_day', 'glacier_area_icemelt_storage')
+
+                # Set process outputs as instantaneous
+                self.settings.set_process_outputs_as_instantaneous()
+
+        # Basin storages for contributions from the glacierized area
+        self.settings.add_sub_basin_brick(
+            'glacier_area_rain_snowmelt_storage', 'storage')
+        self.settings.add_brick_process(
+            'outflow', 'outflow:linear', 'outlet')
+        self.settings.add_sub_basin_brick(
+            'glacier_area_icemelt_storage', 'storage')
+        self.settings.add_brick_process(
+            'outflow', 'outflow:linear', 'outlet')
+
+        # Infiltration and overflow
+        self.settings.select_hydro_unit_brick('ground')
+        self.settings.add_brick_process(
+            'infiltration', 'infiltration:socont', 'slow_reservoir')
+        self.settings.add_brick_process(
+            'runoff', 'outflow:rest_direct', 'surface_runoff')
+
+        # Add other bricks
+        if self.soil_storage_nb == 1:
+            self.settings.add_hydro_unit_brick('slow_reservoir', 'storage')
+            self.settings.add_brick_parameter('capacity', 200)
+            self.settings.add_brick_process('et', 'et:socont')
+            self.settings.add_brick_process('outflow', 'outflow:linear', 'outlet')
+            self.settings.add_brick_process('overflow', 'overflow', 'outlet')
+        elif self.soil_storage_nb == 2:
+            print("Using 2 soil storages.")
+            self.settings.add_hydro_unit_brick('slow_reservoir', 'storage')
+            self.settings.add_brick_parameter('capacity', 200)
+            self.settings.add_brick_process('et', 'et:socont')
+            self.settings.add_brick_process('outflow', 'outflow:linear', 'outlet')
+            self.settings.add_brick_process('percolation', 'outflow:constant',
+                                            'slow_reservoir_2')
+            self.settings.add_brick_process('overflow', 'overflow', 'outlet')
+            self.settings.add_hydro_unit_brick('slow_reservoir_2', 'storage')
+            self.settings.add_brick_process('outflow', 'outflow:linear', 'outlet')
+        else:
+            raise RuntimeError("The number of soil storages must be 1 or 2.")
+
+        # Add surface runoff
+        self.settings.add_hydro_unit_brick('surface_runoff', 'storage')
+        if self.surface_runoff == 'socont_runoff':
+            self.settings.add_brick_process('runoff', 'runoff:socont', 'outlet')
+        elif self.surface_runoff == 'linear_storage':
+            print("Using a linear storage for the quick flow.")
+            self.settings.add_brick_process('outflow', 'outflow:linear', 'outlet')
+        else:
+            raise RuntimeError(f"The surface runoff option {self.surface_runoff} is "
+                  f"not recognised in Socont.")
+
+        self.settings.add_logging_to('outlet')
+
+        return True
 
     def generate_parameters(self):
         ps = ParameterSet()

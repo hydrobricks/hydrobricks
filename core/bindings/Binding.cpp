@@ -29,14 +29,26 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
-        .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
-             "land_cover_types"_a, "land_cover_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont_runoff")
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
+        .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
+        .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a,
+             "kind"_a)
+        .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
+             "kind"_a")
+        .def("add_sub_basin_brick", &SettingsModel::AddSubBasinBrick, "Add a sub basin brick.", "name"_a, "kind"_a)
+        .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrick, "Select a hydro unit brick.", "name"_a)
+        .def("add_brick_parameter", &SettingsModel::AddBrickParameter, "Add a brick parameter.", "name"_a, "value"_a,
+             "type"_a)
         .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter.", "component"_a,
-             "name"_a, "value"_a);
+             "name"_a, "value"_a)
+        .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
+             "Generate the precipitation splitters.", "with_snow"_a = true)
+        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "c"_a)
+        .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
+             "Set the process outputs as instantaneous.");
 
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
@@ -62,7 +74,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_name", &Parameter::SetName, "Set the parameter name.")
         .def("get_value", &Parameter::GetValue, "Get the parameter value.")
         .def("set_value", &Parameter::SetValue, "Set the parameter value.")
-        .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
+        .def("__repr__", [](const Parameter& a) {
+        return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
     py::class_<ParameterVariableYearly, Parameter>(m, "ParameterVariableYearly")
         .def(py::init<const string&>())

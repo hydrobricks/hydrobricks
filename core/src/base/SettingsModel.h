@@ -69,9 +69,6 @@ class SettingsModel : public wxObject {
 
     ~SettingsModel() override;
 
-    bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
-                                 const string& surfaceRunoff = "socont_runoff");
-
     void SetSolver(const string& solverName);
 
     void SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit);

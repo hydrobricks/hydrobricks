@@ -223,3 +223,7 @@ class ModelSettings:
             Name of the item
         """
         self.settings.add_logging_to(item)
+
+    def set_process_outputs_as_instantaneous(self):
+        """Set all process outputs as instantaneous"""
+        self.settings.set_process_outputs_as_instantaneous()

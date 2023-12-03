@@ -39,7 +39,6 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     for (int i = 0; i < landCoverNames.size(); ++i) {
         string type = landCoverTypes[i];
         string name = landCoverNames[i];
-        settings.SelectHydroUnitBrick(name);
 
         if (type == "glacier") {
             // Direct rain and snow melt to linear storage

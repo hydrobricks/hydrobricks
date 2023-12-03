@@ -16,6 +16,8 @@ class ModelSettings:
             Keyword arguments
         """
         self.settings = SettingsModel()
+        self.settings.log_all(record_all)
+        self.settings.set_solver(solver)
 
     def set_timer(self, start_date, end_date, time_step=1, time_step_unit='day'):
         """
@@ -27,7 +29,7 @@ class ModelSettings:
             Start date of the simulation
         end_date : str
             End date of the simulation
-        time_step : float
+        time_step : int
             Time step
         time_step_unit : str
             Time step unit
@@ -50,7 +52,7 @@ class ModelSettings:
         self.settings.set_parameter(component, name, value)
 
     def generate_base_structure(self, land_cover_names, land_cover_types,
-                                snow_melt_process='melt:degree_day'):
+                                with_snow=True, snow_melt_process='melt:degree_day'):
         """
         Generate basic elements
 
@@ -60,6 +62,8 @@ class ModelSettings:
             List of land cover names
         land_cover_types : list
             List of land cover types
+        with_snow : bool
+            Account for snow
         snow_melt_process : str
             Snow melt process
         """
@@ -68,17 +72,19 @@ class ModelSettings:
                                'and types do not match.')
 
         # Precipitation
-        self.settings.generate_precipitation_splitters(True)
+        self.settings.generate_precipitation_splitters(with_snow)
 
         # Add default ground land cover
         self.settings.add_land_cover_brick('ground', 'generic_land_cover')
 
         # Add other specific land covers
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            self.settings.add_land_cover_brick(cover_name, cover_type)
+            if cover_type != 'generic_land_cover':
+                self.settings.add_land_cover_brick(cover_name, cover_type)
 
         # Snowpack
-        self.settings.generate_snowpacks(snow_melt_process)
+        if with_snow:
+            self.settings.generate_snowpacks(snow_melt_process)
 
     def generate_snowpacks(self, snow_melt_process):
         """
@@ -216,4 +222,4 @@ class ModelSettings:
         item : str
             Name of the item
         """
-        self.settings.add_logging_to_item(item)
+        self.settings.add_logging_to(item)

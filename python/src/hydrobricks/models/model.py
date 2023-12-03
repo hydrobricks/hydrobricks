@@ -8,6 +8,8 @@ import _hydrobricks as _hb
 import hydrobricks as hb
 from _hydrobricks import ModelHydro
 
+from .model_settings import ModelSettings
+
 
 class Model(ABC):
     """Base class for the models"""
@@ -30,7 +32,7 @@ class Model(ABC):
         self._set_options(kwargs)
 
         # Setting base settings
-        self.settings = hb.ModelSettings(
+        self.settings = ModelSettings(
             solver=self.solver,
             record_all=self.record_all)
 

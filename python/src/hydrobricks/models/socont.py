@@ -34,7 +34,8 @@ class Socont(Model):
 
         # Generate basic elements
         self.settings.generate_base_structure(
-            self.land_cover_names, self.land_cover_types, self.snow_melt_process)
+            self.land_cover_names, self.land_cover_types,
+            snow_melt_process=self.snow_melt_process)
 
         # Add surface-related processes
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):

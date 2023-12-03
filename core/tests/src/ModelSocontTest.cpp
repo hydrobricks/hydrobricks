@@ -4,6 +4,7 @@
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
+#include "helpers.h"
 
 class ModelSocontBasic : public ::testing::Test {
   protected:
@@ -20,7 +21,7 @@ class ModelSocontBasic : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -496,7 +497,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetTimer("1981-01-01", "2020-12-31", 1, "day");
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
-    modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
+    GenerateStructureSocont(modelSettings, landCover, landCover, 2, "linear_storage");
     modelSettings.SetParameter("slow_reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));

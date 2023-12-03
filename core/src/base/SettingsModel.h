@@ -149,6 +149,8 @@ class SettingsModel : public wxObject {
 
     void SelectHydroUnitBrick(const string& name);
 
+    void SelectHydroUnitBrickByName(const string& name);
+
     void SelectSubBasinBrick(const string& name);
 
     void SelectProcess(int index);

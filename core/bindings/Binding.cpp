@@ -34,14 +34,18 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
-        .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a,
-             "kind"_a)
-        .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
-             "kind"_a")
+        .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
+        .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a, "kind"_a)
         .def("add_sub_basin_brick", &SettingsModel::AddSubBasinBrick, "Add a sub basin brick.", "name"_a, "kind"_a)
-        .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrick, "Select a hydro unit brick.", "name"_a)
+        .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrickByName, "Select a hydro unit brick.",
+             "name"_a)
+        .def("add_brick_process", &SettingsModel::AddBrickProcess, "Add a process to a brick.", "name"_a, "kind"_a,
+             "target"_a = "", "log"_a = false)
+        .def("add_process_parameter", &SettingsModel::AddProcessParameter, "Add a process parameter.", "name"_a,
+             "value"_a, "type"_a = "constant")
+        .def("add_process_forcing", &SettingsModel::AddProcessForcing, "Add a process forcing.", "name"_a)
         .def("add_brick_parameter", &SettingsModel::AddBrickParameter, "Add a brick parameter.", "name"_a, "value"_a,
-             "type"_a)
+             "type"_a = "constant")
         .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter.", "component"_a,
              "name"_a, "value"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
@@ -74,8 +78,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_name", &Parameter::SetName, "Set the parameter name.")
         .def("get_value", &Parameter::GetValue, "Get the parameter value.")
         .def("set_value", &Parameter::SetValue, "Set the parameter value.")
-        .def("__repr__", [](const Parameter& a) {
-        return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
+        .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
     py::class_<ParameterVariableYearly, Parameter>(m, "ParameterVariableYearly")
         .def(py::init<const string&>())

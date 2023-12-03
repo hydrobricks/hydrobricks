@@ -526,6 +526,12 @@ void SettingsModel::SelectHydroUnitBrick(const string& name) {
     }
 }
 
+void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
+    if (!SelectHydroUnitBrickIfFound(name)) {
+        throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
+    }
+}
+
 void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
         throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
@@ -699,55 +705,6 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
 bool SettingsModel::ParseStructure(const string& path) {
     wxLogError(_("This function is outdated and should not be used anymore."));
     return false;
-
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
-        return false;
-    }
-
-    try {
-        YAML::Node settings = YAML::LoadFile(path);
-
-        // Logger
-        m_logAll = LogAll(settings);
-
-        // Solver
-        SetSolver(ParseSolver(settings));
-
-        // Land covers
-        vecStr landCoverNames = ParseLandCoverNames(settings);
-        vecStr landCoverTypes = ParseLandCoverTypes(settings);
-        if (landCoverNames.size() != landCoverTypes.size()) {
-            wxLogError(_("The length of the land cover names and types do not match."));
-            return false;
-        }
-
-        if (settings["base"]) {
-            string base = settings["base"].as<std::string>();
-            if (base == "socont") {
-                int soilStorageNb = 1;
-                string surfaceRunoff = "socont_runoff";
-                if (YAML::Node options = settings["options"]) {
-                    if (YAML::Node parameter = options["soil_storage_nb"]) {
-                        soilStorageNb = parameter.as<int>();
-                    }
-                    if (YAML::Node parameter = options["surface_runoff"]) {
-                        surfaceRunoff = parameter.as<string>();
-                    }
-                }
-                return false;
-            } else {
-                wxLogError(_("Model base '%s' not recognized."));
-                return false;
-            }
-        } else {
-            throw NotImplemented();
-        }
-
-    } catch (YAML::ParserException& e) {
-        wxLogError(e.what());
-        return false;
-    }
 }
 
 bool SettingsModel::ParseParameters(const string& path) {

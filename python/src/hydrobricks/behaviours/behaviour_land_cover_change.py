@@ -10,9 +10,8 @@ from ..units import Unit, convert_unit
 from .behaviour import Behaviour
 
 if hb.has_shapely:
-    from shapely.geometry import mapping
+    from shapely.geometry import MultiPolygon, mapping
     from shapely.ops import unary_union
-    from shapely.geometry import MultiPolygon
 
 if hb.has_rasterio:
     from rasterio.mask import mask
@@ -279,7 +278,10 @@ class BehaviourLandCoverChange(Behaviour):
         # Clip the glaciers to the catchment extent
         all_glaciers = hb.gpd.read_file(glaciers_shapefile)
         all_glaciers.to_crs(catchment.crs, inplace=True)
-        glaciers = hb.gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
+        if catchment.outline[0].geom_type == 'MultiPolygon':
+            glaciers = hb.gpd.clip(all_glaciers, catchment.outline[0])
+        elif catchment.outline[0].geom_type == 'Polygon':
+            glaciers = hb.gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment

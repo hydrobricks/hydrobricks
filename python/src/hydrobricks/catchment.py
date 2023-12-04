@@ -3,9 +3,13 @@ import math
 import pathlib
 import warnings
 
+import math as ma
 import numpy as np
+import pandas as pd
+import xarray as xr
 
 import hydrobricks as hb
+from hydrobricks.constants import AIR_MOLAR_MASS, ES_SM_AXIS, ES_ECCENTRICITY, GRAVITY, R_GAS, SEA_ATM_PRESSURE, SEA_HEIGHT, SEA_SURFACE_TEMPERATURE, SOLAR_CST, TO_DEG, TO_RAD, T_LAPSE_RATE
 
 if hb.has_shapely:
     from shapely.geometry import mapping
@@ -398,6 +402,227 @@ class Catchment:
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+    
+    def calculate_Hock_equation(self, local_height, atm_tra, jd, zenith, incidence_angle):
+        """
+        Hock (2005)
+    
+        Parameters
+        ----------
+        local_height : float
+            Height above sea level [m]
+        atm_tra : float
+            Mean clear-sky atmospheric transmissivity
+        jd : float
+            Julian day
+        zenith : float
+            Solar zenith for one moment during the day (IQBAL 2012)
+        incidence_angle : float
+            Angle of incidence between the normal to the grid slope and the 
+            solar beam
+
+        Returns
+        -------
+        The potential clear-sky direct solar radiation at the ice or snow 
+        surface [W/m²]
+        """
+        
+        # True anomaly (the angle subtended at the Sun between the semi major 
+        # axis line and the current position)
+        # DIFFERENT definition here: https://physics.stackexchange.com/questions/177949/earth-sun-distance-on-a-given-day-of-the-year
+        theta = (365.5 / 360) * jd
+        # Current Sun-Earth distance (computed using the modern version of 
+        # Kepler's first law)
+        current_se_dist = (ES_SM_AXIS * (1 - ES_ECCENTRICITY * ES_ECCENTRICITY)) / \
+            (1 + ES_ECCENTRICITY * np.cos(theta * TO_RAD))
+        # Atmospheric pressure 
+        local_pressure = SEA_ATM_PRESSURE * \
+            (1 + (T_LAPSE_RATE / SEA_SURFACE_TEMPERATURE) * (local_height - SEA_HEIGHT))**\
+            ((-GRAVITY * AIR_MOLAR_MASS) / (R_GAS * T_LAPSE_RATE))
+        # Hock equation (Hock, 1999) to compute the potential clear-sky direct solar radiation
+        I = SOLAR_CST * ((ES_SM_AXIS / current_se_dist)**2) * atm_tra**\
+            (local_pressure / (SEA_ATM_PRESSURE * np.cos(zenith * TO_RAD))) * \
+            np.cos(incidence_angle)
+            
+        return I
+    
+    def calculate_angle_of_incidence(self, zenith, slope, azimuth, aspect):
+        """
+        Calculate the angle of incidence.
+    
+        Parameters
+        ----------
+        zenith : float
+            Solar zenith (IQBAL 2012), in degrees
+        slope : float
+            Slope of the DEM, ALREADY in degrees
+        azimuth : float
+            Azimuth for ZSLOPE CALC, in degrees
+        aspect : float
+            Aspect of the DEM, in degrees
+
+        Returns
+        -------
+        The angle of incidence.
+        """
+        
+        # Solar zenith and azimuth on a slope
+        zenith_rad = zenith * TO_RAD
+        slope_rad = slope * TO_RAD
+        azimuth_rad = azimuth * TO_RAD
+        aspect_rad = (aspect - 180) * TO_RAD
+        incidence_angle = np.arccos((np.cos(zenith_rad) * np.cos(slope_rad)) + \
+                                    (np.sin(zenith_rad) * np.sin(slope_rad) * \
+                                     np.cos(azimuth_rad - aspect_rad)))
+        # Angle of incidence matrix
+        incidence_angle[incidence_angle > 90 * TO_RAD] = 90 * TO_RAD
+        
+        return incidence_angle
+            
+    def calculate_daily_potential_radiation(self, start_date, end_date, 
+                                            output_filename, atm_tra=0.75):
+        """
+        Compute the daily mean potential clear-sky direct solar radiation 
+        at the ice or snow surface [W/m²] using Hock (1999)'s equation.
+    
+        Parameters
+        ----------
+        start_date : datetime
+            Start date of the time series (used to compute the period of interest).
+        end_date : datetime
+            End date of the time series (used to compute the period of interest).
+        output_filename : string
+            Path to the daily mean potential clear-sky direct solar radiation 
+            netcdf file created.
+        atm_tra : float, optional
+            Mean clear-sky atmospheric transmissivity, default is 0.75 
+            (value taken in Hock 1999)
+
+        Returns
+        -------
+        The daily mean potential clear-sky direct solar radiation 
+        at the ice or snow surface [W/m²]
+        """
+        # Julian days are a continuous count of days since the beginning of the Julian 
+        # calendar. In solar calculations, it's often used to represent the time of 
+        # the year.
+        start_datetime = pd.to_datetime(start_date)
+        end_datetime = pd.to_datetime(end_date)
+        times = pd.date_range(start_datetime, end_datetime, freq='D')
+        
+        # Convert the dates to Julian days and only compute the same day once and not 
+        # for all years (same result)
+        jd = times.strftime('%j').to_numpy().astype(int)
+        jd_unique = np.unique(jd)
+        
+        mean_height = self.get_mean_elevation()
+        
+        mean_lat, mean_lon = self._extract_unit_mean_lat_lon(self.masked_dem_data)
+        lat_rad = mean_lat * TO_RAD
+        lon_rad = mean_lon * TO_RAD
+        
+        # Normalized Julian day
+        # '(jd-172)' calculates the number of days that have passed since the winter 
+        # solstice (around December 22nd), which is day 172 in a non-leap year.
+        # '(360*(jd-172))/365' normalizes this count to a value between 0 and 360, 
+        # representing the position in the orbit of the Earth around the Sun.
+        njd = ((360 * (jd_unique - 172)) / 365)
+        
+        # The solar Declination (unit: degrees) is the angle between the rays of the 
+        # Sun and the plane of the Earth's equator. It represents how much the sun is 
+        # tilted towards or away from the observer's latitude.
+        # The cos(...) function is applied to the normalized day of the year. It 
+        # produces values between -1 and 1, representing the variation in solar 
+        # declination throughout the year. The constant factor 23.45 represents the 
+        # tilt of the Earth's axis relative to its orbital plane. This tilt causes the 
+        # variation in the angle of the sun's rays reaching different latitudes on Earth.
+        solar_declin = 23.45 * np.cos(njd * TO_RAD)
+        solar_declin = solar_declin * TO_RAD # convert to radians
+        # The hour angle is the angular distance between the sun and the observer's 
+        # meridian. It is typically measured in degrees. The tangent of solar_declin/lat_rad
+        # represents the ratio of the opposite side (vertical component of the sun's 
+        # rays) to the adjacent side (horizontal component). It helps capture how much 
+        # the sun/the observer's location is tilted north or south relative to the 
+        # equator. The negative sign is applied because the Hour Angle is negative in 
+        # the morning and positive in the afternoon. Then geometry.
+        hour_angle = np.arccos(-np.tan(solar_declin) * np.tan(lat_rad))
+        # A 15 min time interval represents the angular size of a 15-minute time 
+        # interval in radians. 15 degrees of longitude for every one hour of time, 
+        # divided by 4 to get the number of degrees in every 15 minutes of time.
+        time_interval = (15 / 4) * TO_RAD # 4 per hour / 15deg/4 (convert for radians)
+            
+        daily_pot_radiation = np.empty((len(jd_unique), self.slope.shape[0], self.slope.shape[1]))
+        daily_pot_radiation.fill(np.NaN)
+            
+        for i in range(len(jd_unique)):
+            print('Day', jd_unique[i])
+            # List of hour angles throughout the day.
+            # [::-1] reverses the array order
+            ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1] 
+            # The Solar zenith (IQBAL 2012) is the angle between the sun and the
+            # vertical (zenith) position directly above the observer. The result is 
+            # expressed in degrees. The calculation involves trigonometric functions 
+            # to account for the observer's latitude, the solar declination, and the 
+            # position of the sun in the sky (represented by the Hour Angles).
+            zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declin[i])) + \
+                               (np.cos(lat_rad) * np.cos(solar_declin[i]) * np.cos(ha_list))) * \
+                               TO_DEG
+            azimuth = np.arccos((np.sin((90 - zenith) * TO_RAD) * np.sin(lat_rad) - np.sin(solar_declin[i])) /
+                           (np.cos((90 - zenith) * TO_RAD) * np.cos(lat_rad))) * TO_DEG
+            # Solar noon (sun at the local meridian and highest in the sky)
+            sol_noon = np.argmin(azimuth)
+            # Azimuth with negative values before solar noon and positive 
+            # ones after solar noon
+            Az = np.concatenate((azimuth[: sol_noon + 1] * -1, azimuth[sol_noon + 1:]))
+
+            # Potential radiation over the time intervals defined with time_interval
+            inter_pot_radiation = np.empty((len(zenith), self.slope.shape[0], self.slope.shape[1]))
+            inter_pot_radiation.fill(np.NaN)
+            
+            for j in range(len(zenith)):
+                incidence_angle = self.calculate_angle_of_incidence(zenith[j], self.slope, Az[j], self.aspect)
+                potential_radiation = self.calculate_Hock_equation(mean_height, atm_tra, jd_unique[i], zenith[j], incidence_angle)
+                inter_pot_radiation[j, :, :] = potential_radiation.copy()
+                
+            daily_pot_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+        
+        # Get the indices of jd_unique that match the values of jd
+        indices = np.where(jd_unique[:, None] == jd)[1]
+        whole_daily_pot_radiation = daily_pot_radiation[indices, :, :]
+        
+        rows, cols = np.where(self.masked_dem_data)
+        xs, ys = hb.rasterio.transform.xy(self.dem.transform, list(rows), list(cols))
+        xs = np.array(xs).reshape(self.masked_dem_data.shape)[0, :]
+        ys = np.array(ys).reshape(self.masked_dem_data.shape)[:, 0]
+        
+        self.saving_potential_radiation_netcdf(whole_daily_pot_radiation, xs, ys, times, self.dem.crs, output_filename)
+        
+    def saving_potential_radiation_netcdf(self, radiation, xs, ys, times, CRS, output_filename):
+
+        print ('Saving to', output_filename, CRS)
+    
+        ds = xr.DataArray(radiation,
+                          name='radiation',
+                          dims=['time', 'y', 'x'],
+                          coords={
+                              "x": xs,
+                              "y": ys,
+                              "time": times})
+        print(ds)
+        ds.rio.write_crs(CRS, inplace=True)
+        
+        ds.x.attrs["axis"] = "X"
+        ds.x.attrs["long_name"] = "x coordinate of projection"
+        ds.x.attrs["standard_name"] = "projection_x_coordinate"
+        ds.x.attrs["units"] = "metre"
+        
+        ds.y.attrs["axis"] = "Y"
+        ds.y.attrs["long_name"] = "y coordinate of projection"
+        ds.y.attrs["standard_name"] = "projection_y_coordinate"
+        ds.y.attrs["units"] = "metre"
+        
+        ds.to_netcdf(output_filename)
+        ds.close()
 
     def save_hydro_units_to_csv(self, path):
         """

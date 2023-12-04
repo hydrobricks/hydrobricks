@@ -282,6 +282,8 @@ class BehaviourLandCoverChange(Behaviour):
             glaciers = hb.gpd.clip(all_glaciers, catchment.outline[0])
         elif catchment.outline[0].geom_type == 'Polygon':
             glaciers = hb.gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
+        else:
+            raise ValueError("The catchment outline must be a (multi)polygon.")
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment

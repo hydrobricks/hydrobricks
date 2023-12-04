@@ -79,7 +79,7 @@ class ModelSettings:
 
         # Add other specific land covers
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type != 'generic_land_cover':
+            if cover_type not in ['ground', 'generic_land_cover']:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
 
         # Snowpack

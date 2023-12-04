@@ -10,9 +10,8 @@ from ..units import Unit, convert_unit
 from .behaviour import Behaviour
 
 if hb.has_shapely:
-    from shapely.geometry import mapping
+    from shapely.geometry import MultiPolygon, mapping
     from shapely.ops import unary_union
-    from shapely.geometry import MultiPolygon
 
 if hb.has_rasterio:
     from rasterio.mask import mask

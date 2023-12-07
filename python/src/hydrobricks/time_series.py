@@ -1,4 +1,5 @@
 import concurrent.futures
+import importlib
 import os
 import time
 import warnings
@@ -66,6 +67,72 @@ class TimeSeries1D(TimeSeries):
         for col in content:
             self.data_name.append(col)
             self.data.append(file_content[content[col]].to_numpy())
+
+    @staticmethod
+    def _eval_metric(metric, simulations, observations):
+        """
+        Evaluate the simulation using the provided metric (goodness of fit).
+
+        Parameters
+        ----------
+        metric
+            The abbreviation of the function as defined in HydroErr
+            (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
+            Examples: nse, kge_2012, ...
+        simulations
+            The time series of the simulations with dates matching the observed
+            series.
+        observations
+            The time series of the observations with dates matching the simulated
+            series.
+
+        Returns
+        -------
+        The value of the selected metric.
+        """
+        eval_fct = getattr(importlib.import_module('HydroErr'), metric)
+        return eval_fct(simulations, observations)
+
+    def compute_reference_metric(self, metric):
+        """
+        Compute a reference for the provided metric (goodness of fit)
+        by block bootstrapping the observed series 100 times, evaluating
+        the bootstrapped series using the provided metric and computing
+        the mean of the results.
+
+        Parameters
+        ----------
+        metric
+            The abbreviation of the function as defined in HydroErr
+            (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
+            Examples: nse, kge_2012, ...
+
+        Returns
+        -------
+        The mean value of 100 realization of the selected metric.
+        """
+
+        df = self.time.to_frame().copy()
+        df['Data'] = self.data[0]
+        df['Year'] = pd.DatetimeIndex(df['Date']).year
+        df = df.set_index('Date')
+        df = df[df.index.strftime('%m-%d') != '02-29']
+        years = df.Year.unique()
+
+        df = df.set_index('Year')
+
+        metrics = np.empty(100)
+        for i in range(100):
+            sampled_years = np.random.choice(years, size=years.size, replace=True)
+            new_df = df.loc[sampled_years].copy()
+            value = self._eval_metric(metric, new_df.Data.values, df.Data.values)
+            print('value', value)
+
+            metrics[i] = value
+
+        ref_metric = np.mean(metrics)
+        print('ref_metric', ref_metric)
+        return ref_metric
 
 
 class TimeSeries2D(TimeSeries):

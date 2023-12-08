@@ -116,6 +116,7 @@ class TimeSeries1D(TimeSeries):
         df['Data'] = self.data[0]
         df['Year'] = pd.DatetimeIndex(df['Date']).year
         df = df.set_index('Date')
+        # Get rid of the 29 February to always have years of 365 days
         df = df[df.index.strftime('%m-%d') != '02-29']
         years = df.Year.unique()
 
@@ -126,12 +127,9 @@ class TimeSeries1D(TimeSeries):
             sampled_years = np.random.choice(years, size=years.size, replace=True)
             new_df = df.loc[sampled_years].copy()
             value = self._eval_metric(metric, new_df.Data.values, df.Data.values)
-            print('value', value)
-
             metrics[i] = value
 
         ref_metric = np.mean(metrics)
-        print('ref_metric', ref_metric)
         return ref_metric
 
 

@@ -87,6 +87,7 @@ class Catchment:
         self.masked_dem_data = None
         self.slope = None
         self.aspect = None
+        self.mean_annual_radiation = None
         self.map_unit_ids = None
         self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
                                          hydro_units_data)
@@ -165,6 +166,7 @@ class Catchment:
             The criteria to use to discretize the catchment (can be combined):
             'elevation' = elevation bands
             'aspect' = aspect according to the cardinal directions (4 classes)
+            'radiation' = radiation according to the potential radiation (4 quantiles, Hock, 1999)
         elevation_method : str
             The method to build the elevation bands:
             'isohypse' = fixed contour intervals (provide the 'distance' parameter)
@@ -187,6 +189,8 @@ class Catchment:
 
         if self.slope is None or self.aspect is None:
             self.calculate_slope_aspect()
+        if 'radiation' in criteria and self.mean_annual_radiation is None:
+            print("Error: Please first compute the radiation.")
 
         self.map_unit_ids = np.zeros(self.masked_dem_data.shape)
 
@@ -217,10 +221,21 @@ class Catchment:
         if 'aspect' in criteria:
             criteria_dict['aspect'] = [1, 2, 3, 4] # North, East, South, West
 
+        if 'radiation' in criteria:
+            criteria_dict['radiation'] = []
+            radiations = np.nanquantile(
+                self.mean_annual_radiation, np.linspace(0, 1, num=5))
+            for i in range(len(radiations) - 1):
+                criteria_dict['radiation'].append(radiations[i:i + 2])
+        print("criteria_dict", criteria_dict)
+
         res_elevation = []
         res_elevation_min = []
         res_elevation_max = []
         res_aspect_class = []
+        res_radiation = []
+        res_radiation_min = []
+        res_radiation_max = []
 
         combinations = list(itertools.product(*criteria_dict.values()))
         combinations_keys = criteria_dict.keys()
@@ -254,6 +269,11 @@ class Catchment:
                     else:
                         raise ValueError("Unknown aspect value.")
                     mask_unit = np.logical_and(mask_unit, mask_aspect)
+                elif criterion_name == 'radiation':
+                    mask_radi = np.logical_and(
+                        self.mean_annual_radiation >= criterion[0],
+                        self.mean_annual_radiation < criterion[1])
+                    mask_unit = np.logical_and(mask_unit, mask_radi)
 
             # If the unit is empty, skip it
             if np.count_nonzero(mask_unit) == 0:
@@ -278,6 +298,14 @@ class Catchment:
                 i = list(combinations_keys).index('aspect')
                 res_aspect_class.append(criteria[i])
 
+            # Get the radiation class if radiation is a criterion
+            if 'radiation' in criteria_dict.keys():
+                i = list(combinations_keys).index('radiation')
+                radiations = criteria[i]
+                res_radiation.append(round(float(np.mean(radiations)), 2))
+                res_radiation_min.append(round(float(radiations[0]), 2))
+                res_radiation_max.append(round(float(radiations[1]), 2))
+
             unit_id += 1
 
         self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
@@ -289,6 +317,11 @@ class Catchment:
 
         if res_aspect_class:
             self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
+
+        if res_radiation:
+            self.hydro_units.add_property(('radiation', 'm'), res_elevation)
+            self.hydro_units.add_property(('radiation_min', 'm'), res_elevation_min)
+            self.hydro_units.add_property(('radiation_max', 'm'), res_elevation_max)
 
         self._initialize_land_cover_fractions()
         self.get_hydro_units_attributes()
@@ -526,6 +559,9 @@ class Catchment:
         The daily mean potential clear-sky direct solar radiation
         at the ice or snow surface [W/m²]
         """
+        if self.slope is None or self.aspect is None:
+            self.calculate_slope_aspect()
+
         # Julian days are a continuous count of days since the beginning of the Julian
         # calendar. In solar calculations, it's often used to represent the time of
         # the year.
@@ -577,9 +613,13 @@ class Catchment:
         # divided by 4 to get the number of degrees in every 15 minutes of time.
         time_interval = (15 / 4) * TO_RAD  # 4 per hour / 15deg/4 (convert for radians)
 
-        daily_pot_radiation = np.empty(
+        daily_radiation = np.empty(
             (len(jd_unique), self.slope.shape[0], self.slope.shape[1]))
-        daily_pot_radiation.fill(np.NaN)
+        daily_radiation.fill(np.NaN)
+
+        self.mean_annual_radiation = np.empty(
+            (self.slope.shape[0], self.slope.shape[1]))
+        self.mean_annual_radiation.fill(np.NaN)
 
         for i in range(len(jd_unique)):
             print('Day', jd_unique[i])
@@ -619,11 +659,12 @@ class Catchment:
                     mean_height, atm_tra, jd_unique[i], zenith[j], incidence_angle)
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
 
-            daily_pot_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+            daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+        self.mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
 
         # Get the indices of jd_unique that match the values of jd
         indices = np.where(jd_unique[:, None] == jd)[1]
-        whole_daily_pot_radiation = daily_pot_radiation[indices, :, :]
+        whole_daily_pot_radiation = daily_radiation[indices, :, :]
 
         rows, cols = np.where(self.masked_dem_data)
         xs, ys = hb.rasterio.transform.xy(self.dem.transform, list(rows), list(cols))

@@ -280,8 +280,8 @@ class HydroUnits:
             self.settings.add_hydro_unit(int(row['id'].values),
                                          float(row['area'].values))
             for prop in properties:
-                if isinstance(row[prop].values, str):
-                    self.settings.add_hydro_unit_property_str(prop, row[prop].values)
+                if isinstance(row[prop].values[0], str):
+                    self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(

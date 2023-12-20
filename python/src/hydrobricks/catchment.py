@@ -740,7 +740,7 @@ class Catchment:
 
         with hb.rasterio.open(path) as src:
             self._check_crs(src)
-            geoms = [mapping(self.outline)]
+            geoms = [mapping(polygon) for polygon in self.outline]
             self.map_unit_ids, _ = mask(src, geoms, crop=False)
             self.map_unit_ids[self.map_unit_ids == src.nodata] = 0
 

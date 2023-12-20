@@ -220,7 +220,7 @@ class Catchment:
                 raise ValueError("Unknown elevation band creation method.")
 
         if 'aspect' in criteria:
-            criteria_dict['aspect'] = [1, 2, 3, 4] # North, East, South, West
+            criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
         res_elevation = []
         res_elevation_min = []
@@ -243,17 +243,17 @@ class Catchment:
                         self.masked_dem_data < criterion[1])
                     mask_unit = np.logical_and(mask_unit, mask_elev)
                 elif criterion_name == 'aspect':
-                    if criterion == 1: # North
+                    if criterion == 'N':
                         mask_aspect = np.logical_or(
                             np.logical_and(self.aspect >= 315, self.aspect <= 360),
                             np.logical_and(self.aspect >= 0, self.aspect < 45))
-                    elif criterion == 2: # East
+                    elif criterion == 'E':
                         mask_aspect = np.logical_and(self.aspect >= 45,
                                                      self.aspect < 135)
-                    elif criterion == 3: # South
+                    elif criterion == 'S':
                         mask_aspect = np.logical_and(self.aspect >= 135,
                                                      self.aspect < 225)
-                    elif criterion == 4: # West
+                    elif criterion == 'W':
                         mask_aspect = np.logical_and(self.aspect >= 225,
                                                      self.aspect < 315)
                     else:

@@ -23,7 +23,6 @@ class ProcessMeltRadiation : public ProcessMelt {
   protected:
     Forcing* m_temperature;
     Forcing* m_potentialClearSkyDirectSolarRadiation;
-    float* m_meltFactor;
     float* m_meltingTemperature;
     float* m_radiationCoefficient;
 

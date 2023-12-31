@@ -48,12 +48,13 @@ class Socont(Model):
                 component='snowpack', name='degree_day_factor', unit='mm/d/°C',
                 aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
         elif self.snow_melt_process == 'melt:radiation':
+            # This melt factor parameter is initialized on the snow but applied to both snow and ice (debris-covered or clean).
             ps.define_parameter(
                 component='snowpack', name='melt_factor', unit='mm/d/°C',
-                aliases=['mf_snow'], min_value=0, max_value=12, mandatory=True) # Anne-Laure : not sure about the min and max values.
+                aliases=['mf'], min_value=0, max_value=12, mandatory=True)
             ps.define_parameter(
-                component='snowpack', name='radiation_coefficient', unit='xxx', # Anne-Laure : check the unit.
-                aliases=['r_snow'], min_value=0, max_value=10, mandatory=True) # Anne-Laure : not sure about the min and max values.
+                component='snowpack', name='radiation_coefficient', unit='m2/W*mm/d/°C',
+                aliases=['r_snow'], min_value=0, max_value=0.01, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',
@@ -68,7 +69,6 @@ class Socont(Model):
                 if self.snow_melt_process == 'melt:degree_day':
                     a_aliases = ['a_ice']
                 elif self.snow_melt_process == 'melt:radiation':
-                    mf_aliases = ['mf_ice']
                     r_aliases = ['r_ice']
                 t_aliases = ['melt_t_ice']
                 if self.land_cover_types.count('glacier') > 1:
@@ -77,8 +77,6 @@ class Socont(Model):
                         a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
                                      f'a_ice_{i_glacier}']
                     elif self.snow_melt_process == 'melt:radiation':
-                        mf_aliases = [f'mf_ice_{cover_name.replace("-", "_")}',
-                                     f'mf_ice_{i_glacier}']
                         r_aliases = [f'r_ice_{cover_name.replace("-", "_")}',
                                      f'r_ice_{i_glacier}']
                     t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
@@ -87,7 +85,9 @@ class Socont(Model):
                 if self.snow_melt_process == 'melt:degree_day':
                     ps.define_constraint('a_snow', '<', a_aliases[0])
                 ps.define_constraint('k_snow', '<', 'k_ice')
-                # Anne-Laure : do I need to add a constraint?
+
+                if self.snow_melt_process == 'melt:radiation':
+                    ps.define_constraint('r_snow', '<', r_aliases[0])
 
                 if self.snow_melt_process == 'melt:degree_day':
                     ps.define_parameter(
@@ -96,13 +96,9 @@ class Socont(Model):
                         mandatory=True)
                 elif self.snow_melt_process == 'melt:radiation':
                     ps.define_parameter(
-                        component=cover_name, name='melt_factor',
-                        unit='mm/d/°C', aliases=mf_aliases, min_value=0, max_value=12,
-                        mandatory=True) # Anne-Laure : not sure about the min and max values.
-                    ps.define_parameter(
                         component=cover_name, name='radiation_coefficient',
-                        unit='xxx', aliases=r_aliases, min_value=0, max_value=10, # Anne-Laure : check the unit.
-                        mandatory=True) # Anne-Laure : not sure about the min and max values.
+                        unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=0.01,
+                        mandatory=True)
 
                 ps.define_parameter(
                     component=cover_name, name='melting_temperature',

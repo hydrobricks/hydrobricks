@@ -232,7 +232,6 @@ class Catchment:
                 self.mean_annual_radiation, np.linspace(0, 1, num=5))
             for i in range(len(radiations) - 1):
                 criteria_dict['radiation'].append(radiations[i:i + 2])
-        print("criteria_dict", criteria_dict)
 
         res_elevation = []
         res_elevation_min = []
@@ -714,7 +713,6 @@ class Catchment:
                                  "x": xs,
                                  "y": ys,
                                  "time": times})
-        print(ds)
         ds.rio.write_crs(crs, inplace=True)
 
         ds.x.attrs["axis"] = "X"

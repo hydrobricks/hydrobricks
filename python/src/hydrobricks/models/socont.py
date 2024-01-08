@@ -54,7 +54,7 @@ class Socont(Model):
                 aliases=['mf'], min_value=0, max_value=12, mandatory=True)
             ps.define_parameter(
                 component='snowpack', name='radiation_coefficient', unit='m2/W*mm/d/°C',
-                aliases=['r_snow'], min_value=0, max_value=0.01, mandatory=True)
+                aliases=['r_snow'], min_value=0, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',
@@ -97,7 +97,7 @@ class Socont(Model):
                 elif self.snow_melt_process == 'melt:radiation':
                     ps.define_parameter(
                         component=cover_name, name='radiation_coefficient',
-                        unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=0.01,
+                        unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=1,
                         mandatory=True)
 
                 ps.define_parameter(

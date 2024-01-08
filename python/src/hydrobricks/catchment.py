@@ -587,6 +587,8 @@ class Catchment:
         # the year.
         start_datetime = pd.to_datetime(start_date)
         end_datetime = pd.to_datetime(end_date)
+        if start_datetime > end_datetime:
+            raise RuntimeError('The given end date comes earlier in time than the given start date.') from None
         times = pd.date_range(start_datetime, end_datetime, freq='D')
 
         # Convert the dates to Julian days and only compute the same day once and not

@@ -521,7 +521,8 @@ class Catchment:
         return solar_radiation
 
     @staticmethod
-    def _calculate_angle_of_incidence(zenith, slope, azimuth, aspect):
+    def _calculate_angle_of_incidence(zenith, slope, azimuth, aspect,
+                                      tolerance = 10**(-6)):
         """
         Calculate the angle of incidence.
 
@@ -535,6 +536,8 @@ class Catchment:
             Azimuth for ZSLOPE CALC, in degrees
         aspect : float
             Aspect of the DEM, in degrees
+        tolerance : float
+            Error tolerance in the trigonometric computations.
 
         Returns
         -------
@@ -546,9 +549,14 @@ class Catchment:
         slope_rad = slope * TO_RAD
         azimuth_rad = azimuth * TO_RAD
         aspect_rad = (aspect - 180) * TO_RAD
-        incidence_angle = np.arccos((np.cos(zenith_rad) * np.cos(slope_rad)) +
-                                    (np.sin(zenith_rad) * np.sin(slope_rad) *
-                                     np.cos(azimuth_rad - aspect_rad)))
+
+        cosine_term = (np.cos(zenith_rad) * np.cos(slope_rad)) + \
+                      (np.sin(zenith_rad) * np.sin(slope_rad) * \
+                      np.cos(azimuth_rad - aspect_rad))
+        if np.nanmax(np.abs(cosine_term) - 1) < tolerance:
+            incidence_angle = np.arccos(np.clip(cosine_term, -1, 1))
+        else:
+            raise ValueError("Argument of arccos is above or below 1.")
 
         # Angle of incidence matrix
         incidence_angle[incidence_angle > 90 * TO_RAD] = 90 * TO_RAD

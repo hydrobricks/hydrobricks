@@ -740,7 +740,11 @@ class Catchment:
                     mean_height, atm_tra, jd_unique[i], zenith[j], incidence_angle)
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
 
-            daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+            with warnings.catch_warnings():
+                # This function throws a warning for the first slides of nanmean,
+                # it is normal and due to the NaN bands at the sides of the slope rasters, etc.
+                warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+                daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(mean_annual_radiation, output_path)
 

@@ -195,7 +195,7 @@ class Catchment:
         if self.slope is None or self.aspect is None:
             self.calculate_slope_aspect()
         if 'radiation' in criteria and self.mean_annual_radiation is None:
-            print("Error: Please first compute the radiation.")
+            raise RuntimeError("Please first compute the radiation.")
 
         self.map_unit_ids = np.zeros(self.masked_dem_data.shape)
 

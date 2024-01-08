@@ -6,6 +6,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
 import hydrobricks as hb
 from hydrobricks.constants import (
     AIR_MOLAR_MASS,
@@ -702,11 +705,24 @@ class Catchment:
             (self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
         mean_annual_radiation.fill(np.NaN)
 
+        ###### DEBUG #######
+        debug = True
+        if debug:
+            fig, (ax1, ax3) = plt.subplots(2, figsize=(20,3))
+            cmap = plt.get_cmap('viridis')
+            normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
+
+            zeniths = []
+            azimuths = []
+            ha_lists = []
+        ###### END DEBUG #######
+
         for i in range(len(jd_unique)):
             print('Day', jd_unique[i])
             # List of hour angles throughout the day.
             # [::-1] reverses the array order
-            ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1]
+            #ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1]
+            ha_list = np.linspace(-hour_angle[i], hour_angle[i], num=100)#[::-1]
 
             # The Solar zenith (IQBAL 2012) is the angle between the sun and the
             # vertical (zenith) position directly above the observer. The result is
@@ -716,22 +732,37 @@ class Catchment:
             zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declin[i])) +
                                (np.cos(lat_rad) * np.cos(solar_declin[i]) *
                                 np.cos(ha_list))) * TO_DEG
-            azimuth = np.arccos((np.sin((90 - zenith) * TO_RAD) *
-                                 np.sin(lat_rad) - np.sin(solar_declin[i])) /
-                                (np.cos((90 - zenith) * TO_RAD) *
-                                 np.cos(lat_rad))) * TO_DEG
-
-            # Solar noon (sun at the local meridian and highest in the sky)
-            sol_noon = np.argmin(azimuth)
+            #cosine_arg = (np.cos(zenith * TO_RAD) * np.sin(lat_rad) - np.sin(solar_declin[i])) / \
+            #             (np.sin(zenith * TO_RAD) * np.cos(lat_rad))
+            #azimuth = np.arccos((cosine_arg)) * TO_DEG
 
             # Azimuth with negative values before solar noon and positive
-            # ones after solar noon
-            Az = np.concatenate((azimuth[: sol_noon + 1] * -1, azimuth[sol_noon + 1:]))
+            # ones after solar noon. Solar noon is defined by the change in sign of
+            # the hour angle (negative in the morning, positive in the afternoon).
+            #sol_noon = np.argmin(azimuth)
+            #Az = np.concatenate((180 - azimuth[: sol_noon + 1], 180 + azimuth[sol_noon + 1:]))
+            #Az = np.concatenate((180 - azimuth[ha_list < 0], 180 + azimuth[ha_list >= 0]))
+            #Az = azimuth.copy()
+            #Az[ha_list < 0] = Az[ha_list < 0] * -1
+
+            # https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur/#:~:text=aux%20%C3%A9quinoxes%20de%20printemps%20et,d%C3%A9cale%20vers%20le%20nord%2Dest.
+            Az = np.degrees(np.arctan(np.sin(ha_list)/(np.sin(lat_rad)*np.cos(ha_list)-np.cos(lat_rad)*np.tan(solar_declin[i]))))
+            Az[(Az < 0) & (ha_list > 0)] = Az[(Az < 0) & (ha_list > 0)] + 180
+            Az[(Az > 0) & (ha_list < 0)] = Az[(Az > 0) & (ha_list < 0)] - 180
 
             # Potential radiation over the time intervals defined with time_interval
             inter_pot_radiation = np.empty(
                 (len(zenith), self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
             inter_pot_radiation.fill(np.NaN)
+            ###### DEBUG #######
+            if debug:
+                ax1.plot(ha_list, zenith, markersize=2, color=cmap(normalize(i)))
+                #ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
+                ax3.plot(ha_list, Az, markersize=2, color=cmap(normalize(i)))
+                ax1.set_ylabel('Zenith angle')
+                #ax2.set_ylabel('Azimuth')
+                ax3.set_ylabel('Azimuth angle')
+            ###### END DEBUG #######
 
             for j in range(len(zenith)):
                 incidence_angle = self._calculate_angle_of_incidence(
@@ -745,6 +776,54 @@ class Catchment:
                 # it is normal and due to the NaN bands at the sides of the slope rasters, etc.
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
                 daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+            ###### DEBUG #######
+            if debug:
+                zeniths.append(np.nanmean(zenith))
+                #azimuths.append(np.nanmean(azimuth))
+                ha_lists.append(np.nanmean(ha_list) * 100)
+            ###### END DEBUG #######
+
+        ###### DEBUG #######
+        if debug:
+            plt.xlabel('Hour angle')
+            scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
+            scalarmappaple.set_array(len(jd_unique))
+            fig.subplots_adjust(right=0.8)
+            cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+            cbar = plt.colorbar(scalarmappaple, cax=cbar_ax)
+            cbar_ax = cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
+            plt.show()
+
+            fig = plt.figure(figsize=(20,3))
+            ax = fig.add_subplot(111)
+
+            with warnings.catch_warnings():
+                # This function throws a warning for the first slides of nanmean,
+                # it is normal and due to the NaN bands at the sides of the slope rasters, etc.
+                warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+                mins = np.nanmin(daily_radiation, axis=1)
+                mins = np.nanmin(mins, axis=1)
+                maxs = np.nanmax(daily_radiation, axis=1)
+                maxs = np.nanmax(maxs, axis=1)
+                means = np.nanmean(daily_radiation, axis=1)
+                means = np.nanmean(means, axis=1)
+            plt.plot(jd_unique, mins, markersize=2, label='Min')
+            plt.plot(jd_unique, maxs, markersize=2, label='Max')
+            plt.plot(jd_unique, means, markersize=2, label='Mean')
+
+            plt.plot(jd_unique, hour_angle, markersize=2, label='hour_angle')
+            plt.plot(jd_unique, ha_lists, markersize=2, label='ha_list')
+            plt.plot(jd_unique, zeniths, markersize=2, label='zenith')
+            #plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
+            plt.plot(jd_unique, solar_declin, markersize=2, label='solar_declin')
+            plt.plot(jd_unique, np.sin(solar_declin), markersize=2, label='np sin solar_declin')
+
+            plt.xlabel('Time (day)')
+            plt.ylabel('Radiation')
+            plt.legend()
+            plt.show()
+        ###### END DEBUG #######
+
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(mean_annual_radiation, output_path)
 

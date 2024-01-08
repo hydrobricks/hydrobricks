@@ -161,7 +161,9 @@ class Catchment:
                            min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
-                      elevation_distance=50, min_elevation=None, max_elevation=None):
+                      elevation_distance=50, min_elevation=None, max_elevation=None, 
+                      radiation_method='isohypse', radiation_number=5,
+                      radiation_distance=100, min_radiation=None, max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -228,10 +230,24 @@ class Catchment:
 
         if 'radiation' in criteria:
             criteria_dict['radiation'] = []
-            radiations = np.nanquantile(
-                self.mean_annual_radiation, np.linspace(0, 1, num=5))
-            for i in range(len(radiations) - 1):
-                criteria_dict['radiation'].append(radiations[i:i + 2])
+            if radiation_method == 'isohypse':
+                dist = radiation_distance
+                if min_radiation is None:
+                    min_radiation = np.nanmin(self.mean_annual_radiation)
+                    min_radiation = min_radiation - (min_radiation % dist)
+                if max_radiation is None:
+                    max_radiation = np.nanmax(self.mean_annual_radiation)
+                    max_radiation = max_radiation + (dist - max_radiation % dist)
+                radiations = np.arange(min_radiation, max_radiation + dist, dist)
+                for i in range(len(radiations) - 1):
+                    criteria_dict['radiation'].append(radiations[i:i + 2])
+            elif radiation_method == 'quantiles':
+                radiations = np.nanquantile(
+                    self.mean_annual_radiation, np.linspace(0, 1, num=radiation_number))
+                for i in range(len(radiations) - 1):
+                    criteria_dict['radiation'].append(radiations[i:i + 2])
+            else:
+                raise ValueError("Unknown radiation band creation method.")
 
         res_elevation = []
         res_elevation_min = []

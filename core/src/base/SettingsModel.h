@@ -70,7 +70,8 @@ class SettingsModel : public wxObject {
     ~SettingsModel() override;
 
     bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
-                                 const string& surfaceRunoff = "socont_runoff");
+                                 const string& surfaceRunoff = "socont_runoff",
+								 const string& snowMeltProcess = "melt:degree_day");
 
     void SetSolver(const string& solverName);
 

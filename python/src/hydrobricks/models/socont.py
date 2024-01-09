@@ -12,15 +12,18 @@ class Socont(Model):
         # Default options
         self.soil_storage_nb = 1
         self.surface_runoff = 'socont_runoff'
+        self.snow_melt_process = 'melt:degree_day'
 
-        self._add_allowed_kwargs(['soil_storage_nb', 'surface_runoff'])
+        self._add_allowed_kwargs(['soil_storage_nb', 'surface_runoff',
+                                  'snow_melt_process'])
         self._validate_kwargs(kwargs)
         self._set_options(kwargs)
 
         try:
             if not self.settings.generate_socont_structure(
                     self.land_cover_types, self.land_cover_names,
-                    self.soil_storage_nb, self.surface_runoff):
+                    self.soil_storage_nb, self.surface_runoff,
+                    self.snow_melt_process):
                 raise RuntimeError('Socont model initialization failed.')
 
         except RuntimeError as err:
@@ -40,9 +43,18 @@ class Socont(Model):
             aliases=['prec_t_end'], min_value=0, max_value=4, default_value=2,
             mandatory=False)
 
-        ps.define_parameter(
-            component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-            aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
+        if self.snow_melt_process == 'melt:degree_day':
+            ps.define_parameter(
+                component='snowpack', name='degree_day_factor', unit='mm/d/°C',
+                aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
+        elif self.snow_melt_process == 'melt:radiation':
+            # This melt factor parameter is initialized on the snow but applied to both snow and ice (debris-covered or clean).
+            ps.define_parameter(
+                component='snowpack', name='melt_factor', unit='mm/d/°C',
+                aliases=['mf'], min_value=0, max_value=12, mandatory=True)
+            ps.define_parameter(
+                component='snowpack', name='radiation_coefficient', unit='m2/W*mm/d/°C',
+                aliases=['r_snow'], min_value=0, max_value=1, mandatory=True)
 
         ps.define_parameter(
             component='snowpack', name='melting_temperature', unit='°C',
@@ -54,22 +66,39 @@ class Socont(Model):
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             if cover_type == 'glacier':
                 has_glacier = True
-                a_aliases = ['a_ice']
+                if self.snow_melt_process == 'melt:degree_day':
+                    a_aliases = ['a_ice']
+                elif self.snow_melt_process == 'melt:radiation':
+                    r_aliases = ['r_ice']
                 t_aliases = ['melt_t_ice']
                 if self.land_cover_types.count('glacier') > 1:
                     i_glacier += 1
-                    a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
-                                 f'a_ice_{i_glacier}']
+                    if self.snow_melt_process == 'melt:degree_day':
+                        a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
+                                     f'a_ice_{i_glacier}']
+                    elif self.snow_melt_process == 'melt:radiation':
+                        r_aliases = [f'r_ice_{cover_name.replace("-", "_")}',
+                                     f'r_ice_{i_glacier}']
                     t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
                                  f'melt_t_ice_{i_glacier}']
 
-                ps.define_constraint('a_snow', '<', a_aliases[0])
+                if self.snow_melt_process == 'melt:degree_day':
+                    ps.define_constraint('a_snow', '<', a_aliases[0])
                 ps.define_constraint('k_snow', '<', 'k_ice')
 
-                ps.define_parameter(
-                    component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20,
-                    mandatory=True)
+                if self.snow_melt_process == 'melt:radiation':
+                    ps.define_constraint('r_snow', '<', r_aliases[0])
+
+                if self.snow_melt_process == 'melt:degree_day':
+                    ps.define_parameter(
+                        component=cover_name, name='degree_day_factor',
+                        unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20,
+                        mandatory=True)
+                elif self.snow_melt_process == 'melt:radiation':
+                    ps.define_parameter(
+                        component=cover_name, name='radiation_coefficient',
+                        unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=1,
+                        mandatory=True)
 
                 ps.define_parameter(
                     component=cover_name, name='melting_temperature',
@@ -133,9 +162,12 @@ class Socont(Model):
                 raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
         if 'surface_runoff' in kwargs:
             self.surface_runoff = kwargs['surface_runoff']
+        if 'snow_melt_process' in kwargs:
+            self.snow_melt_process = kwargs['snow_melt_process']
 
     def _get_specific_options(self):
         return {
             'soil_storage_nb': self.soil_storage_nb,
-            'surface_runoff': self.surface_runoff
+            'surface_runoff': self.surface_runoff,
+            'snow_melt_process': self.snow_melt_process
         }

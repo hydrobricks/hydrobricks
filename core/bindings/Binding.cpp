@@ -30,7 +30,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
         .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
-             "land_cover_types"_a, "land_cover_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont_runoff")
+             "land_cover_types"_a, "land_cover_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont_runoff",
+			 "snow_melt_process"_a = "melt:degree_day")
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,

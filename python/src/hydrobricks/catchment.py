@@ -882,7 +882,7 @@ class Catchment:
         mean_y = np.nanmean(ys)
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326)
+        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon

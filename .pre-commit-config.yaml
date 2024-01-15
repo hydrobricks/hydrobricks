@@ -5,7 +5,7 @@ ci:
 repos:
 # Standard hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
   - id: check-added-large-files
     args: ['--maxkb=700']
@@ -30,7 +30,7 @@ repos:
 
 # Sort imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 5.12.0
+  rev: 5.13.2
   hooks:
   - id: isort
     exclude: |
@@ -41,7 +41,7 @@ repos:
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.14.0
+  rev: v3.15.0
   hooks:
   - id: pyupgrade
     args: ["--py38-plus"]
@@ -64,7 +64,7 @@ repos:
 
 # Flake 8
 - repo: https://github.com/PyCQA/flake8
-  rev: 6.1.0
+  rev: 7.0.0
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
@@ -89,7 +89,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v16.0.6
+  rev: v17.0.6
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

@@ -227,3 +227,7 @@ class ModelSettings:
     def set_process_outputs_as_instantaneous(self):
         """Set all process outputs as instantaneous"""
         self.settings.set_process_outputs_as_instantaneous()
+
+    def set_process_outputs_as_static(self):
+        """Set all process outputs as static"""
+        self.settings.set_process_outputs_as_static()

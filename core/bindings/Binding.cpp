@@ -54,7 +54,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Generate the precipitation splitters.", "with_snow"_a = true)
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
-             "Set the process outputs as instantaneous.");
+             "Set the process outputs as instantaneous.")
+        .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
+             "Set the process outputs as static.");
 
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())

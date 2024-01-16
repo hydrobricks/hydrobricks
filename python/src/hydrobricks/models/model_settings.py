@@ -152,7 +152,7 @@ class ModelSettings:
         """
         self.settings.select_hydro_unit_brick(name)
 
-    def add_brick_process(self, name, kind, target='', log=False):
+    def add_brick_process(self, name, kind, target='', log=False, instantaneous=False):
         """
         Add a brick process
 
@@ -166,12 +166,18 @@ class ModelSettings:
             Target of the process output
         log : bool
             Log the brick process
+        instantaneous : bool
+            Process outputs are instantaneous
         """
         self.settings.add_brick_process(name, kind, target, log)
 
         # Define output as static
         if kind in ['outflow:direct', 'outflow:rest_direct']:
             self.settings.set_process_outputs_as_static()
+
+        # Define output as instantaneous
+        if instantaneous:
+            self.settings.set_process_outputs_as_instantaneous()
 
         # Set forcing and parameters
         if kind.startswith('et:'):

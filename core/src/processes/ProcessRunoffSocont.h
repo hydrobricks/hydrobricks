@@ -28,6 +28,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     float* m_beta;           // []
     double* m_areaFraction;  // []
     double m_areaUnit;       // [m^2]
+    double m_exponent;
 
     vecDouble GetRates() override;
 

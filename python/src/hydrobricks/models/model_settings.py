@@ -34,7 +34,7 @@ class ModelSettings:
         time_step_unit : str
             Time step unit
         """
-        self.settings.set_timer(start_date, end_date, time_step, time_step_unit)
+        self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
     def set_parameter(self, component, name, value):
         """
@@ -48,8 +48,13 @@ class ModelSettings:
             Name of the parameter
         value : float
             Value of the parameter
+
+        Returns
+        -------
+        bool
+            True if the parameter was set successfully, False otherwise.
         """
-        self.settings.set_parameter(component, name, value)
+        return self.settings.set_parameter(component, name, float(value))
 
     def generate_base_structure(self, land_cover_names, land_cover_types,
                                 with_snow=True, snow_melt_process='melt:degree_day'):
@@ -164,6 +169,11 @@ class ModelSettings:
         """
         self.settings.add_brick_process(name, kind, target, log)
 
+        # Define output as static
+        if kind in ['outflow:direct', 'outflow:rest_direct']:
+            self.settings.set_process_outputs_as_static()
+
+        # Set forcing and parameters
         if kind.startswith('et:'):
             self.settings.add_process_forcing('pet')
         elif kind == 'outflow:linear':

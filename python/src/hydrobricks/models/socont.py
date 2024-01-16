@@ -71,7 +71,6 @@ class Socont(Model):
             'infiltration', 'infiltration:socont', 'slow_reservoir')
         self.settings.add_brick_process(
             'runoff', 'outflow:rest_direct', 'surface_runoff')
-        self.settings.set_process_outputs_as_static()
 
         # Add other bricks
         if self.soil_storage_nb == 1:

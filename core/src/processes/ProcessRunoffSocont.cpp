@@ -9,7 +9,8 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
       m_slope(0),
       m_beta(nullptr),
       m_areaUnit(0),
-      m_areaFraction(nullptr) {}
+      m_areaFraction(nullptr),
+      m_exponent(5.0 / 3.0) {}
 
 void ProcessRunoffSocont::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) {
     if (brick->IsLandCover()) {
@@ -38,15 +39,14 @@ vecDouble ProcessRunoffSocont::GetRates() {
     // The water depth is assumed to be linear from the top to the bottom of the plane.
     // The storage shape is the ratio between the water depth at the bottom and the average water depth -> 2.
     double storageShape = 2.0;
+    const double dt = 86400;  // [s] number of seconds in a day
+
     // h is the water depth at the bottom of the plane != average water depth
-    double h = m_container->GetContentWithChanges() * storageShape * 1000;  // [m]
-    double qquick = *m_beta * pow(m_slope, 0.5) * pow(h, 5 / 3);            // [m^3/s]
-    const double dt = 86400;                                                // [s] number of seconds in a day
-    // Computation in two steps:
-    // double dh = (qquick / GetArea()) * dt * m_storageShape; // [m/d] dh at the plane bottom
-    // double runoff = 1000 * dh / m_storageShape ; // [mm/d]
-    // Simplified computation:
-    double runoff = 1000 * (qquick / GetArea()) * dt;  // [mm/d]
+    double h = m_container->GetContentWithChanges() * storageShape / 1000;  // [m]
+
+    double qQuick = *m_beta * pow(m_slope, 0.5) * pow(h, m_exponent) / GetArea();  // [m/s]
+    double dh = qQuick * storageShape * dt;                                        // [m]
+    double runoff = (dh / storageShape) * 1000;                                    // [mm]
 
     return {wxMin(runoff, m_container->GetContentWithChanges())};
 }

@@ -1004,6 +1004,7 @@ bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& land
     SelectHydroUnitBrick("ground");
     AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
     AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
+    SetProcessOutputsAsStatic();
 
     // Add other bricks
     if (soilStorageNb == 1) {

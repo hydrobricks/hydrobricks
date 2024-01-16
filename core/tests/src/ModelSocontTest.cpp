@@ -597,25 +597,25 @@ TEST_F(ModelSocontGletsch, QuickDischargeIsCorrect) {
 
     // Cannot reproduce the exact same values as the solver is different
     EXPECT_NEAR(q[0], 0.0, 0.0000001);
-    EXPECT_NEAR(q[1], 0.339098404522742, 0.1);
-    EXPECT_NEAR(q[2], 6.14339396606552, 0.1);
-    EXPECT_NEAR(q[3], 15.9871208705154, 0.1);
-    EXPECT_NEAR(q[4], 18.1637996149964, 0.1);
-    EXPECT_NEAR(q[5], 18.8240003953163, 0.1);
-    EXPECT_NEAR(q[6], 18.3973261932905, 0.1);
-    EXPECT_NEAR(q[7], 14.3377406789303, 0.1);
-    EXPECT_NEAR(q[8], 10.4729112050052, 0.1);
-    EXPECT_NEAR(q[9], 7.92405289891611, 0.1);
+    EXPECT_NEAR(q[1], 0.339098404522742, 0.000001);
+    EXPECT_NEAR(q[2], 6.14339396606552, 0.000001);
+    EXPECT_NEAR(q[3], 15.9871208705154, 0.000001);
+    EXPECT_NEAR(q[4], 18.1637996149964, 0.000001);
+    EXPECT_NEAR(q[5], 18.8240003953163, 0.000001);
+    EXPECT_NEAR(q[6], 18.3973261932905, 0.000001);
+    EXPECT_NEAR(q[7], 14.3377406789303, 0.000001);
+    EXPECT_NEAR(q[8], 10.4729112050052, 0.000001);
+    EXPECT_NEAR(q[9], 7.92405289891611, 0.000001);
 
     // Water balance components
-    double precip = 163.2;
+    double precip = 156.9;
     double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
-    double balance = discharge + et + storage - precip - totalGlacierMelt;
+    double balance = precip + totalGlacierMelt - discharge - et - storage;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

@@ -544,7 +544,7 @@ class ModelSocontGletsch : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground"};
         vecStr landCoverNames = {"ground"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 1, "socont_runoff");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 13.8, 59.3, 34.2, 13.7, 26.1, 9.8, 0.0, 0.0, 0.0});

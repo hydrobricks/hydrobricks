@@ -68,6 +68,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     settings.SelectHydroUnitBrick("ground");
     settings.AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
     settings.AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
+    settings.SetProcessOutputsAsStatic();
 
     // Add other bricks
     if (soilStorageNb == 1) {
@@ -99,8 +100,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     settings.AddHydroUnitBrick("surface_runoff", "storage");
     if (surfaceRunoff == "socont_runoff") {
         settings.AddBrickProcess("runoff", "runoff:socont", "outlet");
-        settings.AddProcessParameter("runoff_coefficient", 500.0f);
-        settings.AddProcessParameter("slope", 0.5f);
+        settings.AddProcessParameter("beta", 500.0f);
     } else if (surfaceRunoff == "linear_storage") {
         wxLogMessage(_("Using a linear storage for the quick flow."));
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");

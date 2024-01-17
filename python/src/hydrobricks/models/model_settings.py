@@ -184,9 +184,8 @@ class ModelSettings:
             self.settings.add_process_forcing('pet')
         elif kind == 'outflow:linear':
             self.settings.add_process_parameter('response_factor', 0.2)
-        elif kind == 'outflow:constant':
-            if name == 'percolation':
-                self.settings.add_process_parameter('percolation_rate', 0.1)
+        elif kind == 'outflow:percolation':
+            self.settings.add_process_parameter('percolation_rate', 0.1)
         elif kind == 'runoff:socont':
             self.settings.add_process_parameter('runoff_coefficient', 500)
         elif kind == 'melt:degree_day':

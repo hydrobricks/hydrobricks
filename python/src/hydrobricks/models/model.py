@@ -315,7 +315,9 @@ class Model(ABC):
                 ps.add_aliases(alias_key, alias_value)
 
         for constraint in self.parameter_constraints:
-            ps.define_constraint(**constraint)
+            ps.define_constraint(*constraint)
+
+        return ps
 
     @abstractmethod
     def _define_structure(self):

@@ -50,27 +50,28 @@ class Socont(Model):
                     }
                 }
 
-        # Basin storages for contributions from the glacierized area
-        self.structure['glacier_area_rain_snowmelt_storage'] = {
-            'attach_to': 'sub_basin',
-            'kind': 'storage',
-            'processes': {
-                'outflow': {
-                    'kind': 'outflow:linear',
-                    'target': 'outlet'
+        if 'glacier' in self.land_cover_types:
+            # Basin storages for contributions from the glacierized area
+            self.structure['glacier_area_rain_snowmelt_storage'] = {
+                'attach_to': 'sub_basin',
+                'kind': 'storage',
+                'processes': {
+                    'outflow': {
+                        'kind': 'outflow:linear',
+                        'target': 'outlet'
+                    }
                 }
             }
-        }
-        self.structure['glacier_area_icemelt_storage'] = {
-            'attach_to': 'sub_basin',
-            'kind': 'storage',
-            'processes': {
-                'outflow': {
-                    'kind': 'outflow:linear',
-                    'target': 'outlet'
+            self.structure['glacier_area_icemelt_storage'] = {
+                'attach_to': 'sub_basin',
+                'kind': 'storage',
+                'processes': {
+                    'outflow': {
+                        'kind': 'outflow:linear',
+                        'target': 'outlet'
+                    }
                 }
             }
-        }
 
         # Infiltration and overflow
         self.structure['ground'] = {

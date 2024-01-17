@@ -526,7 +526,10 @@ class ParameterSet:
             return
 
         for process_name, process in brick['processes'].items():
-            if process['kind'] == 'outflow:linear':
+            if process['kind'] in ['infiltration:socont', 'outflow:rest_direct',
+                                   'et:socont', 'overflow']:
+                continue
+            elif process['kind'] == 'outflow:linear':
                 self.define_parameter(
                     component=key, name='response_factor', unit='1/d', aliases=[],
                     min_value=0.001, max_value=1, mandatory=True)

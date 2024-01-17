@@ -6,7 +6,9 @@ import HydroErr
 
 import _hydrobricks as _hb
 import hydrobricks as hb
-from _hydrobricks import ModelHydro, SettingsModel
+from _hydrobricks import ModelHydro
+
+from .model_settings import ModelSettings
 
 
 class Model(ABC):
@@ -15,7 +17,6 @@ class Model(ABC):
     @abstractmethod
     def __init__(self, name=None, **kwargs):
         self.name = name
-        self.settings = SettingsModel()
         self.model = ModelHydro()
         self.spatial_structure = None
         self.allowed_kwargs = {'solver', 'record_all', 'land_cover_types',
@@ -23,16 +24,24 @@ class Model(ABC):
         self._is_initialized = False
 
         # Default options
+        self.options = dict()
         self.solver = 'heun_explicit'
         self.record_all = False
         self.land_cover_types = ['ground']
         self.land_cover_names = ['ground']
+        self.allowed_land_cover_types = ['ground']
 
         self._set_options(kwargs)
 
+        # Structure
+        self.structure = dict()
+        self.parameter_aliases = dict()
+        self.parameter_constraints = []
+
         # Setting base settings
-        self.settings.log_all(self.record_all)
-        self.settings.set_solver(self.solver)
+        self.settings = ModelSettings(
+            solver=self.solver,
+            record_all=self.record_all)
 
     @property
     def name(self):
@@ -79,7 +88,8 @@ class Model(ABC):
 
             # Initialize the model (with sub basin creation)
             if not self.model.init_with_basin(
-                    self.settings, spatial_structure.settings):
+                    self.settings.settings,
+                    spatial_structure.settings):
                 raise RuntimeError('Basin creation failed.')
 
             self._is_initialized = True
@@ -223,7 +233,7 @@ class Model(ABC):
         settings = {
             'base': self.name,
             'solver': self.solver,
-            'options': self._get_specific_options(),
+            'options': self.options,
             'land_covers': {
                 'names': self.land_cover_names,
                 'types': self.land_cover_types
@@ -295,10 +305,39 @@ class Model(ABC):
         eval_fct = getattr(importlib.import_module('HydroErr'), metric)
         return eval_fct(sim_ts, observations)
 
-    @abstractmethod
     def generate_parameters(self):
-        raise RuntimeError(f'Parameters cannot be generated for the base model '
+        ps = hb.ParameterSet()
+        ps.generate_parameters(self.land_cover_types, self.land_cover_names,
+                               self.options, self.structure)
+
+        for alias_key, alias_value in self.parameter_aliases.items():
+            if ps.has(alias_key):
+                ps.add_aliases(alias_key, alias_value)
+
+        for constraint in self.parameter_constraints:
+            ps.define_constraint(**constraint)
+
+    @abstractmethod
+    def _define_structure(self):
+        raise RuntimeError(f'The structure has to be defined by the child class '
                            f'(named {self.name}).')
+
+    def _check_args(self, kwargs):
+        self._add_allowed_kwargs(self.options.keys())
+        self._validate_kwargs(kwargs)
+        self._set_options(kwargs)
+        self._check_cover_types()
+
+    def _check_cover_types(self):
+        if len(self.land_cover_names) != len(self.land_cover_types):
+            raise RuntimeError('The length of the land cover names '
+                               'and types do not match.')
+
+        # Check allowed land cover types: ground, glacier
+        for cover_type in self.land_cover_types:
+            if cover_type not in self.allowed_land_cover_types:
+                raise RuntimeError(
+                    f'The land cover {cover_type} is not used in Socont')
 
     def _set_options(self, kwargs):
         if 'solver' in kwargs:
@@ -317,9 +356,74 @@ class Model(ABC):
         # Validate optional keyword arguments.
         hb.utils.validate_kwargs(kwargs, self.allowed_kwargs)
 
-    @abstractmethod
-    def _get_specific_options(self):
-        return {}
+    def _generate_structure(self):
+        """
+        Generate the model structure.
+        """
+        # Generate basic elements
+        self._set_structure_basics()
+
+        # Generate the structure
+        for key, brick in self.structure.items():
+
+            # Select or add the brick
+            self._set_structure_brick(brick, key)
+
+            # Add brick parameters if any
+            if 'parameters' in brick:
+                for param, value in brick['parameters'].items():
+                    self.settings.add_brick_parameter(param, value)
+
+            # Add brick processes if any
+            if 'processes' in brick:
+                for process, process_data in brick['processes'].items():
+                    self._set_structure_process(key, process, process_data)
+
+        self.settings.add_logging_to('outlet')
+
+    def _set_structure_basics(self):
+        with_snow = True
+        snow_melt_process = 'melt:degree_day'
+        if 'with_snow' in self.options:
+            with_snow = self.options['with_snow']
+        if 'snow_melt_process' in self.options:
+            with_snow = True
+            snow_melt_process = self.options['snow_melt_process']
+        self.settings.generate_base_structure(
+            self.land_cover_names, self.land_cover_types, with_snow=with_snow,
+            snow_melt_process=snow_melt_process)
+
+    def _set_structure_brick(self, brick, key):
+        if brick['kind'] == 'land_cover':
+            self.settings.select_hydro_unit_brick('ground')
+        else:
+            if brick['attach_to'] == 'hydro_unit':
+                self.settings.add_hydro_unit_brick(key, brick['kind'])
+            elif brick['attach_to'] == 'sub_basin':
+                self.settings.add_sub_basin_brick(key, brick['kind'])
+            else:
+                raise RuntimeError(f'Brick {key} has an invalid "attach_to" value.')
+
+    def _set_structure_process(self, key, process, process_data):
+        instantaneous = False
+        if 'instantaneous' in process_data:
+            instantaneous = process_data['instantaneous']
+
+        log = False
+        if 'log' in process_data:
+            log = process_data['log']
+
+        target = ''
+        if 'target' in process_data:
+            target = process_data['target']
+        else:
+            if not process_data['kind'].startswith('et:'):
+                raise RuntimeError(f'Brick {key} has a process '
+                                   f'({process}) without a target.')
+
+        self.settings.add_brick_process(
+            process, process_data['kind'], target,
+            log=log, instantaneous=instantaneous)
 
     def _set_parameters(self, parameters):
         model_params = parameters.get_model_parameters()
@@ -327,7 +431,7 @@ class Model(ABC):
             if not self.settings.set_parameter(param['component'], param['name'],
                                                param['value']):
                 raise RuntimeError('Failed setting parameter values.')
-        self.model.update_parameters(self.settings)
+        self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing):
         if forcing is not None:

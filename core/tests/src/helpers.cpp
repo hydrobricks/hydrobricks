@@ -86,7 +86,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         settings.AddProcessForcing("pet");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
         settings.AddProcessParameter("response_factor", 0.2f);
-        settings.AddBrickProcess("percolation", "outflow:constant", "slow_reservoir_2");
+        settings.AddBrickProcess("percolation", "outflow:percolation", "slow_reservoir_2");
         settings.AddProcessParameter("percolation_rate", 0.1f);
         settings.AddBrickProcess("overflow", "overflow", "outlet");
         settings.AddHydroUnitBrick("slow_reservoir_2", "storage");

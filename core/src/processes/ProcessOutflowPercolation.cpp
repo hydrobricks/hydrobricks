@@ -1,13 +1,13 @@
-#include "ProcessOutflowConstant.h"
+#include "ProcessOutflowPercolation.h"
 
 #include "Brick.h"
 #include "WaterContainer.h"
 
-ProcessOutflowConstant::ProcessOutflowConstant(WaterContainer* container)
+ProcessOutflowPercolation::ProcessOutflowPercolation(WaterContainer* container)
     : ProcessOutflow(container),
       m_rate(nullptr) {}
 
-void ProcessOutflowConstant::SetParameters(const ProcessSettings& processSettings) {
+void ProcessOutflowPercolation::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     if (HasParameter(processSettings, "percolation_rate")) {
         m_rate = GetParameterValuePointer(processSettings, "percolation_rate");
@@ -16,6 +16,6 @@ void ProcessOutflowConstant::SetParameters(const ProcessSettings& processSetting
     }
 }
 
-vecDouble ProcessOutflowConstant::GetRates() {
+vecDouble ProcessOutflowPercolation::GetRates() {
     return {*m_rate};
 }

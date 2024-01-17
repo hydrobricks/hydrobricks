@@ -6,10 +6,10 @@
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessMeltDegreeDay.h"
-#include "ProcessOutflowConstant.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
+#include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
 #include "ProcessRunoffSocont.h"
 #include "Snowpack.h"
@@ -21,8 +21,8 @@ Process::Process(WaterContainer* container)
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     if (processSettings.type == "outflow:linear") {
         return new ProcessOutflowLinear(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:constant") {
-        return new ProcessOutflowConstant(brick->GetWaterContainer());
+    } else if (processSettings.type == "outflow:percolation") {
+        return new ProcessOutflowPercolation(brick->GetWaterContainer());
     } else if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
     } else if (processSettings.type == "outflow:rest_direct" || processSettings.type == "outflow:RestDirect") {

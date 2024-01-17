@@ -4,6 +4,7 @@
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
+#include "helpers.h"
 
 class BehavioursInModel : public ::testing::Test {
   protected:
@@ -20,7 +21,7 @@ class BehavioursInModel : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -101,7 +102,7 @@ class BehavioursInModel2LandCovers : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground", "glacier", "glacier"};
         vecStr landCoverNames = {"ground", "glacier_ice", "glacier_debris"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});

@@ -22,6 +22,9 @@ def disable_geopandas_warning():
         warnings.filterwarnings(
             "ignore", category=DeprecationWarning,
             message="Passing a SingleBlockManager to Series is deprecated *")
+        warnings.filterwarnings(
+            "ignore", category=AttributeError,
+            message="'Series' object has no attribute '_mgr'")
         yield
 
 

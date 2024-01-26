@@ -22,12 +22,12 @@ spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
 
 # Select number of maximum repetitions and run spotpy
 max_rep = 4000
-sampler = spotpy.algorithms.sceua(spot_setup, dbname='socont_sitter_SCEUA',
+sampler = spotpy.algorithms.sceua(spot_setup, dbname='spotpy_socont_sitter_SCEUA',
                                   dbformat='csv')
 sampler.sample(max_rep)
 
 # Load the results
-results = spotpy.analyser.load_csv_results('socont_sitter_SCEUA')
+results = spotpy.analyser.load_csv_results('spotpy_socont_sitter_SCEUA')
 
 # Plot evolution
 fig_evolution = plt.figure(figsize=(9, 5))

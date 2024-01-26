@@ -136,6 +136,102 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
+class SnowpackModelWithAspect : public ::testing::Test {
+  protected:
+    SettingsModel m_model;
+    TimeSeriesUniform* m_tsPrecip{};
+    TimeSeriesUniform* m_tsTemp{};
+
+    void SetUp() override {
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+
+        // Snowpack brick
+        m_model.AddHydroUnitBrick("snowpack", "snowpack");
+        m_model.AddBrickLogging({"content", "snow"});
+
+        // Snow melt process
+        m_model.AddBrickProcess("melt", "melt:degree_day_aspect");
+        m_model.AddProcessForcing("temperature");
+        m_model.AddProcessParameter("degree_day_factor_n", 2.0f);
+        m_model.AddProcessParameter("degree_day_factor_ew", 3.0f);
+        m_model.AddProcessParameter("degree_day_factor_s", 4.0f);
+        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.OutputProcessToSameBrick();
+        m_model.AddProcessLogging("output");
+
+        // Add process to direct meltwater to the outlet
+        m_model.AddBrickProcess("meltwater", "outflow:direct");
+        m_model.AddProcessOutput("outlet");
+        m_model.AddProcessLogging("output");
+
+        // Rain/snow splitter
+        m_model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+        m_model.AddSplitterForcing("precipitation");
+        m_model.AddSplitterForcing("temperature");
+        m_model.AddSplitterOutput("outlet");            // rain
+        m_model.AddSplitterOutput("snowpack", "snow");  // snow
+        m_model.AddSplitterParameter("transition_start", 0.0f);
+        m_model.AddSplitterParameter("transition_end", 2.0f);
+
+        m_model.AddLoggingToItem("outlet");
+
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
+        m_tsPrecip = new TimeSeriesUniform(Precipitation);
+        m_tsPrecip->SetData(precip);
+
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
+        m_tsTemp = new TimeSeriesUniform(Temperature);
+        m_tsTemp->SetData(temperature);
+    }
+    void TearDown() override {
+        wxDELETE(m_tsPrecip);
+        wxDELETE(m_tsTemp);
+    }
+};
+
+TEST_F(SnowpackModelWithAspect, DegreeDayAspect) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddHydroUnit(1, 200);  // Note that it's larger (South facing)
+
+    // Set the aspect of the hydro units
+    basinSettings.SelectUnit(0);
+    basinSettings.AddHydroUnitPropertyString("aspect_class", "N");
+    basinSettings.SelectUnit(1);
+    basinSettings.AddHydroUnitPropertyString("aspect_class", "E");
+    basinSettings.SelectUnit(2);
+    basinSettings.AddHydroUnitPropertyString("aspect_class", "W");
+    basinSettings.SelectUnit(3);
+    basinSettings.AddHydroUnitPropertyString("aspect_class", "S");
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge
+    Logger* logger = model.GetLogger();
+    axd modelOutputs = logger->GetOutletDischarge();
+    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.2, 16.4, 19.6, 15.6, 0.2};
+
+    for (int j = 0; j < modelOutputs.size(); ++j) {
+        EXPECT_NEAR(modelOutputs[j], expectedOutputs[j], 0.000001);
+    }
+}
+
 class GlacierModel : public ::testing::Test {
   protected:
     SettingsModel m_model;

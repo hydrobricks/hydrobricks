@@ -114,7 +114,8 @@ class HydroUnits:
 
         if other_columns is not None:
             for prop, col in other_columns.items():
-                self.add_property((prop[0], prop[1]), col)
+                vals, unit = self._get_column_values_unit(col, file_content)
+                self.add_property((prop, unit), vals)
 
         if column_fractions is not None:
             raise NotImplementedError
@@ -126,7 +127,7 @@ class HydroUnits:
                                   inplace=True)
             self.hydro_units[('area', 'm2')] = new_area
 
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
     def save_to_csv(self, path):
         """
@@ -262,9 +263,9 @@ class HydroUnits:
         self.hydro_units[(field_name, 'fraction')] = land_cover_fraction
         self.hydro_units[(ground_name, 'fraction')] -= land_cover_fraction
 
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
-    def _populate_bounded_instance(self):
+    def populate_bounded_instance(self):
         self.settings.clear()
 
         # List properties to be set
@@ -280,8 +281,8 @@ class HydroUnits:
             self.settings.add_hydro_unit(int(row['id'].values),
                                          float(row['area'].values))
             for prop in properties:
-                if isinstance(row[prop].values, str):
-                    self.settings.add_hydro_unit_property_str(prop, row[prop].values)
+                if isinstance(row[prop].values[0], str):
+                    self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
@@ -347,7 +348,7 @@ class HydroUnits:
         self.hydro_units = data
         idx = self.prefix_fraction + 'ground'
         self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
-        self._populate_bounded_instance()
+        self.populate_bounded_instance()
 
     @staticmethod
     def _check_land_cover_definitions(land_cover_types, land_cover_names):

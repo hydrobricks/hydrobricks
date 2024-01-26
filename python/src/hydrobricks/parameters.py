@@ -42,7 +42,7 @@ class ParameterSet:
         name : str
             The name of the parameter in the C++ code of hydrobricks (e.g.,
             degree_day_factor, response_factor).
-        unit : str
+        unit : ?str
             The unit of the parameter.
         aliases : list
             Aliases to the parameter name, such as names used in other implementations
@@ -71,6 +71,24 @@ class ParameterSet:
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
+
+    def add_aliases(self, parameter_name, aliases):
+        """
+        Add aliases to a parameter.
+
+        Parameters
+        ----------
+        parameter_name : str
+            The name of the parameter with the related component (e.g.,
+            snowpack:degree_day_factor).
+        aliases : list, str
+            Aliases to the parameter name, such as names used in other implementations
+            (e.g., kgl, an). Aliases must be unique.
+        """
+        if not isinstance(aliases, list):
+            aliases = [aliases]
+        index = self._get_parameter_index(parameter_name)
+        self.parameters.loc[index, 'aliases'] += aliases
 
     def change_range(self, parameter, min_value, max_value):
         """
@@ -167,6 +185,10 @@ class ParameterSet:
         True is constraints are satisfied, False otherwise.
         """
         for constraint in self.constraints:
+            # Ignore constraints involving unused parameters
+            if not self.has(constraint[0]) or not self.has(constraint[2]):
+                continue
+
             val_1 = self.get(constraint[0])
             operator = constraint[1]
             val_2 = self.get(constraint[2])
@@ -277,6 +299,33 @@ class ParameterSet:
         """
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, 'value']
+
+    def is_ok(self):
+        """
+        Check if all the parameters are defined and have a value.
+
+        Returns
+        -------
+        True if all parameters are defined and have a value, False otherwise.
+        """
+        for _, row in self.parameters.iterrows():
+            if row['value'] is None:
+                return False
+        return True
+
+    def get_undefined(self):
+        """
+        Get the undefined parameters.
+
+        Returns
+        ------
+        A list of the undefined parameter names.
+        """
+        undefined = []
+        for _, row in self.parameters.iterrows():
+            if row['value'] is None:
+                undefined.append(row['name'])
+        return undefined
 
     def get_model_parameters(self):
         """
@@ -447,6 +496,189 @@ class ParameterSet:
             file_content.update({group_name: group_content})
 
         hb.utils.dump_config_file(file_content, directory, name, file_type)
+
+    def generate_parameters(self, land_cover_types, land_cover_names, options,
+                            structure):
+        """
+        Generate a parameters object for the provided model options and structure.
+
+        Parameters
+        ----------
+        land_cover_types : list
+            The land cover types.
+        land_cover_names : list
+            The land cover names.
+        options : dict
+            The model options.
+        structure : dict
+            The model structure.
+        """
+        # General parameters
+        self._generate_snow_parameters(options)
+
+        # Parameters for the glaciers
+        self._generate_glacier_parameters(land_cover_types, land_cover_names,
+                                          structure)
+
+        # Parameters for the different bricks
+        for key, brick in structure.items():
+            self._generate_brick_parameters(key, brick)
+            self._generate_process_parameters(key, brick)
+
+    def _generate_process_parameters(self, key, brick):
+        if 'processes' not in brick:
+            return
+
+        for _, process in brick['processes'].items():
+            if process['kind'] in ['infiltration:socont', 'outflow:rest_direct',
+                                   'et:socont', 'overflow']:
+                continue
+            elif process['kind'] == 'outflow:linear':
+                self.define_parameter(
+                    component=key, name='response_factor', unit='1/d', aliases=[],
+                    min_value=0.001, max_value=1, mandatory=True)
+            elif process['kind'] == 'runoff:socont':
+                self.define_parameter(
+                    component=key, name='beta', unit='m^(4/3)/s', aliases=['beta'],
+                    min_value=100, max_value=30000, mandatory=True)
+            elif process['kind'] == 'outflow:percolation':
+                self.define_parameter(
+                    component=key, name='percolation_rate', unit='mm/d',
+                    aliases=['percol'], min_value=0, max_value=10, mandatory=True)
+            else:
+                raise RuntimeError(f"The process {process['kind']} is not recognised "
+                                   f"in parameters generation.")
+
+    def _generate_brick_parameters(self, key, brick):
+        if 'parameters' not in brick:
+            return
+
+        for param_name, _ in brick['parameters'].items():
+            if param_name in ['no_melt_when_snow_cover', 'infinite_storage']:
+                continue
+            elif param_name == 'capacity':
+                self.define_parameter(
+                    component=key, name=param_name, unit='mm', aliases=[],
+                    min_value=0, max_value=3000, mandatory=True)
+            else:
+                raise RuntimeError(f"The parameter {param_name} is not recognised in "
+                                   f"parameters generation.")
+
+    def _generate_glacier_parameters(self, land_cover_types, land_cover_names,
+                                     structure):
+        if 'glacier' not in land_cover_types:
+            return
+
+        glacier_names = [cover_name for cover_type, cover_name in
+                         zip(land_cover_types, land_cover_names) if
+                         cover_type == 'glacier']
+
+        for i, cover_name in enumerate(glacier_names):
+            melt_method = structure[cover_name]['processes']['melt']['kind']
+
+            if melt_method == 'melt:degree_day':
+                if len(glacier_names) == 1:
+                    a_aliases = ['a_ice']
+                    t_aliases = ['melt_t_ice']
+                else:
+                    a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
+                                 f'a_ice_{i}']
+                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                                 f'melt_t_ice_{i}']
+
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor',
+                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='melting_temperature',
+                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
+                    default_value=0, mandatory=False)
+
+                self.define_constraint('a_snow', '<', a_aliases[0])
+
+            elif melt_method == 'melt:degree_day_aspect':
+                if len(glacier_names) == 1:
+                    a_n_aliases = ['a_ice_n']
+                    a_s_aliases = ['a_ice_s']
+                    a_ew_aliases = ['a_ice_ew']
+                    t_aliases = ['melt_t_ice']
+                else:
+                    a_n_aliases = [f'a_ice_n_{cover_name.replace("-", "_")}',
+                                   f'a_ice_n_{i}']
+                    a_s_aliases = [f'a_ice_s_{cover_name.replace("-", "_")}',
+                                   f'a_ice_s_{i}']
+                    a_ew_aliases = [f'a_ice_ew_{cover_name.replace("-", "_")}',
+                                    f'a_ice_ew_{i}']
+                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                                 f'melt_t_ice_{i}']
+
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_n',
+                    unit='mm/d/°C', aliases=a_n_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_s',
+                    unit='mm/d/°C', aliases=a_s_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_ew',
+                    unit='mm/d/°C', aliases=a_ew_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='melting_temperature',
+                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
+                    default_value=0, mandatory=False)
+
+                self.define_constraint('a_snow', '<', a_n_aliases[0])
+                self.define_constraint('a_snow', '<', a_s_aliases[0])
+                self.define_constraint('a_snow', '<', a_ew_aliases[0])
+                self.define_constraint('a_snow_n', '<', a_n_aliases[0])
+                self.define_constraint('a_snow_s', '<', a_s_aliases[0])
+                self.define_constraint('a_snow_ew', '<', a_ew_aliases[0])
+
+            else:
+                raise RuntimeError(f"The glacier melt method {melt_method} is not "
+                                   f"recognised in parameters generation.")
+
+    def _generate_snow_parameters(self, options):
+        if 'snow_melt_process' in options or 'with_snow' in options:
+            self.define_parameter(
+                component='snow_rain_transition', name='transition_start', unit='°C',
+                aliases=['prec_t_start'], min_value=-2, max_value=2, default_value=0,
+                mandatory=False)
+
+            self.define_parameter(
+                component='snow_rain_transition', name='transition_end', unit='°C',
+                aliases=['prec_t_end'], min_value=0, max_value=4, default_value=2,
+                mandatory=False)
+
+            if 'snow_melt_process' in options:
+                if options['snow_melt_process'] == 'melt:degree_day':
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor', unit='mm/d/°C',
+                        aliases=['a_snow'], min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='melting_temperature', unit='°C',
+                        aliases=['melt_t_snow'], min_value=0, max_value=5,
+                        default_value=0, mandatory=False)
+                elif options['snow_melt_process'] == 'melt:degree_day_aspect':
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_n',
+                        unit='mm/d/°C', aliases=['a_snow_n'],
+                        min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_s',
+                        unit='mm/d/°C', aliases=['a_snow_s'],
+                        min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_ew',
+                        unit='mm/d/°C', aliases=['a_snow_ew'],
+                        min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='melting_temperature', unit='°C',
+                        aliases=['melt_t_snow'], min_value=0, max_value=5,
+                        default_value=0, mandatory=False)
+                else:
+                    raise RuntimeError(
+                        f"The snow melt process option "
+                        f"{options['snow_melt_process']} is not recognised.")
 
     @staticmethod
     def _check_min_max_consistency(min_value, max_value):

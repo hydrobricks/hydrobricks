@@ -45,6 +45,14 @@ class Forcing:
         PRESSURE = auto()  # Atmospheric pressure [kPa]
 
     def __init__(self, hydro_units):
+        # Check hydro units
+        if not isinstance(hydro_units, hb.HydroUnits):
+            raise TypeError('The hydro_units argument must be a HydroUnits '
+                            f'object, not {type(hydro_units)}.')
+        if len(hydro_units.hydro_units) == 0:
+            raise ValueError('The hydro_units argument must contain at least '
+                             'one hydrological unit.')
+
         super().__init__()
         self.data1D = TimeSeries1D()
         self.data2D = TimeSeries2D()
@@ -343,7 +351,7 @@ class Forcing:
 
         Parameters
         ----------
-        path : str
+        path : str|Path
             Path of the file to read.
         """
         if not hb.has_netcdf:

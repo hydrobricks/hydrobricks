@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -21,13 +21,13 @@ jobs:
       run: sudo apt-get install tree
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache Conan libs
       id: cache-conan
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: /home/runner/.conan
         key: ${{ runner.os }}-conan
@@ -65,7 +65,7 @@ jobs:
 
       - name: Cache Conan libs
         id: cache-conan
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /home/runner/.conan
           key: ${{ runner.os }}-conan

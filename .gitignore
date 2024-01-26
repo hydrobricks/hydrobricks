@@ -50,8 +50,9 @@ wheelhouse/
 *~$*
 **/__pycache__/*
 **.egg-info/
-**/examples/*.csv
-**/examples/*.png
+**/examples/**/*.csv
+**/examples/**/*.png
+**/spotpy_*.csv
 conan.lock
 conanbuildinfo.cmake
 conanbuildinfo.txt

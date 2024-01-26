@@ -1,5 +1,3 @@
-from hydrobricks import ParameterSet
-
 from .model import Model
 
 
@@ -10,132 +8,169 @@ class Socont(Model):
         super().__init__(name=name, **kwargs)
 
         # Default options
-        self.soil_storage_nb = 1
-        self.surface_runoff = 'socont_runoff'
+        self.options['soil_storage_nb'] = 1
+        self.options['surface_runoff'] = 'socont_runoff'
+        self.options['snow_melt_process'] = 'melt:degree_day'
+        self.allowed_land_cover_types = ['ground', 'glacier']
 
-        self._add_allowed_kwargs(['soil_storage_nb', 'surface_runoff'])
-        self._validate_kwargs(kwargs)
         self._set_options(kwargs)
 
         try:
-            if not self.settings.generate_socont_structure(
-                    self.land_cover_types, self.land_cover_names,
-                    self.soil_storage_nb, self.surface_runoff):
-                raise RuntimeError('Socont model initialization failed.')
+            self._define_structure()
+            self._generate_structure()
+            self._define_parameter_aliases()
+            self._define_parameter_constraints()
 
         except RuntimeError as err:
             raise RuntimeError(f'Socont model initialization raised '
                                f'an exception: {err}')
 
-    def generate_parameters(self):
-        ps = ParameterSet()
-
-        ps.define_parameter(
-            component='snow_rain_transition', name='transition_start', unit='°C',
-            aliases=['prec_t_start'], min_value=-2, max_value=2, default_value=0,
-            mandatory=False)
-
-        ps.define_parameter(
-            component='snow_rain_transition', name='transition_end', unit='°C',
-            aliases=['prec_t_end'], min_value=0, max_value=4, default_value=2,
-            mandatory=False)
-
-        ps.define_parameter(
-            component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-            aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
-
-        ps.define_parameter(
-            component='snowpack', name='melting_temperature', unit='°C',
-            aliases=['melt_t_snow'], min_value=0, max_value=5, default_value=0,
-            mandatory=False)
-
-        i_glacier = 0
-        has_glacier = False
+    def _define_structure(self):
+        # Add surface-related processes
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             if cover_type == 'glacier':
-                has_glacier = True
-                a_aliases = ['a_ice']
-                t_aliases = ['melt_t_ice']
-                if self.land_cover_types.count('glacier') > 1:
-                    i_glacier += 1
-                    a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
-                                 f'a_ice_{i_glacier}']
-                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                                 f'melt_t_ice_{i_glacier}']
+                self.structure[cover_name] = {
+                    'attach_to': 'hydro_unit',
+                    'kind': 'land_cover',
+                    'parameters': {
+                        'no_melt_when_snow_cover': True,
+                        'infinite_storage': True
+                    },
+                    'processes': {
+                        'outflow_rain_snowmelt': {
+                            'kind': 'outflow:direct',
+                            'target': 'glacier_area_rain_snowmelt_storage',
+                            'instantaneous': True
+                        },
+                        'melt': {
+                            'kind': 'melt:degree_day',
+                            'target': 'glacier_area_icemelt_storage',
+                            'instantaneous': True
+                        }
+                    }
+                }
 
-                ps.define_constraint('a_snow', '<', a_aliases[0])
-                ps.define_constraint('k_snow', '<', 'k_ice')
+        if 'glacier' in self.land_cover_types:
+            # Basin storages for contributions from the glacierized area
+            self.structure['glacier_area_rain_snowmelt_storage'] = {
+                'attach_to': 'sub_basin',
+                'kind': 'storage',
+                'processes': {
+                    'outflow': {
+                        'kind': 'outflow:linear',
+                        'target': 'outlet'
+                    }
+                }
+            }
+            self.structure['glacier_area_icemelt_storage'] = {
+                'attach_to': 'sub_basin',
+                'kind': 'storage',
+                'processes': {
+                    'outflow': {
+                        'kind': 'outflow:linear',
+                        'target': 'outlet'
+                    }
+                }
+            }
 
-                ps.define_parameter(
-                    component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20,
-                    mandatory=True)
-
-                ps.define_parameter(
-                    component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
-                    default_value=0, mandatory=False)
-
-        if has_glacier:
-            ps.define_parameter(
-                component='glacier_area_rain_snowmelt_storage', name='response_factor',
-                unit='1/d', aliases=['k_snow'], min_value=0.05, max_value=0.25,
-                mandatory=True)
-
-            ps.define_parameter(
-                component='glacier_area_icemelt_storage', name='response_factor',
-                unit='1/d', aliases=['k_ice'], min_value=0.05, max_value=1,
-                mandatory=True)
-
-        if self.surface_runoff == 'socont_runoff':
-            ps.define_parameter(
-                component='surface_runoff', name='runoff_coefficient', unit='m^(4/3)/s',
-                aliases=['beta'], min_value=100, max_value=30000, mandatory=True)
-            ps.define_parameter(
-                component='surface_runoff', name='slope', unit='°',
-                aliases=['J'], min_value=0, max_value=90, mandatory=True)
-        elif self.surface_runoff == 'linear_storage':
-            ps.define_parameter(
-                component='surface_runoff', name='response_factor', unit='1/d',
-                aliases=['k_quick'], min_value=0.05, max_value=1, mandatory=True)
-
-        ps.define_parameter(
-            component='slow_reservoir', name='capacity', unit='mm', aliases=['A'],
-            min_value=10, max_value=3000, mandatory=True)
-
-        ps.define_parameter(
-            component='slow_reservoir', name='response_factor', unit='1/d',
-            aliases=['k_slow', 'k_slow_1', 'k_slow1'], min_value=0.001, max_value=1,
-            mandatory=True)
-
-        if self.soil_storage_nb == 2:
-            ps.define_parameter(
-                component='slow_reservoir', name='percolation_rate', unit='mm/d',
-                aliases=['percol'], min_value=0, max_value=10, mandatory=True)
-
-            ps.define_parameter(
-                component='slow_reservoir_2', name='response_factor', unit='1/d',
-                aliases=['k_slow_2', 'k_slow2'], min_value=0.001, max_value=1,
-                mandatory=True)
-
-            if self.surface_runoff == 'linear_storage':
-                ps.define_constraint('k_slow_1', '<', 'k_quick')
-                ps.define_constraint('k_slow_2', '<', 'k_quick')
-            ps.define_constraint('k_slow_2', '<', 'k_slow_1')
-
-        return ps
-
-    def _set_options(self, kwargs):
-        super()._set_options(kwargs)
-        if 'soil_storage_nb' in kwargs:
-            self.soil_storage_nb = int(kwargs['soil_storage_nb'])
-            if self.soil_storage_nb < 1 or self.soil_storage_nb > 2:
-                raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
-        if 'surface_runoff' in kwargs:
-            self.surface_runoff = kwargs['surface_runoff']
-
-    def _get_specific_options(self):
-        return {
-            'soil_storage_nb': self.soil_storage_nb,
-            'surface_runoff': self.surface_runoff
+        # Infiltration and overflow
+        self.structure['ground'] = {
+            'attach_to': 'hydro_unit',
+            'kind': 'land_cover',
+            'processes': {
+                'infiltration': {
+                    'kind': 'infiltration:socont',
+                    'target': 'slow_reservoir'
+                },
+                'runoff': {
+                    'kind': 'outflow:rest_direct',
+                    'target': 'surface_runoff'
+                }
+            }
         }
+
+        # Add other bricks
+        self.structure['slow_reservoir'] = {
+            'attach_to': 'hydro_unit',
+            'kind': 'storage',
+            'parameters': {
+                'capacity': 200
+            },
+            'processes': {
+                'et': {
+                    'kind': 'et:socont'
+                },
+                'outflow': {
+                    'kind': 'outflow:linear',
+                    'target': 'outlet'
+                },
+                'overflow': {
+                    'kind': 'overflow',
+                    'target': 'outlet'
+                }
+            }
+        }
+
+        if self.options['soil_storage_nb'] == 2:
+            print("Using 2 soil storages.")
+            self.structure['slow_reservoir']['processes']['percolation'] = {
+                'kind': 'outflow:percolation',
+                'target': 'slow_reservoir_2'
+            }
+            self.structure['slow_reservoir_2'] = {
+                'attach_to': 'hydro_unit',
+                'kind': 'storage',
+                'processes': {
+                    'outflow': {
+                        'kind': 'outflow:linear',
+                        'target': 'outlet'
+                    }
+                }
+            }
+
+        # Add surface runoff
+        if self.options['surface_runoff'] == 'socont_runoff':
+            surface_runoff_kind = 'runoff:socont'
+        elif self.options['surface_runoff'] == 'linear_storage':
+            print("Using a linear storage for the quick flow.")
+            surface_runoff_kind = 'outflow:linear'
+        else:
+            raise RuntimeError(
+                f"The surface runoff option {self.options['surface_runoff']} is "
+                f"not recognised in Socont.")
+
+        self.structure['surface_runoff'] = {
+            'attach_to': 'hydro_unit',
+            'kind': 'storage',
+            'processes': {
+                'runoff': {
+                    'kind': surface_runoff_kind,
+                    'target': 'outlet'
+                }
+            }
+        }
+
+    def _define_parameter_aliases(self):
+        self.parameter_aliases = {
+            'slow_reservoir:capacity': 'A',
+            'slow_reservoir:response_factor': ['k_slow', 'k_slow_1', 'k_slow1'],
+            'slow_reservoir_2:response_factor': ['k_slow_2', 'k_slow2'],
+            'glacier_area_rain_snowmelt_storage:response_factor': 'k_snow',
+            'glacier_area_icemelt_storage:response_factor': 'k_ice',
+            'surface_runoff:response_factor': 'k_quick'
+        }
+
+    def _define_parameter_constraints(self):
+        self.parameter_constraints = [
+            ['a_snow', '<', 'a_ice'],
+            ['k_slow_1', '<', 'k_quick'],
+            ['k_slow_2', '<', 'k_quick'],
+            ['k_slow_2', '<', 'k_slow_1'],
+        ]
+
+    def _set_specific_options(self, kwargs):
+        if 'soil_storage_nb' in kwargs:
+            self.options['soil_storage_nb'] = int(kwargs['soil_storage_nb'])
+            if (self.options['soil_storage_nb'] < 1 or
+                    self.options['soil_storage_nb'] > 2):
+                raise ValueError('The option "soil_storage_nb" can only be 1 or 2')

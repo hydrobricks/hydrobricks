@@ -39,12 +39,14 @@ class ModelSetupHelper:
         except Exception:
             print("Failed to clean up.")
 
-    def create_hydro_units_from_csv_file(self, filename='elevation_bands.csv'):
+    def create_hydro_units_from_csv_file(self, filename='elevation_bands.csv',
+                                         other_columns=None):
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
         self.hydro_units = hb.HydroUnits()
         self.hydro_units.load_from_csv(
-            catchment_dir / filename, column_elevation='elevation', column_area='area')
+            catchment_dir / filename, column_elevation='elevation', column_area='area',
+            other_columns=other_columns)
 
     def get_forcing_data_from_csv_file(self, filename='meteo.csv', ref_elevation=None,
                                        use_pyet=False, use_precip_gradient=False):
@@ -96,10 +98,11 @@ class ModelSetupHelper:
 
     def get_model_and_params_socont(
             self, soil_storage_nb=2, surface_runoff="linear_storage",
-            record_all=False):
+            snow_melt_process='melt:degree_day', record_all=False):
 
         socont = models.Socont(soil_storage_nb=soil_storage_nb,
                                surface_runoff=surface_runoff,
+                               snow_melt_process=snow_melt_process,
                                record_all=record_all)
 
         socont.setup(spatial_structure=self.hydro_units,

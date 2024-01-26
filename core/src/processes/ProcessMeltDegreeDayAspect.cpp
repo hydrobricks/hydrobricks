@@ -35,12 +35,18 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
     Process::SetParameters(processSettings);
     m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 
-    if (m_aspect_class == "north" || m_aspect_class == "NE") {
+    if (m_aspect_class == "north" || m_aspect_class == "N") {
         m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_n");
     } else if (m_aspect_class == "south" || m_aspect_class == "S") {
         m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_s");
     } else if (m_aspect_class == "east" || m_aspect_class == "west" || m_aspect_class == "E" || m_aspect_class == "W") {
-        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
+        if (HasParameter(processSettings, "degree_day_factor_ew")) {
+            m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
+        } else if (HasParameter(processSettings, "degree_day_factor_we")) {
+            m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
+        } else {
+            throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
+        }
     } else {
         throw InvalidArgument("Invalid aspect: " + m_aspect_class);
     }

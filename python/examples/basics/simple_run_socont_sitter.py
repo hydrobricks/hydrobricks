@@ -2,6 +2,8 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 import hydrobricks as hb
 import hydrobricks.models as models
 
@@ -70,3 +72,14 @@ nse = socont.eval('nse', obs_ts)
 kge_2012 = socont.eval('kge_2012', obs_ts)
 
 print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
+
+# Plot
+year_to_plot = 2020
+dates = obs.time[obs.time.dt.year == year_to_plot]
+plt.plot(dates, obs_ts[dates.index], label='observed', color='black')
+plt.plot(dates, sim_ts[dates.index], label='model', color='blue')
+plt.legend()
+plt.ylabel('discharge (mm/day)')
+plt.ylim(0, None)
+plt.tight_layout()
+plt.show()

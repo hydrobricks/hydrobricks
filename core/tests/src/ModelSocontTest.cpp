@@ -4,6 +4,7 @@
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
+#include "helpers.h"
 
 class ModelSocontBasic : public ::testing::Test {
   protected:
@@ -20,7 +21,7 @@ class ModelSocontBasic : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        m_model.GenerateStructureSocont(landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -496,7 +497,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetTimer("1981-01-01", "2020-12-31", 1, "day");
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
-    modelSettings.GenerateStructureSocont(landCover, landCover, 2, "linear_storage");
+    GenerateStructureSocont(modelSettings, landCover, landCover, 2, "linear_storage");
     modelSettings.SetParameter("slow_reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
@@ -524,6 +525,98 @@ TEST(ModelSocont, WaterBalanceCloses) {
 
     // Balance
     double balance = discharge + et + storage + snow - precip;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
+class ModelSocontGletsch : public ::testing::Test {
+  protected:
+    SettingsModel m_model;
+    TimeSeriesUniform* m_tsPrecip{};
+    TimeSeriesUniform* m_tsTemp{};
+    TimeSeriesUniform* m_tsPet{};
+
+    void SetUp() override {
+        m_model.SetLogAll();
+        m_model.SetSolver("runge_kutta");
+        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        m_model.SetLogAll(true);
+
+        vecStr landCoverTypes = {"ground"};
+        vecStr landCoverNames = {"ground"};
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
+
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        precip->SetValues({0.0, 13.8, 59.3, 34.2, 13.7, 26.1, 9.8, 0.0, 0.0, 0.0});
+        m_tsPrecip = new TimeSeriesUniform(Precipitation);
+        m_tsPrecip->SetData(precip);
+
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        temperature->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
+        m_tsTemp = new TimeSeriesUniform(Temperature);
+        m_tsTemp->SetData(temperature);
+
+        auto pet = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        m_tsPet = new TimeSeriesUniform(PET);
+        m_tsPet->SetData(pet);
+    }
+    void TearDown() override {
+        wxDELETE(m_tsPrecip);
+        wxDELETE(m_tsTemp);
+        wxDELETE(m_tsPet);
+    }
+};
+
+TEST_F(ModelSocontGletsch, QuickDischargeIsCorrect) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 38.9 * 1000000);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 0.3, "m/m");
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    m_model.SetParameter("surface_runoff", "beta", 301);
+    m_model.SetParameter("slow_reservoir", "capacity", 0);
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Get discharge time series
+    axd q = logger->GetOutletDischarge();
+
+    // Cannot reproduce the exact same values as the solver is different
+    EXPECT_NEAR(q[0], 0.0, 0.0000001);
+    EXPECT_NEAR(q[1], 0.339098404522742, 0.000001);
+    EXPECT_NEAR(q[2], 6.14339396606552, 0.000001);
+    EXPECT_NEAR(q[3], 15.9871208705154, 0.000001);
+    EXPECT_NEAR(q[4], 18.1637996149964, 0.000001);
+    EXPECT_NEAR(q[5], 18.8240003953163, 0.000001);
+    EXPECT_NEAR(q[6], 18.3973261932905, 0.000001);
+    EXPECT_NEAR(q[7], 14.3377406789303, 0.000001);
+    EXPECT_NEAR(q[8], 10.4729112050052, 0.000001);
+    EXPECT_NEAR(q[9], 7.92405289891611, 0.000001);
+
+    // Water balance components
+    double precip = 156.9;
+    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalWaterStorageChanges();
+
+    // Balance
+    double balance = precip + totalGlacierMelt - discharge - et - storage;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

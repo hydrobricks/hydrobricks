@@ -122,7 +122,11 @@ class Forcing:
 
     def load_station_data_from_csv(self, path, column_time, time_format, content):
         """
-        Read 1D time series data from csv file.
+        Read 1D time series data from csv file. The files must contain a first column
+        with the time and then one column per variable. The variables must be named
+        according to the variable names defined in the Variable enum. The time must be
+        formatted according to the time_format parameter. The first line of the file
+        must contain the variable names and the second line must contain the units.
 
         Parameters
         ----------
@@ -134,7 +138,7 @@ class Forcing:
             Format of the time
         content : dict
             Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
+            Example: {'precipitation': 'Precipitation'}
         """
         # Change the variable names (key) to the enum corresponding values
         for key in list(content.keys()):

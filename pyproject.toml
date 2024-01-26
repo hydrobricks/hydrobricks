@@ -23,11 +23,11 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest cftime HydroErr numpy pandas>=2.0 pyyaml StrEnum dask geopandas netCDF4 pyet rasterio rioxarray shapely xarray xarray-spatial"
+test-requires = "pytest cftime HydroErr numpy pandas==2.1 pyyaml StrEnum dask geopandas netCDF4 pyet rasterio rioxarray shapely xarray xarray-spatial"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "cp312-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "cp38-*", "cp312-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
@@ -38,7 +38,7 @@ build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [
-    "dnf update -y",
+    "dnf update -y --nogpgcheck",
     "dnf install epel-release -y",
     "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
     "rm -rf {project}/build/lib.*",

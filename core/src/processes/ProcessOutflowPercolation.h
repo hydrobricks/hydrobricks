@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_PROCESS_OUTFLOW_CONSTANT_H
-#define HYDROBRICKS_PROCESS_OUTFLOW_CONSTANT_H
+#ifndef HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
+#define HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
-class ProcessOutflowConstant : public ProcessOutflow {
+class ProcessOutflowPercolation : public ProcessOutflow {
   public:
-    explicit ProcessOutflowConstant(WaterContainer* container);
+    explicit ProcessOutflowPercolation(WaterContainer* container);
 
-    ~ProcessOutflowConstant() override = default;
+    ~ProcessOutflowPercolation() override = default;
 
     /**
      * @copydoc Process::SetParameters()

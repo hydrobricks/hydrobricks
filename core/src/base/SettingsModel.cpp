@@ -436,6 +436,12 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
             AddProcessForcing("temperature");
             AddProcessParameter("degree_day_factor", 3.0f);
             AddProcessParameter("melting_temperature", 0.0f);
+        } else if (snowMeltProcess == "melt:degree_day_aspect") {
+            AddProcessForcing("temperature");
+            AddProcessParameter("degree_day_factor_n", 3.0f);
+            AddProcessParameter("degree_day_factor_s", 3.0f);
+            AddProcessParameter("degree_day_factor_ew", 3.0f);
+            AddProcessParameter("melting_temperature", 0.0f);
         } else if (snowMeltProcess == "melt:radiation") {
             AddProcessForcing("temperature");
             AddProcessForcing("r_solar");
@@ -539,6 +545,12 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
 }
 
 void SettingsModel::SelectHydroUnitBrick(const string& name) {
+    if (!SelectHydroUnitBrickIfFound(name)) {
+        throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
+    }
+}
+
+void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
@@ -714,55 +726,9 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
     return logNames;
 }
 
-bool SettingsModel::ParseStructure(const string& path) {
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
-        return false;
-    }
-
-    try {
-        YAML::Node settings = YAML::LoadFile(path);
-
-        // Logger
-        m_logAll = LogAll(settings);
-
-        // Solver
-        SetSolver(ParseSolver(settings));
-
-        // Land covers
-        vecStr landCoverNames = ParseLandCoverNames(settings);
-        vecStr landCoverTypes = ParseLandCoverTypes(settings);
-        if (landCoverNames.size() != landCoverTypes.size()) {
-            wxLogError(_("The length of the land cover names and types do not match."));
-            return false;
-        }
-
-        if (settings["base"]) {
-            string base = settings["base"].as<std::string>();
-            if (base == "socont") {
-                int soilStorageNb = 1;
-                string surfaceRunoff = "socont_runoff";
-                if (YAML::Node options = settings["options"]) {
-                    if (YAML::Node parameter = options["soil_storage_nb"]) {
-                        soilStorageNb = parameter.as<int>();
-                    }
-                    if (YAML::Node parameter = options["surface_runoff"]) {
-                        surfaceRunoff = parameter.as<string>();
-                    }
-                }
-                return GenerateStructureSocont(landCoverTypes, landCoverNames, soilStorageNb, surfaceRunoff);
-            } else {
-                wxLogError(_("Model base '%s' not recognized."));
-                return false;
-            }
-        } else {
-            throw NotImplemented();
-        }
-
-    } catch (YAML::ParserException& e) {
-        wxLogError(e.what());
-        return false;
-    }
+bool SettingsModel::ParseStructure(const string&) {
+    wxLogError(_("This function is outdated and should not be used anymore."));
+    return false;
 }
 
 bool SettingsModel::ParseParameters(const string& path) {
@@ -955,125 +921,6 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
             return false;
         }
     }
-
-    return true;
-}
-
-bool SettingsModel::GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb,
-                                            const string& surfaceRunoff, const string& snowMeltProcess) {
-    if (landCoverNames.size() != landCoverTypes.size()) {
-        wxLogError(_("The length of the land cover names and types do not match."));
-        return false;
-    }
-
-    // Precipitation
-    GeneratePrecipitationSplitters(true);
-
-    // Add default ground land cover
-    AddLandCoverBrick("ground", "generic_land_cover");
-
-    // Add other specific land covers
-    for (int i = 0; i < landCoverNames.size(); ++i) {
-        string type = landCoverTypes[i];
-        if (type == "ground") {
-            // Nothing to do, already added.
-        } else if (type == "glacier") {
-            AddLandCoverBrick(landCoverNames[i], "glacier");
-        } else {
-            wxLogError(_("The land cover type %s is not used in Socont"), type);
-            return false;
-        }
-    }
-
-    // Snowpacks
-    GenerateSnowpacks(snowMeltProcess);
-
-    // Add surface-related processes
-    for (int i = 0; i < landCoverNames.size(); ++i) {
-        string type = landCoverTypes[i];
-        string name = landCoverNames[i];
-        SelectHydroUnitBrick(name);
-
-        if (type == "glacier") {
-            // Direct rain and snow melt to linear storage
-            SelectHydroUnitBrick(name);
-            AddBrickProcess("outflow_rain_snowmelt", "outflow:direct", "glacier_area_rain_snowmelt_storage");
-
-            // Glacier melt process
-            AddBrickParameter("no_melt_when_snow_cover", 1.0);
-            AddBrickParameter("infinite_storage", 1.0);
-            if (snowMeltProcess == "melt:degree_day") {
-                AddBrickProcess("melt", "melt:degree_day", "glacier_area_icemelt_storage");
-                AddProcessParameter("degree_day_factor", 3.0f);
-            } else if (snowMeltProcess == "melt:radiation") {
-                AddBrickProcess("melt", "melt:radiation", "glacier_area_icemelt_storage");
-                AddProcessForcing("r_solar");
-                AddProcessParameter("melt_factor", 2.0f);
-                AddProcessParameter("radiation_coefficient", 0.0007f);
-            } else {
-                throw NotImplemented(); // Anne-Laure: Not sure that's the right method.
-            }
-            AddProcessForcing("temperature");
-            AddProcessParameter("melting_temperature", 0.0f);
-            SetProcessOutputsAsInstantaneous();
-        }
-    }
-
-    // Basin storages for contributions from the glacierized area
-    AddSubBasinBrick("glacier_area_rain_snowmelt_storage", "storage");
-    AddBrickProcess("outflow", "outflow:linear", "outlet");
-    AddProcessParameter("response_factor", 0.2f);
-    AddSubBasinBrick("glacier_area_icemelt_storage", "storage");
-    AddBrickProcess("outflow", "outflow:linear", "outlet");
-    AddProcessParameter("response_factor", 0.2f);
-
-    // Infiltration and overflow
-    SelectHydroUnitBrick("ground");
-    AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
-    AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
-
-    // Add other bricks
-    if (soilStorageNb == 1) {
-        AddHydroUnitBrick("slow_reservoir", "storage");
-        AddBrickParameter("capacity", 200.0f);
-        AddBrickProcess("et", "et:socont");
-        AddProcessForcing("pet");
-        AddBrickProcess("outflow", "outflow:linear", "outlet");
-        AddProcessParameter("response_factor", 0.2f);
-        AddBrickProcess("overflow", "overflow", "outlet");
-    } else if (soilStorageNb == 2) {
-        wxLogMessage(_("Using 2 soil storages."));
-        AddHydroUnitBrick("slow_reservoir", "storage");
-        AddBrickParameter("capacity", 200.0f);
-        AddBrickProcess("et", "et:socont");
-        AddProcessForcing("pet");
-        AddBrickProcess("outflow", "outflow:linear", "outlet");
-        AddProcessParameter("response_factor", 0.2f);
-        AddBrickProcess("percolation", "outflow:constant", "slow_reservoir_2");
-        AddProcessParameter("percolation_rate", 0.1f);
-        AddBrickProcess("overflow", "overflow", "outlet");
-        AddHydroUnitBrick("slow_reservoir_2", "storage");
-        AddBrickProcess("outflow", "outflow:linear", "outlet");
-        AddProcessParameter("response_factor", 0.02f);
-    } else {
-        wxLogError(_("There can be only one or two groundwater storages."));
-    }
-
-    AddHydroUnitBrick("surface_runoff", "storage");
-    if (surfaceRunoff == "socont_runoff") {
-        AddBrickProcess("runoff", "runoff:socont", "outlet");
-        AddProcessParameter("runoff_coefficient", 500.0f);
-        AddProcessParameter("slope", 0.5f);
-    } else if (surfaceRunoff == "linear_storage") {
-        wxLogMessage(_("Using a linear storage for the quick flow."));
-        AddBrickProcess("outflow", "outflow:linear", "outlet");
-        AddProcessParameter("response_factor", 0.8f);
-    } else {
-        wxLogError(_("The surface runoff option %s is not recognised in Socont."), surfaceRunoff);
-        return false;
-    }
-
-    AddLoggingToItem("outlet");
 
     return true;
 }

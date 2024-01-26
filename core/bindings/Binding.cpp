@@ -29,21 +29,40 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
-        .def("generate_socont_structure", &SettingsModel::GenerateStructureSocont, "Generate the GSM-SOCONT structure.",
-             "land_cover_types"_a, "land_cover_names"_a, "soil_storage_nb"_a = 1, "surface_runoff"_a = "socont_runoff",
-			 "snow_melt_process"_a = "melt:degree_day")
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
+        .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
+        .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
+        .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
+             "kind"_a = "storage")
+        .def("add_sub_basin_brick", &SettingsModel::AddSubBasinBrick, "Add a sub basin brick.", "name"_a,
+             "kind"_a = "storage")
+        .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrickByName, "Select a hydro unit brick.",
+             "name"_a)
+        .def("add_brick_process", &SettingsModel::AddBrickProcess, "Add a process to a brick.", "name"_a, "kind"_a,
+             "target"_a = "", "log"_a = false)
+        .def("add_process_parameter", &SettingsModel::AddProcessParameter, "Add a process parameter.", "name"_a,
+             "value"_a, "kind"_a = "constant")
+        .def("add_process_forcing", &SettingsModel::AddProcessForcing, "Add a process forcing.", "name"_a)
+        .def("add_brick_parameter", &SettingsModel::AddBrickParameter, "Add a brick parameter.", "name"_a, "value"_a,
+             "kind"_a = "constant")
         .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter.", "component"_a,
-             "name"_a, "value"_a);
+             "name"_a, "value"_a)
+        .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
+             "Generate the precipitation splitters.", "with_snow"_a = true)
+        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
+        .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
+             "Set the process outputs as instantaneous.")
+        .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
+             "Set the process outputs as static.");
 
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
              "area"_a)
-        .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "type"_a,
+        .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",
              "name"_a, "value"_a)

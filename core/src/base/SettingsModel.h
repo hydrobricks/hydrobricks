@@ -69,10 +69,6 @@ class SettingsModel : public wxObject {
 
     ~SettingsModel() override;
 
-    bool GenerateStructureSocont(vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb = 1,
-                                 const string& surfaceRunoff = "socont_runoff",
-								 const string& snowMeltProcess = "melt:degree_day");
-
     void SetSolver(const string& solverName);
 
     void SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit);
@@ -152,6 +148,8 @@ class SettingsModel : public wxObject {
     bool SelectSubBasinBrickIfFound(const string& name);
 
     void SelectHydroUnitBrick(const string& name);
+
+    void SelectHydroUnitBrickByName(const string& name);
 
     void SelectSubBasinBrick(const string& name);
 

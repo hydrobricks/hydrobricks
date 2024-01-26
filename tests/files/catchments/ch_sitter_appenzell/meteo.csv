@@ -1,4 +1,5 @@
-Date,precip(mm/day),temp(C),sunshine_dur(h),pet_sim(mm/day)
+Date,precip,temp,sunshine_dur,pet_sim
+,mm/day,C,h,mm/day
 01/01/1981,8.24,-0.98,0.42,0.58
 02/01/1981,4.02,-3.35,0.08,0
 03/01/1981,22.27,0.96,0.44,0.95

@@ -3,11 +3,10 @@ import math
 import pathlib
 import warnings
 
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 import hydrobricks as hb
 from hydrobricks.constants import (
@@ -29,8 +28,8 @@ if hb.has_shapely:
     from shapely.geometry import mapping
 
 if hb.has_rasterio:
-    from rasterio.mask import mask
     from rasterio.enums import Resampling
+    from rasterio.mask import mask
 
 
 class Catchment:
@@ -170,7 +169,7 @@ class Catchment:
                            min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
-                      elevation_distance=50, min_elevation=None, max_elevation=None, 
+                      elevation_distance=50, min_elevation=None, max_elevation=None,
                       radiation_method='isohypse', radiation_number=5,
                       radiation_distance=100, min_radiation=None, max_radiation=None):
         """
@@ -182,7 +181,7 @@ class Catchment:
             The criteria to use to discretize the catchment (can be combined):
             'elevation' = elevation bands
             'aspect' = aspect according to the cardinal directions (4 classes)
-            'radiation' = radiation according to the potential radiation (4 quantiles, Hock, 1999)
+            'radiation' = potential radiation (4 quantiles, Hock, 1999)
         elevation_method : str
             The method to build the elevation bands:
             'isohypse' = fixed contour intervals (provide the 'distance' parameter)
@@ -501,11 +500,14 @@ class Catchment:
         src = hb.rasterio.open(downsampled_dem_path)
         self.downsampled_dem = src
         self.downsampled_masked_dem_data, _ = mask(src, geoms, crop=False)
-        self.downsampled_masked_dem_data[self.downsampled_masked_dem_data == src.nodata] = np.nan
+        self.downsampled_masked_dem_data[
+            self.downsampled_masked_dem_data == src.nodata] = np.nan
         if len(self.downsampled_masked_dem_data.shape) == 3:
             self.downsampled_masked_dem_data = self.downsampled_masked_dem_data[0]
-        self.downsampled_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
-        self.downsampled_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
+        self.downsampled_slope = hb.xrs.slope(xr_dem_downsampled,
+                                              name='slope').to_numpy()
+        self.downsampled_aspect = hb.xrs.aspect(xr_dem_downsampled,
+                                                name='aspect').to_numpy()
 
     def calculate_slope_aspect(self):
         """
@@ -575,7 +577,7 @@ class Catchment:
 
     @staticmethod
     def _calculate_angle_of_incidence(zenith, slope, azimuth, aspect,
-                                      tolerance = 10**(-6)):
+                                      tolerance=10 ** (-6)):
         """
         Calculate the angle of incidence.
 
@@ -604,8 +606,8 @@ class Catchment:
         aspect_rad = (aspect - 180) * TO_RAD
 
         cosine_term = (np.cos(zenith_rad) * np.cos(slope_rad)) + \
-                      (np.sin(zenith_rad) * np.sin(slope_rad) * \
-                      np.cos(azimuth_rad - aspect_rad))
+                      (np.sin(zenith_rad) * np.sin(slope_rad) *
+                       np.cos(azimuth_rad - aspect_rad))
         if np.nanmax(np.abs(cosine_term) - 1) < tolerance:
             incidence_angle = np.arccos(np.clip(cosine_term, -1, 1))
         else:
@@ -642,7 +644,8 @@ class Catchment:
         """
         if self.downsampled_dem is None or self.downsampled_slope is None or \
                 self.downsampled_aspect is None:
-            self.resample_dem_and_calculate_slope_aspect(resolution, output_path + 'downsampled_DEM.tif')
+            self.resample_dem_and_calculate_slope_aspect(
+                resolution, output_path + 'downsampled_DEM.tif')
 
         # Julian days are a continuous count of days since the beginning of the Julian
         # calendar. In solar calculations, it's often used to represent the time of
@@ -650,7 +653,9 @@ class Catchment:
         start_datetime = pd.to_datetime(start_date)
         end_datetime = pd.to_datetime(end_date)
         if start_datetime > end_datetime:
-            raise RuntimeError('The given end date comes earlier in time than the given start date.') from None
+            raise RuntimeError(
+                'The given end date comes earlier in time than the given start date.') \
+                from None
         times = pd.date_range(start_datetime, end_datetime, freq='D')
 
         # Convert the dates to Julian days and only compute the same day once and not
@@ -695,34 +700,36 @@ class Catchment:
         # A 15 min time interval represents the angular size of a 15-minute time
         # interval in radians. 15 degrees of longitude for every one hour of time,
         # divided by 4 to get the number of degrees in every 15 minutes of time.
-        time_interval = (15 / 4) * TO_RAD  # 4 per hour / 15deg/4 (convert for radians)
+
+        # time_interval = (15 / 4) * TO_RAD  # 4 per hour / 15deg/4 (convert for rads)
 
         daily_radiation = np.empty(
-            (len(jd_unique), self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
+            (len(jd_unique), self.downsampled_slope.shape[0],
+             self.downsampled_slope.shape[1]))
         daily_radiation.fill(np.NaN)
 
         mean_annual_radiation = np.empty(
             (self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
         mean_annual_radiation.fill(np.NaN)
 
-        ###### DEBUG #######
+        # DEBUG #
         debug = True
         if debug:
-            fig, (ax1, ax3) = plt.subplots(2, figsize=(20,3))
+            fig, (ax1, ax3) = plt.subplots(2, figsize=(20, 3))
             cmap = plt.get_cmap('viridis')
             normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
 
             zeniths = []
-            azimuths = []
+            # azimuths = []
             ha_lists = []
-        ###### END DEBUG #######
+        # END DEBUG #
 
         for i in range(len(jd_unique)):
             print('Day', jd_unique[i])
             # List of hour angles throughout the day.
             # [::-1] reverses the array order
-            #ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1]
-            ha_list = np.linspace(-hour_angle[i], hour_angle[i], num=100)#[::-1]
+            # ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1]
+            ha_list = np.linspace(-hour_angle[i], hour_angle[i], num=100)  # [::-1]
 
             # The Solar zenith (IQBAL 2012) is the angle between the sun and the
             # vertical (zenith) position directly above the observer. The result is
@@ -732,37 +739,43 @@ class Catchment:
             zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declin[i])) +
                                (np.cos(lat_rad) * np.cos(solar_declin[i]) *
                                 np.cos(ha_list))) * TO_DEG
-            #cosine_arg = (np.cos(zenith * TO_RAD) * np.sin(lat_rad) - np.sin(solar_declin[i])) / \
+            # cosine_arg = (np.cos(zenith * TO_RAD) * np.sin(lat_rad) -
+            # np.sin(solar_declin[i])) / \
             #             (np.sin(zenith * TO_RAD) * np.cos(lat_rad))
-            #azimuth = np.arccos((cosine_arg)) * TO_DEG
+            # azimuth = np.arccos((cosine_arg)) * TO_DEG
 
             # Azimuth with negative values before solar noon and positive
             # ones after solar noon. Solar noon is defined by the change in sign of
             # the hour angle (negative in the morning, positive in the afternoon).
-            #sol_noon = np.argmin(azimuth)
-            #Az = np.concatenate((180 - azimuth[: sol_noon + 1], 180 + azimuth[sol_noon + 1:]))
-            #Az = np.concatenate((180 - azimuth[ha_list < 0], 180 + azimuth[ha_list >= 0]))
-            #Az = azimuth.copy()
-            #Az[ha_list < 0] = Az[ha_list < 0] * -1
+            # sol_noon = np.argmin(azimuth)
+            # Az = np.concatenate((180 - azimuth[: sol_noon + 1], 180 + a
+            # zimuth[sol_noon + 1:]))
+            # Az = np.concatenate((180 - azimuth[ha_list < 0], 180 +
+            # azimuth[ha_list >= 0]))
+            # Az = azimuth.copy()
+            # Az[ha_list < 0] = Az[ha_list < 0] * -1
 
             # https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur/#:~:text=aux%20%C3%A9quinoxes%20de%20printemps%20et,d%C3%A9cale%20vers%20le%20nord%2Dest.
-            Az = np.degrees(np.arctan(np.sin(ha_list)/(np.sin(lat_rad)*np.cos(ha_list)-np.cos(lat_rad)*np.tan(solar_declin[i]))))
+            Az = np.degrees(np.arctan(np.sin(ha_list) / (
+                    np.sin(lat_rad) * np.cos(ha_list) -
+                    np.cos(lat_rad) * np.tan(solar_declin[i]))))
             Az[(Az < 0) & (ha_list > 0)] = Az[(Az < 0) & (ha_list > 0)] + 180
             Az[(Az > 0) & (ha_list < 0)] = Az[(Az > 0) & (ha_list < 0)] - 180
 
             # Potential radiation over the time intervals defined with time_interval
             inter_pot_radiation = np.empty(
-                (len(zenith), self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
+                (len(zenith), self.downsampled_slope.shape[0],
+                 self.downsampled_slope.shape[1]))
             inter_pot_radiation.fill(np.NaN)
-            ###### DEBUG #######
+            # DEBUG #
             if debug:
                 ax1.plot(ha_list, zenith, markersize=2, color=cmap(normalize(i)))
-                #ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
+                # ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
                 ax3.plot(ha_list, Az, markersize=2, color=cmap(normalize(i)))
                 ax1.set_ylabel('Zenith angle')
-                #ax2.set_ylabel('Azimuth')
+                # ax2.set_ylabel('Azimuth')
                 ax3.set_ylabel('Azimuth angle')
-            ###### END DEBUG #######
+            # END DEBUG #
 
             for j in range(len(zenith)):
                 incidence_angle = self._calculate_angle_of_incidence(
@@ -773,33 +786,35 @@ class Catchment:
 
             with warnings.catch_warnings():
                 # This function throws a warning for the first slides of nanmean,
-                # it is normal and due to the NaN bands at the sides of the slope rasters, etc.
+                # it is normal and due to the NaN bands at the sides of the
+                # slope rasters, etc.
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
                 daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
-            ###### DEBUG #######
+            # DEBUG #
             if debug:
                 zeniths.append(np.nanmean(zenith))
-                #azimuths.append(np.nanmean(azimuth))
+                # azimuths.append(np.nanmean(azimuth))
                 ha_lists.append(np.nanmean(ha_list) * 100)
-            ###### END DEBUG #######
+            # END DEBUG #
 
-        ###### DEBUG #######
+        # DEBUG #
         if debug:
             plt.xlabel('Hour angle')
             scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
             scalarmappaple.set_array(len(jd_unique))
             fig.subplots_adjust(right=0.8)
             cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-            cbar = plt.colorbar(scalarmappaple, cax=cbar_ax)
-            cbar_ax = cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
+            plt.colorbar(scalarmappaple, cax=cbar_ax)
+            cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
             plt.show()
 
-            fig = plt.figure(figsize=(20,3))
-            ax = fig.add_subplot(111)
+            fig = plt.figure(figsize=(20, 3))
+            fig.add_subplot(111)
 
             with warnings.catch_warnings():
                 # This function throws a warning for the first slides of nanmean,
-                # it is normal and due to the NaN bands at the sides of the slope rasters, etc.
+                # it is normal and due to the NaN bands at the sides of
+                # the slope rasters, etc.
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
                 mins = np.nanmin(daily_radiation, axis=1)
                 mins = np.nanmin(mins, axis=1)
@@ -814,25 +829,28 @@ class Catchment:
             plt.plot(jd_unique, hour_angle, markersize=2, label='hour_angle')
             plt.plot(jd_unique, ha_lists, markersize=2, label='ha_list')
             plt.plot(jd_unique, zeniths, markersize=2, label='zenith')
-            #plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
+            # plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
             plt.plot(jd_unique, solar_declin, markersize=2, label='solar_declin')
-            plt.plot(jd_unique, np.sin(solar_declin), markersize=2, label='np sin solar_declin')
+            plt.plot(jd_unique, np.sin(solar_declin), markersize=2,
+                     label='np sin solar_declin')
 
             plt.xlabel('Time (day)')
             plt.ylabel('Radiation')
             plt.legend()
             plt.show()
-        ###### END DEBUG #######
+        # END DEBUG #
 
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
-        self.upscale_and_save_mean_annual_radiation_rasters(mean_annual_radiation, output_path)
+        self.upscale_and_save_mean_annual_radiation_rasters(mean_annual_radiation,
+                                                            output_path)
 
         # Get the indices of jd_unique that match the values of jd
         indices = np.searchsorted(jd_unique, jd)
         whole_daily_pot_radiation = daily_radiation[indices, :, :]
 
         rows, cols = np.where(self.downsampled_masked_dem_data)
-        xs, ys = hb.rasterio.transform.xy(self.downsampled_dem.transform, list(rows), list(cols))
+        xs, ys = hb.rasterio.transform.xy(self.downsampled_dem.transform, list(rows),
+                                          list(cols))
         xs = np.array(xs).reshape(self.downsampled_masked_dem_data.shape)[0, :]
         ys = np.array(ys).reshape(self.downsampled_masked_dem_data.shape)[:, 0]
 
@@ -929,7 +947,8 @@ class Catchment:
     def upscale_and_save_mean_annual_radiation_rasters(self, mean_annual_radiation,
                                                        path):
         """
-        Save the mean annual radiation rasters (downsampled and at DEM resolution) to a file.
+        Save the mean annual radiation rasters (downsampled and at DEM resolution)
+        to a file.
 
         Parameters
         ----------
@@ -941,10 +960,12 @@ class Catchment:
         # Create the profile
         profile = self.downsampled_dem.profile
 
-        with hb.rasterio.open(path + 'DownsampledAnnualPotentialRadiation.tif', 'w', **profile) as dst:
+        with hb.rasterio.open(path + 'DownsampledAnnualPotentialRadiation.tif', 'w',
+                              **profile) as dst:
             dst.write(mean_annual_radiation, 1)
 
-        xr_dem = hb.rxr.open_rasterio(path + 'DownsampledAnnualPotentialRadiation.tif').drop_vars('band')[0]
+        xr_dem = hb.rxr.open_rasterio(
+            path + 'DownsampledAnnualPotentialRadiation.tif').drop_vars('band')[0]
         xr_dem_upscaled = xr_dem.rio.reproject(
             xr_dem.rio.crs,
             shape=self.dem.shape,
@@ -1110,7 +1131,7 @@ class Catchment:
         mean_y = np.nanmean(ys)
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326)
+        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon

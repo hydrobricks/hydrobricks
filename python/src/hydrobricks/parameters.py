@@ -588,15 +588,50 @@ class ParameterSet:
 
                 self.define_parameter(
                     component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20,
-                    mandatory=True)
-
+                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20)
                 self.define_parameter(
                     component=cover_name, name='melting_temperature',
                     unit='°C', aliases=t_aliases, min_value=0, max_value=5,
                     default_value=0, mandatory=False)
 
                 self.define_constraint('a_snow', '<', a_aliases[0])
+
+            elif melt_method == 'melt:degree_day_aspect':
+                if len(glacier_names) == 1:
+                    a_n_aliases = ['a_ice_n']
+                    a_s_aliases = ['a_ice_s']
+                    a_ew_aliases = ['a_ice_ew']
+                    t_aliases = ['melt_t_ice']
+                else:
+                    a_n_aliases = [f'a_ice_n_{cover_name.replace("-", "_")}',
+                                   f'a_ice_n_{i}']
+                    a_s_aliases = [f'a_ice_s_{cover_name.replace("-", "_")}',
+                                   f'a_ice_s_{i}']
+                    a_ew_aliases = [f'a_ice_ew_{cover_name.replace("-", "_")}',
+                                    f'a_ice_ew_{i}']
+                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                                 f'melt_t_ice_{i}']
+
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_n',
+                    unit='mm/d/°C', aliases=a_n_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_s',
+                    unit='mm/d/°C', aliases=a_s_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='degree_day_factor_ew',
+                    unit='mm/d/°C', aliases=a_ew_aliases, min_value=5, max_value=20)
+                self.define_parameter(
+                    component=cover_name, name='melting_temperature',
+                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
+                    default_value=0, mandatory=False)
+
+                self.define_constraint('a_snow', '<', a_n_aliases[0])
+                self.define_constraint('a_snow', '<', a_s_aliases[0])
+                self.define_constraint('a_snow', '<', a_ew_aliases[0])
+                self.define_constraint('a_snow_n', '<', a_n_aliases[0])
+                self.define_constraint('a_snow_s', '<', a_s_aliases[0])
+                self.define_constraint('a_snow_ew', '<', a_ew_aliases[0])
 
             else:
                 raise RuntimeError(f"The glacier melt method {melt_method} is not "
@@ -618,8 +653,24 @@ class ParameterSet:
                 if options['snow_melt_process'] == 'melt:degree_day':
                     self.define_parameter(
                         component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-                        aliases=['a_snow'], min_value=2, max_value=12, mandatory=True)
-
+                        aliases=['a_snow'], min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='melting_temperature', unit='°C',
+                        aliases=['melt_t_snow'], min_value=0, max_value=5,
+                        default_value=0, mandatory=False)
+                elif options['snow_melt_process'] == 'melt:degree_day_aspect':
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_n',
+                        unit='mm/d/°C', aliases=['a_snow_n'],
+                        min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_s',
+                        unit='mm/d/°C', aliases=['a_snow_s'],
+                        min_value=2, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='degree_day_factor_ew',
+                        unit='mm/d/°C', aliases=['a_snow_ew'],
+                        min_value=2, max_value=12)
                     self.define_parameter(
                         component='snowpack', name='melting_temperature', unit='°C',
                         aliases=['melt_t_snow'], min_value=0, max_value=5,

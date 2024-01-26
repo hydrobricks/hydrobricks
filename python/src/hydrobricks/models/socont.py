@@ -13,7 +13,7 @@ class Socont(Model):
         self.options['snow_melt_process'] = 'melt:degree_day'
         self.allowed_land_cover_types = ['ground', 'glacier']
 
-        self._check_args(kwargs)
+        self._set_options(kwargs)
 
         try:
             self._define_structure()
@@ -168,12 +168,9 @@ class Socont(Model):
             ['k_slow_2', '<', 'k_slow_1'],
         ]
 
-    def _set_options(self, kwargs):
-        super()._set_options(kwargs)
+    def _set_specific_options(self, kwargs):
         if 'soil_storage_nb' in kwargs:
             self.options['soil_storage_nb'] = int(kwargs['soil_storage_nb'])
             if (self.options['soil_storage_nb'] < 1 or
                     self.options['soil_storage_nb'] > 2):
                 raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
-        if 'surface_runoff' in kwargs:
-            self.options['surface_runoff'] = kwargs['surface_runoff']

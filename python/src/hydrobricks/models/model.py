@@ -31,7 +31,7 @@ class Model(ABC):
         self.land_cover_names = ['ground']
         self.allowed_land_cover_types = ['ground']
 
-        self._set_options(kwargs)
+        self._set_basic_options(kwargs)
 
         # Structure
         self.structure = dict()
@@ -327,10 +327,19 @@ class Model(ABC):
         raise RuntimeError(f'The structure has to be defined by the child class '
                            f'(named {self.name}).')
 
-    def _check_args(self, kwargs):
+    @abstractmethod
+    def _set_specific_options(self, kwargs):
+        raise RuntimeError(f'The specific options have to be defined by the child '
+                           f'class (named {self.name}).')
+
+    def _set_options(self, kwargs):
         self._add_allowed_kwargs(self.options.keys())
         self._validate_kwargs(kwargs)
-        self._set_options(kwargs)
+
+        for key, value in kwargs.items():
+            self.options[key] = value
+
+        self._set_specific_options(kwargs)
         self._check_cover_types()
 
     def _check_cover_types(self):
@@ -344,7 +353,7 @@ class Model(ABC):
                 raise RuntimeError(
                     f'The land cover {cover_type} is not used in Socont')
 
-    def _set_options(self, kwargs):
+    def _set_basic_options(self, kwargs):
         if 'solver' in kwargs:
             self.solver = kwargs['solver']
         if 'record_all' in kwargs:

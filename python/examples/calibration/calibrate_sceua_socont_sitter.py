@@ -54,6 +54,3 @@ plt.ylabel('Discharge [l s-1]')
 plt.legend(loc='upper right')
 plt.tight_layout()
 plt.show()
-
-# Cleanup
-socont.cleanup()

@@ -43,6 +43,9 @@ class Model(ABC):
             solver=self.solver,
             record_all=self.record_all)
 
+    def __del__(self):
+        self.cleanup()
+
     @property
     def name(self):
         return self._name

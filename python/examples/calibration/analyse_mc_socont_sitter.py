@@ -42,5 +42,3 @@ posterior = spotpy.analyser.get_posterior(results, percentage=10)
 spotpy.analyser.plot_parameterInteraction(posterior)
 plt.tight_layout()
 plt.show()
-
-socont.cleanup()

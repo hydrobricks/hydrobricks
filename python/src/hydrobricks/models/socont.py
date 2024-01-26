@@ -162,7 +162,7 @@ class Socont(Model):
 
     def _define_parameter_constraints(self):
         self.parameter_constraints = [
-            ['k_snow', '<', 'k_ice'],
+            ['a_snow', '<', 'a_ice'],
             ['k_slow_1', '<', 'k_quick'],
             ['k_slow_2', '<', 'k_quick'],
             ['k_slow_2', '<', 'k_slow_1'],
@@ -177,4 +177,3 @@ class Socont(Model):
                 raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
         if 'surface_runoff' in kwargs:
             self.options['surface_runoff'] = kwargs['surface_runoff']
-

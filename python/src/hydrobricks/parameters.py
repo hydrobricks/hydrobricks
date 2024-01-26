@@ -185,6 +185,10 @@ class ParameterSet:
         True is constraints are satisfied, False otherwise.
         """
         for constraint in self.constraints:
+            # Ignore constraints involving unused parameters
+            if not self.has(constraint[0]) or not self.has(constraint[2]):
+                continue
+
             val_1 = self.get(constraint[0])
             operator = constraint[1]
             val_2 = self.get(constraint[2])
@@ -525,7 +529,7 @@ class ParameterSet:
         if 'processes' not in brick:
             return
 
-        for process_name, process in brick['processes'].items():
+        for _, process in brick['processes'].items():
             if process['kind'] in ['infiltration:socont', 'outflow:rest_direct',
                                    'et:socont', 'overflow']:
                 continue
@@ -549,7 +553,7 @@ class ParameterSet:
         if 'parameters' not in brick:
             return
 
-        for param_name, param_value in brick['parameters'].items():
+        for param_name, _ in brick['parameters'].items():
             if param_name in ['no_melt_when_snow_cover', 'infinite_storage']:
                 continue
             elif param_name == 'capacity':

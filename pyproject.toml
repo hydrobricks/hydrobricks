@@ -38,6 +38,7 @@ build-verbosity = 3
 
 [tool.cibuildwheel.linux]
 before-build = [
+    "dnf clean packages",
     "dnf update -y",
     "dnf install -y gpg",
     "dnf --refresh -y",

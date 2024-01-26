@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import warnings
 
 import hydrobricks as hb
 import hydrobricks.behaviours as behaviours
@@ -13,19 +12,6 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'tests', 'files',
 )
-
-
-@pytest.fixture
-def disable_geopandas_warning():
-    with warnings.catch_warnings():
-        # Filter out the specific DeprecationWarning
-        warnings.filterwarnings(
-            "ignore", category=DeprecationWarning,
-            message="Passing a SingleBlockManager to Series is deprecated *")
-        warnings.filterwarnings(
-            "ignore", category=AttributeError,
-            message="'Series' object has no attribute '_mgr'")
-        yield
 
 
 @pytest.fixture
@@ -165,8 +151,7 @@ def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
     assert model.get_behaviour_items_nb() == 444
 
 
-def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data,
-                                                disable_geopandas_warning):
+def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data):
     files = changes_data[0]
     times = changes_data[1]
 
@@ -195,8 +180,7 @@ def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data,
     assert changes_sum.iloc[5] == pytest.approx(catchment_gletsch.area, rel=0.001)
 
 
-def test_extract_glacier_cover_evolution_vector(catchment_gletsch, changes_data,
-                                                disable_geopandas_warning):
+def test_extract_glacier_cover_evolution_vector(catchment_gletsch, changes_data):
     files = changes_data[0]
     times = changes_data[1]
 
@@ -225,8 +209,7 @@ def test_extract_glacier_cover_evolution_vector(catchment_gletsch, changes_data,
     assert changes_sum.iloc[5] == pytest.approx(catchment_gletsch.area, rel=0.001)
 
 
-def test_extract_glacier_cover_evolution_interpolate(catchment_gletsch, changes_data,
-                                                     disable_geopandas_warning):
+def test_extract_glacier_cover_evolution_interpolate(catchment_gletsch, changes_data):
     files = changes_data[0]
     times = changes_data[1]
 

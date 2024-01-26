@@ -1,6 +1,6 @@
 cftime
 HydroErr
 numpy
-pandas>=2.0
+pandas==2.1
 pyyaml
 StrEnum

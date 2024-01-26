@@ -142,7 +142,6 @@ def test_socont_with_1_soil_storage_closes_water_balance():
 
     assert balance == pytest.approx(0, abs=1e-8)
 
-    socont.cleanup()
     try:
         tmp_dir.cleanup()
     except Exception:
@@ -203,7 +202,6 @@ def test_socont_with_2_soil_storages_closes_water_balance():
 
     assert balance == pytest.approx(0, abs=1e-8)
 
-    socont.cleanup()
     try:
         tmp_dir.cleanup()
     except Exception:
@@ -233,7 +231,6 @@ def test_error_is_raised_if_parameter_missing():
     with pytest.raises(RuntimeError, match=r"Some parameters were not defined*"):
         socont.run(parameters=parameters)
 
-    socont.cleanup()
     try:
         tmp_dir.cleanup()
     except Exception:

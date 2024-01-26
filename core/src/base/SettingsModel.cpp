@@ -430,6 +430,12 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
             AddProcessForcing("temperature");
             AddProcessParameter("degree_day_factor", 3.0f);
             AddProcessParameter("melting_temperature", 0.0f);
+        } else if (snowMeltProcess == "melt:degree_day_aspect") {
+            AddProcessForcing("temperature");
+            AddProcessParameter("degree_day_factor_n", 3.0f);
+            AddProcessParameter("degree_day_factor_s", 3.0f);
+            AddProcessParameter("degree_day_factor_ew", 3.0f);
+            AddProcessParameter("melting_temperature", 0.0f);
         } else {
             throw NotImplemented();
         }
@@ -700,11 +706,6 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
     }
 
     return logNames;
-}
-
-bool SettingsModel::ParseStructure(const string& path) {
-    wxLogError(_("This function is outdated and should not be used anymore."));
-    return false;
 }
 
 bool SettingsModel::ParseParameters(const string& path) {

@@ -1,10 +1,16 @@
-import shutil
-
 import matplotlib.pyplot as plt
 import spotpy
-from setups.socont_sitter import forcing, obs, parameters, socont, tmp_dir
+from examples._helpers.models_setup_helper import ModelSetupHelper
 
 import hydrobricks as hb
+
+# Set up the model
+helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
+                          end_date='2020-12-31')
+helper.create_hydro_units_from_csv_file()
+forcing = helper.get_forcing_data_from_csv_file(ref_elevation=1250)
+obs = helper.get_obs_data_from_csv_file()
+socont, parameters = helper.get_model_and_params_socont()
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
@@ -37,9 +43,4 @@ spotpy.analyser.plot_parameterInteraction(posterior)
 plt.tight_layout()
 plt.show()
 
-# Cleanup
-try:
-    socont.cleanup()
-    shutil.rmtree(tmp_dir)
-except Exception:
-    print("Failed to clean up.")
+socont.cleanup()

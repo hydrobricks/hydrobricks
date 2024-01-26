@@ -171,6 +171,8 @@ class SettingsModel : public wxObject {
 
     void SelectSubBasinSplitter(const string& name);
 
+    bool ParseStructure(const string& path);
+
     bool ParseParameters(const string& path);
 
     bool SetParameter(const string& component, const string& name, float value);

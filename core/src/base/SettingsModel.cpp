@@ -708,6 +708,11 @@ vecStr SettingsModel::GetSubBasinGenericLogLabels() {
     return logNames;
 }
 
+bool SettingsModel::ParseStructure(const string&) {
+    wxLogError(_("This function is outdated and should not be used anymore."));
+    return false;
+}
+
 bool SettingsModel::ParseParameters(const string& path) {
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);

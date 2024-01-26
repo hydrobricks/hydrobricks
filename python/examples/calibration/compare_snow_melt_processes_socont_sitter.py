@@ -6,7 +6,6 @@ import hydrobricks as hb
 
 # Select the methods to compare
 methods = ['degree_day', 'degree_day_aspect']
-methods = ['degree_day_aspect']
 
 # Select number of maximum repetitions for spotpy
 max_rep = 100

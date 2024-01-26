@@ -114,7 +114,8 @@ class HydroUnits:
 
         if other_columns is not None:
             for prop, col in other_columns.items():
-                self.add_property((prop[0], prop[1]), col)
+                vals, unit = self._get_column_values_unit(col, file_content)
+                self.add_property((prop, unit), vals)
 
         if column_fractions is not None:
             raise NotImplementedError

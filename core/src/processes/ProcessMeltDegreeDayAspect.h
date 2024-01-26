@@ -23,11 +23,9 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    string m_aspect;
+    string m_aspect_class;
     Forcing* m_temperature;
-    float* m_degreeDayFactorN;
-    float* m_degreeDayFactorS;
-    float* m_degreeDayFactorEW;
+    float* m_degreeDayFactor;
     float* m_meltingTemperature;
 
     vecDouble GetRates() override;

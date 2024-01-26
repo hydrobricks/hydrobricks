@@ -1,14 +1,13 @@
 #include "ProcessMeltDegreeDayAspect.h"
 
 #include "Brick.h"
+#include "HydroUnit.h"
 #include "WaterContainer.h"
 
 ProcessMeltDegreeDayAspect::ProcessMeltDegreeDayAspect(WaterContainer* container)
     : ProcessMelt(container),
       m_temperature(nullptr),
-      m_degreeDayFactorN(nullptr),
-      m_degreeDayFactorS(nullptr),
-      m_degreeDayFactorEW(nullptr),
+      m_degreeDayFactor(nullptr),
       m_meltingTemperature(nullptr) {}
 
 bool ProcessMeltDegreeDayAspect::IsOk() {
@@ -18,14 +17,8 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
     if (m_temperature == nullptr) {
         return false;
     }
-    if (m_degreeDayFactorN == nullptr) {
+    if (m_degreeDayFactor == nullptr) {
         return false;
-    }
-    if (m_degreeDayFactorS == nullptr) {
-            return false;
-    }
-    if (m_degreeDayFactorEW == nullptr) {
-            return false;
     }
     if (m_meltingTemperature == nullptr) {
         return false;
@@ -34,16 +27,23 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
     return true;
 }
 
-void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) {
-    m_aspect = unit->GetPropertyString("aspect");
+void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
+    m_aspect_class = unit->GetPropertyString("aspect_class");
 }
 
 void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
-    m_degreeDayFactorN = GetParameterValuePointer(processSettings, "degree_day_factor_n");
-    m_degreeDayFactorS = GetParameterValuePointer(processSettings, "degree_day_factor_s");
-    m_degreeDayFactorEW = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
     m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
+
+    if (m_aspect_class == "north" || m_aspect_class == "NE") {
+        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_n");
+    } else if (m_aspect_class == "south" || m_aspect_class == "S") {
+        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_s");
+    } else if (m_aspect_class == "east" || m_aspect_class == "west" || m_aspect_class == "E" || m_aspect_class == "W") {
+        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
+    } else {
+        throw InvalidArgument("Invalid aspect: " + m_aspect_class);
+    }
 }
 
 void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {

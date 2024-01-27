@@ -576,15 +576,18 @@ class ParameterSet:
         for i, cover_name in enumerate(glacier_names):
             melt_method = structure[cover_name]['processes']['melt']['kind']
 
+            if len(glacier_names) == 1:
+                t_aliases = ['melt_t_ice']
+            else:
+                t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
+                             f'melt_t_ice_{i}']
+
             if melt_method == 'melt:degree_day':
                 if len(glacier_names) == 1:
                     a_aliases = ['a_ice']
-                    t_aliases = ['melt_t_ice']
                 else:
                     a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
                                  f'a_ice_{i}']
-                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                                 f'melt_t_ice_{i}']
 
                 self.define_parameter(
                     component=cover_name, name='degree_day_factor',
@@ -601,7 +604,6 @@ class ParameterSet:
                     a_n_aliases = ['a_ice_n']
                     a_s_aliases = ['a_ice_s']
                     a_ew_aliases = ['a_ice_ew']
-                    t_aliases = ['melt_t_ice']
                 else:
                     a_n_aliases = [f'a_ice_n_{cover_name.replace("-", "_")}',
                                    f'a_ice_n_{i}']
@@ -609,8 +611,6 @@ class ParameterSet:
                                    f'a_ice_s_{i}']
                     a_ew_aliases = [f'a_ice_ew_{cover_name.replace("-", "_")}',
                                     f'a_ice_ew_{i}']
-                    t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                                 f'melt_t_ice_{i}']
 
                 self.define_parameter(
                     component=cover_name, name='degree_day_factor_n',
@@ -632,6 +632,19 @@ class ParameterSet:
                 self.define_constraint('a_snow_n', '<', a_n_aliases[0])
                 self.define_constraint('a_snow_s', '<', a_s_aliases[0])
                 self.define_constraint('a_snow_ew', '<', a_ew_aliases[0])
+
+            elif melt_method == 'melt:temperature_index':
+                if len(glacier_names) == 1:
+                    r_aliases = ['r_ice']
+                else:
+                    r_aliases = [f'r_ice_{cover_name.replace("-", "_")}',
+                                 f'r_ice_{i}']
+
+                self.define_parameter(
+                    component=cover_name, name='radiation_coefficient',
+                    unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=1)
+
+                self.define_constraint('r_snow', '<', r_aliases[0])
 
             else:
                 raise RuntimeError(f"The glacier melt method {melt_method} is not "
@@ -675,6 +688,16 @@ class ParameterSet:
                         component='snowpack', name='melting_temperature', unit='°C',
                         aliases=['melt_t_snow'], min_value=0, max_value=5,
                         default_value=0, mandatory=False)
+                elif options['snow_melt_process'] == 'melt:temperature_index':
+                    # This melt factor parameter is initialized on the snow but applied
+                    # to both snow and ice (debris-covered or clean).
+                    self.define_parameter(
+                        component='snowpack', name='melt_factor', unit='mm/d/°C',
+                        aliases=['mf'], min_value=0, max_value=12)
+                    self.define_parameter(
+                        component='snowpack', name='radiation_coefficient',
+                        unit='m2/W*mm/d/°C', aliases=['r_snow'],
+                        min_value=0, max_value=1)
                 else:
                     raise RuntimeError(
                         f"The snow melt process option "

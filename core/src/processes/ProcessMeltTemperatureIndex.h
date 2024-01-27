@@ -5,11 +5,11 @@
 #include "Includes.h"
 #include "ProcessMelt.h"
 
-class ProcessMeltRadiation : public ProcessMelt {
+class ProcessMeltTemperatureIndex : public ProcessMelt {
   public:
-    explicit ProcessMeltRadiation(WaterContainer* container);
+    explicit ProcessMeltTemperatureIndex(WaterContainer* container);
 
-    ~ProcessMeltRadiation() override = default;
+    ~ProcessMeltTemperatureIndex() override = default;
 
     /**
      * @copydoc Process::IsOk()

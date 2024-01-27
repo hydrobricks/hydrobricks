@@ -8,7 +8,7 @@ import hydrobricks as hb
 methods = ['degree_day', 'degree_day_aspect']
 
 # Select number of maximum repetitions for spotpy
-max_rep = 100
+max_rep = 4000
 
 # Set up the case study options
 helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',

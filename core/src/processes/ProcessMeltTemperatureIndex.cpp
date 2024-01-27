@@ -1,16 +1,16 @@
-#include "ProcessMeltRadiation.h"
+#include "ProcessMeltTemperatureIndex.h"
 
 #include "Brick.h"
 #include "WaterContainer.h"
 
-ProcessMeltRadiation::ProcessMeltRadiation(WaterContainer* container)
+ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* container)
     : ProcessMelt(container),
       m_temperature(nullptr),
       m_meltingTemperature(nullptr),
       m_radiationCoefficient(nullptr),
       m_potentialClearSkyDirectSolarRadiation(nullptr) {}
 
-bool ProcessMeltRadiation::IsOk() {
+bool ProcessMeltTemperatureIndex::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;
     }
@@ -33,7 +33,7 @@ bool ProcessMeltRadiation::IsOk() {
     return true;
 }
 
-void ProcessMeltRadiation::SetParameters(const ProcessSettings& processSettings) {
+void ProcessMeltTemperatureIndex::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     float* meltFactorPtr = GetParameterValuePointer(processSettings, "melt_factor");
     if (meltFactorPtr) {
@@ -46,7 +46,7 @@ void ProcessMeltRadiation::SetParameters(const ProcessSettings& processSettings)
     m_radiationCoefficient = GetParameterValuePointer(processSettings, "radiation_coefficient");
 }
 
-void ProcessMeltRadiation::AttachForcing(Forcing* forcing) {
+void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         m_temperature = forcing;
     } else if (forcing->GetType() == Radiation) {
@@ -56,7 +56,7 @@ void ProcessMeltRadiation::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessMeltRadiation::GetRates() {
+vecDouble ProcessMeltTemperatureIndex::GetRates() {
     if (!m_container->ContentAccessible()) {
         return {0};
     }

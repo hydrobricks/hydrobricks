@@ -6,9 +6,10 @@
 ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* container)
     : ProcessMelt(container),
       m_temperature(nullptr),
+      m_potentialClearSkyDirectSolarRadiation(nullptr),
+      m_meltFactor(nullptr),
       m_meltingTemperature(nullptr),
-      m_radiationCoefficient(nullptr),
-      m_potentialClearSkyDirectSolarRadiation(nullptr) {}
+      m_radiationCoefficient(nullptr) {}
 
 bool ProcessMeltTemperatureIndex::IsOk() {
     if (!ProcessMelt::IsOk()) {
@@ -35,13 +36,7 @@ bool ProcessMeltTemperatureIndex::IsOk() {
 
 void ProcessMeltTemperatureIndex::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
-    float* meltFactorPtr = GetParameterValuePointer(processSettings, "melt_factor");
-    if (meltFactorPtr) {
-        float meltFactorValue = *meltFactorPtr;
-        *m_meltFactor = meltFactorValue;
-    } else {
-        throw ShouldNotHappen();
-    }
+    m_meltFactor = GetParameterValuePointer(processSettings, "melt_factor");
     m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
     m_radiationCoefficient = GetParameterValuePointer(processSettings, "radiation_coefficient");
 }

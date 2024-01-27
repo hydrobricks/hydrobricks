@@ -21,8 +21,6 @@ class ProcessMelt : public Process {
     double* GetValuePointer(const string& name) override;
 
   protected:
-    std::shared_ptr<float> m_meltFactor;
-
   private:
 };
 

@@ -1,5 +1,5 @@
-#ifndef HYDROBRICKS_PROCESS_MELT_RADIATION_H
-#define HYDROBRICKS_PROCESS_MELT_RADIATION_H
+#ifndef HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H
+#define HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H
 
 #include "Forcing.h"
 #include "Includes.h"
@@ -23,6 +23,7 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
   protected:
     Forcing* m_temperature;
     Forcing* m_potentialClearSkyDirectSolarRadiation;
+    float* m_meltFactor;
     float* m_meltingTemperature;
     float* m_radiationCoefficient;
 
@@ -31,4 +32,4 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
   private:
 };
 
-#endif  // HYDROBRICKS_PROCESS_MELT_RADIATION_H
+#endif  // HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H

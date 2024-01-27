@@ -4,8 +4,7 @@
 #include "WaterContainer.h"
 
 ProcessMelt::ProcessMelt(WaterContainer* container)
-    : Process(container),
-      m_meltFactor(std::make_shared<float>(0.0f)) {}
+    : Process(container) {}
 
 bool ProcessMelt::IsOk() {
     if (m_outputs.size() != 1) {

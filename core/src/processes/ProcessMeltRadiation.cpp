@@ -50,7 +50,7 @@ void ProcessMeltRadiation::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         m_temperature = forcing;
     } else if (forcing->GetType() == Radiation) {
-    	m_potentialClearSkyDirectSolarRadiation = forcing;
+        m_potentialClearSkyDirectSolarRadiation = forcing;
     } else {
         throw InvalidArgument("Forcing must be of type Temperature or Radiation");
     }
@@ -63,7 +63,8 @@ vecDouble ProcessMeltRadiation::GetRates() {
 
     double melt = 0;
     if (m_temperature->GetValue() >= *m_meltingTemperature) {
-        melt = (m_temperature->GetValue() - *m_meltingTemperature) * (*m_meltFactor + *m_radiationCoefficient * m_potentialClearSkyDirectSolarRadiation->GetValue());
+        melt = (m_temperature->GetValue() - *m_meltingTemperature) *
+               (*m_meltFactor + *m_radiationCoefficient * m_potentialClearSkyDirectSolarRadiation->GetValue());
     }
 
     return {melt};

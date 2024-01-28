@@ -38,7 +38,9 @@ class ParameterSet:
         ----------
         component : str
             The component (brick) name to which the parameter refer (e.g., snowpack,
-            glacier, surface_runoff).
+            glacier, surface_runoff). It can be a string of a list of components when
+            the parameter is shared between components (e.g., melt_factor in the
+            temperature index method).
         name : str
             The name of the parameter in the C++ code of hydrobricks (e.g.,
             degree_day_factor, response_factor).
@@ -692,12 +694,16 @@ class ParameterSet:
                     # This melt factor parameter is initialized on the snow but applied
                     # to both snow and ice (debris-covered or clean).
                     self.define_parameter(
-                        component='snowpack', name='melt_factor', unit='mm/d/°C',
-                        aliases=['mf'], min_value=0, max_value=12)
+                        component='snowpack,type:glacier', name='melt_factor',
+                        unit='mm/d/°C', aliases=['mf'], min_value=0, max_value=12)
                     self.define_parameter(
                         component='snowpack', name='radiation_coefficient',
                         unit='m2/W*mm/d/°C', aliases=['r_snow'],
                         min_value=0, max_value=1)
+                    self.define_parameter(
+                        component='snowpack', name='melting_temperature', unit='°C',
+                        aliases=['melt_t_snow'], min_value=0, max_value=5,
+                        default_value=0, mandatory=False)
                 else:
                     raise RuntimeError(
                         f"The snow melt process option "

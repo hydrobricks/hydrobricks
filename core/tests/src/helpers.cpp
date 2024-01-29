@@ -22,7 +22,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     // Add other specific land covers
     for (int i = 0; i < landCoverNames.size(); ++i) {
         string type = landCoverTypes[i];
-        if (type == "ground") {
+        if (type == "ground" || type == "generic_land_cover") {
             // Nothing to do, already added.
         } else if (type == "glacier") {
             settings.AddLandCoverBrick(landCoverNames[i], "glacier");

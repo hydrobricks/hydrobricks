@@ -131,6 +131,9 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
         varType = Precipitation;
     } else if (StringsMatch(varName, "temperature") || StringsMatch(varName, "t")) {
         varType = Temperature;
+    } else if (StringsMatch(varName, "solar_radiation") || StringsMatch(varName, "r_solar") ||
+               StringsMatch(varName, "r")) {
+        varType = Radiation;
     } else if (StringsMatch(varName, "pet") || StringsMatch(varName, "etp")) {
         varType = PET;
     } else if (StringsMatch(varName, "custom_1")) {

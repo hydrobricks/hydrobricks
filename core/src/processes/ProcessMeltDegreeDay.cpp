@@ -9,6 +9,12 @@ ProcessMeltDegreeDay::ProcessMeltDegreeDay(WaterContainer* container)
       m_degreeDayFactor(nullptr),
       m_meltingTemperature(nullptr) {}
 
+void ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessParameter("degree_day_factor", 3.0f);
+    modelSettings->AddProcessParameter("melting_temperature", 0.0f);
+    modelSettings->AddProcessForcing("temperature");
+}
+
 bool ProcessMeltDegreeDay::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;

@@ -6,6 +6,10 @@
 ProcessOutflowOverflow::ProcessOutflowOverflow(WaterContainer* container)
     : ProcessOutflow(container) {}
 
+void ProcessOutflowOverflow::RegisterProcessParametersAndForcing(SettingsModel*) {
+    // Nothing to register
+}
+
 void ProcessOutflowOverflow::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
 }

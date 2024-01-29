@@ -36,9 +36,9 @@ class ModelSettings:
         """
         self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
-    def set_parameter(self, component, name, value):
+    def set_parameter_value(self, component, name, value):
         """
-        Set a parameter
+        Set a parameter value
 
         Parameters
         ----------
@@ -54,7 +54,7 @@ class ModelSettings:
         bool
             True if the parameter was set successfully, False otherwise.
         """
-        return self.settings.set_parameter(component, name, float(value))
+        return self.settings.set_parameter_value(component, name, float(value))
 
     def generate_base_structure(self, land_cover_names, land_cover_types,
                                 with_snow=True, snow_melt_process='melt:degree_day'):
@@ -178,25 +178,6 @@ class ModelSettings:
         # Define output as instantaneous
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
-
-        # Set forcing and parameters
-        if kind.startswith('et:'):
-            self.settings.add_process_forcing('pet')
-        elif kind == 'outflow:linear':
-            self.settings.add_process_parameter('response_factor', 0.2)
-        elif kind == 'outflow:percolation':
-            self.settings.add_process_parameter('percolation_rate', 0.1)
-        elif kind == 'runoff:socont':
-            self.settings.add_process_parameter('runoff_coefficient', 500)
-        elif kind == 'melt:degree_day':
-            self.settings.add_process_forcing('temperature')
-            self.settings.add_process_parameter('degree_day_factor', 3.0)
-            self.settings.add_process_parameter('melting_temperature', 0)
-        elif kind in ['outflow:direct', 'outflow:rest_direct', 'infiltration:socont',
-                      'overflow']:
-            pass  # No parameters
-        else:
-            raise ValueError(f'Unknown brick process: {name}')
 
     def add_brick_parameter(self, name, value, kind='constant'):
         """

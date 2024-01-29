@@ -8,6 +8,10 @@ ProcessETSocont::ProcessETSocont(WaterContainer* container)
       m_pet(nullptr),
       m_exponent(0.5) {}
 
+void ProcessETSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessForcing("pet");
+}
+
 bool ProcessETSocont::IsOk() {
     return ProcessET::IsOk();
 }

@@ -10,6 +10,14 @@ ProcessMeltDegreeDayAspect::ProcessMeltDegreeDayAspect(WaterContainer* container
       m_degreeDayFactor(nullptr),
       m_meltingTemperature(nullptr) {}
 
+void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessParameter("degree_day_factor_n", 3);
+    modelSettings->AddProcessParameter("degree_day_factor_s", 3);
+    modelSettings->AddProcessParameter("degree_day_factor_ew", 3);
+    modelSettings->AddProcessParameter("melting_temperature", 0);
+    modelSettings->AddProcessForcing("temperature");
+}
+
 bool ProcessMeltDegreeDayAspect::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;
@@ -28,18 +36,18 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
 }
 
 void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
-    m_aspect_class = unit->GetPropertyString("aspect_class");
+    m_aspectClass = unit->GetPropertyString("aspect_class");
 }
 
 void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 
-    if (m_aspect_class == "north" || m_aspect_class == "N") {
+    if (m_aspectClass == "north" || m_aspectClass == "N") {
         m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_n");
-    } else if (m_aspect_class == "south" || m_aspect_class == "S") {
+    } else if (m_aspectClass == "south" || m_aspectClass == "S") {
         m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_s");
-    } else if (m_aspect_class == "east" || m_aspect_class == "west" || m_aspect_class == "E" || m_aspect_class == "W") {
+    } else if (m_aspectClass == "east" || m_aspectClass == "west" || m_aspectClass == "E" || m_aspectClass == "W") {
         if (HasParameter(processSettings, "degree_day_factor_ew")) {
             m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
         } else if (HasParameter(processSettings, "degree_day_factor_we")) {
@@ -48,7 +56,7 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
             throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
         }
     } else {
-        throw InvalidArgument("Invalid aspect: " + m_aspect_class);
+        throw InvalidArgument("Invalid aspect: " + m_aspectClass);
     }
 }
 

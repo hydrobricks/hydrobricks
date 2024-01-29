@@ -11,6 +11,8 @@ class ProcessOutflowOverflow : public ProcessOutflow {
 
     ~ProcessOutflowOverflow() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::SetParameters()
      */

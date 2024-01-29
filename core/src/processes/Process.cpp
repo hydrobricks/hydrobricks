@@ -7,6 +7,7 @@
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
+#include "ProcessMeltTemperatureIndex.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
@@ -56,11 +57,52 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         } else {
             throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
         }
+    } else if (processSettings.type == "melt:temperature_index") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
+        } else if (brick->IsGlacier()) {
+            auto glacierBrick = dynamic_cast<Glacier*>(brick);
+            return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
+        } else {
+            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+        }
     } else {
-        wxLogError(_("Process type '%s' not recognized."), processSettings.type);
+        wxLogError(_("Process type '%s' not recognized (Process::Factory)."), processSettings.type);
     }
 
     return nullptr;
+}
+
+bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
+    if (processType == "outflow:linear") {
+        ProcessOutflowLinear::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "outflow:percolation") {
+        ProcessOutflowPercolation::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "outflow:direct") {
+        ProcessOutflowDirect::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "outflow:rest_direct") {
+        ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "runoff:socont") {
+        ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "infiltration:socont") {
+        ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "overflow") {
+        ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "et:socont") {
+        ProcessETSocont::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "melt:degree_day") {
+        ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "melt:degree_day_aspect") {
+        ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "melt:temperature_index") {
+        ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(modelSettings);
+    } else {
+        wxLogError(_("Process type '%s' not recognized (Process::RegisterParametersAndForcing)."), processType);
+        return false;
+    }
+
+    return true;
 }
 
 void Process::Reset() {

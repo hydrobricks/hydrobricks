@@ -24,9 +24,8 @@ class SnowpackModel : public ::testing::Test {
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.OutputProcessToSameBrick();
         m_model.AddProcessLogging("output");
 
@@ -152,11 +151,10 @@ class SnowpackModelWithAspect : public ::testing::Test {
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day_aspect");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor_n", 2.0f);
-        m_model.AddProcessParameter("degree_day_factor_ew", 3.0f);
-        m_model.AddProcessParameter("degree_day_factor_s", 4.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_n", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_ew", 3.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_s", 4.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.OutputProcessToSameBrick();
         m_model.AddProcessLogging("output");
 
@@ -246,9 +244,8 @@ class GlacierModel : public ::testing::Test {
 
         // Glacier melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -323,8 +320,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 
         // Snow melt process
         m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.AddProcessParameter("degree_day_factor", 2.0f);
-        m_model.AddProcessParameter("melting_temperature", 0.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 2.0f);
         m_model.AddProcessLogging("output");
 
         // Glacier melt process
@@ -332,9 +328,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
         m_model.AddBrickProcess("melt", "melt:degree_day", "outlet");
         m_model.AddBrickParameter("no_melt_when_snow_cover", true);
         m_model.AddBrickParameter("infinite_storage", 1.0);
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 0.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
         m_model.AddProcessLogging("output");
 
         // Add process to direct meltwater to the outlet
@@ -433,6 +427,122 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
 
     // Balance
     double balance = discharge + et + storage - precip - totalGlacierMelt;
+
+    EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
+class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
+  protected:
+    SettingsModel m_model;
+    TimeSeriesUniform* m_tsTemp{};
+    TimeSeriesUniform* m_tsPrecip{};
+    TimeSeriesUniform* m_tsRad{};
+
+    void SetUp() override {
+        m_model.SetSolver("heun_explicit");
+        m_model.SetTimer("2020-01-01", "2020-01-08", 1, "day");
+        m_model.SetLogAll(true);
+
+        // Precipitation
+        m_model.GeneratePrecipitationSplitters(true);
+
+        // Glacier land cover bricks
+        m_model.AddLandCoverBrick("ground", "ground");
+        m_model.AddLandCoverBrick("glacier_ice", "glacier");
+        m_model.AddLandCoverBrick("glacier_debris", "glacier");
+
+        // Snowpack brick
+        m_model.GenerateSnowpacks("melt:temperature_index");
+
+        // Glacier melt process
+        m_model.SelectHydroUnitBrick("glacier_ice");
+        m_model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
+        m_model.AddProcessLogging("output");
+        m_model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        m_model.AddBrickParameter("no_melt_when_snow_cover", true);
+        m_model.AddBrickParameter("infinite_storage", 1.0);
+        m_model.SelectHydroUnitBrick("glacier_debris");
+        m_model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
+        m_model.AddProcessLogging("output");
+        m_model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        m_model.AddBrickParameter("no_melt_when_snow_cover", true);
+        m_model.AddBrickParameter("infinite_storage", 1.0);
+
+        // Route to the outlet
+        m_model.SelectHydroUnitBrick("ground");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        m_model.SelectHydroUnitBrick("glacier_ice");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        m_model.SelectHydroUnitBrick("glacier_debris");
+        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+        m_model.AddLoggingToItem("outlet");
+
+        // Set melt process parameters
+        EXPECT_TRUE(m_model.SetParameterValue("type:snowpack", "radiation_coefficient", 0.0006f));
+        EXPECT_TRUE(m_model.SetParameterValue("type:glacier", "radiation_coefficient", 0.001f));
+
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        precip->SetValues({8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        m_tsPrecip = new TimeSeriesUniform(Precipitation);
+        m_tsPrecip->SetData(precip);
+
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        temperature->SetValues({-2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
+        m_tsTemp = new TimeSeriesUniform(Temperature);
+        m_tsTemp->SetData(temperature);
+
+        auto radiation = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        radiation->SetValues({100, 110, 120, 130, 140, 150, 160, 170});
+        m_tsRad = new TimeSeriesUniform(Radiation);
+        m_tsRad->SetData(radiation);
+    }
+    void TearDown() override {
+        wxDELETE(m_tsRad);
+        wxDELETE(m_tsTemp);
+        wxDELETE(m_tsPrecip);
+    }
+};
+
+TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
+    wxLogNull logNo;
+
+    SettingsBasin basinProp;
+    basinProp.AddHydroUnit(1, 1000);
+    basinProp.AddLandCover("ground", "ground", 0.2);
+    basinProp.AddLandCover("glacier_ice", "glacier", 0.6);
+    basinProp.AddLandCover("glacier_debris", "glacier", 0.2);
+    basinProp.AddHydroUnit(2, 1000);
+    basinProp.AddLandCover("ground", "ground", 0.5);
+    basinProp.AddLandCover("glacier_ice", "glacier", 0.3);
+    basinProp.AddLandCover("glacier_debris", "glacier", 0.2);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinProp));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsRad));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Water balance components
+    double precip = 8;
+    double totalGlacierIceMelt = logger->GetTotalHydroUnits("glacier_ice:melt:output");
+    double totalGlacierDebrisMelt = logger->GetTotalHydroUnits("glacier_debris:melt:output");
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double storage = logger->GetTotalWaterStorageChanges();
+
+    // Balance
+    double balance = discharge + et + storage - precip - totalGlacierIceMelt - totalGlacierDebrisMelt;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

@@ -133,7 +133,7 @@ class Model(ABC):
             if forcing is not None and not forcing.is_initialized():
                 forcing.apply_operations(parameters)
 
-            self._set_parameters(parameters)
+            self._set_parameter_values(parameters)
             self._set_forcing(forcing)
 
             if not self.model.is_ok():
@@ -439,11 +439,11 @@ class Model(ABC):
             process, process_data['kind'], target,
             log=log, instantaneous=instantaneous)
 
-    def _set_parameters(self, parameters):
+    def _set_parameter_values(self, parameters):
         model_params = parameters.get_model_parameters()
         for _, param in model_params.iterrows():
-            if not self.settings.set_parameter(param['component'], param['name'],
-                                               param['value']):
+            if not self.settings.set_parameter_value(
+                    param['component'], param['name'], param['value']):
                 raise RuntimeError('Failed setting parameter values.')
         self.model.update_parameters(self.settings.settings)
 

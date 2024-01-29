@@ -11,6 +11,8 @@ class ProcessOutflowLinear : public ProcessOutflow {
 
     ~ProcessOutflowLinear() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::SetParameters()
      */

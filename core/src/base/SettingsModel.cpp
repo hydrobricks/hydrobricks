@@ -1,6 +1,7 @@
 #include "SettingsModel.h"
 
 #include "Parameter.h"
+#include "Process.h"
 
 SettingsModel::SettingsModel()
     : m_logAll(false),
@@ -150,6 +151,8 @@ void SettingsModel::AddBrickForcing(const string& name) {
         m_selectedBrick->forcing.push_back(Precipitation);
     } else if (name == "temperature") {
         m_selectedBrick->forcing.push_back(Temperature);
+    } else if (name == "solar_radiation" || name == "r_solar") {
+        m_selectedBrick->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
@@ -170,6 +173,12 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     }
     if (log || m_logAll) {
         AddProcessLogging("output");
+    }
+
+    // Register the related parameters
+    if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
+        throw InvalidArgument(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
+                                               processSettings.type));
     }
 }
 
@@ -219,6 +228,8 @@ void SettingsModel::AddProcessForcing(const string& name) {
         m_selectedProcess->forcing.push_back(PET);
     } else if (name == "temperature") {
         m_selectedProcess->forcing.push_back(Temperature);
+    } else if (name == "solar_radiation" || name == "r_solar") {
+        m_selectedProcess->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
@@ -316,6 +327,8 @@ void SettingsModel::AddSplitterForcing(const string& name) {
         m_selectedSplitter->forcing.push_back(Precipitation);
     } else if (name == "temperature") {
         m_selectedSplitter->forcing.push_back(Temperature);
+    } else if (name == "solar_radiation" || name == "r_solar") {
+        m_selectedSplitter->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
     }
@@ -426,19 +439,6 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
-        if (snowMeltProcess == "melt:degree_day") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else if (snowMeltProcess == "melt:degree_day_aspect") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor_n", 3.0f);
-            AddProcessParameter("degree_day_factor_s", 3.0f);
-            AddProcessParameter("degree_day_factor_ew", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else {
-            throw NotImplemented();
-        }
 
         if (m_logAll) {
             AddBrickLogging("snow");
@@ -461,14 +461,6 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
 
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(brickSettings.name);
-
-        if (snowMeltProcess == "melt:degree_day") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else {
-            throw NotImplemented();
-        }
     }
 }
 
@@ -713,128 +705,128 @@ bool SettingsModel::ParseStructure(const string&) {
     return false;
 }
 
-bool SettingsModel::ParseParameters(const string& path) {
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
-        return false;
-    }
-
-    try {
-        YAML::Node root = YAML::LoadFile(path);
-
-        if (!root.IsMap()) {
-            wxLogError(_("Expecting a map node in the yaml parameter file."));
+bool SettingsModel::ParseParameters(const string&) {
+    wxLogError(_("This function is outdated and should not be used anymore."));
+    return false;
+    /*
+        if (!wxFile::Exists(path)) {
+            wxLogError(_("The file %s could not be found."), path);
             return false;
         }
 
-        for (auto itL1 = root.begin(); itL1 != root.end(); ++itL1) {
-            auto keyL1 = itL1->first;
-            auto valL1 = itL1->second;
-            string nameL1 = keyL1.as<string>();
+        try {
+            YAML::Node root = YAML::LoadFile(path);
 
-            bool isBrick = false;
-            bool isSplitter = false;
-
-            // Get target object
-            if (SelectHydroUnitBrickIfFound(nameL1) || SelectSubBasinBrickIfFound(nameL1)) {
-                isBrick = true;
-            } else if (SelectHydroUnitSplitterIfFound(nameL1) || SelectSubBasinSplitterIfFound(nameL1)) {
-                isSplitter = true;
-            } else if (nameL1 == "snowpack") {
-                // Specific actions needed
-            } else {
-                wxLogError(_("Cannot find the nameL1 '%s'."), nameL1);
+            if (!root.IsMap()) {
+                wxLogError(_("Expecting a map node in the yaml parameter file."));
                 return false;
             }
 
-            for (auto itL2 = valL1.begin(); itL2 != valL1.end(); ++itL2) {
-                auto keyL2 = itL2->first;
-                auto valL2 = itL2->second;
-                string nameL2 = keyL2.as<string>();
+            for (auto itL1 = root.begin(); itL1 != root.end(); ++itL1) {
+                auto keyL1 = itL1->first;
+                auto valL1 = itL1->second;
+                string nameL1 = keyL1.as<string>();
 
-                if (valL2.IsMap()) {
-                    // The process to assign the parameter to has been specified.
-                    for (auto itL3 = valL2.begin(); itL3 != valL2.end(); ++itL3) {
-                        auto keyL3 = itL3->first;
-                        auto valL3 = itL3->second;
-                        string nameL3 = keyL3.as<string>();
+                bool isBrick = false;
+                bool isSplitter = false;
 
-                        if (!valL3.IsScalar()) {
-                            throw ShouldNotHappen();
+                // Get target object
+                if (SelectHydroUnitBrickIfFound(nameL1) || SelectSubBasinBrickIfFound(nameL1)) {
+                    isBrick = true;
+                } else if (SelectHydroUnitSplitterIfFound(nameL1) || SelectSubBasinSplitterIfFound(nameL1)) {
+                    isSplitter = true;
+                } else if (nameL1 == "snowpack") {
+                    // Specific actions needed
+                } else {
+                    wxLogError(_("Cannot find the nameL1 '%s'."), nameL1);
+                    return false;
+                }
+
+                for (auto itL2 = valL1.begin(); itL2 != valL1.end(); ++itL2) {
+                    auto keyL2 = itL2->first;
+                    auto valL2 = itL2->second;
+                    string nameL2 = keyL2.as<string>();
+
+                    if (valL2.IsMap()) {
+                        // The process to assign the parameter to has been specified.
+                        for (auto itL3 = valL2.begin(); itL3 != valL2.end(); ++itL3) {
+                            auto keyL3 = itL3->first;
+                            auto valL3 = itL3->second;
+                            string nameL3 = keyL3.as<string>();
+
+                            if (!valL3.IsScalar()) {
+                                throw ShouldNotHappen();
+                            }
+
+                            auto paramValue = valL3.as<float>();
+
+                            if (isBrick) {
+                                SelectProcess(nameL2);
+                                SetProcessParameterValue(nameL3, paramValue);
+                            } else if (isSplitter) {
+                                throw ShouldNotHappen();
+                            } else {
+                                if (nameL1 == "snowpack") {
+                                    for (int index : m_selectedStructure->landCoverBricks) {
+                                        BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
+                                        SelectHydroUnitBrick(brickSettings.name + "_snowpack");
+                                        SelectProcess(nameL2);
+                                        SetProcessParameterValue(nameL3, paramValue);
+                                    }
+                                }
+                            }
                         }
-
-                        auto paramValue = valL3.as<float>();
+                    } else if (valL2.IsScalar()) {
+                        // Can be: brick, splitter or process parameter.
+                        auto paramValue = valL2.as<float>();
 
                         if (isBrick) {
-                            SelectProcess(nameL2);
-                            SetProcessParameterValue(nameL3, paramValue);
+                            if (BrickHasParameter(nameL2)) {
+                                SetBrickParameterValue(nameL2, paramValue);
+                            } else {
+                                SelectProcessWithParameter(nameL2);
+                                SetProcessParameterValue(nameL2, paramValue);
+                            }
                         } else if (isSplitter) {
-                            throw ShouldNotHappen();
+                            SetSplitterParameterValue(nameL2, paramValue);
                         } else {
                             if (nameL1 == "snowpack") {
                                 for (int index : m_selectedStructure->landCoverBricks) {
                                     BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
                                     SelectHydroUnitBrick(brickSettings.name + "_snowpack");
-                                    SelectProcess(nameL2);
-                                    SetProcessParameterValue(nameL3, paramValue);
+                                    SelectProcessWithParameter(nameL2);
+                                    SetProcessParameterValue(nameL2, paramValue);
                                 }
                             }
                         }
-                    }
-                } else if (valL2.IsScalar()) {
-                    // Can be: brick, splitter or process parameter.
-                    auto paramValue = valL2.as<float>();
-
-                    if (isBrick) {
-                        if (BrickHasParameter(nameL2)) {
-                            SetBrickParameterValue(nameL2, paramValue);
-                        } else {
-                            SelectProcessWithParameter(nameL2);
-                            SetProcessParameterValue(nameL2, paramValue);
-                        }
-                    } else if (isSplitter) {
-                        SetSplitterParameterValue(nameL2, paramValue);
                     } else {
-                        if (nameL1 == "snowpack") {
-                            for (int index : m_selectedStructure->landCoverBricks) {
-                                BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                                SelectHydroUnitBrick(brickSettings.name + "_snowpack");
-                                SelectProcessWithParameter(nameL2);
-                                SetProcessParameterValue(nameL2, paramValue);
-                            }
-                        }
+                        throw ShouldNotHappen();
                     }
-                } else {
-                    throw ShouldNotHappen();
                 }
             }
+        } catch (YAML::ParserException& e) {
+            wxLogError(e.what());
+            return false;
         }
-    } catch (YAML::ParserException& e) {
-        wxLogError(e.what());
-        return false;
-    }
 
-    return true;
+        return true;*/
 }
 
-bool SettingsModel::SetParameter(const string& component, const string& name, float value) {
-    bool isBrick = false;
-    bool isSplitter = false;
+bool SettingsModel::SetParameterValue(const string& component, const string& name, float value) {
+    // Check if the parameter should be set for multiple components
+    if (component.find(',') != string::npos) {
+        wxArrayString components = wxSplit(wxString(component), ',');
+        for (const auto& componentItem : components) {
+            if (!SetParameterValue(componentItem.ToStdString(), name, value)) {
+                wxLogError(_("Fail to set the parameter '%s' for the component '%s'."), name, componentItem);
+                return false;
+            }
+        }
+        return true;
+    }
 
     // Get target object
     if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
-        isBrick = true;
-    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
-        isSplitter = true;
-    } else if (component == "snowpack") {
-        // Specific actions needed
-    } else {
-        wxLogError(_("Cannot find the component '%s'."), component);
-        return false;
-    }
-
-    // Can be: brick, splitter or process parameter.
-    if (isBrick) {
         if (BrickHasParameter(name)) {
             SetBrickParameterValue(name, value);
         } else {
@@ -842,22 +834,44 @@ bool SettingsModel::SetParameter(const string& component, const string& name, fl
             SetProcessParameterValue(name, value);
         }
         return true;
-    } else if (isSplitter) {
+    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
         SetSplitterParameterValue(name, value);
         return true;
-    } else {
-        if (component == "snowpack") {
-            for (int index : m_selectedStructure->landCoverBricks) {
-                BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                SelectHydroUnitBrick(brickSettings.name + "_snowpack");
-                SelectProcessWithParameter(name);
-                SetProcessParameterValue(name, value);
+    } else if (component.find("type:") != string::npos) {
+        wxString type = wxString(component).AfterFirst(':');
+
+        // Set the parameter for all bricks of the given type - hydro units
+        for (auto& brick : m_selectedStructure->hydroUnitBricks) {
+            if (brick.type == type) {
+                SelectHydroUnitBrick(brick.name);
+                if (BrickHasParameter(name)) {
+                    SetBrickParameterValue(name, value);
+                } else {
+                    SelectProcessWithParameter(name);
+                    SetProcessParameterValue(name, value);
+                }
             }
-            return true;
         }
+
+        // Set the parameter for all bricks of the given type - subbasins
+        for (auto& brick : m_selectedStructure->subBasinBricks) {
+            if (brick.type == type) {
+                SelectHydroUnitBrick(brick.name);
+                if (BrickHasParameter(name)) {
+                    SetBrickParameterValue(name, value);
+                } else {
+                    SelectProcessWithParameter(name);
+                    SetProcessParameterValue(name, value);
+                }
+            }
+        }
+
+    } else {
+        wxLogError(_("Cannot find the component '%s'."), component);
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 vecStr SettingsModel::ParseLandCoverNames(const YAML::Node& settings) {

@@ -48,8 +48,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_process_forcing", &SettingsModel::AddProcessForcing, "Add a process forcing.", "name"_a)
         .def("add_brick_parameter", &SettingsModel::AddBrickParameter, "Add a brick parameter.", "name"_a, "value"_a,
              "kind"_a = "constant")
-        .def("set_parameter", &SettingsModel::SetParameter, "Setting one of the model parameter.", "component"_a,
-             "name"_a, "value"_a)
+        .def("set_parameter_value", &SettingsModel::SetParameterValue, "Setting one of the model parameter.",
+             "component"_a, "name"_a, "value"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true)
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)

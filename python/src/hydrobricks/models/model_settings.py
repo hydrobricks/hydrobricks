@@ -36,9 +36,9 @@ class ModelSettings:
         """
         self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
-    def set_parameter(self, component, name, value):
+    def set_parameter_value(self, component, name, value):
         """
-        Set a parameter
+        Set a parameter value
 
         Parameters
         ----------
@@ -54,7 +54,7 @@ class ModelSettings:
         bool
             True if the parameter was set successfully, False otherwise.
         """
-        return self.settings.set_parameter(component, name, float(value))
+        return self.settings.set_parameter_value(component, name, float(value))
 
     def generate_base_structure(self, land_cover_names, land_cover_types,
                                 with_snow=True, snow_melt_process='melt:degree_day'):

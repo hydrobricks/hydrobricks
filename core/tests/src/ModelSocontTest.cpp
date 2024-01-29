@@ -498,7 +498,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetLogAll(true);
     vecStr landCover = {"ground"};
     GenerateStructureSocont(modelSettings, landCover, landCover, 2, "linear_storage");
-    modelSettings.SetParameter("slow_reservoir", "capacity", 200);
+    modelSettings.SetParameterValue("slow_reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
     EXPECT_TRUE(model.IsOk());
@@ -577,8 +577,8 @@ TEST_F(ModelSocontGletsch, QuickDischargeIsCorrect) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.SetParameter("surface_runoff", "beta", 301);
-    m_model.SetParameter("slow_reservoir", "capacity", 0);
+    m_model.SetParameterValue("surface_runoff", "beta", 301);
+    m_model.SetParameterValue("slow_reservoir", "capacity", 0);
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(m_model, basinSettings));

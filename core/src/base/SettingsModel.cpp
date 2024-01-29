@@ -841,24 +841,20 @@ bool SettingsModel::ParseParameters(const string& path) {
     return true;
 }
 
-bool SettingsModel::SetParameter(const string& component, const string& name, float value) {
-    bool isBrick = false;
-    bool isSplitter = false;
+bool SettingsModel::SetParameterValue(const string& component, const string& name, float value) {
+    // Check if the parameter should be set for multiple components
+    if (component.find(',') != string::npos) {
+        wxArrayString components = wxSplit(wxString(component), ',');
+        for (const auto& componentItem : components) {
+            if (!SetParameterValue(componentItem.ToStdString(), name, value)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     // Get target object
     if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
-        isBrick = true;
-    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
-        isSplitter = true;
-    } else if (component == "snowpack") {
-        // Specific actions needed
-    } else {
-        wxLogError(_("Cannot find the component '%s'."), component);
-        return false;
-    }
-
-    // Can be: brick, splitter or process parameter.
-    if (isBrick) {
         if (BrickHasParameter(name)) {
             SetBrickParameterValue(name, value);
         } else {
@@ -866,19 +862,41 @@ bool SettingsModel::SetParameter(const string& component, const string& name, fl
             SetProcessParameterValue(name, value);
         }
         return true;
-    } else if (isSplitter) {
+    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
         SetSplitterParameterValue(name, value);
         return true;
-    } else {
-        if (component == "snowpack") {
-            for (int index : m_selectedStructure->landCoverBricks) {
-                BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[index];
-                SelectHydroUnitBrick(brickSettings.name + "_snowpack");
-                SelectProcessWithParameter(name);
-                SetProcessParameterValue(name, value);
+    } else if (component.find("type:") != string::npos) {
+        wxString type = wxString(component).AfterFirst(':');
+
+        // Set the parameter for all bricks of the given type - hydro units
+        for (auto& brick : m_selectedStructure->hydroUnitBricks) {
+            if (brick.type == type) {
+                SelectHydroUnitBrick(brick.name);
+                if (BrickHasParameter(name)) {
+                    SetBrickParameterValue(name, value);
+                } else {
+                    SelectProcessWithParameter(name);
+                    SetProcessParameterValue(name, value);
+                }
             }
-            return true;
         }
+
+        // Set the parameter for all bricks of the given type - subbasins
+        for (auto& brick : m_selectedStructure->subBasinBricks) {
+            if (brick.type == type) {
+                SelectHydroUnitBrick(brick.name);
+                if (BrickHasParameter(name)) {
+                    SetBrickParameterValue(name, value);
+                } else {
+                    SelectProcessWithParameter(name);
+                    SetProcessParameterValue(name, value);
+                }
+            }
+        }
+
+    } else {
+        wxLogError(_("Cannot find the component '%s'."), component);
+        return false;
     }
 
     return false;

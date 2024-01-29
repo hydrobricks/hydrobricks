@@ -175,7 +175,7 @@ class SettingsModel : public wxObject {
 
     bool ParseParameters(const string& path);
 
-    bool SetParameter(const string& component, const string& name, float value);
+    bool SetParameterValue(const string& component, const string& name, float value);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());

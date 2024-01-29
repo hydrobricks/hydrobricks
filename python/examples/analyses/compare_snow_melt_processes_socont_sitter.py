@@ -53,7 +53,7 @@ for method in methods:
     results = spotpy.analyser.load_csv_results(f'spotpy_socont_sitter_{method}')
 
     # Get best results
-    best_index, best_obj_func = spotpy.analyser.get_minlikeindex(results)
+    best_index, best_obj_func = spotpy.analyser.get_maxlikeindex(results)
     best_model_run = results[best_index]
     fields = [word for word in best_model_run.dtype.names if word.startswith('sim')]
     best_simulation = list(best_model_run[fields])

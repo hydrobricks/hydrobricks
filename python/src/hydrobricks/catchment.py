@@ -3,8 +3,8 @@ import math
 import pathlib
 import warnings
 
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
+# import matplotlib.colors as mcolors
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -713,15 +713,15 @@ class Catchment:
         mean_annual_radiation.fill(np.NaN)
 
         # DEBUG #
-        debug = True
-        if debug:
-            fig, (ax1, ax3) = plt.subplots(2, figsize=(20, 3))
-            cmap = plt.get_cmap('viridis')
-            normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
-
-            zeniths = []
-            # azimuths = []
-            ha_lists = []
+        # debug = True
+        # if debug:
+        #     fig, (ax1, ax3) = plt.subplots(2, figsize=(20, 3))
+        #     cmap = plt.get_cmap('viridis')
+        #     normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
+        #
+        #     zeniths = []
+        #     # azimuths = []
+        #     ha_lists = []
         # END DEBUG #
 
         for i in range(len(jd_unique)):
@@ -768,13 +768,13 @@ class Catchment:
                  self.downsampled_slope.shape[1]))
             inter_pot_radiation.fill(np.NaN)
             # DEBUG #
-            if debug:
-                ax1.plot(ha_list, zenith, markersize=2, color=cmap(normalize(i)))
-                # ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
-                ax3.plot(ha_list, Az, markersize=2, color=cmap(normalize(i)))
-                ax1.set_ylabel('Zenith angle')
-                # ax2.set_ylabel('Azimuth')
-                ax3.set_ylabel('Azimuth angle')
+            # if debug:
+            #     ax1.plot(ha_list, zenith, markersize=2, color=cmap(normalize(i)))
+            #     # ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
+            #     ax3.plot(ha_list, Az, markersize=2, color=cmap(normalize(i)))
+            #     ax1.set_ylabel('Zenith angle')
+            #     # ax2.set_ylabel('Azimuth')
+            #     ax3.set_ylabel('Azimuth angle')
             # END DEBUG #
 
             for j in range(len(zenith)):
@@ -791,53 +791,53 @@ class Catchment:
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
                 daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
             # DEBUG #
-            if debug:
-                zeniths.append(np.nanmean(zenith))
-                # azimuths.append(np.nanmean(azimuth))
-                ha_lists.append(np.nanmean(ha_list) * 100)
+            # if debug:
+            #     zeniths.append(np.nanmean(zenith))
+            #     # azimuths.append(np.nanmean(azimuth))
+            #     ha_lists.append(np.nanmean(ha_list) * 100)
             # END DEBUG #
 
         # DEBUG #
-        if debug:
-            plt.xlabel('Hour angle')
-            scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
-            scalarmappaple.set_array(len(jd_unique))
-            fig.subplots_adjust(right=0.8)
-            cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-            plt.colorbar(scalarmappaple, cax=cbar_ax)
-            cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
-            plt.show()
-
-            fig = plt.figure(figsize=(20, 3))
-            fig.add_subplot(111)
-
-            with warnings.catch_warnings():
-                # This function throws a warning for the first slides of nanmean,
-                # it is normal and due to the NaN bands at the sides of
-                # the slope rasters, etc.
-                warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-                mins = np.nanmin(daily_radiation, axis=1)
-                mins = np.nanmin(mins, axis=1)
-                maxs = np.nanmax(daily_radiation, axis=1)
-                maxs = np.nanmax(maxs, axis=1)
-                means = np.nanmean(daily_radiation, axis=1)
-                means = np.nanmean(means, axis=1)
-            plt.plot(jd_unique, mins, markersize=2, label='Min')
-            plt.plot(jd_unique, maxs, markersize=2, label='Max')
-            plt.plot(jd_unique, means, markersize=2, label='Mean')
-
-            plt.plot(jd_unique, hour_angle, markersize=2, label='hour_angle')
-            plt.plot(jd_unique, ha_lists, markersize=2, label='ha_list')
-            plt.plot(jd_unique, zeniths, markersize=2, label='zenith')
-            # plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
-            plt.plot(jd_unique, solar_declin, markersize=2, label='solar_declin')
-            plt.plot(jd_unique, np.sin(solar_declin), markersize=2,
-                     label='np sin solar_declin')
-
-            plt.xlabel('Time (day)')
-            plt.ylabel('Radiation')
-            plt.legend()
-            plt.show()
+        # if debug:
+        #     plt.xlabel('Hour angle')
+        #     scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
+        #     scalarmappaple.set_array(len(jd_unique))
+        #     fig.subplots_adjust(right=0.8)
+        #     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        #     plt.colorbar(scalarmappaple, cax=cbar_ax)
+        #     cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
+        #     plt.show()
+        #
+        #     fig = plt.figure(figsize=(20, 3))
+        #     fig.add_subplot(111)
+        #
+        #     with warnings.catch_warnings():
+        #         # This function throws a warning for the first slides of nanmean,
+        #         # it is normal and due to the NaN bands at the sides of
+        #         # the slope rasters, etc.
+        #        warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+        #         mins = np.nanmin(daily_radiation, axis=1)
+        #         mins = np.nanmin(mins, axis=1)
+        #         maxs = np.nanmax(daily_radiation, axis=1)
+        #         maxs = np.nanmax(maxs, axis=1)
+        #         means = np.nanmean(daily_radiation, axis=1)
+        #         means = np.nanmean(means, axis=1)
+        #     plt.plot(jd_unique, mins, markersize=2, label='Min')
+        #     plt.plot(jd_unique, maxs, markersize=2, label='Max')
+        #     plt.plot(jd_unique, means, markersize=2, label='Mean')
+        #
+        #     plt.plot(jd_unique, hour_angle, markersize=2, label='hour_angle')
+        #     plt.plot(jd_unique, ha_lists, markersize=2, label='ha_list')
+        #     plt.plot(jd_unique, zeniths, markersize=2, label='zenith')
+        #     # plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
+        #     plt.plot(jd_unique, solar_declin, markersize=2, label='solar_declin')
+        #     plt.plot(jd_unique, np.sin(solar_declin), markersize=2,
+        #              label='np sin solar_declin')
+        #
+        #     plt.xlabel('Time (day)')
+        #     plt.ylabel('Radiation')
+        #     plt.legend()
+        #     plt.show()
         # END DEBUG #
 
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)

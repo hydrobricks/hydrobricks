@@ -151,7 +151,7 @@ void SettingsModel::AddBrickForcing(const string& name) {
         m_selectedBrick->forcing.push_back(Precipitation);
     } else if (name == "temperature") {
         m_selectedBrick->forcing.push_back(Temperature);
-    } else if (name == "r_solar") {
+    } else if (name == "solar_radiation" || name == "r_solar") {
         m_selectedBrick->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -228,7 +228,7 @@ void SettingsModel::AddProcessForcing(const string& name) {
         m_selectedProcess->forcing.push_back(PET);
     } else if (name == "temperature") {
         m_selectedProcess->forcing.push_back(Temperature);
-    } else if (name == "r_solar") {
+    } else if (name == "solar_radiation" || name == "r_solar") {
         m_selectedProcess->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));
@@ -327,7 +327,7 @@ void SettingsModel::AddSplitterForcing(const string& name) {
         m_selectedSplitter->forcing.push_back(Precipitation);
     } else if (name == "temperature") {
         m_selectedSplitter->forcing.push_back(Temperature);
-    } else if (name == "r_solar") {
+    } else if (name == "solar_radiation" || name == "r_solar") {
         m_selectedSplitter->forcing.push_back(Radiation);
     } else {
         throw InvalidArgument(_("The provided forcing is not yet supported."));

@@ -16,7 +16,7 @@ void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsMo
     modelSettings->AddProcessParameter("melting_temperature", 0.0f);
     modelSettings->AddProcessParameter("radiation_coefficient", 0.0007f);
     modelSettings->AddProcessForcing("temperature");
-    modelSettings->AddProcessForcing("r_solar");
+    modelSettings->AddProcessForcing("solar_radiation");
 }
 
 bool ProcessMeltTemperatureIndex::IsOk() {

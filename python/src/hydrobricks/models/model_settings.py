@@ -192,6 +192,18 @@ class ModelSettings:
             self.settings.add_process_forcing('temperature')
             self.settings.add_process_parameter('degree_day_factor', 3.0)
             self.settings.add_process_parameter('melting_temperature', 0)
+        elif kind == 'melt:degree_day_aspect':
+            self.settings.add_process_forcing('temperature')
+            self.settings.add_process_parameter('degree_day_factor_n', 3.0)
+            self.settings.add_process_parameter('degree_day_factor_s', 3.0)
+            self.settings.add_process_parameter('degree_day_factor_ew', 3.0)
+            self.settings.add_process_parameter('melting_temperature', 0)
+        elif kind == 'melt:temperature_index':
+            self.settings.add_process_forcing('temperature')
+            self.settings.add_process_forcing('r_solar')
+            self.settings.add_process_parameter('melt_factor', 3.0)
+            self.settings.add_process_parameter('melting_temperature', 0)
+            self.settings.add_process_parameter('radiation_coefficient', 0.0007)
         elif kind in ['outflow:direct', 'outflow:rest_direct', 'infiltration:socont',
                       'overflow']:
             pass  # No parameters

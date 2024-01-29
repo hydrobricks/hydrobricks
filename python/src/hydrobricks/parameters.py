@@ -645,6 +645,10 @@ class ParameterSet:
                 self.define_parameter(
                     component=cover_name, name='radiation_coefficient',
                     unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=1)
+                self.define_parameter(
+                    component=cover_name, name='melting_temperature',
+                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
+                    default_value=0, mandatory=False)
 
                 self.define_constraint('r_snow', '<', r_aliases[0])
 
@@ -667,43 +671,43 @@ class ParameterSet:
             if 'snow_melt_process' in options:
                 if options['snow_melt_process'] == 'melt:degree_day':
                     self.define_parameter(
-                        component='snowpack', name='degree_day_factor', unit='mm/d/°C',
-                        aliases=['a_snow'], min_value=2, max_value=12)
+                        component='type:snowpack', name='degree_day_factor',
+                        unit='mm/d/°C', aliases=['a_snow'], min_value=2, max_value=12)
                     self.define_parameter(
-                        component='snowpack', name='melting_temperature', unit='°C',
-                        aliases=['melt_t_snow'], min_value=0, max_value=5,
+                        component='type:snowpack', name='melting_temperature',
+                        unit='°C', aliases=['melt_t_snow'], min_value=0, max_value=5,
                         default_value=0, mandatory=False)
                 elif options['snow_melt_process'] == 'melt:degree_day_aspect':
                     self.define_parameter(
-                        component='snowpack', name='degree_day_factor_n',
+                        component='type:snowpack', name='degree_day_factor_n',
                         unit='mm/d/°C', aliases=['a_snow_n'],
                         min_value=2, max_value=12)
                     self.define_parameter(
-                        component='snowpack', name='degree_day_factor_s',
+                        component='type:snowpack', name='degree_day_factor_s',
                         unit='mm/d/°C', aliases=['a_snow_s'],
                         min_value=2, max_value=12)
                     self.define_parameter(
-                        component='snowpack', name='degree_day_factor_ew',
+                        component='type:snowpack', name='degree_day_factor_ew',
                         unit='mm/d/°C', aliases=['a_snow_ew'],
                         min_value=2, max_value=12)
                     self.define_parameter(
-                        component='snowpack', name='melting_temperature', unit='°C',
-                        aliases=['melt_t_snow'], min_value=0, max_value=5,
-                        default_value=0, mandatory=False)
+                        component='type:snowpack', name='melting_temperature',
+                        unit='°C', aliases=['melt_t_snow'], min_value=0,
+                        max_value=5, default_value=0, mandatory=False)
                 elif options['snow_melt_process'] == 'melt:temperature_index':
                     # This melt factor parameter is initialized on the snow but applied
                     # to both snow and ice (debris-covered or clean).
                     self.define_parameter(
-                        component='snowpack,type:glacier', name='melt_factor',
+                        component='type:snowpack,type:glacier', name='melt_factor',
                         unit='mm/d/°C', aliases=['mf'], min_value=0, max_value=12)
                     self.define_parameter(
-                        component='snowpack', name='radiation_coefficient',
+                        component='type:snowpack', name='radiation_coefficient',
                         unit='m2/W*mm/d/°C', aliases=['r_snow'],
                         min_value=0, max_value=1)
                     self.define_parameter(
-                        component='snowpack', name='melting_temperature', unit='°C',
-                        aliases=['melt_t_snow'], min_value=0, max_value=5,
-                        default_value=0, mandatory=False)
+                        component='type:snowpack', name='melting_temperature',
+                        unit='°C', aliases=['melt_t_snow'], min_value=0,
+                        max_value=5, default_value=0, mandatory=False)
                 else:
                     raise RuntimeError(
                         f"The snow melt process option "

@@ -441,6 +441,7 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
     void SetUp() override {
         m_model.SetSolver("heun_explicit");
         m_model.SetTimer("2020-01-01", "2020-01-08", 1, "day");
+        m_model.SetLogAll(true);
 
         // Precipitation
         m_model.GeneratePrecipitationSplitters(true);
@@ -456,11 +457,13 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier_ice");
         m_model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
+        m_model.AddProcessLogging("output");
         m_model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
         m_model.AddBrickParameter("no_melt_when_snow_cover", true);
         m_model.AddBrickParameter("infinite_storage", 1.0);
         m_model.SelectHydroUnitBrick("glacier_debris");
         m_model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
+        m_model.AddProcessLogging("output");
         m_model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
         m_model.AddBrickParameter("no_melt_when_snow_cover", true);
         m_model.AddBrickParameter("infinite_storage", 1.0);
@@ -506,11 +509,13 @@ TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
 
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
-    basinProp.AddLandCover("glacier_ice", "glacier", 0.5);
+    basinProp.AddLandCover("ground", "ground", 0.2);
+    basinProp.AddLandCover("glacier_ice", "glacier", 0.6);
     basinProp.AddLandCover("glacier_debris", "glacier", 0.2);
-    basinProp.AddHydroUnit(1, 1000);
+    basinProp.AddHydroUnit(2, 1000);
+    basinProp.AddLandCover("ground", "ground", 0.5);
     basinProp.AddLandCover("glacier_ice", "glacier", 0.3);
-    basinProp.AddLandCover("glacier_debris", "glacier", 0.1);
+    basinProp.AddLandCover("glacier_debris", "glacier", 0.2);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinProp));
@@ -530,14 +535,14 @@ TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
 
     // Water balance components
     double precip = 8;
-    double totalGlacierMelt = logger->GetTotalHydroUnits("glacier_ice:melt:output") +
-                              logger->GetTotalHydroUnits("glacier_debris:melt:output");
+    double totalGlacierIceMelt = logger->GetTotalHydroUnits("glacier_ice:melt:output");
+    double totalGlacierDebrisMelt = logger->GetTotalHydroUnits("glacier_debris:melt:output");
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalWaterStorageChanges();
 
     // Balance
-    double balance = discharge + et + storage - precip - totalGlacierMelt;
+    double balance = discharge + et + storage - precip - totalGlacierIceMelt - totalGlacierDebrisMelt;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }

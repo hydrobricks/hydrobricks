@@ -705,7 +705,7 @@ bool SettingsModel::ParseStructure(const string&) {
     return false;
 }
 
-bool SettingsModel::ParseParameters(const string& path) {
+bool SettingsModel::ParseParameters(const string&) {
     wxLogError(_("This function is outdated and should not be used anymore."));
     return false;
 /*
@@ -818,6 +818,7 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         wxArrayString components = wxSplit(wxString(component), ',');
         for (const auto& componentItem : components) {
             if (!SetParameterValue(componentItem.ToStdString(), name, value)) {
+                wxLogError(_("Fail to set the parameter '%s' for the component '%s'."), name, componentItem);
                 return false;
             }
         }
@@ -870,7 +871,7 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         return false;
     }
 
-    return false;
+    return true;
 }
 
 vecStr SettingsModel::ParseLandCoverNames(const YAML::Node& settings) {

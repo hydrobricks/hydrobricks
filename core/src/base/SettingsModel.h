@@ -224,6 +224,18 @@ class SettingsModel : public wxObject {
         return m_selectedStructure->hydroUnitBricks[index];
     }
 
+    BrickSettings GetHydroUnitBrickSettings(const string& name) const {
+        wxASSERT(m_selectedStructure);
+
+        for (auto& brick : m_selectedStructure->hydroUnitBricks) {
+            if (brick.name == name) {
+                return brick;
+            }
+        }
+
+        throw std::runtime_error("Brick not found.");
+    }
+
     BrickSettings GetSurfaceComponentBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
         int brickIndex = m_selectedStructure->surfaceComponentBricks[index];

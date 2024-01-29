@@ -12,6 +12,10 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
       m_areaFraction(nullptr),
       m_exponent(5.0 / 3.0) {}
 
+void ProcessRunoffSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessParameter("beta", 500.0f);
+}
+
 void ProcessRunoffSocont::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) {
     if (brick->IsLandCover()) {
         auto* landCover = dynamic_cast<LandCover*>(brick);

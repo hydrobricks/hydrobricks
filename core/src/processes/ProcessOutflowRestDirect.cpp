@@ -6,6 +6,10 @@
 ProcessOutflowRestDirect::ProcessOutflowRestDirect(WaterContainer* container)
     : ProcessOutflow(container) {}
 
+void ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(SettingsModel*) {
+    // Nothing to register
+}
+
 vecDouble ProcessOutflowRestDirect::GetRates() {
     return {wxMax(m_container->GetContentWithChanges() - GetSumChangeRatesOtherProcesses(), 0)};
 }

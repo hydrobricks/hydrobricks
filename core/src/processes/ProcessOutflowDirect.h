@@ -11,6 +11,8 @@ class ProcessOutflowDirect : public ProcessOutflow {
 
     ~ProcessOutflowDirect() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
   protected:
     vecDouble GetRates() override;
 

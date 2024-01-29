@@ -11,6 +11,8 @@ class ProcessETSocont : public ProcessET {
 
     ~ProcessETSocont() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::IsOk()
      */

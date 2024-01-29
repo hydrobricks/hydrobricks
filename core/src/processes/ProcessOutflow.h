@@ -11,6 +11,8 @@ class ProcessOutflow : public Process {
 
     ~ProcessOutflow() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::IsOk()
      */

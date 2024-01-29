@@ -43,7 +43,7 @@ class Socont(Model):
                             'instantaneous': True
                         },
                         'melt': {
-                            'kind': 'melt:degree_day',
+                            'kind': self.options['snow_melt_process'],
                             'target': 'glacier_area_icemelt_storage',
                             'instantaneous': True
                         }

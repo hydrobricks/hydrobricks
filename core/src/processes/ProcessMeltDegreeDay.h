@@ -11,6 +11,8 @@ class ProcessMeltDegreeDay : public ProcessMelt {
 
     ~ProcessMeltDegreeDay() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::IsOk()
      */

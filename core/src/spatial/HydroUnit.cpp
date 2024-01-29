@@ -186,6 +186,16 @@ bool HydroUnit::IsOk() {
         wxLogError(_("The hydro unit area has not been defined."));
         return false;
     }
+    if (!m_landCoverBricks.empty()) {
+        double sumLandCoverArea = 0;
+        for (auto brick : m_landCoverBricks) {
+            sumLandCoverArea += brick->GetAreaFraction();
+        }
+        if (std::fabs(sumLandCoverArea - 1.0) > EPSILON_D) {
+            wxLogError(_("The sum of the land cover fractions is not equal to 1."));
+            return false;
+        }
+    }
 
     return true;
 }

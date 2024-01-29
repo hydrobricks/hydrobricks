@@ -13,6 +13,8 @@ class ProcessRunoffSocont : public ProcessOutflow {
 
     ~ProcessRunoffSocont() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::SetHydroUnitProperties()
      */

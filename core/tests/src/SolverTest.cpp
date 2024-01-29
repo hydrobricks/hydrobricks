@@ -58,7 +58,7 @@ class SolverLinearStorage : public ::testing::Test {
         m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
-        m_model.AddProcessParameter("response_factor", 0.3f);
+        m_model.SetProcessParameterValue("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -203,7 +203,7 @@ class Solver2LinearStorages : public ::testing::Test {
         m_model.AddBrickForcing("precipitation");
         m_model.AddBrickLogging("content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
-        m_model.AddProcessParameter("response_factor", 0.5f);
+        m_model.SetProcessParameterValue("response_factor", 0.5f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("storage_2");
 
@@ -211,7 +211,7 @@ class Solver2LinearStorages : public ::testing::Test {
         m_model.AddHydroUnitBrick("storage_2", "storage");
         m_model.AddBrickLogging("content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
-        m_model.AddProcessParameter("response_factor", 0.3f);
+        m_model.SetProcessParameterValue("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -366,13 +366,12 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         // Linear outflow process
         m_model.AddBrickProcess("outflow", "outflow:linear");
-        m_model.AddProcessParameter("response_factor", 0.1f);
+        m_model.SetProcessParameterValue("response_factor", 0.1f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
         // ET process
         m_model.AddBrickProcess("et", "et:socont");
-        m_model.AddProcessForcing("pet");
         m_model.AddProcessLogging("output");
 
         // Overflow process

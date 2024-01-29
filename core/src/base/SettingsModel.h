@@ -175,7 +175,7 @@ class SettingsModel : public wxObject {
 
     bool ParseParameters(const string& path);
 
-    bool SetParameter(const string& component, const string& name, float value);
+    bool SetParameterValue(const string& component, const string& name, float value);
 
     int GetStructuresNb() const {
         return int(m_modelStructures.size());
@@ -222,6 +222,18 @@ class SettingsModel : public wxObject {
     BrickSettings GetHydroUnitBrickSettings(int index) const {
         wxASSERT(m_selectedStructure);
         return m_selectedStructure->hydroUnitBricks[index];
+    }
+
+    BrickSettings GetHydroUnitBrickSettings(const string& name) const {
+        wxASSERT(m_selectedStructure);
+
+        for (auto& brick : m_selectedStructure->hydroUnitBricks) {
+            if (brick.name == name) {
+                return brick;
+            }
+        }
+
+        throw std::runtime_error("Brick not found.");
     }
 
     BrickSettings GetSurfaceComponentBrickSettings(int index) const {

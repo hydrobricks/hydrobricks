@@ -26,6 +26,15 @@ class Process : public wxObject {
     static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
 
     /**
+     * Register the parameters and the needed forcing for the process.
+     *
+     * @param modelSettings settings of the model.
+     * @param processType type of process.
+     * @return true if everything is correctly defined.
+     */
+    static bool RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType);
+
+    /**
      * Reset all the fluxes connected to the process.
      */
     void Reset();

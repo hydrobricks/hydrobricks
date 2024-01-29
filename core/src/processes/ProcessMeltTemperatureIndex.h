@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_ASPECT_H
-#define HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_ASPECT_H
+#ifndef HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H
+#define HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "ProcessMelt.h"
 
-class ProcessMeltDegreeDayAspect : public ProcessMelt {
+class ProcessMeltTemperatureIndex : public ProcessMelt {
   public:
-    explicit ProcessMeltDegreeDayAspect(WaterContainer* container);
+    explicit ProcessMeltTemperatureIndex(WaterContainer* container);
 
-    ~ProcessMeltDegreeDayAspect() override = default;
+    ~ProcessMeltTemperatureIndex() override = default;
 
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
@@ -18,21 +18,20 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
      */
     bool IsOk() override;
 
-    void SetHydroUnitProperties(HydroUnit* unit, Brick* brick) override;
-
     void SetParameters(const ProcessSettings& processSettings) override;
 
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    string m_aspectClass;
     Forcing* m_temperature;
-    float* m_degreeDayFactor;
+    Forcing* m_potentialClearSkyDirectSolarRadiation;
+    float* m_meltFactor;
     float* m_meltingTemperature;
+    float* m_radiationCoefficient;
 
     vecDouble GetRates() override;
 
   private:
 };
 
-#endif  // HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_ASPECT_H
+#endif  // HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H

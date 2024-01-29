@@ -6,6 +6,10 @@
 ProcessOutflow::ProcessOutflow(WaterContainer* container)
     : Process(container) {}
 
+void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
+    // Nothing to register
+}
+
 bool ProcessOutflow::IsOk() {
     if (m_outputs.size() != 1) {
         wxLogError(_("An outflow should have a single output."));

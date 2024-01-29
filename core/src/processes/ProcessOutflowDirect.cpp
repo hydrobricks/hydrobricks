@@ -9,3 +9,7 @@ ProcessOutflowDirect::ProcessOutflowDirect(WaterContainer* container)
 vecDouble ProcessOutflowDirect::GetRates() {
     return {m_container->GetContentWithChanges()};
 }
+
+void ProcessOutflowDirect::RegisterProcessParametersAndForcing(SettingsModel*) {
+    // Nothing to register
+}

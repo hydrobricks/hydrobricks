@@ -11,6 +11,8 @@ class ProcessOutflowPercolation : public ProcessOutflow {
 
     ~ProcessOutflowPercolation() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::SetParameters()
      */

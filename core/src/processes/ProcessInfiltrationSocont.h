@@ -11,6 +11,8 @@ class ProcessInfiltrationSocont : public ProcessInfiltration {
 
     ~ProcessInfiltrationSocont() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::SetParameters()
      */

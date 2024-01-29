@@ -1,6 +1,7 @@
 #include "SettingsModel.h"
 
 #include "Parameter.h"
+#include "Process.h"
 
 SettingsModel::SettingsModel()
     : m_logAll(false),
@@ -172,6 +173,12 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     }
     if (log || m_logAll) {
         AddProcessLogging("output");
+    }
+
+    // Register the related parameters
+    if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
+        throw InvalidArgument(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
+                                               processSettings.type));
     }
 }
 
@@ -432,25 +439,6 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
-        if (snowMeltProcess == "melt:degree_day") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else if (snowMeltProcess == "melt:degree_day_aspect") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor_n", 3.0f);
-            AddProcessParameter("degree_day_factor_s", 3.0f);
-            AddProcessParameter("degree_day_factor_ew", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else if (snowMeltProcess == "melt:temperature_index") {
-            AddProcessForcing("temperature");
-            AddProcessForcing("r_solar");
-            AddProcessParameter("melt_factor", 2.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-            AddProcessParameter("radiation_coefficient", 0.0007f);
-        } else {
-            throw NotImplemented();
-        }
 
         if (m_logAll) {
             AddBrickLogging("snow");
@@ -473,26 +461,6 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
 
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(brickSettings.name);
-
-        if (snowMeltProcess == "melt:degree_day") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else if (snowMeltProcess == "melt:degree_day_aspect") {
-            AddProcessForcing("temperature");
-            AddProcessParameter("degree_day_factor_n", 3.0f);
-            AddProcessParameter("degree_day_factor_s", 3.0f);
-            AddProcessParameter("degree_day_factor_ew", 3.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-        } else if (snowMeltProcess == "melt:temperature_index") {
-            AddProcessForcing("temperature");
-            AddProcessForcing("r_solar");
-            AddProcessParameter("melt_factor", 2.0f);
-            AddProcessParameter("melting_temperature", 0.0f);
-            AddProcessParameter("radiation_coefficient", 0.0007f);
-        } else {
-            throw NotImplemented();
-        }
     }
 }
 
@@ -738,6 +706,9 @@ bool SettingsModel::ParseStructure(const string&) {
 }
 
 bool SettingsModel::ParseParameters(const string& path) {
+    wxLogError(_("This function is outdated and should not be used anymore."));
+    return false;
+/*
     if (!wxFile::Exists(path)) {
         wxLogError(_("The file %s could not be found."), path);
         return false;
@@ -838,7 +809,7 @@ bool SettingsModel::ParseParameters(const string& path) {
         return false;
     }
 
-    return true;
+    return true;*/
 }
 
 bool SettingsModel::SetParameterValue(const string& component, const string& name, float value) {

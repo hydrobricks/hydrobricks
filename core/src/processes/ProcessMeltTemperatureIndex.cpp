@@ -11,6 +11,14 @@ ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* contain
       m_meltingTemperature(nullptr),
       m_radiationCoefficient(nullptr) {}
 
+void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessParameter("melt_factor", 3.0f);
+    modelSettings->AddProcessParameter("melting_temperature", 0.0f);
+    modelSettings->AddProcessParameter("radiation_coefficient", 0.0007f);
+    modelSettings->AddProcessForcing("temperature");
+    modelSettings->AddProcessForcing("r_solar");
+}
+
 bool ProcessMeltTemperatureIndex::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;

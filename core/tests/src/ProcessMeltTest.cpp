@@ -24,9 +24,8 @@ class SnowpackModel : public ::testing::Test {
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.OutputProcessToSameBrick();
         m_model.AddProcessLogging("output");
 
@@ -152,11 +151,10 @@ class SnowpackModelWithAspect : public ::testing::Test {
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day_aspect");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor_n", 2.0f);
-        m_model.AddProcessParameter("degree_day_factor_ew", 3.0f);
-        m_model.AddProcessParameter("degree_day_factor_s", 4.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_n", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_ew", 3.0f);
+        m_model.SetProcessParameterValue("degree_day_factor_s", 4.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.OutputProcessToSameBrick();
         m_model.AddProcessLogging("output");
 
@@ -246,9 +244,8 @@ class GlacierModel : public ::testing::Test {
 
         // Glacier melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.AddProcessLogging("output");
         m_model.AddProcessOutput("outlet");
 
@@ -323,8 +320,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 
         // Snow melt process
         m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.AddProcessParameter("degree_day_factor", 2.0f);
-        m_model.AddProcessParameter("melting_temperature", 0.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 2.0f);
         m_model.AddProcessLogging("output");
 
         // Glacier melt process
@@ -332,9 +328,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
         m_model.AddBrickProcess("melt", "melt:degree_day", "outlet");
         m_model.AddBrickParameter("no_melt_when_snow_cover", true);
         m_model.AddBrickParameter("infinite_storage", 1.0);
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 0.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
         m_model.AddProcessLogging("output");
 
         // Add process to direct meltwater to the outlet

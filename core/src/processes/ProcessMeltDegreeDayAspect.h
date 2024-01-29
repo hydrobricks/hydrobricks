@@ -11,6 +11,8 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
 
     ~ProcessMeltDegreeDayAspect() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::IsOk()
      */
@@ -23,7 +25,7 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    string m_aspect_class;
+    string m_aspectClass;
     Forcing* m_temperature;
     float* m_degreeDayFactor;
     float* m_meltingTemperature;

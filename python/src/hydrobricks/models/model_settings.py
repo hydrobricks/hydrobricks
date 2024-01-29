@@ -179,37 +179,6 @@ class ModelSettings:
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
 
-        # Set forcing and parameters
-        if kind.startswith('et:'):
-            self.settings.add_process_forcing('pet')
-        elif kind == 'outflow:linear':
-            self.settings.add_process_parameter('response_factor', 0.2)
-        elif kind == 'outflow:percolation':
-            self.settings.add_process_parameter('percolation_rate', 0.1)
-        elif kind == 'runoff:socont':
-            self.settings.add_process_parameter('runoff_coefficient', 500)
-        elif kind == 'melt:degree_day':
-            self.settings.add_process_forcing('temperature')
-            self.settings.add_process_parameter('degree_day_factor', 3.0)
-            self.settings.add_process_parameter('melting_temperature', 0)
-        elif kind == 'melt:degree_day_aspect':
-            self.settings.add_process_forcing('temperature')
-            self.settings.add_process_parameter('degree_day_factor_n', 3.0)
-            self.settings.add_process_parameter('degree_day_factor_s', 3.0)
-            self.settings.add_process_parameter('degree_day_factor_ew', 3.0)
-            self.settings.add_process_parameter('melting_temperature', 0)
-        elif kind == 'melt:temperature_index':
-            self.settings.add_process_forcing('temperature')
-            self.settings.add_process_forcing('r_solar')
-            self.settings.add_process_parameter('melt_factor', 3.0)
-            self.settings.add_process_parameter('melting_temperature', 0)
-            self.settings.add_process_parameter('radiation_coefficient', 0.0007)
-        elif kind in ['outflow:direct', 'outflow:rest_direct', 'infiltration:socont',
-                      'overflow']:
-            pass  # No parameters
-        else:
-            raise ValueError(f'Unknown brick process: {name}')
-
     def add_brick_parameter(self, name, value, kind='constant'):
         """
         Add a brick parameter

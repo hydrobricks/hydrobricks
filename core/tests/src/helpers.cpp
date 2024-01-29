@@ -49,9 +49,6 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
             settings.AddBrickParameter("no_melt_when_snow_cover", 1.0);
             settings.AddBrickParameter("infinite_storage", 1.0);
             settings.AddBrickProcess("melt", "melt:degree_day", "glacier_area_icemelt_storage");
-            settings.AddProcessForcing("temperature");
-            settings.AddProcessParameter("degree_day_factor", 3.0f);
-            settings.AddProcessParameter("melting_temperature", 0.0f);
             settings.SetProcessOutputsAsInstantaneous();
         }
     }
@@ -59,10 +56,8 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     // Basin storages for contributions from the glacierized area
     settings.AddSubBasinBrick("glacier_area_rain_snowmelt_storage", "storage");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-    settings.AddProcessParameter("response_factor", 0.2f);
     settings.AddSubBasinBrick("glacier_area_icemelt_storage", "storage");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-    settings.AddProcessParameter("response_factor", 0.2f);
 
     // Infiltration and overflow
     settings.SelectHydroUnitBrick("ground");
@@ -75,24 +70,19 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         settings.AddHydroUnitBrick("slow_reservoir", "storage");
         settings.AddBrickParameter("capacity", 200.0f);
         settings.AddBrickProcess("et", "et:socont");
-        settings.AddProcessForcing("pet");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-        settings.AddProcessParameter("response_factor", 0.2f);
         settings.AddBrickProcess("overflow", "overflow", "outlet");
     } else if (soilStorageNb == 2) {
         wxLogMessage(_("Using 2 soil storages."));
         settings.AddHydroUnitBrick("slow_reservoir", "storage");
         settings.AddBrickParameter("capacity", 200.0f);
         settings.AddBrickProcess("et", "et:socont");
-        settings.AddProcessForcing("pet");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-        settings.AddProcessParameter("response_factor", 0.2f);
         settings.AddBrickProcess("percolation", "outflow:percolation", "slow_reservoir_2");
-        settings.AddProcessParameter("percolation_rate", 0.1f);
         settings.AddBrickProcess("overflow", "overflow", "outlet");
         settings.AddHydroUnitBrick("slow_reservoir_2", "storage");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-        settings.AddProcessParameter("response_factor", 0.02f);
+        settings.SetProcessParameterValue("response_factor", 0.02f);
     } else {
         wxLogError(_("There can be only one or two groundwater storages."));
     }
@@ -100,11 +90,10 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     settings.AddHydroUnitBrick("surface_runoff", "storage");
     if (surfaceRunoff == "socont_runoff") {
         settings.AddBrickProcess("runoff", "runoff:socont", "outlet");
-        settings.AddProcessParameter("beta", 500.0f);
     } else if (surfaceRunoff == "linear_storage") {
         wxLogMessage(_("Using a linear storage for the quick flow."));
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-        settings.AddProcessParameter("response_factor", 0.8f);
+        settings.SetProcessParameterValue("response_factor", 0.8f);
     } else {
         wxLogError(_("The surface runoff option %s is not recognised in Socont."), surfaceRunoff);
         return false;

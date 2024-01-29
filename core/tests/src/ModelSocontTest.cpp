@@ -529,7 +529,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
-class ModelSocontGletsch : public ::testing::Test {
+class ModelSocontSingleLandCover : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -568,7 +568,7 @@ class ModelSocontGletsch : public ::testing::Test {
     }
 };
 
-TEST_F(ModelSocontGletsch, QuickDischargeIsCorrect) {
+TEST_F(ModelSocontSingleLandCover, QuickDischargeIsCorrect) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 38.9 * 1000000);
     basinSettings.AddHydroUnitPropertyDouble("slope", 0.3, "m/m");

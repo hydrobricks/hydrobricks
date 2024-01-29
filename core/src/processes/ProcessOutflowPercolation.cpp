@@ -7,6 +7,10 @@ ProcessOutflowPercolation::ProcessOutflowPercolation(WaterContainer* container)
     : ProcessOutflow(container),
       m_rate(nullptr) {}
 
+void ProcessOutflowPercolation::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    modelSettings->AddProcessParameter("percolation_rate", 0.1f);
+}
+
 void ProcessOutflowPercolation::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     if (HasParameter(processSettings, "percolation_rate")) {

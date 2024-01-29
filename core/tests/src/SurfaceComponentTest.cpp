@@ -35,23 +35,22 @@ class GlacierComponentModel : public ::testing::Test {
         // Snow melt process on ground
         m_model.SelectHydroUnitBrick("ground_snowpack");
         m_model.SelectProcess("melt");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Snow melt process on glacier
         m_model.SelectHydroUnitBrick("glacier_snowpack");
         m_model.SelectProcess("melt");
-        m_model.AddProcessParameter("degree_day_factor", 3.0f);
-        m_model.AddProcessParameter("melting_temperature", 2.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Glacier melt process
         m_model.SelectHydroUnitBrick("glacier");
         m_model.AddBrickParameter("no_melt_when_snow_cover", 1.0);
         m_model.AddBrickParameter("infinite_storage", 1.0);
         m_model.AddBrickProcess("melt", "melt:degree_day", "glacier");
-        m_model.AddProcessForcing("temperature");
-        m_model.AddProcessParameter("degree_day_factor", 4.0f);
-        m_model.AddProcessParameter("melting_temperature", 1.0f);
+        m_model.SetProcessParameterValue("degree_day_factor", 4.0f);
+        m_model.SetProcessParameterValue("melting_temperature", 1.0f);
         m_model.SetProcessOutputsAsInstantaneous();
         m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
         m_model.SetProcessOutputsAsInstantaneous();

@@ -11,6 +11,8 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
 
     ~ProcessMeltTemperatureIndex() override = default;
 
+    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+
     /**
      * @copydoc Process::IsOk()
      */

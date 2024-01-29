@@ -231,22 +231,15 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBricksNb(); ++iBrick) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
+            brick->SetParameters(brickSettings);
 
-            string brickName = modelSettings.GetHydroUnitBrickSettings(iBrick).name;
-            if (TargetMultipleBricks(brickName)) {
-                vecStr bricksNames = GetAllBricksNames(brickName);
-
-            } else {
-                Brick* brick = unit->GetBrick(brickName);
-                brick->SetParameters(brickSettings);
-
-                // Update the processes
-                for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
-                    modelSettings.SelectProcess(iProcess);
-                    ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
-                    Process* process = brick->GetProcess(iProcess);
-                    process->SetParameters(processSettings);
-                }
+            // Update the processes
+            for (int iProcess = 0; iProcess < modelSettings.GetProcessesNb(); ++iProcess) {
+                modelSettings.SelectProcess(iProcess);
+                ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+                Process* process = brick->GetProcess(iProcess);
+                process->SetParameters(processSettings);
             }
         }
 
@@ -258,35 +251,6 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             splitter->SetParameters(splitterSettings);
         }
     }
-}
-
-bool ModelHydro::TargetMultipleBricks(const string& name) {
-    if (name.find(',') != string::npos || name.find(':') != string::npos) {
-        return true;
-    }
-    return false;
-}
-
-vecStr ModelHydro::GetAllBricksNames(const string& combinedNames) {
-    wxArrayString namesTemp;
-    if (combinedNames.find(',') != string::npos) {
-        namesTemp = wxSplit(wxString(combinedNames), ',');
-    } else {
-        namesTemp.Add(wxString(combinedNames));
-    }
-
-    vecStr names;
-    for (auto& name : namesTemp) {
-        if (name.StartsWith("type:")) {
-            wxString kind = name.AfterFirst(':');
-            // Select all bricks of the corresponding kind
-
-        } else {
-            names.push_back(name.ToStdString());
-        }
-    }
-
-    return names;
 }
 
 void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {

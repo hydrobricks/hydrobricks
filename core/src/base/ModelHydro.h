@@ -103,10 +103,6 @@ class ModelHydro : public wxObject {
 
     void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
 
-    static bool TargetMultipleBricks(const string& name);
-
-    static vecStr GetAllBricksNames(const string& combinedNames);
-
     void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
 
     void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);

@@ -10,18 +10,18 @@ methods = ['degree_day', 'degree_day_aspect']
 # Select number of maximum repetitions for spotpy
 max_rep = 4000
 
-# Set up the case study options
-helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
-                          end_date='2020-12-31')
-helper.create_hydro_units_from_csv_file(
-    filename='elevation_bands_aspect.csv',
-    other_columns={'slope': 'slope', 'aspect_class': 'aspect_class'})
-forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True)
-obs = helper.get_obs_data_from_csv_file()
-
 # Run spotpy for each method
 for method in methods:
+    # Set up the case study options
+    helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
+                              end_date='2020-12-31')
+    helper.create_hydro_units_from_csv_file(
+        filename='elevation_bands_aspect.csv',
+        other_columns={'slope': 'slope', 'aspect_class': 'aspect_class'})
+    forcing = helper.get_forcing_data_from_csv_file(
+        ref_elevation=1250, use_precip_gradient=True)
+    obs = helper.get_obs_data_from_csv_file()
+
     # Set up the model
     socont, parameters = helper.get_model_and_params_socont(
         snow_melt_process=f'melt:{method}')

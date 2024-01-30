@@ -45,7 +45,7 @@ except ImportError:
     has_spotpy = False
 else:
     has_spotpy = True
-    from .spotpy_setup import SpotpySetup
+    from .parameter_estimation import SpotpySetup
 
 try:
     import pyet

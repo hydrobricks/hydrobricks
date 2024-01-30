@@ -292,7 +292,7 @@ class Model(ABC):
 
         Parameters
         ----------
-        metric
+        metric : str
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...

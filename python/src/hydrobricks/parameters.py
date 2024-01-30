@@ -533,7 +533,7 @@ class ParameterSet:
 
         for _, process in brick['processes'].items():
             if process['kind'] in ['infiltration:socont', 'outflow:rest_direct',
-                                   'et:socont', 'overflow']:
+                                   'outflow:direct', 'et:socont', 'overflow']:
                 continue
             elif process['kind'] == 'outflow:linear':
                 self.define_parameter(

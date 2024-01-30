@@ -531,9 +531,16 @@ class ParameterSet:
         if 'processes' not in brick:
             return
 
+        skip_processes = [
+            # No parameters
+            'infiltration:socont', 'outflow:rest_direct', 'outflow:direct', 'et:socont',
+            'overflow',
+            # Already defined for snowpacks + glaciers
+            'melt:degree_day', 'melt:degree_day_aspect', 'melt:temperature_index'
+        ]
+
         for _, process in brick['processes'].items():
-            if process['kind'] in ['infiltration:socont', 'outflow:rest_direct',
-                                   'outflow:direct', 'et:socont', 'overflow']:
+            if process['kind'] in skip_processes:
                 continue
             elif process['kind'] == 'outflow:linear':
                 self.define_parameter(

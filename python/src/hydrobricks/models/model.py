@@ -296,7 +296,7 @@ class Model(ABC):
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
-        observations
+        observations : np.array
             The time series of the observations with dates matching the simulated
             series.
 
@@ -304,9 +304,7 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        sim_ts = self.get_outlet_discharge()
-        eval_fct = getattr(importlib.import_module('HydroErr'), metric)
-        return eval_fct(sim_ts, observations)
+        return hb.evaluate(self.get_outlet_discharge(), observations, metric)
 
     def generate_parameters(self):
         ps = hb.ParameterSet()

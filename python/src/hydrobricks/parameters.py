@@ -706,7 +706,8 @@ class ParameterSet:
                     # to both snow and ice (debris-covered or clean).
                     self.define_parameter(
                         component='type:snowpack,type:glacier', name='melt_factor',
-                        unit='mm/d/°C', aliases=['mf'], min_value=0, max_value=12)
+                        unit='mm/d/°C', aliases=['melt_factor', 'mf'],
+                        min_value=0, max_value=12)
                     self.define_parameter(
                         component='type:snowpack', name='radiation_coefficient',
                         unit='m2/W*mm/d/°C', aliases=['r_snow'],

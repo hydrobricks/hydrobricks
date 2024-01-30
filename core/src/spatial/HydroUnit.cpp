@@ -232,7 +232,8 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
             return false;
         }
         if (ground->GetAreaFraction() < diff) {
-            wxLogError(_("The ground (generic) land cover is not large enough to compensate the area fractions."));
+            wxLogError(_("The ground (generic) land cover is not large enough to compensate the area fractions."
+                "(i.e. the sum of the other land cover fractions is too large)."));
             return false;
         }
         ground->SetAreaFraction(ground->GetAreaFraction() - diff);

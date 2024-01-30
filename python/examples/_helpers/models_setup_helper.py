@@ -31,6 +31,8 @@ class ModelSetupHelper:
 
         # Options defined later
         self.use_precip_gradient = False
+        self.precip_corr_factor = None
+        self.temp_gradients = None
 
     def __del__(self):
         # Cleanup
@@ -49,8 +51,11 @@ class ModelSetupHelper:
             other_columns=other_columns)
 
     def get_forcing_data_from_csv_file(self, filename='meteo.csv', ref_elevation=None,
-                                       use_pyet=False, use_precip_gradient=False):
+                                       use_pyet=False, use_precip_gradient=False,
+                                       precip_corr_factor=None, temp_gradients=None):
         self.use_precip_gradient = use_precip_gradient
+        self.precip_corr_factor = precip_corr_factor
+        self.temp_gradients = temp_gradients
 
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
@@ -60,18 +65,28 @@ class ModelSetupHelper:
             content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                      'pet': 'pet_sim(mm/day)'})
 
-        forcing.spatialize_from_station_data(
-            variable='temperature', ref_elevation=ref_elevation,
-            gradient='param:temp_gradients')
+        if temp_gradients is not None:
+            forcing.spatialize_from_station_data(
+                variable='temperature', ref_elevation=ref_elevation,
+                gradient=temp_gradients)
+        else:
+            forcing.spatialize_from_station_data(
+                variable='temperature', ref_elevation=ref_elevation,
+                gradient='param:temp_gradients')
 
         if use_pyet:
             forcing.compute_pet(method='priestley_taylor')
         else:
             forcing.spatialize_from_station_data(variable='pet', method='constant')
 
-        forcing.correct_station_data(
-            variable='precipitation', correction_factor='param:precip_corr_factor'
-        )
+        if precip_corr_factor is not None:
+            forcing.correct_station_data(
+                variable='precipitation', correction_factor=precip_corr_factor
+            )
+        else:
+            forcing.correct_station_data(
+                variable='precipitation', correction_factor='param:precip_corr_factor'
+            )
 
         if use_precip_gradient:
             forcing.spatialize_from_station_data(
@@ -113,10 +128,12 @@ class ModelSetupHelper:
         # Parameters
         parameters = socont.generate_parameters()
         parameters.define_constraint('k_slow_2', '<', 'k_slow_1')
-        parameters.add_data_parameter('precip_corr_factor', 0.85,
-                                      min_value=0.7, max_value=1.3)
-        parameters.add_data_parameter('temp_gradients', -0.6,
-                                      min_value=-1, max_value=0)
+        if self.precip_corr_factor is None:
+            parameters.add_data_parameter('temp_gradients', -0.6,
+                                          min_value=-1, max_value=0)
+        if self.precip_corr_factor is None:
+            parameters.add_data_parameter('precip_corr_factor', 0.85,
+                                          min_value=0.7, max_value=1.3)
         if self.use_precip_gradient:
             parameters.add_data_parameter('precip_gradient', 0.05,
                                           min_value=0, max_value=0.2)

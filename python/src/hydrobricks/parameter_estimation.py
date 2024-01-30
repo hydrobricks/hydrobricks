@@ -2,9 +2,9 @@ import importlib
 import os
 from datetime import datetime
 
-import HydroErr
 import numpy as np
-import spotpy
+
+import hydrobricks as hb
 
 
 class SpotpySetup:
@@ -33,7 +33,7 @@ class SpotpySetup:
     def parameters(self):
         x = None
         for i in range(1000):
-            x = spotpy.parameter.generate(self.params_spotpy)
+            x = hb.spotpy.parameter.generate(self.params_spotpy)
             names = [row[1] for row in x]
             values = [row[0] for row in x]
             params = self.params
@@ -82,10 +82,10 @@ class SpotpySetup:
 
     def objectivefunction(self, simulation, evaluation, params=None):
         if not self.obj_func:
-            like = spotpy.objectivefunctions.kge_non_parametric(evaluation, simulation)
+            like = hb.spotpy.objectivefunctions.kge_non_parametric(evaluation,
+                                                                   simulation)
         elif isinstance(self.obj_func, str):
-            eval_fct = getattr(importlib.import_module('HydroErr'), self.obj_func)
-            like = eval_fct(simulation, evaluation)
+            like = hb.evaluate(simulation, evaluation, self.obj_func)
         else:
             like = self.obj_func(evaluation, simulation)
 
@@ -93,3 +93,28 @@ class SpotpySetup:
             like = -like
 
         return like
+
+
+def evaluate(simulation, observation, metric):
+    """
+    Evaluate the simulation using the provided metric (goodness of fit).
+
+    Parameters
+    ----------
+    simulation : np.array
+        The predicted time series.
+    observation : np.array
+        The time series of the observations with dates matching the simulated
+        series.
+    metric : str
+        The abbreviation of the function as defined in HydroErr
+        (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
+        Examples: nse, kge_2012, ...
+
+    Returns
+    -------
+    The value of the selected metric.
+    """
+    eval_fct = getattr(importlib.import_module('HydroErr'), metric)
+
+    return eval_fct(simulation, observation)

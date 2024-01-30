@@ -10,6 +10,9 @@ methods = ['degree_day', 'degree_day_aspect']
 # Select number of maximum repetitions for spotpy
 max_rep = 4000
 
+# Optimize data-related parameters
+optimize_data_params = True
+
 # Run spotpy for each method
 for method in methods:
     # Set up the case study options
@@ -29,13 +32,16 @@ for method in methods:
     # Select the parameters to optimize/analyze
     if method == 'degree_day':
         parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol',
-                                     'k_slow_2', 'precip_corr_factor']
+                                     'k_slow_2']
     elif method == 'degree_day_aspect':
         parameters.allow_changing = ['a_snow_n', 'a_snow_s', 'a_snow_ew', 'k_quick',
-                                     'A', 'k_slow_1', 'percol', 'k_slow_2',
-                                     'precip_corr_factor']
+                                     'A', 'k_slow_1', 'percol', 'k_slow_2']
     else:
         raise RuntimeError(f"Method {method} not recognized.")
+
+    if optimize_data_params:
+        parameters.allow_changing += ['temp_gradients', 'precip_corr_factor',
+                                      'precip_gradient']
 
     # Setup SPOTPY
     spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,

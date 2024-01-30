@@ -71,7 +71,13 @@ obs_ts = obs.data[0]
 nse = socont.eval('nse', obs_ts)
 kge_2012 = socont.eval('kge_2012', obs_ts)
 
-print(f"nse = {nse:.3f}, kge_2012 = {kge_2012:.3f}")
+print(f"NSE = {nse:.3f}, KGE = {kge_2012:.3f}")
+
+# Compute reference metric
+ref_nse = obs.compute_reference_metric('nse')
+ref_kge = obs.compute_reference_metric('kge_2012')
+
+print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
 
 # Plot
 year_to_plot = 2020

@@ -29,11 +29,13 @@ for method in methods:
     # Select the parameters to optimize/analyze
     if method == 'degree_day':
         parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol',
-                                     'k_slow_2', 'precip_corr_factor']
+                                     'k_slow_2', 'precip_corr_factor', 'temp_gradients',
+                                     'precip_gradient']
     elif method == 'degree_day_aspect':
         parameters.allow_changing = ['a_snow_n', 'a_snow_s', 'a_snow_ew', 'k_quick',
                                      'A', 'k_slow_1', 'percol', 'k_slow_2',
-                                     'precip_corr_factor']
+                                     'precip_corr_factor', 'temp_gradients',
+                                     'precip_gradient']
     else:
         raise RuntimeError(f"Method {method} not recognized.")
 

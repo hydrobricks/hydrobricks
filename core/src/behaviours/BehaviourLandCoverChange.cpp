@@ -27,9 +27,8 @@ bool BehaviourLandCoverChange::Apply(double) {
     HydroUnit* unit = m_manager->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
     string landCoverName = m_landCoverNames[m_landCoverIds[m_cursor]];
     double areaFraction = m_areas[m_cursor] / unit->GetArea();
-    unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 
-    return true;
+    return unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 }
 
 int BehaviourLandCoverChange::GetLandCoverId(const string& landCoverName) {

@@ -71,7 +71,7 @@ void BehavioursManager::DateUpdate(double date) {
 
     while (m_dates.size() > m_cursorManager && m_dates[m_cursorManager] <= date) {
         if (!m_behaviours[m_behaviourIndices[m_cursorManager]]->Apply(date)) {
-            wxLogError(_("Application of a behaviour failed."));
+            throw InvalidArgument(_("Application of a behaviour failed."));
         }
         m_behaviours[m_behaviourIndices[m_cursorManager]]->IncrementCursor();
         m_cursorManager++;

@@ -68,7 +68,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
         }
     } else {
-        wxLogError(_("Process type '%s' not recognized (Process::Factory)."), processSettings.type);
+        throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processSettings.type));
     }
 
     return nullptr;
@@ -98,8 +98,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
     } else if (processType == "melt:temperature_index") {
         ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(modelSettings);
     } else {
-        wxLogError(_("Process type '%s' not recognized (Process::RegisterParametersAndForcing)."), processType);
-        return false;
+        throw ConceptionIssue(
+            wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing)."), processType));
     }
 
     return true;

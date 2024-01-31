@@ -409,7 +409,7 @@ class Model(ABC):
 
     def _set_structure_brick(self, brick, key):
         if brick['kind'] == 'land_cover':
-            self.settings.select_hydro_unit_brick('ground')
+            self.settings.select_hydro_unit_brick(key)
         else:
             if brick['attach_to'] == 'hydro_unit':
                 self.settings.add_hydro_unit_brick(key, brick['kind'])

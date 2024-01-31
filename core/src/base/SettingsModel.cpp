@@ -161,6 +161,9 @@ void SettingsModel::AddBrickForcing(const string& name) {
 void SettingsModel::AddBrickProcess(const string& name, const string& type, const string& target, bool log) {
     wxASSERT(m_selectedBrick);
 
+    wxLogVerbose(_("Adding brick process to brick: %s, process name: %s, process type: %s, target: %s"),
+                 m_selectedBrick->name, name, type, target);
+
     ProcessSettings processSettings;
     processSettings.name = name;
     processSettings.type = type;
@@ -436,7 +439,6 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SelectHydroUnitBrick(brickSettings.name + "_snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
@@ -455,7 +457,6 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SelectHydroUnitBrick(brickSettings.name + "_snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess);

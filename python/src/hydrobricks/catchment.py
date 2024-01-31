@@ -539,7 +539,7 @@ class Catchment:
             Julian day
         zenith : float
             Solar zenith for one moment during the day (IQBAL 2012)
-        incidence_angle : float
+        incidence_angle : np.array
             Angle of incidence between the normal to the grid slope and the
             solar beam
 
@@ -568,6 +568,16 @@ class Catchment:
 
         # Hock equation (Hock, 1999) to compute the potential
         # clear-sky direct solar radiation
+        if zenith > 90 - 1e-10:
+            empty_matrix = np.zeros(incidence_angle.shape)
+            # Set border values to nan
+            empty_matrix[0, :] = np.nan
+            empty_matrix[-1, :] = np.nan
+            empty_matrix[:, 0] = np.nan
+            empty_matrix[:, -1] = np.nan
+
+            return empty_matrix
+
         solar_radiation = (SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
                            atm_tra ** (local_pressure / (SEA_ATM_PRESSURE *
                                                          np.cos(zenith * TO_RAD))) *

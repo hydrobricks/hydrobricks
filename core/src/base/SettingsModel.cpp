@@ -161,6 +161,9 @@ void SettingsModel::AddBrickForcing(const string& name) {
 void SettingsModel::AddBrickProcess(const string& name, const string& type, const string& target, bool log) {
     wxASSERT(m_selectedBrick);
 
+    wxLogVerbose(_("Adding brick process to brick: %s, process name: %s, process type: %s, target: %s"),
+                 m_selectedBrick->name, name, type, target);
+
     ProcessSettings processSettings;
     processSettings.name = name;
     processSettings.type = type;

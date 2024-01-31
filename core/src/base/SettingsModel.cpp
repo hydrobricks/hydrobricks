@@ -436,6 +436,7 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
+        SelectHydroUnitBrick(brickSettings.name + "_snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
@@ -454,6 +455,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
+        SelectHydroUnitBrick(brickSettings.name + "_snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess);

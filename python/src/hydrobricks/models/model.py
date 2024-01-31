@@ -335,6 +335,8 @@ class Model(ABC):
         self._validate_kwargs(kwargs)
 
         for key, value in kwargs.items():
+            if key in ['solver', 'record_all', 'land_cover_types', 'land_cover_names']:
+                continue
             self.options[key] = value
 
         self._set_specific_options(kwargs)

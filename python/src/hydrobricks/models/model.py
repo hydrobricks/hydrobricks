@@ -299,14 +299,14 @@ class Model(ABC):
         observations : np.array
             The time series of the observations with dates matching the simulated
             series.
-        warmup
+        warmup : int
             The number of days of warmup period. This option is used to 
             discard the warmup period from the evaluation. It is useful when 
             conducting a run with a specific parameter set and comparing 
-            its score with an inversion run. By setting the 'warmup' value, 
-            you can ensure fair and accurate assessments by discarding data 
-            from the specified warmup period (as is done automatically in an
-            inversion run).
+            its score with those from the calibration. By setting the 'warmup' 
+            value, you can ensure fair assessments by discarding outputs 
+            from the specified warmup period (as is done automatically during
+            calibration).
 
         Returns
         -------

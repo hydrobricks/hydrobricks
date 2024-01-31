@@ -45,7 +45,8 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
         } else {
-            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+            throw ConceptionIssue(
+                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
     } else if (processSettings.type == "melt:degree_day_aspect") {
         if (brick->IsSnowpack()) {
@@ -55,7 +56,8 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
         } else {
-            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+            throw ConceptionIssue(
+                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
     } else if (processSettings.type == "melt:temperature_index") {
         if (brick->IsSnowpack()) {
@@ -65,7 +67,8 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
         } else {
-            throw ConceptionIssue(_("Trying to apply melting processes to unsupported brick."));
+            throw ConceptionIssue(
+                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
     } else {
         throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processSettings.type));

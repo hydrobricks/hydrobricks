@@ -300,11 +300,11 @@ class Model(ABC):
             The time series of the observations with dates matching the simulated
             series.
         warmup : int
-            The number of days of warmup period. This option is used to 
-            discard the warmup period from the evaluation. It is useful when 
-            conducting a run with a specific parameter set and comparing 
-            its score with those from the calibration. By setting the 'warmup' 
-            value, you can ensure fair assessments by discarding outputs 
+            The number of days of warmup period. This option is used to
+            discard the warmup period from the evaluation. It is useful when
+            conducting a run with a specific parameter set and comparing
+            its score with those from the calibration. By setting the 'warmup'
+            value, you can ensure fair assessments by discarding outputs
             from the specified warmup period (as is done automatically during
             calibration).
 

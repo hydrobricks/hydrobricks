@@ -286,27 +286,33 @@ class Model(ABC):
         """
         self.model.dump_outputs(path)
 
-    def eval(self, metric, observations):
+    def eval(self, metric, observations, warmup=0):
         """
         Evaluate the simulation using the provided metric (goodness of fit).
 
         Parameters
         ----------
-        metric
+        metric : str
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
-        observations
+        observations : np.array
             The time series of the observations with dates matching the simulated
             series.
+        warmup : int
+            The number of days of warmup period. This option is used to 
+            discard the warmup period from the evaluation. It is useful when 
+            conducting a run with a specific parameter set and comparing 
+            its score with those from the calibration. By setting the 'warmup' 
+            value, you can ensure fair assessments by discarding outputs 
+            from the specified warmup period (as is done automatically during
+            calibration).
 
         Returns
         -------
         The value of the selected metric.
         """
-        sim_ts = self.get_outlet_discharge()
-        eval_fct = getattr(importlib.import_module('HydroErr'), metric)
-        return eval_fct(sim_ts, observations)
+        return hb.evaluate(self.get_outlet_discharge()[warmup:], observations[warmup:], metric)
 
     def generate_parameters(self):
         ps = hb.ParameterSet()
@@ -337,6 +343,8 @@ class Model(ABC):
         self._validate_kwargs(kwargs)
 
         for key, value in kwargs.items():
+            if key in ['solver', 'record_all', 'land_cover_types', 'land_cover_names']:
+                continue
             self.options[key] = value
 
         self._set_specific_options(kwargs)
@@ -409,7 +417,7 @@ class Model(ABC):
 
     def _set_structure_brick(self, brick, key):
         if brick['kind'] == 'land_cover':
-            self.settings.select_hydro_unit_brick('ground')
+            self.settings.select_hydro_unit_brick(key)
         else:
             if brick['attach_to'] == 'hydro_unit':
                 self.settings.add_hydro_unit_brick(key, brick['kind'])

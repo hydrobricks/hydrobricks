@@ -564,14 +564,14 @@ class Forcing:
             method = 'regrid_from_netcdf'
 
         if method == 'regrid_from_netcdf':
-            path = kwargs.get('path', None)
+            path = kwargs.get('path', '')
             file_pattern = kwargs.get('file_pattern', None)
             data_crs = kwargs.get('data_crs', None)
-            var_name = kwargs.get('var_name', None)
+            var_name = kwargs.get('var_name', '')
             dim_time = kwargs.get('dim_time', 'time')
             dim_x = kwargs.get('dim_x', 'x')
             dim_y = kwargs.get('dim_y', 'y')
-            raster_hydro_units = kwargs.get('raster_hydro_units', None)
+            raster_hydro_units = kwargs.get('raster_hydro_units', '')
             self.data2D.regrid_from_netcdf(
                 path, file_pattern=file_pattern, data_crs=data_crs, var_name=var_name,
                 dim_time=dim_time, dim_x=dim_x, dim_y=dim_y,

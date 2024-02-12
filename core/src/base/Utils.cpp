@@ -39,7 +39,7 @@ wxString GetUserDirPath() {
 
 void InitLog(const string& path) {
     wxString fullPath = path;
-    wxString logFileName = "hydrobricks.log";
+    wxString logFileName = wxString::Format("hydrobricks_%s.log", wxDateTime::Now().Format("%Y-%m-%d_%H%M%S"));
     fullPath.Append(wxFileName::GetPathSeparator());
     fullPath.Append(logFileName);
     wxFFile* logFile = new wxFFile(fullPath, "w");

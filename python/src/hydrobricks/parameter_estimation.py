@@ -12,21 +12,33 @@ class SpotpySetup:
     def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None,
                  invert_obj_func=False, dump_outputs=False, dump_forcing=False,
                  dump_dir=''):
-        self.model = model
+        self.model = [model] if not isinstance(model, list) else model
         self.params = params
         self.params_spotpy = params.get_for_spotpy()
         self.random_forcing = params.needs_random_forcing()
-        self.forcing = forcing
-        self.forcing.apply_operations(params)
-        self.obs = obs.data[0]
+        self.forcing = [forcing] if not isinstance(forcing, list) else forcing
+        for f in self.forcing:
+            f.apply_operations(params)
+        if not isinstance(obs, list):
+            self.obs = [obs.data[0]]
+        else:
+            self.obs = [o.data[0] for o in obs]
         self.warmup = warmup
         self.obj_func = obj_func
         self.invert_obj_func = invert_obj_func
         self.dump_outputs = dump_outputs
         self.dump_forcing = dump_forcing
         self.dump_dir = dump_dir
+
+        # Check that the models, forcing and the observations have the same length
+        if len(self.model) != len(self.forcing) or len(self.model) != len(self.obs):
+            raise ValueError('The number of models, forcing and observations '
+                             'must be the same.')
+
         if not self.random_forcing:
-            self.model.set_forcing(forcing=forcing)
+            for m, f in zip(self.model, self.forcing):
+                m.set_forcing(forcing=f)
+
         if not obj_func:
             print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
@@ -56,43 +68,53 @@ class SpotpySetup:
         if not params.constraints_satisfied() or not params.range_satisfied():
             return np.random.rand(len(self.obs[self.warmup:]))
 
-        model = self.model
-        forcing = self.forcing
-        if self.random_forcing:
-            forcing.apply_operations(params, apply_to_all=False)
-            model.run(parameters=params, forcing=forcing)
-        else:
-            model.run(parameters=params)
-        sim = model.get_outlet_discharge()
+        all_sim = []
+        for model, forcing, i in zip(self.model, self.forcing, range(len(self.model))):
+            if self.random_forcing:
+                forcing.apply_operations(params, apply_to_all=False)
+                model.run(parameters=params, forcing=forcing)
+            else:
+                model.run(parameters=params)
 
-        if self.dump_outputs or self.dump_forcing:
-            now = datetime.now()
-            date_time = now.strftime("%Y-%m-%d_%H%M%S")
-            path = os.path.join(self.dump_dir, date_time)
-            os.makedirs(path, exist_ok=True)
-            if self.dump_outputs:
-                model.dump_outputs(path)
-            if self.dump_forcing:
-                forcing.save_as(os.path.join(path, 'forcing.nc'))
+            sim = model.get_outlet_discharge()
+            all_sim.append(sim[self.warmup:])
 
-        return sim[self.warmup:]
+            if self.dump_outputs or self.dump_forcing:
+                now = datetime.now()
+                date_time = now.strftime("%Y-%m-%d_%H%M%S")
+                path = os.path.join(self.dump_dir, date_time)
+                os.makedirs(path, exist_ok=True)
+                if self.dump_outputs:
+                    model.dump_outputs(path)
+                if self.dump_forcing:
+                    forcing.save_as(os.path.join(path, f'forcing_{i}.nc'))
+
+        return all_sim
 
     def evaluation(self):
-        return self.obs[self.warmup:]
+        all_obs = []
+        for obs in self.obs:
+            all_obs.append(obs[self.warmup:])
+
+        return all_obs
 
     def objectivefunction(self, simulation, evaluation, params=None):
-        if not self.obj_func:
-            like = hb.spotpy.objectivefunctions.kge_non_parametric(evaluation,
-                                                                   simulation)
-        elif isinstance(self.obj_func, str):
-            like = hb.evaluate(simulation, evaluation, self.obj_func)
-        else:
-            like = self.obj_func(evaluation, simulation)
+        all_like = []
+        for sim, obs in zip(simulation, evaluation):
+            if not self.obj_func:
+                like = hb.spotpy.objectivefunctions.kge_non_parametric(obs, sim)
+            elif isinstance(self.obj_func, str):
+                like = hb.evaluate(sim, obs, self.obj_func)
+            else:
+                like = self.obj_func(obs, sim)
 
-        if self.invert_obj_func:
-            like = -like
+            if self.invert_obj_func:
+                like = -like
 
-        return like
+            all_like.append(like)
+
+        # Return the mean of the objective function
+        return np.mean(all_like)
 
 
 def evaluate(simulation, observation, metric):

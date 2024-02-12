@@ -109,7 +109,7 @@ jobs:
         run: lcov --list hydrobricks-coverage.info
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true

@@ -431,7 +431,7 @@ class BehaviourLandCoverChange(Behaviour):
         changes_df = pd.DataFrame(index=range(n_unit_ids))
         changes_df.insert(loc=0, column='hydro_unit', value=0)
         ids = hydro_units.hydro_units[('id', '-')].values.squeeze()
-        changes_df.hydro_unit.iloc[:] = ids
+        changes_df.loc[:, 'hydro_unit'] = ids
         return changes_df
 
     @staticmethod

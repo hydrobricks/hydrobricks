@@ -231,10 +231,11 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
             wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));
             return false;
         }
-        if (ground->GetAreaFraction() - diff < - EPSILON_D) {
-            wxLogError(
-                    _("The ground (generic) land cover (%.20g) is not large enough to compensate the area fractions (%.20g) with error margin (%.20g)."
-                      "(i.e. the sum of the other land cover fractions is too large)."), ground->GetAreaFraction(), diff, EPSILON_D);
+        if (ground->GetAreaFraction() - diff < -EPSILON_D) {
+            wxLogError(_("The ground (generic) land cover (%.20g) is not large enough to compensate "
+                         "the area fractions (%.20g) with error margin (%.20g)."
+                         "(i.e. the sum of the other land cover fractions is too large)."),
+                       ground->GetAreaFraction(), diff, EPSILON_D);
             return false;
         }
         if (ground->GetAreaFraction() - diff > 0) {

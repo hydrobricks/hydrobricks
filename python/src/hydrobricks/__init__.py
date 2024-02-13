@@ -45,7 +45,7 @@ except ImportError:
     has_spotpy = False
 else:
     has_spotpy = True
-    from .parameter_estimation import SpotpySetup
+    from .trainer import SpotpySetup
 
 try:
     import pyet
@@ -93,7 +93,7 @@ from .catchment import Catchment
 from .forcing import Forcing
 from .hydro_units import HydroUnits
 from .observations import Observations
-from .parameter_estimation import evaluate
+from .trainer import evaluate
 from .parameters import ParameterSet
 from .time_series import TimeSeries
 

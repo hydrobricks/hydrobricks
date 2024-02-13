@@ -5,32 +5,32 @@ from examples._helpers.models_setup_helper import ModelSetupHelper
 import hydrobricks as hb
 
 # Set up the model for the Sitter
-helper_sitter = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
-                                 end_date='2020-12-31')
-helper_sitter.create_hydro_units_from_csv_file()
-forcing_sitter = helper_sitter.get_forcing_data_from_csv_file(
+helper_appenzell = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
+                                    end_date='2020-12-31')
+helper_appenzell.create_hydro_units_from_csv_file()
+forcing_appenzell = helper_appenzell.get_forcing_data_from_csv_file(
     ref_elevation=1250, use_precip_gradient=True)
-obs_sitter = helper_sitter.get_obs_data_from_csv_file()
-socont_sitter, _ = helper_sitter.get_model_and_params_socont()
+obs_appenzell = helper_appenzell.get_obs_data_from_csv_file()
+socont_appenzell, _ = helper_appenzell.get_model_and_params_socont()
 
 # Set up the model for the Rhone at Gletsch
-helper_rhone = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
-                                end_date='2020-12-31')
-helper_rhone.create_hydro_units_from_csv_file()
-forcing_rhone = helper_rhone.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True)
-obs_rhone = helper_rhone.get_obs_data_from_csv_file()
-socont_rhone, parameters = helper_rhone.get_model_and_params_socont()
+helper_stgallen = ModelSetupHelper('ch_sitter_stgallen', start_date='1981-01-01',
+                                   end_date='2020-12-31')
+helper_stgallen.create_hydro_units_from_csv_file()
+forcing_stgallen = helper_stgallen.get_forcing_data_from_csv_file(
+    ref_elevation=1040, use_precip_gradient=True)
+obs_stgallen = helper_stgallen.get_obs_data_from_csv_file()
+socont_stgallen, parameters = helper_stgallen.get_model_and_params_socont()
 
 # Select the parameters to optimize/analyze
 parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_slow_2',
                              'precip_corr_factor']
 
 # Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
-spot_setup = hb.SpotpySetup([socont_sitter, socont_rhone],
+spot_setup = hb.SpotpySetup([socont_appenzell, socont_stgallen],
                             parameters,
-                            [forcing_sitter, forcing_rhone],
-                            [obs_sitter, obs_rhone],
+                            [forcing_appenzell, forcing_stgallen],
+                            [obs_appenzell, obs_stgallen],
                             warmup=365,
                             obj_func='kge_2012',
                             invert_obj_func=True)

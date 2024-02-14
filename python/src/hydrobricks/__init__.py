@@ -93,13 +93,14 @@ from .catchment import Catchment
 from .forcing import Forcing
 from .hydro_units import HydroUnits
 from .observations import Observations
-from .trainer import evaluate
 from .parameters import ParameterSet
+from .results import Results
 from .time_series import TimeSeries
+from .trainer import evaluate
 
 init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'Catchment', 'utils', 'init', 'init_log', 'close_log', 'set_debug_log_level',
-           'set_max_log_level', 'set_message_log_level', 'Dataset', 'rasterio', 'gpd',
-           'shapely', 'SpotpySetup', 'spotpy', 'pyet', 'pyproj', 'xr', 'rxr',
-           'xrs', 'evaluate')
+           'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
+           'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
+           'Dataset', 'rasterio', 'gpd', 'shapely', 'SpotpySetup', 'spotpy', 'pyet',
+           'pyproj', 'xr', 'rxr', 'xrs', 'evaluate')

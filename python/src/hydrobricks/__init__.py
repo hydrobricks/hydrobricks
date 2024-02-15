@@ -88,6 +88,14 @@ else:
     if not has_rioxarray:
         raise ImportError("rioxarray is required to use xrspatial.")
 
+try:
+    import matplotlib.pyplot as plt  # noqa
+except ImportError:
+    has_matplotlib = False
+else:
+    has_matplotlib = True
+    from .plotting import *  # noqa
+
 from . import utils
 from .catchment import Catchment
 from .forcing import Forcing

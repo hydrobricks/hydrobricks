@@ -63,3 +63,20 @@ class Results:
 
         return self.results.hydro_units_values[i_component].sel(
             time=slice(start_date, end_date)).to_numpy()
+
+    def get_time_array(self, start_date, end_date):
+        """
+        Get the time array.
+
+        Parameters
+        ----------
+        start_date : str
+            The start date of the period to extract.
+        end_date : str
+            The end date of the period to extract.
+
+        Returns
+        -------
+        The time array.
+        """
+        return self.results.time.sel(time=slice(start_date, end_date)).to_numpy()

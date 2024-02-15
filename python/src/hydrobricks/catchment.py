@@ -913,9 +913,15 @@ class Catchment:
         ds.y.attrs["long_name"] = "y coordinate of projection"
         ds.y.attrs["standard_name"] = "projection_y_coordinate"
         ds.y.attrs["units"] = "metre"
-
-        ds.to_netcdf(output_filename)
-        ds.close()
+        
+        try:
+            ds.to_netcdf(output_filename)
+            print('File successfully written.')
+        except Exception as e:
+            raise RuntimeError(f"Error writing to file: {e}")
+        finally:
+            ds.close()
+            print('Dataset closed.')
 
     def save_hydro_units_to_csv(self, path):
         """
@@ -984,6 +990,22 @@ class Catchment:
         xr_dem_upscaled.rio.to_raster(path + 'AnnualPotentialRadiation.tif')
 
         self.mean_annual_radiation = xr_dem_upscaled
+
+    def upload_mean_annual_radiation_raster(self, path):
+        """
+        Upload the mean annual radiation raster (downsampled and at DEM resolution)
+        from its file.
+
+        Parameters
+        ----------
+        path : str|Path
+            Path to the input file.
+        """
+        # Create the profile
+        xr_rad = hb.rxr.open_rasterio(
+            path + 'AnnualPotentialRadiation.tif').drop_vars('band')[0]
+
+        self.mean_annual_radiation = xr_rad
 
     def load_unit_ids_from_raster(self, path):
         """

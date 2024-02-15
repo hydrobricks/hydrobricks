@@ -8,6 +8,36 @@ from matplotlib.colors import ListedColormap
 import hydrobricks as hb
 
 
+def plot_hydrograph(obs, sim, time, year=None):
+    """
+    Plot the hydrograph of observed and simulated data.
+
+    Parameters
+    ----------
+    obs : array-like
+        The observed data.
+    sim : array-like
+        The simulated data.
+    time : array-like
+        The time array.
+    year : int (optional)
+        The year to plot (default: None).
+    """
+    plt.figure()
+    if year is not None:
+        dates = time[time.dt.year == year]
+        plt.plot(dates, obs[dates.index], label='observed', color='black')
+        plt.plot(dates, sim[dates.index], label='model', color='blue')
+    else:
+        plt.plot(time, obs, label='observed', color='black')
+        plt.plot(time, sim, label='model', color='blue')
+    plt.legend()
+    plt.ylabel('discharge (mm/day)')
+    plt.ylim(0, None)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
                               min_val=0, max_val=None):
     """

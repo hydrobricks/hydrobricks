@@ -3,8 +3,6 @@ import math
 import pathlib
 import warnings
 
-# import matplotlib.colors as mcolors
-# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -724,7 +722,9 @@ class Catchment:
 
         # DEBUG #
         # debug = True
+        # import matplotlib.pyplot as plt
         # if debug:
+        #     import matplotlib.colors as mcolors
         #     fig, (ax1, ax3) = plt.subplots(2, figsize=(20, 3))
         #     cmap = plt.get_cmap('viridis')
         #     normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
@@ -808,6 +808,7 @@ class Catchment:
             # END DEBUG #
 
         # DEBUG #
+        # import matplotlib.pyplot as plt
         # if debug:
         #     plt.xlabel('Hour angle')
         #     scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
@@ -913,7 +914,7 @@ class Catchment:
         ds.y.attrs["long_name"] = "y coordinate of projection"
         ds.y.attrs["standard_name"] = "projection_y_coordinate"
         ds.y.attrs["units"] = "metre"
-        
+
         try:
             ds.to_netcdf(output_filename)
             print('File successfully written.')

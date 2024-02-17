@@ -497,11 +497,13 @@ class Catchment:
         new_width = int(xr_dem.rio.width * x_downscale_factor)
         new_height = int(xr_dem.rio.height * y_downscale_factor)
 
-        xr_dem_downsampled = xr_dem.rio.reproject(
-            xr_dem.rio.crs,
-            shape=(new_height, new_width),
-            resampling=Resampling.bilinear,
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            xr_dem_downsampled = xr_dem.rio.reproject(
+                xr_dem.rio.crs,
+                shape=(new_height, new_width),
+                resampling=Resampling.bilinear,
+            )
 
         # Save the downsampled DEM to a file
         filepath = output_path + '/downsampled_dem.tif'
@@ -811,7 +813,10 @@ class Catchment:
                                  "x": xs,
                                  "y": ys,
                                  "day_of_year": day_of_year})
-        ds.rio.write_crs(self.dem.crs, inplace=True)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            ds.rio.write_crs(self.dem.crs, inplace=True)
 
         ds.x.attrs["axis"] = "X"
         ds.x.attrs["long_name"] = "x coordinate of projection"

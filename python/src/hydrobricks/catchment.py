@@ -521,6 +521,7 @@ class Catchment:
             new_masked_dem_data = new_masked_dem_data[0]
         new_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
         new_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
+        xr_dem_downsampled.close()
 
         return new_dem, new_masked_dem_data, new_slope, new_aspect
 
@@ -774,6 +775,10 @@ class Catchment:
         self._save_potential_radiation_netcdf(
             daily_radiation, dem, masked_dem_data, day_of_year, output_path)
 
+        # If DEM is the downsampled one, close it
+        if dem.res[0] != self.get_dem_x_resolution():
+            dem.close()
+
     def _save_potential_radiation_netcdf(
             self, radiation, dem, masked_dem_data, day_of_year, output_path,
             output_filename='daily_potential_radiation.nc'):
@@ -899,18 +904,30 @@ class Catchment:
         temp_path = Path(output_path) / 'downsampled_annual_potential_radiation.tif'
         res_path = Path(output_path) / output_filename
 
+        # If both resolutions are the same, just save the mean annual radiation
+        if dem.res[0] == self.get_dem_x_resolution():
+            with hb.rasterio.open(res_path, 'w', **profile) as dst:
+                dst.write(mean_annual_radiation, 1)
+            self.mean_annual_radiation = mean_annual_radiation
+            return
+
+        # Save a temporary file to upscale the mean annual radiation
         with hb.rasterio.open(temp_path, 'w', **profile) as dst:
             dst.write(mean_annual_radiation, 1)
 
-        xr_dem = hb.rxr.open_rasterio(temp_path).drop_vars('band')[0]
-        xr_dem_upscaled = xr_dem.rio.reproject(
-            xr_dem.rio.crs,
-            shape=self.dem.shape,
-            resampling=Resampling.bilinear,
-        )
-        xr_dem_upscaled.rio.to_raster(res_path)
+        # Upscale the mean annual radiation to the DEM resolution
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            with hb.rxr.open_rasterio(temp_path).drop_vars('band')[0] as xr_dem:
+                xr_dem_upscaled = xr_dem.rio.reproject(
+                    xr_dem.rio.crs,
+                    shape=self.dem.shape,
+                    resampling=Resampling.bilinear,
+                )
+                xr_dem_upscaled.rio.to_raster(res_path)
 
-        self.mean_annual_radiation = xr_dem_upscaled
+        self.mean_annual_radiation = xr_dem_upscaled.to_numpy()
+        xr_dem_upscaled.close()
 
     def load_mean_annual_radiation_raster(self, dir_path,
                                           filename='annual_potential_radiation.tif'):

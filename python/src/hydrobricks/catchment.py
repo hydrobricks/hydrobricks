@@ -645,7 +645,7 @@ class Catchment:
 
     def calculate_daily_potential_radiation(self, output_path, resolution=None,
                                             atmos_transmissivity=0.75,
-                                            n_daily_steps=100):
+                                            steps_per_hour=4):
         """
         Compute the daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²] using Hock (1999)'s equation.
@@ -661,9 +661,8 @@ class Catchment:
         atmos_transmissivity : float, optional
             Mean clear-sky atmospheric transmissivity, default is 0.75
             (value taken in Hock 1999)
-        n_daily_steps : int, optional
-            Number of steps to compute the potential radiation over the day (during
-            sunshine hours).
+        steps_per_hour : int, optional
+            Number of steps per hour to compute the potential radiation, default is 4.
 
         Returns
         -------
@@ -712,15 +711,19 @@ class Catchment:
         # afternoon.
         hour_angle = np.arccos(-np.tan(solar_declin) * np.tan(lat_rad))
 
-        # Create arrays
+        # Time intervals (360°/24h = 15° per hour, then divided by the number of steps
+        # per hour)
+        time_interval = (15/steps_per_hour) * TO_RAD
+
+        # Create array for the daily potential radiation
         daily_radiation = np.full((len(day_of_year), n_rows, n_cols), np.nan)
-        inter_pot_radiation = np.full((n_daily_steps, n_rows, n_cols), np.nan)
 
         # Loop over the days of the year
         for i in range(len(day_of_year)):
             print('Computing radiation for day', day_of_year[i])
             # List of hour angles throughout the day.
-            ha_list = np.linspace(-hour_angle[i], hour_angle[i], num=n_daily_steps)
+            ha_list = np.arange(-hour_angle[i], hour_angle[i] + time_interval,
+                                time_interval)
 
             # The Solar zenith (IQBAL 2012) is the angle between the sun and the
             # vertical (zenith) position directly above the observer. The result is
@@ -742,7 +745,7 @@ class Catchment:
             azimuth[np.where((azimuth > 0) & (ha_list < 0))] -= 180
 
             # Potential radiation over the time intervals
-            inter_pot_radiation.fill(np.nan)
+            inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
                 incidence_angle = self._calculate_angle_of_incidence(
                     zenith[j], slope, azimuth[j], aspect)
@@ -756,7 +759,8 @@ class Catchment:
                 # it is normal and due to the NaN bands at the sides of the
                 # slope rasters, etc.
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-                daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
+                daily_radiation[i, :, :] = np.nansum(inter_pot_radiation, axis=0)
+                daily_radiation[i, :, :] /= 24 * steps_per_hour
 
         # Mean annual potential radiation
         mean_annual_radiation = np.full((n_rows, n_cols), np.nan)
@@ -768,9 +772,9 @@ class Catchment:
         self._save_potential_radiation_netcdf(
             daily_radiation, dem, masked_dem_data, day_of_year, output_path)
 
-    def _save_potential_radiation_netcdf(self, radiation, dem, masked_dem_data,
-                                         day_of_year, output_path,
-                                         output_filename='DailyPotentialRadiation.nc'):
+    def _save_potential_radiation_netcdf(
+            self, radiation, dem, masked_dem_data, day_of_year, output_path,
+            output_filename='daily_potential_radiation.nc'):
         """
         Save the potential radiation to a netcdf file.
 
@@ -787,7 +791,7 @@ class Catchment:
         output_path : str
             Path to the directory to save the netcdf file to.
         output_filename : str, optional
-            Name of the output file. Default is 'DailyPotentialRadiation.nc'.
+            Name of the output file. Default is 'daily_potential_radiation.nc'.
         """
         full_path = Path(output_path) / output_filename
         print('Saving to', str(full_path), self.dem.crs)

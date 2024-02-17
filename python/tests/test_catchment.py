@@ -68,7 +68,7 @@ def test_save_unit_ids_raster():
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='isohypse', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
-        catchment.save_unit_ids_raster(Path(tmp_dir) / 'unit_ids.tif')
+        catchment.save_unit_ids_raster(Path(tmp_dir))
         assert (Path(tmp_dir) / 'unit_ids.tif').exists()
 
 

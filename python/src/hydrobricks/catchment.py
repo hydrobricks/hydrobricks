@@ -856,17 +856,21 @@ class Catchment:
 
         self.hydro_units.save_to_csv(path)
 
-    def save_unit_ids_raster(self, path):
+    def save_unit_ids_raster(self, output_path, output_filename='unit_ids.tif'):
         """
         Save the unit ids raster to a file.
 
         Parameters
         ----------
-        path : str|Path
+        output_path : str|Path
             Path to the output file.
+        output_filename : str, optional
+            Name of the output file. Default is 'unit_ids.tif'.
         """
         if self.map_unit_ids is None:
             raise ValueError("No unit ids raster to save.")
+
+        full_path = Path(output_path) / output_filename
 
         # Create the profile
         profile = self.dem.profile
@@ -876,7 +880,7 @@ class Catchment:
             compress='lzw',
             nodata=0)
 
-        with hb.rasterio.open(path, 'w', **profile) as dst:
+        with hb.rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
     def upscale_and_save_mean_annual_radiation_rasters(

@@ -122,11 +122,16 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         try:
-            geoms = [mapping(polygon) for polygon in self.outline]
             src = hb.rasterio.open(dem_path)
             self._check_crs(src)
             self.dem = src
-            self.masked_dem_data, _ = mask(src, geoms, crop=False)
+
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                self.masked_dem_data, _ = mask(src, geoms, crop=False)
+            else:
+                self.masked_dem_data = src.read(1)
+
             self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
             if len(self.masked_dem_data.shape) == 3:
                 self.masked_dem_data = self.masked_dem_data[0]
@@ -503,9 +508,12 @@ class Catchment:
         xr_dem_downsampled.rio.to_raster(filepath)
 
         # Reopen the downsampled DEM as a rasterio dataset
-        geoms = [mapping(polygon) for polygon in self.outline]
         new_dem = hb.rasterio.open(filepath)
-        new_masked_dem_data, _ = mask(new_dem, geoms, crop=False)
+        if self.outline is not None:
+            geoms = [mapping(polygon) for polygon in self.outline]
+            new_masked_dem_data, _ = mask(new_dem, geoms, crop=False)
+        else:
+            new_masked_dem_data = new_dem.read(1)
         new_masked_dem_data[new_masked_dem_data == new_dem.nodata] = np.nan
         if len(new_masked_dem_data.shape) == 3:
             new_masked_dem_data = new_masked_dem_data[0]
@@ -927,8 +935,11 @@ class Catchment:
         full_path = Path(dir_path) / filename
         with hb.rasterio.open(full_path) as src:
             self._check_crs(src)
-            geoms = [mapping(polygon) for polygon in self.outline]
-            self.map_unit_ids, _ = mask(src, geoms, crop=False)
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                self.map_unit_ids, _ = mask(src, geoms, crop=False)
+            else:
+                self.map_unit_ids = src.read(1)
             self.map_unit_ids[self.map_unit_ids == src.nodata] = 0
 
             if len(self.map_unit_ids.shape) == 3:

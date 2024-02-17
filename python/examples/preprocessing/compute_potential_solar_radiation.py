@@ -26,3 +26,6 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.calculate_daily_potential_radiation(str(working_dir), resolution=25)
 
 print("Results were saved in: ", working_dir)
+
+catchment.discretize_by(['elevation', 'radiation'])
+catchment.save_unit_ids_raster(working_dir)

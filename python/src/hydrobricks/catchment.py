@@ -168,9 +168,9 @@ class Catchment:
                            min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
-                      elevation_distance=50, min_elevation=None, max_elevation=None,
+                      elevation_distance=100, min_elevation=None, max_elevation=None,
                       radiation_method='isohypse', radiation_number=5,
-                      radiation_distance=100, min_radiation=None, max_radiation=None):
+                      radiation_distance=50, min_radiation=None, max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -194,6 +194,19 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
+        radiation_method : str
+            The method to build the radiation categories:
+            'isohypse' = fixed radiation intervals (provide the 'distance' parameter)
+            'quantiles' = quantiles of the catchment area (same surface;
+            provide the 'number' parameter)
+        radiation_number : int, optional
+            Number of radiation bands to create when using the 'quantiles' method.
+        radiation_distance : int, optional
+            Distance (W/m2) between the radiation lines for the 'isohypse' method.
+        min_radiation : int, optional
+            Minimum radiation of the radiation bands (to homogenize between runs).
+        max_radiation : int, optional
+            Maximum radiation of the radiation bands (to homogenize between runs).
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -236,6 +249,9 @@ class Catchment:
             criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
         if 'radiation' in criteria:
+            if self.mean_annual_radiation is None:
+                raise ValueError("No radiation data available. "
+                                 "Compute the radiation first")
             criteria_dict['radiation'] = []
             if radiation_method == 'isohypse':
                 dist = radiation_distance
@@ -346,9 +362,9 @@ class Catchment:
             self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
 
         if res_radiation:
-            self.hydro_units.add_property(('radiation', 'm'), res_elevation)
-            self.hydro_units.add_property(('radiation_min', 'm'), res_elevation_min)
-            self.hydro_units.add_property(('radiation_max', 'm'), res_elevation_max)
+            self.hydro_units.add_property(('radiation', 'W/m2'), res_radiation)
+            self.hydro_units.add_property(('radiation_min', 'W/m2'), res_radiation_min)
+            self.hydro_units.add_property(('radiation_max', 'W/m2'), res_radiation_max)
 
         self._initialize_land_cover_fractions()
         self.get_hydro_units_attributes()

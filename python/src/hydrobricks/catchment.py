@@ -2,11 +2,9 @@ import itertools
 import math
 import pathlib
 import warnings
+from pathlib import Path
 
-# import matplotlib.colors as mcolors
-# import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 import hydrobricks as hb
 from hydrobricks.constants import (
@@ -94,10 +92,6 @@ class Catchment:
         self.map_unit_ids = None
         self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
                                          hydro_units_data)
-        self.downsampled_dem = None
-        self.downsampled_masked_dem_data = None
-        self.downsampled_slope = None
-        self.downsampled_aspect = None
 
         self._extract_outline(outline)
         self._extract_area(outline)
@@ -128,11 +122,16 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         try:
-            geoms = [mapping(polygon) for polygon in self.outline]
             src = hb.rasterio.open(dem_path)
             self._check_crs(src)
             self.dem = src
-            self.masked_dem_data, _ = mask(src, geoms, crop=False)
+
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                self.masked_dem_data, _ = mask(src, geoms, crop=False)
+            else:
+                self.masked_dem_data = src.read(1)
+
             self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
             if len(self.masked_dem_data.shape) == 3:
                 self.masked_dem_data = self.masked_dem_data[0]
@@ -169,9 +168,9 @@ class Catchment:
                            min_elevation, max_elevation)
 
     def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
-                      elevation_distance=50, min_elevation=None, max_elevation=None,
+                      elevation_distance=100, min_elevation=None, max_elevation=None,
                       radiation_method='isohypse', radiation_number=5,
-                      radiation_distance=100, min_radiation=None, max_radiation=None):
+                      radiation_distance=50, min_radiation=None, max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -195,6 +194,19 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
+        radiation_method : str
+            The method to build the radiation categories:
+            'isohypse' = fixed radiation intervals (provide the 'distance' parameter)
+            'quantiles' = quantiles of the catchment area (same surface;
+            provide the 'number' parameter)
+        radiation_number : int, optional
+            Number of radiation bands to create when using the 'quantiles' method.
+        radiation_distance : int, optional
+            Distance (W/m2) between the radiation lines for the 'isohypse' method.
+        min_radiation : int, optional
+            Minimum radiation of the radiation bands (to homogenize between runs).
+        max_radiation : int, optional
+            Maximum radiation of the radiation bands (to homogenize between runs).
         """
         if not hb.has_pyproj:
             raise ImportError("pyproj is required to do this.")
@@ -237,6 +249,9 @@ class Catchment:
             criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
         if 'radiation' in criteria:
+            if self.mean_annual_radiation is None:
+                raise ValueError("No radiation data available. "
+                                 "Compute the radiation first")
             criteria_dict['radiation'] = []
             if radiation_method == 'isohypse':
                 dist = radiation_distance
@@ -347,9 +362,9 @@ class Catchment:
             self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
 
         if res_radiation:
-            self.hydro_units.add_property(('radiation', 'm'), res_elevation)
-            self.hydro_units.add_property(('radiation_min', 'm'), res_elevation_min)
-            self.hydro_units.add_property(('radiation_max', 'm'), res_elevation_max)
+            self.hydro_units.add_property(('radiation', 'W/m2'), res_radiation)
+            self.hydro_units.add_property(('radiation_min', 'W/m2'), res_radiation_min)
+            self.hydro_units.add_property(('radiation_max', 'W/m2'), res_radiation_max)
 
         self._initialize_land_cover_fractions()
         self.get_hydro_units_attributes()
@@ -462,7 +477,7 @@ class Catchment:
         """
         return np.nanmean(self.masked_dem_data)
 
-    def resample_dem_and_calculate_slope_aspect(self, resolution, downsampled_dem_path):
+    def resample_dem_and_calculate_slope_aspect(self, resolution, output_path):
         """
         Resample the DEM and calculate the slope and aspect of the whole DEM.
 
@@ -470,14 +485,23 @@ class Catchment:
         ----------
         resolution : float
             Desired pixel resolution.
-        downsampled_dem_path : str
-            Path to save the downsampled DEM to.
-        """
+        output_path : str
+            Path of the directory to save the downsampled DEM to.
 
+        Returns
+        -------
+        The downsampled DEM, the masked downsampled DEM data, the slope and the aspect.
+        """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
+
+        # Only resample the DEM if the resolution is different from the original
+        if resolution is None or resolution == self.get_dem_x_resolution():
+            if self.slope is None or self.aspect is None:
+                self.calculate_slope_aspect()
+            return self.dem, self.masked_dem_data, self.slope, self.aspect
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
@@ -489,25 +513,33 @@ class Catchment:
         new_width = int(xr_dem.rio.width * x_downscale_factor)
         new_height = int(xr_dem.rio.height * y_downscale_factor)
 
-        xr_dem_downsampled = xr_dem.rio.reproject(
-            xr_dem.rio.crs,
-            shape=(new_height, new_width),
-            resampling=Resampling.bilinear,
-        )
-        xr_dem_downsampled.rio.to_raster(downsampled_dem_path)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            xr_dem_downsampled = xr_dem.rio.reproject(
+                xr_dem.rio.crs,
+                shape=(new_height, new_width),
+                resampling=Resampling.bilinear,
+            )
 
-        geoms = [mapping(polygon) for polygon in self.outline]
-        src = hb.rasterio.open(downsampled_dem_path)
-        self.downsampled_dem = src
-        self.downsampled_masked_dem_data, _ = mask(src, geoms, crop=False)
-        self.downsampled_masked_dem_data[
-            self.downsampled_masked_dem_data == src.nodata] = np.nan
-        if len(self.downsampled_masked_dem_data.shape) == 3:
-            self.downsampled_masked_dem_data = self.downsampled_masked_dem_data[0]
-        self.downsampled_slope = hb.xrs.slope(xr_dem_downsampled,
-                                              name='slope').to_numpy()
-        self.downsampled_aspect = hb.xrs.aspect(xr_dem_downsampled,
-                                                name='aspect').to_numpy()
+        # Save the downsampled DEM to a file
+        filepath = output_path + '/downsampled_dem.tif'
+        xr_dem_downsampled.rio.to_raster(filepath)
+
+        # Reopen the downsampled DEM as a rasterio dataset
+        new_dem = hb.rasterio.open(filepath)
+        if self.outline is not None:
+            geoms = [mapping(polygon) for polygon in self.outline]
+            new_masked_dem_data, _ = mask(new_dem, geoms, crop=False)
+        else:
+            new_masked_dem_data = new_dem.read(1)
+        new_masked_dem_data[new_masked_dem_data == new_dem.nodata] = np.nan
+        if len(new_masked_dem_data.shape) == 3:
+            new_masked_dem_data = new_masked_dem_data[0]
+        new_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
+        new_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
+        xr_dem_downsampled.close()
+
+        return new_dem, new_masked_dem_data, new_slope, new_aspect
 
     def calculate_slope_aspect(self):
         """
@@ -523,20 +555,20 @@ class Catchment:
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
     @staticmethod
-    def _calculate_hock_equation(local_height, atm_tra, jd, zenith,
-                                 incidence_angle):
+    def _calculate_radiation_hock_equation(elevation, atmos_transmissivity, day_of_year,
+                                           zenith, incidence_angle):
         """
         Hock (2005) equation to compute the potential clear-sky direct solar
         radiation at the ice or snow surface [W/m²].
 
         Parameters
         ----------
-        local_height : float
+        elevation : float
             Height above sea level [m]
-        atm_tra : float
+        atmos_transmissivity : float
             Mean clear-sky atmospheric transmissivity
-        jd : float
-            Julian day
+        day_of_year : float
+            Day of the year (Julian Day)
         zenith : float
             Solar zenith for one moment during the day (IQBAL 2012)
         incidence_angle : np.array
@@ -551,9 +583,9 @@ class Catchment:
 
         # True anomaly (the angle subtended at the Sun between the semi major
         # axis line and the current position)
-        # DIFFERENT definition here:
+        # Different definition here:
         # https://physics.stackexchange.com/questions/177949/earth-sun-distance-on-a-given-day-of-the-year
-        theta = (365.5 / 360) * jd
+        theta = (365.5 / 360) * day_of_year
 
         # Current Sun-Earth distance (computed using the modern version of
         # Kepler's first law)
@@ -562,9 +594,9 @@ class Catchment:
 
         # Atmospheric pressure
         local_pressure = (SEA_ATM_PRESSURE * (
-                    1 + (T_LAPSE_RATE / SEA_SURFACE_TEMPERATURE) * (
-                        local_height - SEA_HEIGHT)) **
-                          ((-GRAVITY * AIR_MOLAR_MASS) / (R_GAS * T_LAPSE_RATE)))
+                1 + (T_LAPSE_RATE / SEA_SURFACE_TEMPERATURE) *
+                (elevation - SEA_HEIGHT)
+        ) ** ((-GRAVITY * AIR_MOLAR_MASS) / (R_GAS * T_LAPSE_RATE)))
 
         # Hock equation (Hock, 1999) to compute the potential
         # clear-sky direct solar radiation
@@ -579,8 +611,9 @@ class Catchment:
             return empty_matrix
 
         solar_radiation = (SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
-                           atm_tra ** (local_pressure / (SEA_ATM_PRESSURE *
-                                                         np.cos(zenith * TO_RAD))) *
+                           atmos_transmissivity **
+                           (local_pressure / (SEA_ATM_PRESSURE *
+                                              np.cos(zenith * TO_RAD))) *
                            np.cos(incidence_angle))
 
         return solar_radiation
@@ -618,6 +651,7 @@ class Catchment:
         cosine_term = (np.cos(zenith_rad) * np.cos(slope_rad)) + \
                       (np.sin(zenith_rad) * np.sin(slope_rad) *
                        np.cos(azimuth_rad - aspect_rad))
+
         if np.nanmax(np.abs(cosine_term) - 1) < tolerance:
             incidence_angle = np.arccos(np.clip(cosine_term, -1, 1))
         else:
@@ -628,65 +662,55 @@ class Catchment:
 
         return incidence_angle
 
-    def calculate_daily_potential_radiation(self, start_date, end_date,
-                                            output_path, resolution, atm_tra=0.75):
+    def calculate_daily_potential_radiation(self, output_path, resolution=None,
+                                            atmos_transmissivity=0.75,
+                                            steps_per_hour=4):
         """
         Compute the daily mean potential clear-sky direct solar radiation
-        at the ice or snow surface [W/m²] using Hock (1999)'s equation.
+        at the DEM surface [W/m²] using Hock (1999)'s equation.
+        It is computed for each day of the year and saved in a netcdf file.
 
         Parameters
         ----------
-        start_date : datetime
-            Start date of the time series (used to compute the period of interest).
-        end_date : datetime
-            End date of the time series (used to compute the period of interest).
         output_path : string
-            Path to the daily and annual mean potential clear-sky direct solar radiation
-            netcdf files created.
-        atm_tra : float, optional
+            Path to for created daily and annual mean potential clear-sky direct solar
+            radiation files.
+        resolution : float, optional
+            Desired pixel resolution, default is the DEM resolution.
+        atmos_transmissivity : float, optional
             Mean clear-sky atmospheric transmissivity, default is 0.75
             (value taken in Hock 1999)
+        steps_per_hour : int, optional
+            Number of steps per hour to compute the potential radiation, default is 4.
 
         Returns
         -------
         The daily mean potential clear-sky direct solar radiation
-        at the ice or snow surface [W/m²]
+        at the DEM surface [W/m²]
         """
-        if self.downsampled_dem is None or self.downsampled_slope is None or \
-                self.downsampled_aspect is None:
-            self.resample_dem_and_calculate_slope_aspect(
-                resolution, output_path + 'downsampled_DEM.tif')
+        # Resample the DEM and calculate the slope and aspect
+        dem, masked_dem_data, slope, aspect = (
+            self.resample_dem_and_calculate_slope_aspect(resolution, output_path))
+        n_rows = slope.shape[0]
+        n_cols = slope.shape[1]
 
-        # Julian days are a continuous count of days since the beginning of the Julian
-        # calendar. In solar calculations, it's often used to represent the time of
-        # the year.
-        start_datetime = pd.to_datetime(start_date)
-        end_datetime = pd.to_datetime(end_date)
-        if start_datetime > end_datetime:
-            raise RuntimeError(
-                'The given end date comes earlier in time than the given start date.') \
-                from None
-        times = pd.date_range(start_datetime, end_datetime, freq='D')
+        # Create an array with the day of the year (Julian Day)
+        day_of_year = np.arange(1, 367)
 
-        # Convert the dates to Julian days and only compute the same day once and not
-        # for all years (same result)
-        jd = times.strftime('%j').to_numpy().astype(int)
-        jd_unique = np.unique(jd)
-
-        mean_height = self.get_mean_elevation()
-
+        # Get some catchment attributes
+        mean_elevation = self.get_mean_elevation()
         mean_lat, _ = self._extract_unit_mean_lat_lon(self.masked_dem_data)
         lat_rad = mean_lat * TO_RAD
 
-        # Normalized Julian day
-        # '(jd-172)' calculates the number of days that have passed since the winter
-        # solstice (around December 22nd), which is day 172 in a non-leap year.
-        # '(360*(jd-172))/365' normalizes this count to a value between 0 and 360,
-        # representing the position in the orbit of the Earth around the Sun.
-        njd = ((360 * (jd_unique - 172)) / 365)
+        # Normalized day of the year
+        # '(jd-172)' calculates the number of days that have passed since the summer
+        # solstice (around June 21st), which is day 172 in a non-leap year.
+        # '(360*(jd-172))/365' normalizes this count to a value representing the
+        # position in the orbit of the Earth around the Sun (in degrees).
+        ndy = ((360 * (day_of_year - 172)) / 365)
 
-        # The solar Declination (unit: degrees) is the angle between the rays of the
-        # Sun and the plane of the Earth's equator. It represents how much the sun is
+        # The solar Declination is the angle between the rays of the Sun and the
+        # plane of the Earth's equator. It represents how much the sun is
         # tilted towards or away from the observer's latitude.
         # The cos(...) function is applied to the normalized day of the year. It
         # produces values between -1 and 1, representing the variation in solar
@@ -694,8 +718,7 @@ class Catchment:
         # tilt of the Earth's axis relative to its orbital plane. This tilt causes the
         # variation in the angle of the sun's rays reaching different latitudes
         # on Earth.
-        solar_declin = 23.45 * np.cos(njd * TO_RAD)
-        solar_declin = solar_declin * TO_RAD  # convert to radians
+        solar_declin = 23.45 * np.cos(ndy * TO_RAD) * TO_RAD
 
         # The hour angle is the angular distance between the sun and the observer's
         # meridian. It is typically measured in degrees. The tangent of
@@ -704,42 +727,22 @@ class Catchment:
         # component). It helps capture how much the sun/the observer's location is
         # tilted north or south relative to the equator. The negative sign is applied
         # because the Hour Angle is negative in the morning and positive in the
-        # afternoon. Then geometry.
+        # afternoon.
         hour_angle = np.arccos(-np.tan(solar_declin) * np.tan(lat_rad))
 
-        # A 15 min time interval represents the angular size of a 15-minute time
-        # interval in radians. 15 degrees of longitude for every one hour of time,
-        # divided by 4 to get the number of degrees in every 15 minutes of time.
+        # Time intervals (360°/24h = 15° per hour, then divided by the number of steps
+        # per hour)
+        time_interval = (15/steps_per_hour) * TO_RAD
 
-        # time_interval = (15 / 4) * TO_RAD  # 4 per hour / 15deg/4 (convert for rads)
+        # Create array for the daily potential radiation
+        daily_radiation = np.full((len(day_of_year), n_rows, n_cols), np.nan)
 
-        daily_radiation = np.empty(
-            (len(jd_unique), self.downsampled_slope.shape[0],
-             self.downsampled_slope.shape[1]))
-        daily_radiation.fill(np.NaN)
-
-        mean_annual_radiation = np.empty(
-            (self.downsampled_slope.shape[0], self.downsampled_slope.shape[1]))
-        mean_annual_radiation.fill(np.NaN)
-
-        # DEBUG #
-        # debug = True
-        # if debug:
-        #     fig, (ax1, ax3) = plt.subplots(2, figsize=(20, 3))
-        #     cmap = plt.get_cmap('viridis')
-        #     normalize = mcolors.Normalize(vmin=0, vmax=len(jd_unique))
-        #
-        #     zeniths = []
-        #     # azimuths = []
-        #     ha_lists = []
-        # END DEBUG #
-
-        for i in range(len(jd_unique)):
-            print('Day', jd_unique[i])
+        # Loop over the days of the year
+        for i in range(len(day_of_year)):
+            print('Computing radiation for day', day_of_year[i])
             # List of hour angles throughout the day.
-            # [::-1] reverses the array order
-            # ha_list = np.arange(-hour_angle[i], hour_angle[i], time_interval)[::-1]
-            ha_list = np.linspace(-hour_angle[i], hour_angle[i], num=100)  # [::-1]
+            ha_list = np.arange(-hour_angle[i], hour_angle[i] + time_interval,
+                                time_interval)
 
             # The Solar zenith (IQBAL 2012) is the angle between the sun and the
             # vertical (zenith) position directly above the observer. The result is
@@ -749,49 +752,25 @@ class Catchment:
             zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declin[i])) +
                                (np.cos(lat_rad) * np.cos(solar_declin[i]) *
                                 np.cos(ha_list))) * TO_DEG
-            # cosine_arg = (np.cos(zenith * TO_RAD) * np.sin(lat_rad) -
-            # np.sin(solar_declin[i])) / \
-            #             (np.sin(zenith * TO_RAD) * np.cos(lat_rad))
-            # azimuth = np.arccos((cosine_arg)) * TO_DEG
 
             # Azimuth with negative values before solar noon and positive
             # ones after solar noon. Solar noon is defined by the change in sign of
             # the hour angle (negative in the morning, positive in the afternoon).
-            # sol_noon = np.argmin(azimuth)
-            # Az = np.concatenate((180 - azimuth[: sol_noon + 1], 180 + a
-            # zimuth[sol_noon + 1:]))
-            # Az = np.concatenate((180 - azimuth[ha_list < 0], 180 +
-            # azimuth[ha_list >= 0]))
-            # Az = azimuth.copy()
-            # Az[ha_list < 0] = Az[ha_list < 0] * -1
-
-            # https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur/#:~:text=aux%20%C3%A9quinoxes%20de%20printemps%20et,d%C3%A9cale%20vers%20le%20nord%2Dest.
-            Az = np.degrees(np.arctan(np.sin(ha_list) / (
+            # From https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur
+            azimuth = np.degrees(np.arctan(np.sin(ha_list) / (
                     np.sin(lat_rad) * np.cos(ha_list) -
                     np.cos(lat_rad) * np.tan(solar_declin[i]))))
-            Az[(Az < 0) & (ha_list > 0)] = Az[(Az < 0) & (ha_list > 0)] + 180
-            Az[(Az > 0) & (ha_list < 0)] = Az[(Az > 0) & (ha_list < 0)] - 180
+            azimuth[np.where((azimuth < 0) & (ha_list > 0))] += 180
+            azimuth[np.where((azimuth > 0) & (ha_list < 0))] -= 180
 
-            # Potential radiation over the time intervals defined with time_interval
-            inter_pot_radiation = np.empty(
-                (len(zenith), self.downsampled_slope.shape[0],
-                 self.downsampled_slope.shape[1]))
-            inter_pot_radiation.fill(np.NaN)
-            # DEBUG #
-            # if debug:
-            #     ax1.plot(ha_list, zenith, markersize=2, color=cmap(normalize(i)))
-            #     # ax2.plot(ha_list, azimuth, markersize=2, color=cmap(normalize(i)))
-            #     ax3.plot(ha_list, Az, markersize=2, color=cmap(normalize(i)))
-            #     ax1.set_ylabel('Zenith angle')
-            #     # ax2.set_ylabel('Azimuth')
-            #     ax3.set_ylabel('Azimuth angle')
-            # END DEBUG #
-
+            # Potential radiation over the time intervals
+            inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
                 incidence_angle = self._calculate_angle_of_incidence(
-                    zenith[j], self.downsampled_slope, Az[j], self.downsampled_aspect)
-                potential_radiation = self._calculate_hock_equation(
-                    mean_height, atm_tra, jd_unique[i], zenith[j], incidence_angle)
+                    zenith[j], slope, azimuth[j], aspect)
+                potential_radiation = self._calculate_radiation_hock_equation(
+                    mean_elevation, atmos_transmissivity, day_of_year[i],
+                    zenith[j], incidence_angle)
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
 
             with warnings.catch_warnings():
@@ -799,78 +778,26 @@ class Catchment:
                 # it is normal and due to the NaN bands at the sides of the
                 # slope rasters, etc.
                 warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-                daily_radiation[i, :, :] = np.nanmean(inter_pot_radiation, axis=0)
-            # DEBUG #
-            # if debug:
-            #     zeniths.append(np.nanmean(zenith))
-            #     # azimuths.append(np.nanmean(azimuth))
-            #     ha_lists.append(np.nanmean(ha_list) * 100)
-            # END DEBUG #
+                daily_radiation[i, :, :] = np.nansum(inter_pot_radiation, axis=0)
+                daily_radiation[i, :, :] /= 24 * steps_per_hour
 
-        # DEBUG #
-        # if debug:
-        #     plt.xlabel('Hour angle')
-        #     scalarmappaple = plt.cm.ScalarMappable(norm=normalize, cmap=cmap)
-        #     scalarmappaple.set_array(len(jd_unique))
-        #     fig.subplots_adjust(right=0.8)
-        #     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-        #     plt.colorbar(scalarmappaple, cax=cbar_ax)
-        #     cbar_ax.text(-0.5, 0.2, 'Day of the year', rotation=90)
-        #     plt.show()
-        #
-        #     fig = plt.figure(figsize=(20, 3))
-        #     fig.add_subplot(111)
-        #
-        #     with warnings.catch_warnings():
-        #         # This function throws a warning for the first slides of nanmean,
-        #         # it is normal and due to the NaN bands at the sides of
-        #         # the slope rasters, etc.
-        #        warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-        #         mins = np.nanmin(daily_radiation, axis=1)
-        #         mins = np.nanmin(mins, axis=1)
-        #         maxs = np.nanmax(daily_radiation, axis=1)
-        #         maxs = np.nanmax(maxs, axis=1)
-        #         means = np.nanmean(daily_radiation, axis=1)
-        #         means = np.nanmean(means, axis=1)
-        #     plt.plot(jd_unique, mins, markersize=2, label='Min')
-        #     plt.plot(jd_unique, maxs, markersize=2, label='Max')
-        #     plt.plot(jd_unique, means, markersize=2, label='Mean')
-        #
-        #     plt.plot(jd_unique, hour_angle, markersize=2, label='hour_angle')
-        #     plt.plot(jd_unique, ha_lists, markersize=2, label='ha_list')
-        #     plt.plot(jd_unique, zeniths, markersize=2, label='zenith')
-        #     # plt.plot(jd_unique, azimuths, markersize=2, label='azimuth')
-        #     plt.plot(jd_unique, solar_declin, markersize=2, label='solar_declin')
-        #     plt.plot(jd_unique, np.sin(solar_declin), markersize=2,
-        #              label='np sin solar_declin')
-        #
-        #     plt.xlabel('Time (day)')
-        #     plt.ylabel('Radiation')
-        #     plt.legend()
-        #     plt.show()
-        # END DEBUG #
-
+        # Mean annual potential radiation
+        mean_annual_radiation = np.full((n_rows, n_cols), np.nan)
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
-        self.upscale_and_save_mean_annual_radiation_rasters(mean_annual_radiation,
-                                                            output_path)
+        self.upscale_and_save_mean_annual_radiation_rasters(
+            mean_annual_radiation, dem, output_path)
 
-        # Get the indices of jd_unique that match the values of jd
-        indices = np.searchsorted(jd_unique, jd)
-        whole_daily_pot_radiation = daily_radiation[indices, :, :]
+        # Save the daily potential radiation to a netcdf file
+        self._save_potential_radiation_netcdf(
+            daily_radiation, dem, masked_dem_data, day_of_year, output_path)
 
-        rows, cols = np.where(self.downsampled_masked_dem_data)
-        xs, ys = hb.rasterio.transform.xy(self.downsampled_dem.transform, list(rows),
-                                          list(cols))
-        xs = np.array(xs).reshape(self.downsampled_masked_dem_data.shape)[0, :]
-        ys = np.array(ys).reshape(self.downsampled_masked_dem_data.shape)[:, 0]
+        # If DEM is the downsampled one, close it
+        if dem.res[0] != self.get_dem_x_resolution():
+            dem.close()
 
-        self._saving_potential_radiation_netcdf(
-            whole_daily_pot_radiation, xs, ys, times,
-            self.dem.crs, output_path + 'DailyPotentialRadiation.nc')
-
-    @staticmethod
-    def _saving_potential_radiation_netcdf(radiation, xs, ys, times, crs,
-                                           output_filename):
+    def _save_potential_radiation_netcdf(
+            self, radiation, dem, masked_dem_data, day_of_year, output_path,
+            output_filename='daily_potential_radiation.nc'):
         """
         Save the potential radiation to a netcdf file.
 
@@ -878,31 +805,39 @@ class Catchment:
         ----------
         radiation : np.ndarray
             The potential radiation.
-        xs : np.ndarray
-            The x coordinates.
-        ys : np.ndarray
-            The y coordinates.
-        times : pd.DatetimeIndex
-            The dates.
-        crs : str
-            The CRS.
-        output_filename : str|Path
-            The output filename.
+        dem : rasterio.Dataset
+            The DEM.
+        masked_dem_data : np.ndarray
+            The masked DEM data.
+        day_of_year : np.ndarray
+            The array with the days of the year.
+        output_path : str
+            Path to the directory to save the netcdf file to.
+        output_filename : str, optional
+            Name of the output file. Default is 'daily_potential_radiation.nc'.
         """
-
-        print('Saving to', output_filename, crs)
+        full_path = Path(output_path) / output_filename
+        print('Saving to', str(full_path), self.dem.crs)
 
         if not hb.has_xarray:
             raise ImportError("xarray is required to do this.")
 
+        rows, cols = np.where(masked_dem_data)
+        xs, ys = hb.rasterio.transform.xy(dem.transform, list(rows), list(cols))
+        xs = np.array(xs).reshape(masked_dem_data.shape)[0, :]
+        ys = np.array(ys).reshape(masked_dem_data.shape)[:, 0]
+
         ds = hb.xr.DataArray(radiation,
                              name='radiation',
-                             dims=['time', 'y', 'x'],
+                             dims=['day_of_year', 'y', 'x'],
                              coords={
                                  "x": xs,
                                  "y": ys,
-                                 "time": times})
-        ds.rio.write_crs(crs, inplace=True)
+                                 "day_of_year": day_of_year})
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            ds.rio.write_crs(self.dem.crs, inplace=True)
 
         ds.x.attrs["axis"] = "X"
         ds.x.attrs["long_name"] = "x coordinate of projection"
@@ -913,9 +848,9 @@ class Catchment:
         ds.y.attrs["long_name"] = "y coordinate of projection"
         ds.y.attrs["standard_name"] = "projection_y_coordinate"
         ds.y.attrs["units"] = "metre"
-        
+
         try:
-            ds.to_netcdf(output_filename)
+            ds.to_netcdf(full_path)
             print('File successfully written.')
         except Exception as e:
             raise RuntimeError(f"Error writing to file: {e}")
@@ -937,17 +872,21 @@ class Catchment:
 
         self.hydro_units.save_to_csv(path)
 
-    def save_unit_ids_raster(self, path):
+    def save_unit_ids_raster(self, output_path, output_filename='unit_ids.tif'):
         """
         Save the unit ids raster to a file.
 
         Parameters
         ----------
-        path : str|Path
+        output_path : str|Path
             Path to the output file.
+        output_filename : str, optional
+            Name of the output file. Default is 'unit_ids.tif'.
         """
         if self.map_unit_ids is None:
             raise ValueError("No unit ids raster to save.")
+
+        full_path = Path(output_path) / output_filename
 
         # Create the profile
         profile = self.dem.profile
@@ -957,11 +896,12 @@ class Catchment:
             compress='lzw',
             nodata=0)
 
-        with hb.rasterio.open(path, 'w', **profile) as dst:
+        with hb.rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
-    def upscale_and_save_mean_annual_radiation_rasters(self, mean_annual_radiation,
-                                                       path):
+    def upscale_and_save_mean_annual_radiation_rasters(
+            self, mean_annual_radiation, dem, output_path,
+            output_filename='annual_potential_radiation.tif'):
         """
         Save the mean annual radiation rasters (downsampled and at DEM resolution)
         to a file.
@@ -970,59 +910,82 @@ class Catchment:
         ----------
         mean_annual_radiation : np.ndarray
             Downsampled mean annual radiation.
-        path : str|Path
-            Path to the output file.
+        dem : rasterio.Dataset
+            The DEM at the resolution of the radiation.
+        output_path : str
+            Path to the output directory.
+        output_filename : str, optional
+            Name of the output file. Default is 'annual_potential_radiation.tif'.
         """
         # Create the profile
-        profile = self.downsampled_dem.profile
+        profile = dem.profile
 
-        with hb.rasterio.open(path + 'DownsampledAnnualPotentialRadiation.tif', 'w',
-                              **profile) as dst:
+        # Define the output paths
+        temp_path = Path(output_path) / 'downsampled_annual_potential_radiation.tif'
+        res_path = Path(output_path) / output_filename
+
+        # If both resolutions are the same, just save the mean annual radiation
+        if dem.res[0] == self.get_dem_x_resolution():
+            with hb.rasterio.open(res_path, 'w', **profile) as dst:
+                dst.write(mean_annual_radiation, 1)
+            self.mean_annual_radiation = mean_annual_radiation
+            return
+
+        # Save a temporary file to upscale the mean annual radiation
+        with hb.rasterio.open(temp_path, 'w', **profile) as dst:
             dst.write(mean_annual_radiation, 1)
 
-        xr_dem = hb.rxr.open_rasterio(
-            path + 'DownsampledAnnualPotentialRadiation.tif').drop_vars('band')[0]
-        xr_dem_upscaled = xr_dem.rio.reproject(
-            xr_dem.rio.crs,
-            shape=self.dem.shape,
-            resampling=Resampling.bilinear,
-        )
-        xr_dem_upscaled.rio.to_raster(path + 'AnnualPotentialRadiation.tif')
+        # Upscale the mean annual radiation to the DEM resolution
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            with hb.rxr.open_rasterio(temp_path).drop_vars('band')[0] as xr_dem:
+                xr_dem_upscaled = xr_dem.rio.reproject(
+                    xr_dem.rio.crs,
+                    shape=self.dem.shape,
+                    resampling=Resampling.bilinear,
+                )
+                xr_dem_upscaled.rio.to_raster(res_path)
 
-        self.mean_annual_radiation = xr_dem_upscaled
+        self.mean_annual_radiation = xr_dem_upscaled.to_numpy()
+        xr_dem_upscaled.close()
 
-    def upload_mean_annual_radiation_raster(self, path):
+    def load_mean_annual_radiation_raster(self, dir_path,
+                                          filename='annual_potential_radiation.tif'):
         """
-        Upload the mean annual radiation raster (downsampled and at DEM resolution)
-        from its file.
+        Load the mean annual radiation raster.
 
         Parameters
         ----------
-        path : str|Path
-            Path to the input file.
+        dir_path : str
+            Path to the input file directory.
+        filename : str, optional
+            Name of the input file. Default is 'annual_potential_radiation.tif'.
         """
-        # Create the profile
-        xr_rad = hb.rxr.open_rasterio(
-            path + 'AnnualPotentialRadiation.tif').drop_vars('band')[0]
+        self.mean_annual_radiation = hb.rxr.open_rasterio(
+            Path(dir_path) / 'annual_potential_radiation.tif').drop_vars('band')[0]
 
-        self.mean_annual_radiation = xr_rad
-
-    def load_unit_ids_from_raster(self, path):
+    def load_unit_ids_from_raster(self, dir_path, filename='unit_ids.tif'):
         """
         Load hydro units from a raster file.
 
         Parameters
         ----------
-        path : str|Path
-            Path to the raster file containing the hydro unit ids.
+        dir_path : str
+            Path to the directory containing the raster file.
+        filename : str, optional
+            Name of the raster file. Default is 'unit_ids.tif'.
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
 
-        with hb.rasterio.open(path) as src:
+        full_path = Path(dir_path) / filename
+        with hb.rasterio.open(full_path) as src:
             self._check_crs(src)
-            geoms = [mapping(polygon) for polygon in self.outline]
-            self.map_unit_ids, _ = mask(src, geoms, crop=False)
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                self.map_unit_ids, _ = mask(src, geoms, crop=False)
+            else:
+                self.map_unit_ids = src.read(1)
             self.map_unit_ids[self.map_unit_ids == src.nodata] = 0
 
             if len(self.map_unit_ids.shape) == 3:

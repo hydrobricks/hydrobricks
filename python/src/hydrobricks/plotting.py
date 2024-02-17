@@ -3,7 +3,7 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import LightSource, ListedColormap
 
 import hydrobricks as hb
 
@@ -39,7 +39,7 @@ def plot_hydrograph(obs, sim, time, year=None):
 
 
 def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
-                              min_val=0, max_val=None):
+                              dem_path=None, min_val=0, max_val=None):
     """
     Plot the values of a component at the hydro units on a map.
 
@@ -53,6 +53,9 @@ def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
         The name of the component.
     date : str
         The date of the values to plot (format: 'YYYY-MM-DD').
+    dem_path : str (optional)
+        The path to the digital elevation model (default: None). If provided,
+        the DEM will be used to create a shaded relief map.
     min_val : float (optional)
         The minimum value for the color scale (default: 0).
     max_val : float (optional)
@@ -70,10 +73,21 @@ def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
     # Find the boundary between non-zero values and zeros
     boundary = _create_catchment_boundary(unit_ids_raster)
 
+    # Load the DEM and create a shaded relief map
+    shaded_dem = None
+    if dem_path is not None:
+        dem = _load_dem(dem_path)
+        ls = LightSource(azdeg=315, altdeg=45)
+        shaded_dem = ls.hillshade(dem.to_numpy(), vert_exag=0.1)
+
     # Plot
+    cmap = _generate_cmap_blue()
     plt.figure()
-    plt.imshow(val_raster, cmap=_generate_cmap_blue())
-    plt.clim(min_val, max_val)
+    if dem_path is not None:
+        plt.imshow(shaded_dem, cmap='gray')
+        plt.imshow(val_raster, cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
+    else:
+        plt.imshow(val_raster, cmap=cmap, vmin=min_val, vmax=max_val)
     plt.colorbar(shrink=0.8)
     plt.contour(boundary, levels=[0.5], linewidths=1, colors='black', alpha=1.0)
     plt.axis('off')
@@ -83,8 +97,8 @@ def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
 
 
 def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, component,
-                                         start_date, end_date, save_path, min_val=0,
-                                         max_val=None, fps=5):
+                                         start_date, end_date, save_path, dem_path=None,
+                                         min_val=0, max_val=None, fps=5):
     """
     Create an animated map of the values of a component at the hydro units.
 
@@ -102,6 +116,9 @@ def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, componen
         The end date of the period to plot (format: 'YYYY-MM-DD').
     save_path : str
         The path where to save the animation.
+    dem_path : str (optional)
+        The path to the digital elevation model (default: None). If provided,
+        the DEM will be used to create a shaded relief map.
     min_val : float (optional)
         The minimum value for the color scale (default: 0).
     max_val : float (optional)
@@ -129,11 +146,24 @@ def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, componen
     # Find the boundary between non-zero values and zeros
     boundary = _create_catchment_boundary(unit_ids_raster)
 
+    # Load the DEM and create a shaded relief map
+    shaded_dem = None
+    if dem_path is not None:
+        dem = _load_dem(dem_path)
+        ls = LightSource(azdeg=315, altdeg=45)
+        shaded_dem = ls.hillshade(dem.to_numpy(), vert_exag=0.1)
+
     # Create the animation
+    cmap = _generate_cmap_blue()
     fig, ax = plt.subplots()
 
     # Initialize the plot with the first frame of the data
-    im = ax.imshow(data_3d[0], cmap=_generate_cmap_blue(), vmin=min_val, vmax=max_val)
+    if dem_path is not None:
+        plt.imshow(shaded_dem, cmap='gray')
+        im = ax.imshow(data_3d[0], cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
+    else:
+        im = ax.imshow(data_3d[0], cmap=cmap, vmin=min_val, vmax=max_val)
+
     plt.axis('off')
 
     # Add the catchment boundary
@@ -182,6 +212,15 @@ def _load_units_ids_raster(unit_ids_raster_path):
         unit_ids_raster = unit_ids_raster.squeeze().drop_vars("band")
 
     return unit_ids_raster.to_numpy()
+
+
+def _load_dem(dem_path):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        dem = hb.rxr.open_rasterio(dem_path)
+        dem = dem.squeeze().drop_vars("band")
+
+    return dem
 
 
 def _create_catchment_boundary(unit_ids_raster):

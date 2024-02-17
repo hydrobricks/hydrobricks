@@ -14,6 +14,7 @@ CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 CATCHMENT_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'unit_ids.tif'
+DEM_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
 
 with tempfile.TemporaryDirectory() as tmp_dir_name:
     tmp_dir = tmp_dir_name
@@ -91,11 +92,20 @@ socont.dump_outputs(str(working_dir))
 # Load the netcdf file
 results = hb.Results(str(working_dir) + '/results.nc')
 
+# List the hydro units components available
+results.list_hydro_units_components()
+
 # Plot the snow water equivalent on a map
 hb.plotting.plot_map_hydro_unit_value(
-    results, CATCHMENT_RASTER, "ground_snowpack:snow", "1981-01-20", max_val=300)
+    results, CATCHMENT_RASTER, "ground_snowpack:snow",
+    "1981-01-20", dem_path=DEM_RASTER, max_val=300)
 
 # Create an animated map of the snow water equivalent
 hb.plotting.create_animated_map_hydro_unit_value(
     results, CATCHMENT_RASTER, "ground_snowpack:snow", "1990-01-01",
-    "1990-03-20", save_path=str(working_dir), max_val=300)
+    "1990-03-20", save_path=str(working_dir), dem_path=DEM_RASTER, max_val=300)
+
+# Create an animated map of the slow reservoir 2 content
+hb.plotting.create_animated_map_hydro_unit_value(
+    results, CATCHMENT_RASTER, "slow_reservoir_2:content", "2020-01-20",
+    "2020-03-20", save_path=str(working_dir), dem_path=DEM_RASTER)

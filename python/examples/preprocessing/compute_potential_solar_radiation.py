@@ -23,12 +23,15 @@ working_dir = Path(tmp_dir)
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
 catchment.extract_dem(CATCHMENT_DEM)
+
+catchment.calculate_daily_potential_radiation(str(working_dir), resolution=25)
 print("Results were saved in: ", working_dir)
 
 # The annual radiation can then be loaded from the generated file
 # catchment.load_mean_annual_radiation_raster(working_dir)
 
 catchment.discretize_by(['elevation', 'radiation'])
+catchment.save_hydro_units_to_csv(working_dir / 'hydro_units.csv')
 catchment.save_unit_ids_raster(working_dir)
 
 forcing = hb.Forcing(catchment.hydro_units)

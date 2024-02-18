@@ -11,7 +11,7 @@ methods = ['temperature_index', 'degree_day', 'degree_day_aspect']
 max_rep = 4000
 
 # Optimize data-related parameters
-optimize_data_params = True
+optimize_data_params = False
 
 # Run spotpy for each method
 for method in methods:

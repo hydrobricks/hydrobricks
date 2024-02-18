@@ -739,7 +739,10 @@ class Catchment:
 
         # Loop over the days of the year
         for i in range(len(day_of_year)):
-            print('Computing radiation for day', day_of_year[i])
+            # Print every 10 days
+            if day_of_year[i] % 10 == 0:
+                print('Computing radiation for day', day_of_year[i])
+
             # List of hour angles throughout the day.
             ha_list = np.arange(-hour_angle[i], hour_angle[i] + time_interval,
                                 time_interval)
@@ -842,12 +845,12 @@ class Catchment:
         ds.x.attrs["axis"] = "X"
         ds.x.attrs["long_name"] = "x coordinate of projection"
         ds.x.attrs["standard_name"] = "projection_x_coordinate"
-        ds.x.attrs["units"] = "metre"
+        ds.x.attrs["units"] = "meter"
 
         ds.y.attrs["axis"] = "Y"
         ds.y.attrs["long_name"] = "y coordinate of projection"
         ds.y.attrs["standard_name"] = "projection_y_coordinate"
-        ds.y.attrs["units"] = "metre"
+        ds.y.attrs["units"] = "meter"
 
         try:
             ds.to_netcdf(full_path)
@@ -856,7 +859,6 @@ class Catchment:
             raise RuntimeError(f"Error writing to file: {e}")
         finally:
             ds.close()
-            print('Dataset closed.')
 
     def save_hydro_units_to_csv(self, path):
         """

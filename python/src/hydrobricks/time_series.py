@@ -153,11 +153,21 @@ class TimeSeries2D(TimeSeries):
         unit_ids_list = unit_ids_list[unit_ids_list != 0]
         unit_ids_nb = len(unit_ids_list)
 
-        # Get list of time steps
-        time_nc = nc_data.variables[dim_time][:]
-        if len(self.time) == 0:
-            self.time = pd.Series(time_nc)
+        # Check if the file has the dimension 'day_of_year'
+        time_method = None
+        if 'day_of_year' in nc_data.dims:
+            time_method = 'day_of_year'
+            day_of_year = nc_data.variables['day_of_year'][:]
+            if len(self.time) == 0:
+                raise ValueError("Other forcing data with a full temporal array have "
+                                 "to be loaded and spatialized before data based "
+                                 "on 'day_of_year'.")
         else:
+            time_method = 'full'
+            time_nc = nc_data.variables[dim_time][:]
+            if len(self.time) == 0:
+                self.time = pd.Series(time_nc)
+
             # Check if the time steps are the same
             if len(self.time) != len(time_nc):
                 raise ValueError(f"The length of the netcdf time series "
@@ -184,7 +194,8 @@ class TimeSeries2D(TimeSeries):
         self.data.append(data)
 
         # Drop other variables
-        other_coords = [v for v in nc_data.coords if v not in [dim_time, dim_x, dim_y]]
+        other_coords = [v for v in nc_data.coords if v not in [
+            dim_time, dim_x, dim_y, 'day_of_year']]
         nc_data = nc_data.drop_vars(other_coords)
 
         # Extract variable
@@ -206,6 +217,12 @@ class TimeSeries2D(TimeSeries):
         start_time = time.time()
 
         num_threads = os.cpu_count()
+        time_len = len(self.time)
+        if time_method == 'day_of_year':
+            time_len = len(day_of_year)
+            if time_len != 366:
+                raise ValueError("The time series based on 'day_of_year' must have "
+                                 "a length of 366.")
 
         if method == 'reproject':
             # Create a ThreadPoolExecutor with a specified number of threads
@@ -216,7 +233,7 @@ class TimeSeries2D(TimeSeries):
                     futures = [executor.submit(self._extract_time_step_data_reproject,
                                                data_var, unit_id_masks, unit_ids,
                                                unit_ids_nb, t)
-                               for t in range(len(self.time))]
+                               for t in range(time_len)]
 
                     # Wait for all tasks to complete
                     concurrent.futures.wait(futures)
@@ -253,7 +270,7 @@ class TimeSeries2D(TimeSeries):
                 # Add the mask to the list
                 unit_weights.append(weights_mask)
 
-            n_steps = 1 + np.ceil(len(self.time) / weights_block_size).astype(int)
+            n_steps = 1 + np.ceil(time_len / weights_block_size).astype(int)
 
             with ThreadPoolExecutor(max_workers=num_threads) as executor:
                 # Submit the tasks for each time step to the executor
@@ -267,6 +284,15 @@ class TimeSeries2D(TimeSeries):
 
         else:
             raise ValueError(f"Unknown method '{method}'.")
+
+        # If the time method is 'day_of_year', convert to the full time series
+        if time_method == 'day_of_year':
+            print("Converting to the full time series...")
+            # Get the indices of jd_unique that match the values of jd
+            jd = self.time.dt.strftime('%j').to_numpy().astype(int)
+            indices = np.searchsorted(day_of_year, jd)
+            whole_daily_pot_radiation = self.data[-1][indices, :]
+            self.data[-1] = whole_daily_pot_radiation
 
         # Print elapsed time
         elapsed_time = time.time() - start_time
@@ -293,6 +319,7 @@ class TimeSeries2D(TimeSeries):
                                         block_size):
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
+        i_end = min(i_end, data_var.shape[0])
         if i_start >= len(self.time):
             return
 

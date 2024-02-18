@@ -25,7 +25,9 @@ class ModelSetupHelper:
         self.start_date = start_date
         self.end_date = end_date
         self.hydro_units = None
-        self.working_dir = working_dir
+        self.working_dir = None
+        if working_dir is not None:
+            self.working_dir = Path(working_dir)
 
         self._create_temp_working_directory()
 
@@ -40,6 +42,9 @@ class ModelSetupHelper:
             shutil.rmtree(self.working_dir)
         except Exception:
             print("Failed to clean up.")
+
+    def get_catchment_dir(self):
+        return TEST_FILES_DIR / self.catchment_name
 
     def create_hydro_units_from_csv_file(self, filename='elevation_bands.csv',
                                          other_columns=None):

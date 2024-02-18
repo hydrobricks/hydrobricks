@@ -5,25 +5,53 @@ from examples._helpers.models_setup_helper import ModelSetupHelper
 import hydrobricks as hb
 
 # Select the methods to compare
-methods = ['degree_day', 'degree_day_aspect']
+methods = ['temperature_index', 'degree_day', 'degree_day_aspect']
 
 # Select number of maximum repetitions for spotpy
 max_rep = 4000
 
 # Optimize data-related parameters
-optimize_data_params = True
+optimize_data_params = False
 
 # Run spotpy for each method
 for method in methods:
     # Set up the case study options
-    helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
+    helper = ModelSetupHelper('ch_sitter_appenzell',
+                              start_date='1981-01-01',
                               end_date='2020-12-31')
-    helper.create_hydro_units_from_csv_file(
-        filename='elevation_bands_aspect.csv',
-        other_columns={'slope': 'slope', 'aspect_class': 'aspect_class'})
+
+    if method == 'degree_day':
+        helper.create_hydro_units_from_csv_file(
+            filename='elevation_bands.csv')
+    elif method == 'degree_day_aspect':
+        helper.create_hydro_units_from_csv_file(
+            filename='elevation_bands_aspect.csv',
+            other_columns={'slope': 'slope', 'aspect_class': 'aspect_class'})
+    elif method == 'temperature_index':
+        helper.create_hydro_units_from_csv_file(
+            filename='elevation_bands_radiation.csv',
+            other_columns={'slope': 'slope', 'radiation': 'radiation'})
+    else:
+        raise RuntimeError(f"Method {method} not recognized.")
+
     forcing = helper.get_forcing_data_from_csv_file(
         ref_elevation=1250, use_precip_gradient=True)
     obs = helper.get_obs_data_from_csv_file()
+
+    if method == 'temperature_index':
+        catchment = hb.Catchment(helper.get_catchment_dir() / 'outline.shp')
+        if not (helper.working_dir / 'daily_potential_radiation.nc').exists():
+            catchment.extract_dem(helper.get_catchment_dir() / 'dem.tif')
+            catchment.calculate_daily_potential_radiation(
+                str(helper.working_dir),  resolution=25)
+
+        catchment.load_unit_ids_from_raster(
+            helper.get_catchment_dir(), 'unit_ids_radiation.tif')
+        forcing.spatialize_from_gridded_data(
+            variable='solar_radiation', var_name='radiation', path=helper.working_dir,
+            file_pattern='daily_potential_radiation.nc',
+            data_crs=2056, dim_x='x', dim_y='y',
+            raster_hydro_units=helper.get_catchment_dir() / 'unit_ids_radiation.tif')
 
     # Set up the model
     socont, parameters = helper.get_model_and_params_socont(
@@ -36,6 +64,9 @@ for method in methods:
     elif method == 'degree_day_aspect':
         parameters.allow_changing = ['a_snow_n', 'a_snow_s', 'a_snow_ew', 'k_quick',
                                      'A', 'k_slow_1', 'percol', 'k_slow_2']
+    elif method == 'temperature_index':
+        parameters.allow_changing = ['melt_factor', 'r_snow', 'k_quick', 'A',
+                                     'k_slow_1', 'percol', 'k_slow_2']
     else:
         raise RuntimeError(f"Method {method} not recognized.")
 

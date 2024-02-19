@@ -60,6 +60,7 @@ jobs:
       with:
         path: wheelhouse/*.whl
         overwrite: true
+        name: artifact-${{ matrix.os }}-${{ github.run_number }}
 
 
   upload_all:

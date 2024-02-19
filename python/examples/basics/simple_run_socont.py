@@ -2,8 +2,6 @@ import os.path
 import tempfile
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
 import hydrobricks as hb
 import hydrobricks.models as models
 
@@ -15,6 +13,8 @@ TEST_FILES_DIR = Path(
 CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
+CATCHMENT_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'unit_ids.tif'
+DEM_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
 
 with tempfile.TemporaryDirectory() as tmp_dir_name:
     tmp_dir = tmp_dir_name
@@ -24,7 +24,7 @@ working_dir = Path(tmp_dir)
 
 # Model structure
 socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
-                       record_all=False)
+                       record_all=True)
 
 # Parameters
 parameters = socont.generate_parameters()
@@ -79,13 +79,33 @@ ref_kge = obs.compute_reference_metric('kge_2012')
 
 print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
 
+if not hb.has_matplotlib:
+    print("Matplotlib is not installed, the plotting functions will not work.")
+    exit()
+
 # Plot
-year_to_plot = 2020
-dates = obs.time[obs.time.dt.year == year_to_plot]
-plt.plot(dates, obs_ts[dates.index], label='observed', color='black')
-plt.plot(dates, sim_ts[dates.index], label='model', color='blue')
-plt.legend()
-plt.ylabel('discharge (mm/day)')
-plt.ylim(0, None)
-plt.tight_layout()
-plt.show()
+hb.plotting.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
+
+# Dump all outputs
+socont.dump_outputs(str(working_dir))
+
+# Load the netcdf file
+results = hb.Results(str(working_dir) + '/results.nc')
+
+# List the hydro units components available
+results.list_hydro_units_components()
+
+# Plot the snow water equivalent on a map
+hb.plotting.plot_map_hydro_unit_value(
+    results, CATCHMENT_RASTER, "ground_snowpack:snow",
+    "1981-01-20", dem_path=DEM_RASTER, max_val=300)
+
+# Create an animated map of the snow water equivalent
+hb.plotting.create_animated_map_hydro_unit_value(
+    results, CATCHMENT_RASTER, "ground_snowpack:snow", "1990-01-01",
+    "1990-03-20", save_path=str(working_dir), dem_path=DEM_RASTER, max_val=300)
+
+# Create an animated map of the slow reservoir 2 content
+hb.plotting.create_animated_map_hydro_unit_value(
+    results, CATCHMENT_RASTER, "slow_reservoir_2:content", "2020-01-20",
+    "2020-03-20", save_path=str(working_dir), dem_path=DEM_RASTER)

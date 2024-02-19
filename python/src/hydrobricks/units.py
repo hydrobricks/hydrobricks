@@ -39,6 +39,7 @@ class Unit(StrEnumClass):
     PC = auto()  # [%]
     FRAC = auto()  # [fraction]
     MJ_M2_D = auto()  # [MJ m-2 d-1]
+    W_M2 = auto()  # [W m-2]
     KPA = auto()  # [kPa]
 
 
@@ -103,6 +104,8 @@ def get_unit_enum(unit):
         return Unit.FRAC
     elif unit in ['MJ/m2/d', 'MJ/m2/day', 'MJ_m2_d', 'MJ_m2_day']:
         return Unit.MJ_M2_D
+    elif unit in ['W/m2', 'W_m2', 'W/m^2', 'W/m**2', 'Watt per square meter']:
+        return Unit.W_M2
     elif unit in ['kPa', 'kilopascal']:
         return Unit.KPA
     else:

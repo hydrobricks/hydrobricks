@@ -5,15 +5,41 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
-## 0.7.0 - UNDER WORK
+## 0.7.0 - 2024-02-18
 
 ### Added
 
+-   Adding a new functionality to create a BehaviourLandCoverChange object from shapefiles of glacier extents.
+-   Adding a function to compute potential clear-sky direct solar radiation as defined by Hock (1999).
+-   Adding a temperature index melt model based on Hock (1999).
+-   Adding the possibility to discretize the hydrological units based on the mean annual potential radiation used in Hock (1999).
+-   Adding an aspect-related degree day factor.
+-   Adding a reference prediction based on a bootstrapping approach of the observed discharge.
+-   Adding the option to define a parameter shared by different processes (e.g., snow and ice melt).
+-   Allow calibrating a single parameter set for multiple catchments.
+-   Adding a Results class to simplify outputs analysis.
+-   Adding maps plotting and spatio-temporal animations of the model outputs.
+-   Handling yearly recurrent forcing with a 'day_of_year' approach.
+-   Moving the model structure definition from C++ to Python.
+
 ### Changed
+
+-   Transitioning to a dictionary-based structure definition.
+-   Moving the parameters generation out of the Socont class.
+-   Moving the process parameters and forcing definitions to respective classes.
+-   Changing workflow in load_from_csv.
+-   Restructuring examples.
+-   An error is raised if some parameter values are missing.
+-   The parameter estimation and evaluation functions are restructured to a new trainer.py file.
+-   Adding the date/time to the log file name.
 
 ### Fixed
 
--   Socont quick discharge has been fixed... For real this time.
+-   Socont quick discharge has been fixed... For real, this time.
+-   Fixing the SpotpySetup initialization.
+-   Fixing issue with hydro unit initialization in catchment discretization.
+-   Fixing a bug that occurred when the study area outline comprised multiple polygons.
+-   Adapting the FixLandCoverFractionsTotal() function to also work with cases where the hydro unit is fully glaciated at the beginning of the Behaviour time series.
 
 
 ## 0.6.2 - 2023-09-15

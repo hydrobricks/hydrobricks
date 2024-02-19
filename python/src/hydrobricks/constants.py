@@ -1,13 +1,13 @@
-import math as ma
+import math
 
 # Radian to Degree and Degree to Radian multiplicative factors
-TO_RAD = ma.pi / 180
-TO_DEG = 180 / ma.pi
+TO_RAD = math.pi / 180.0
+TO_DEG = 180.0 / math.pi
 
-# The orbit of Earth around the sun is an ellipse with eccentricity 0.017
-# and semimajor axis 149,598,023 km.
+# The orbit of Earth around the sun is an ellipse with an eccentricity of 0.017
+# and a semi-major axis of 149,598,023 km.
 ES_SM_AXIS = 149.6  # Earth-Sun radius semi-major axis (i.e. mean Sun-Earth distance)
-ES_ECCENTRICITY = 0.017  # 0.0167 # Eccentricity
+ES_ECCENTRICITY = 0.017  # Eccentricity
 SOLAR_CST = 1368  # Solar constant [W/m²]
 
 # To compute the atmospheric pressure

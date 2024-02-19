@@ -1,5 +1,6 @@
 import random
 
+import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
@@ -460,7 +461,7 @@ class ParameterSet:
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
-            if param['prior']:
+            if param['prior'] and not np.isnan(param['prior']):
                 spotpy_params.append(
                     param['prior']
                 )

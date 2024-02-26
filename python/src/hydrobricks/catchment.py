@@ -579,6 +579,14 @@ class Catchment:
         -------
         The potential clear-sky direct solar radiation at the ice or snow
         surface [W/m²]
+
+        Notes
+        -----
+        This function is based on the R package TopoSol, authored by Matthew Olson.
+
+        References
+        ----------
+        - Original R package: https://github.com/mattols/TopoSol
         """
 
         # True anomaly (the angle subtended at the Sun between the semi major
@@ -640,6 +648,14 @@ class Catchment:
         Returns
         -------
         The angle of incidence.
+
+        Notes
+        -----
+        This function is based on the R package TopoSol, authored by Matthew Olson.
+
+        References
+        ----------
+        - Original R package: https://github.com/mattols/TopoSol
         """
 
         # Solar zenith and azimuth on a slope
@@ -687,6 +703,14 @@ class Catchment:
         -------
         The daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²]
+
+        Notes
+        -----
+        This function is based on the R package TopoSol, authored by Matthew Olson.
+
+        References
+        ----------
+        - Original R package: https://github.com/mattols/TopoSol
         """
         # Resample the DEM and calculate the slope and aspect
         dem, masked_dem_data, slope, aspect = (

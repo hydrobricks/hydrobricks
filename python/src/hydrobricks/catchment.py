@@ -593,18 +593,24 @@ class Catchment:
 
         # Compute flow direction and flow accumulation
         flow_dir = grid.flowdir(inflated_dem, routing='d8')
-        flow_acc = grid.accumulation(flow_dir, routing='d8')
-
-        # Transform to numpy arrays
-        flow_dir = flow_dir.view(np.ndarray)
-        flow_acc = flow_acc.view(np.ndarray)
 
         # Create a dataframe with the hydro units IDs and a column of empty dictionaries
         df = self.hydro_units.hydro_units[[('id', '-')]].copy()
         df[('connectivity', '-')] = [{} for _ in range(len(df))]
 
+        # Loop over every hydro unit id and compute the flow accumulation
+        flow_acc_tot = np.zeros_like(self.map_unit_ids)
+        for unit_id in df[('id', '-')]:
+            mask_unit = self.map_unit_ids == unit_id
+            flow_acc = grid.accumulation(flow_dir, mask=mask_unit, routing='d8')
+            flow_acc_np = flow_acc.view(np.ndarray)
+            flow_acc_tot = np.maximum(flow_acc_tot, flow_acc_np)
+
+        # Transform to numpy arrays
+        flow_dir = flow_dir.view(np.ndarray)
+
         # Compute the connectivity
-        self._sum_contributing_flow_acc(df, flow_acc, flow_dir, no_loss)
+        self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir, no_loss)
 
         def normalize_connectivity(row):
             connectivity = row[('connectivity', '-')]

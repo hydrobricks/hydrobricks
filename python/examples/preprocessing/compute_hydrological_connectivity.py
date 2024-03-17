@@ -31,4 +31,8 @@ catchment.save_hydro_units_to_csv(working_dir / 'hydro_units.csv')
 catchment.save_unit_ids_raster(working_dir)
 
 # Compute connectivity between hydro units
-connectivity = catchment.calculate_connectivity()
+connectivity = catchment.calculate_connectivity(mode='multiple')
+
+# Save connectivity to a csv file
+connectivity.to_csv(working_dir / 'connectivity.csv')
+print("Results were saved in: ", working_dir)

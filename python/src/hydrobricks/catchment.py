@@ -603,6 +603,41 @@ class Catchment:
         df = self.hydro_units.hydro_units[[('id', '-')]].copy()
         df[('connectivity', '-')] = [{} for _ in range(len(df))]
 
+        # Compute the connectivity
+        self._sum_contributing_flow_acc(df, flow_acc, flow_dir, no_loss)
+
+        def normalize_connectivity(row):
+            connectivity = row[('connectivity', '-')]
+            total_flow = sum(connectivity.values())
+            if total_flow == 0:
+                return row
+            for key in connectivity:
+                connectivity[key] /= total_flow
+            row[('connectivity', '-')] = connectivity
+            return row
+
+        def keep_highest_connectivity(row):
+            connectivity = row[('connectivity', '-')]
+            if not connectivity:
+                return row
+            max_key = max(connectivity, key=connectivity.get)
+            connectivity = {max_key: 1.0}
+            row[('connectivity', '-')] = connectivity
+            return row
+
+        if mode == 'multiple':
+            df = df.apply(normalize_connectivity, axis=1)
+        elif mode == 'single':
+            df = df.apply(keep_highest_connectivity, axis=1)
+        else:
+            raise ValueError("Unknown mode.")
+
+        # Add the connectivity to the hydro units
+        self.hydro_units.hydro_units[('connectivity', '-')] = df[('connectivity', '-')]
+
+        return df
+
+    def _sum_contributing_flow_acc(self, df, flow_acc, flow_dir, no_loss):
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
@@ -658,34 +693,6 @@ class Catchment:
                     connect[unit_id_next] = 0
                 connect[unit_id_next] += flow_acc[i, j]
                 df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')] = [connect]
-
-        def normalize_connectivity(row):
-            connectivity = row[('connectivity', '-')]
-            total_flow = sum(connectivity.values())
-            if total_flow == 0:
-                return row
-            for key in connectivity:
-                connectivity[key] /= total_flow
-            row[('connectivity', '-')] = connectivity
-            return row
-
-        def keep_highest_connectivity(row):
-            connectivity = row[('connectivity', '-')]
-            if not connectivity:
-                return row
-            max_key = max(connectivity, key=connectivity.get)
-            connectivity = {max_key: connectivity[max_key]}
-            row[('connectivity', '-')] = [connectivity]
-            return row
-
-        if mode == 'multiple':
-            df = df.apply(normalize_connectivity, axis=1)
-        elif mode == 'single':
-            df = df.apply(keep_highest_connectivity, axis=1)
-        else:
-            raise ValueError("Unknown mode.")
-
-        return df
 
     @staticmethod
     def _calculate_radiation_hock_equation(elevation, atmos_transmissivity, day_of_year,

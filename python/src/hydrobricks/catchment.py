@@ -554,10 +554,12 @@ class Catchment:
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
-    def calculate_connectivity(self, mode='multiple', no_loss=True):
+    def calculate_connectivity(self, mode='multiple'):
         """
         Calculate the connectivity between hydro units using a flow accumulation
-        partition.
+        partition. Connectivity between hydro units is forced to stay within the
+        catchment. If a hydro unit contributes mostly to surfaces out of the catchment,
+        the connectivity will be nulled.
 
         Parameters
         ----------
@@ -565,8 +567,6 @@ class Catchment:
             The mode to calculate the connectivity:
             'single' = keep the highest connectivity only
             'multiple' = keep all connectivity values (multiple connections)
-        no_loss : bool
-            If True, connections to hydro units with an ID of 0 are not considered.
 
         Returns
         -------
@@ -610,10 +610,24 @@ class Catchment:
         flow_dir = flow_dir.view(np.ndarray)
 
         # Compute the connectivity
-        self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir, no_loss)
+        self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
 
         def normalize_connectivity(row):
             connectivity = row[('connectivity', '-')]
+            if not connectivity:
+                return row
+
+            # If the maximum connectivity leaves the catchment, nullify the connectivity
+            max_key = max(connectivity, key=connectivity.get)
+            if max_key == 0:
+                row[('connectivity', '-')] = {}
+                return row
+
+            # Remove the key 0 if it exists
+            if 0 in connectivity:
+                del connectivity[0]
+
+            # Normalize the connectivity within the catchment
             total_flow = sum(connectivity.values())
             if total_flow == 0:
                 return row
@@ -626,7 +640,14 @@ class Catchment:
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
+
+            # If the maximum connectivity leaves the catchment, nullify the connectivity
             max_key = max(connectivity, key=connectivity.get)
+            if max_key == 0:
+                row[('connectivity', '-')] = {}
+                return row
+
+            # Keep only the highest connectivity
             connectivity = {max_key: 1.0}
             row[('connectivity', '-')] = connectivity
             return row
@@ -643,7 +664,7 @@ class Catchment:
 
         return df
 
-    def _sum_contributing_flow_acc(self, df, flow_acc, flow_dir, no_loss):
+    def _sum_contributing_flow_acc(self, df, flow_acc, flow_dir):
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
@@ -685,9 +706,6 @@ class Catchment:
                     continue
 
                 unit_id_next = self.map_unit_ids[i_next, j_next]
-
-                if no_loss and unit_id_next == 0:
-                    continue
 
                 if unit_id_next == unit_id:
                     continue

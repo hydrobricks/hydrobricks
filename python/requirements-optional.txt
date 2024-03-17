@@ -4,6 +4,7 @@ matplotlib
 netCDF4
 pyet
 pyproj
+pysheds
 pytest
 rasterio
 rioxarray

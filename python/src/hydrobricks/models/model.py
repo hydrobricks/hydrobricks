@@ -312,7 +312,9 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        return hb.evaluate(self.get_outlet_discharge()[warmup:], observations[warmup:], metric)
+        return hb.evaluate(self.get_outlet_discharge()[warmup:],
+                           observations[warmup:],
+                           metric)
 
     def generate_parameters(self):
         ps = hb.ParameterSet()

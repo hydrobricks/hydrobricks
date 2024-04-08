@@ -678,6 +678,179 @@ class Catchment:
 
         return incidence_angle
 
+    def _calculate_cast_shadows(self, dem_array, masked_dem,
+                                zenith, azimuth, lat, i=None):
+        """
+        Calculate the cast shadows.
+
+        Parameters
+        ----------
+        dem_array :
+            DEM as read by rasterio, containing the DEM topography and its profile
+        masked_dem : float
+            DEM topography, masked with np.nan for the areas outside the study catchment
+        zenith : float
+            Solar zenith (IQBAL 2012), in degrees
+        azimuth : float
+            Azimuth for ZSLOPE CALC, in degrees
+        lat : float
+            Mean latitude of the catchment, in degrees
+        i : int
+            A number, used for creating successive files and debugging
+
+        Returns
+        -------
+        The cast shadows (1), the in sun areas (0), and the masked area (np.nan).
+
+        Notes
+        -----
+        The alogrithm is applied to the whole topography before masking the
+        areas outside the catchment.
+        TODO:
+        The South hemisphere needs to be tested.
+        The difference in pixel x and y sizes should be taken into account.
+        """
+
+        dem = dem_array.read(1)
+
+        test = False
+        if test:
+            dem = np.array([[1., 2., 3., 4., 4.],
+                            [5., 6., 7., 8., 8.],
+                            [9., 10., 11., 12., 12.],
+                            [9., 10., 11., 12., 12.]])
+
+        # Solar zenith and azimuth in radians
+        zenith_rad = zenith * TO_RAD
+        azimuth_rad = azimuth * TO_RAD
+
+        # Check in which hemisphere we are and if the sun is coming from
+        # the east or west directions
+        north_hemisphere = (lat > 0)
+        east = (azimuth <= -45)
+        west = (45 <= azimuth)
+
+        # Get mean pixel size
+        x_size = self.get_dem_x_resolution()
+        y_size = self.get_dem_y_resolution()
+        pixel_size = (x_size + y_size) / 2
+
+        # Tilt the DEM to obtain a global horizontal matching the sun rays
+        # I get the x and y grids for my dem
+        xv, yv = np.indices(dem.shape)
+        x_length, y_length = dem.shape
+        if north_hemisphere:
+            xv = xv[::-1,:]
+
+        if test:
+            print("i", i)
+            print("lat", lat)
+            print("pixel_size", pixel_size)
+            print("zenith", zenith)
+            print("azimuth", azimuth)
+            print("West", west)
+            print("East", east)
+            print("North hemisp", north_hemisphere)
+            print("xv, yv", xv, yv)
+
+        # 1. Computation of the solar ray paths for each pixel.
+        # offset: Offset in the direction derived by the azimuth, for each row.
+        # ray: Adding the offset to the position of each pixel.
+        # ray_positives: Because of the '- offset', some solar ray identifier are negative. Putting them positives.
+        # ray_int: Convert to int. Now all pixels in the same solar ray have the same identifier.
+        # 2. Computation of the tilt for the DEM.
+        # orthogonal_distance: Projected distance to the corner, projected on the azimuthal direction.
+        # tilt_heights: Heights to add for each pixel to achieve tilting.
+        # tilted_dem: DEM after tilt of zenith degree in the azimuthal direction.
+        # 3. Remapping of the solar rays on another matrix and processing them.
+        # mapped: Map with nans on unused pixels and the tilted DEM pixels remapped from solar rays to row/columns.
+        # accumulated: Map with filled DEM pixels. The solar rays are processed as row/columns.
+        # cast_sh: Cast shadows in the solar rays system.
+        # dem_filled: Filled DEM in the DEM coordinate system.
+        # cast_shadows: Cast shadows in the DEM coordinate system.
+        if west:
+            offset = yv / np.tan(azimuth_rad)
+            ray = xv - offset
+            ray_positives = ray - np.nanmin(ray)
+            ray_int = ray_positives.astype(int)
+
+            orthogonal_distance = np.sqrt(np.power(xv, 2) + np.power(offset, 2))
+            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
+            tilted_dem = dem + tilt_heights
+
+            mapped = np.ones((np.nanmax(ray_int) + 1,
+                              y_length))
+            mapped = mapped * np.nan
+            mapped[ray_int, yv] = tilted_dem
+            accumulated = np.fmax.accumulate(mapped, axis=1)
+            cast_sh = (accumulated > mapped).astype(float)
+            dem_filled = accumulated[ray_int, yv]
+            cast_shadows = cast_sh[ray_int, yv]
+
+        elif east:
+            offset = yv / np.tan(azimuth_rad)
+            ray = xv + offset
+            ray_positives = ray - np.nanmin(ray)
+            ray_int = ray_positives.astype(int)[:,::-1]
+
+            orthogonal_distance = np.sqrt(np.power(xv, 2) + np.power(offset, 2))
+            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
+            tilted_dem = dem + tilt_heights
+
+            mapped = np.ones((np.nanmax(ray_int) + 1,
+                              y_length))
+            mapped = mapped * np.nan
+            mapped[ray_int, yv[:,::-1]] = tilted_dem
+            accumulated = np.fmax.accumulate(mapped, axis=1)
+            cast_sh = (accumulated > mapped).astype(float)
+            dem_filled = accumulated[ray_int, yv[:,::-1]]
+            cast_shadows = cast_sh[ray_int, yv[:,::-1]]
+
+        else:
+            offset = xv * np.tan(azimuth_rad)
+            ray = yv - offset
+            ray_positives = ray - np.nanmin(ray)
+            ray_int = ray_positives.astype(int)
+
+            orthogonal_distance = np.sqrt(np.power(yv, 2) + np.power(offset, 2))
+            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
+            tilted_dem = dem + tilt_heights
+
+            mapped = np.ones((np.nanmax(ray_int) + 1,
+                              x_length))
+            mapped = mapped * np.nan
+            mapped[ray_int, xv] = tilted_dem
+            accumulated = np.fmax.accumulate(mapped, axis=1)
+            cast_sh = (accumulated > mapped).astype(float)
+            dem_filled = accumulated[ray_int, xv]
+            cast_shadows = cast_sh[ray_int, xv]
+
+        # Put the mask back on (we need the surrounding topography in the steps before).
+        cast_shadows[np.isnan(masked_dem)] = np.nan
+
+        if test:
+            print(offset, "offset")
+            print(ray, "ray")
+            print(ray_int, "ray_int")
+            print(mapped, "mapped")
+
+        if i:
+            profile = dem_array.profile
+            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_ray_{i}.tif', 'w', **profile) as dst:
+                dst.write(ray, 1)
+                dst.close()
+            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
+                dst.write(orthogonal_distance, 1)
+                dst.close()
+            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_dem_filled_{i}.tif', 'w', **profile) as dst:
+                dst.write(dem_filled, 1)
+                dst.close()
+            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_cast_shadows_{i}.tif', 'w', **profile) as dst:
+                dst.write(cast_shadows, 1)
+                dst.close()
+
+        return cast_shadows
+
     def calculate_daily_potential_radiation(self, output_path, resolution=None,
                                             atmos_transmissivity=0.75,
                                             steps_per_hour=4):
@@ -793,12 +966,20 @@ class Catchment:
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
-                incidence_angle = self._calculate_angle_of_incidence(
-                    zenith[j], slope, azimuth[j], aspect)
-                potential_radiation = self._calculate_radiation_hock_equation(
-                    mean_elevation, atmos_transmissivity, day_of_year[i],
-                    zenith[j], incidence_angle)
-                inter_pot_radiation[j, :, :] = potential_radiation.copy()
+                # Shorten computation time, because zenith >= 90 results in no irradiation.
+                if zenith[j] < 90:
+                    cast_shadows = self._calculate_cast_shadows(dem, masked_dem_data,
+                                                                zenith[j], azimuth[j],
+                                                                mean_lat, j)
+                    incidence_angle = self._calculate_angle_of_incidence(
+                        zenith[j], slope, azimuth[j], aspect)
+                    potential_radiation = self._calculate_radiation_hock_equation(
+                        mean_elevation, atmos_transmissivity, day_of_year[i],
+                        zenith[j], incidence_angle)
+                    potential_radiation = potential_radiation * cast_shadows
+                    inter_pot_radiation[j, :, :] = potential_radiation.copy()
+                else:
+                    inter_pot_radiation[j, :, :] = np.zeros_like(zenith[j])
 
             with warnings.catch_warnings():
                 # This function throws a warning for the first slides of nanmean,

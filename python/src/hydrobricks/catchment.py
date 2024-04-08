@@ -853,7 +853,8 @@ class Catchment:
 
     def calculate_daily_potential_radiation(self, output_path, resolution=None,
                                             atmos_transmissivity=0.75,
-                                            steps_per_hour=4):
+                                            steps_per_hour=4,
+                                            with_cast_shadows=True):
         """
         Compute the daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²] using Hock (1999)'s equation.
@@ -871,6 +872,8 @@ class Catchment:
             (value taken in Hock 1999)
         steps_per_hour : int, optional
             Number of steps per hour to compute the potential radiation, default is 4.
+        with_cast_shadows : bool, optional
+            If True, the cast shadows are taken into account. Default is True.
 
         Returns
         -------
@@ -967,19 +970,22 @@ class Catchment:
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
                 # Shorten computation time, because zenith >= 90 results in no irradiation.
-                if zenith[j] < 90:
-                    cast_shadows = self._calculate_cast_shadows(dem, masked_dem_data,
-                                                                zenith[j], azimuth[j],
-                                                                mean_lat, j)
-                    incidence_angle = self._calculate_angle_of_incidence(
-                        zenith[j], slope, azimuth[j], aspect)
-                    potential_radiation = self._calculate_radiation_hock_equation(
-                        mean_elevation, atmos_transmissivity, day_of_year[i],
-                        zenith[j], incidence_angle)
-                    potential_radiation = potential_radiation * cast_shadows
-                    inter_pot_radiation[j, :, :] = potential_radiation.copy()
-                else:
+                if zenith[j] >= 90:
                     inter_pot_radiation[j, :, :] = np.zeros_like(zenith[j])
+                    continue
+
+                incidence_angle = self._calculate_angle_of_incidence(
+                    zenith[j], slope, azimuth[j], aspect)
+                potential_radiation = self._calculate_radiation_hock_equation(
+                    mean_elevation, atmos_transmissivity, day_of_year[i],
+                    zenith[j], incidence_angle)
+
+                if with_cast_shadows:
+                    cast_shadows = self._calculate_cast_shadows(
+                        dem, masked_dem_data, zenith[j], azimuth[j], mean_lat, j)
+                    potential_radiation = potential_radiation * cast_shadows
+
+                inter_pot_radiation[j, :, :] = potential_radiation.copy()
 
             with warnings.catch_warnings():
                 # This function throws a warning for the first slides of nanmean,

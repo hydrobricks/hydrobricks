@@ -483,9 +483,9 @@ class Catchment:
 
         Parameters
         ----------
-        resolution : float
+        resolution : ?float
             Desired pixel resolution.
-        output_path : str
+        output_path : str|Path
             Path of the directory to save the downsampled DEM to.
 
         Returns
@@ -522,7 +522,9 @@ class Catchment:
             )
 
         # Save the downsampled DEM to a file
-        filepath = output_path + '/downsampled_dem.tif'
+        if isinstance(output_path, str):
+            output_path = Path(output_path)
+        filepath = output_path / 'downsampled_dem.tif'
         xr_dem_downsampled.rio.to_raster(filepath)
 
         # Reopen the downsampled DEM as a rasterio dataset
@@ -686,7 +688,7 @@ class Catchment:
         Parameters
         ----------
         dem_array :
-            DEM as read by rasterio, containing the DEM topography and its profile
+            DEM as read by rasterio, containing the DEM topography
         masked_dem : float
             DEM topography, masked with np.nan for the areas outside the study catchment
         zenith : float
@@ -704,7 +706,7 @@ class Catchment:
 
         Notes
         -----
-        The alogrithm is applied to the whole topography before masking the
+        The algorithm is applied to the whole topography before masking the
         areas outside the catchment.
         TODO:
         The South hemisphere needs to be tested.
@@ -740,7 +742,7 @@ class Catchment:
         xv, yv = np.indices(dem.shape)
         x_length, y_length = dem.shape
         if north_hemisphere:
-            xv = xv[::-1,:]
+            xv = xv[::-1, :]
 
         if test:
             print("i", i)
@@ -756,15 +758,20 @@ class Catchment:
         # 1. Computation of the solar ray paths for each pixel.
         # offset: Offset in the direction derived by the azimuth, for each row.
         # ray: Adding the offset to the position of each pixel.
-        # ray_positives: Because of the '- offset', some solar ray identifier are negative. Putting them positives.
-        # ray_int: Convert to int. Now all pixels in the same solar ray have the same identifier.
+        # ray_positives: Because of the '- offset', some solar ray identifier are
+        #     negative. Putting them positives.
+        # ray_int: Convert to int. Now all pixels in the same solar ray have the
+        #     same identifier.
         # 2. Computation of the tilt for the DEM.
-        # orthogonal_distance: Projected distance to the corner, projected on the azimuthal direction.
+        # orthogonal_distance: Projected distance to the corner, projected on the
+        #     azimuthal direction.
         # tilt_heights: Heights to add for each pixel to achieve tilting.
         # tilted_dem: DEM after tilt of zenith degree in the azimuthal direction.
         # 3. Remapping of the solar rays on another matrix and processing them.
-        # mapped: Map with nans on unused pixels and the tilted DEM pixels remapped from solar rays to row/columns.
-        # accumulated: Map with filled DEM pixels. The solar rays are processed as row/columns.
+        # mapped: Map with nans on unused pixels and the tilted DEM pixels remapped
+        #     from solar rays to row/columns.
+        # accumulated: Map with filled DEM pixels. The solar rays are processed
+        #     as row/columns.
         # cast_sh: Cast shadows in the solar rays system.
         # dem_filled: Filled DEM in the DEM coordinate system.
         # cast_shadows: Cast shadows in the DEM coordinate system.
@@ -791,7 +798,7 @@ class Catchment:
             offset = yv / np.tan(azimuth_rad)
             ray = xv + offset
             ray_positives = ray - np.nanmin(ray)
-            ray_int = ray_positives.astype(int)[:,::-1]
+            ray_int = ray_positives.astype(int)[:, ::-1]
 
             orthogonal_distance = np.sqrt(np.power(xv, 2) + np.power(offset, 2))
             tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
@@ -800,11 +807,11 @@ class Catchment:
             mapped = np.ones((np.nanmax(ray_int) + 1,
                               y_length))
             mapped = mapped * np.nan
-            mapped[ray_int, yv[:,::-1]] = tilted_dem
+            mapped[ray_int, yv[:, ::-1]] = tilted_dem
             accumulated = np.fmax.accumulate(mapped, axis=1)
             cast_sh = (accumulated > mapped).astype(float)
-            dem_filled = accumulated[ray_int, yv[:,::-1]]
-            cast_shadows = cast_sh[ray_int, yv[:,::-1]]
+            dem_filled = accumulated[ray_int, yv[:, ::-1]]
+            cast_shadows = cast_sh[ray_int, yv[:, ::-1]]
 
         else:
             offset = xv * np.tan(azimuth_rad)
@@ -836,16 +843,17 @@ class Catchment:
 
         if i:
             profile = dem_array.profile
-            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_ray_{i}.tif', 'w', **profile) as dst:
+            with hb.rasterio.open(f'1_ray_{i}.tif', 'w', **profile) as dst:
                 dst.write(ray, 1)
                 dst.close()
-            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
+            with hb.rasterio.open(
+                    f'1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
                 dst.write(orthogonal_distance, 1)
                 dst.close()
-            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_dem_filled_{i}.tif', 'w', **profile) as dst:
+            with hb.rasterio.open(f'1_dem_filled_{i}.tif', 'w', **profile) as dst:
                 dst.write(dem_filled, 1)
                 dst.close()
-            with hb.rasterio.open(f'/home/anne-laure/Downloads/1_cast_shadows_{i}.tif', 'w', **profile) as dst:
+            with hb.rasterio.open(f'1_cast_shadows_{i}.tif', 'w', **profile) as dst:
                 dst.write(cast_shadows, 1)
                 dst.close()
 
@@ -932,7 +940,7 @@ class Catchment:
 
         # Time intervals (360°/24h = 15° per hour, then divided by the number of steps
         # per hour)
-        time_interval = (15/steps_per_hour) * TO_RAD
+        time_interval = (15 / steps_per_hour) * TO_RAD
 
         # Create array for the daily potential radiation
         daily_radiation = np.full((len(day_of_year), n_rows, n_cols), np.nan)
@@ -969,7 +977,7 @@ class Catchment:
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
-                # Shorten computation time, because zenith >= 90 results in no irradiation.
+                # Shorten computation time, because if zenith >= 90 : no irradiation.
                 if zenith[j] >= 90:
                     inter_pot_radiation[j, :, :] = np.zeros_like(zenith[j])
                     continue
@@ -980,6 +988,7 @@ class Catchment:
                     mean_elevation, atmos_transmissivity, day_of_year[i],
                     zenith[j], incidence_angle)
 
+                # Account for cast shadows
                 if with_cast_shadows:
                     cast_shadows = self._calculate_cast_shadows(
                         dem, masked_dem_data, zenith[j], azimuth[j], mean_lat, j)

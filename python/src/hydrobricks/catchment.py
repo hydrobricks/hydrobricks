@@ -1245,6 +1245,20 @@ class Catchment:
         """
         return self.get_dem_x_resolution() * self.get_dem_y_resolution()
 
+    def get_dem_mean_lat_lon(self):
+        # Central coordinates of the catchment
+        mean_x = self.dem.bounds[0] + (self.dem.bounds[2] - self.dem.bounds[0]) / 2
+        if self.dem.bounds[3] > self.dem.bounds[1]:
+            mean_y = self.dem.bounds[1] + (self.dem.bounds[3] - self.dem.bounds[1]) / 2
+        else:
+            mean_y = self.dem.bounds[3] + (self.dem.bounds[1] - self.dem.bounds[3]) / 2
+
+        # Get the mean coordinates of the unit in lat/lon
+        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
+
+        return mean_lat, mean_lon
+
     def create_dem_pixel_geometry(self, i, j):
         """
         Create a shapely geometry of the DEM pixel.

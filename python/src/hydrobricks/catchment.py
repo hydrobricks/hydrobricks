@@ -556,6 +556,56 @@ class Catchment:
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
+    def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):
+        """
+        Create a hillshade from the DEM.
+
+        Adapted from https://github.com/royalosyin/Work-with-DEM-data-using-Python-
+        from-Simple-to-Complicated/blob/master/ex07-Hillshade%20from%20a%20Digital
+        %20Elevation%20Model%20(DEM).ipynb
+
+        Parameters
+        ----------
+        azimuth : float
+            The desired azimuth for the hillshade.
+        altitude : float
+            The desired sun angle altitude for the hillshade.
+        z_factor : float
+            The z factor to amplify the relief.
+
+        Returns
+        -------
+        A numpy array containing hillshade values.
+        """
+        x, y = np.gradient(self.dem.read(1))
+        x_pixel_size = self.dem.res[0]
+        y_pixel_size = self.dem.res[1]
+
+        if azimuth > 360.0:
+            raise ValueError(
+                "Azimuth value should be less than or equal to 360 degrees")
+
+        if altitude > 90.0:
+            raise ValueError(
+                "Altitude value should be less than or equal to 90 degrees")
+
+        # Account for the pixel size
+        x = z_factor * x / x_pixel_size
+        y = z_factor * y / y_pixel_size
+
+        azimuth = 360.0 - azimuth
+        azimuth_rad = azimuth * np.pi / 180.0
+        altitude_rad = altitude * np.pi / 180.0
+
+        slope = np.pi / 2.0 - np.arctan(np.sqrt(x * x + y * y))
+        aspect = np.arctan2(-x, y)
+
+        shaded = (np.sin(altitude_rad) * np.sin(slope) +
+                  np.cos(altitude_rad) * np.cos(slope) *
+                  np.cos((azimuth_rad - np.pi / 2.0) - aspect))
+
+        return 255 * (shaded + 1) / 2
+
     @staticmethod
     def get_solar_declination_rad(day_of_year):
         """

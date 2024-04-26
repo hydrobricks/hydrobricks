@@ -880,8 +880,8 @@ class Catchment:
 
         return incidence_angle
 
-    def _calculate_cast_shadows(self, dem_array, masked_dem,
-                                zenith, azimuth, lat, i=None):
+    def calculate_cast_shadows(self, dem_array, masked_dem,
+                               zenith, azimuth, lat, i=None):
         """
         Calculate the cast shadows.
 
@@ -1152,7 +1152,7 @@ class Catchment:
 
                 # Account for cast shadows
                 if with_cast_shadows:
-                    cast_shadows = self._calculate_cast_shadows(
+                    cast_shadows = self.calculate_cast_shadows(
                         dem, masked_dem_data, zenith[j], azimuth[j], mean_lat, j)
                     potential_radiation = potential_radiation * cast_shadows
 

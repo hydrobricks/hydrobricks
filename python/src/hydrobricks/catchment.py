@@ -578,8 +578,8 @@ class Catchment:
         A numpy array containing hillshade values.
         """
         x, y = np.gradient(self.dem.read(1))
-        x_pixel_size = self.dem.res[0]
-        y_pixel_size = self.dem.res[1]
+        x_pixel_size = self.get_dem_x_resolution()
+        y_pixel_size = self.get_dem_y_resolution()
 
         if azimuth > 360.0:
             raise ValueError(
@@ -880,61 +880,55 @@ class Catchment:
 
         return incidence_angle
 
-    def calculate_cast_shadows(self, dem_array, masked_dem,
-                               zenith, azimuth, lat, i=None):
+    def calculate_cast_shadows(self, dem_dataset, masked_dem,
+                               zenith, azimuth, lat):
         """
         Calculate the cast shadows.
 
         Parameters
         ----------
-        dem_array :
+        dem_dataset :
             DEM as read by rasterio, containing the DEM topography
         masked_dem : float
             DEM topography, masked with np.nan for the areas outside the study catchment
         zenith : float
             Solar zenith (IQBAL 2012), in degrees
         azimuth : float
-            Azimuth for ZSLOPE CALC, in degrees
+            Azimuth relative to the south for ZSLOPE CALC, in degrees
         lat : float
             Mean latitude of the catchment, in degrees
-        i : int
-            A number, used for creating successive files and debugging
 
         Returns
         -------
-        The cast shadows (1), the in sun areas (0), and the masked area (np.nan).
+        A np.array with the cast shadows (1), the in sun areas (0),
+        and the masked area (np.nan).
 
         Notes
         -----
         The algorithm is applied to the whole topography before masking the
         areas outside the catchment.
-        TODO:
-        The South hemisphere needs to be tested.
-        The difference in pixel x and y sizes should be taken into account.
         """
+        dem = dem_dataset.read(1)
+        x_size = dem_dataset.res[0]
+        y_size = dem_dataset.res[1]
 
-        dem = dem_array.read(1)
-
-        test = False
-        if test:
-            dem = np.array([[1., 2., 3., 4., 4.],
-                            [5., 6., 7., 8., 8.],
-                            [9., 10., 11., 12., 12.],
-                            [9., 10., 11., 12., 12.]])
+        if x_size != y_size:
+            raise ValueError("The DEM x and y resolutions must be equal "
+                             "for computing the cast shadows.")
 
         # Solar zenith and azimuth in radians
         zenith_rad = zenith * TO_RAD
         azimuth_rad = azimuth * TO_RAD
 
-        # Check in which hemisphere we are and if the sun is coming from
-        # the east or west directions
+        # Check the hemisphere and the sun direction
         north_hemisphere = (lat > 0)
         east = (azimuth <= -45)
         west = (45 <= azimuth)
 
+        if not north_hemisphere:
+            raise NotImplementedError("The South hemisphere is not implemented yet.")
+
         # Get mean pixel size
-        x_size = self.get_dem_x_resolution()
-        y_size = self.get_dem_y_resolution()
         pixel_size = (x_size + y_size) / 2
 
         # Tilt the DEM to obtain a global horizontal matching the sun rays
@@ -943,17 +937,6 @@ class Catchment:
         x_length, y_length = dem.shape
         if north_hemisphere:
             xv = xv[::-1, :]
-
-        if test:
-            print("i", i)
-            print("lat", lat)
-            print("pixel_size", pixel_size)
-            print("zenith", zenith)
-            print("azimuth", azimuth)
-            print("West", west)
-            print("East", east)
-            print("North hemisp", north_hemisphere)
-            print("xv, yv", xv, yv)
 
         # 1. Computation of the solar ray paths for each pixel.
         # offset: Offset in the direction derived by the azimuth, for each row.
@@ -991,7 +974,7 @@ class Catchment:
             mapped[ray_int, yv] = tilted_dem
             accumulated = np.fmax.accumulate(mapped, axis=1)
             cast_sh = (accumulated > mapped).astype(float)
-            dem_filled = accumulated[ray_int, yv]
+            # dem_filled = accumulated[ray_int, yv]
             cast_shadows = cast_sh[ray_int, yv]
 
         elif east:
@@ -1010,7 +993,7 @@ class Catchment:
             mapped[ray_int, yv[:, ::-1]] = tilted_dem
             accumulated = np.fmax.accumulate(mapped, axis=1)
             cast_sh = (accumulated > mapped).astype(float)
-            dem_filled = accumulated[ray_int, yv[:, ::-1]]
+            # dem_filled = accumulated[ray_int, yv[:, ::-1]]
             cast_shadows = cast_sh[ray_int, yv[:, ::-1]]
 
         else:
@@ -1029,33 +1012,27 @@ class Catchment:
             mapped[ray_int, xv] = tilted_dem
             accumulated = np.fmax.accumulate(mapped, axis=1)
             cast_sh = (accumulated > mapped).astype(float)
-            dem_filled = accumulated[ray_int, xv]
+            # dem_filled = accumulated[ray_int, xv]
             cast_shadows = cast_sh[ray_int, xv]
 
         # Put the mask back on (we need the surrounding topography in the steps before).
         cast_shadows[np.isnan(masked_dem)] = np.nan
 
-        if test:
-            print(offset, "offset")
-            print(ray, "ray")
-            print(ray_int, "ray_int")
-            print(mapped, "mapped")
-
-        if i:
-            profile = dem_array.profile
-            with hb.rasterio.open(f'1_ray_{i}.tif', 'w', **profile) as dst:
-                dst.write(ray, 1)
-                dst.close()
-            with hb.rasterio.open(
-                    f'1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
-                dst.write(orthogonal_distance, 1)
-                dst.close()
-            with hb.rasterio.open(f'1_dem_filled_{i}.tif', 'w', **profile) as dst:
-                dst.write(dem_filled, 1)
-                dst.close()
-            with hb.rasterio.open(f'1_cast_shadows_{i}.tif', 'w', **profile) as dst:
-                dst.write(cast_shadows, 1)
-                dst.close()
+        # if i:
+        #     profile = dem_array.profile
+        #     with hb.rasterio.open(f'1_ray_{i}.tif', 'w', **profile) as dst:
+        #         dst.write(ray, 1)
+        #         dst.close()
+        #     with hb.rasterio.open(
+        #             f'1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
+        #         dst.write(orthogonal_distance, 1)
+        #         dst.close()
+        #     with hb.rasterio.open(f'1_dem_filled_{i}.tif', 'w', **profile) as dst:
+        #         dst.write(dem_filled, 1)
+        #         dst.close()
+        #     with hb.rasterio.open(f'1_cast_shadows_{i}.tif', 'w', **profile) as dst:
+        #         dst.write(cast_shadows, 1)
+        #         dst.close()
 
         return cast_shadows
 
@@ -1153,7 +1130,7 @@ class Catchment:
                 # Account for cast shadows
                 if with_cast_shadows:
                     cast_shadows = self.calculate_cast_shadows(
-                        dem, masked_dem_data, zenith[j], azimuth[j], mean_lat, j)
+                        dem, masked_dem_data, zenith[j], azimuth[j], mean_lat)
                     potential_radiation = potential_radiation * cast_shadows
 
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()

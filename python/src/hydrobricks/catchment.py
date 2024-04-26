@@ -654,9 +654,9 @@ class Catchment:
         return zenith
 
     @staticmethod
-    def get_solar_azimuth(hour_angles, lat_rad, solar_declination):
+    def get_solar_azimuth_to_south(hour_angles, lat_rad, solar_declination):
         """
-        Compute the solar azimuth.
+        Compute the solar azimuth relative to the south.
 
         The solar azimuth is the angle between the sun and the observer's meridian.
         It is typically measured in degrees.
@@ -691,6 +691,18 @@ class Catchment:
 
         if convert_to_float:
             azimuth = azimuth[0]
+
+        return azimuth
+
+    @staticmethod
+    def get_solar_azimuth_to_north(hour_angles, lat_rad, solar_declination):
+        """
+        Compute the solar azimuth relative to the north.
+        See get_solar_azimuth_to_south() for more details.
+        """
+        azimuth = Catchment.get_solar_azimuth_to_south(
+            hour_angles, lat_rad, solar_declination)
+        azimuth += 180
 
         return azimuth
 
@@ -1072,7 +1084,7 @@ class Catchment:
 
             # Compute the zenith and azimuth
             zenith = self.get_solar_zenith(ha_list, lat_rad, solar_declin[i])
-            azimuth = self.get_solar_azimuth(ha_list, lat_rad, solar_declin[i])
+            azimuth = self.get_solar_azimuth_to_south(ha_list, lat_rad, solar_declin[i])
 
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)

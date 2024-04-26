@@ -154,24 +154,24 @@ def test_solar_zenith_aug():
 
 def test_solar_azimuth_jan():
     lat_rad = math.radians(47)
-    solar_declination = hb.Catchment.get_solar_declination_rad(10)
+    solar_declin = hb.Catchment.get_solar_declination_rad(10)
     # Solar noon for location and date: 12:35:06 (https://gml.noaa.gov/grad/solcalc/)
     noon_dt = 35 / 60 + 6 / 3600
     hour_dt = -2  # 10h local time
     hour_angle = math.radians(15 * (hour_dt - noon_dt))
-    azimuth = hb.Catchment.get_solar_azimuth(hour_angle, lat_rad, solar_declination)
+    azimuth = hb.Catchment.get_solar_azimuth_to_north(hour_angle, lat_rad, solar_declin)
     res = 143.45  # From https://www.suncalc.org/
     assert azimuth == pytest.approx(res, abs=0.04)
 
 
 def test_solar_azimuth_aug():
     lat_rad = math.radians(47.31759)
-    solar_declination = hb.Catchment.get_solar_declination_rad(218)
+    solar_declin = hb.Catchment.get_solar_declination_rad(218)
     # Solar noon for location and date: 13:28:22 (https://gml.noaa.gov/grad/solcalc/)
     noon_dt = 1 + 28 / 60 + 22 / 3600
     hour_dt = 7  # 19h local time
     hour_angle = math.radians(15 * (hour_dt - noon_dt))
-    azimuth = hb.Catchment.get_solar_azimuth(hour_angle, lat_rad, solar_declination)
+    azimuth = hb.Catchment.get_solar_azimuth_to_north(hour_angle, lat_rad, solar_declin)
     res = 276.36  # From https://www.suncalc.org/
     assert azimuth == pytest.approx(res, abs=0.06)
 

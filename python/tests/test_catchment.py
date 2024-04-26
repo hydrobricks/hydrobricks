@@ -1,9 +1,11 @@
+import math
 import os.path
 import shutil
 import tempfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import hydrobricks as hb
 
@@ -113,6 +115,65 @@ def test_discretize_by_elevation_and_aspect():
     catchment.discretize_by(criteria=['elevation', 'aspect'],
                             elevation_method='isohypse', elevation_distance=100)
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
+
+
+def test_solar_declination_jan():
+    res = math.radians(-22.019)  # From https://www.suncalc.org/
+    assert hb.Catchment.get_solar_declination_rad(10) == pytest.approx(res, abs=0.001)
+
+
+def test_solar_declination_aug():
+    doy = 218  # August 6th
+    res = math.radians(16.523)  # From https://www.suncalc.org/
+    assert hb.Catchment.get_solar_declination_rad(doy) == pytest.approx(res, abs=0.001)
+
+
+def test_solar_zenith_jan():
+    lat_rad = math.radians(47)
+    solar_declination = hb.Catchment.get_solar_declination_rad(10)
+    # Solar noon for location and date: 12:35:06 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 35 / 60 + 6 / 3600
+    hour_dt = -2  # 10h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    zenith = hb.Catchment.get_solar_zenith(hour_angle, lat_rad, solar_declination)
+    res = 90 - 12.69  # From https://www.suncalc.org/
+    assert zenith == pytest.approx(res, abs=0.05)
+
+
+def test_solar_zenith_aug():
+    lat_rad = math.radians(47.31759)
+    solar_declination = hb.Catchment.get_solar_declination_rad(218)
+    # Solar noon for location and date: 13:28:22 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 1 + 28 / 60 + 22 / 3600
+    hour_dt = 7  # 19h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    zenith = hb.Catchment.get_solar_zenith(hour_angle, lat_rad, solar_declination)
+    res = 90 - 16.86  # From https://www.suncalc.org/
+    assert zenith == pytest.approx(res, abs=0.08)
+
+
+def test_solar_azimuth_jan():
+    lat_rad = math.radians(47)
+    solar_declination = hb.Catchment.get_solar_declination_rad(10)
+    # Solar noon for location and date: 12:35:06 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 35 / 60 + 6 / 3600
+    hour_dt = -2  # 10h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    azimuth = hb.Catchment.get_solar_azimuth(hour_angle, lat_rad, solar_declination)
+    res = 143.45  # From https://www.suncalc.org/
+    assert azimuth == pytest.approx(res, abs=0.04)
+
+
+def test_solar_azimuth_aug():
+    lat_rad = math.radians(47.31759)
+    solar_declination = hb.Catchment.get_solar_declination_rad(218)
+    # Solar noon for location and date: 13:28:22 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 1 + 28 / 60 + 22 / 3600
+    hour_dt = 7  # 19h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    azimuth = hb.Catchment.get_solar_azimuth(hour_angle, lat_rad, solar_declination)
+    res = 276.36  # From https://www.suncalc.org/
+    assert azimuth == pytest.approx(res, abs=0.06)
 
 
 def test_radiation_calculation():

@@ -483,9 +483,9 @@ class Catchment:
 
         Parameters
         ----------
-        resolution : float
+        resolution : ?float
             Desired pixel resolution.
-        output_path : str
+        output_path : str|Path
             Path of the directory to save the downsampled DEM to.
 
         Returns
@@ -522,7 +522,9 @@ class Catchment:
             )
 
         # Save the downsampled DEM to a file
-        filepath = output_path + '/downsampled_dem.tif'
+        if isinstance(output_path, str):
+            output_path = Path(output_path)
+        filepath = output_path / 'downsampled_dem.tif'
         xr_dem_downsampled.rio.to_raster(filepath)
 
         # Reopen the downsampled DEM as a rasterio dataset
@@ -553,6 +555,206 @@ class Catchment:
             xr_dem = hb.rxr.open_rasterio(self.dem.files[0]).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+
+    def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):
+        """
+        Create a hillshade from the DEM.
+
+        Adapted from https://github.com/royalosyin/Work-with-DEM-data-using-Python-
+        from-Simple-to-Complicated/blob/master/ex07-Hillshade%20from%20a%20Digital
+        %20Elevation%20Model%20(DEM).ipynb
+
+        Parameters
+        ----------
+        azimuth : float
+            The desired azimuth for the hillshade.
+        altitude : float
+            The desired sun angle altitude for the hillshade.
+        z_factor : float
+            The z factor to amplify the relief.
+
+        Returns
+        -------
+        A numpy array containing hillshade values.
+        """
+        x, y = np.gradient(self.dem.read(1))
+        x_pixel_size = self.get_dem_x_resolution()
+        y_pixel_size = self.get_dem_y_resolution()
+
+        if azimuth > 360.0:
+            raise ValueError(
+                "Azimuth value should be less than or equal to 360 degrees")
+
+        if altitude > 90.0:
+            raise ValueError(
+                "Altitude value should be less than or equal to 90 degrees")
+
+        # Account for the pixel size
+        x = z_factor * x / x_pixel_size
+        y = z_factor * y / y_pixel_size
+
+        azimuth = 360.0 - azimuth
+        azimuth_rad = azimuth * np.pi / 180.0
+        altitude_rad = altitude * np.pi / 180.0
+
+        slope = np.pi / 2.0 - np.arctan(np.sqrt(x * x + y * y))
+        aspect = np.arctan2(-x, y)
+
+        shaded = (np.sin(altitude_rad) * np.sin(slope) +
+                  np.cos(altitude_rad) * np.cos(slope) *
+                  np.cos((azimuth_rad - np.pi / 2.0) - aspect))
+
+        return 255 * (shaded + 1) / 2
+
+    @staticmethod
+    def get_solar_declination_rad(day_of_year):
+        """
+        Compute the solar declination.
+
+        The solar declination is the angle between the rays of the Sun and the
+        plane of the Earth's equator. It represents how much the sun is
+        tilted towards or away from the observer's latitude. The calculation
+        involves trigonometric functions to account for the observer's latitude
+        and the position of the sun in the sky.
+
+        Parameters
+        ----------
+        day_of_year : int|np.array
+            Day of the year (1-366).
+
+        Returns
+        -------
+        The solar declination in radians
+        """
+
+        # Normalized day of the year
+        # '(jd-172)' calculates the number of days that have passed since the summer
+        # solstice (around June 21st), which is day 172 in a non-leap year.
+        # '(360*(jd-172))/365' normalizes this count to a value representing the
+        # position in the orbit of the Earth around the Sun (in degrees).
+        ndy = ((360 * (day_of_year - 172)) / 365)
+
+        # The cos(...) function is applied to the normalized day of the year. It
+        # produces values between -1 and 1, representing the variation in solar
+        # declination throughout the year. The constant factor 23.45 represents the
+        # tilt of the Earth's axis relative to its orbital plane. This tilt causes the
+        # variation in the angle of the sun's rays reaching different latitudes
+        # on Earth.
+        solar_declin = 23.45 * np.cos(ndy * TO_RAD) * TO_RAD
+
+        return solar_declin
+
+    @staticmethod
+    def get_solar_hour_angle_limit(solar_declination, lat_rad):
+        """
+        Compute the hour angle limit value (min/max).
+
+        The hour angle is the angular distance between the sun and the observer's
+        meridian. It is typically measured in degrees. The tangent of
+        solar_declin/lat_rad represents the ratio of the opposite side
+        (vertical component of the sun's rays) to the adjacent side (horizontal
+        component). It helps capture how much the sun/the observer's location is
+        tilted north or south relative to the equator.
+
+        Parameters
+        ----------
+        solar_declination : float|np.array
+            Solar declination in radians.
+        lat_rad : float
+            Latitude in radians.
+
+        Returns
+        -------
+        The limit value of the hour angle in radians.
+        """
+
+        # The negative sign is applied because the Hour Angle is negative in the
+        # morning and positive in the afternoon.
+        hour_angle = np.arccos(-np.tan(solar_declination) * np.tan(lat_rad))
+
+        return hour_angle
+
+    @staticmethod
+    def get_solar_zenith(hour_angles, lat_rad, solar_declination):
+        """
+        Compute the solar zenith.
+
+        The Solar zenith (IQBAL 2012) is the angle between the sun and the
+        vertical (zenith) position directly above the observer. The result is
+        expressed in degrees. The calculation involves trigonometric functions
+        to account for the observer's latitude, the solar declination, and the
+        position of the sun in the sky (represented by the Hour Angles).
+
+        Parameters
+        ----------
+        hour_angles : float|np.ndarray
+            Hour angle(s).
+        lat_rad : float
+            Latitude in radians.
+        solar_declination : float
+            Solar declination in radians.
+
+        Returns
+        -------
+        The solar zenith in degrees.
+        """
+        zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declination)) +
+                           (np.cos(lat_rad) * np.cos(solar_declination) *
+                            np.cos(hour_angles))) * TO_DEG
+        return zenith
+
+    @staticmethod
+    def get_solar_azimuth_to_south(hour_angles, lat_rad, solar_declination):
+        """
+        Compute the solar azimuth relative to the south.
+
+        The solar azimuth is the angle between the sun and the observer's meridian.
+        It is typically measured in degrees.
+        Azimuth with negative values before solar noon and positive values with
+        positive values after solar noon. Solar noon is defined by the change in sign
+        of the hour angle (negative in the morning, positive in the afternoon).
+        From https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur
+
+        Parameters
+        ----------
+        hour_angles : float|np.ndarray
+            Array with the hour angles.
+        lat_rad : float
+            Latitude in radians.
+        solar_declination : float
+            Solar declination.
+
+        Returns
+        -------
+        The solar azimuth in degrees.
+        """
+        convert_to_float = False
+        if isinstance(hour_angles, (int, float)):
+            hour_angles = np.array([hour_angles])
+            convert_to_float = True
+
+        azimuth = np.degrees(np.arctan(np.sin(hour_angles) / (
+                np.sin(lat_rad) * np.cos(hour_angles) -
+                np.cos(lat_rad) * np.tan(solar_declination))))
+        azimuth[np.where((azimuth < 0) & (hour_angles > 0))] += 180
+        azimuth[np.where((azimuth > 0) & (hour_angles < 0))] -= 180
+
+        if convert_to_float:
+            azimuth = azimuth[0]
+
+        return azimuth
+
+    @staticmethod
+    def get_solar_azimuth_to_north(hour_angles, lat_rad, solar_declination):
+        """
+        Compute the solar azimuth relative to the north.
+        See get_solar_azimuth_to_south() for more details.
+        """
+        azimuth = Catchment.get_solar_azimuth_to_south(
+            hour_angles, lat_rad, solar_declination)
+        azimuth += 180
+
+        return azimuth
 
     @staticmethod
     def _calculate_radiation_hock_equation(elevation, atmos_transmissivity, day_of_year,
@@ -678,9 +880,118 @@ class Catchment:
 
         return incidence_angle
 
+    def calculate_cast_shadows(self, dem_dataset, masked_dem,
+                               zenith, azimuth, lat):
+        """
+        Calculate the cast shadows.
+
+        The approach relies on tilting the DEM to obtain a horizon matching the sun
+        rays and filling the DEM. The algorithm is applied to the whole topography
+        before masking the areas outside the catchment.
+
+        Parameters
+        ----------
+        dem_dataset :
+            DEM as read by rasterio, containing the DEM topography
+        masked_dem : float
+            DEM topography, masked with np.nan for the areas outside the study catchment
+        zenith : float
+            Solar zenith (IQBAL 2012), in degrees
+        azimuth : float
+            Azimuth relative to the south for ZSLOPE CALC, in degrees
+        lat : float
+            Mean latitude of the catchment, in degrees
+
+        Returns
+        -------
+        A np.array with the cast shadows (1), the in sun areas (0),
+        and the masked area (np.nan).
+
+        Notes
+        -----
+        The algorithm is applied to the whole topography before masking the
+        areas outside the catchment.
+        """
+        dem = dem_dataset.read(1)
+        x_size = abs(dem_dataset.res[0])
+        y_size = abs(dem_dataset.res[1])
+
+        if x_size != y_size:
+            raise ValueError("The DEM x and y resolutions must be equal "
+                             "for computing the cast shadows.")
+
+        if zenith >= 90:
+            cast_shadows = np.ones(dem.shape)
+            cast_shadows[np.isnan(masked_dem)] = np.nan
+            return cast_shadows
+
+        # Get mean pixel size
+        pixel_size = (x_size + y_size) / 2
+
+        # Get the x and y grids for the DEM
+        xv, yv = np.indices(dem.shape)
+
+        # Get the base arrays for the solar ray IDs and the offset distances
+        if azimuth < -135:  # NNE
+            ref_grid = xv
+            base_ray_ids = yv[:, ::-1]
+            angle = np.tan(-(azimuth + 90) * TO_RAD)
+        elif azimuth < -90:  # ENE
+            ref_grid = yv[:, ::-1]
+            base_ray_ids = xv
+            angle = np.tan((azimuth + 180) * TO_RAD)
+        elif azimuth < -45:  # ESE
+            ref_grid = yv[:, ::-1]
+            base_ray_ids = xv[::-1, :]
+            angle = np.tan(-azimuth * TO_RAD)
+        elif azimuth < 0:  # SSE
+            ref_grid = xv[::-1, :]
+            base_ray_ids = yv[:, ::-1]
+            angle = np.tan((90 + azimuth) * TO_RAD)
+        elif azimuth < 45:  # SSW
+            ref_grid = xv[::-1, :]
+            base_ray_ids = yv
+            angle = np.tan((90 - azimuth) * TO_RAD)
+        elif azimuth < 90:  # WSW
+            ref_grid = yv
+            base_ray_ids = xv[::-1, :]
+            angle = np.tan(azimuth * TO_RAD)
+        elif azimuth < 135:  # WNW
+            ref_grid = yv
+            base_ray_ids = xv
+            angle = np.tan((180 - azimuth) * TO_RAD)
+        else:  # NNW
+            ref_grid = xv
+            base_ray_ids = yv
+            angle = np.tan((azimuth - 90) * TO_RAD)
+
+        # Computation of the solar ray paths for each pixel (rays with different IDs).
+        ray_ids = base_ray_ids - ref_grid / angle  # Adding the offset (from azimuth)
+        ray_ids = ray_ids - np.nanmin(ray_ids)  # Set all IDs to positive values
+        ray_ids = ray_ids.astype(int) + 1  # Convert to int
+
+        # Compute the tilted DEM
+        orthogonal_distance = ref_grid + base_ray_ids / angle  # Projected distance
+        tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith * TO_RAD)
+        tilted_dem = dem + tilt_heights  # DEM after tilt of zenith °, azimuthal dir.
+
+        # Remapping of the solar rays on another matrix to process them.
+        mapped = np.ones((np.nanmax(ray_ids) + 1, np.max(ref_grid) + 1))
+        mapped = mapped * np.nan  # Mapping of the tilted DEM from solar rays ...
+        mapped[ray_ids, ref_grid] = tilted_dem  # ... to row/columns.
+        accumulated = np.fmax.accumulate(mapped, axis=1)
+        cast_sh = (accumulated > mapped).astype(float)
+        cast_shadows = cast_sh[ray_ids, ref_grid]
+
+        # Put the mask back on (we previously needed the surrounding topography).
+        cast_shadows[np.isnan(masked_dem)] = np.nan
+
+        return cast_shadows
+
     def calculate_daily_potential_radiation(self, output_path, resolution=None,
                                             atmos_transmissivity=0.75,
-                                            steps_per_hour=4):
+                                            steps_per_hour=4,
+                                            with_cast_shadows=True):
         """
         Compute the daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²] using Hock (1999)'s equation.
@@ -698,6 +1009,8 @@ class Catchment:
             (value taken in Hock 1999)
         steps_per_hour : int, optional
             Number of steps per hour to compute the potential radiation, default is 4.
+        with_cast_shadows : bool, optional
+            If True, the cast shadows are taken into account. Default is True.
 
         Returns
         -------
@@ -726,37 +1039,14 @@ class Catchment:
         mean_lat, _ = self._extract_unit_mean_lat_lon(self.masked_dem_data)
         lat_rad = mean_lat * TO_RAD
 
-        # Normalized day of the year
-        # '(jd-172)' calculates the number of days that have passed since the summer
-        # solstice (around June 21st), which is day 172 in a non-leap year.
-        # '(360*(jd-172))/365' normalizes this count to a value representing the
-        # position in the orbit of the Earth around the Sun (in degrees).
-        ndy = ((360 * (day_of_year - 172)) / 365)
+        # Compute the solar declination
+        solar_declin = self.get_solar_declination_rad(day_of_year)
 
-        # The solar Declination is the angle between the rays of the Sun and the
-        # plane of the Earth's equator. It represents how much the sun is
-        # tilted towards or away from the observer's latitude.
-        # The cos(...) function is applied to the normalized day of the year. It
-        # produces values between -1 and 1, representing the variation in solar
-        # declination throughout the year. The constant factor 23.45 represents the
-        # tilt of the Earth's axis relative to its orbital plane. This tilt causes the
-        # variation in the angle of the sun's rays reaching different latitudes
-        # on Earth.
-        solar_declin = 23.45 * np.cos(ndy * TO_RAD) * TO_RAD
+        # Compute the hour angle starting value
+        ha_limit = self.get_solar_hour_angle_limit(solar_declin, lat_rad)
 
-        # The hour angle is the angular distance between the sun and the observer's
-        # meridian. It is typically measured in degrees. The tangent of
-        # solar_declin/lat_rad represents the ratio of the opposite side
-        # (vertical component of the sun's rays) to the adjacent side (horizontal
-        # component). It helps capture how much the sun/the observer's location is
-        # tilted north or south relative to the equator. The negative sign is applied
-        # because the Hour Angle is negative in the morning and positive in the
-        # afternoon.
-        hour_angle = np.arccos(-np.tan(solar_declin) * np.tan(lat_rad))
-
-        # Time intervals (360°/24h = 15° per hour, then divided by the number of steps
-        # per hour)
-        time_interval = (15/steps_per_hour) * TO_RAD
+        # Time intervals (360°/24h = 15° per hour, divided by the # of steps / hour)
+        time_interval = (15 / steps_per_hour) * TO_RAD
 
         # Create array for the daily potential radiation
         daily_radiation = np.full((len(day_of_year), n_rows, n_cols), np.nan)
@@ -768,36 +1058,33 @@ class Catchment:
                 print('Computing radiation for day', day_of_year[i])
 
             # List of hour angles throughout the day.
-            ha_list = np.arange(-hour_angle[i], hour_angle[i] + time_interval,
+            ha_list = np.arange(-ha_limit[i], ha_limit[i] + time_interval,
                                 time_interval)
 
-            # The Solar zenith (IQBAL 2012) is the angle between the sun and the
-            # vertical (zenith) position directly above the observer. The result is
-            # expressed in degrees. The calculation involves trigonometric functions
-            # to account for the observer's latitude, the solar declination, and the
-            # position of the sun in the sky (represented by the Hour Angles).
-            zenith = np.arccos((np.sin(lat_rad) * np.sin(solar_declin[i])) +
-                               (np.cos(lat_rad) * np.cos(solar_declin[i]) *
-                                np.cos(ha_list))) * TO_DEG
-
-            # Azimuth with negative values before solar noon and positive
-            # ones after solar noon. Solar noon is defined by the change in sign of
-            # the hour angle (negative in the morning, positive in the afternoon).
-            # From https://www.astrolabe-science.fr/diagramme-solaire-azimut-hauteur
-            azimuth = np.degrees(np.arctan(np.sin(ha_list) / (
-                    np.sin(lat_rad) * np.cos(ha_list) -
-                    np.cos(lat_rad) * np.tan(solar_declin[i]))))
-            azimuth[np.where((azimuth < 0) & (ha_list > 0))] += 180
-            azimuth[np.where((azimuth > 0) & (ha_list < 0))] -= 180
+            # Compute the zenith and azimuth
+            zenith = self.get_solar_zenith(ha_list, lat_rad, solar_declin[i])
+            azimuth = self.get_solar_azimuth_to_south(ha_list, lat_rad, solar_declin[i])
 
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
             for j in range(len(zenith)):
+                # Shorten computation time, because if zenith >= 90 : no irradiation.
+                if zenith[j] >= 90:
+                    inter_pot_radiation[j, :, :] = np.zeros_like(zenith[j])
+                    continue
+
                 incidence_angle = self._calculate_angle_of_incidence(
                     zenith[j], slope, azimuth[j], aspect)
                 potential_radiation = self._calculate_radiation_hock_equation(
                     mean_elevation, atmos_transmissivity, day_of_year[i],
                     zenith[j], incidence_angle)
+
+                # Account for cast shadows
+                if with_cast_shadows:
+                    cast_shadows = self.calculate_cast_shadows(
+                        dem, masked_dem_data, zenith[j], azimuth[j], mean_lat)
+                    potential_radiation = potential_radiation * cast_shadows
+
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
 
             with warnings.catch_warnings():
@@ -813,6 +1100,14 @@ class Catchment:
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(
             mean_annual_radiation, dem, output_path)
+
+        # Put the mask back on (we need the surrounding topography in the steps before)
+        # And make sure the padding lines are also set to nans and not 0
+        mean_annual_radiation[np.isnan(masked_dem_data)] = np.nan
+        mean_annual_radiation[0, :] = np.nan
+        mean_annual_radiation[-1, :] = np.nan
+        mean_annual_radiation[:, 0] = np.nan
+        mean_annual_radiation[:, -1] = np.nan
 
         # Save the daily potential radiation to a netcdf file
         self._save_potential_radiation_netcdf(
@@ -1048,6 +1343,20 @@ class Catchment:
         The DEM pixel area.
         """
         return self.get_dem_x_resolution() * self.get_dem_y_resolution()
+
+    def get_dem_mean_lat_lon(self):
+        # Central coordinates of the catchment
+        mean_x = self.dem.bounds[0] + (self.dem.bounds[2] - self.dem.bounds[0]) / 2
+        if self.dem.bounds[3] > self.dem.bounds[1]:
+            mean_y = self.dem.bounds[1] + (self.dem.bounds[3] - self.dem.bounds[1]) / 2
+        else:
+            mean_y = self.dem.bounds[3] + (self.dem.bounds[1] - self.dem.bounds[3]) / 2
+
+        # Get the mean coordinates of the unit in lat/lon
+        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
+
+        return mean_lat, mean_lon
 
     def create_dem_pixel_geometry(self, i, j):
         """

@@ -1,9 +1,11 @@
+import math
 import os.path
 import shutil
 import tempfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import hydrobricks as hb
 
@@ -115,6 +117,65 @@ def test_discretize_by_elevation_and_aspect():
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
 
 
+def test_solar_declination_jan():
+    res = math.radians(-22.019)  # From https://www.suncalc.org/
+    assert hb.Catchment.get_solar_declination_rad(10) == pytest.approx(res, abs=0.001)
+
+
+def test_solar_declination_aug():
+    doy = 218  # August 6th
+    res = math.radians(16.523)  # From https://www.suncalc.org/
+    assert hb.Catchment.get_solar_declination_rad(doy) == pytest.approx(res, abs=0.001)
+
+
+def test_solar_zenith_jan():
+    lat_rad = math.radians(47)
+    solar_declination = hb.Catchment.get_solar_declination_rad(10)
+    # Solar noon for location and date: 12:35:06 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 35 / 60 + 6 / 3600
+    hour_dt = -2  # 10h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    zenith = hb.Catchment.get_solar_zenith(hour_angle, lat_rad, solar_declination)
+    res = 90 - 12.69  # From https://www.suncalc.org/
+    assert zenith == pytest.approx(res, abs=0.05)
+
+
+def test_solar_zenith_aug():
+    lat_rad = math.radians(47.31759)
+    solar_declination = hb.Catchment.get_solar_declination_rad(218)
+    # Solar noon for location and date: 13:28:22 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 1 + 28 / 60 + 22 / 3600
+    hour_dt = 7  # 19h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    zenith = hb.Catchment.get_solar_zenith(hour_angle, lat_rad, solar_declination)
+    res = 90 - 16.86  # From https://www.suncalc.org/
+    assert zenith == pytest.approx(res, abs=0.08)
+
+
+def test_solar_azimuth_jan():
+    lat_rad = math.radians(47)
+    solar_declin = hb.Catchment.get_solar_declination_rad(10)
+    # Solar noon for location and date: 12:35:06 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 35 / 60 + 6 / 3600
+    hour_dt = -2  # 10h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    azimuth = hb.Catchment.get_solar_azimuth_to_north(hour_angle, lat_rad, solar_declin)
+    res = 143.45  # From https://www.suncalc.org/
+    assert azimuth == pytest.approx(res, abs=0.04)
+
+
+def test_solar_azimuth_aug():
+    lat_rad = math.radians(47.31759)
+    solar_declin = hb.Catchment.get_solar_declination_rad(218)
+    # Solar noon for location and date: 13:28:22 (https://gml.noaa.gov/grad/solcalc/)
+    noon_dt = 1 + 28 / 60 + 22 / 3600
+    hour_dt = 7  # 19h local time
+    hour_angle = math.radians(15 * (hour_dt - noon_dt))
+    azimuth = hb.Catchment.get_solar_azimuth_to_north(hour_angle, lat_rad, solar_declin)
+    res = 276.36  # From https://www.suncalc.org/
+    assert azimuth == pytest.approx(res, abs=0.06)
+
+
 def test_radiation_calculation():
     dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
     ref_radiation_path = FILES_DIR / 'others' / 'radiation_annual_mean.tif'
@@ -123,7 +184,8 @@ def test_radiation_calculation():
         catchment = hb.Catchment()
         catchment.extract_dem(dem_path)
 
-        catchment.calculate_daily_potential_radiation(str(Path(tmp_dir)))
+        catchment.calculate_daily_potential_radiation(
+            str(Path(tmp_dir)), with_cast_shadows=False)
 
         assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
         assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
@@ -147,6 +209,39 @@ def test_radiation_calculation():
         assert abs(average_diff) < 4
 
 
+def test_radiation_calculation_with_cast_shadows():
+    dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
+    ref_radiation_path = FILES_DIR / 'others' / 'radiation_annual_mean.tif'
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment = hb.Catchment()
+        catchment.extract_dem(dem_path)
+
+        catchment.calculate_daily_potential_radiation(
+            str(Path(tmp_dir)), with_cast_shadows=True)
+
+        assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
+        assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
+
+        ref_radiation = hb.rasterio.open(ref_radiation_path).read(1)
+        calc_radiation = hb.rasterio.open(
+            Path(tmp_dir) / 'annual_potential_radiation.tif').read(1)
+
+        # Shift the calculated radiation to match the reference (likely due to the
+        # slope and aspect calculations)
+        calc_radiation = np.roll(calc_radiation, 1, axis=0)
+        calc_radiation = np.roll(calc_radiation, -1, axis=1)
+
+        # Crop 2 pixels around the edges for both arrays
+        ref_radiation = ref_radiation[2:-2, 2:-2]
+        calc_radiation = calc_radiation[2:-2, 2:-2]
+
+        diff = ref_radiation - calc_radiation
+        average_diff = np.mean(diff)
+
+        assert abs(average_diff) > 4  # Expected to be different from the previous test
+
+
 def test_radiation_calculation_resolution():
     dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
 
@@ -158,8 +253,8 @@ def test_radiation_calculation_resolution():
     catchment = hb.Catchment()
     catchment.extract_dem(dem_path)
 
-    catchment.calculate_daily_potential_radiation(str(working_dir),
-                                                  resolution=100)
+    catchment.calculate_daily_potential_radiation(
+        str(working_dir), resolution=100, with_cast_shadows=False)
 
     assert (working_dir / 'annual_potential_radiation.tif').exists()
     assert (working_dir / 'daily_potential_radiation.nc').exists()

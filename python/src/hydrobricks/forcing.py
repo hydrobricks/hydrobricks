@@ -16,6 +16,7 @@ import pandas as pd
 from cftime import num2date
 
 import hydrobricks as hb
+from hydrobricks.constants import TO_RAD
 
 from .time_series import TimeSeries1D, TimeSeries2D
 
@@ -593,9 +594,9 @@ class Forcing:
         if 'latitude' in use or 'lat' in use:
             # If latitude provided in the arguments
             if 'latitude' in kwargs:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['latitude'])
+                pyet_args['lat'] = kwargs['latitude'] * TO_RAD
             elif 'lat' in kwargs:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(kwargs['lat'])
+                pyet_args['lat'] = kwargs['lat'] * TO_RAD
             else:
                 use_unit_latitude = True
 
@@ -609,7 +610,7 @@ class Forcing:
             if use_unit_elevation:
                 pyet_args['elevation'] = unit['elevation'].values
             if use_unit_latitude:
-                pyet_args['lat'] = hb.pyet.deg_to_rad(unit['latitude'].values)
+                pyet_args['lat'] = unit['latitude'].values * TO_RAD
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 

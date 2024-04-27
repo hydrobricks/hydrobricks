@@ -184,7 +184,8 @@ def test_radiation_calculation():
         catchment = hb.Catchment()
         catchment.extract_dem(dem_path)
 
-        catchment.calculate_daily_potential_radiation(str(Path(tmp_dir)))
+        catchment.calculate_daily_potential_radiation(
+            str(Path(tmp_dir)), with_cast_shadows=False)
 
         assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
         assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
@@ -208,6 +209,39 @@ def test_radiation_calculation():
         assert abs(average_diff) < 4
 
 
+def test_radiation_calculation_with_cast_shadows():
+    dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
+    ref_radiation_path = FILES_DIR / 'others' / 'radiation_annual_mean.tif'
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment = hb.Catchment()
+        catchment.extract_dem(dem_path)
+
+        catchment.calculate_daily_potential_radiation(
+            str(Path(tmp_dir)), with_cast_shadows=True)
+
+        assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
+        assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
+
+        ref_radiation = hb.rasterio.open(ref_radiation_path).read(1)
+        calc_radiation = hb.rasterio.open(
+            Path(tmp_dir) / 'annual_potential_radiation.tif').read(1)
+
+        # Shift the calculated radiation to match the reference (likely due to the
+        # slope and aspect calculations)
+        calc_radiation = np.roll(calc_radiation, 1, axis=0)
+        calc_radiation = np.roll(calc_radiation, -1, axis=1)
+
+        # Crop 2 pixels around the edges for both arrays
+        ref_radiation = ref_radiation[2:-2, 2:-2]
+        calc_radiation = calc_radiation[2:-2, 2:-2]
+
+        diff = ref_radiation - calc_radiation
+        average_diff = np.mean(diff)
+
+        assert abs(average_diff) > 4  # Expected to be different from the previous test
+
+
 def test_radiation_calculation_resolution():
     dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
 
@@ -219,8 +253,8 @@ def test_radiation_calculation_resolution():
     catchment = hb.Catchment()
     catchment.extract_dem(dem_path)
 
-    catchment.calculate_daily_potential_radiation(str(working_dir),
-                                                  resolution=100)
+    catchment.calculate_daily_potential_radiation(
+        str(working_dir), resolution=100, with_cast_shadows=False)
 
     assert (working_dir / 'annual_potential_radiation.tif').exists()
     assert (working_dir / 'daily_potential_radiation.nc').exists()

@@ -932,11 +932,6 @@ class Catchment:
         xv, yv = np.indices(dem.shape)
 
         # Get the base arrays for the solar ray IDs and the offset distances
-
-        # self._generate_solar_rays(azimuth, xv, yv, zenith_rad, pixel_size, dem)
-
-        azimuth = 90
-
         if azimuth < -135:  # NNE
             ref_grid = xv
             base_ray_ids = yv[:, ::-1]
@@ -970,21 +965,22 @@ class Catchment:
             base_ray_ids = yv
             angle = np.tan((azimuth - 90) * TO_RAD)
 
-        # Creation of solar rays with different IDs
-        ray_ids = base_ray_ids - ref_grid / angle
-        ray_ids = ray_ids - np.nanmin(ray_ids)
-        ray_ids = ray_ids.astype(int) + 1
+        # Computation of the solar ray paths for each pixel (rays with different IDs).
+        ray_ids = base_ray_ids - ref_grid / angle  # Adding the offset (from azimuth)
+        ray_ids = ray_ids - np.nanmin(ray_ids)  # Set all IDs to positive values
+        ray_ids = ray_ids.astype(int) + 1  # Convert to int
 
-        orthogonal_distance = ref_grid + base_ray_ids / angle
+        # Compute the tilted DEM
+        orthogonal_distance = ref_grid + base_ray_ids / angle  # Projected distance
         tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith * TO_RAD)
-        tilted_dem = dem + tilt_heights
+        tilted_dem = dem + tilt_heights  # DEM after tilt of zenith °, azimuthal dir.
 
+        # Remapping of the solar rays on another matrix to process them.
         mapped = np.ones((np.nanmax(ray_ids) + 1, np.max(ref_grid) + 1))
-        mapped = mapped * np.nan
-        mapped[ray_ids, ref_grid] = tilted_dem
+        mapped = mapped * np.nan  # Mapping of the tilted DEM from solar rays ...
+        mapped[ray_ids, ref_grid] = tilted_dem  # ... to row/columns.
         accumulated = np.fmax.accumulate(mapped, axis=1)
         cast_sh = (accumulated > mapped).astype(float)
-        # dem_filled = accumulated[ray_int, ref_grid]
         cast_shadows = cast_sh[ray_ids, ref_grid]
 
         # Put the mask back on (we need the surrounding topography in the steps before).

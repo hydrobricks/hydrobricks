@@ -885,6 +885,10 @@ class Catchment:
         """
         Calculate the cast shadows.
 
+        The approach relies on tilting the DEM to obtain a horizon matching the sun
+        rays and filling the DEM. The algorithm is applied to the whole topography
+        before masking the areas outside the catchment.
+
         Parameters
         ----------
         dem_dataset :
@@ -909,21 +913,20 @@ class Catchment:
         areas outside the catchment.
         """
         dem = dem_dataset.read(1)
-        x_size = dem_dataset.res[0]
-        y_size = dem_dataset.res[1]
+        x_size = abs(dem_dataset.res[0])
+        y_size = abs(dem_dataset.res[1])
 
         if x_size != y_size:
             raise ValueError("The DEM x and y resolutions must be equal "
                              "for computing the cast shadows.")
 
-        # Solar zenith and azimuth in radians
-        zenith_rad = zenith * TO_RAD
-        azimuth_rad = azimuth * TO_RAD
+        if zenith >= 90:
+            cast_shadows = np.ones(dem.shape)
+            cast_shadows[np.isnan(masked_dem)] = np.nan
+            return cast_shadows
 
         # Check the hemisphere and the sun direction
         north_hemisphere = (lat > 0)
-        east = (azimuth <= -45)
-        west = (45 <= azimuth)
 
         if not north_hemisphere:
             raise NotImplementedError("The South hemisphere is not implemented yet.")
@@ -931,108 +934,85 @@ class Catchment:
         # Get mean pixel size
         pixel_size = (x_size + y_size) / 2
 
-        # Tilt the DEM to obtain a global horizontal matching the sun rays
-        # I get the x and y grids for my dem
+        # Get the x and y grids for the DEM
         xv, yv = np.indices(dem.shape)
-        x_length, y_length = dem.shape
-        if north_hemisphere:
-            xv = xv[::-1, :]
 
-        # 1. Computation of the solar ray paths for each pixel.
-        # offset: Offset in the direction derived by the azimuth, for each row.
-        # ray: Adding the offset to the position of each pixel.
-        # ray_positives: Because of the '- offset', some solar ray identifier are
-        #     negative. Putting them positives.
-        # ray_int: Convert to int. Now all pixels in the same solar ray have the
-        #     same identifier.
-        # 2. Computation of the tilt for the DEM.
-        # orthogonal_distance: Projected distance to the corner, projected on the
-        #     azimuthal direction.
-        # tilt_heights: Heights to add for each pixel to achieve tilting.
-        # tilted_dem: DEM after tilt of zenith degree in the azimuthal direction.
-        # 3. Remapping of the solar rays on another matrix and processing them.
-        # mapped: Map with nans on unused pixels and the tilted DEM pixels remapped
-        #     from solar rays to row/columns.
-        # accumulated: Map with filled DEM pixels. The solar rays are processed
-        #     as row/columns.
-        # cast_sh: Cast shadows in the solar rays system.
-        # dem_filled: Filled DEM in the DEM coordinate system.
-        # cast_shadows: Cast shadows in the DEM coordinate system.
-        if west:
-            offset = yv / np.tan(azimuth_rad)
-            ray = xv - offset
-            ray_positives = ray - np.nanmin(ray)
-            ray_int = ray_positives.astype(int)
+        # Get the base arrays for the solar ray IDs and the offset distances
+        base_ray_ids = None
+        ref_grid = None
+        angle = None
 
-            orthogonal_distance = np.sqrt(np.power(xv, 2) + np.power(offset, 2))
-            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
-            tilted_dem = dem + tilt_heights
+        # self._generate_solar_rays(azimuth, xv, yv, zenith_rad, pixel_size, dem)
 
-            mapped = np.ones((np.nanmax(ray_int) + 1,
-                              y_length))
-            mapped = mapped * np.nan
-            mapped[ray_int, yv] = tilted_dem
-            accumulated = np.fmax.accumulate(mapped, axis=1)
-            cast_sh = (accumulated > mapped).astype(float)
-            # dem_filled = accumulated[ray_int, yv]
-            cast_shadows = cast_sh[ray_int, yv]
+        if azimuth == -180:  # N
+            ref_grid = xv
+            base_ray_ids = yv
+        elif azimuth < -135:  # NNE
+            ref_grid = xv
+            base_ray_ids = yv[:, ::-1]
+            angle = np.tan(-(azimuth + 90) * TO_RAD)
+        elif azimuth < -90:  # ENE
+            ref_grid = yv[:, ::-1]
+            base_ray_ids = xv
+            angle = np.tan((azimuth + 180) * TO_RAD)
+        elif azimuth == -90:  # E
+            ref_grid = yv[:, ::-1]
+            base_ray_ids = xv
+        elif azimuth < -45:  # ESE
+            ref_grid = yv[:, ::-1]
+            base_ray_ids = xv[::-1, :]
+            angle = np.tan(-azimuth * TO_RAD)
+        elif azimuth < 0:  # SSE
+            ref_grid = xv[::-1, :]
+            base_ray_ids = yv[:, ::-1]
+            angle = np.tan((90 + azimuth) * TO_RAD)
+        elif azimuth == 0:  # S
+            ref_grid = xv[::-1, :]
+            base_ray_ids = yv[::-1, :]
+        elif azimuth < 45:  # SSW
+            ref_grid = xv[::-1, :]
+            base_ray_ids = yv
+            angle = np.tan((90 - azimuth) * TO_RAD)
+        elif azimuth < 90:  # WSW
+            ref_grid = yv
+            base_ray_ids = xv[::-1, :]
+            angle = np.tan(azimuth * TO_RAD)
+        elif azimuth == 90:  # W
+            ref_grid = yv
+            base_ray_ids = xv
+        elif azimuth < 135:  # WNW
+            ref_grid = yv
+            base_ray_ids = xv
+            angle = np.tan((180 - azimuth) * TO_RAD)
+        else:  # NNW
+            ref_grid = xv
+            base_ray_ids = yv
+            angle = np.tan((azimuth - 90) * TO_RAD)
 
-        elif east:
-            offset = yv / np.tan(azimuth_rad)
-            ray = xv + offset
-            ray_positives = ray - np.nanmin(ray)
-            ray_int = ray_positives.astype(int)[:, ::-1]
+        offset = np.zeros(dem.shape)
+        if angle is not None:
+            offset = ref_grid / angle
+            offset_t = base_ray_ids / angle
 
-            orthogonal_distance = np.sqrt(np.power(xv, 2) + np.power(offset, 2))
-            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
-            tilted_dem = dem + tilt_heights
+        # Creation of solar rays with different IDs
+        ray_ids = base_ray_ids - offset
+        ray_ids = ray_ids - np.nanmin(ray_ids)
+        ray_ids = ray_ids.astype(int) + 1
 
-            mapped = np.ones((np.nanmax(ray_int) + 1,
-                              y_length))
-            mapped = mapped * np.nan
-            mapped[ray_int, yv[:, ::-1]] = tilted_dem
-            accumulated = np.fmax.accumulate(mapped, axis=1)
-            cast_sh = (accumulated > mapped).astype(float)
-            # dem_filled = accumulated[ray_int, yv[:, ::-1]]
-            cast_shadows = cast_sh[ray_int, yv[:, ::-1]]
+        orthogonal_distance = ref_grid + offset_t
+        tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith * TO_RAD)
+        tilted_dem = dem + tilt_heights
 
-        else:
-            offset = xv * np.tan(azimuth_rad)
-            ray = yv - offset
-            ray_positives = ray - np.nanmin(ray)
-            ray_int = ray_positives.astype(int)
-
-            orthogonal_distance = np.sqrt(np.power(yv, 2) + np.power(offset, 2))
-            tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith_rad)
-            tilted_dem = dem + tilt_heights
-
-            mapped = np.ones((np.nanmax(ray_int) + 1,
-                              x_length))
-            mapped = mapped * np.nan
-            mapped[ray_int, xv] = tilted_dem
-            accumulated = np.fmax.accumulate(mapped, axis=1)
-            cast_sh = (accumulated > mapped).astype(float)
-            # dem_filled = accumulated[ray_int, xv]
-            cast_shadows = cast_sh[ray_int, xv]
+        mapped = np.ones((np.nanmax(ray_ids) + 1, np.max(ref_grid) + 1))
+        mapped = mapped * np.nan
+        mapped[ray_ids, ref_grid] = tilted_dem
+        accumulated = np.fmax.accumulate(mapped, axis=1)
+        cast_sh = (accumulated > mapped).astype(float)
+        # dem_filled = accumulated[ray_int, ref_grid]
+        cast_shadows = cast_sh[ray_ids, ref_grid]
 
         # Put the mask back on (we need the surrounding topography in the steps before).
         cast_shadows[np.isnan(masked_dem)] = np.nan
-
-        # if i:
-        #     profile = dem_array.profile
-        #     with hb.rasterio.open(f'1_ray_{i}.tif', 'w', **profile) as dst:
-        #         dst.write(ray, 1)
-        #         dst.close()
-        #     with hb.rasterio.open(
-        #             f'1_orthogonal_distance_{i}.tif', 'w', **profile) as dst:
-        #         dst.write(orthogonal_distance, 1)
-        #         dst.close()
-        #     with hb.rasterio.open(f'1_dem_filled_{i}.tif', 'w', **profile) as dst:
-        #         dst.write(dem_filled, 1)
-        #         dst.close()
-        #     with hb.rasterio.open(f'1_cast_shadows_{i}.tif', 'w', **profile) as dst:
-        #         dst.write(cast_shadows, 1)
-        #         dst.close()
 
         return cast_shadows
 

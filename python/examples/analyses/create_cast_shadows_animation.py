@@ -58,8 +58,8 @@ zenith_list = catchment.get_solar_zenith(ha_list, lat_rad, solar_declin)
 azimuth_list = catchment.get_solar_azimuth_to_south(ha_list, lat_rad, solar_declin)
 
 # Create a colormap for the shadows
-colors = [(0, 0, 0, 0), (0, 0, 0, 1)]  # R, G, B, Alpha
-cmap_shadow = ListedColormap(colors)
+cmap_shadow = ListedColormap([(0, 0, 0, 0), (0, 0, 0, 1)])
+cmap_black = ListedColormap([(0, 0, 0, 1)])
 
 # Initialize a list to store the frames
 frames = []
@@ -72,7 +72,10 @@ for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
     # Create a new figure and plot the data
     plt.figure()
     plt.imshow(hillshade, cmap='gray')
-    plt.imshow(shadows, cmap=cmap_shadow, alpha=0.8)
+    if np.any(shadows == 0):
+        plt.imshow(shadows, cmap=cmap_shadow, alpha=0.8)
+    else:
+        plt.imshow(shadows, cmap=cmap_black, alpha=0.8)
     plt.title(f'Cast shadow ({i + 1})')
     plt.tight_layout()
 
@@ -81,9 +84,7 @@ for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
     plt.savefig(buf, format='png')
     buf.seek(0)
     frames.append(imageio.v3.imread(buf))
-
-# Close the last figure
-plt.close()
+    plt.close()
 
 # Save frames as an animated GIF
-imageio.mimsave('animated_shadows.gif', frames, 'GIF', duration=500)
+imageio.mimsave('animated_shadows.gif', frames, 'GIF', duration=500, loop=0)

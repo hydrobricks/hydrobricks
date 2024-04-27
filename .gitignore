@@ -60,3 +60,4 @@ conaninfo.txt
 graph_info.json
 *.pyd
 *.tif.aux.xml
+*.gif

@@ -983,7 +983,7 @@ class Catchment:
         cast_sh = (accumulated > mapped).astype(float)
         cast_shadows = cast_sh[ray_ids, ref_grid]
 
-        # Put the mask back on (we need the surrounding topography in the steps before).
+        # Put the mask back on (we previously needed the surrounding topography).
         cast_shadows[np.isnan(masked_dem)] = np.nan
 
         return cast_shadows
@@ -1100,6 +1100,14 @@ class Catchment:
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(
             mean_annual_radiation, dem, output_path)
+
+        # Put the mask back on (we need the surrounding topography in the steps before)
+        # And make sure the padding lines are also set to nans and not 0
+        mean_annual_radiation[np.isnan(masked_dem_data)] = np.nan
+        mean_annual_radiation[0, :] = np.nan
+        mean_annual_radiation[-1, :] = np.nan
+        mean_annual_radiation[:, 0] = np.nan
+        mean_annual_radiation[:, -1] = np.nan
 
         # Save the daily potential radiation to a netcdf file
         self._save_potential_radiation_netcdf(

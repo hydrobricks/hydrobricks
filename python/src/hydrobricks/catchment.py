@@ -925,12 +925,6 @@ class Catchment:
             cast_shadows[np.isnan(masked_dem)] = np.nan
             return cast_shadows
 
-        # Check the hemisphere and the sun direction
-        north_hemisphere = (lat > 0)
-
-        if not north_hemisphere:
-            raise NotImplementedError("The South hemisphere is not implemented yet.")
-
         # Get mean pixel size
         pixel_size = (x_size + y_size) / 2
 
@@ -938,16 +932,12 @@ class Catchment:
         xv, yv = np.indices(dem.shape)
 
         # Get the base arrays for the solar ray IDs and the offset distances
-        base_ray_ids = None
-        ref_grid = None
-        angle = None
 
         # self._generate_solar_rays(azimuth, xv, yv, zenith_rad, pixel_size, dem)
 
-        if azimuth == -180:  # N
-            ref_grid = xv
-            base_ray_ids = yv
-        elif azimuth < -135:  # NNE
+        azimuth = 90
+
+        if azimuth < -135:  # NNE
             ref_grid = xv
             base_ray_ids = yv[:, ::-1]
             angle = np.tan(-(azimuth + 90) * TO_RAD)
@@ -955,9 +945,6 @@ class Catchment:
             ref_grid = yv[:, ::-1]
             base_ray_ids = xv
             angle = np.tan((azimuth + 180) * TO_RAD)
-        elif azimuth == -90:  # E
-            ref_grid = yv[:, ::-1]
-            base_ray_ids = xv
         elif azimuth < -45:  # ESE
             ref_grid = yv[:, ::-1]
             base_ray_ids = xv[::-1, :]
@@ -966,9 +953,6 @@ class Catchment:
             ref_grid = xv[::-1, :]
             base_ray_ids = yv[:, ::-1]
             angle = np.tan((90 + azimuth) * TO_RAD)
-        elif azimuth == 0:  # S
-            ref_grid = xv[::-1, :]
-            base_ray_ids = yv[::-1, :]
         elif azimuth < 45:  # SSW
             ref_grid = xv[::-1, :]
             base_ray_ids = yv
@@ -977,9 +961,6 @@ class Catchment:
             ref_grid = yv
             base_ray_ids = xv[::-1, :]
             angle = np.tan(azimuth * TO_RAD)
-        elif azimuth == 90:  # W
-            ref_grid = yv
-            base_ray_ids = xv
         elif azimuth < 135:  # WNW
             ref_grid = yv
             base_ray_ids = xv
@@ -989,17 +970,12 @@ class Catchment:
             base_ray_ids = yv
             angle = np.tan((azimuth - 90) * TO_RAD)
 
-        offset = np.zeros(dem.shape)
-        if angle is not None:
-            offset = ref_grid / angle
-            offset_t = base_ray_ids / angle
-
         # Creation of solar rays with different IDs
-        ray_ids = base_ray_ids - offset
+        ray_ids = base_ray_ids - ref_grid / angle
         ray_ids = ray_ids - np.nanmin(ray_ids)
         ray_ids = ray_ids.astype(int) + 1
 
-        orthogonal_distance = ref_grid + offset_t
+        orthogonal_distance = ref_grid + base_ray_ids / angle
         tilt_heights = orthogonal_distance * pixel_size / np.tan(zenith * TO_RAD)
         tilted_dem = dem + tilt_heights
 

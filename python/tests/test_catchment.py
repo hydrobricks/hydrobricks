@@ -239,7 +239,7 @@ def test_radiation_calculation_with_cast_shadows():
         diff = ref_radiation - calc_radiation
         average_diff = np.mean(diff)
 
-        assert abs(average_diff) > 4  # Expected to be different from the previous test
+        assert abs(average_diff) < 0.1  # Different from the previous test
 
 
 def test_radiation_calculation_resolution():

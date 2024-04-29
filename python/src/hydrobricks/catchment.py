@@ -880,8 +880,8 @@ class Catchment:
 
         return incidence_angle
 
-    def calculate_cast_shadows(self, dem_dataset, masked_dem,
-                               zenith, azimuth, lat):
+    @staticmethod
+    def calculate_cast_shadows(dem_dataset, masked_dem, zenith, azimuth):
         """
         Calculate the cast shadows.
 
@@ -899,8 +899,6 @@ class Catchment:
             Solar zenith (IQBAL 2012), in degrees
         azimuth : float
             Azimuth relative to the south for ZSLOPE CALC, in degrees
-        lat : float
-            Mean latitude of the catchment, in degrees
 
         Returns
         -------
@@ -1082,8 +1080,8 @@ class Catchment:
                 # Account for cast shadows
                 if with_cast_shadows:
                     cast_shadows = self.calculate_cast_shadows(
-                        dem, masked_dem_data, zenith[j], azimuth[j], mean_lat)
-                    potential_radiation = potential_radiation * cast_shadows
+                        dem, masked_dem_data, zenith[j], azimuth[j])
+                    potential_radiation = potential_radiation * (1 - cast_shadows)
 
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
 

@@ -67,7 +67,7 @@ frames = []
 # Loop over the time steps
 for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
     shadows = catchment.calculate_cast_shadows(
-        dem, masked_dem_data, zenith, azimuth, lat)
+        dem, masked_dem_data, zenith, azimuth)
 
     # Create a new figure and plot the data
     plt.figure()

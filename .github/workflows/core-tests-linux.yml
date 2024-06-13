@@ -8,7 +8,7 @@ defaults:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       BUILD_TYPE: Release
@@ -58,7 +58,7 @@ jobs:
       run: tests/hydrobricks-tests
 
   code-coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       BUILD_TYPE: RelWithDebInfo

@@ -14,7 +14,7 @@ on:
 jobs:
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2019] # macOS images on GitHub actions are not available...
+        os: [ubuntu-latest, windows-latest] # macOS images on GitHub actions are not available...
 
     steps:
     - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
   upload_all:
     name: Upload if release
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:

@@ -109,37 +109,37 @@ typedef struct {
 class NotImplemented : public std::logic_error {
   public:
     NotImplemented()
-        : std::logic_error("Function not yet implemented") {};
+        : std::logic_error("Function not yet implemented"){};
 };
 
 class ShouldNotHappen : public std::logic_error {
   public:
     ShouldNotHappen()
-        : std::logic_error("This should not happen...") {};
+        : std::logic_error("This should not happen..."){};
 };
 
 class InvalidArgument : public std::invalid_argument {
   public:
     explicit InvalidArgument(const wxString& msg)
-        : std::invalid_argument(msg) {};
+        : std::invalid_argument(msg){};
 };
 
 class MissingParameter : public std::logic_error {
   public:
     explicit MissingParameter(const wxString& msg)
-        : std::logic_error(msg) {};
+        : std::logic_error(msg){};
 };
 
 class ConceptionIssue : public std::logic_error {
   public:
     explicit ConceptionIssue(const wxString& msg)
-        : std::logic_error(msg) {};
+        : std::logic_error(msg){};
 };
 
 class NotFound : public std::logic_error {
   public:
     explicit NotFound(const wxString& msg)
-        : std::logic_error(msg) {};
+        : std::logic_error(msg){};
 };
 
 //---------------------------------

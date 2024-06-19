@@ -1,0 +1,29 @@
+{
+  "description": "Hydrobricks is a modular hydrological modelling framework written in Python with a core in C++.",
+  "license": "MIT",
+  "title": "Hydrobricks: a modular hydrological modelling framework",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Horton, Pascal",
+      "orcid": "0000-0003-0466-0359",
+      "affiliation": "University of Bern, Bern, Switzerland."
+    },
+    {
+      "name": "Argentin, Anne-Laure",
+      "orcid": "0000-0003-2310-6011",
+      "affiliation": "Free University of Bozen-Bolzano, Bolzano, Italy."
+    }
+  ],
+  "access_right": "open",
+  "keywords": [
+    "hydrology",
+    "rainfall-runoff",
+    "modeling",
+    "modular",
+    "flexible framework",
+    "Python",
+    "C++",
+    "SOCONT"
+  ]
+}

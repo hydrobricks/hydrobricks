@@ -113,7 +113,11 @@ class CMakeBuild(build_ext):
 
 # Read the contents of the README file
 this_directory = Path(__file__).parent
-long_description = (this_directory / "python" / "README.md").read_text()
+read_me_file = this_directory / "python" / "README.md"
+if read_me_file.exists():
+    long_description = open("python/README.md").read()
+else:
+    long_description = "A modular hydrological modelling framework."
 
 # Setup
 setup(

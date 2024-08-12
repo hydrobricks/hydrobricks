@@ -113,7 +113,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("set_initial_state", &ModelHydro::SetInitialState, "Set the initial water storage amount (mm).",
-            "amount"_a)
+            "hydro_unit_id"_a, "brick_name"_a, "amount"_a)
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
         .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
         .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")

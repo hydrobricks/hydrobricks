@@ -28,7 +28,7 @@ class WaterContainer : public wxObject {
 
     void SaveAsInitialState();
 
-    void SetInitialState(double content);
+    void SetInitialState(double amount);
 
     vecDoublePt GetDynamicContentChanges();
 

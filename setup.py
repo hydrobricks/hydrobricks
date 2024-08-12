@@ -122,7 +122,7 @@ else:
 # Setup
 setup(
     name="hydrobricks",
-    version="0.7.2",
+    version="0.7.3",
     author="Pascal Horton",
     author_email="pascal.horton@unibe.ch",
     description="A modular hydrological modelling framework",

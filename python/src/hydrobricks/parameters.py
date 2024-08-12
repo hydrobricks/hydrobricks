@@ -626,7 +626,7 @@ class ParameterSet:
 
                 self.define_parameter(
                     component=cover_name, name='degree_day_factor_n',
-                    unit='mm/d/°C', aliases=a_n_aliases, min_value=0, max_value=20)
+                    unit='mm/d/°C', aliases=a_n_aliases, min_value=1, max_value=20)
                 self.define_parameter(
                     component=cover_name, name='degree_day_factor_s',
                     unit='mm/d/°C', aliases=a_s_aliases, min_value=5, max_value=20)

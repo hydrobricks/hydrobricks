@@ -247,6 +247,7 @@ class TimeSeries2D(TimeSeries):
             # Reproject the data cell indices to the hydro unit raster
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+                data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
                 data_idx_reproj = data_idx.rio.reproject_match(
                     unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
 

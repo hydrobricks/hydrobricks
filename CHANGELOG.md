@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 ### Fixed
 
 -   Fixing the package installation from PyPI.
+-   Fixing issue between pybind11 and numpy 2.
 
 
 ## 0.7.2 - 2024-04-29

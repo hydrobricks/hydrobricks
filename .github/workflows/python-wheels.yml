@@ -46,7 +46,7 @@ jobs:
         python-version: "3.x"
 
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.18.1
+      uses: pypa/cibuildwheel@v2.20.0
       env:
         CIBW_ARCHS: auto64
         CIBW_ENVIRONMENT: SKIP_CONAN=1
@@ -79,6 +79,6 @@ jobs:
         name: artifact
         path: dist
 
-    - uses: pypa/gh-action-pypi-publish@v1.8.14
+    - uses: pypa/gh-action-pypi-publish@v1.9.0
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}

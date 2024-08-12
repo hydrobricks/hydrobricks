@@ -143,7 +143,6 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
-    readme="python/README.md",
     license="MIT",
     project_urls={
         "Source Code": "https://github.com/hydrobricks/hydrobricks",

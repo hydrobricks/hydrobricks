@@ -187,6 +187,11 @@ void WaterContainer::SaveAsInitialState() {
     m_initialState = m_content;
 }
 
+void WaterContainer::SetInitialState(double content) {
+    m_content = content;
+    m_initialState = content;
+}
+
 double WaterContainer::SumIncomingFluxes() {
     double sum = 0;
     for (auto& input : m_inputs) {

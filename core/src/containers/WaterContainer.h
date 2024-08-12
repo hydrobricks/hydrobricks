@@ -28,6 +28,8 @@ class WaterContainer : public wxObject {
 
     void SaveAsInitialState();
 
+    void SetInitialState(double content);
+
     vecDoublePt GetDynamicContentChanges();
 
     bool HasMaximumCapacity() const {

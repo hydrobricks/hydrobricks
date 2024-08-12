@@ -172,6 +172,32 @@ class Model(ABC):
         self.run(parameters, forcing)
         self.model.save_as_initial_state()
 
+    def set_glacier_initial_content_from_raster(self, raster_glacier_thickness, raster_hydro_units,
+                                                glacier_name='glacier'):
+        """
+        Set the initial glacier state variables from a raster file.
+
+        Parameters
+        ----------
+        raster_glacier_thickness : str
+            Path to the raster file containing the glacier thickness in meters.
+        raster_hydro_units : str
+            Path to the raster file containing the hydro units.
+        glacier_name : str
+            The name of the glacier.
+        """
+        # Extract the glacier thickness (m)
+
+        # Convert to water equivalent (mm)
+
+        # Assign to each glacier unit
+        for hydro_unit in hydro_units:
+            hydro_unit_id = ...
+            amount = ...
+
+            self.model.set_initial_state(hydro_unit_id, glacier_name, amount)
+
+
     def set_forcing(self, forcing):
         """
         Set the forcing data.

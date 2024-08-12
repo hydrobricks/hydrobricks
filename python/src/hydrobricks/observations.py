@@ -41,7 +41,7 @@ class Observations(TimeSeries1D):
         years = df.year.unique()
 
         if len(years) == 1:
-            print("Not possible computing reference metric on one year only.")
+            print("Not possible to compute the reference metric on one year only.")
             return -1
 
         df = df.set_index('year')

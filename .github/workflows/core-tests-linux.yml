@@ -10,9 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    env:
-      BUILD_TYPE: Release
-
     steps:
     - uses: actions/checkout@v4
 
@@ -28,7 +25,7 @@ jobs:
     - name: Run CMake and vcpkg
       uses: lukka/run-cmake@v10
       with:
-        buildPresetAdditionalArgs: "['--config ${{BUILD_TYPE}}']"
+        buildPresetAdditionalArgs: "['--config Release']"
 
     - name: Copy test files
       working-directory: ${{github.workspace}}

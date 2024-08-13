@@ -1,0 +1,13 @@
+{
+  "name": "hydrobricks",
+  "version": "0.7.3",
+  "dependencies": [
+    "wxwidgets",
+    "netcdf-c",
+    "eigen3",
+    "gtest",
+    "pybind11",
+    "yaml-cpp",
+    "zlib"
+  ]
+}

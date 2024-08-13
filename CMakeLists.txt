@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14) # To support FetchContent / FetchContent_MakeAvailable
+cmake_minimum_required(VERSION 3.15)
 
 if (POLICY CMP0043)
     cmake_policy(SET CMP0043 NEW)
@@ -9,6 +9,10 @@ endif ()
 if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif ()
+
+# VCPKG
+include(${CMAKE_CURRENT_LIST_DIR}/core/build/cmake/find_vcpkg.cmake)
+find_vcpkg()
 
 # Project name
 project(hydrobricks)
@@ -37,6 +41,14 @@ option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
 
+# Find packages
+find_package(wxWidgets REQUIRED COMPONENTS base)
+find_package(NetCDF REQUIRED)
+find_package(Eigen3 3.4 REQUIRED)
+find_package(GTest REQUIRED)
+find_package(yaml-cpp REQUIRED)
+find_package(ZLIB REQUIRED)
+
 # Enable Visual Leak Detector
 if (WIN32)
     option(USE_VLD "Should we use Visual Leak Detector (https://vld.codeplex.com) ?" OFF)
@@ -62,65 +74,6 @@ else (WIN32)
     set(INSTALL_DIR_BIN bin)
 endif (WIN32)
 
-# CONAN
-
-option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
-
-if (RUN_CONAN_FROM_CMAKE)
-    # Run conan from CMake
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-        message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-        file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
-             "${CMAKE_BINARY_DIR}/conan.cmake")
-    endif ()
-
-    include(${CMAKE_BINARY_DIR}/conan.cmake)
-
-    # Check conan install
-    find_program(CONAN_CMD conan)
-    if (NOT CONAN_CMD AND CONAN_REQUIRED)
-        message(FATAL_ERROR "Conan executable not found! Please install conan.")
-    endif ()
-    if (NOT CONAN_DETECT_QUIET)
-        message(STATUS "Conan: Found program ${CONAN_CMD}")
-    endif ()
-    execute_process(
-        COMMAND ${CONAN_CMD} --version
-        RESULT_VARIABLE return_code
-        OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
-        ERROR_VARIABLE CONAN_VERSION_ERROR)
-
-    message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
-    message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
-
-    # Get libraries
-    conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
-
-else (RUN_CONAN_FROM_CMAKE)
-
-    find_file(
-        CONANBUILDINFO
-        NAMES conanbuildinfo.cmake
-        PATHS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}" "D:/a/hydrobricks/hydrobricks" "/project")
-
-    include(${CONANBUILDINFO})
-    conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
-
-endif (RUN_CONAN_FROM_CMAKE)
-
-include_directories(${CONAN_INCLUDE_DIRS})
-
-message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY (post conan): ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-
-# OTHER DEPENDENCIES
-
-include(FetchContent)
-
-FetchContent_Declare(
-    pybind11
-    GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG v2.10.0)
-
 # FIND ANALYSIS TOOLS
 
 # Visual Leak Detector
@@ -138,7 +91,7 @@ endif (USE_VLD)
 
 # Code coverage
 if (USE_CODECOV)
-    include(CodeCoverage)
+    include(code_coverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
         NAME
@@ -176,3 +129,13 @@ message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE = ${CMAKE_CXX_FLAGS_RELEASE}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO = ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+# COPY BINARY FILES
+
+if (WIN32)
+    add_custom_command(
+        TARGET ${PROJECT_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:wx::base> $<TARGET_FILE:netcdf>
+                $<TARGET_FILE:yaml-cpp> $<TARGET_FILE:zlib> $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+endif ()

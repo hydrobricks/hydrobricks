@@ -50,6 +50,6 @@ endif (WIN32)
 # LINKING
 
 # Link libraries explicitly to not link Google Tests to the main app.
-target_link_libraries(core CONAN_PKG::wxbase CONAN_PKG::netcdf CONAN_PKG::yaml-cpp)
+target_link_libraries(core wx::base netcdf yaml-cpp)
 
 target_link_libraries(hydrobricks-cli core)

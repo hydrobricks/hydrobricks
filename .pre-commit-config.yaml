@@ -84,7 +84,7 @@ repos:
     files: (\.cmake|CMakeLists.txt)(.in)?$
     exclude: |
       (?x)^(
-          .*/CodeCoverage.cmake
+          .*/code_coverage.cmake
       )$
 
 # Suggested for .clang-format files

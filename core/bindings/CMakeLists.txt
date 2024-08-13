@@ -22,4 +22,4 @@ add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 # GENERATED MODULE
 
 pybind11_add_module(_hydrobricks ${src_bind})
-target_link_libraries(_hydrobricks PRIVATE CONAN_PKG::wxbase CONAN_PKG::netcdf CONAN_PKG::yaml-cpp)
+target_link_libraries(_hydrobricks PRIVATE wx::base netcdf yaml-cpp)

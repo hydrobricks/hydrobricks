@@ -40,15 +40,25 @@ class Observations(TimeSeries1D):
         df = df[df.index.strftime('%m-%d') != '02-29']
         years = df.year.unique()
 
+        if len(years) == 1:
+            print("Not possible to compute the reference metric on one year only.")
+            return -1
+
         df = df.set_index('year')
 
         metrics = np.empty(n_evals)
-        for i in range(n_evals):
+        i = 0
+        while i < n_evals - 1:
             sampled_years = np.random.choice(years, size=years.size, replace=True)
+            diff = sampled_years - years
+            if not np.all(diff):
+                continue
+            i += 1
             new_df = df.loc[sampled_years].copy()
             value = hb.evaluate(new_df.data.values, df.data.values, metric)
             metrics[i] = value
 
         ref_metric = np.mean(metrics)
+        print("Reference metric is ", ref_metric)
 
         return ref_metric

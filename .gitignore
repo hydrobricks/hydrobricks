@@ -45,6 +45,7 @@ build/lib.*
 build/temp.*
 build/bdist.*
 wheelhouse/
+vcpkg_installed/
 
 # Others
 *~$*

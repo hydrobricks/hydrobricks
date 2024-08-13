@@ -113,12 +113,16 @@ class CMakeBuild(build_ext):
 
 # Read the contents of the README file
 this_directory = Path(__file__).parent
-long_description = (this_directory / "python" / "README.md").read_text()
+read_me_file = this_directory / "python" / "README.md"
+if read_me_file.exists():
+    long_description = open("python/README.md").read()
+else:
+    long_description = "A modular hydrological modelling framework."
 
 # Setup
 setup(
     name="hydrobricks",
-    version="0.7.2",
+    version="0.7.3",
     author="Pascal Horton",
     author_email="pascal.horton@unibe.ch",
     description="A modular hydrological modelling framework",
@@ -139,7 +143,6 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
-    readme="python/README.md",
     license="MIT",
     project_urls={
         "Source Code": "https://github.com/hydrobricks/hydrobricks",

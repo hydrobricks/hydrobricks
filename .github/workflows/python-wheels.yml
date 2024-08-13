@@ -14,7 +14,7 @@ on:
 jobs:
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2019] # macOS images on GitHub actions are not available...
+        os: [ubuntu-latest, windows-latest] #, macos-latest, macos-latest-large]
 
     steps:
     - uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
         python-version: "3.x"
 
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.17.0
+      uses: pypa/cibuildwheel@v2.20.0
       env:
         CIBW_ARCHS: auto64
         CIBW_ENVIRONMENT: SKIP_CONAN=1
@@ -66,7 +66,7 @@ jobs:
   upload_all:
     name: Upload if release
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
@@ -79,6 +79,6 @@ jobs:
         name: artifact
         path: dist
 
-    - uses: pypa/gh-action-pypi-publish@v1.8.14
+    - uses: pypa/gh-action-pypi-publish@v1.9.0
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}

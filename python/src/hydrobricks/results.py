@@ -12,7 +12,7 @@ class Results:
         self.results = xr.open_dataset(filename)
         self.labels_distributed = self.results.attrs.get('labels_distributed')
         self.labels_aggregated = self.results.attrs.get('labels_aggregated')
-        self.labels_land_cover = self.results.attrs.get('labels_land_cover')
+        self.labels_land_cover = self.results.attrs.get('labels_land_covers')
         self.hydro_units_ids = self.results.hydro_units_ids.to_numpy()
 
     def __del__(self):

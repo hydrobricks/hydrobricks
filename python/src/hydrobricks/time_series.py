@@ -143,7 +143,8 @@ class TimeSeries2D(TimeSeries):
 
         if data_crs != unit_ids_crs:
             print("The CRS of the netcdf file does not match the CRS of the "
-                  "hydro unit ids raster. Reprojection will be done.")
+                  "hydro unit ids raster. Reprojection will be done from "
+                  f"{unit_ids_crs} to {data_crs}.")
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 unit_ids = unit_ids.rio.reproject(f'epsg:{data_crs}')
@@ -247,6 +248,7 @@ class TimeSeries2D(TimeSeries):
             # Reproject the data cell indices to the hydro unit raster
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+                data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
                 data_idx_reproj = data_idx.rio.reproject_match(
                     unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
 

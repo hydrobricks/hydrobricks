@@ -27,8 +27,6 @@ class CMakeBuild(build_ext):
         # To build the extension in debug mode.
         # self.debug = True
 
-        skip_conan = os.environ.get("SKIP_CONAN", 0)
-
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
@@ -103,10 +101,7 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
-        if not skip_conan:
-            subprocess.check_call(["conan", "install", ext.source_dir, "-s",
-                                   "build_type=Release", "--build=missing",
-                                   "-pr:b=default"], cwd=build_temp)
+        subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

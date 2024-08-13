@@ -27,6 +27,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
+          name: sdist
           overwrite: true
 
 
@@ -59,13 +60,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: wheelhouse/*.whl
+          name: wheels-${{ matrix.os }}
           overwrite: true
-          name: artifact-${{ matrix.os }}-${{ github.run_number }}
 
 
   upload_all:
     name: Upload if release
-    needs: [ build_wheels, build_sdist ]
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
@@ -74,10 +75,23 @@ jobs:
         with:
           python-version: "3.x"
 
-      - uses: actions/download-artifact@v4
+      - name: Download wheels artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: artifact
-          path: dist
+          name: wheels-ubuntu-latest
+          path: dist/
+
+      - name: Download windows wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-windows-latest
+          path: dist/
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
 
       - uses: pypa/gh-action-pypi-publish@v1.8.14
         with:

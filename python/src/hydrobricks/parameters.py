@@ -608,7 +608,8 @@ class ParameterSet:
                     default_value=0, mandatory=False)
 
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
-                    self.define_constraint(f'a_ice_glacier_debris', '<', f'a_ice_glacier_ice')
+                    self.define_constraint('a_ice_glacier_debris', '<',
+                                           'a_ice_glacier_ice')
                 self.define_constraint('a_snow', '<', a_aliases[0])
 
             elif melt_method == 'melt:degree_day_aspect':
@@ -639,9 +640,12 @@ class ParameterSet:
                     default_value=0, mandatory=False)
 
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
-                    self.define_constraint(f'a_ice_n_glacier_debris', '<', f'a_ice_n_glacier_ice')
-                    self.define_constraint(f'a_ice_s_glacier_debris', '<', f'a_ice_s_glacier_ice')
-                    self.define_constraint(f'a_ice_ew_glacier_debris', '<', f'a_ice_ew_glacier_ice')
+                    self.define_constraint('a_ice_n_glacier_debris', '<',
+                                           'a_ice_n_glacier_ice')
+                    self.define_constraint('a_ice_s_glacier_debris', '<',
+                                           'a_ice_s_glacier_ice')
+                    self.define_constraint('a_ice_ew_glacier_debris', '<',
+                                           'a_ice_ew_glacier_ice')
                 self.define_constraint('a_snow', '<', a_n_aliases[0])
                 self.define_constraint('a_snow', '<', a_s_aliases[0])
                 self.define_constraint('a_snow', '<', a_ew_aliases[0])
@@ -664,9 +668,9 @@ class ParameterSet:
                     unit='°C', aliases=t_aliases, min_value=0, max_value=5,
                     default_value=0, mandatory=False)
 
-
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
-                    self.define_constraint(f'r_ice_glacier_debris', '<', f'r_ice_glacier_ice')
+                    self.define_constraint('r_ice_glacier_debris', '<',
+                                           'r_ice_glacier_ice')
                 self.define_constraint('r_snow', '<', r_aliases[0])
 
             else:

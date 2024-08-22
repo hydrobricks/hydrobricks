@@ -138,6 +138,14 @@ setup(
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.8",
+    install_requires=[
+        'cftime',
+        'numpy',
+        'HydroErr',
+        'pandas',
+        'pyyaml',
+        'StrEnum'
+    ],
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",

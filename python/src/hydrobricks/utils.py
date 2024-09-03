@@ -35,7 +35,9 @@ def date_as_mjd(date):
         return pd.to_datetime(date).to_julian_date() - 2400000.5
     if isinstance(date, pd.Timestamp):
         return date.to_julian_date() - 2400000.5
-    return pd.DatetimeIndex(date).to_julian_date() - 2400000.5
+    mjd = pd.DatetimeIndex(date).to_julian_date() - 2400000.5
+    mjd = mjd.values
+    return mjd
 
 
 def jd_to_date(jd):

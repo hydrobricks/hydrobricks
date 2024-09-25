@@ -1,6 +1,5 @@
 import itertools
 import math
-import pathlib
 import warnings
 from pathlib import Path
 
@@ -78,7 +77,7 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         # Check that the outline file exists if provided
-        if outline is not None and not pathlib.Path(outline).is_file():
+        if outline is not None and not Path(outline).is_file():
             raise FileNotFoundError(f"File {outline} does not exist.")
 
         self.area = None
@@ -113,7 +112,7 @@ class Catchment:
         -------
         True if successful, False otherwise.
         """
-        if not pathlib.Path(dem_path).is_file():
+        if not Path(dem_path).is_file():
             raise FileNotFoundError(f"File {dem_path} does not exist.")
 
         if not hb.has_rasterio:

@@ -42,11 +42,11 @@ option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
 
 # Find packages
-find_package(wxWidgets REQUIRED COMPONENTS base)
-find_package(NetCDF REQUIRED)
-find_package(Eigen3 3.4 REQUIRED)
-find_package(GTest REQUIRED)
-find_package(yaml-cpp REQUIRED)
+find_package(wxWidgets CONFIG REQUIRED)
+find_package(NetCDF CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 
 # Enable Visual Leak Detector
@@ -80,13 +80,6 @@ endif (WIN32)
 if (USE_VLD)
     find_package(VLD)
     include_directories(${VLD_INCLUDE_DIRS})
-else (USE_VLD)
-    # unset for wxhgversion
-    unset(VLD_INCLUDE_DIR CACHE)
-    unset(VLD_LIBRARY CACHE)
-    unset(VLD_LIBRARY_DEBUG CACHE)
-    unset(VLD_LIBRARY_DIR CACHE)
-    unset(VLD_ROOT_DIR CACHE)
 endif (USE_VLD)
 
 # Code coverage
@@ -133,9 +126,7 @@ message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO = ${CMAKE_CXX_FLAGS_RELWITHDEBINF
 # COPY BINARY FILES
 
 if (WIN32)
-    add_custom_command(
-        TARGET ${PROJECT_NAME}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:wx::base> $<TARGET_FILE:netcdf>
-                $<TARGET_FILE:yaml-cpp> $<TARGET_FILE:zlib> $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    # add_custom_command( TARGET ${hydrobricks} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    # $<TARGET_FILE:wx::base> $<TARGET_FILE:netcdf> $<TARGET_FILE:yaml-cpp> $<TARGET_FILE:zlib>
+    # $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 endif ()

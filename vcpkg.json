@@ -1,13 +1,23 @@
 {
   "name": "hydrobricks",
-  "version": "0.7.3",
+  "version": "0.7.4",
+  "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
   "dependencies": [
     "wxwidgets",
-    "netcdf-c",
     "eigen3",
     "gtest",
-    "pybind11",
     "yaml-cpp",
-    "zlib"
+    "zlib",
+    {
+      "name": "pybind11",
+      "version>=": "2.12.0"
+    },
+    {
+      "name": "netcdf-c",
+      "features": [
+        "netcdf-4",
+        "hdf5"
+      ]
+    }
   ]
 }

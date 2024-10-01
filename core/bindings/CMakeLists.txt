@@ -14,12 +14,7 @@ include(${CMAKE_SOURCE_DIR}/build/cmake/hydrobricks_core_source.cmake)
 
 list(APPEND src_bind ${src_core})
 
-# LIBRARIES
-
-FetchContent_MakeAvailable(pybind11)
-add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
-
 # GENERATED MODULE
 
 pybind11_add_module(_hydrobricks ${src_bind})
-target_link_libraries(_hydrobricks PRIVATE wx::base netcdf yaml-cpp)
+target_link_libraries(_hydrobricks PRIVATE wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)

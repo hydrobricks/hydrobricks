@@ -1,9 +1,8 @@
 {
-  "version": 2,
+  "version": 3,
   "configurePresets": [
     {
       "name": "vcpkg",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/cmake-build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -11,7 +10,6 @@
     },
     {
       "name": "vcpkg-debug",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/cmake-build-debug",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -20,7 +18,6 @@
     },
     {
       "name": "vcpkg-release",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/cmake-build-release",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",

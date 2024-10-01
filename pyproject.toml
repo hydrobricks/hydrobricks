@@ -45,14 +45,16 @@ before-build = [
     "rm -rf {project}/build/bdist.*",
     "git clone https://github.com/microsoft/vcpkg.git",
     "./vcpkg/bootstrap-vcpkg.sh",
-    "pwd",
+    "export PATH=$PATH:./vcpkg",
+    "export VCPKG_ROOT=$(pwd)/vcpkg",
 ]
 
 [tool.cibuildwheel.windows]
 before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
     "./vcpkg/bootstrap-vcpkg.bat",
-    "pwd",
+    "set PATH=%PATH%;./vcpkg",
+    "set VCPKG_ROOT=%cd%/vcpkg",
 ]
 
 [tool.cibuildwheel.macos]
@@ -60,5 +62,6 @@ before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
     "./vcpkg/bootstrap-vcpkg.sh",
-    "pwd",
+    "export PATH=$PATH:./vcpkg",
+    "export VCPKG_ROOT=$(pwd)/vcpkg",
 ]

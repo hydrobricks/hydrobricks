@@ -52,9 +52,9 @@ before-build = [
 [tool.cibuildwheel.windows]
 before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
-    "./vcpkg/bootstrap-vcpkg.bat",
-    "set PATH=%PATH%;%cd%/vcpkg",
-    "set VCPKG_ROOT=%cd%/vcpkg",
+    ".\\vcpkg\\bootstrap-vcpkg.bat",
+    "set PATH=%PATH%;%cd%\\vcpkg",
+    "set VCPKG_ROOT=%cd%\\vcpkg",
 ]
 
 [tool.cibuildwheel.macos]

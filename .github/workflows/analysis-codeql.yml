@@ -54,6 +54,7 @@ jobs:
     - name: Run CMake and vcpkg
       uses: lukka/run-cmake@v10
       with:
+        workflowPreset: "vcpkg"
         buildPresetAdditionalArgs: "['--config RelWithDebugInfo']"
 
     - name: Perform CodeQL Analysis

@@ -45,7 +45,7 @@ before-build = [
     "rm -rf {project}/build/bdist.*",
     "git clone https://github.com/microsoft/vcpkg.git",
     "./vcpkg/bootstrap-vcpkg.sh",
-    "export PATH=$PATH:./vcpkg",
+    "export PATH=$PATH:$(pwd)/vcpkg",
     "export VCPKG_ROOT=$(pwd)/vcpkg",
 ]
 
@@ -53,7 +53,7 @@ before-build = [
 before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
     "./vcpkg/bootstrap-vcpkg.bat",
-    "set PATH=%PATH%;./vcpkg",
+    "set PATH=%PATH%;%cd%/vcpkg",
     "set VCPKG_ROOT=%cd%/vcpkg",
 ]
 
@@ -62,6 +62,6 @@ before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
     "./vcpkg/bootstrap-vcpkg.sh",
-    "export PATH=$PATH:./vcpkg",
+    "export PATH=$PATH:$(pwd)/vcpkg",
     "export VCPKG_ROOT=$(pwd)/vcpkg",
 ]

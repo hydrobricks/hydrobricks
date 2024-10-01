@@ -40,6 +40,7 @@ before-build = [
     "dnf update -y --nogpgcheck",
     "dnf install epel-release -y",
     "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
+    "pip install cmake",
     "rm -rf {project}/build/lib.*",
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",
@@ -51,6 +52,7 @@ before-build = [
 
 [tool.cibuildwheel.windows]
 before-build = [
+    "pip install cmake",
     "git clone https://github.com/microsoft/vcpkg.git",
     ".\\vcpkg\\bootstrap-vcpkg.bat",
     "set PATH=%PATH%;%cd%\\vcpkg",
@@ -59,6 +61,7 @@ before-build = [
 
 [tool.cibuildwheel.macos]
 before-build = [
+    "pip install cmake",
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
     "./vcpkg/bootstrap-vcpkg.sh",

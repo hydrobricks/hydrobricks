@@ -55,7 +55,7 @@ jobs:
       uses: lukka/run-cmake@v10
       with:
         configurePreset: "vcpkg"
-        configurePresetAdditionalArgs: "['--config RelWithDebugInfo']"
+        buildPresetAdditionalArgs: "['--config RelWithDebugInfo']"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

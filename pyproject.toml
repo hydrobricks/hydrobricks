@@ -44,29 +44,24 @@ before-build = [
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",
     "git clone https://github.com/microsoft/vcpkg.git",
-    "cd vcpkg",
-    "./bootstrap-vcpkg.sh",
-    "./vcpkg integrate install",
-    "cd ..",
-    "vcpkg install",
+    "./vcpkg/bootstrap-vcpkg.sh",
+    "./vcpkg/vcpkg integrate install",
+    "./vcpkg/vcpkg install",
 ]
 
 [tool.cibuildwheel.windows]
 before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
-    "cd vcpkg",
-    "./bootstrap-vcpkg.bat",
-    "./vcpkg integrate install",
-    "cd ..",
-    "vcpkg install",
+    "./vcpkg/bootstrap-vcpkg.bat",
+    "./vcpkg/vcpkg integrate install",
+    "./vcpkg/vcpkg install",
 ]
 
 [tool.cibuildwheel.macos]
 before-build = [
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
-    "./bootstrap-vcpkg.sh",
-    "./vcpkg integrate install",
-    "cd ..",
-    "vcpkg install",
+    "./vcpkg/bootstrap-vcpkg.sh",
+    "./vcpkg/vcpkg integrate install",
+    "./vcpkg/vcpkg install",
 ]

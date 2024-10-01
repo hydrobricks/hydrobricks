@@ -2,25 +2,117 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "vcpkg",
-      "binaryDir": "${sourceDir}/cmake-build",
+      "name": "windows-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
       }
     },
     {
-      "name": "vcpkg-debug",
+      "name": "win-x64-debug",
+      "displayName": "x64 Debug",
+      "inherits": "windows-base",
       "binaryDir": "${sourceDir}/cmake-build-debug",
+      "installDir": "${sourceDir}/cmake-build-debug/install",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "vcpkg-release",
+      "name": "win-x64-release",
+      "displayName": "x64 Release",
+      "inherits": "windows-base",
       "binaryDir": "${sourceDir}/cmake-build-release",
+      "installDir": "${sourceDir}/cmake-build-release/install",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/cmake-build-debug",
+      "installDir": "${sourceDir}/cmake-build-debug/install",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/cmake-build-release",
+      "installDir": "${sourceDir}/cmake-build-release/install",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-releasewithdebuginfo",
+      "displayName": "Linux ReleaseWithDebugInfo",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/cmake-build-releasewithdebuginfo",
+      "installDir": "${sourceDir}/cmake-build-releasewithdebuginfo/install",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "ReleaseWithDebugInfo"
+      }
+    },
+    {
+      "name": "macos-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS Debug",
+      "inherits": "macos-base",
+      "binaryDir": "${sourceDir}/cmake-build-debug",
+      "installDir": "${sourceDir}/cmake-build-debug/install",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS Release",
+      "inherits": "macos-base",
+      "binaryDir": "${sourceDir}/cmake-build-release",
+      "installDir": "${sourceDir}/cmake-build-release/install",
+      "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
     }

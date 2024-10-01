@@ -25,8 +25,7 @@ jobs:
     - name: Run CMake and vcpkg
       uses: lukka/run-cmake@v10
       with:
-        configurePreset: "vcpkg"
-        buildPresetAdditionalArgs: "['--config Release']"
+        configurePreset: "linux-release"
 
     - name: Copy test files
       working-directory: ${{github.workspace}}

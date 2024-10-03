@@ -3,6 +3,7 @@
   "version": "0.7.4",
   "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
   "dependencies": [
+    "vcpkg-tool-ninja",
     "wxwidgets",
     "eigen3",
     "gtest",

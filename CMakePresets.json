@@ -43,7 +43,7 @@
     {
       "name": "linux-base",
       "hidden": true,
-      "generator": "Unix Makefiles",
+      "generator": "Ninja",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_MAKE_PROGRAM": "make",
@@ -89,7 +89,7 @@
     {
       "name": "macos-base",
       "hidden": true,
-      "generator": "Unix Makefiles",
+      "generator": "Ninja",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "condition": {
         "type": "equals",

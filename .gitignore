@@ -57,3 +57,4 @@ vcpkg_installed/
 *.pyd
 *.tif.aux.xml
 *.gif
+/vcpkg-build-*

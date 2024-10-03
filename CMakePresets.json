@@ -24,8 +24,8 @@
       "name": "win-x64-debug",
       "displayName": "x64 Debug",
       "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/cmake-build-debug",
-      "installDir": "${sourceDir}/cmake-build-debug/install",
+      "binaryDir": "vcpkg-build-debug",
+      "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -34,8 +34,8 @@
       "name": "win-x64-release",
       "displayName": "x64 Release",
       "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/cmake-build-release",
-      "installDir": "${sourceDir}/cmake-build-release/install",
+      "binaryDir": "vcpkg-build-release",
+      "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -60,8 +60,8 @@
       "name": "linux-debug",
       "displayName": "Linux Debug",
       "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/cmake-build-debug",
-      "installDir": "${sourceDir}/cmake-build-debug/install",
+      "binaryDir": "vcpkg-build-debug",
+      "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -70,8 +70,8 @@
       "name": "linux-release",
       "displayName": "Linux Release",
       "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/cmake-build-release",
-      "installDir": "${sourceDir}/cmake-build-release/install",
+      "binaryDir": "vcpkg-build-release",
+      "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -80,8 +80,8 @@
       "name": "linux-releasewithdebuginfo",
       "displayName": "Linux ReleaseWithDebugInfo",
       "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/cmake-build-releasewithdebuginfo",
-      "installDir": "${sourceDir}/cmake-build-releasewithdebuginfo/install",
+      "binaryDir": "vcpkg-build-releasewithdebuginfo",
+      "installDir": "vcpkg-build-releasewithdebuginfo/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "ReleaseWithDebugInfo"
       }
@@ -101,8 +101,8 @@
       "name": "macos-debug",
       "displayName": "macOS Debug",
       "inherits": "macos-base",
-      "binaryDir": "${sourceDir}/cmake-build-debug",
-      "installDir": "${sourceDir}/cmake-build-debug/install",
+      "binaryDir": "vcpkg-build-debug",
+      "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -111,8 +111,8 @@
       "name": "macos-release",
       "displayName": "macOS Release",
       "inherits": "macos-base",
-      "binaryDir": "${sourceDir}/cmake-build-release",
-      "installDir": "${sourceDir}/cmake-build-release/install",
+      "binaryDir": "vcpkg-build-release",
+      "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }

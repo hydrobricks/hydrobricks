@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+include(FetchContent)
 
 if (POLICY CMP0043)
     cmake_policy(SET CMP0043 NEW)
@@ -41,8 +42,22 @@ option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
 
+# Get and build wxbase from wxWidgets
+FetchContent_Declare(
+        wxWidgets
+        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+        GIT_TAG v3.2.6 # v3.2.6
+)
+# Pre-set wxWidgets options
+set(wxUSE_GUI OFF)
+set(wxBUILD_INSTALL OFF)
+set(wxBUILD_SAMPLES OFF)
+set(wxBUILD_TESTS OFF)
+FetchContent_MakeAvailable(wxWidgets)
+include_directories(${wxWidgets_SOURCE_DIR}/include)
+link_directories(${wxWidgets_BINARY_DIR}/lib)
+
 # Find packages
-find_package(wxWidgets CONFIG REQUIRED)
 find_package(NetCDF CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)

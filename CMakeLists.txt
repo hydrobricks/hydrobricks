@@ -10,9 +10,9 @@ if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif ()
 
-# VCPKG
-include(${CMAKE_CURRENT_LIST_DIR}/core/build/cmake/find_vcpkg.cmake)
-find_vcpkg()
+# vcpgk
+set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
 
 # Project name
 project(hydrobricks)

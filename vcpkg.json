@@ -5,7 +5,6 @@
   "dependencies": [
     "vcpkg-tool-ninja",
     "vcpkg-cmake",
-    "wxwidgets",
     "eigen3",
     "gtest",
     "yaml-cpp",

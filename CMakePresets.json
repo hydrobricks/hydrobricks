@@ -50,8 +50,7 @@
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux",
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg_installed/x64-linux/tools/ninja/ninja"
+        "CMAKE_CXX_COMPILER": "g++"
       },
       "condition": {
         "type": "equals",
@@ -66,7 +65,8 @@
       "binaryDir": "vcpkg-build-debug",
       "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-debug/vcpkg_installed/x64-linux/tools/ninja/ninja"
       }
     },
     {
@@ -76,7 +76,8 @@
       "binaryDir": "vcpkg-build-release",
       "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-release/vcpkg_installed/x64-linux/tools/ninja/ninja"
       }
     },
     {
@@ -97,8 +98,7 @@
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-osx",
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg_installed/x64-osx/tools/ninja/ninja"
+        "CMAKE_CXX_COMPILER": "g++"
       },
       "condition": {
         "type": "equals",
@@ -113,7 +113,8 @@
       "binaryDir": "vcpkg-build-debug",
       "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-debug/vcpkg_installed/x64-osx/tools/ninja/ninja"
       }
     },
     {
@@ -123,7 +124,8 @@
       "binaryDir": "vcpkg-build-release",
       "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-release/vcpkg_installed/x64-osx/tools/ninja/ninja"
       }
     }
   ]

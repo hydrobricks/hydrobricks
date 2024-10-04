@@ -44,27 +44,17 @@ before-build = [
     "rm -rf {project}/build/lib.*",
     "rm -rf {project}/build/temp.*",
     "rm -rf {project}/build/bdist.*",
-    "git clone https://github.com/microsoft/vcpkg.git",
-    "./vcpkg/bootstrap-vcpkg.sh",
-    "export PATH=$PATH:$(pwd)/vcpkg",
-    "export VCPKG_ROOT=$(pwd)/vcpkg",
+    "vcpkg install",
 ]
 
 [tool.cibuildwheel.windows]
 before-build = [
     "pip install cmake",
-    "git clone https://github.com/microsoft/vcpkg.git",
-    ".\\vcpkg\\bootstrap-vcpkg.bat",
-    "set PATH=%PATH%;%cd%\\vcpkg",
-    "set VCPKG_ROOT=%cd%\\vcpkg",
+    "vcpkg install",
 ]
 
 [tool.cibuildwheel.macos]
 before-build = [
     "pip install cmake",
-    "git clone https://github.com/microsoft/vcpkg.git",
-    "cd vcpkg",
-    "./vcpkg/bootstrap-vcpkg.sh",
-    "export PATH=$PATH:$(pwd)/vcpkg",
-    "export VCPKG_ROOT=$(pwd)/vcpkg",
+    "vcpkg install",
 ]

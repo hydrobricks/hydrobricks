@@ -65,8 +65,7 @@
       "binaryDir": "vcpkg-build-debug",
       "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-debug/vcpkg_installed/x64-linux/tools/ninja/ninja"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
@@ -76,8 +75,7 @@
       "binaryDir": "vcpkg-build-release",
       "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-release/vcpkg_installed/x64-linux/tools/ninja/ninja"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
@@ -113,8 +111,7 @@
       "binaryDir": "vcpkg-build-debug",
       "installDir": "vcpkg-build-debug/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-debug/vcpkg_installed/x64-osx/tools/ninja/ninja"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
@@ -124,8 +121,7 @@
       "binaryDir": "vcpkg-build-release",
       "installDir": "vcpkg-build-release/install",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg-build-release/vcpkg_installed/x64-osx/tools/ninja/ninja"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ]

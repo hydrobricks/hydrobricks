@@ -38,7 +38,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install libraries
-      run: sudo apt-get install tree python3 autoconf automake autoconf-archive
+      run: sudo apt-get install tree python3 ninja-build
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3

@@ -7,8 +7,10 @@
       "generator": "Ninja",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
         "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe"
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg_installed/x64-windows/tools/ninja/ninja"
       },
       "condition": {
         "type": "equals",
@@ -46,9 +48,10 @@
       "generator": "Ninja",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_MAKE_PROGRAM": "make",
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++"
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg_installed/x64-linux/tools/ninja/ninja"
       },
       "condition": {
         "type": "equals",
@@ -91,6 +94,12 @@
       "hidden": true,
       "generator": "Ninja",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-osx",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_MAKE_PROGRAM": "${sourceDir}/vcpkg_installed/x64-osx/tools/ninja/ninja"
+      },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",

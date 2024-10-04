@@ -4,6 +4,7 @@
   "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
   "dependencies": [
     "vcpkg-tool-ninja",
+    "vcpkg-tool-cmake",
     "wxwidgets",
     "eigen3",
     "gtest",
@@ -19,6 +20,13 @@
         "netcdf-4",
         "hdf5"
       ]
+    }
+  ],
+  "overrides": [
+    {
+      "name": "netcdf-c",
+      "version": "4.8.1",
+      "port-version": 3
     }
   ]
 }

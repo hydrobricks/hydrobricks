@@ -1,5 +1,7 @@
 #include "Logger.h"
 
+#include <wx/filename.h>
+
 #include "FileNetcdf.h"
 
 Logger::Logger()

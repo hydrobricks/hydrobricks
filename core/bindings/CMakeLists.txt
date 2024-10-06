@@ -17,4 +17,4 @@ list(APPEND src_bind ${src_core})
 # GENERATED MODULE
 
 pybind11_add_module(_hydrobricks ${src_bind})
-target_link_libraries(_hydrobricks PRIVATE wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)
+target_link_libraries(_hydrobricks PRIVATE wx::base netcdf yaml-cpp::yaml-cpp pybind11::headers)

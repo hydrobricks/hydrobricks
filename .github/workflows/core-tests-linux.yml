@@ -60,7 +60,7 @@ jobs:
 
       - name: Copy test files
         working-directory: ${{github.workspace}}
-        run: cp -R core/tests/files/ bin/tests
+        run: cp -R core/tests/files/ vcpkg-build-relwithdebinfo/tests
 
       - name: Build and run code coverage
         working-directory: ${{github.workspace}}/vcpkg-build-relwithdebinfo
@@ -76,4 +76,4 @@ jobs:
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true
           flags: core
-          files: ${{github.workspace}}/bin/hydrobricks-coverage.info
+          files: ${{github.workspace}}/vcpkg-build-relwithdebinfo/hydrobricks-coverage.info

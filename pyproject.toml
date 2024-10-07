@@ -55,6 +55,8 @@ before-build = [
 
 [tool.cibuildwheel.macos]
 before-build = [
+    "brew update",
+    "brew install pkg-config",
     "pip install cmake",
     "vcpkg install",
 ]

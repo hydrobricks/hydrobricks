@@ -79,11 +79,11 @@
       }
     },
     {
-      "name": "linux-releasewithdebuginfo",
+      "name": "linux-relwithdebinfo",
       "displayName": "Linux ReleaseWithDebugInfo",
       "inherits": "linux-base",
-      "binaryDir": "vcpkg-build-releasewithdebuginfo",
-      "installDir": "vcpkg-build-releasewithdebuginfo/install",
+      "binaryDir": "vcpkg-build-relwithdebinfo",
+      "installDir": "vcpkg-build-relwithdebinfo/install",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "ReleaseWithDebugInfo"
       }

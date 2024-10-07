@@ -55,7 +55,7 @@ jobs:
       - name: Run CMake and vcpkg
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: "linux-releasewithdebuginfo"
+          configurePreset: "linux-relwithdebinfo"
           configurePresetAdditionalArgs: "['-DUSE_CODECOV=1', '-DBUILD_PYBINDINGS=0']"
 
       - name: Copy test files

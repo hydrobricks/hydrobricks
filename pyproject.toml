@@ -48,7 +48,6 @@ before-build = [
     "vcpkg/bootstrap-vcpkg.sh",
     "export VCPKG_ROOT=$(pwd)/vcpkg",
     "export PATH=$VCPKG_ROOT:$PATH",
-    "vcpkg install",
 ]
 
 [tool.cibuildwheel.windows]
@@ -60,7 +59,6 @@ before-build = [
     "cd ..",
     "set VCPKG_ROOT=%cd%\\vcpkg",
     "set PATH=%VCPKG_ROOT%;%PATH%",
-    "vcpkg install",
 ]
 
 [tool.cibuildwheel.macos]
@@ -71,5 +69,4 @@ before-build = [
     "vcpkg/bootstrap-vcpkg.sh",
     "export VCPKG_ROOT=$(pwd)/vcpkg",
     "export PATH=$VCPKG_ROOT:$PATH",
-    "vcpkg install",
 ]

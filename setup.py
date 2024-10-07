@@ -54,22 +54,9 @@ class CMakeBuild(build_ext):
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
         if self.compiler.compiler_type != "msvc":
-            # Using Ninja-build since it a) is available as a wheel and
-            # b) multithreads automatically.
-            if not cmake_generator or cmake_generator == "Ninja":
-                try:
-                    import ninja  # noqa: F401
-
-                    ninja_exe_path = os.path.join(ninja.BIN_DIR, "ninja")
-                    cmake_args += [
-                        "-GNinja",
-                        f"-DCMAKE_MAKE_PROGRAM:FILEPATH={ninja_exe_path}",
-                    ]
-                except ImportError:
-                    pass
+            cmake_args += ["--preset=linux-release"]
 
         else:
-
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
 
@@ -87,10 +74,14 @@ class CMakeBuild(build_ext):
                 build_args += ["--config", cfg]
 
         if sys.platform.startswith("darwin"):
+            cmake_args += ["--preset=osx-release"]
             # Cross-compile support for macOS - respect ARCHFLAGS if set
             archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
             if archs:
                 cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
+
+        if sys.platform.startswith("linux"):
+            cmake_args += ["--preset=linux-release"]
 
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level.
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:

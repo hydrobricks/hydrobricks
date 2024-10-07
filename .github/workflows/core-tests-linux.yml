@@ -27,6 +27,10 @@ jobs:
       with:
         configurePreset: "linux-release"
 
+    - name: Build
+      working-directory: ${{github.workspace}}/bin
+      run: cmake --build . --config Release
+
     - name: Copy test files
       working-directory: ${{github.workspace}}
       run: cp -R core/tests/files/ bin/bin/
@@ -54,9 +58,11 @@ jobs:
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/bin
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/bin
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_CODECOV=1 -DBUILD_PYBINDINGS=0
+      - name: Run CMake and vcpkg
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: "linux-releasewithdebuginfo"
+          configurePresetAdditionalArgs: "['-DUSE_CODECOV=1', '-DBUILD_PYBINDINGS=0']"
 
       - name: Copy test files
         working-directory: ${{github.workspace}}

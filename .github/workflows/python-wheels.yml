@@ -46,17 +46,10 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install vcpkg
-        run: |
-          git clone https://github.com/microsoft/vcpkg.git
-          ./vcpkg/bootstrap-vcpkg.sh
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.2
         env:
           CIBW_ARCHS: auto64
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-          PATH: ${{ github.workspace }}/vcpkg:$PATH
 
       - name: Verify clean directory
         run: git diff --exit-code

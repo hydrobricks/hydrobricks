@@ -64,7 +64,7 @@ jobs:
 
       - name: Build and run code coverage
         working-directory: ${{github.workspace}}/vcpkg-build-relwithdebinfo
-        run: cmake --build . --config $BUILD_TYPE --target hydrobricks-coverage
+        run: cmake --build . --config $BUILD_TYPE
 
       - name: Display code coverage report
         working-directory: ${{github.workspace}}/vcpkg-build-relwithdebinfo

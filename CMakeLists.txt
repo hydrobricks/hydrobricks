@@ -12,7 +12,9 @@ if (POLICY CMP0077)
 endif ()
 
 # vcpgk
-set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+set(CMAKE_TOOLCHAIN_FILE
+    "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "Vcpkg toolchain file")
 message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
 
 # Project name
@@ -44,9 +46,9 @@ option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
 
 # Get and build wxbase from wxWidgets
 FetchContent_Declare(
-        wxWidgets
-        GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-        GIT_TAG v3.2.6 # v3.2.6
+    wxWidgets
+    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+    GIT_TAG v3.2.6 # v3.2.6
 )
 # Pre-set wxWidgets options
 set(wxUSE_GUI OFF)
@@ -103,6 +105,9 @@ endif (USE_VLD)
 if (USE_CODECOV)
     include(code_coverage)
     append_coverage_compiler_flags()
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON)
+    set(CMAKE_NINJA_FLAGS "-w phonycycle=warn")
     setup_target_for_coverage_lcov(
         NAME
         hydrobricks-coverage

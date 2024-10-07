@@ -55,7 +55,9 @@ before-build = [
 before-build = [
     "pip install cmake",
     "git clone https://github.com/microsoft/vcpkg.git",
-    "vcpkg/bootstrap-vcpkg.bat",
+    "cd vcpkg",
+    "bootstrap-vcpkg.bat",
+    "cd ..",
     "set VCPKG_ROOT=%cd%\\vcpkg",
     "set PATH=%VCPKG_ROOT%;%PATH%",
     "vcpkg install",

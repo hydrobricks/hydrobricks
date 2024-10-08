@@ -32,9 +32,10 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
-        print(f"--- build_temp: {build_temp}")
-        print(f"--- ext_dir: {ext_dir}")
-        print(f"--- VCPKG_ROOT: {os.environ.get('VCPKG_ROOT')}")
+        print(f"--- Working directory: {os.getcwd()}")
+        print(f"--- Directory content: {os.listdir()}")
+        print(f"--- Path build_temp: {build_temp}")
+        print(f"--- Path ext_dir: {ext_dir}")
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
@@ -98,9 +99,7 @@ class CMakeBuild(build_ext):
         # Override the build and install directory and the toolchain file
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
-        cmake_args += ["-CMAKE_TOOLCHAIN_FILE=" +
-                       os.path.join(os.environ.get('VCPKG_ROOT'),
-                                    'scripts/buildsystems/vcpkg.cmake')]
+        cmake_args += ["-CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake"]
 
         subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
 
@@ -109,8 +108,6 @@ class CMakeBuild(build_ext):
         if os.path.exists(vcpkg_build_release):
             subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
         else:
-            print(f"Working directory: {os.getcwd()}")
-            print(f"Directory content: {os.listdir()}")
             print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)

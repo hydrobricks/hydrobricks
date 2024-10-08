@@ -28,7 +28,6 @@ class CMakeBuild(build_ext):
         # self.debug = True
 
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-
         build_temp = os.path.join(self.build_temp, ext.name)
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
@@ -95,11 +94,16 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        # Override the build directory
+        # Override the build and install directory
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
-
-        # Override the CMAKE_INSTALL_PREFIX
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
+
+        # Copy the content of the vcpkg-build-release directory to build_temp
+        vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
+        if os.path.exists(vcpkg_build_release):
+            subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
+        else:
+            print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)

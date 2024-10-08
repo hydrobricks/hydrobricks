@@ -103,7 +103,10 @@ class CMakeBuild(build_ext):
         if os.path.exists(vcpkg_build_release):
             subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
         else:
-            print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
+            print(f"Working directory: {os.getcwd()}")
+            print(f"Directory content: {os.listdir()}")
+            raise FileNotFoundError(
+                f"vcpkg-build-release directory not found: {vcpkg_build_release}")
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)

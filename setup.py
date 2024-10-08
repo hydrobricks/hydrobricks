@@ -98,7 +98,6 @@ class CMakeBuild(build_ext):
         # Override the CMAKE_INSTALL_PREFIX
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
 
-        subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

@@ -105,9 +105,6 @@ endif (USE_VLD)
 if (USE_CODECOV)
     include(code_coverage)
     append_coverage_compiler_flags()
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-    set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON)
-    set(CMAKE_NINJA_FLAGS "-w phonycycle=warn")
     setup_target_for_coverage_lcov(
         NAME
         hydrobricks-coverage

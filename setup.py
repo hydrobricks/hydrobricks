@@ -88,18 +88,10 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        build_temp = os.path.join(self.build_temp, ext.name)
-        if not os.path.exists(build_temp):
-            os.makedirs(build_temp)
+        print(self.build_temp)
 
-        # Override the build directory
-        cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
-
-        # Override the CMAKE_INSTALL_PREFIX
-        cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
-
-        subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
-        subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
+        subprocess.check_call(["cmake", ext.source_dir] + cmake_args)
+        subprocess.check_call(["cmake", "--build", "."] + build_args)
 
 
 # Read the contents of the README file

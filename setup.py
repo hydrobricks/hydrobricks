@@ -98,6 +98,8 @@ class CMakeBuild(build_ext):
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
 
+        subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
+
         # Copy the content of the vcpkg-build-release directory to build_temp
         vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
         if os.path.exists(vcpkg_build_release):

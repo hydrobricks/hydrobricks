@@ -32,8 +32,9 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
-        print(f"build_temp: {build_temp}")
-        print(f"ext_dir: {ext_dir}")
+        print(f"--- build_temp: {build_temp}")
+        print(f"--- ext_dir: {ext_dir}")
+        print(f"--- VCPKG_ROOT: {os.environ.get('VCPKG_ROOT')}")
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
@@ -94,9 +95,12 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        # Override the build and install directory
+        # Override the build and install directory and the toolchain file
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
+        cmake_args += ["-CMAKE_TOOLCHAIN_FILE=" +
+                       os.path.join(os.environ.get('VCPKG_ROOT'),
+                                    'scripts/buildsystems/vcpkg.cmake')]
 
         subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
 

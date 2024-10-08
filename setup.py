@@ -29,6 +29,13 @@ class CMakeBuild(build_ext):
 
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
+        build_temp = os.path.join(self.build_temp, ext.name)
+        if not os.path.exists(build_temp):
+            os.makedirs(build_temp)
+
+        print(f"build_temp: {build_temp}")
+        print(f"ext_dir: {ext_dir}")
+
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
             ext_dir += os.path.sep
@@ -87,13 +94,6 @@ class CMakeBuild(build_ext):
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
-
-        build_temp = os.path.join(self.build_temp, ext.name)
-        if not os.path.exists(build_temp):
-            os.makedirs(build_temp)
-
-        print(f"build_temp: {build_temp}")
-        print(f"ext_dir: {ext_dir}")
 
         # Override the build directory
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]

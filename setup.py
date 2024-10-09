@@ -24,7 +24,8 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        self.debug = False
+        # Flag to enable debug mode
+        # self.debug = True
 
         # Define the build directory
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
@@ -59,6 +60,7 @@ class CMakeBuild(build_ext):
         # Check if the debug mode is enabled
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
+        print(f"-- Build configuration: {cfg}")
 
         # CMake configuration
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")

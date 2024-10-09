@@ -25,7 +25,6 @@ class CMakeExtension(Extension):
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
         self.debug = False
-        self.parallel = True
 
         # Define the build directory
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))

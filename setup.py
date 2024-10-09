@@ -112,9 +112,9 @@ class CMakeBuild(build_ext):
         if sys.platform.startswith("linux"):
             cmake_args += ["--preset=linux-release"]
         elif sys.platform.startswith("win"):
-            cmake_args += ["--preset=windows-release"]
+            cmake_args += ["--preset=win-x64-release"]
         elif sys.platform.startswith("darwin"):
-            cmake_args += ["--preset=osx-release"]
+            cmake_args += ["--preset=macos-release"]
         else:
             raise RuntimeError(f"Unsupported platform: {sys.platform}")
 
@@ -129,7 +129,7 @@ class CMakeBuild(build_ext):
         vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
         if os.path.exists(vcpkg_build_release):
             if sys.platform.startswith("win"):
-                subprocess.check_call(["robocopy", vcpkg_build_release, build_temp, "/E"])
+                subprocess.check_call(["xcopy", vcpkg_build_release, build_temp, "/E"])
             else:
                 subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
         else:

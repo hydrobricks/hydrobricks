@@ -24,13 +24,18 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        # To build the extension in debug mode.
-        # self.debug = True
+        self.debug = False
+        self.parallel = True
 
+        # Define the build directory
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
         build_temp = os.path.join(self.build_temp, ext.name)
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
+
+        # Required for auto-detection & inclusion of auxiliary "native" libs
+        if not ext_dir.endswith(os.path.sep):
+            ext_dir += os.path.sep
 
         # Install vcpkg
         subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
@@ -42,24 +47,25 @@ class CMakeBuild(build_ext):
         os.environ["PATH"] = os.path.abspath("vcpkg") + os.pathsep + os.environ["PATH"]
         os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath("vcpkg/scripts/buildsystems/vcpkg.cmake")
 
+        # Print some debug information
         print(f"-- Working directory: {os.getcwd()}")
         print(f"-- Directory content: {os.listdir()}")
         print(f"-- Path build_temp: {build_temp}")
         print(f"-- Path ext_dir: {ext_dir}")
 
-        # Required for auto-detection & inclusion of auxiliary "native" libs
-        if not ext_dir.endswith(os.path.sep):
-            ext_dir += os.path.sep
-
+        # Check if the debug mode is enabled
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
 
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
-
+        # CMake configuration
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={ext_dir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",
+            f"-DCMAKE_BINARY_DIR={build_temp}",
+            f"-DCMAKE_INSTALL_PREFIX={ext_dir}",
+            f"-DCMAKE_TOOLCHAIN_FILE={os.getcwd()}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "-DBUILD_PYBINDINGS=1",
             "-DBUILD_CLI=0",
             "-DBUILD_TESTS=0",
@@ -106,20 +112,7 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        # Override the build and install directory and the toolchain file
-        cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
-        cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
-        cmake_args += [f"-CMAKE_TOOLCHAIN_FILE={os.getcwd()}/vcpkg/scripts/buildsystems/vcpkg.cmake"]
-
         subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
-
-        # Copy the content of the vcpkg-build-release directory to build_temp
-        vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
-        if os.path.exists(vcpkg_build_release):
-            subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
-        else:
-            print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
-
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

@@ -32,13 +32,20 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
+        # Install vcpkg
+        subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+        if sys.platform.startswith("win"):
+            subprocess.check_call(["vcpkg/bootstrap-vcpkg.bat"])
+        else:
+            subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
+        os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
+        os.environ["PATH"] = os.path.abspath("vcpkg") + os.pathsep + os.environ["PATH"]
+        os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath("vcpkg/scripts/buildsystems/vcpkg.cmake")
+
         print(f"-- Working directory: {os.getcwd()}")
         print(f"-- Directory content: {os.listdir()}")
         print(f"-- Path build_temp: {build_temp}")
         print(f"-- Path ext_dir: {ext_dir}")
-
-        subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
-        subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
@@ -102,7 +109,7 @@ class CMakeBuild(build_ext):
         # Override the build and install directory and the toolchain file
         cmake_args += [f"-DCMAKE_BINARY_DIR={build_temp}"]
         cmake_args += [f"-DCMAKE_INSTALL_PREFIX={ext_dir}"]
-        cmake_args += ["-CMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake"]
+        cmake_args += [f"-CMAKE_TOOLCHAIN_FILE={os.getcwd()}/vcpkg/scripts/buildsystems/vcpkg.cmake"]
 
         subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
 
@@ -115,7 +122,6 @@ class CMakeBuild(build_ext):
 
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
-
 
 # Read the contents of the README file
 this_directory = Path(__file__).parent

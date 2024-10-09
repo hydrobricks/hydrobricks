@@ -32,10 +32,13 @@ class CMakeBuild(build_ext):
         if not os.path.exists(build_temp):
             os.makedirs(build_temp)
 
-        print(f"--- Working directory: {os.getcwd()}")
-        print(f"--- Directory content: {os.listdir()}")
-        print(f"--- Path build_temp: {build_temp}")
-        print(f"--- Path ext_dir: {ext_dir}")
+        print(f"-- Working directory: {os.getcwd()}")
+        print(f"-- Directory content: {os.listdir()}")
+        print(f"-- Path build_temp: {build_temp}")
+        print(f"-- Path ext_dir: {ext_dir}")
+
+        subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+        subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):

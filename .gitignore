@@ -58,3 +58,4 @@ vcpkg_installed/
 *.tif.aux.xml
 *.gif
 /vcpkg-build-*
+vcpkg/

@@ -37,9 +37,12 @@ class CMakeBuild(build_ext):
             ext_dir += os.path.sep
 
         # Install vcpkg
-        subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+        if not os.path.exists("vcpkg"):
+            subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+        else:
+            subprocess.check_call(["git", "pull"], cwd="vcpkg")
         if sys.platform.startswith("win"):
-            subprocess.check_call(["vcpkg/bootstrap-vcpkg.bat"])
+            subprocess.check_call(["vcpkg\\bootstrap-vcpkg.bat"])
         else:
             subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
         os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
@@ -51,6 +54,7 @@ class CMakeBuild(build_ext):
         print(f"-- Directory content: {os.listdir()}")
         print(f"-- Path build_temp: {build_temp}")
         print(f"-- Path ext_dir: {ext_dir}")
+        print(f"-- Python executable: {sys.executable}")
 
         # Check if the debug mode is enabled
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
@@ -111,7 +115,7 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        subprocess.check_call(["vcpkg", "install"], cwd=build_temp)
+        subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

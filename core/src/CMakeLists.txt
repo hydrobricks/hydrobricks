@@ -11,7 +11,7 @@ list(APPEND src_app ${src_app_cpp})
 
 list(REMOVE_DUPLICATES src_app)
 
-include(${CMAKE_SOURCE_DIR}/build/cmake/hydrobricks_core_source.cmake)
+include(${CMAKE_SOURCE_DIR}/core/build/cmake/hydrobricks_core_source.cmake)
 
 # LIBRARIES
 

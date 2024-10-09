@@ -14,7 +14,7 @@ list(APPEND src_bind ${src_bind_cpp})
 list(REMOVE_DUPLICATES src_bind)
 
 # Core
-include(${CMAKE_SOURCE_DIR}/build/cmake/hydrobricks_core_source.cmake)
+include(${CMAKE_SOURCE_DIR}/core/build/cmake/hydrobricks_core_source.cmake)
 
 list(APPEND src_bind ${src_core})
 

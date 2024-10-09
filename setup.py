@@ -111,6 +111,12 @@ class CMakeBuild(build_ext):
 
         if sys.platform.startswith("linux"):
             cmake_args += ["--preset=linux-release"]
+        elif sys.platform.startswith("win"):
+            cmake_args += ["--preset=windows-release"]
+        elif sys.platform.startswith("darwin"):
+            cmake_args += ["--preset=osx-release"]
+        else:
+            raise RuntimeError(f"Unsupported platform: {sys.platform}")
 
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level.
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
@@ -122,7 +128,10 @@ class CMakeBuild(build_ext):
         # Copy the content of the vcpkg-build-release directory to build_temp
         vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
         if os.path.exists(vcpkg_build_release):
-            subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
+            if sys.platform.startswith("win"):
+                subprocess.check_call(["robocopy", vcpkg_build_release, build_temp, "/E"])
+            else:
+                subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
         else:
             print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
 

@@ -37,18 +37,25 @@ class CMakeBuild(build_ext):
         if not ext_dir.endswith(os.path.sep):
             ext_dir += os.path.sep
 
-        # Install vcpkg
-        if not os.path.exists("vcpkg"):
-            subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+        # Check if VCPKG_ROOT is set
+        if "VCPKG_ROOT" not in os.environ:
+            print("-- VCPKG_ROOT is not set. Trying to install vcpkg.")
+            # Install vcpkg
+            if not os.path.exists("vcpkg"):
+                subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+            else:
+                subprocess.check_call(["git", "pull"], cwd="vcpkg")
+            if sys.platform.startswith("win"):
+                subprocess.check_call(["vcpkg\\bootstrap-vcpkg.bat"])
+            else:
+                subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
+            os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
+            os.environ["PATH"] = os.path.abspath("vcpkg") + os.pathsep + os.environ["PATH"]
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath("vcpkg/scripts/buildsystems/vcpkg.cmake")
         else:
-            subprocess.check_call(["git", "pull"], cwd="vcpkg")
-        if sys.platform.startswith("win"):
-            subprocess.check_call(["vcpkg\\bootstrap-vcpkg.bat"])
-        else:
-            subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
-        os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
-        os.environ["PATH"] = os.path.abspath("vcpkg") + os.pathsep + os.environ["PATH"]
-        os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath("vcpkg/scripts/buildsystems/vcpkg.cmake")
+            print(f"-- VCPKG_ROOT is set to {os.environ['VCPKG_ROOT']}")
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.join(os.environ["VCPKG_ROOT"],
+                                                              "scripts/buildsystems/vcpkg.cmake")
 
         # Print some debug information
         print(f"-- Working directory: {os.getcwd()}")
@@ -70,7 +77,7 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",
             f"-DCMAKE_BINARY_DIR={build_temp}",
             f"-DCMAKE_INSTALL_PREFIX={ext_dir}",
-            f"-DCMAKE_TOOLCHAIN_FILE={os.getcwd()}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            f"-DCMAKE_TOOLCHAIN_FILE={os.environ['CMAKE_TOOLCHAIN_FILE']}",
             "-DBUILD_PYBINDINGS=1",
             "-DBUILD_CLI=0",
             "-DBUILD_TESTS=0",
@@ -109,32 +116,12 @@ class CMakeBuild(build_ext):
             if archs:
                 cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
-        if sys.platform.startswith("linux"):
-            cmake_args += ["--preset=linux-release"]
-        elif sys.platform.startswith("win"):
-            cmake_args += ["--preset=win-x64-release"]
-        elif sys.platform.startswith("darwin"):
-            cmake_args += ["--preset=macos-release"]
-        else:
-            raise RuntimeError(f"Unsupported platform: {sys.platform}")
-
         # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level.
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
         subprocess.check_call(["vcpkg", "install"])
-
-        # Copy the content of the vcpkg-build-release directory to build_temp
-        vcpkg_build_release = os.path.join(ext.source_dir, "vcpkg-build-release")
-        if os.path.exists(vcpkg_build_release):
-            if sys.platform.startswith("win"):
-                subprocess.check_call(["xcopy", vcpkg_build_release, build_temp, "/E"])
-            else:
-                subprocess.check_call(["cp", "-r", vcpkg_build_release, build_temp])
-        else:
-            print(f"vcpkg-build-release directory not found: {vcpkg_build_release}")
-
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

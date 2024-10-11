@@ -121,7 +121,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the total change in snow storage.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
-    py::class_<Behaviour>(m, "Behaviour").def(py::init<>());
+    py::class_<Behaviour>(m, "Behaviour")
+        .def(py::init<>());
 
     py::class_<BehaviourLandCoverChange, Behaviour>(m, "BehaviourLandCoverChange")
         .def(py::init<>())
@@ -129,5 +130,6 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_changes_nb", &BehaviourLandCoverChange::GetChangesNb)
         .def("get_land_covers_nb", &BehaviourLandCoverChange::GetLandCoversNb);
 
-    py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
+    py::class_<wxLogNull>(m, "LogNull")
+        .def(py::init<>());
 }

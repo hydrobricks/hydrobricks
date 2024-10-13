@@ -53,8 +53,6 @@ jobs:
 
     - name: Run CMake and vcpkg
       uses: lukka/run-cmake@v10
-      with:
-        configurePreset: "linux-releasewithdebuginfo"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

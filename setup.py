@@ -89,10 +89,7 @@ class CMakeBuild(build_ext):
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
-        if self.compiler.compiler_type != "msvc":
-            cmake_args += ["--preset=linux-release"]
-
-        else:
+        if self.compiler.compiler_type == "msvc":
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
 
@@ -110,7 +107,6 @@ class CMakeBuild(build_ext):
                 build_args += ["--config", cfg]
 
         if sys.platform.startswith("darwin"):
-            cmake_args += ["--preset=osx-release"]
             # Cross-compile support for macOS - respect ARCHFLAGS if set
             archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
             if archs:

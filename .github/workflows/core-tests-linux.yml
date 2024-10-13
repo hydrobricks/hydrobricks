@@ -21,8 +21,6 @@ jobs:
 
     - name: Run CMake and vcpkg
       uses: lukka/run-cmake@v10
-      with:
-        configurePreset: "linux-release"
 
     - name: Build
       working-directory: ${{github.workspace}}/vcpkg-build-release

@@ -1,7 +1,8 @@
 # SOURCE FILES
 
 # Find Pybind11
-find_package(Python COMPONENTS Interpreter Development)
+set(PYBIND11_FINDPYTHON ON)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 # List source files

@@ -10,9 +10,16 @@
     "yaml-cpp",
     "zlib",
     "netcdf-c",
+    "python3",
     {
       "name": "pybind11",
       "version>=": "2.12.0"
+    }
+  ],
+  "overrides": [
+    {
+      "name": "pybind11",
+      "version": "2.12.0"
     }
   ]
 }

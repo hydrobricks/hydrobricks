@@ -41,9 +41,6 @@ before-build = [
     "dnf install epel-release -y",
     "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA python3 autoconf automake autoconf-archive -y",
     "pip install cmake",
-    "rm -rf {project}/build/lib.*",
-    "rm -rf {project}/build/temp.*",
-    "rm -rf {project}/build/bdist.*",
 ]
 
 [tool.cibuildwheel.windows]

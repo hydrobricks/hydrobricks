@@ -24,7 +24,7 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        # Flag to enable debug mode
+        # Flag to build in debug mode
         # self.debug = True
 
         # Define the build directory

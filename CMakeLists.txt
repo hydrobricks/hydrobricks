@@ -12,6 +12,9 @@ if (POLICY CMP0077)
 endif ()
 
 # vcpkg
+if (NOT DEFINED ENV{VCPKG_ROOT})
+    message(FATAL_ERROR "Please define the environment variable VCPKG_ROOT")
+endif ()
 set(CMAKE_TOOLCHAIN_FILE
     "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
     CACHE STRING "Vcpkg toolchain file")
@@ -42,7 +45,7 @@ endif (WIN32)
 # Targets
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
-option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
+option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" ON)
 
 # Get and build wxbase from wxWidgets
 FetchContent_Declare(

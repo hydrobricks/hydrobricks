@@ -1,7 +1,7 @@
 # SOURCE FILES
 
 # Find Pybind11
-set(PYBIND11_FINDPYTHON ON)
+set(PYBIND11_NEWPYTHON ON)
 find_package(
     Python
     COMPONENTS Interpreter Development
@@ -24,5 +24,5 @@ list(APPEND src_bind ${src_core})
 
 # GENERATED MODULE
 
-pybind11_add_module(_hydrobricks ${src_bind})
-target_link_libraries(_hydrobricks PRIVATE wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)
+pybind11_add_module(_hydrobricks MODULE ${src_bind})
+target_link_libraries(_hydrobricks PUBLIC wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)

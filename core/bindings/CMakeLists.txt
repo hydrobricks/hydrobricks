@@ -30,9 +30,12 @@ if (PYTHON_ROOT)
 
     # Prioritize PYTHON_ROOT in CMAKE_PREFIX_PATH
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
-endif()
+endif ()
 
-find_package(Python3 ${PYTHON_VERSION} COMPONENTS Development REQUIRED)
+find_package(
+    Python3 ${PYTHON_VERSION}
+    COMPONENTS Development
+    REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
 

@@ -23,9 +23,15 @@ if (PYTHON_ROOT)
 
     # Set Python paths
     set(Python3_ROOT_DIR "${PYTHON_ROOT}")
-    set(Python3_EXECUTABLE "${PYTHON_ROOT}/python.exe")
-    set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include")
-    set(Python3_LIBRARY "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
+    if (WIN32)
+        set(Python3_EXECUTABLE "${PYTHON_ROOT}/python.exe")
+        set(Python3_LIBRARY "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
+        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include")
+    else ()
+        set(Python3_EXECUTABLE "${PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
+        set(Python3_LIBRARY "${PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
+        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
+    endif ()
 
     # Prioritize PYTHON_ROOT in CMAKE_PREFIX_PATH
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")

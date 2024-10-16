@@ -59,3 +59,4 @@ vcpkg_installed/
 *.gif
 /vcpkg-build-*
 vcpkg/
+*.whl

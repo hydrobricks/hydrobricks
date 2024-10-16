@@ -70,7 +70,7 @@ class CMakeBuild(build_ext):
         print(f"-- Build configuration: {cfg}")
 
         # CMake configuration
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "Ninja")
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={ext_dir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",

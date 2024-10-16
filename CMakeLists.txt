@@ -20,22 +20,6 @@ set(CMAKE_TOOLCHAIN_FILE
     CACHE STRING "Vcpkg toolchain file")
 message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
 
-# Use Ninja under Windows
-if (WIN32)
-    find_program(
-        NINJA_EXECUTABLE ninja
-        HINTS "${PROJECT_SOURCE_DIR}/vcpkg_installed/x64-windows/tools/ninja"
-              "${PROJECT_BINARY_DIR}/vcpkg_installed/x64-windows/tools/ninja" "$ENV{ProgramFiles}/Ninja"
-              "$ENV{USERPROFILE}/bin" "$ENV{LOCALAPPDATA}/Programs/Ninja")
-    if (NINJA_EXECUTABLE)
-        set(CMAKE_GENERATOR "Ninja")
-        set(CMAKE_MAKE_PROGRAM ${NINJA_EXECUTABLE})
-        message(STATUS "Ninja build system found: ${NINJA_EXECUTABLE}")
-    else ()
-        message(FATAL_ERROR "Ninja build system not found. Please install Ninja or specify its location.")
-    endif ()
-endif ()
-
 # Project name
 project(hydrobricks)
 

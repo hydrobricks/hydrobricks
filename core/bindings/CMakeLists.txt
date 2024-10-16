@@ -39,11 +39,13 @@ if (PYTHON_VERSION)
 else ()
     find_package(
         Python3
-        COMPONENTS Interpreter Development
+        COMPONENTS Development Interpreter
         REQUIRED)
 endif ()
 find_package(pybind11 CONFIG REQUIRED)
 message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
+message(STATUS "Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
+message(STATUS "Python3_LIBRARY = ${Python3_LIBRARY}")
 
 # List source files
 file(GLOB_RECURSE src_bind_h *.h)

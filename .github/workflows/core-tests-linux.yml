@@ -14,24 +14,32 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install libraries
-      run: sudo apt-get install tree python3 ninja-build libxi-dev libxtst-dev
+      run: sudo apt-get install tree python3 python3-dev ninja-build libxi-dev libxtst-dev
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
 
-    - name: Run CMake and vcpkg
-      uses: lukka/run-cmake@v10
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/bin
+
+    - name: Get dependencies
+      working-directory: ${{github.workspace}}/bin
+      run: vcpkg install
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/bin
+      run: cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
-      working-directory: ${{github.workspace}}/vcpkg-build-release
-      run: cmake --build . --config Release
+      working-directory: ${{github.workspace}}/bin
+      run: cmake --build . --config $BUILD_TYPE
 
     - name: Copy test files
       working-directory: ${{github.workspace}}
-      run: cp -R core/tests/files/ vcpkg-build-release/bin/
+      run: cp -R core/tests/files/ bin/bin/
 
     - name: Test
-      working-directory: ${{github.workspace}}/vcpkg-build-release
+      working-directory: ${{github.workspace}}/bin
       run: tests/hydrobricks-tests
 
   code-coverage:
@@ -45,27 +53,36 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install libraries
-        run: sudo apt-get install tree lcov python3 ninja-build libxi-dev libxtst-dev
+        run: sudo apt-get install tree lcov python3 python3-des ninja-build libxi-dev libxtst-dev
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
 
-      - name: Run CMake and vcpkg
-        uses: lukka/run-cmake@v10
-        with:
-          configurePreset: "linux-relwithdebinfo"
-          configurePresetAdditionalArgs: "['-DUSE_CODECOV=1', '-DBUILD_PYBINDINGS=0']"
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/bin
+
+      - name: Get dependencies
+        working-directory: ${{github.workspace}}/bin
+        run: conan install .. --build=missing -pr:b=default
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/bin
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUSE_CODECOV=1 -DBUILD_PYBINDINGS=0
+
+      - name: Get dependencies
+        working-directory: ${{github.workspace}}/bin
+        run: vcpkg install
 
       - name: Copy test files
         working-directory: ${{github.workspace}}
-        run: cp -R core/tests/files/ vcpkg-build-relwithdebinfo/tests
+        run: cp -R core/tests/files/ bin/tests
 
       - name: Build and run code coverage
-        working-directory: ${{github.workspace}}/vcpkg-build-relwithdebinfo
+        working-directory: ${{github.workspace}}/bin
         run: cmake --build . --config $BUILD_TYPE --target hydrobricks-coverage
 
       - name: Display code coverage report
-        working-directory: ${{github.workspace}}/vcpkg-build-relwithdebinfo
+        working-directory: ${{github.workspace}}/bin
         run: lcov --list hydrobricks-coverage.info
 
       - name: Upload coverage to Codecov
@@ -74,4 +91,4 @@ jobs:
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true
           flags: core
-          files: ${{github.workspace}}/vcpkg-build-relwithdebinfo/hydrobricks-coverage.info
+          files: ${{github.workspace}}/bin/hydrobricks-coverage.info

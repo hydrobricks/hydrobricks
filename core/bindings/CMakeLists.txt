@@ -31,10 +31,17 @@ if (PYTHON_ROOT)
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
 endif ()
 
-find_package(
-    Python3 ${PYTHON_VERSION}
-    COMPONENTS Interpreter Development
-    REQUIRED)
+if (PYTHON_VERSION)
+    find_package(
+        Python3 ${PYTHON_VERSION}
+        COMPONENTS Interpreter Development
+        REQUIRED)
+else ()
+    find_package(
+        Python3
+        COMPONENTS Interpreter Development
+        REQUIRED)
+endif ()
 find_package(pybind11 CONFIG REQUIRED)
 message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
 

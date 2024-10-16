@@ -91,9 +91,11 @@ class CMakeBuild(build_ext):
 
         if "PYTHON_VERSION" in os.environ:
             cmake_args += [f"-DPYTHON_VERSION={os.environ['PYTHON_VERSION']}"]
+            print(f"-- Setting Python version: {os.environ['PYTHON_VERSION']}")
 
         if "PYTHON_ROOT" in os.environ:
             cmake_args += [f"-DPYTHON_ROOT={os.environ['PYTHON_ROOT']}"]
+            print(f"-- Setting Python root: {os.environ['PYTHON_ROOT']}")
 
         if self.compiler.compiler_type == "msvc":
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})

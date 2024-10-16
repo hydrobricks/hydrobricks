@@ -42,7 +42,8 @@ class CMakeBuild(build_ext):
             print("-- VCPKG_ROOT is not set. Trying to install vcpkg.")
             # Install vcpkg
             if not os.path.exists("vcpkg"):
-                subprocess.check_call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+                subprocess.check_call(
+                    ["git", "clone", "https://github.com/microsoft/vcpkg.git"])
             else:
                 subprocess.check_call(["git", "pull"], cwd="vcpkg")
             if sys.platform.startswith("win"):
@@ -50,12 +51,14 @@ class CMakeBuild(build_ext):
             else:
                 subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
             os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
-            os.environ["PATH"] = os.path.abspath("vcpkg") + os.pathsep + os.environ["PATH"]
-            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath("vcpkg/scripts/buildsystems/vcpkg.cmake")
+            os.environ["PATH"] = (os.path.abspath("vcpkg") + os.pathsep +
+                                  os.environ["PATH"])
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath(
+                "vcpkg/scripts/buildsystems/vcpkg.cmake")
         else:
             print(f"-- VCPKG_ROOT is set to {os.environ['VCPKG_ROOT']}")
-            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.join(os.environ["VCPKG_ROOT"],
-                                                              "scripts/buildsystems/vcpkg.cmake")
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.join(
+                os.environ["VCPKG_ROOT"], "scripts/buildsystems/vcpkg.cmake")
 
         # Print some debug information
         print(f"-- Working directory: {os.getcwd()}")
@@ -92,10 +95,14 @@ class CMakeBuild(build_ext):
         if "PYTHON_VERSION" in os.environ:
             cmake_args += [f"-DPYTHON_VERSION={os.environ['PYTHON_VERSION']}"]
             print(f"-- Setting Python version: {os.environ['PYTHON_VERSION']}")
+        else:
+            print("-- Python version not set.")
 
         if "PYTHON_ROOT" in os.environ:
             cmake_args += [f"-DPYTHON_ROOT={os.environ['PYTHON_ROOT']}"]
             print(f"-- Setting Python root: {os.environ['PYTHON_ROOT']}")
+        else:
+            print("-- Python root not set.")
 
         if self.compiler.compiler_type == "msvc":
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
@@ -128,6 +135,7 @@ class CMakeBuild(build_ext):
         subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
+
 
 # Read the contents of the README file
 this_directory = Path(__file__).parent

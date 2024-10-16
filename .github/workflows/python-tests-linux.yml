@@ -24,8 +24,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-      env:
-        PYTHON_VERSION: ${{ matrix.python-version }}
 
     - name: Install requirements
       run: |
@@ -34,6 +32,9 @@ jobs:
 
     - name: Install the package
       run: pip install -vv .
+      env:
+        PYTHON_VERSION: ${{ matrix.python-version }}
+        PYTHON_ROOT: ${{ env.Python3_ROOT_DIR }}
 
     - name: Test
       run: pytest ./python/tests

@@ -37,6 +37,17 @@ class CMakeBuild(build_ext):
         if not ext_dir.endswith(os.path.sep):
             ext_dir += os.path.sep
 
+        # Set VCPKG_TARGET_TRIPLET to static link
+        if sys.platform.startswith("win"):
+            os.environ["VCPKG_TARGET_TRIPLET"] = "x64-windows-static"
+        elif sys.platform.startswith("linux"):
+            os.environ["VCPKG_TARGET_TRIPLET"] = "x64-linux-static"
+        elif sys.platform.startswith("darwin"):
+            os.environ["VCPKG_TARGET_TRIPLET"] = "x64-osx-static"
+        else:
+            print(f"-- Unsupported platform: {sys.platform}")
+            sys.exit(1)
+
         # Check if VCPKG_ROOT is set
         if "VCPKG_ROOT" not in os.environ:
             print("-- VCPKG_ROOT is not set. Trying to install vcpkg.")

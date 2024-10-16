@@ -25,6 +25,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Install Python development headers
+      run: sudo apt-get install python${{ matrix.python-version }}-dev
+
     - name: Install requirements
       run: |
         pip install -r python/requirements.txt
@@ -49,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install system libraries
-        run: sudo apt-get install tree lcov python3 ninja-build
+        run: sudo apt-get install tree lcov python3 python3-dev ninja-build
 
       - name: Install requirements
         run: |

@@ -89,6 +89,12 @@ class CMakeBuild(build_ext):
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
+        if "PYTHON_VERSION" in os.environ:
+            cmake_args += [f"-DPYTHON_VERSION={os.environ['PYTHON_VERSION']}"]
+
+        if "PYTHON_ROOT" in os.environ:
+            cmake_args += [f"-DPYTHON_ROOT={os.environ['PYTHON_ROOT']}"]
+
         if self.compiler.compiler_type == "msvc":
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})

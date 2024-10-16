@@ -2,13 +2,12 @@
 
 # Define an option for the Python root directory
 option(PYTHON_ROOT "Path to the root of the desired Python installation" "")
-option(PYTHON_VERSION "Python version" 3.12)
+message(STATUS "PYTHON_ROOT = ${PYTHON_ROOT}")
+option(PYTHON_VERSION "Python version" "")
+message(STATUS "PYTHON_VERSION = ${PYTHON_VERSION}")
 
 # Find Pybind11 and Python
 if (PYTHON_ROOT)
-    message(STATUS "PYTHON_ROOT = ${PYTHON_ROOT}")
-    message(STATUS "PYTHON_VERSION = ${PYTHON_VERSION}")
-
     set(Python3_ROOT_DIR ${PYTHON_ROOT})
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
 
@@ -34,7 +33,7 @@ endif ()
 
 find_package(
     Python3 ${PYTHON_VERSION}
-    COMPONENTS Development
+    COMPONENTS Interpreter Development
     REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")

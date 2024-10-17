@@ -9,6 +9,7 @@
     "gtest",
     "yaml-cpp",
     "zlib",
-    "netcdf-c"
+    "netcdf-c",
+    "hdf5"
   ]
 }

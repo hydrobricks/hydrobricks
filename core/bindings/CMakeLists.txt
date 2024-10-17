@@ -53,6 +53,10 @@ if (PYBIND11_PYTHON_ROOT)
     message(STATUS "Python3_LIBRARY = ${Python3_LIBRARY}")
 endif ()
 
+if (NOT PYBIND11_PYTHON_VERSION)
+    # Remove the variable to avoid issues in pybind11
+    unset(PYBIND11_PYTHON_VERSION)
+
 FetchContent_MakeAvailable(pybind11)
 add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 

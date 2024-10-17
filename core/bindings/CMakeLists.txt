@@ -1,11 +1,11 @@
 # SOURCE FILES
 
 # Define an option for the Python root directory
-option(PYBIND11_PYTHON_ROOT "Path to the root of the desired Python installation" "")
-option(PYBIND11_PYTHON_VERSION "Python version" "")
+set(PYBIND11_PYTHON_ROOT CACHE STRING "Path to the root of the desired Python installation")
+set(PYBIND11_PYTHON_VERSION CACHE STRING "Python version")
 
 # Find Pybind11 and Python
-if (PYBIND11_PYTHON_ROOT)
+if (PYBIND11_PYTHON_ROOT_XXXXXXXXX)
     message(STATUS "PYBIND11_PYTHON_ROOT = ${PYBIND11_PYTHON_ROOT}")
 
     set(Python3_ROOT_DIR ${PYBIND11_PYTHON_ROOT})
@@ -53,10 +53,8 @@ if (PYBIND11_PYTHON_ROOT)
     message(STATUS "Python3_LIBRARY = ${Python3_LIBRARY}")
 endif ()
 
-if (NOT PYBIND11_PYTHON_VERSION)
-    # Remove the variable to avoid issues in pybind11
-    unset(PYBIND11_PYTHON_VERSION)
-
+set(PYBIND11_NEWPYTHON ON)
+set(PYBIND11_FINDPYTHON ON)
 FetchContent_MakeAvailable(pybind11)
 add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 

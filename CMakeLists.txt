@@ -69,7 +69,7 @@ message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
 FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG v2.13.1)
+    GIT_TAG v2.13.6)
 
 # Find packages
 find_package(netCDF CONFIG REQUIRED)

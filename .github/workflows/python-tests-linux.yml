@@ -25,6 +25,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+
+    - name: Get dependencies
+      run: vcpkg install
+
     - name: Install requirements
       run: |
         pip install -r python/requirements.txt

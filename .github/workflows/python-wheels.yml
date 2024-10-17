@@ -41,6 +41,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      - name: Get dependencies
+        run: vcpkg install
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.2

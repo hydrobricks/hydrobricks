@@ -51,8 +51,17 @@ jobs:
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/bin
 
-    - name: Run CMake and vcpkg
-      uses: lukka/run-cmake@v10
+    - name: Get dependencies
+      working-directory: ${{github.workspace}}/bin
+      run: vcpkg install
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/bin
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      working-directory: ${{github.workspace}}/bin
+      run: cmake --build . --config Release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

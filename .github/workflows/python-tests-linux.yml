@@ -31,7 +31,7 @@ jobs:
         pip install -r python/requirements-optional.txt
 
     - name: Install the package
-      run: pip install -vv .
+      run: pip install .
 
     - name: Test
       run: pytest ./python/tests

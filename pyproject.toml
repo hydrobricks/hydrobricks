@@ -39,7 +39,7 @@ build-verbosity = 3
 before-build = [
     "dnf update -y --nogpgcheck",
     "dnf install epel-release -y",
-    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
+    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA hdf5-devel -y",
     "pip install cmake",
 ]
 
@@ -50,6 +50,5 @@ before-build = [
 
 [tool.cibuildwheel.macos]
 before-build = [
-    "brew install python3 autoconf",
     "pip install cmake",
 ]

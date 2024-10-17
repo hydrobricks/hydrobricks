@@ -52,3 +52,19 @@ endif (WIN32)
 # Link libraries explicitly to not link Google Tests to the main app.
 target_link_libraries(core wx::base netCDF::netcdf yaml-cpp::yaml-cpp)
 target_link_libraries(hydrobricks-cli core)
+
+# COPY BINARY FILES
+
+if (WIN32)
+    # Find all DLL files in the vcpkg installed directory
+    file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
+
+    # Copy DLL files to the target directory after build
+    add_custom_command(
+            TARGET hydrobricks-cli
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${VCPKG_DLLS}
+            $<TARGET_FILE_DIR:hydrobricks-cli>
+    )
+endif ()

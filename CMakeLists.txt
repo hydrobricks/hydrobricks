@@ -47,22 +47,32 @@ option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" ON)
 
-# Get and build wxbase from wxWidgets
-FetchContent_Declare(
-    wxWidgets
-    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-    GIT_TAG v3.2.6 # v3.2.6
-)
 # Pre-set wxWidgets options
 set(wxUSE_GUI OFF)
 set(wxBUILD_INSTALL OFF)
 set(wxBUILD_SAMPLES OFF)
 set(wxBUILD_TESTS OFF)
+set(wxBUILD_SHARED OFF)
+
+# Get and build wxbase from wxWidgets
+FetchContent_Declare(
+    wxWidgets
+    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+    GIT_TAG v3.2.6
+)
 FetchContent_MakeAvailable(wxWidgets)
+
 include_directories(${wxWidgets_SOURCE_DIR}/include)
 link_directories(${wxWidgets_BINARY_DIR}/lib)
 message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
 message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
+
+# Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically
+# (without control of the version)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.13.6)
 
 # Find packages
 find_package(netCDF CONFIG REQUIRED)
@@ -144,11 +154,3 @@ message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE = ${CMAKE_CXX_FLAGS_RELEASE}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG = ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO = ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-
-# COPY BINARY FILES
-
-if (WIN32)
-    # add_custom_command( TARGET ${hydrobricks} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    # $<TARGET_FILE:wx::base> $<TARGET_FILE:netcdf> $<TARGET_FILE:yaml-cpp> $<TARGET_FILE:zlib>
-    # $<TARGET_FILE_DIR:${PROJECT_NAME}>)
-endif ()

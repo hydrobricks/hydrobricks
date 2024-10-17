@@ -2,12 +2,12 @@
 
 # Define an option for the Python root directory
 option(PYTHON_ROOT "Path to the root of the desired Python installation" "")
-message(STATUS "PYTHON_ROOT = ${PYTHON_ROOT}")
 option(PYTHON_VERSION "Python version" "")
-message(STATUS "PYTHON_VERSION = ${PYTHON_VERSION}")
 
 # Find Pybind11 and Python
 if (PYTHON_ROOT)
+    message(STATUS "PYTHON_ROOT = ${PYTHON_ROOT}")
+
     set(Python3_ROOT_DIR ${PYTHON_ROOT})
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
 
@@ -24,66 +24,37 @@ if (PYTHON_ROOT)
     # Set Python paths
     set(Python3_ROOT_DIR "${PYTHON_ROOT}")
     if (WIN32)
-        if (EXISTS "${PYTHON_ROOT}/python.exe")
-            set(Python3_EXECUTABLE "${PYTHON_ROOT}/python.exe")
-        else ()
-            message(FATAL_ERROR "Python executable not found in ${PYTHON_ROOT}")
-        endif ()
-
-        if (EXISTS "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
-            set(Python3_LIBRARY "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
-        else ()
-            message(FATAL_ERROR "Python library not found in ${PYTHON_ROOT}")
-        endif ()
-
-        if (EXISTS "${PYTHON_ROOT}/include")
-            set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include")
-        else ()
-            message(FATAL_ERROR "Python include directory not found in ${PYTHON_ROOT}")
-        endif ()
+        set(Python3_EXECUTABLE "${PYTHON_ROOT}/python.exe")
+        set(Python3_LIBRARY "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
+        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include")
     else ()
-        if (EXISTS "${PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
-            set(Python3_EXECUTABLE "${PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
-        else ()
-            message(FATAL_ERROR "Python executable not found in ${PYTHON_ROOT}")
-        endif ()
-
-        if (EXISTS "${PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
-            set(Python3_LIBRARY "${PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
-        elseif (EXISTS "/usr/lib/x86_64-linux-gnu/libpython${PYTHON_VERSION}.so")
-            set(Python3_LIBRARY "/usr/lib/x86_64-linux-gnu/libpython${PYTHON_VERSION}.so")
-        else ()
-            message(FATAL_ERROR "Python library not found in ${PYTHON_ROOT}")
-        endif ()
-
-        if (EXISTS "${PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
-            set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
-        elseif (EXISTS "/usr/include/python${PYTHON_VERSION}")
-            set(Python3_INCLUDE_DIR "/usr/include/python${PYTHON_VERSION}")
-        else ()
-            message(FATAL_ERROR "Python include directory not found in ${PYTHON_ROOT}")
-        endif ()
+        set(Python3_EXECUTABLE "${PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
+        set(Python3_LIBRARY "${PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
+        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
     endif ()
 
     # Prioritize PYTHON_ROOT in CMAKE_PREFIX_PATH
     list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
+
+    if (PYTHON_VERSION)
+        message(STATUS "PYTHON_VERSION = ${PYTHON_VERSION}")
+        find_package(
+                Python3 ${PYTHON_VERSION}
+                COMPONENTS Interpreter Development
+                REQUIRED)
+    else ()
+        find_package(
+                Python3
+                COMPONENTS Development Interpreter
+                REQUIRED)
+    endif ()
+    message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
+    message(STATUS "Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
+    message(STATUS "Python3_LIBRARY = ${Python3_LIBRARY}")
 endif ()
 
-if (PYTHON_VERSION)
-    find_package(
-        Python3 ${PYTHON_VERSION}
-        COMPONENTS Interpreter Development
-        REQUIRED)
-else ()
-    find_package(
-        Python3
-        COMPONENTS Development Interpreter
-        REQUIRED)
-endif ()
-find_package(pybind11 CONFIG REQUIRED)
-message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
-message(STATUS "Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
-message(STATUS "Python3_LIBRARY = ${Python3_LIBRARY}")
+FetchContent_MakeAvailable(pybind11)
+add_subdirectory("${pybind11_SOURCE_DIR}" "${EXECUTABLE_OUTPUT_PATH}/pybind11")
 
 # List source files
 file(GLOB_RECURSE src_bind_h *.h)

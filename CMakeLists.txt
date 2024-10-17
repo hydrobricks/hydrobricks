@@ -64,6 +64,13 @@ link_directories(${wxWidgets_BINARY_DIR}/lib)
 message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
 message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
 
+# Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically
+# (without control of the version)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.13.1)
+
 # Find packages
 find_package(netCDF CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)

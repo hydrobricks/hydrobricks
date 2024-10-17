@@ -9,10 +9,6 @@
     "gtest",
     "yaml-cpp",
     "zlib",
-    "netcdf-c",
-    {
-      "name": "pybind11",
-      "version>=": "2.12.0"
-    }
+    "netcdf-c"
   ]
 }

@@ -37,20 +37,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest ] #, macos-latest, macos-latest-large]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      - name: Get dependencies
+        run: vcpkg install
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.1
+        uses: pypa/cibuildwheel@v2.21.3
         env:
           CIBW_ARCHS: auto64
-          CIBW_ENVIRONMENT: SKIP_CONAN=1
 
       - name: Verify clean directory
         run: git diff --exit-code
@@ -71,10 +72,6 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
       - name: Download wheels artifacts
         uses: actions/download-artifact@v4
         with:
@@ -93,6 +90,6 @@ jobs:
           name: sdist
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@v1.10.2
+      - uses: pypa/gh-action-pypi-publish@v1.10.3
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

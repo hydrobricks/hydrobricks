@@ -3,7 +3,6 @@ requires = [
     "setuptools>=42",
     "wheel",
     "ninja",
-    "conan==1.*",
     "cmake>=3.12"
 ]
 build-backend = "setuptools.build_meta"
@@ -27,7 +26,7 @@ test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopand
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "cp38-*", "cp312-*", "cp313-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "cp38-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
@@ -40,35 +39,16 @@ build-verbosity = 3
 before-build = [
     "dnf update -y --nogpgcheck",
     "dnf install epel-release -y",
-    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
-    "rm -rf {project}/build/lib.*",
-    "rm -rf {project}/build/temp.*",
-    "rm -rf {project}/build/bdist.*",
-    "pip install conan==1.*",
-    "pip show conan",
-    "conan profile new default --detect --force",
-    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
-    "conan profile update settings.compiler.libcxx=libstdc++11 default",
-    "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -s build_type=Release -pr:b=default",
+    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA hdf5-devel -y",
+    "pip install cmake",
 ]
 
 [tool.cibuildwheel.windows]
 before-build = [
-    "pip install conan==1.*",
-    "pip show conan",
-    "conan profile new default --detect --force",
-    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
-    "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -s build_type=Release -pr:b=default",
+    "pip install cmake",
 ]
 
 [tool.cibuildwheel.macos]
 before-build = [
-    "pip install conan==1.*",
-    "pip show conan",
-    "conan profile new default --detect --force",
-    "conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force",
-    "conan config set general.revisions_enabled=1",
-    "conan install . --build=missing -s build_type=Release -pr:b=default",
+    "pip install cmake",
 ]

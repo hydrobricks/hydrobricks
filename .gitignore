@@ -54,11 +54,9 @@ vcpkg_installed/
 **/examples/**/*.csv
 **/examples/**/*.png
 **/spotpy_*.csv
-conan.lock
-conanbuildinfo.cmake
-conanbuildinfo.txt
-conaninfo.txt
-graph_info.json
 *.pyd
 *.tif.aux.xml
 *.gif
+/vcpkg-build-*
+vcpkg/
+*.whl

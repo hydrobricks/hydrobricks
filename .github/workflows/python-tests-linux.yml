@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -25,20 +25,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache Conan libs
-      id: cache-conan
-      uses: actions/cache@v4
-      with:
-        path: /home/runner/.conan
-        key: ${{ runner.os }}-conan
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
 
-    - name: Setup Conan
-      run: |
-        pip install conan==1.*
-        conan profile new default --detect --force
-        conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
-        conan profile update settings.compiler.libcxx=libstdc++11 default
-        conan config set general.revisions_enabled=1
+    - name: Get dependencies
+      run: vcpkg install
 
     - name: Install requirements
       run: |
@@ -62,21 +53,6 @@ jobs:
 
       - name: Install system libraries
         run: sudo apt-get install tree lcov python3
-
-      - name: Cache Conan libs
-        id: cache-conan
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.conan
-          key: ${{ runner.os }}-conan
-
-      - name: Setup Conan
-        run: |
-          pip install conan==1.*
-          conan profile new default --detect --force
-          conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
-          conan profile update settings.compiler.libcxx=libstdc++11 default
-          conan config set general.revisions_enabled=1
 
       - name: Install requirements
         run: |

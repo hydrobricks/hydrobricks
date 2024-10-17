@@ -1,5 +1,8 @@
 #include "FileNetcdf.h"
 
+#include <wx/file.h>
+#include <wx/filename.h>
+
 FileNetcdf::FileNetcdf()
     : m_ncId(-1) {}
 

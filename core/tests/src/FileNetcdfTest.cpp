@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <wx/file.h>
 #include <wx/stdpaths.h>
 
 #include "FileNetcdf.h"

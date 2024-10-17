@@ -50,5 +50,6 @@ before-build = [
 
 [tool.cibuildwheel.macos]
 before-build = [
+    "xcode-select --install",
     "pip install cmake",
 ]

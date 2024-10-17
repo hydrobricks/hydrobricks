@@ -39,14 +39,14 @@ if (PYBIND11_PYTHON_ROOT_XXXXXXXXX)
     if (PYBIND11_PYTHON_VERSION)
         message(STATUS "PYBIND11_PYTHON_VERSION = ${PYBIND11_PYTHON_VERSION}")
         find_package(
-                Python3 ${PYBIND11_PYTHON_VERSION}
-                COMPONENTS Interpreter Development
-                REQUIRED)
+            Python3 ${PYBIND11_PYTHON_VERSION}
+            COMPONENTS Interpreter Development
+            REQUIRED)
     else ()
         find_package(
-                Python3
-                COMPONENTS Development Interpreter
-                REQUIRED)
+            Python3
+            COMPONENTS Development Interpreter
+            REQUIRED)
     endif ()
     message(STATUS "Python3_EXECUTABLE = ${Python3_EXECUTABLE}")
     message(STATUS "Python3_INCLUDE_DIR = ${Python3_INCLUDE_DIR}")
@@ -85,10 +85,7 @@ if (WIN32)
 
     # Copy DLL files to the target directory after build
     add_custom_command(
-            TARGET _hydrobricks
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${VCPKG_DLLS}
-            $<TARGET_FILE_DIR:_hydrobricks>
-    )
+        TARGET _hydrobricks
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VCPKG_DLLS} $<TARGET_FILE_DIR:_hydrobricks>)
 endif ()

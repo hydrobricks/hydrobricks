@@ -61,10 +61,7 @@ if (WIN32)
 
     # Copy DLL files to the target directory after build
     add_custom_command(
-            TARGET hydrobricks-cli
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${VCPKG_DLLS}
-            $<TARGET_FILE_DIR:hydrobricks-cli>
-    )
+        TARGET hydrobricks-cli
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VCPKG_DLLS} $<TARGET_FILE_DIR:hydrobricks-cli>)
 endif ()

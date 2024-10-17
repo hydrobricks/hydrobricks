@@ -58,8 +58,7 @@ set(wxBUILD_SHARED OFF)
 FetchContent_Declare(
     wxWidgets
     GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-    GIT_TAG v3.2.6
-)
+    GIT_TAG v3.2.6)
 FetchContent_MakeAvailable(wxWidgets)
 
 include_directories(${wxWidgets_SOURCE_DIR}/include)
@@ -67,8 +66,7 @@ link_directories(${wxWidgets_BINARY_DIR}/lib)
 message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
 message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
 
-# Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically
-# (without control of the version)
+# Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically (without control of the version)
 FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git

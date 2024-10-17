@@ -39,7 +39,7 @@ build-verbosity = 3
 before-build = [
     "dnf update -y --nogpgcheck",
     "dnf install epel-release -y",
-    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA python3 autoconf automake autoconf-archive -y",
+    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA -y",
     "pip install cmake",
 ]
 

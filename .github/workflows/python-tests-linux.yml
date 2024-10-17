@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install system libraries
-      run: sudo apt-get install tree ninja-build autoconf-archive
+      run: sudo apt-get install tree
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install system libraries
-        run: sudo apt-get install tree lcov python3 python3-dev ninja-build
+        run: sudo apt-get install tree lcov python3
 
       - name: Install requirements
         run: |

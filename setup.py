@@ -103,15 +103,15 @@ class CMakeBuild(build_ext):
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
-        if "PYTHON_VERSION" in os.environ:
-            cmake_args += [f"-DPYTHON_VERSION={os.environ['PYTHON_VERSION']}"]
-            print(f"-- Setting Python version: {os.environ['PYTHON_VERSION']}")
+        if "PYBIND11_PYTHON_VERSION" in os.environ:
+            cmake_args += [f"-DPYBIND11_PYTHON_VERSION={os.environ['PYBIND11_PYTHON_VERSION']}"]
+            print(f"-- Setting Python version: {os.environ['PYBIND11_PYTHON_VERSION']}")
         else:
             print("-- Python version not set.")
 
-        if "PYTHON_ROOT" in os.environ:
-            cmake_args += [f"-DPYTHON_ROOT={os.environ['PYTHON_ROOT']}"]
-            print(f"-- Setting Python root: {os.environ['PYTHON_ROOT']}")
+        if "PYBIND11_PYTHON_ROOT" in os.environ:
+            cmake_args += [f"-DPYBIND11_PYTHON_ROOT={os.environ['PYBIND11_PYTHON_ROOT']}"]
+            print(f"-- Setting Python root: {os.environ['PYBIND11_PYTHON_ROOT']}")
         else:
             print("-- Python root not set.")
 

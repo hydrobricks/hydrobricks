@@ -1,15 +1,15 @@
 # SOURCE FILES
 
 # Define an option for the Python root directory
-option(PYTHON_ROOT "Path to the root of the desired Python installation" "")
-option(PYTHON_VERSION "Python version" "")
+option(PYBIND11_PYTHON_ROOT "Path to the root of the desired Python installation" "")
+option(PYBIND11_PYTHON_VERSION "Python version" "")
 
 # Find Pybind11 and Python
-if (PYTHON_ROOT)
-    message(STATUS "PYTHON_ROOT = ${PYTHON_ROOT}")
+if (PYBIND11_PYTHON_ROOT)
+    message(STATUS "PYBIND11_PYTHON_ROOT = ${PYBIND11_PYTHON_ROOT}")
 
-    set(Python3_ROOT_DIR ${PYTHON_ROOT})
-    list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
+    set(Python3_ROOT_DIR ${PYBIND11_PYTHON_ROOT})
+    list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_PYTHON_ROOT}")
 
     # Clear previously cached Python variables
     unset(Python3_EXECUTABLE CACHE)
@@ -19,27 +19,27 @@ if (PYTHON_ROOT)
     unset(Python3_VERSION_STRING CACHE)
 
     # Remove the dot in the version number
-    string(REPLACE "." "" PYTHON_VERSION_CONT ${PYTHON_VERSION})
+    string(REPLACE "." "" PYTHON_VERSION_CONT ${PYBIND11_PYTHON_VERSION})
 
     # Set Python paths
-    set(Python3_ROOT_DIR "${PYTHON_ROOT}")
+    set(Python3_ROOT_DIR "${PYBIND11_PYTHON_ROOT}")
     if (WIN32)
-        set(Python3_EXECUTABLE "${PYTHON_ROOT}/python.exe")
-        set(Python3_LIBRARY "${PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
-        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include")
+        set(Python3_EXECUTABLE "${PYBIND11_PYTHON_ROOT}/python.exe")
+        set(Python3_LIBRARY "${PYBIND11_PYTHON_ROOT}/libs/python${PYTHON_VERSION_CONT}.lib")
+        set(Python3_INCLUDE_DIR "${PYBIND11_PYTHON_ROOT}/include")
     else ()
-        set(Python3_EXECUTABLE "${PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
-        set(Python3_LIBRARY "${PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
-        set(Python3_INCLUDE_DIR "${PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
+        set(Python3_EXECUTABLE "${PYBIND11_PYTHON_ROOT}/bin/python${PYTHON_VERSION_CONT}")
+        set(Python3_LIBRARY "${PYBIND11_PYTHON_ROOT}/lib/libpython${PYTHON_VERSION_CONT}.so")
+        set(Python3_INCLUDE_DIR "${PYBIND11_PYTHON_ROOT}/include/python${PYTHON_VERSION_CONT}")
     endif ()
 
-    # Prioritize PYTHON_ROOT in CMAKE_PREFIX_PATH
-    list(APPEND CMAKE_PREFIX_PATH "${PYTHON_ROOT}")
+    # Prioritize PYBIND11_PYTHON_ROOT in CMAKE_PREFIX_PATH
+    list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_PYTHON_ROOT}")
 
-    if (PYTHON_VERSION)
-        message(STATUS "PYTHON_VERSION = ${PYTHON_VERSION}")
+    if (PYBIND11_PYTHON_VERSION)
+        message(STATUS "PYBIND11_PYTHON_VERSION = ${PYBIND11_PYTHON_VERSION}")
         find_package(
-                Python3 ${PYTHON_VERSION}
+                Python3 ${PYBIND11_PYTHON_VERSION}
                 COMPONENTS Interpreter Development
                 REQUIRED)
     else ()

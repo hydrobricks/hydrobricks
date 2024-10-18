@@ -40,7 +40,7 @@ jobs:
 
     - name: Install optional requirements (only for Python 3.13)
       if: matrix.python-version == '3.13'
-      run: pip install pytest geopandas dask xarray
+      run: pip install pytest geopandas dask xarray rasterio pyet
 
     - name: Install the package
       run: pip install .

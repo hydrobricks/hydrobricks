@@ -32,13 +32,13 @@ test-requires = [
     "StrEnum",
     "dask",
     "geopandas",
-    "netCDF4; python_version < '3.13'",
+    "netCDF4;python_version<'3.13'",
     "pyet",
     "rasterio",
     "rioxarray",
     "shapely",
     "xarray",
-    "xarray-spatial; python_version < '3.13'",
+    "xarray-spatial;python_version<'3.13'",
 ]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
@@ -51,7 +51,7 @@ manylinux-s390x-image = "manylinux_2_28"
 manylinux-pypy_x86_64-image = "manylinux_2_28"
 manylinux-pypy_aarch64-image = "manylinux_2_28"
 environment = {VCPKG_LIBRARY_LINKAGE="static"}
-build-verbosity = 3
+build-verbosity = 1
 
 [tool.cibuildwheel.linux]
 before-all = [ # Independent of Python version

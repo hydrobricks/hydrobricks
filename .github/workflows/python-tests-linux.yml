@@ -32,8 +32,9 @@ jobs:
       run: vcpkg install
 
     - name: Install requirements
-      run: pip install -r python/requirements.txt
-      run: pip install -r python/requirements-optional.txt
+      run: |
+        pip install -r python/requirements.txt
+        pip install -r python/requirements-optional.txt
 
     - name: Install the package
       run: pip install .

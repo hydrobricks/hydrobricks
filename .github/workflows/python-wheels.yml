@@ -43,10 +43,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Xcode Command Line Tools (macOS only)
-        if: matrix.os == 'macos-latest'
-        run: xcode-select --install || true
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         env:

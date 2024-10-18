@@ -38,6 +38,10 @@ jobs:
       if: matrix.python-version != '3.13'
       run: pip install -r python/requirements-optional.txt
 
+    - name: Install optional requirements (only for Python 3.13)
+      if: matrix.python-version == '3.13'
+      run: pip install pytest geopandas dask xarray
+
     - name: Install the package
       run: pip install .
 

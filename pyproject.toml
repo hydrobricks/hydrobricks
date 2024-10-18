@@ -22,7 +22,24 @@ filterwarnings = ["error"]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas netCDF4 pyet rasterio rioxarray shapely xarray xarray-spatial"
+test-requires = [
+    "pytest",
+    "cftime",
+    "HydroErr",
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "StrEnum",
+    "dask",
+    "geopandas",
+    "netCDF4; python_version < '3.13'",
+    "pyet",
+    "rasterio",
+    "rioxarray",
+    "shapely",
+    "xarray",
+    "xarray-spatial; python_version < '3.13'",
+]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
@@ -91,12 +108,3 @@ before-all = [ # Independent of Python version
 before-build = [  # Depends on Python version
     "pip install cmake",
 ]
-
-[tool.cibuildwheel.linux."3.13"]
-test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"
-
-[tool.cibuildwheel.windows."3.13"]
-test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"
-
-[tool.cibuildwheel.macos."3.13"]
-test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"

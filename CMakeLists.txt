@@ -19,6 +19,7 @@ set(CMAKE_TOOLCHAIN_FILE
     "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
     CACHE STRING "Vcpkg toolchain file")
 message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
+set(VCPKG_LIBRARY_LINKAGE "static")
 
 # Project name
 project(hydrobricks)

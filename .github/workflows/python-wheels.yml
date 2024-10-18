@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - dev
       - feature/*
   release:
     types:
@@ -37,16 +38,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        os: [ ubuntu-latest, windows-latest] #, macos-latest ]
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-
-      - name: Get dependencies
-        run: vcpkg install
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3

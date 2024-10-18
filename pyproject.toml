@@ -77,7 +77,6 @@ before-build = [ # Depends on Python version
 before-all = [ # Independent of Python version
     # Install system dependencies
     "brew install hdf5",
-    "xcode-select --install",
     # Install vcpkg
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
@@ -92,3 +91,12 @@ before-all = [ # Independent of Python version
 before-build = [  # Depends on Python version
     "pip install cmake",
 ]
+
+[tool.cibuildwheel.linux."3.13"]
+test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"
+
+[tool.cibuildwheel.windows."3.13"]
+test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"
+
+[tool.cibuildwheel.macos."3.13"]
+test-requires = "pytest cftime HydroErr numpy pandas pyyaml StrEnum dask geopandas pyet rasterio rioxarray shapely xarray"

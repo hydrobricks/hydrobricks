@@ -46,12 +46,6 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: xcode-select --install || true
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-
-      - name: Get dependencies
-        run: vcpkg install
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         env:

@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install system libraries
-      run: sudo apt-get install tree
+      run: sudo apt-get install tree libhdf5-dev
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -38,8 +38,6 @@ jobs:
 
     - name: Install the package
       run: pip install .
-      env:
-        HDF5_DIR: ${{ github.workspace }}/vcpkg_installed/x64-linux
 
     - name: Test
       run: pytest ./python/tests

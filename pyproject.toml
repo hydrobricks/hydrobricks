@@ -33,23 +33,62 @@ manylinux-ppc64le-image = "manylinux_2_28"
 manylinux-s390x-image = "manylinux_2_28"
 manylinux-pypy_x86_64-image = "manylinux_2_28"
 manylinux-pypy_aarch64-image = "manylinux_2_28"
+environment = {VCPKG_LIBRARY_LINKAGE="static"}
 build-verbosity = 3
 
 [tool.cibuildwheel.linux]
-before-build = [
-    "dnf update -y --nogpgcheck",
-    "dnf install epel-release -y",
-    "dnf install perl perl-core perl-IPC-Cmd perl-Digest-SHA hdf5-devel -y",
+before-all = [ # Independent of Python version
+    # Install system dependencies
+    "yum install -y epel-release",
+    "yum install -y perl perl-core perl-IPC-Cmd perl-Digest-SHA hdf5-devel",
+    # Install vcpkg
+    "git clone https://github.com/microsoft/vcpkg.git",
+    "cd vcpkg",
+    "./bootstrap-vcpkg.sh",
+    "export VCPKG_ROOT=$PWD",
+    "export PATH=$VCPKG_ROOT:$PATH",
+    "cd ..",
+    # Install vcpkg dependencies
+    "export VCPKG_LIBRARY_LINKAGE=static",
+    "vcpkg install",
+]
+before-build = [ # Depends on Python version
     "pip install cmake",
 ]
 
 [tool.cibuildwheel.windows]
-before-build = [
+before-all = [ # Independent of Python version
+    # Install vcpkg
+    "git clone https://github.com/microsoft/vcpkg.git",
+    "cd vcpkg",
+    ".\\bootstrap-vcpkg.bat",
+    "set VCPKG_ROOT=%cd%",
+    "set PATH=%VCPKG_ROOT%;%PATH%",
+    "cd ..",
+    # Install vcpkg dependencies
+    "set VCPKG_LIBRARY_LINKAGE=static",
+    "vcpkg install",
+]
+before-build = [ # Depends on Python version
     "pip install cmake",
 ]
 
 [tool.cibuildwheel.macos]
-before-build = [
+before-all = [ # Independent of Python version
+    # Install system dependencies
+    "brew install hdf5",
     "xcode-select --install",
+    # Install vcpkg
+    "git clone https://github.com/microsoft/vcpkg.git",
+    "cd vcpkg",
+    "./bootstrap-vcpkg.sh",
+    "export VCPKG_ROOT=$PWD",
+    "export PATH=$VCPKG_ROOT:$PATH",
+    "cd ..",
+    # Install vcpkg dependencies
+    "export VCPKG_LIBRARY_LINKAGE=static",
+    "vcpkg install",
+]
+before-build = [  # Depends on Python version
     "pip install cmake",
 ]

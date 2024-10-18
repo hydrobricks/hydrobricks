@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -33,14 +33,7 @@ jobs:
 
     - name: Install requirements
       run: pip install -r python/requirements.txt
-
-    - name: Install optional requirements (not for Python 3.13)
-      if: matrix.python-version != '3.13'
       run: pip install -r python/requirements-optional.txt
-
-    - name: Install optional requirements (only for Python 3.13)
-      if: matrix.python-version == '3.13'
-      run: pip install pytest geopandas dask xarray rasterio pyet
 
     - name: Install the package
       run: pip install .

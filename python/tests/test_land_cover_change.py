@@ -41,7 +41,7 @@ def catchment_gletsch():
         land_cover_names=['ground', 'glacier'])
     catchment.extract_dem(
         TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'dem.tif')
-    catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='equal_intervals', distance=50)
 
     return catchment
 

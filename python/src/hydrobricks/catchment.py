@@ -53,11 +53,11 @@ class Catchment:
     outline : shapely.geometry.Polygon
         The outline of the catchment.
     dem : rasterio.DatasetReader
-        The DEM of the catchment.
+        The DEM of the catchment [m].
     masked_dem_data : np.ndarray
         The masked DEM data of the catchment.
     slope : np.ndarray
-        The slope map of the catchment.
+        The slope map of the catchment [degrees].
     aspect : np.ndarray
         The aspect map of the catchment.
     map_unit_ids : np.ndarray
@@ -142,7 +142,7 @@ class Catchment:
             print(e)
             return False
 
-    def create_elevation_bands(self, method='isohypse', number=100, distance=50,
+    def create_elevation_bands(self, method='equal_intervals', number=100, distance=50,
                                min_elevation=None, max_elevation=None):
         """
         Construction of the elevation bands based on the chosen method.
@@ -151,13 +151,13 @@ class Catchment:
         ----------
         method : str
             The method to build the elevation bands:
-            'isohypse' = fixed contour intervals (provide the 'distance' parameter)
+            'equal_intervals' = fixed contour intervals (provide the 'distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'number' parameter)
         number : int, optional
             Number of bands to create when using the 'quantiles' method.
         distance : int, optional
-            Distance (m) between the contour lines when using the 'isohypse' method.
+            Distance (m) between the contour lines when using the 'equal_intervals' method.
         min_elevation : int, optional
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
@@ -166,9 +166,9 @@ class Catchment:
         self.discretize_by('elevation', method, number, distance,
                            min_elevation, max_elevation)
 
-    def discretize_by(self, criteria, elevation_method='isohypse', elevation_number=100,
+    def discretize_by(self, criteria, elevation_method='equal_intervals', elevation_number=100,
                       elevation_distance=100, min_elevation=None, max_elevation=None,
-                      radiation_method='isohypse', radiation_number=5,
+                      radiation_method='equal_intervals', radiation_number=5,
                       radiation_distance=50, min_radiation=None, max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
@@ -179,29 +179,29 @@ class Catchment:
             The criteria to use to discretize the catchment (can be combined):
             'elevation' = elevation bands
             'aspect' = aspect according to the cardinal directions (4 classes)
-            'radiation' = potential radiation (4 quantiles, Hock, 1999)
+            'radiation' = potential radiation (Hock, 1999)
         elevation_method : str
             The method to build the elevation bands:
-            'isohypse' = fixed contour intervals (provide the 'distance' parameter)
+            'equal_intervals' = fixed contour intervals (provide the 'distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'number' parameter)
         elevation_number : int, optional
             Number of elevation bands to create when using the 'quantiles' method.
         elevation_distance : int, optional
-            Distance (m) between the contour lines when using the 'isohypse' method.
+            Distance (m) between the contour lines when using the 'equal_intervals' method.
         min_elevation : int, optional
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
         radiation_method : str
             The method to build the radiation categories:
-            'isohypse' = fixed radiation intervals (provide the 'distance' parameter)
+            'equal_intervals' = fixed radiation intervals (provide the 'distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'number' parameter)
         radiation_number : int, optional
             Number of radiation bands to create when using the 'quantiles' method.
         radiation_distance : int, optional
-            Distance (W/m2) between the radiation lines for the 'isohypse' method.
+            Distance (W/m2) between the radiation lines for the 'equal_intervals' method.
         min_radiation : int, optional
             Minimum radiation of the radiation bands (to homogenize between runs).
         max_radiation : int, optional
@@ -225,7 +225,7 @@ class Catchment:
 
         if 'elevation' in criteria:
             criteria_dict['elevation'] = []
-            if elevation_method == 'isohypse':
+            if elevation_method == 'equal_intervals':
                 dist = elevation_distance
                 if min_elevation is None:
                     min_elevation = np.nanmin(self.masked_dem_data)
@@ -252,7 +252,7 @@ class Catchment:
                 raise ValueError("No radiation data available. "
                                  "Compute the radiation first")
             criteria_dict['radiation'] = []
-            if radiation_method == 'isohypse':
+            if radiation_method == 'equal_intervals':
                 dist = radiation_distance
                 if min_radiation is None:
                     min_radiation = np.nanmin(self.mean_annual_radiation)

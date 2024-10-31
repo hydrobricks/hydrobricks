@@ -26,7 +26,7 @@ catchment = hb.Catchment(CATCHMENT_OUTLINE)
 catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
-catchment.create_elevation_bands(method='isohypse', distance=50)
+catchment.create_elevation_bands(method='equal_intervals', distance=50)
 
 # Save elevation bands to a raster
 catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')

@@ -31,7 +31,7 @@ catchment.discretize_by(criteria=['elevation', 'aspect'], elevation_method='equa
                         elevation_distance=100)
 
 # Save elevation bands to a raster
-catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')
+catchment.save_unit_ids_raster(working_dir)
 
 # Save the elevation band properties to a csv file
 catchment.save_hydro_units_to_csv(working_dir / 'bands.csv')

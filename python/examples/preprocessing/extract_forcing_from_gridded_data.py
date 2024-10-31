@@ -29,7 +29,7 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.create_elevation_bands(method='equal_intervals', distance=50)
 
 # Save elevation bands to a raster
-catchment.save_unit_ids_raster(working_dir / 'unit_ids.tif')
+catchment.save_unit_ids_raster(working_dir)
 
 # Create forcing object and spatialize from gridded data
 forcing = hb.Forcing(catchment.hydro_units)

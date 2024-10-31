@@ -168,8 +168,10 @@ class Catchment:
 
     def discretize_by(self, criteria, elevation_method='equal_intervals', elevation_number=100,
                       elevation_distance=100, min_elevation=None, max_elevation=None,
-                      radiation_method='equal_intervals', radiation_number=5,
-                      radiation_distance=50, min_radiation=None, max_radiation=None):
+                      slope_method='equal_intervals', slope_number=6, slope_distance=15,
+                      min_slope=0, max_slope=90, radiation_method='equal_intervals',
+                      radiation_number=5, radiation_distance=50, min_radiation=None,
+                      max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -180,11 +182,12 @@ class Catchment:
             'elevation' = elevation bands
             'aspect' = aspect according to the cardinal directions (4 classes)
             'radiation' = potential radiation (Hock, 1999)
+            'slope' = slope in degrees
         elevation_method : str
             The method to build the elevation bands:
-            'equal_intervals' = fixed contour intervals (provide the 'distance' parameter)
+            'equal_intervals' = fixed contour intervals (provide the 'elevation_distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
-            provide the 'number' parameter)
+            provide the 'elevation_number' parameter)
         elevation_number : int, optional
             Number of elevation bands to create when using the 'quantiles' method.
         elevation_distance : int, optional
@@ -193,11 +196,24 @@ class Catchment:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation : int, optional
             Maximum elevation of the elevation bands (to homogenize between runs).
+        slope_method : str
+            The method to build the slope categories:
+            'equal_intervals' = fixed slope intervals (provide the 'slope_distance' parameter)
+            'quantiles' = quantiles of the catchment area (same surface;
+            provide the 'slope_number' parameter)
+        slope_number : int, optional
+            Number of slope bands to create when using the 'quantiles' method.
+        slope_distance : int, optional
+            Distance (degrees) between the slope lines when using the 'equal_intervals' method.
+        min_slope : int, optional
+            Minimum slope of the slope bands (to homogenize between runs).
+        max_slope : int, optional
+            Maximum slope of the slope bands (to homogenize between runs).
         radiation_method : str
             The method to build the radiation categories:
-            'equal_intervals' = fixed radiation intervals (provide the 'distance' parameter)
+            'equal_intervals' = fixed radiation intervals (provide the 'radiation_distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
-            provide the 'number' parameter)
+            provide the 'radiation_number' parameter)
         radiation_number : int, optional
             Number of radiation bands to create when using the 'quantiles' method.
         radiation_distance : int, optional
@@ -244,6 +260,26 @@ class Catchment:
             else:
                 raise ValueError("Unknown elevation band creation method.")
 
+        if 'slope' in criteria:
+            criteria_dict['slope'] = []
+            if slope_method == 'equal_intervals':
+                dist = slope_distance
+                if min_slope is None:
+                    min_slope = np.nanmin(self.slope)
+                    min_slope = min_slope - (min_slope % dist)
+                if max_slope is None:
+                    max_slope = np.nanmax(self.slope)
+                    max_slope = max_slope + (dist - max_slope % dist)
+                slopes = np.arange(min_slope, max_slope + dist, dist)
+                for i in range(len(slopes) - 1):
+                    criteria_dict['slope'].append(slopes[i:i + 2])
+            elif slope_method == 'quantiles':
+                slopes = np.nanquantile(self.slope, np.linspace(0, 1, num=slope_number))
+                for i in range(len(slopes) - 1):
+                    criteria_dict['slope'].append(slopes[i:i + 2])
+            else:
+                raise ValueError("Unknown slope band creation method.")
+
         if 'aspect' in criteria:
             criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
@@ -274,6 +310,9 @@ class Catchment:
         res_elevation = []
         res_elevation_min = []
         res_elevation_max = []
+        res_slope = []
+        res_slope_min = []
+        res_slope_max = []
         res_aspect_class = []
         res_radiation = []
         res_radiation_min = []
@@ -294,6 +333,11 @@ class Catchment:
                         self.masked_dem_data >= criterion[0],
                         self.masked_dem_data < criterion[1])
                     mask_unit = np.logical_and(mask_unit, mask_elev)
+                elif criterion_name == 'slope':
+                    mask_slope = np.logical_and(
+                        self.slope >= criterion[0],
+                        self.slope < criterion[1])
+                    mask_unit = np.logical_and(mask_unit, mask_slope)
                 elif criterion_name == 'aspect':
                     if criterion == 'N':
                         mask_aspect = np.logical_or(
@@ -335,6 +379,14 @@ class Catchment:
                 res_elevation_min.append(round(float(elevations[0]), 2))
                 res_elevation_max.append(round(float(elevations[1]), 2))
 
+            # Set the mean slope of the unit if slope is a criterion
+            if 'slope' in criteria_dict.keys():
+                i = list(combinations_keys).index('slope')
+                slopes = criteria[i]
+                res_slope.append(round(float(np.mean(slopes)), 2))
+                res_slope_min.append(round(float(slopes[0]), 2))
+                res_slope_max.append(round(float(slopes[1]), 2))
+
             # Get the aspect class if aspect is a criterion
             if 'aspect' in criteria_dict.keys():
                 i = list(combinations_keys).index('aspect')
@@ -356,6 +408,11 @@ class Catchment:
             self.hydro_units.add_property(('elevation', 'm'), res_elevation)
             self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
             self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
+
+        if res_slope:
+            self.hydro_units.add_property(('slope', 'deg'), res_slope)
+            self.hydro_units.add_property(('slope_min', 'deg'), res_slope_min)
+            self.hydro_units.add_property(('slope_max', 'deg'), res_slope_max)
 
         if res_aspect_class:
             self.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)

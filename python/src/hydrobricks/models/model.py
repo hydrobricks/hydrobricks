@@ -208,9 +208,11 @@ class Model(ABC):
             The forcing data.
         """
         self.model.clear_time_series()
-        time = hb.utils.date_as_mjd(forcing.data2D.time.to_numpy())
-        ids = self.spatial_structure.get_ids().to_numpy()
+        time = forcing.data2D.time.to_numpy()
+        time = hb.utils.date_as_mjd(time)
+        ids = self.spatial_structure.get_ids().to_numpy().flatten()
         for data_name, data in zip(forcing.data2D.data_name, forcing.data2D.data):
+            data_name = str(data_name)
             if data is None:
                 raise RuntimeError(f'The forcing {data_name} has not '
                                    f'been spatialized.')

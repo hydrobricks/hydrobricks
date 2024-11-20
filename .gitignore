@@ -45,6 +45,7 @@ build/lib.*
 build/temp.*
 build/bdist.*
 wheelhouse/
+vcpkg_installed/
 
 # Others
 *~$*
@@ -53,11 +54,9 @@ wheelhouse/
 **/examples/**/*.csv
 **/examples/**/*.png
 **/spotpy_*.csv
-conan.lock
-conanbuildinfo.cmake
-conanbuildinfo.txt
-conaninfo.txt
-graph_info.json
 *.pyd
 *.tif.aux.xml
 *.gif
+/vcpkg-build-*
+vcpkg/
+*.whl

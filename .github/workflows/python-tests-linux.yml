@@ -67,7 +67,7 @@ jobs:
         run: pytest --cov=hydrobricks ./python/tests --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true

@@ -34,12 +34,12 @@ def test_dem_extraction():
     assert catchment.extract_dem(CATCHMENT_DEM)
 
 
-def test_elevation_bands_isohypses():
+def test_elevation_bands_equal_intervalss():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='equal_intervals', distance=50)
     area_sum = catchment.hydro_units.hydro_units['area'].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
 
@@ -68,7 +68,7 @@ def test_save_unit_ids_raster():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
         assert (Path(tmp_dir) / 'unit_ids.tif').exists()
@@ -79,7 +79,7 @@ def test_load_units_from_raster():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
@@ -92,7 +92,7 @@ def test_load_units_from_raster():
 def test_load_units_from_raster_prepare_attributes():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
-    catchment.create_elevation_bands(method='isohypse', distance=50)
+    catchment.create_elevation_bands(method='equal_intervals', distance=50)
     df1 = catchment.hydro_units.hydro_units
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -113,7 +113,7 @@ def test_discretize_by_elevation_and_aspect():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.discretize_by(criteria=['elevation', 'aspect'],
-                            elevation_method='isohypse', elevation_distance=100)
+                            elevation_method='equal_intervals', elevation_distance=100)
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
 
 

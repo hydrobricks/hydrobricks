@@ -612,6 +612,170 @@ class Catchment:
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
+    def calculate_connectivity(self, mode='multiple'):
+        """
+        Calculate the connectivity between hydro units using a flow accumulation
+        partition. Connectivity between hydro units is forced to stay within the
+        catchment. If a hydro unit contributes mostly to surfaces out of the catchment,
+        the connectivity will be nulled.
+
+        Parameters
+        ----------
+        mode : str
+            The mode to calculate the connectivity:
+            'single' = keep the highest connectivity only
+            'multiple' = keep all connectivity values (multiple connections)
+
+        Returns
+        -------
+        The hydro units connectivity.
+        """
+        if not hb.has_pysheds:
+            raise ImportError("pysheds is required to do this.")
+
+        if self.dem is None:
+            raise ValueError("No DEM to calculate the connectivity.")
+
+        if self.map_unit_ids is None:
+            raise ValueError("No hydro units to calculate the connectivity.")
+
+        # Create a pysheds instance
+        dem_path = self.dem.files[0]
+        grid = hb.pyshedsGrid.from_raster(dem_path)
+        dem = grid.read_raster(dem_path)
+
+        # Fill pits and depressions in DEM and resolve flats
+        pit_filled_dem = grid.fill_pits(dem)
+        flooded_dem = grid.fill_depressions(pit_filled_dem)
+        inflated_dem = grid.resolve_flats(flooded_dem)
+
+        # Compute flow direction and flow accumulation
+        flow_dir = grid.flowdir(inflated_dem, routing='d8')
+
+        # Create a dataframe with the hydro units IDs and a column of empty dictionaries
+        df = self.hydro_units.hydro_units[[('id', '-')]].copy()
+        df[('connectivity', '-')] = [{} for _ in range(len(df))]
+
+        # Loop over every hydro unit id and compute the flow accumulation
+        flow_acc_tot = np.zeros_like(self.map_unit_ids)
+        for unit_id in df[('id', '-')]:
+            mask_unit = self.map_unit_ids == unit_id
+            flow_acc = grid.accumulation(flow_dir, mask=mask_unit, routing='d8')
+            flow_acc_np = flow_acc.view(np.ndarray)
+            flow_acc_tot = np.maximum(flow_acc_tot, flow_acc_np)
+
+        # Transform to numpy arrays
+        flow_dir = flow_dir.view(np.ndarray)
+
+        # Compute the connectivity
+        self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
+
+        def normalize_connectivity(row):
+            connectivity = row[('connectivity', '-')]
+            if not connectivity:
+                return row
+
+            # If the maximum connectivity leaves the catchment, nullify the connectivity
+            max_key = max(connectivity, key=connectivity.get)
+            if max_key == 0:
+                row[('connectivity', '-')] = {}
+                return row
+
+            # Remove the key 0 if it exists
+            if 0 in connectivity:
+                del connectivity[0]
+
+            # Normalize the connectivity within the catchment
+            total_flow = sum(connectivity.values())
+            if total_flow == 0:
+                return row
+            for key in connectivity:
+                connectivity[key] /= total_flow
+            row[('connectivity', '-')] = connectivity
+            return row
+
+        def keep_highest_connectivity(row):
+            connectivity = row[('connectivity', '-')]
+            if not connectivity:
+                return row
+
+            # If the maximum connectivity leaves the catchment, nullify the connectivity
+            max_key = max(connectivity, key=connectivity.get)
+            if max_key == 0:
+                row[('connectivity', '-')] = {}
+                return row
+
+            # Keep only the highest connectivity
+            connectivity = {max_key: 1.0}
+            row[('connectivity', '-')] = connectivity
+            return row
+
+        if mode == 'multiple':
+            df = df.apply(normalize_connectivity, axis=1)
+        elif mode == 'single':
+            df = df.apply(keep_highest_connectivity, axis=1)
+        else:
+            raise ValueError("Unknown mode.")
+
+        # Add the connectivity to the hydro units
+        self.hydro_units.hydro_units[('connectivity', '-')] = df[('connectivity', '-')]
+
+        return df
+
+    def _sum_contributing_flow_acc(self, df, flow_acc, flow_dir):
+        # Loop over every cell in the flow accumulation grid
+        for i in range(flow_acc.shape[0]):
+            for j in range(flow_acc.shape[1]):
+                # Get the unit id of the current cell
+                unit_id = self.map_unit_ids[i, j]
+                if unit_id == 0:
+                    continue
+
+                # Get the flow direction of the current cell
+                flow_dir_cell = flow_dir[i, j]
+                if flow_dir_cell <= 0:
+                    continue
+
+                # Get the unit id of the cell to which the current cell flows
+                # Flow directions:
+                # [N,  NE,  E, SE, S, SW, W, NW]
+                # [64, 128, 1, 2,  4, 8, 16, 32]
+                if flow_dir_cell == 1:
+                    i_next, j_next = i, j + 1
+                elif flow_dir_cell == 2:
+                    i_next, j_next = i + 1, j + 1
+                elif flow_dir_cell == 4:
+                    i_next, j_next = i + 1, j
+                elif flow_dir_cell == 8:
+                    i_next, j_next = i + 1, j - 1
+                elif flow_dir_cell == 16:
+                    i_next, j_next = i, j - 1
+                elif flow_dir_cell == 32:
+                    i_next, j_next = i - 1, j - 1
+                elif flow_dir_cell == 64:
+                    i_next, j_next = i - 1, j
+                elif flow_dir_cell == 128:
+                    i_next, j_next = i - 1, j + 1
+                else:
+                    raise ValueError("Unknown flow direction.")
+
+                if (i_next < 0 or i_next >= flow_acc.shape[0] or
+                        j_next < 0 or j_next >= flow_acc.shape[1]):
+                    continue
+
+                unit_id_next = self.map_unit_ids[i_next, j_next]
+
+                if unit_id_next == unit_id:
+                    continue
+
+                # If the current cell flows to a different unit, add a connection
+                connect = df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')]
+                connect = connect.values[0]
+                if unit_id_next not in connect:
+                    connect[unit_id_next] = 0
+                connect[unit_id_next] += flow_acc[i, j]
+                df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')] = [connect]
+
     def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):
         """
         Create a hillshade from the DEM.

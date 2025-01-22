@@ -173,7 +173,8 @@ setup(
         'HydroErr',
         'pandas',
         'pyyaml',
-        'StrEnum'
+        'StrEnum',
+        'dask'
     ],
     classifiers=[
         "Programming Language :: C++",

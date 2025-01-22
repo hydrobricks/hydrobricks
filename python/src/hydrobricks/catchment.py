@@ -550,6 +550,8 @@ class Catchment:
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
+        if not hb.has_pyarrow:
+            raise ImportError("pyarrow is required to do this.")
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
 
@@ -603,6 +605,8 @@ class Catchment:
         """
         Calculate the slope and aspect of the whole DEM.
         """
+        if not hb.has_pyarrow:
+            raise ImportError("pyarrow is required to do this.")
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
 

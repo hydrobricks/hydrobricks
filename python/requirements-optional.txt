@@ -2,6 +2,7 @@ dask
 geopandas
 matplotlib
 netCDF4
+pyarrow
 pyet
 pyproj
 pysheds

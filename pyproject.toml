@@ -38,6 +38,7 @@ test-requires = [
     "rioxarray",
     "shapely",
     "xarray",
+    "pyarrow",
     "xarray-spatial",
 ]
 test-command = "pytest {project}/python/tests"

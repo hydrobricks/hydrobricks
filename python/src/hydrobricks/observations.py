@@ -1,9 +1,6 @@
 import itertools
-
-import HydroErr as he
 import numpy as np
 import pandas as pd
-from pip._vendor.pygments.unistring import Pe
 
 import hydrobricks as hb
 
@@ -68,8 +65,8 @@ class Observations(TimeSeries1D):
             # Map the mean discharge back to the original DataFrame based on
             # the day of year
             df['mean_discharge'] = df['day_of_year'].map(mean_discharge_df)
-            df.to_csv('mean_discharge.csv', columns = ['mean_discharge'], float_format='%.12f')
-            df.to_csv('data.csv', columns = ['data'], float_format='%.12f')
+            df.to_csv('mean_discharge.csv', columns=['mean_discharge'], float_format='%.12f')
+            df.to_csv('data.csv', columns=['data'], float_format='%.12f')
 
             if start_date and end_date:
                 df = df[(df.index >= start_date) & (df.index <= end_date)]
@@ -94,7 +91,6 @@ class Observations(TimeSeries1D):
         else:
             comparing_years = years
             comparing_df = df
-
 
         if all_combinations:
             metrics = []

@@ -62,6 +62,14 @@ else:
     has_pyproj = True
 
 try:
+    import pysheds
+except ImportError:
+    has_pysheds = False
+else:
+    has_pysheds = True
+    from pysheds.grid import Grid as pyshedsGrid
+
+try:
     import xarray as xr
 except ImportError:
     has_xarray = False
@@ -111,4 +119,4 @@ __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries'
            'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
            'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
            'Dataset', 'rasterio', 'gpd', 'shapely', 'SpotpySetup', 'spotpy', 'pyet',
-           'pyproj', 'xr', 'rxr', 'xrs', 'evaluate')
+           'pyproj', 'pysheds', 'pyshedsGrid', 'xr', 'rxr', 'xrs', 'evaluate')

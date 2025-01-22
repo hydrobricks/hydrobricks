@@ -5,7 +5,7 @@ ci:
 repos:
 # Standard hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v5.0.0
   hooks:
   - id: check-added-large-files
     args: ['--maxkb=700']
@@ -16,17 +16,6 @@ repos:
   - id: debug-statements
   - id: requirements-txt-fixer
   - id: trailing-whitespace
-
-# Black, the code formatter
-#- repo: https://github.com/psf/black
-#  rev: 22.8.0
-#  hooks:
-#  - id: black
-#    exclude: |
-#      (?x)^(
-#          docs/*|
-#          .*/gcovr
-#      )$
 
 # Sort imports in a standard form
 - repo: https://github.com/PyCQA/isort
@@ -41,7 +30,7 @@ repos:
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.15.1
+  rev: v3.19.1
   hooks:
   - id: pyupgrade
     args: ["--py38-plus"]
@@ -64,7 +53,7 @@ repos:
 
 # Flake 8
 - repo: https://github.com/PyCQA/flake8
-  rev: 7.0.0
+  rev: 7.1.1
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
@@ -84,12 +73,12 @@ repos:
     files: (\.cmake|CMakeLists.txt)(.in)?$
     exclude: |
       (?x)^(
-          .*/CodeCoverage.cmake
+          .*/code_coverage.cmake
       )$
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v18.1.1
+  rev: v19.1.7
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

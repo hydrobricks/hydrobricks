@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - dev
       - feature/*
   release:
     types:
@@ -14,20 +15,21 @@ on:
 jobs:
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build SDist
-      run: pipx run build --sdist
+      - name: Build SDist
+        run: pipx run build --sdist
 
-    - name: Check metadata
-      run: pipx run twine check dist/*
+      - name: Check metadata
+        run: pipx run twine check dist/*
 
-    - uses: actions/upload-artifact@v4
-      with:
-        path: dist/*.tar.gz
-        overwrite: true
+      - uses: actions/upload-artifact@v4
+        with:
+          path: dist/*.tar.gz
+          name: sdist
+          overwrite: true
 
 
   build_wheels:
@@ -36,49 +38,53 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2019] # macOS images on GitHub actions are not available...
+        os: [ ubuntu-latest, windows-latest] #, macos-latest ]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_ARCHS: auto64
 
-    - name: Build wheels
-      uses: pypa/cibuildwheel@v2.16.5
-      env:
-        CIBW_ARCHS: auto64
-        CIBW_ENVIRONMENT: SKIP_CONAN=1
+      - name: Verify clean directory
+        run: git diff --exit-code
+        shell: bash
 
-    - name: Verify clean directory
-      run: git diff --exit-code
-      shell: bash
-
-    - name: Upload wheels
-      uses: actions/upload-artifact@v4
-      with:
-        path: wheelhouse/*.whl
-        overwrite: true
-        name: artifact-${{ matrix.os }}-${{ github.run_number }}
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          path: wheelhouse/*.whl
+          name: wheels-${{ matrix.os }}
+          overwrite: true
 
 
   upload_all:
     name: Upload if release
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
+      - name: Download wheels artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-ubuntu-latest
+          path: dist/
 
-    - uses: actions/download-artifact@v4
-      with:
-        name: artifact
-        path: dist
+      - name: Download windows wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-windows-latest
+          path: dist/
 
-    - uses: pypa/gh-action-pypi-publish@v1.8.14
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@v1.12.3
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

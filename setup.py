@@ -24,26 +24,66 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        # To build the extension in debug mode.
+        # Flag to build in debug mode
         # self.debug = True
 
-        skip_conan = os.environ.get("SKIP_CONAN", 0)
-
+        # Define the build directory
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        build_temp = os.path.join(self.build_temp, ext.name)
+        if not os.path.exists(build_temp):
+            os.makedirs(build_temp)
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
         if not ext_dir.endswith(os.path.sep):
             ext_dir += os.path.sep
 
+        # Set VCPKG_LIBRARY_LINKAGE to static
+        os.environ["VCPKG_LIBRARY_LINKAGE"] = "static"
+
+        # Check if VCPKG_ROOT is set
+        if "VCPKG_ROOT" not in os.environ:
+            print("-- VCPKG_ROOT is not set. Trying to install vcpkg.")
+            # Install vcpkg
+            if not os.path.exists("vcpkg"):
+                subprocess.check_call(
+                    ["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+            else:
+                subprocess.check_call(["git", "pull"], cwd="vcpkg")
+            if sys.platform.startswith("win"):
+                subprocess.check_call(["vcpkg\\bootstrap-vcpkg.bat"])
+            else:
+                subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
+            os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
+            os.environ["PATH"] = (os.path.abspath("vcpkg") + os.pathsep +
+                                  os.environ["PATH"])
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.abspath(
+                "vcpkg/scripts/buildsystems/vcpkg.cmake")
+        else:
+            print(f"-- VCPKG_ROOT is set to {os.environ['VCPKG_ROOT']}")
+            os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.join(
+                os.environ["VCPKG_ROOT"], "scripts/buildsystems/vcpkg.cmake")
+
+        # Print some debug information
+        print(f"-- Working directory: {os.getcwd()}")
+        print(f"-- Directory content: {os.listdir()}")
+        print(f"-- Path build_temp: {build_temp}")
+        print(f"-- Path ext_dir: {ext_dir}")
+        print(f"-- Python executable: {sys.executable}")
+
+        # Check if the debug mode is enabled
         debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
         cfg = "Debug" if debug else "Release"
+        print(f"-- Build configuration: {cfg}")
 
+        # CMake configuration
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
-
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={ext_dir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",
+            f"-DCMAKE_BINARY_DIR={build_temp}",
+            f"-DCMAKE_INSTALL_PREFIX={ext_dir}",
+            f"-DCMAKE_TOOLCHAIN_FILE={os.environ['CMAKE_TOOLCHAIN_FILE']}",
             "-DBUILD_PYBINDINGS=1",
             "-DBUILD_CLI=0",
             "-DBUILD_TESTS=0",
@@ -55,23 +95,19 @@ class CMakeBuild(build_ext):
         if "CMAKE_ARGS" in os.environ:
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
-        if self.compiler.compiler_type != "msvc":
-            # Using Ninja-build since it a) is available as a wheel and
-            # b) multithreads automatically.
-            if not cmake_generator or cmake_generator == "Ninja":
-                try:
-                    import ninja  # noqa: F401
-
-                    ninja_exe_path = os.path.join(ninja.BIN_DIR, "ninja")
-                    cmake_args += [
-                        "-GNinja",
-                        f"-DCMAKE_MAKE_PROGRAM:FILEPATH={ninja_exe_path}",
-                    ]
-                except ImportError:
-                    pass
-
+        if "PYBIND11_PYTHON_VERSION" in os.environ:
+            cmake_args += [f"-DPYBIND11_PYTHON_VERSION={os.environ['PYBIND11_PYTHON_VERSION']}"]
+            print(f"-- Setting Python version: {os.environ['PYBIND11_PYTHON_VERSION']}")
         else:
+            print("-- Python version not set.")
 
+        if "PYBIND11_PYTHON_ROOT" in os.environ:
+            cmake_args += [f"-DPYBIND11_PYTHON_ROOT={os.environ['PYBIND11_PYTHON_ROOT']}"]
+            print(f"-- Setting Python root: {os.environ['PYBIND11_PYTHON_ROOT']}")
+        else:
+            print("-- Python root not set.")
+
+        if self.compiler.compiler_type == "msvc":
             single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
 
@@ -99,26 +135,23 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args += [f"-j{self.parallel}"]
 
-        build_temp = os.path.join(self.build_temp, ext.name)
-        if not os.path.exists(build_temp):
-            os.makedirs(build_temp)
-
-        if not skip_conan:
-            subprocess.check_call(["conan", "install", ext.source_dir, "-s",
-                                   "build_type=Release", "--build=missing",
-                                   "-pr:b=default"], cwd=build_temp)
+        subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 
 
 # Read the contents of the README file
 this_directory = Path(__file__).parent
-long_description = (this_directory / "python" / "README.md").read_text()
+read_me_file = this_directory / "python" / "README.md"
+if read_me_file.exists():
+    long_description = open("python/README.md").read()
+else:
+    long_description = "A modular hydrological modelling framework."
 
 # Setup
 setup(
     name="hydrobricks",
-    version="0.7.0",
+    version="0.7.5",
     author="Pascal Horton",
     author_email="pascal.horton@unibe.ch",
     description="A modular hydrological modelling framework",
@@ -134,12 +167,19 @@ setup(
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
     python_requires=">=3.8",
+    install_requires=[
+        'cftime',
+        'numpy',
+        'HydroErr',
+        'pandas',
+        'pyyaml',
+        'StrEnum'
+    ],
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
-    readme="python/README.md",
     license="MIT",
     project_urls={
         "Source Code": "https://github.com/hydrobricks/hydrobricks",

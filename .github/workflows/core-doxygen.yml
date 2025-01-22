@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-doxygen:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
 
       # Deploy the HTML documentation to GitHub Pages
       - name: GH Pages Deployment
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           external_repository: hydrobricks/hydrobricks-doc-core

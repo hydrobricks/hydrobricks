@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.14) # To support FetchContent / FetchContent_MakeAvailable
+cmake_minimum_required(VERSION 3.15)
+include(FetchContent)
 
 if (POLICY CMP0043)
     cmake_policy(SET CMP0043 NEW)
@@ -10,6 +11,16 @@ if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif ()
 
+# vcpkg
+if (NOT DEFINED ENV{VCPKG_ROOT})
+    message(FATAL_ERROR "Please define the environment variable VCPKG_ROOT")
+endif ()
+set(CMAKE_TOOLCHAIN_FILE
+    "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    CACHE STRING "Vcpkg toolchain file")
+message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
+set(VCPKG_LIBRARY_LINKAGE "static")
+
 # Project name
 project(hydrobricks)
 
@@ -18,7 +29,7 @@ project(hydrobricks)
 # Version number
 set(VERSION_MAJOR "0")
 set(VERSION_MINOR "7")
-set(VERSION_PATCH "0")
+set(VERSION_PATCH "5")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -35,7 +46,39 @@ endif (WIN32)
 # Targets
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
-option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" OFF)
+option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" ON)
+
+# Pre-set wxWidgets options
+set(wxUSE_GUI OFF)
+set(wxBUILD_INSTALL OFF)
+set(wxBUILD_SAMPLES OFF)
+set(wxBUILD_TESTS OFF)
+set(wxBUILD_SHARED OFF)
+
+# Get and build wxbase from wxWidgets
+FetchContent_Declare(
+    wxWidgets
+    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+    GIT_TAG v3.2.6)
+FetchContent_MakeAvailable(wxWidgets)
+
+include_directories(${wxWidgets_SOURCE_DIR}/include)
+link_directories(${wxWidgets_BINARY_DIR}/lib)
+message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
+message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
+
+# Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically (without control of the version)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v2.13.6)
+
+# Find packages
+find_package(netCDF CONFIG REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # Enable Visual Leak Detector
 if (WIN32)
@@ -62,83 +105,17 @@ else (WIN32)
     set(INSTALL_DIR_BIN bin)
 endif (WIN32)
 
-# CONAN
-
-option(RUN_CONAN_FROM_CMAKE "Should we run conan from CMake ?" OFF)
-
-if (RUN_CONAN_FROM_CMAKE)
-    # Run conan from CMake
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-        message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-        file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/master/conan.cmake"
-             "${CMAKE_BINARY_DIR}/conan.cmake")
-    endif ()
-
-    include(${CMAKE_BINARY_DIR}/conan.cmake)
-
-    # Check conan install
-    find_program(CONAN_CMD conan)
-    if (NOT CONAN_CMD AND CONAN_REQUIRED)
-        message(FATAL_ERROR "Conan executable not found! Please install conan.")
-    endif ()
-    if (NOT CONAN_DETECT_QUIET)
-        message(STATUS "Conan: Found program ${CONAN_CMD}")
-    endif ()
-    execute_process(
-        COMMAND ${CONAN_CMD} --version
-        RESULT_VARIABLE return_code
-        OUTPUT_VARIABLE CONAN_VERSION_OUTPUT
-        ERROR_VARIABLE CONAN_VERSION_ERROR)
-
-    message(STATUS "Conan version output: ${CONAN_VERSION_OUTPUT}")
-    message(STATUS "Conan version error: ${CONAN_VERSION_ERROR}")
-
-    # Get libraries
-    conan_cmake_run(CONANFILE conanfile.txt BASIC_SETUP CMAKE_TARGETS BUILD missing)
-
-else (RUN_CONAN_FROM_CMAKE)
-
-    find_file(
-        CONANBUILDINFO
-        NAMES conanbuildinfo.cmake
-        PATHS "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}" "D:/a/hydrobricks/hydrobricks" "/project")
-
-    include(${CONANBUILDINFO})
-    conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
-
-endif (RUN_CONAN_FROM_CMAKE)
-
-include_directories(${CONAN_INCLUDE_DIRS})
-
-message(STATUS "CMAKE_LIBRARY_OUTPUT_DIRECTORY (post conan): ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-
-# OTHER DEPENDENCIES
-
-include(FetchContent)
-
-FetchContent_Declare(
-    pybind11
-    GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG v2.10.0)
-
 # FIND ANALYSIS TOOLS
 
 # Visual Leak Detector
 if (USE_VLD)
     find_package(VLD)
     include_directories(${VLD_INCLUDE_DIRS})
-else (USE_VLD)
-    # unset for wxhgversion
-    unset(VLD_INCLUDE_DIR CACHE)
-    unset(VLD_LIBRARY CACHE)
-    unset(VLD_LIBRARY_DEBUG CACHE)
-    unset(VLD_LIBRARY_DIR CACHE)
-    unset(VLD_ROOT_DIR CACHE)
 endif (USE_VLD)
 
 # Code coverage
 if (USE_CODECOV)
-    include(CodeCoverage)
+    include(code_coverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
         NAME

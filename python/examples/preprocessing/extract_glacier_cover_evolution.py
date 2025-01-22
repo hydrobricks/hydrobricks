@@ -27,7 +27,7 @@ catchment = hb.Catchment(CATCHMENT_OUTLINE, land_cover_types=['ground', 'glacier
 catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
-catchment.create_elevation_bands(method='isohypse', distance=50)
+catchment.create_elevation_bands(method='equal_intervals', distance=50)
 
 # List the files and dates
 glaciers = [f'{GLACIERS_DIR}/sgi_1850.shp',

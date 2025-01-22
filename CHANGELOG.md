@@ -4,6 +4,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
+## 0.7.5 - 2024-10-31
+
+### Breaking changes
+
+-   The 'isohypse' option has been renamed to 'equal_intervals' in the catchment discretization functions.
+
+### Added
+
+-   Adding the option to discretize the catchment by slope intervals.
+
+### Changed
+
+-   Using vcpkg for the C++ dependencies instead of conan. This allows building the package for Python >= 3.12.
+-   The basic requirements are automatically installed when installing the package from PyPI.
+
+
+## 0.7.4 - 2024-08-13
+
+### Fixed
+
+-   Fixing wheels upload to PyPI.
+
+
+## 0.7.3 - 2024-08-12
+
+### Fixed
+
+-   Fixing the package installation from PyPI.
+-   Fixing issue between pybind11 and numpy 2.
+
+
+## 0.7.2 - 2024-04-29
+
+### Fixed
+
+-   Fixing the computation of the potential radiation for the temperature index melt model.
+
+
+## 0.7.1 - 2024-04-27
+
+### Added
+
+-   Adding a function to compute the units connectivity.
+-   Adding the cast shadow computation for the potential radiation.
+
 
 ## 0.7.0 - 2024-02-18
 

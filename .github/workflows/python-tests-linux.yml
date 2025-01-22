@@ -8,37 +8,28 @@ defaults:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Install system libraries
-      run: sudo apt-get install tree
+      run: sudo apt-get install tree libhdf5-dev libnetcdf-dev
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache Conan libs
-      id: cache-conan
-      uses: actions/cache@v4
-      with:
-        path: /home/runner/.conan
-        key: ${{ runner.os }}-conan
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
 
-    - name: Setup Conan
-      run: |
-        pip install conan==1.*
-        conan profile new default --detect --force
-        conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
-        conan profile update settings.compiler.libcxx=libstdc++11 default
-        conan config set general.revisions_enabled=1
+    - name: Get dependencies
+      run: vcpkg install
 
     - name: Install requirements
       run: |
@@ -52,7 +43,7 @@ jobs:
       run: pytest ./python/tests
 
   code-coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
@@ -62,21 +53,6 @@ jobs:
 
       - name: Install system libraries
         run: sudo apt-get install tree lcov python3
-
-      - name: Cache Conan libs
-        id: cache-conan
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.conan
-          key: ${{ runner.os }}-conan
-
-      - name: Setup Conan
-        run: |
-          pip install conan==1.*
-          conan profile new default --detect --force
-          conan remote add gitlab https://gitlab.com/api/v4/packages/conan --force
-          conan profile update settings.compiler.libcxx=libstdc++11 default
-          conan config set general.revisions_enabled=1
 
       - name: Install requirements
         run: |
@@ -91,7 +67,7 @@ jobs:
         run: pytest --cov=hydrobricks ./python/tests --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: true

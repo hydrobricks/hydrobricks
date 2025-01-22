@@ -893,10 +893,16 @@ int ModelHydro::GetBehaviourItemsNb() {
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
-    TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
-    if (!AddTimeSeries(timeSeries)) {
+    try {
+        TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
+        if (!AddTimeSeries(timeSeries)) {
+            return false;
+        }
+    } catch (const std::exception& e) {
+        wxLogError(_("An exception occurred during timeseries creation: %s."), e.what());
         return false;
     }
+
     return true;
 }
 

@@ -278,18 +278,18 @@ class HydroUnits:
             properties.append(prop[0])
 
         for _, row in self.hydro_units.iterrows():
-            self.settings.add_hydro_unit(int(row['id'].values),
-                                         float(row['area'].values))
+            self.settings.add_hydro_unit(int(row['id'].values[0]),
+                                         float(row['area'].values[0]))
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
                     self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop, float(row[prop].values), unit)
+                        prop, float(row[prop].values[0]), unit)
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
-                fraction = float(row[self.prefix_fraction + cover_name].values)
+                fraction = float(row[self.prefix_fraction + cover_name].values[0])
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     @staticmethod

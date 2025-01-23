@@ -8,15 +8,17 @@ class GlacierMassBalance:
         
         # Basic stuff
         self.elevation_bands = glacier_df['elevation_bands']
-        nb_elevation_bands = len(self.elevation_bands)
+        self.elevation_zone_id = glacier_df['elevation_zone_id']
         self.elevation_zones = elevation_zones
+        nb_elevation_bands = len(self.elevation_bands)
         nb_elevation_zones = len(self.elevation_zones)
         self.nb_increments = nb_increments
-        self.elevation_zone_id = glacier_df['elevation_zone_id']
         
-        # Step 1
+        # Step 1 
+        # Water equivalent in mm (depth) for each elevation band i, and for each increment.
+        self.water_equivalents = np.ones((nb_increments, nb_elevation_bands))
+        self.water_equivalents[0] = glacier_df['initial_water_equivalents']  # Initialization
         self.initial_areas = glacier_df['initial_areas']
-        self.initial_water_equivalents = glacier_df['initial_water_equivalents']
         self.total_glacier_mass = np.nan
         self.normalized_elevations = np.nan
         
@@ -31,13 +33,12 @@ class GlacierMassBalance:
         
         # Step 4
         self.scaled_areas = np.zeros((nb_increments, nb_elevation_bands))
+        self.scaled_areas[0] = self.initial_areas  # Initialization
         
         # Step 6
         self.elevation_zone_areas = np.ones((nb_increments, nb_elevation_zones))
+        self.update_elevation_zones_areas(-1)  # Initialization
         
-        # water_equivalents: water equivalent in mm (depth) for each elevation band i,
-        # and for each increment.
-        self.water_equivalents = np.ones((nb_increments, nb_elevation_bands))
 
     def compute_initial_state(self):
         """
@@ -59,12 +60,6 @@ class GlacierMassBalance:
         zones typically have resolutions of 100 to 200 m, whereas for the elevation
         bands a resolution of 10 m is commonly used."
         """
-        
-        ### Define glacier profile
-        self.scaled_areas[0] = self.initial_areas
-        self.water_equivalents[0] = self.initial_water_equivalents
-        indices = np.where(self.elevation_zone_id == 0)[0]
-        self.elevation_zone_areas[0] = np.sum(self.initial_areas[indices])
         
         ### Calculate total glacier mass (Eq. 2)
         # areas: area (expressed as a proportion of the catchment area) for each elevation band i
@@ -108,8 +103,6 @@ class GlacierMassBalance:
         Step 2 of Seibert et al. (2018):
         "Depending on the glacier area, select one of the three parameterizations
         suggested by Huss et al. (2010)."
-        
-        delta_mass_balance: the glacier volume change increment
         """
         
         ### Choose the right glacial parametrization (Huss et al., 2010, Fig. 2a)
@@ -119,10 +112,10 @@ class GlacierMassBalance:
         ### Apply ∆h-parameterization (Eq. 4)
         # gives the normalized (dimensionless) ice thickness change for each elevation band i
         self.delta_water_equivalents = np.power(self.normalized_elevations + self.a_coef, self.gamma_coef) + \
-                                        self.b_coef * (self.normalized_elevations + self.a_coef) + self.c_coef
+                                                self.b_coef * (self.normalized_elevations + self.a_coef) + self.c_coef
         
         ### Calculate the scaling factor fs (Eq. 5)
-        delta_mass_balance = self.total_glacier_mass / 100
+        delta_mass_balance = self.total_glacier_mass / 100  # the glacier volume change increment
         self.scaling_factor = delta_mass_balance / np.sum(self.initial_areas * self.delta_water_equivalents)
         
     def update_glacier_thickness(self, increment):
@@ -165,8 +158,11 @@ class GlacierMassBalance:
         area (relative to the catchment area) for each elevation zone."
         """
         
-        ### Deﬁne elevation zones
-        # NOT SURE I UNDERSTAND THE POINT OF THIS STEP
+        ### Deﬁne elevation zones - Not done here as I suppose they will be defined by us beforehand for Hydrobricks (HRUs)
+        #------
+        
+        ### Compute the fraction of glacier and non-glacier areas.
+        # fractions = NOT SURE I GET IT...
         return 
         
     def update_elevation_zones_areas(self, increment):
@@ -181,10 +177,9 @@ class GlacierMassBalance:
         for elevation_zone in self.elevation_zones:
             indices = np.where(self.elevation_zone_id == elevation_zone)[0]
             if len(indices) != 0:
-                self.elevation_zone_areas[increment + 1] = np.sum(self.scaled_areas[increment + 1][indices])
+                self.elevation_zone_areas[increment + 1, elevation_zone] = np.sum(self.scaled_areas[increment + 1][indices])
             else:
-                self.elevation_zone_areas[increment + 1] = 0
-        print(self.elevation_zone_areas)
+                self.elevation_zone_areas[increment + 1, elevation_zone] = 0
         
     def write_lookup_table(self):
         """
@@ -208,9 +203,8 @@ class GlacierMassBalance:
         """
         
         self.compute_initial_state()
-        
-        
         self.calculate_total_glacier_mass()
+        
         for increment in range(self.nb_increments - 1): # CHECK THE RANGE # + I DO NOT UNDERSTAND WHY THE STEP 2 SHOULD BE IN THE LOOP??!
             self.update_glacier_thickness(increment) # THIS CAN PROBABLY DONE MORE EFFICIENTLY AS WE USE PYTHON
             self.width_scaling(increment)
@@ -235,9 +229,9 @@ def main():
     print("Here")
     
     glacier_data = {"elevation_bands": [2100, 2110, 2120, 2130],   # Median elevation for each elevation band i. An elevation band is smaller than a HRU, usually around 10 m high.
-            "elevation_zone_id": [1, 1, 2, 2],             # For each elevation band i, the ID of the corresponding elevation zone (the HRU).
-            "initial_water_equivalents": [60, 50, 80, 70], # Water equivalent in mm (depth) for each elevation band i
-            "initial_areas": [20, 20, 20, 20]}                     #
+                    "elevation_zone_id": [1, 1, 2, 2],             # For each elevation band i, the ID of the corresponding elevation zone (the HRU).
+                    "initial_water_equivalents": [60, 50, 80, 70], # Water equivalent in mm (depth) for each elevation band i
+                    "initial_areas": [20, 20, 20, 20]}             #
     glacier_df = pd.DataFrame(glacier_data)
     print(glacier_df)
     

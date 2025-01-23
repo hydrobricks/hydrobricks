@@ -118,18 +118,23 @@ if (USE_CODECOV)
     include(code_coverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
-        NAME
-        hydrobricks-coverage
-        EXECUTABLE
-        hydrobricks-tests
-        EXCLUDE
-        "/usr/**"
-        "**/tests/**"
-        "**Test.cpp"
-        "**/_deps/**"
-        "bin/**"
-        DEPENDENCIES
-        hydrobricks-tests)
+            NAME
+            hydrobricks-coverage
+            EXECUTABLE
+            hydrobricks-tests
+            EXCLUDE
+            "/usr/**"
+            "**/tests/**"
+            "/core/tests/CMakeFiles/*"
+            "./core/tests/CMakeFiles/*"
+            "/core/tests/CMakeFiles/hydrobricks-tests.dir/*"
+            "./core/tests/CMakeFiles/hydrobricks-tests.dir/*"
+            "/core/tests/CMakeFiles/hydrobricks-tests.dir/src/*"
+            "./core/tests/CMakeFiles/hydrobricks-tests.dir/src/*"
+            "**/_deps/**"
+            "bin/**"
+            DEPENDENCIES
+            hydrobricks-tests)
 endif (USE_CODECOV)
 
 # GET SUBDIRECTORIES CONTENT

@@ -14,3 +14,4 @@ shapely
 spotpy
 xarray
 xarray-spatial
+datashader==0.17.0a0

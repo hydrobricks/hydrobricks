@@ -1,4 +1,4 @@
-dask
+dask==2024.12.1
 geopandas
 matplotlib
 netCDF4

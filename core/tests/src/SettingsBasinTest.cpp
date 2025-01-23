@@ -31,4 +31,3 @@ TEST(SettingsBasin, ParseNcFile) {
     EXPECT_TRUE(unitSettings.landCovers[2].type == "glacier");
     EXPECT_FLOAT_EQ(unitSettings.landCovers[2].fraction, 0.11033797f);
 }
-//

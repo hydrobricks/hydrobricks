@@ -86,6 +86,13 @@ else:
         raise ImportError("xarray is required to use rioxarray.")
 
 try:
+    import pyarrow as pa
+except ImportError:
+    has_pyarrow = False
+else:
+    has_pyarrow = True
+
+try:
     import xrspatial as xrs
 except ImportError:
     has_xrspatial = False

@@ -31,6 +31,7 @@ test-requires = [
     "pyyaml",
     "StrEnum",
     "dask",
+    "dask-expr",
     "geopandas",
     "netCDF4",
     "pyet",
@@ -38,12 +39,15 @@ test-requires = [
     "rioxarray",
     "shapely",
     "xarray",
+    "pyarrow",
     "xarray-spatial",
+    "pysheds",
+    "datashader==0.17.0a0"
 ]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "cp38-*", "cp313-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "cp38-*", "cp39-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

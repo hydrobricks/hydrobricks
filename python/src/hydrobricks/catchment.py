@@ -550,6 +550,8 @@ class Catchment:
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
+        if not hb.has_pyarrow:
+            raise ImportError("pyarrow is required to do this.")
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
 
@@ -603,6 +605,8 @@ class Catchment:
         """
         Calculate the slope and aspect of the whole DEM.
         """
+        if not hb.has_pyarrow:
+            raise ImportError("pyarrow is required to do this.")
         if not hb.has_xrspatial:
             raise ImportError("xarray-spatial is required to do this.")
 
@@ -650,7 +654,7 @@ class Catchment:
         inflated_dem = grid.resolve_flats(flooded_dem)
 
         # Compute flow direction and flow accumulation
-        flow_dir = grid.flowdir(inflated_dem, routing='d8')
+        flow_dir = grid.flowdir(inflated_dem, routing='d8', nodata_out=np.int64(0))
 
         # Create a dataframe with the hydro units IDs and a column of empty dictionaries
         df = self.hydro_units.hydro_units[[('id', '-')]].copy()
@@ -660,7 +664,8 @@ class Catchment:
         flow_acc_tot = np.zeros_like(self.map_unit_ids)
         for unit_id in df[('id', '-')]:
             mask_unit = self.map_unit_ids == unit_id
-            flow_acc = grid.accumulation(flow_dir, mask=mask_unit, routing='d8')
+            flow_acc = grid.accumulation(flow_dir, mask=mask_unit, routing='d8',
+                                         nodata_out=np.float64(0))
             flow_acc_np = flow_acc.view(np.ndarray)
             flow_acc_tot = np.maximum(flow_acc_tot, flow_acc_np)
 
@@ -727,7 +732,7 @@ class Catchment:
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
                 # Get the unit id of the current cell
-                unit_id = self.map_unit_ids[i, j]
+                unit_id = int(self.map_unit_ids[i, j])
                 if unit_id == 0:
                     continue
 
@@ -763,7 +768,7 @@ class Catchment:
                         j_next < 0 or j_next >= flow_acc.shape[1]):
                     continue
 
-                unit_id_next = self.map_unit_ids[i_next, j_next]
+                unit_id_next = int(self.map_unit_ids[i_next, j_next])
 
                 if unit_id_next == unit_id:
                     continue
@@ -773,7 +778,7 @@ class Catchment:
                 connect = connect.values[0]
                 if unit_id_next not in connect:
                     connect[unit_id_next] = 0
-                connect[unit_id_next] += flow_acc[i, j]
+                connect[unit_id_next] += float(flow_acc[i, j])
                 df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')] = [connect]
 
     def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):

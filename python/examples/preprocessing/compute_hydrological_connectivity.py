@@ -11,7 +11,6 @@ TEST_FILES_DIR = Path(
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-CATCHMENT_METEO = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'meteo.csv'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -34,5 +33,5 @@ catchment.save_unit_ids_raster(working_dir)
 connectivity = catchment.calculate_connectivity(mode='multiple')
 
 # Save connectivity to a csv file
-connectivity.to_csv(working_dir / 'connectivity.csv')
+connectivity.to_csv(working_dir / 'connectivity.csv', index=False)
 print("Results were saved in: ", working_dir)

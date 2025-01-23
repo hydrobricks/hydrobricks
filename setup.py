@@ -174,7 +174,8 @@ setup(
         'pandas',
         'pyyaml',
         'StrEnum',
-        'dask'
+        'dask<=2024.12.1',
+        'dask-expr',
     ],
     classifiers=[
         "Programming Language :: C++",

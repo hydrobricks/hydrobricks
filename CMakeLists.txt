@@ -124,8 +124,7 @@ if (USE_CODECOV)
             hydrobricks-tests
             EXCLUDE
             "/usr/*"
-            "${PROJECT_SOURCE_DIR}/core/tests/*"
-            "${PROJECT_SOURCE_DIR}/_deps/*"
+            "core/tests/*"
             "bin/*"
             DEPENDENCIES
             hydrobricks-tests)

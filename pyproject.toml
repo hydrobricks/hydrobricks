@@ -41,6 +41,7 @@ test-requires = [
     "xarray",
     "pyarrow",
     "xarray-spatial",
+    "pysheds"
 ]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"

@@ -115,8 +115,6 @@ endif (USE_VLD)
 
 # Code coverage
 if (USE_CODECOV)
-    set(Coverage_LCOV_ARGS
-        "--ignore-errors" "mismatch")
     include(code_coverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(

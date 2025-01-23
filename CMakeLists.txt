@@ -123,16 +123,10 @@ if (USE_CODECOV)
             EXECUTABLE
             hydrobricks-tests
             EXCLUDE
-            "/usr/**"
-            "**/tests/**"
-            "/core/tests/CMakeFiles/*"
-            "./core/tests/CMakeFiles/*"
-            "/core/tests/CMakeFiles/hydrobricks-tests.dir/*"
-            "./core/tests/CMakeFiles/hydrobricks-tests.dir/*"
-            "/core/tests/CMakeFiles/hydrobricks-tests.dir/src/*"
-            "./core/tests/CMakeFiles/hydrobricks-tests.dir/src/*"
-            "**/_deps/**"
-            "bin/**"
+            "/usr/*"
+            "${PROJECT_SOURCE_DIR}/core/tests/*"
+            "${PROJECT_SOURCE_DIR}/_deps/*"
+            "bin/*"
             DEPENDENCIES
             hydrobricks-tests)
 endif (USE_CODECOV)

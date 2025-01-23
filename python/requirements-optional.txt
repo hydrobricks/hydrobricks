@@ -1,4 +1,5 @@
 dask<=2024.12.1
+dask-expr
 geopandas
 matplotlib
 netCDF4

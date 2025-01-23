@@ -265,6 +265,7 @@ def test_radiation_calculation_resolution():
         print("Failed to clean up.")
 
 
+@pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
     catchment.extract_dem(CATCHMENT_DEM)

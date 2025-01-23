@@ -732,7 +732,7 @@ class Catchment:
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
                 # Get the unit id of the current cell
-                unit_id = self.map_unit_ids[i, j]
+                unit_id = int(self.map_unit_ids[i, j])
                 if unit_id == 0:
                     continue
 
@@ -768,7 +768,7 @@ class Catchment:
                         j_next < 0 or j_next >= flow_acc.shape[1]):
                     continue
 
-                unit_id_next = self.map_unit_ids[i_next, j_next]
+                unit_id_next = int(self.map_unit_ids[i_next, j_next])
 
                 if unit_id_next == unit_id:
                     continue
@@ -778,7 +778,7 @@ class Catchment:
                 connect = connect.values[0]
                 if unit_id_next not in connect:
                     connect[unit_id_next] = 0
-                connect[unit_id_next] += flow_acc[i, j]
+                connect[unit_id_next] += float(flow_acc[i, j])
                 df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')] = [connect]
 
     def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):

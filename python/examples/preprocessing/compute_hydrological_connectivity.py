@@ -34,5 +34,5 @@ catchment.save_unit_ids_raster(working_dir)
 connectivity = catchment.calculate_connectivity(mode='multiple')
 
 # Save connectivity to a csv file
-connectivity.to_csv(working_dir / 'connectivity.csv')
+connectivity.to_csv(working_dir / 'connectivity.csv', index=False)
 print("Results were saved in: ", working_dir)

@@ -118,16 +118,16 @@ if (USE_CODECOV)
     include(code_coverage)
     append_coverage_compiler_flags()
     setup_target_for_coverage_lcov(
-            NAME
-            hydrobricks-coverage
-            EXECUTABLE
-            hydrobricks-tests
-            EXCLUDE
-            "/usr/*"
-            "core/tests/*"
-            "bin/*"
-            DEPENDENCIES
-            hydrobricks-tests)
+        NAME
+        hydrobricks-coverage
+        EXECUTABLE
+        hydrobricks-tests
+        EXCLUDE
+        "/usr/*"
+        "core/tests/*"
+        "bin/*"
+        DEPENDENCIES
+        hydrobricks-tests)
 endif (USE_CODECOV)
 
 # GET SUBDIRECTORIES CONTENT

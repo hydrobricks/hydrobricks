@@ -1,5 +1,6 @@
 dask
 dask-expr
+datashader==0.17.0a0
 geopandas
 matplotlib
 netCDF4
@@ -14,4 +15,3 @@ shapely
 spotpy
 xarray
 xarray-spatial
-datashader==0.17.0a0

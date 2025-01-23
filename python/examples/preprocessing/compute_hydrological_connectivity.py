@@ -11,7 +11,6 @@ TEST_FILES_DIR = Path(
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-CATCHMENT_METEO = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'meteo.csv'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:

@@ -174,7 +174,7 @@ setup(
         'pandas',
         'pyyaml',
         'StrEnum',
-        'dask<=2024.12.1',
+        'dask',
         'dask-expr',
     ],
     classifiers=[

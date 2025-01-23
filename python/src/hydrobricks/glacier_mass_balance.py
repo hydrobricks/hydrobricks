@@ -1,8 +1,9 @@
+import numpy as np
 
 class GlacierMassBalance:
     """Class for glacier mass balance"""
     
-    def __init__(self):
+    def __init__(self, nb_elevation_bands, nb_increments):
         
         # Step 1
         self.areas = np.nan
@@ -18,8 +19,10 @@ class GlacierMassBalance:
         self.c_coef = np.nan
         self.gamma_coef = np.nan
         
-        # water_equivalents: water equivalent in mm for each elevation band i
-        self.water_equivalents = np.ones(nb_elevation_bands, nb_increments)
+        # water_equivalents: water equivalent in mm (depth) for each elevation band i,
+        # and for each increment.
+        self.water_equivalents = np.ones((nb_increments, nb_elevation_bands))
+        self.nb_increments = nb_increments
 
     def compute_initial_state(self, water_equivalents, elevations, areas):
         """
@@ -33,7 +36,7 @@ class GlacierMassBalance:
         between glacier mass and glacier area, a glacier proﬁle, which deﬁnes
         the initial thickness (in mm water equivalent) and areal distribution of
         the glacier at a ﬁner resolution, is needed as model input data. Note that
-         the resolution of the glacier routine simulations largely depends on
+        the resolution of the glacier routine simulations largely depends on
         the number of elevation bands per elevation zone; i.e. all glacier area
         within each band is either covered by a glacier or not, and the percentage
         of glacierized area within a certain elevation zone is based on the state
@@ -83,7 +86,7 @@ class GlacierMassBalance:
             # THROW AN ERROR!!!?
             pass
         
-    def calculate_total_glacier_mass(self, glacier_area_km2, delta_mass_balance):
+    def calculate_total_glacier_mass(self, glacier_area_km2):
         """
         Step 2 of Seibert et al. (2018):
         "Depending on the glacier area, select one of the three parameterizations
@@ -98,11 +101,14 @@ class GlacierMassBalance:
         
         ### Apply ∆h-parameterization (Eq. 4)
         # gives the normalized (dimensionless) ice thickness change for each elevation band i
-        self.delta_water_equivalents = (self.normalized_elevations + self.a_coef)^self.gamma_coef + \
+        self.delta_water_equivalents = np.power(self.normalized_elevations + self.a_coef, self.gamma_coef) + \
                                         self.b_coef * (self.normalized_elevations + self.a_coef) + self.c_coef
         
         ### Calculate the scaling factor fs (Eq. 5)
         delta_mass_balance = self.total_glacier_mass / 100
+        print(self.areas)
+        print(self.delta_water_equivalents)
+        print(self.areas * self.delta_water_equivalents)
         self.scaling_factor = delta_mass_balance / np.sum(self.areas * self.delta_water_equivalents)
         
     def update_glacier_thickness(self, increment):
@@ -136,7 +142,7 @@ class GlacierMassBalance:
         
         ### Width scaling (Eq. 7)
         # TO CHECK, REALLY
-        scaled_areas = self.areas * (self.water_equivalents / self.water_equivalents[0])^0.5
+        scaled_areas = self.areas * np.power(self.water_equivalents / self.water_equivalents[0], 0.5)
         
     def define_elevation_zones(self):
         """
@@ -167,7 +173,7 @@ class GlacierMassBalance:
         
         ### Write record to the lookup table
         
-    def loop_through_the_steps(self):
+    def loop_through_the_steps(self, initial_water_equivalents, elevations, areas, glacier_area_km2):
         """
         Seibert et al. (2018):
         "Melt the glacier in steps of 1 % of its total mass"
@@ -175,10 +181,10 @@ class GlacierMassBalance:
         
         self.compute_initial_state(initial_water_equivalents, elevations, areas)
         self.define_elevation_zones() # UNCLEAR
-        self.calculate_total_glacier_mass()
-        for increment in range(100): # CHECK THE RANGE # + I DO NOT UNDERSTAND WHY THE STEP 2 SHOULD BE IN THE LOOP??!
+        self.calculate_total_glacier_mass(glacier_area_km2)
+        for increment in range(self.nb_increments - 1): # CHECK THE RANGE # + I DO NOT UNDERSTAND WHY THE STEP 2 SHOULD BE IN THE LOOP??!
             self.update_glacier_thickness(increment) # THIS CAN PROBABLY DONE MORE EFFICIENTLY AS WE USE PYTHON
-            self.scaled_areas = width_scaling()
+            self.scaled_areas = self.width_scaling()
             self.update_elevation_zones_areas() # UNCLEAR
             self.write_lookup_table()
         
@@ -196,6 +202,17 @@ class GlacierMassBalance:
         # THIS FUNCTION WILL PROBABLY DISAPPEAR TO BE REPLACED BY A HYDROBRICKS MORE CORE FUNCTION
         
 def main():
+    print("Here")
+    nb_elevation_bands = 4
+    nb_increments = 100 # CHECK IF IT IS FIXED?
+    elevation_bands = [2100, 2110, 2170, 2180] # Median of the elevation bands (smaller than the HRU)
+    initial_water_equivalents = [60, 50, 80, 70] # Water equivalent in mm (depth) for each elevation band i
+    areas = [20, 20, 20, 20]
+    glacier_area_km2 = np.sum(areas)
     
-    glacier = GlacierMassBalance()
+    glacier = GlacierMassBalance(nb_elevation_bands, nb_increments)
+    glacier.loop_through_the_steps(initial_water_equivalents, elevation_bands, areas, glacier_area_km2)
+    print("Terminated")
+    
+main()
     

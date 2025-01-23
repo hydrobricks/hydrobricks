@@ -41,7 +41,8 @@ test-requires = [
     "xarray",
     "pyarrow",
     "xarray-spatial",
-    "pysheds"
+    "pysheds",
+    "datashader==0.17.0a0"
 ]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"

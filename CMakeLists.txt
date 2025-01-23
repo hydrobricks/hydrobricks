@@ -125,6 +125,7 @@ if (USE_CODECOV)
         EXCLUDE
         "/usr/**"
         "**/tests/**"
+        "**Test.cpp"
         "**/_deps/**"
         "bin/**"
         DEPENDENCIES

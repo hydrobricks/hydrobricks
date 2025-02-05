@@ -22,14 +22,14 @@ for method in methods:
 
     if method == 'degree_day':
         helper.create_hydro_units_from_csv_file(
-            filename='elevation_bands.csv')
+            filename='hydro_units_elevation.csv')
     elif method == 'degree_day_aspect':
         helper.create_hydro_units_from_csv_file(
-            filename='elevation_bands_aspect.csv',
+            filename='hydro_units_elevation_aspect.csv',
             other_columns={'slope': 'slope', 'aspect_class': 'aspect_class'})
     elif method == 'temperature_index':
         helper.create_hydro_units_from_csv_file(
-            filename='elevation_bands_radiation.csv',
+            filename='hydro_units_elevation_radiation.csv',
             other_columns={'slope': 'slope', 'radiation': 'radiation'})
     else:
         raise RuntimeError(f"Method {method} not recognized.")

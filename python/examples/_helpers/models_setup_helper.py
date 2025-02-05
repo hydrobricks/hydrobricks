@@ -46,7 +46,7 @@ class ModelSetupHelper:
     def get_catchment_dir(self):
         return TEST_FILES_DIR / self.catchment_name
 
-    def create_hydro_units_from_csv_file(self, filename='elevation_bands.csv',
+    def create_hydro_units_from_csv_file(self, filename='hydro_units.csv',
                                          other_columns=None):
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 

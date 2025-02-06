@@ -1,5 +1,5 @@
 Catchment: Sitter at St. Gallen	
-Mean elevation: 1044.52 masl (CAMELS-CH)
+Mean elevation: 1045 masl (CAMELS-CH)
 CAMELS-CH id: 2468
 
 Data source:

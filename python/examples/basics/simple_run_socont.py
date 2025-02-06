@@ -37,7 +37,7 @@ hydro_units.load_from_csv(
     CATCHMENT_BANDS, column_elevation='elevation', column_area='area')
 
 # Meteo data
-ref_elevation = 1250  # Reference altitude for the meteo data
+ref_elevation = 1253  # Reference altitude for the meteo data
 forcing = hb.Forcing(hydro_units)
 forcing.load_station_data_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',

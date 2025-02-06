@@ -35,7 +35,7 @@ for method in methods:
         raise RuntimeError(f"Method {method} not recognized.")
 
     forcing = helper.get_forcing_data_from_csv_file(
-        ref_elevation=1250, use_precip_gradient=True)
+        ref_elevation=1253, use_precip_gradient=True)
     obs = helper.get_obs_data_from_csv_file()
 
     if method == 'temperature_index':

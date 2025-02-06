@@ -60,5 +60,5 @@ vcpkg_installed/
 /vcpkg-build-*
 vcpkg/
 *.whl
-*/forcing.nc
-*/daily_potential_radiation.nc
+**/forcing.nc
+**/daily_potential_radiation.nc

@@ -1,5 +1,5 @@
 Catchment: Sitter at Appenzell	
-Mean elevation: 1253.32 masl (CAMELS-CH)
+Mean elevation: 1253 masl (CAMELS-CH)
 CAMELS-CH id: 2112
 
 Data source:

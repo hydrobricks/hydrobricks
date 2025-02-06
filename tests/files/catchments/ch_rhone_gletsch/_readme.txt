@@ -1,3 +1,7 @@
+Catchment: Rhone at Gletsch	
+Mean elevation: 2701.55 masl (CAMELS-CH)
+CAMELS-CH id: 2268
+
 Data source:
 - Swisstopo: dem
 - CAMELS-CH: discharge, meteo, pet_sim

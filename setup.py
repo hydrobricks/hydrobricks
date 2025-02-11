@@ -166,7 +166,7 @@ setup(
                  },
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     install_requires=[
         'cftime',
         'numpy',

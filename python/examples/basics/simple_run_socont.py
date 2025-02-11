@@ -10,7 +10,7 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', 'tests', 'files', 'catchments'
 )
-CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
+CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'hydro_units.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 CATCHMENT_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'unit_ids.tif'
@@ -37,7 +37,7 @@ hydro_units.load_from_csv(
     CATCHMENT_BANDS, column_elevation='elevation', column_area='area')
 
 # Meteo data
-ref_elevation = 1250  # Reference altitude for the meteo data
+ref_elevation = 1253  # Reference altitude for the meteo data
 forcing = hb.Forcing(hydro_units)
 forcing.load_station_data_from_csv(
     CATCHMENT_METEO, column_time='Date', time_format='%d/%m/%Y',

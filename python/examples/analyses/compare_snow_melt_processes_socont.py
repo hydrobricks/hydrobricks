@@ -13,10 +13,14 @@ max_rep = 4000
 # Optimize data-related parameters
 optimize_data_params = False
 
+# Select the catchment
+catchment_name = 'ch_rhone_gletsch'
+ref_elevation = 2702
+
 # Run spotpy for each method
 for method in methods:
     # Set up the case study options
-    helper = ModelSetupHelper('ch_sitter_appenzell',
+    helper = ModelSetupHelper(catchment_name,
                               start_date='1981-01-01',
                               end_date='2020-12-31')
 
@@ -35,7 +39,7 @@ for method in methods:
         raise RuntimeError(f"Method {method} not recognized.")
 
     forcing = helper.get_forcing_data_from_csv_file(
-        ref_elevation=1253, use_precip_gradient=True)
+        ref_elevation=ref_elevation, use_precip_gradient=True)
     obs = helper.get_obs_data_from_csv_file()
 
     if method == 'temperature_index':
@@ -80,14 +84,14 @@ for method in methods:
 
     # Run spotpy
     sampler = spotpy.algorithms.sceua(spot_setup, dbformat='csv',
-                                      dbname=f'spotpy_socont_sitter_{method}')
+                                      dbname=f'spotpy_{catchment_name}_{method}')
     sampler.optimization_direction = "maximize"
     sampler.sample(max_rep)
 
 # Plot the results
 for method in methods:
     # Load the results
-    results = spotpy.analyser.load_csv_results(f'spotpy_socont_sitter_{method}')
+    results = spotpy.analyser.load_csv_results(f'spotpy_{catchment_name}_{method}')
 
     # Get best results
     best_index, best_obj_func = spotpy.analyser.get_maxlikeindex(results)

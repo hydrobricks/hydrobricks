@@ -43,10 +43,14 @@ target_link_libraries(_hydrobricks PUBLIC wx::base netCDF::netcdf yaml-cpp::yaml
 if (WIN32)
     # Find all DLL files in the vcpkg installed directory
     file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
+    set(OUTPUT_DIR_DLLS "${CMAKE_SOURCE_DIR}")
 
-    # Copy DLL files to the target directory after build
-    add_custom_command(
-        TARGET _hydrobricks
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VCPKG_DLLS} $<TARGET_FILE_DIR:_hydrobricks>)
+    foreach(DLL ${VCPKG_DLLS})
+        add_custom_command(
+                TARGET _hydrobricks
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${OUTPUT_DIR_DLLS}"
+                COMMENT "Copying ${DLL} to ${OUTPUT_DIR_DLLS}"
+        )
+    endforeach()
 endif ()

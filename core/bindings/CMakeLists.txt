@@ -45,12 +45,11 @@ if (WIN32)
     file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
     set(OUTPUT_DIR_DLLS "${CMAKE_SOURCE_DIR}")
 
-    foreach(DLL ${VCPKG_DLLS})
+    foreach (DLL ${VCPKG_DLLS})
         add_custom_command(
-                TARGET _hydrobricks
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${OUTPUT_DIR_DLLS}"
-                COMMENT "Copying ${DLL} to ${OUTPUT_DIR_DLLS}"
-        )
-    endforeach()
+            TARGET _hydrobricks
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${OUTPUT_DIR_DLLS}"
+            COMMENT "Copying ${DLL} to ${OUTPUT_DIR_DLLS}")
+    endforeach ()
 endif ()

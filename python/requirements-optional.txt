@@ -11,6 +11,7 @@ pysheds
 pytest
 rasterio
 rioxarray
+scipy
 shapely
 spotpy
 xarray

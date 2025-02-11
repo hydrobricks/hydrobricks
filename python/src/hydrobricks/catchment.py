@@ -1,9 +1,9 @@
 import itertools
 import math
 import warnings
-from pathlib import Path
-
 import numpy as np
+from pathlib import Path
+from scipy import ndimage
 
 import hydrobricks as hb
 from hydrobricks.constants import (
@@ -616,12 +616,11 @@ class Catchment:
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
-    def calculate_connectivity(self, mode='multiple'):
+    def calculate_connectivity(self, mode='multiple', force_connectivity=True):
         """
         Calculate the connectivity between hydro units using a flow accumulation
         partition. Connectivity between hydro units is forced to stay within the
-        catchment. If a hydro unit contributes mostly to surfaces out of the catchment,
-        the connectivity will be nulled.
+        catchment.
 
         Parameters
         ----------
@@ -629,6 +628,12 @@ class Catchment:
             The mode to calculate the connectivity:
             'single' = keep the highest connectivity only
             'multiple' = keep all connectivity values (multiple connections)
+        force_connectivity : bool
+            If True, all hydro units are forced to have a connection to another hydro unit.
+            When there is no downstream hydro unit, the connectivity is set to the neighboring
+            hydro units, proportionally to the length of the common border.
+            If False, and if a hydro unit contributes mostly to surfaces out of the catchment,
+            the connectivity will be nulled.
 
         Returns
         -------
@@ -675,6 +680,38 @@ class Catchment:
         # Compute the connectivity
         self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
 
+        def remove_connectivity_out(row):
+            connectivity = row[('connectivity', '-')]
+            if not connectivity:
+                return row
+
+            # Remove the key 0 if it exists
+            if 0 in connectivity:
+                del connectivity[0]
+
+            return row
+
+        def connect_to_neighbours(row):
+            # Look for hydro units without connectivity and connect them to the neighboring hydro units
+            unit_id = row[('id', '-')]
+            connectivity = row[('connectivity', '-')]
+            if connectivity:
+                return row
+
+            # Identify the neighboring hydro units
+            mask_unit = self.map_unit_ids == unit_id
+            dilated_mask = ndimage.binary_dilation(mask_unit, iterations=1)
+            neighbor_ids = np.unique(self.map_unit_ids[dilated_mask])
+            neighbor_ids = neighbor_ids[neighbor_ids != 0]
+            neighbor_ids = neighbor_ids[neighbor_ids != unit_id]
+
+            # Count the number of cells for each neighbor and set this value as the connectivity
+            for neighbor_id in neighbor_ids:
+                connectivity[int(neighbor_id)] = np.count_nonzero(self.map_unit_ids[dilated_mask] == neighbor_id)
+
+            row[('connectivity', '-')] = connectivity
+            return row
+
         def normalize_connectivity(row):
             connectivity = row[('connectivity', '-')]
             if not connectivity:
@@ -682,7 +719,7 @@ class Catchment:
 
             # If the maximum connectivity leaves the catchment, nullify the connectivity
             max_key = max(connectivity, key=connectivity.get)
-            if max_key == 0:
+            if max_key == 0 and not force_connectivity:
                 row[('connectivity', '-')] = {}
                 return row
 
@@ -706,7 +743,7 @@ class Catchment:
 
             # If the maximum connectivity leaves the catchment, nullify the connectivity
             max_key = max(connectivity, key=connectivity.get)
-            if max_key == 0:
+            if max_key == 0 and not force_connectivity:
                 row[('connectivity', '-')] = {}
                 return row
 
@@ -714,6 +751,10 @@ class Catchment:
             connectivity = {max_key: 1.0}
             row[('connectivity', '-')] = connectivity
             return row
+
+        if force_connectivity:
+            df = df.apply(remove_connectivity_out, axis=1)
+            df = df.apply(connect_to_neighbours, axis=1)
 
         if mode == 'multiple':
             df = df.apply(normalize_connectivity, axis=1)

@@ -1,3 +1,43 @@
+[project]
+name = "hydrobricks"
+version = "0.7.6"
+authors = [
+    { name = "Pascal Horton", email = "pascal.horton@unibe.ch" },
+    { name = "Anne-Laure Argentin" },
+]
+description = "A modular hydrological modelling framework"
+readme = "python/README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+
+[project.urls]
+"Source Code" = "https://github.com/hydrobricks/hydrobricks"
+"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
+
+[tool.setuptools]
+packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours"]
+package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours" }
+
+[project.dependencies]
+dependencies = [
+    "cftime",
+    "numpy",
+    "HydroErr",
+    "pandas",
+    "pyyaml",
+    "StrEnum",
+    "dask",
+    "dask-expr"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=6.0"]
+
 [build-system]
 requires = [
     "setuptools>=42",

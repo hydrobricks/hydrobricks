@@ -14,16 +14,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License"
 ]
-
-[project.urls]
-"Source Code" = "https://github.com/hydrobricks/hydrobricks"
-"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
-
-[tool.setuptools]
-packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours"]
-package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours" }
-
-[project.dependencies]
 dependencies = [
     "cftime",
     "numpy",
@@ -37,6 +27,14 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=6.0"]
+
+[project.urls]
+"Source Code" = "https://github.com/hydrobricks/hydrobricks"
+"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
+
+[tool.setuptools]
+packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours"]
+package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours" }
 
 [build-system]
 requires = [

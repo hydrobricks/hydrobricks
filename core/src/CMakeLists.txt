@@ -59,11 +59,10 @@ if (WIN32)
     # Find all DLL files in the vcpkg installed directory
     file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
 
-    foreach(DLL ${VCPKG_DLLS})
+    foreach (DLL ${VCPKG_DLLS})
         add_custom_command(
-                TARGET hydrobricks-cli
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" $<TARGET_FILE_DIR:hydrobricks-cli>
-        )
-    endforeach()
+            TARGET hydrobricks-cli
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" $<TARGET_FILE_DIR:hydrobricks-cli>)
+    endforeach ()
 endif ()

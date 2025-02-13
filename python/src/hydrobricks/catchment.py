@@ -1,8 +1,9 @@
 import itertools
 import math
 import warnings
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 from scipy import ndimage
 
 import hydrobricks as hb

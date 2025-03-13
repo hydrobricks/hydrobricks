@@ -70,7 +70,6 @@ class GlacierMassBalance:
         ### Calculate total glacier mass (Eq. 2)
         # areas: area (expressed as a proportion of the catchment area) for each elevation band i
         self.total_glacier_mass_mm = np.sum(self.initial_areas_perc * self.water_equivalents_mm[0])
-        print("M: ", self.total_glacier_mass_mm)
         
         ### Normalize glacier elevations (Eq. 3)
         # elevations: absolute elevation for each elevation band i
@@ -112,17 +111,6 @@ class GlacierMassBalance:
         suggested by Huss et al. (2010)."
         """
         
-        #############################################################
-        #if increment > 0:
-        #    print("self.scaled_areas_perc[increment] > 0", self.scaled_areas_perc[increment] > 0)
-        #    glacier_elevation_bands = self.elevation_bands_m.loc[self.scaled_areas_perc[increment] > 0]
-        #    print("glacier_elevation_bands", glacier_elevation_bands)
-        #    max_elevation_m = np.max(glacier_elevation_bands)
-        #    min_elevation_m = np.min(glacier_elevation_bands)
-        #    self.normalized_elevations_o = (max_elevation_m - self.elevation_bands_m) / (max_elevation_m - min_elevation_m)
-        #print(self.normalized_elevations_o)
-        #############################################################
-        
         ### Choose the right glacial parametrization (Huss et al., 2010, Fig. 2a)
         # "Based on the initial total glacier area (in km2) that needs to be speciﬁed in addition to the initial
         # glacier thickness proﬁle, one of the three empirical parameterizations applicable for unmeasured glaciers from Huss et
@@ -136,23 +124,15 @@ class GlacierMassBalance:
         self.delta_water_equivalents_o = np.power(self.normalized_elevations_o + self.a_coef, self.gamma_coef) + \
                                                 self.b_coef * (self.normalized_elevations_o + self.a_coef) + self.c_coef \
                                                 #- 0.005006
-        print("self.delta_water_equivalents_o:", self.delta_water_equivalents_o)
         ### Calculate the scaling factor fs (Eq. 5)
         # the glacier volume change increment, added with the excess melt that could not be melted in the previous step
-        delta_mass_balance_mm = self.total_glacier_mass_mm / 100 #+ self.excess_melt_mass_mm
-        print("delta_mass_balance_mm: ", delta_mass_balance_mm)
+        delta_mass_balance_mm = self.total_glacier_mass_mm / 100 + self.excess_melt_mass_mm
         # "A scaling factor fS (mm), which scales the dimensionless h, is computed based on the glacier volume
         # change M and on the area and normalized water equivalent change for each of the elevation bands."
         # Huss: "Ba (in kg) is given by the mass balance computation. fs (in m) is a factor that scales the magnitude of the dimension-
         # less ice thickness change (ordinate in Fig. 3) and is chosen for each year such that Eq. (2) is satisﬁed. hr refers to the
         # ANNUALLY UPDATED glacier extent."
         self.scaling_factor_mm = delta_mass_balance_mm / (np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
-        #print("self.scaled_areas_perc[increment]:", self.scaled_areas_perc[increment])
-        #print(len(self.scaled_areas_perc[increment]))
-        #print(len(self.delta_water_equivalents_o))
-        #print(len(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
-        print("np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o):", np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
-        print("self.scaling_factor_mm:", self.scaling_factor_mm)
         
     def update_glacier_thickness(self, increment):
         """
@@ -176,20 +156,9 @@ class GlacierMassBalance:
         self.water_equivalents_mm[increment + 1] = np.where(reduced_thickness_mm < 0, 
                                                             0, reduced_thickness_mm)
         
-        ini=np.sum(self.water_equivalents_mm[0] * self.scaled_areas_perc[0])
-        now=np.sum(self.water_equivalents_mm[increment+1] * self.scaled_areas_perc[0])
-        print("Initial volume:", ini)
-        print("Current volume:", now)
-        print("Difference:", ini-now)
-        print("Difference:", (ini-now)/(increment+1))
-        
-        #if increment ==2:
-        #    print(bjiö)
-        
         self.excess_melt_mass_mm = - np.sum(np.where(reduced_thickness_mm < 0, 
                                                      reduced_thickness_mm, 0)
                                                      * self.scaled_areas_perc[increment])
-        #print(debug)
         # This excess melt is taken into account in Step 2.
         
     def width_scaling(self, increment):
@@ -207,7 +176,7 @@ class GlacierMassBalance:
         ### Width scaling (Eq. 7)
         # TO CHECK, REALLY
         # Seibert
-        self.scaled_areas_perc[increment + 1] = self.initial_areas_perc * np.power(self.water_equivalents_mm[increment + 1] / self.water_equivalents_mm[0], 0.5)
+        #self.scaled_areas_perc[increment + 1] = self.initial_areas_perc * np.power(self.water_equivalents_mm[increment + 1] / self.water_equivalents_mm[0], 0.5)
         
         # Huss "Glacier extent is determined by updating the ice thickness distribution; the glacier disap-
         # pears where ice thickness drops to zero.
@@ -420,7 +389,7 @@ def main():
     glacier_df = glacier_df.drop(glacier_df[glacier_df.initial_areas_m2 == 0].index)
     elevation_zones = np.unique(glacier_df.elevation_zone_id)
     
-    nb_increments = 101 # This means that the lookup table consists of glacier areas per elevation
+    nb_increments = 100 # This means that the lookup table consists of glacier areas per elevation
     # zone for 101 different glacier mass situations, ranging from the initial glacier mass to zero.
     
     glacier = GlacierMassBalance(glacier_df, elevation_zones, nb_increments, catchment_area_m2)

@@ -1,42 +1,48 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from constants import WATER_EQ
 
 class GlacierMassBalance:
     """Class for glacier mass balance"""
     
-    def __init__(self, glacier_df, elevation_zones, nb_increments):
+    def __init__(self, glacier_df, elevation_zones, nb_increments, catchment_area_m2):
         
         # Basic stuff
-        self.elevation_bands = glacier_df['elevation_bands']
+        self.elevation_bands_m = glacier_df['elevation_bands_m']
         self.elevation_zone_id = glacier_df['elevation_zone_id']
         self.elevation_zones = elevation_zones
-        nb_elevation_bands = len(self.elevation_bands)
+        nb_elevation_bands = len(self.elevation_bands_m)
         nb_elevation_zones = len(self.elevation_zones)
         self.nb_increments = nb_increments
+        self.catchment_area_m2 = catchment_area_m2
         
         # Step 1 
         # Water equivalent in mm (depth) for each elevation band i, and for each increment.
-        self.water_equivalents = np.ones((nb_increments, nb_elevation_bands))
-        self.water_equivalents[0] = glacier_df['initial_water_equivalents']  # Initialization
-        self.initial_areas = glacier_df['initial_areas']
-        self.total_glacier_mass = np.nan
-        self.normalized_elevations = np.nan
+        self.water_equivalents_mm = np.ones((nb_increments, nb_elevation_bands))
+        self.water_equivalents_mm[0] = glacier_df['initial_water_equivalents_mm']  # Initialization
+        self.initial_areas_perc = glacier_df['initial_areas_m2'] / catchment_area_m2
+        self.total_glacier_mass_mm = np.nan
+        self.normalized_elevations_o = np.nan
         
         # Step 2
-        self.delta_water_equivalents = np.nan
-        self.scaling_factor = np.nan
+        self.delta_water_equivalents_o = np.nan
+        self.scaling_factor_mm = np.nan
         # Delta-H parametrization based on Huss et al. (2010).
         self.a_coef = np.nan
         self.b_coef = np.nan
         self.c_coef = np.nan
         self.gamma_coef = np.nan
         
+        # Step 3
+        self.excess_melt_mass_mm = 0
+        
         # Step 4
-        self.scaled_areas = np.zeros((nb_increments, nb_elevation_bands))
-        self.scaled_areas[0] = self.initial_areas  # Initialization
+        self.scaled_areas_perc = np.zeros((nb_increments, nb_elevation_bands))
+        self.scaled_areas_perc[0] = self.initial_areas_perc  # Initialization
         
         # Step 6
-        self.elevation_zone_areas = np.ones((nb_increments, nb_elevation_zones))
+        self.elevation_zone_areas_m2 = np.ones((nb_increments, nb_elevation_zones))
         self.update_elevation_zones_areas(-1)  # Initialization
         
 
@@ -63,13 +69,14 @@ class GlacierMassBalance:
         
         ### Calculate total glacier mass (Eq. 2)
         # areas: area (expressed as a proportion of the catchment area) for each elevation band i
-        self.total_glacier_mass = np.sum(self.initial_areas * self.water_equivalents[0])
+        self.total_glacier_mass_mm = np.sum(self.initial_areas_perc * self.water_equivalents_mm[0])
+        print("M: ", self.total_glacier_mass_mm)
         
         ### Normalize glacier elevations (Eq. 3)
         # elevations: absolute elevation for each elevation band i
-        max_elevation = np.max(self.elevation_bands)
-        min_elevation = np.min(self.elevation_bands)
-        self.normalized_elevations = (max_elevation - self.elevation_bands) / (max_elevation - min_elevation)
+        max_elevation_m = np.max(self.elevation_bands_m)
+        min_elevation_m = np.min(self.elevation_bands_m)
+        self.normalized_elevations_o = (max_elevation_m - self.elevation_bands_m) / (max_elevation_m - min_elevation_m)
         
     def parametrization(self, glacier_area_km2):
         """
@@ -98,25 +105,54 @@ class GlacierMassBalance:
             # THROW AN ERROR!!!?
             pass
         
-    def calculate_total_glacier_mass(self):
+    def calculate_total_glacier_mass(self, increment):
         """
         Step 2 of Seibert et al. (2018):
         "Depending on the glacier area, select one of the three parameterizations
         suggested by Huss et al. (2010)."
         """
         
+        #############################################################
+        #if increment > 0:
+        #    print("self.scaled_areas_perc[increment] > 0", self.scaled_areas_perc[increment] > 0)
+        #    glacier_elevation_bands = self.elevation_bands_m.loc[self.scaled_areas_perc[increment] > 0]
+        #    print("glacier_elevation_bands", glacier_elevation_bands)
+        #    max_elevation_m = np.max(glacier_elevation_bands)
+        #    min_elevation_m = np.min(glacier_elevation_bands)
+        #    self.normalized_elevations_o = (max_elevation_m - self.elevation_bands_m) / (max_elevation_m - min_elevation_m)
+        #print(self.normalized_elevations_o)
+        #############################################################
+        
         ### Choose the right glacial parametrization (Huss et al., 2010, Fig. 2a)
-        glacier_area_km2 = np.sum(self.initial_areas) / 1000 # OR NOT? ARE WE TALKING ABOUT GLACIATED AREAS OR HRU AREAS???
+        # "Based on the initial total glacier area (in km2) that needs to be speciﬁed in addition to the initial
+        # glacier thickness proﬁle, one of the three empirical parameterizations applicable for unmeasured glaciers from Huss et
+        # al. (2010) is used (Figs. 1 and 2a)."
+        glacier_area_km2 = np.sum(self.scaled_areas_perc[0]) * self.catchment_area_m2 / (1000*1000)
         self.parametrization(glacier_area_km2)
+        print("glacier area km2:", glacier_area_km2)
         
         ### Apply ∆h-parameterization (Eq. 4)
         # gives the normalized (dimensionless) ice thickness change for each elevation band i
-        self.delta_water_equivalents = np.power(self.normalized_elevations + self.a_coef, self.gamma_coef) + \
-                                                self.b_coef * (self.normalized_elevations + self.a_coef) + self.c_coef
-        
+        self.delta_water_equivalents_o = np.power(self.normalized_elevations_o + self.a_coef, self.gamma_coef) + \
+                                                self.b_coef * (self.normalized_elevations_o + self.a_coef) + self.c_coef \
+                                                #- 0.005006
+        print("self.delta_water_equivalents_o:", self.delta_water_equivalents_o)
         ### Calculate the scaling factor fs (Eq. 5)
-        delta_mass_balance = self.total_glacier_mass / 100  # the glacier volume change increment
-        self.scaling_factor = delta_mass_balance / np.sum(self.initial_areas * self.delta_water_equivalents)
+        # the glacier volume change increment, added with the excess melt that could not be melted in the previous step
+        delta_mass_balance_mm = self.total_glacier_mass_mm / 100 #+ self.excess_melt_mass_mm
+        print("delta_mass_balance_mm: ", delta_mass_balance_mm)
+        # "A scaling factor fS (mm), which scales the dimensionless h, is computed based on the glacier volume
+        # change M and on the area and normalized water equivalent change for each of the elevation bands."
+        # Huss: "Ba (in kg) is given by the mass balance computation. fs (in m) is a factor that scales the magnitude of the dimension-
+        # less ice thickness change (ordinate in Fig. 3) and is chosen for each year such that Eq. (2) is satisﬁed. hr refers to the
+        # ANNUALLY UPDATED glacier extent."
+        self.scaling_factor_mm = delta_mass_balance_mm / (np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
+        #print("self.scaled_areas_perc[increment]:", self.scaled_areas_perc[increment])
+        #print(len(self.scaled_areas_perc[increment]))
+        #print(len(self.delta_water_equivalents_o))
+        #print(len(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
+        print("np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o):", np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
+        print("self.scaling_factor_mm:", self.scaling_factor_mm)
         
     def update_glacier_thickness(self, increment):
         """
@@ -133,7 +169,28 @@ class GlacierMassBalance:
         """
         
         ### Update glacier thicknesses (Eq. 6)
-        self.water_equivalents[increment + 1] = self.water_equivalents[increment] + self.scaling_factor * self.delta_water_equivalents
+        # Glacier water equivalent reduction
+        gwe_reduction_mm = self.scaling_factor_mm * self.delta_water_equivalents_o
+        reduced_thickness_mm = self.water_equivalents_mm[increment] - gwe_reduction_mm
+        
+        self.water_equivalents_mm[increment + 1] = np.where(reduced_thickness_mm < 0, 
+                                                            0, reduced_thickness_mm)
+        
+        ini=np.sum(self.water_equivalents_mm[0] * self.scaled_areas_perc[0])
+        now=np.sum(self.water_equivalents_mm[increment+1] * self.scaled_areas_perc[0])
+        print("Initial volume:", ini)
+        print("Current volume:", now)
+        print("Difference:", ini-now)
+        print("Difference:", (ini-now)/(increment+1))
+        
+        #if increment ==2:
+        #    print(bjiö)
+        
+        self.excess_melt_mass_mm = - np.sum(np.where(reduced_thickness_mm < 0, 
+                                                     reduced_thickness_mm, 0)
+                                                     * self.scaled_areas_perc[increment])
+        #print(debug)
+        # This excess melt is taken into account in Step 2.
         
     def width_scaling(self, increment):
         """
@@ -149,7 +206,13 @@ class GlacierMassBalance:
         
         ### Width scaling (Eq. 7)
         # TO CHECK, REALLY
-        self.scaled_areas[increment + 1] = self.initial_areas * np.power(self.water_equivalents[increment + 1] / self.water_equivalents[0], 0.5)
+        # Seibert
+        self.scaled_areas_perc[increment + 1] = self.initial_areas_perc * np.power(self.water_equivalents_mm[increment + 1] / self.water_equivalents_mm[0], 0.5)
+        
+        # Huss "Glacier extent is determined by updating the ice thickness distribution; the glacier disap-
+        # pears where ice thickness drops to zero.
+        self.scaled_areas_perc[increment + 1] = np.where(self.water_equivalents_mm[increment + 1] == 0, 
+                                                         0, self.scaled_areas_perc[increment])
         
     def compute_fractions_per_elevation_zones(self):
         """
@@ -174,12 +237,12 @@ class GlacierMassBalance:
         """
         
         ### Update elevation zone areas
-        for elevation_zone in self.elevation_zones:
+        for i, elevation_zone in enumerate(self.elevation_zones): # Because the elevation zones do not necessarily start with 0.
             indices = np.where(self.elevation_zone_id == elevation_zone)[0]
             if len(indices) != 0:
-                self.elevation_zone_areas[increment + 1, elevation_zone] = np.sum(self.scaled_areas[increment + 1][indices])
+                self.elevation_zone_areas_m2[increment + 1, i] = np.sum(self.scaled_areas_perc[increment + 1][indices]) * self.catchment_area_m2
             else:
-                self.elevation_zone_areas[increment + 1, elevation_zone] = 0
+                self.elevation_zone_areas_m2[increment + 1, i] = 0
         
     def write_lookup_table(self):
         """
@@ -190,11 +253,23 @@ class GlacierMassBalance:
         """
         
         ### Write record to the lookup table
-        lookup_table = pd.DataFrame(self.elevation_zone_areas, 
+        lookup_table = pd.DataFrame(self.elevation_zone_areas_m2, 
                                     index=range(self.nb_increments), 
                                     columns=range(len(self.elevation_zones)))
         lookup_table.to_csv("lookup_table.csv")
+        
+        detailed_lookup_table = pd.DataFrame(self.scaled_areas_perc * self.catchment_area_m2, 
+                                    index=range(self.nb_increments), 
+                                    columns=range(len(self.scaled_areas_perc[0])))
+        detailed_lookup_table.to_csv("detailed_lookup_table.csv")
+        
+        detailed_thickness_lookup_table = pd.DataFrame(self.water_equivalents_mm / 1000, 
+                                    index=range(self.nb_increments), 
+                                    columns=range(len(self.water_equivalents_mm[0])))
+        detailed_thickness_lookup_table.to_csv("detailed_thickness_lookup_table.csv")
         print("Lookup table:\n", lookup_table)
+        print("Detailed lookup table:\n", detailed_lookup_table)
+        print("Detailed thickness lookup table:\n", detailed_thickness_lookup_table)
         
     def loop_through_the_steps(self):
         """
@@ -203,9 +278,9 @@ class GlacierMassBalance:
         """
         
         self.compute_initial_state()
-        self.calculate_total_glacier_mass()
         
-        for increment in range(self.nb_increments - 1): # CHECK THE RANGE # + I DO NOT UNDERSTAND WHY THE STEP 2 SHOULD BE IN THE LOOP??!
+        for increment in range(self.nb_increments - 1):
+            self.calculate_total_glacier_mass(increment)
             self.update_glacier_thickness(increment) # THIS CAN PROBABLY DONE MORE EFFICIENTLY AS WE USE PYTHON
             self.width_scaling(increment)
             self.compute_fractions_per_elevation_zones() # I REMOVED THE DEFINITION OF THE ELEVATION ZONES FROM HERE
@@ -225,21 +300,133 @@ class GlacierMassBalance:
         # RUN HYDROBRICKS
         # THIS FUNCTION WILL PROBABLY DISAPPEAR TO BE REPLACED BY A HYDROBRICKS MORE CORE FUNCTION
         
+def plot_figure_2b(elevation_bands):
+    """
+    Reproduces Figure 2b.
+    """
+    
+    area_lookup_table = pd.read_csv("detailed_lookup_table.csv", index_col=0)
+    thickness_lookup_table = pd.read_csv("detailed_thickness_lookup_table.csv", index_col=0)
+    
+    band_width = elevation_bands[1] - elevation_bands[0]
+    all_bands = elevation_bands - band_width / 2
+    all_bands = np.append(all_bands, elevation_bands[-1] + band_width / 2)
+    
+    path = "/home/anne-laure/eclipse-workspace/Huss_glacial_melt_files/"
+    areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
+    # Grey lines
+    for i in range(len(area_lookup_table)):
+        if i % 5 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
+    # Black lines
+    for i in range(len(area_lookup_table)):
+        if i % 20 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
+    print(areas_df)
+    plt.plot(areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], 
+             drawstyle="steps-post", color='red')
+    plt.xlabel('Glacier area (m²)')
+    plt.ylabel('Elevation (m a.s.l.)')
+    
+    
+    plt.figure()
+    # Grey lines
+    for i in range(len(area_lookup_table)):
+        if i % 5 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            plt.plot(trick_to_plot/areas_df["Glacier area [m²]"][8:-7], all_bands, drawstyle="steps-post", color="lightgrey")
+    # Black lines
+    for i in range(len(area_lookup_table)):
+        if i % 20 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            plt.plot(trick_to_plot/areas_df["Glacier area [m²]"][8:-7], all_bands, drawstyle="steps-post", color="black")
+    print(areas_df)
+    plt.xlabel('Glacier area / Glacier initial area (-)')
+    plt.ylabel('Elevation (m a.s.l.)')
+    
+    
+    plt.figure()
+    thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
+    print(thicknesses_df)
+    plt.plot(thicknesses_df["Glacier thickness [m]"], [x + 5 for x in thicknesses_df["Elevation [m a.s.l.]"]], 
+             drawstyle="steps-post", color='black')
+    plt.xlabel('Glacier thickness (m)')
+    plt.ylabel('Elevation (m a.s.l.)')
+    
+    
+    plt.figure()
+    volumes_df = pd.read_csv(path + "histogram1_values_corr.csv")
+    print(volumes_df)
+    plt.plot(volumes_df["Glacier volume [m³]"]*1000, [x + 5 for x in volumes_df["Elevation [m a.s.l.]"]], 
+             drawstyle="steps-post", color='black')
+    plt.plot(thicknesses_df["Glacier thickness [m]"]*areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], 
+             drawstyle="steps-post", color='red')
+    plt.xlabel('Glacier volume (m³)')
+    plt.ylabel('Elevation (m a.s.l.)')
+    
+    
+    plt.figure()
+    # Grey lines
+    for i in range(len(area_lookup_table)):
+        if i % 5 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0] * thickness_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
+                                      area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ)
+            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
+    # Black lines
+    for i in range(len(area_lookup_table)):
+        if i % 20 == 0:
+            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0] * thickness_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
+                                      area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ)
+            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
+    plt.plot(thicknesses_df["Glacier thickness [m]"] * areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], 
+             drawstyle="steps-post", color='red')
+    plt.xlabel('Glacier volume (m³)')
+    plt.ylabel('Elevation (m a.s.l.)')
+    
+    
+    plt.figure()
+    for i in range(len(area_lookup_table)):
+        volumes = area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ
+        if i == 0:
+            plt.axhline(y=np.sum(volumes), color='r', linestyle='-')
+        plt.plot(i, np.sum(volumes), marker="o", color="black")
+    plt.axhline(y=0, color='r', linestyle='-')
+    plt.xlabel('Increment')
+    plt.ylabel('Glacier volume (m³)')
+    
+    plt.show()
+    
 def main():
-    print("Here")
     
-    glacier_data = {"elevation_bands": [2100, 2110, 2120, 2130],   # Median elevation for each elevation band i. An elevation band is smaller than a HRU, usually around 10 m high.
-                    "elevation_zone_id": [1, 1, 2, 2],             # For each elevation band i, the ID of the corresponding elevation zone (the HRU).
-                    "initial_water_equivalents": [60, 50, 80, 70], # Water equivalent in mm (depth) for each elevation band i
-                    "initial_areas": [20, 20, 20, 20]}             #
+    # Data from Huss and Seibert
+    path = "/home/anne-laure/eclipse-workspace/Huss_glacial_melt_files/"
+    areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
+    thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
+    length = int(len(areas_df["Elevation [m a.s.l.]"].values) / 4) # For steps of 10 m, and zones of 40 m.
+    ids = [i for i in range(length) for _ in range(4)]
+    catchment_area_m2 = 100000000
+    
+    water_equivalents_mm = thicknesses_df["Glacier thickness [m]"].values * WATER_EQ * 1000 # water equivalent conversion + m to mm conversion
+    
+    glacier_data = {"elevation_bands_m": areas_df["Elevation [m a.s.l.]"].values,            # Median elevation for each elevation band i. An elevation band is smaller than a HRU, usually around 10 m high.
+                    "elevation_zone_id": ids,                                                # For each elevation band i, the ID of the corresponding elevation zone (the HRU).
+                    "initial_water_equivalents_mm": water_equivalents_mm,                    # Water equivalent in mm (depth) for each elevation band i
+                    "initial_areas_m2": areas_df["Glacier area [m²]"].values}                # Glaciated areas for each elevation band i
+    
     glacier_df = pd.DataFrame(glacier_data)
-    print(glacier_df)
+    # We have to remove the bands with no glacier area (otherwise the min and max elevations are wrong)
+    glacier_df = glacier_df.drop(glacier_df[glacier_df.initial_areas_m2 == 0].index)
+    elevation_zones = np.unique(glacier_df.elevation_zone_id)
     
-    nb_increments = 10 # CHECK IF IT IS FIXED? 100 normally?
-    elevation_zones = np.array([0, 1, 2])
+    nb_increments = 101 # This means that the lookup table consists of glacier areas per elevation
+    # zone for 101 different glacier mass situations, ranging from the initial glacier mass to zero.
     
-    glacier = GlacierMassBalance(glacier_df, elevation_zones, nb_increments)
+    glacier = GlacierMassBalance(glacier_df, elevation_zones, nb_increments, catchment_area_m2)
     glacier.loop_through_the_steps()
+    
+    plot_figure_2b(elevation_bands=glacier_df.elevation_bands_m.values)
     print("Terminated")
     
 main()

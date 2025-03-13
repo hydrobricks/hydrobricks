@@ -38,12 +38,18 @@ class GlacierMassBalance:
         self.excess_melt_mass_mm = 0
         
         # Step 4
-        self.scaled_areas_perc = np.zeros((nb_increments, nb_elevation_bands))
-        self.scaled_areas_perc[0] = self.initial_areas_perc  # Initialization
+        self.areas_perc = np.zeros((nb_increments, nb_elevation_bands))
+        self.areas_perc[0] = self.initial_areas_perc  # Initialization
         
         # Step 6
         self.elevation_zone_areas_m2 = np.ones((nb_increments, nb_elevation_zones))
         self.update_elevation_zones_areas(-1)  # Initialization
+        
+        # After loop
+        self.scaled_areas_perc = np.zeros((nb_increments, nb_elevation_bands))
+        self.scaled_areas_perc[0] = self.initial_areas_perc  # Initialization
+        self.scaled_water_equivalents_mm = np.ones((nb_increments, nb_elevation_bands))
+        self.scaled_water_equivalents_mm[0] = glacier_df['initial_water_equivalents_mm']  # Initialization
         
 
     def compute_initial_state(self):
@@ -115,7 +121,7 @@ class GlacierMassBalance:
         # "Based on the initial total glacier area (in km2) that needs to be speciﬁed in addition to the initial
         # glacier thickness proﬁle, one of the three empirical parameterizations applicable for unmeasured glaciers from Huss et
         # al. (2010) is used (Figs. 1 and 2a)."
-        glacier_area_km2 = np.sum(self.scaled_areas_perc[0]) * self.catchment_area_m2 / (1000*1000)
+        glacier_area_km2 = np.sum(self.areas_perc[0]) * self.catchment_area_m2 / (1000*1000)
         self.parametrization(glacier_area_km2)
         print("glacier area km2:", glacier_area_km2)
         
@@ -132,7 +138,7 @@ class GlacierMassBalance:
         # Huss: "Ba (in kg) is given by the mass balance computation. fs (in m) is a factor that scales the magnitude of the dimension-
         # less ice thickness change (ordinate in Fig. 3) and is chosen for each year such that Eq. (2) is satisﬁed. hr refers to the
         # ANNUALLY UPDATED glacier extent."
-        self.scaling_factor_mm = delta_mass_balance_mm / (np.sum(self.scaled_areas_perc[increment] * self.delta_water_equivalents_o))
+        self.scaling_factor_mm = delta_mass_balance_mm / (np.sum(self.areas_perc[increment] * self.delta_water_equivalents_o))
         
     def update_glacier_thickness(self, increment):
         """
@@ -158,10 +164,32 @@ class GlacierMassBalance:
         
         self.excess_melt_mass_mm = - np.sum(np.where(reduced_thickness_mm < 0, 
                                                      reduced_thickness_mm, 0)
-                                                     * self.scaled_areas_perc[increment])
+                                                     * self.areas_perc[increment])
         # This excess melt is taken into account in Step 2.
         
-    def width_scaling(self, increment):
+    def width_updating(self, increment):
+        """
+        Step 4 of Seibert et al. (2018):
+        "The delta h approach distributes the change in glacier mass over the
+        different elevation zones though it results in glacier-free areas mainly
+        at the lowest elevations. The width scaling within each elevation band
+        relates a decrease in glacier thickness to a reduction of the glacier area
+        within the respective elevation band. In other words, this approach also
+        allows for glacier area shrinkage at higher elevations, which mimics
+        the typical spatial effect of the downwasting of glaciers." -> THIS WAS
+        MISLEADING. THE BAHR SCALING SHOULD BE DONE AFTER THE LOOP, AS IT IS NOT
+        NEEDED IN THE LOOP AND SHOULD NOT BE USED AS INPUT OF OTHER CALCULATIONS.
+        INSTEAD, WE JUST APPLY THE SURFACE REDUCTION FROM HUSS.
+        """
+        
+        # Huss "Glacier extent is determined by updating the ice thickness distribution; the glacier disap-
+        # pears where ice thickness drops to zero.
+        self.areas_perc[increment + 1] = np.where(self.water_equivalents_mm[increment + 1] == 0, 
+                                                         0, self.areas_perc[increment])
+        
+        
+        
+    def width_scaling(self):
         """
         Step 4 of Seibert et al. (2018):
         "The delta h approach distributes the change in glacier mass over the
@@ -174,14 +202,10 @@ class GlacierMassBalance:
         """
         
         ### Width scaling (Eq. 7)
-        # TO CHECK, REALLY
-        # Seibert
-        #self.scaled_areas_perc[increment + 1] = self.initial_areas_perc * np.power(self.water_equivalents_mm[increment + 1] / self.water_equivalents_mm[0], 0.5)
-        
-        # Huss "Glacier extent is determined by updating the ice thickness distribution; the glacier disap-
-        # pears where ice thickness drops to zero.
-        self.scaled_areas_perc[increment + 1] = np.where(self.water_equivalents_mm[increment + 1] == 0, 
-                                                         0, self.scaled_areas_perc[increment])
+        for increment in range(len(self.water_equivalents_mm)):
+            self.scaled_areas_perc[increment] = self.initial_areas_perc * np.power(self.water_equivalents_mm[increment] / self.water_equivalents_mm[0], 0.5)
+            # If we want to keep the same glacial volume, we need to modify accordingly the thickness
+            self.scaled_water_equivalents_mm[increment] = self.areas_perc[increment] * self.water_equivalents_mm[increment] / self.scaled_areas_perc[increment]
         
     def compute_fractions_per_elevation_zones(self):
         """
@@ -209,7 +233,7 @@ class GlacierMassBalance:
         for i, elevation_zone in enumerate(self.elevation_zones): # Because the elevation zones do not necessarily start with 0.
             indices = np.where(self.elevation_zone_id == elevation_zone)[0]
             if len(indices) != 0:
-                self.elevation_zone_areas_m2[increment + 1, i] = np.sum(self.scaled_areas_perc[increment + 1][indices]) * self.catchment_area_m2
+                self.elevation_zone_areas_m2[increment + 1, i] = np.sum(self.areas_perc[increment + 1][indices]) * self.catchment_area_m2
             else:
                 self.elevation_zone_areas_m2[increment + 1, i] = 0
         
@@ -227,18 +251,25 @@ class GlacierMassBalance:
                                     columns=range(len(self.elevation_zones)))
         lookup_table.to_csv("lookup_table.csv")
         
-        detailed_lookup_table = pd.DataFrame(self.scaled_areas_perc * self.catchment_area_m2, 
+        scaled_areas_lookup_table = pd.DataFrame(self.scaled_areas_perc * self.catchment_area_m2, 
                                     index=range(self.nb_increments), 
                                     columns=range(len(self.scaled_areas_perc[0])))
-        detailed_lookup_table.to_csv("detailed_lookup_table.csv")
+        scaled_areas_lookup_table.to_csv("scaled_areas_lookup_table.csv")
         
-        detailed_thickness_lookup_table = pd.DataFrame(self.water_equivalents_mm / 1000, 
+        areas_lookup_table = pd.DataFrame(self.areas_perc * self.catchment_area_m2, 
+                                          index=range(self.nb_increments), 
+                                          columns=range(len(self.areas_perc[0])))
+        areas_lookup_table.to_csv("areas_lookup_table.csv")
+        
+        scaled_we_lookup_table = pd.DataFrame(self.scaled_water_equivalents_mm / 1000, 
+                                    index=range(self.nb_increments), 
+                                    columns=range(len(self.scaled_water_equivalents_mm[0])))
+        scaled_we_lookup_table.to_csv("scaled_we_lookup_table.csv")
+        
+        we_lookup_table = pd.DataFrame(self.water_equivalents_mm / 1000, 
                                     index=range(self.nb_increments), 
                                     columns=range(len(self.water_equivalents_mm[0])))
-        detailed_thickness_lookup_table.to_csv("detailed_thickness_lookup_table.csv")
-        print("Lookup table:\n", lookup_table)
-        print("Detailed lookup table:\n", detailed_lookup_table)
-        print("Detailed thickness lookup table:\n", detailed_thickness_lookup_table)
+        we_lookup_table.to_csv("we_lookup_table.csv")
         
     def loop_through_the_steps(self):
         """
@@ -251,9 +282,10 @@ class GlacierMassBalance:
         for increment in range(self.nb_increments - 1):
             self.calculate_total_glacier_mass(increment)
             self.update_glacier_thickness(increment) # THIS CAN PROBABLY DONE MORE EFFICIENTLY AS WE USE PYTHON
-            self.width_scaling(increment)
+            self.width_updating(increment)
             self.compute_fractions_per_elevation_zones() # I REMOVED THE DEFINITION OF THE ELEVATION ZONES FROM HERE
             self.update_elevation_zones_areas(increment) # UNCLEAR # AND FROM WHAT I UNDERSTAND, NOT SURE WHY IT SHOULD BE IN THE LOOP...
+        self.width_scaling()
         self.write_lookup_table() # FOR SURE, THIS SHOULDN'T BE IN THE LOOP
         
         ### Loop through the steps 2, 3, 6 and 7.
@@ -274,8 +306,9 @@ def plot_figure_2b(elevation_bands):
     Reproduces Figure 2b.
     """
     
-    area_lookup_table = pd.read_csv("detailed_lookup_table.csv", index_col=0)
-    thickness_lookup_table = pd.read_csv("detailed_thickness_lookup_table.csv", index_col=0)
+    areas_lookup_table = pd.read_csv("areas_lookup_table.csv", index_col=0)
+    we_lookup_table = pd.read_csv("we_lookup_table.csv", index_col=0)
+    scaled_areas_lookup_table = pd.read_csv("scaled_areas_lookup_table.csv", index_col=0)
     
     band_width = elevation_bands[1] - elevation_bands[0]
     all_bands = elevation_bands - band_width / 2
@@ -284,35 +317,35 @@ def plot_figure_2b(elevation_bands):
     path = "/home/anne-laure/eclipse-workspace/Huss_glacial_melt_files/"
     areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
     # Grey lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(scaled_areas_lookup_table)):
         if i % 5 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            trick_to_plot = np.append(scaled_areas_lookup_table.iloc[i, :].values[0], scaled_areas_lookup_table.iloc[i, :].values)
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
     # Black lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(scaled_areas_lookup_table)):
         if i % 20 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            trick_to_plot = np.append(scaled_areas_lookup_table.iloc[i, :].values[0], scaled_areas_lookup_table.iloc[i, :].values)
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
     print(areas_df)
     plt.plot(areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], 
              drawstyle="steps-post", color='red')
-    plt.xlabel('Glacier area (m²)')
+    plt.xlabel('Glacier area (scaled) (m²)')
     plt.ylabel('Elevation (m a.s.l.)')
     
     
     plt.figure()
     # Grey lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(scaled_areas_lookup_table)):
         if i % 5 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            trick_to_plot = np.append(scaled_areas_lookup_table.iloc[i, :].values[0], scaled_areas_lookup_table.iloc[i, :].values)
             plt.plot(trick_to_plot/areas_df["Glacier area [m²]"][8:-7], all_bands, drawstyle="steps-post", color="lightgrey")
     # Black lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(scaled_areas_lookup_table)):
         if i % 20 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0], area_lookup_table.iloc[i, :].values)
+            trick_to_plot = np.append(scaled_areas_lookup_table.iloc[i, :].values[0], scaled_areas_lookup_table.iloc[i, :].values)
             plt.plot(trick_to_plot/areas_df["Glacier area [m²]"][8:-7], all_bands, drawstyle="steps-post", color="black")
     print(areas_df)
-    plt.xlabel('Glacier area / Glacier initial area (-)')
+    plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
     plt.ylabel('Elevation (m a.s.l.)')
     
     
@@ -338,16 +371,16 @@ def plot_figure_2b(elevation_bands):
     
     plt.figure()
     # Grey lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(areas_lookup_table)):
         if i % 5 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0] * thickness_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
-                                      area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ)
+            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
+                                      areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ)
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
     # Black lines
-    for i in range(len(area_lookup_table)):
+    for i in range(len(areas_lookup_table)):
         if i % 20 == 0:
-            trick_to_plot = np.append(area_lookup_table.iloc[i, :].values[0] * thickness_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
-                                      area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ)
+            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / WATER_EQ, 
+                                      areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ)
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
     plt.plot(thicknesses_df["Glacier thickness [m]"] * areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], 
              drawstyle="steps-post", color='red')
@@ -356,8 +389,8 @@ def plot_figure_2b(elevation_bands):
     
     
     plt.figure()
-    for i in range(len(area_lookup_table)):
-        volumes = area_lookup_table.iloc[i, :].values * thickness_lookup_table.iloc[i, :].values / WATER_EQ
+    for i in range(len(areas_lookup_table)):
+        volumes = areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ
         if i == 0:
             plt.axhline(y=np.sum(volumes), color='r', linestyle='-')
         plt.plot(i, np.sum(volumes), marker="o", color="black")

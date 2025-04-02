@@ -271,7 +271,7 @@ def test_single_connectivity_on_elevation_bands():
     catchment.extract_dem(CATCHMENT_DEM)
     catchment.discretize_by(['elevation'], elevation_distance=100)
 
-    df = catchment.calculate_connectivity(mode='single')
+    df = catchment.calculate_connectivity(mode='single', force_connectivity=False)
 
     assert df.loc[df[('id', '-')] == 1, ('connectivity', '-')][0] == {}
 

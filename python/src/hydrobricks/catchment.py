@@ -3,10 +3,10 @@ import numpy as np
 
 import hydrobricks as hb
 
-from hydrobricks.catchment_tools.topography import Topography
-from hydrobricks.catchment_tools.discretization import Discretization
-from hydrobricks.catchment_tools.connectivity import Connectivity
-from hydrobricks.catchment_tools.solar_radiation import SolarRadiation
+from hydrobricks.catchment_components.topography import Topography
+from hydrobricks.catchment_components.discretization import Discretization
+from hydrobricks.catchment_components.connectivity import Connectivity
+from hydrobricks.catchment_components.solar_radiation import SolarRadiation
 
 if hb.has_shapely:
     from shapely.geometry import mapping

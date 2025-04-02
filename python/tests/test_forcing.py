@@ -21,7 +21,7 @@ def hydro_units():
     # Preparation of the hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        CATCHMENT_DIR / 'hydro_units.csv',
+        CATCHMENT_DIR / 'hydro_units_elevation.csv',
         column_elevation='elevation', column_area='area')
     return hydro_units
 
@@ -30,7 +30,7 @@ def hydro_units():
 def forcing(hydro_units):
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
-        CATCHMENT_DIR / 'meteo.csv', column_time='Date', time_format='%d/%m/%Y',
+        CATCHMENT_DIR / 'meteo.csv', column_time='date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
     return forcing
@@ -88,7 +88,7 @@ def test_forcing_get_variable_enum(hydro_units):
 def test_forcing_load_station_data_from_csv(hydro_units):
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
-        CATCHMENT_DIR / 'meteo.csv', column_time='Date', time_format='%d/%m/%Y',
+        CATCHMENT_DIR / 'meteo.csv', column_time='date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
     assert len(forcing.data1D.data_name) == 3

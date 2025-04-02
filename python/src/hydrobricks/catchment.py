@@ -548,19 +548,19 @@ class Catchment:
             raise ValueError("Unknown data format.")
 
     # Copy the docstring from attached classes
-   # discretize_by.__doc__ = hb.Discretization.discretize_by.__doc__
-   # create_elevation_bands.__doc__ = hb.Discretization.create_elevation_bands.__doc__
-   # get_mean_elevation.__doc__ = hb.Topography.get_mean_elevation.__doc__
-   # resample_dem_and_calculate_slope_aspect.__doc__ = hb.Topography.resample_dem_and_calculate_slope_aspect.__doc__
-   # calculate_slope_aspect.__doc__ = hb.Topography.calculate_slope_aspect.__doc__
-   # get_hillshade.__doc__ = hb.Topography.get_hillshade.__doc__
-   # calculate_connectivity.__doc__ = hb.Connectivity.calculate.__doc__
-   # calculate_daily_potential_radiation.__doc__ = hb.SolarRadiation.calculate_daily_potential_radiation.__doc__
-   # calculate_cast_shadows.__doc__ = hb.SolarRadiation.calculate_cast_shadows.__doc__
-   # load_mean_annual_radiation_raster.__doc__ = hb.SolarRadiation.load_mean_annual_radiation_raster.__doc__
-   # upscale_and_save_mean_annual_radiation_rasters.__doc__ = hb.SolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
-   # get_solar_declination_rad.__doc__ = hb.SolarRadiation.get_solar_declination_rad.__doc__
-   # get_solar_hour_angle_limit.__doc__ = hb.SolarRadiation.get_solar_hour_angle_limit.__doc__
-   # get_solar_zenith.__doc__ = hb.SolarRadiation.get_solar_zenith.__doc__
-   # get_solar_azimuth_to_south.__doc__ = hb.SolarRadiation.get_solar_azimuth_to_south.__doc__
-   # get_solar_azimuth_to_north.__doc__ = hb.SolarRadiation.get_solar_azimuth_to_north.__doc__
+    discretize_by.__doc__ = Discretization.discretize_by.__doc__
+    create_elevation_bands.__doc__ = Discretization.create_elevation_bands.__doc__
+    get_mean_elevation.__doc__ = Topography.get_mean_elevation.__doc__
+    resample_dem_and_calculate_slope_aspect.__doc__ = Topography.resample_dem_and_calculate_slope_aspect.__doc__
+    calculate_slope_aspect.__doc__ = Topography.calculate_slope_aspect.__doc__
+    get_hillshade.__doc__ = Topography.get_hillshade.__doc__
+    calculate_connectivity.__doc__ = Connectivity.calculate.__doc__
+    calculate_daily_potential_radiation.__doc__ = SolarRadiation.calculate_daily_potential_radiation.__doc__
+    calculate_cast_shadows.__doc__ = SolarRadiation.calculate_cast_shadows.__doc__
+    load_mean_annual_radiation_raster.__doc__ = SolarRadiation.load_mean_annual_radiation_raster.__doc__
+    upscale_and_save_mean_annual_radiation_rasters.__doc__ = SolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
+    get_solar_declination_rad.__doc__ = SolarRadiation.get_solar_declination_rad.__doc__
+    get_solar_hour_angle_limit.__doc__ = SolarRadiation.get_solar_hour_angle_limit.__doc__
+    get_solar_zenith.__doc__ = SolarRadiation.get_solar_zenith.__doc__
+    get_solar_azimuth_to_south.__doc__ = SolarRadiation.get_solar_azimuth_to_south.__doc__
+    get_solar_azimuth_to_north.__doc__ = SolarRadiation.get_solar_azimuth_to_north.__doc__

@@ -1,7 +1,9 @@
 import itertools
+
 import numpy as np
 
 import hydrobricks as hb
+
 
 class Discretization:
     """

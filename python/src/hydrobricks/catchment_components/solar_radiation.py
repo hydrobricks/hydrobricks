@@ -1,6 +1,7 @@
 import warnings
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 import hydrobricks as hb
 
@@ -21,6 +22,7 @@ from hydrobricks.constants import (
     TO_DEG,
     TO_RAD,
 )
+
 
 class SolarRadiation:
     """

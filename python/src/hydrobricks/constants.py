@@ -18,3 +18,8 @@ T_LAPSE_RATE = -0.0065  # Standard temperature lapse rate (-0.0065) [K/m]
 GRAVITY = 9.80665  # Gravitational acceleration [m/s²]
 R_GAS = 8.31432  # Universal gas constant [J/(mol·K)]
 AIR_MOLAR_MASS = 0.0289644  # Molar mass of Earth's air [kg/mol]
+
+# For the glacier melt
+ICE_DENSITY = 900  # Ice density [kg/m³]
+WATER_DENSITY = 1000  # Water density [kg/m³]
+WATER_EQ = ICE_DENSITY / WATER_DENSITY  # Water equivalent [-]

@@ -46,7 +46,7 @@ class ModelSetupHelper:
     def get_catchment_dir(self):
         return TEST_FILES_DIR / self.catchment_name
 
-    def create_hydro_units_from_csv_file(self, filename='elevation_bands.csv',
+    def create_hydro_units_from_csv_file(self, filename='hydro_units.csv',
                                          other_columns=None):
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
@@ -57,7 +57,7 @@ class ModelSetupHelper:
 
     def get_forcing_data_from_csv_file(self, filename='meteo.csv', ref_elevation=None,
                                        use_pyet=False, use_precip_gradient=False,
-                                       precip_corr_factor=None, temp_gradients=None):
+                                       precip_corr_factor=None, temp_gradients=None, lat=None):
         self.use_precip_gradient = use_precip_gradient
         self.precip_corr_factor = precip_corr_factor
         self.temp_gradients = temp_gradients
@@ -65,10 +65,12 @@ class ModelSetupHelper:
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
         forcing = hb.Forcing(self.hydro_units)
+        content = {'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)'}
+        if not use_pyet:
+            content['pet'] = 'pet_sim(mm/day)'
         forcing.load_station_data_from_csv(
-            catchment_dir / filename, column_time='Date', time_format='%d/%m/%Y',
-            content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
-                     'pet': 'pet_sim(mm/day)'})
+            catchment_dir / filename, column_time='date', time_format='%d/%m/%Y',
+            content=content)
 
         if temp_gradients is not None:
             forcing.spatialize_from_station_data(
@@ -80,7 +82,7 @@ class ModelSetupHelper:
                 gradient='param:temp_gradients')
 
         if use_pyet:
-            forcing.compute_pet(method='priestley_taylor')
+            forcing.compute_pet(method='Hamon', use=['t', 'lat'], lat=lat)
         else:
             forcing.spatialize_from_station_data(variable='pet', method='constant')
 

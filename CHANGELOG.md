@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
+## 0.7.7 - NEXT RELEASE
+
+### Added
+
+-   Adding an option to force the connectivity to neighbors when there is no downstream unit.
+
+### Fixed
+
+-   Fixing an issue with the dlls when installing the module in editable mode.
+
+### Changed
+
+-   Updating some example scripts.
+
+
+## 0.7.6 - 2025-01-23
+
+### Added
+
+-   A new function to compute the connectivity between hydrological units has been added.
+-   New reference metrics have been added (bootstrapping approach).
+
+### Fixed
+
+-   Fixing issues related to updated dependencies (dask, pyarrow, pysheds).
+-   Fixing CI issues.
+
+
 ## 0.7.5 - 2024-10-31
 
 ### Breaking changes

@@ -11,7 +11,7 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'tests', 'files', 'catchments'
 )
-CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'elevation_bands.csv'
+CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'hydro_units.csv'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 

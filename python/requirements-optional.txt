@@ -1,12 +1,17 @@
 dask
+dask-expr
+datashader==0.17.0
 geopandas
 matplotlib
 netCDF4
+pyarrow
 pyet
 pyproj
+pysheds
 pytest
 rasterio
 rioxarray
+scipy
 shapely
 spotpy
 xarray

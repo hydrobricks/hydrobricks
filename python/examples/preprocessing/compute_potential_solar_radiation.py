@@ -41,7 +41,7 @@ forcing.load_station_data_from_csv(
 forcing.spatialize_from_station_data(
     variable='precipitation', method='constant')
 forcing.spatialize_from_station_data(
-    variable='temperature', ref_elevation=2615, gradient=-0.6)
+    variable='temperature', ref_elevation=2702, gradient=-0.6)
 forcing.spatialize_from_gridded_data(
     variable='solar_radiation', var_name='radiation', path=working_dir,
     file_pattern='daily_potential_radiation.nc', data_crs=2056,

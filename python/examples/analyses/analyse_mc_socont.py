@@ -9,7 +9,7 @@ helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
                           end_date='2020-12-31')
 helper.create_hydro_units_from_csv_file()
 forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True)
+    ref_elevation=1253, use_precip_gradient=True)
 obs = helper.get_obs_data_from_csv_file()
 socont, parameters = helper.get_model_and_params_socont()
 

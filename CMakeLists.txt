@@ -29,7 +29,7 @@ project(hydrobricks)
 # Version number
 set(VERSION_MAJOR "0")
 set(VERSION_MINOR "7")
-set(VERSION_PATCH "5")
+set(VERSION_PATCH "6")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -124,9 +124,7 @@ if (USE_CODECOV)
         hydrobricks-tests
         EXCLUDE
         "/usr/*"
-        "${PROJECT_SOURCE_DIR}/core/tests/src/*"
-        "tests/*"
-        "${CMAKE_BINARY_DIR}/_deps/*"
+        "core/tests/*"
         "bin/*"
         DEPENDENCIES
         hydrobricks-tests)

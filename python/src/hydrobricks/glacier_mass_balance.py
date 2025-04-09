@@ -327,6 +327,8 @@ def plot_figure_2b(elevation_bands):
              drawstyle="steps-post", color='red')
     plt.xlabel('Glacier area (scaled) (m²)')
     plt.ylabel('Elevation (m a.s.l.)')
+    plt.xlim(0,)
+    plt.tight_layout()
 
     plt.figure()
     # Grey lines
@@ -348,22 +350,7 @@ def plot_figure_2b(elevation_bands):
     plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
     plt.ylabel('Elevation (m a.s.l.)')
     plt.xlim(0,)
-
-    plt.figure()
-    thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
-    plt.plot(thicknesses_df["Glacier thickness [m]"], [x + 5 for x in thicknesses_df["Elevation [m a.s.l.]"]],
-             drawstyle="steps-post", color='black')
-    plt.xlabel('Glacier thickness (m)')
-    plt.ylabel('Elevation (m a.s.l.)')
-
-    plt.figure()
-    volumes_df = pd.read_csv(path + "histogram1_values_corr.csv")
-    plt.plot(volumes_df["Glacier volume [m³]"] * 1000, [x + 5 for x in volumes_df["Elevation [m a.s.l.]"]],
-             drawstyle="steps-post", color='black')
-    plt.plot(thicknesses_df["Glacier thickness [m]"] * areas_df["Glacier area [m²]"],
-             [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], drawstyle="steps-post", color='red')
-    plt.xlabel('Glacier volume (m³)')
-    plt.ylabel('Elevation (m a.s.l.)')
+    plt.tight_layout()
 
     plt.figure()
     # Grey lines
@@ -380,10 +367,14 @@ def plot_figure_2b(elevation_bands):
                 areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / (1000 * WATER_EQ),
                 areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / (1000 * WATER_EQ))
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
-    plt.plot(thicknesses_df["Glacier thickness [m]"] * areas_df["Glacier area [m²]"],
-             [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], drawstyle="steps-post", color='red')
+    trick_to_plot = np.append(
+        areas_lookup_table.iloc[0, :].values[0] * we_lookup_table.iloc[0, :].values[0] / (1000 * WATER_EQ),
+        areas_lookup_table.iloc[0, :].values * we_lookup_table.iloc[0, :].values / (1000 * WATER_EQ))
+    plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color='red')
     plt.xlabel('Glacier volume (m³)')
     plt.ylabel('Elevation (m a.s.l.)')
+    plt.xlim(0,)
+    plt.tight_layout()
 
     plt.show()
 

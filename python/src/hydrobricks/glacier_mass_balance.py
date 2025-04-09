@@ -67,7 +67,7 @@ class GlacierMassBalance:
         # Step 1
         # Water equivalent in mm (depth) for each elevation band i, and for each increment.
         initial_areas_perc = glacier_df['initial_areas_m2'] / catchment_area_m2
-        self.we = np.zeros((nb_increments, nb_elevation_bands))
+        self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
         self.we[0] = glacier_df['initial_water_equivalents_mm']  # Initialization
         self.initial_total_glacier_we = np.nan
         self.norm_elevations = np.nan
@@ -80,11 +80,11 @@ class GlacierMassBalance:
         self.excess_melt_we = 0
 
         # Step 4
-        self.areas_perc = np.zeros((nb_increments, nb_elevation_bands))
+        self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
         self.areas_perc[0] = initial_areas_perc  # Initialization
 
         # Step 5
-        self.hydro_unit_glacier_areas_m2 = np.zeros((nb_increments, nb_hydro_units))
+        self.hydro_unit_glacier_areas_m2 = np.zeros((nb_increments + 1, nb_hydro_units))
 
     def _initialization(self):
         """
@@ -212,6 +212,13 @@ class GlacierMassBalance:
         # Nullify the areas of the elevation bands with no glacier water equivalent
         self.areas_perc[increment, self.we[increment] == 0] = 0
 
+    def _setting_last_iteration_to_zero(self):
+        """
+        Set the last iteration to zero.
+        """
+        self.we[-1] = 0
+        self.areas_perc[-1] = 0
+
     def _final_width_scaling(self):
         """
         Similar to _width_scaling, but for the case when the glacier area is not
@@ -257,19 +264,19 @@ class GlacierMassBalance:
         # Write record to the lookup table
         lookup_table = pd.DataFrame(
             self.hydro_unit_glacier_areas_m2,
-            index=range(self.nb_increments),
+            index=range(self.nb_increments + 1),
             columns=np.unique(self.hydro_unit_ids))
         lookup_table.to_csv("glacier_evolution_lookup_table.csv")
 
         areas_lookup_table = pd.DataFrame(
             self.areas_perc * self.catchment_area_m2,
-            index=range(self.nb_increments),
+            index=range(self.nb_increments + 1),
             columns=range(len(self.areas_perc[0])))
         areas_lookup_table.to_csv("details_glacier_areas_evolution.csv")
 
         we_lookup_table = pd.DataFrame(
-            self.we / 1000,
-            index=range(self.nb_increments),
+            self.we,
+            index=range(self.nb_increments + 1),
             columns=range(len(self.we[0])))
         we_lookup_table.to_csv("details_glacier_we_evolution.csv")
 
@@ -279,11 +286,12 @@ class GlacierMassBalance:
         """
         self._initialization()
 
-        for increment in range(1, self.nb_increments):
+        for increment in range(1, self.nb_increments + 1):
             self._compute_delta_h(increment)
             self._update_glacier_thickness(increment)
             self._width_scaling(increment)
 
+        self._setting_last_iteration_to_zero()
         self._final_width_scaling()
         self._update_hydro_unit_glacier_areas()
         self._save_to_file()
@@ -309,7 +317,7 @@ def plot_figure_2b(elevation_bands):
     all_bands = elevation_bands - band_width / 2
     all_bands = np.append(all_bands, elevation_bands[-1] + band_width / 2)
 
-    path = "/home/anne-laure/eclipse-workspace/Huss_glacial_melt_files/"
+    path = R"C:\Data\Projects\Hydrobricks\Reference models\Delta-h\\"
     areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
     # Grey lines
     for i in range(len(areas_lookup_table)):
@@ -367,15 +375,15 @@ def plot_figure_2b(elevation_bands):
     for i in range(len(areas_lookup_table)):
         if i % 5 == 0:
             trick_to_plot = np.append(
-                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / WATER_EQ,
-                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ)
+                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / (1000 * WATER_EQ),
+                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / (1000 * WATER_EQ))
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
     # Black lines
     for i in range(len(areas_lookup_table)):
         if i % 20 == 0:
             trick_to_plot = np.append(
-                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / WATER_EQ,
-                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ)
+                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / (1000 * WATER_EQ),
+                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / (1000 * WATER_EQ))
             plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
     plt.plot(thicknesses_df["Glacier thickness [m]"] * areas_df["Glacier area [m²]"],
              [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], drawstyle="steps-post", color='red')
@@ -397,7 +405,7 @@ def plot_figure_2b(elevation_bands):
 
 def main():
     # Data from Huss and Seibert
-    path = "/home/anne-laure/eclipse-workspace/Huss_glacial_melt_files/"
+    path = R"C:\Data\Projects\Hydrobricks\Reference models\Delta-h\\"
     areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
     thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
     length = int(len(areas_df["Elevation [m a.s.l.]"].values) / 4)  # For steps of 10 m, and zones of 40 m.

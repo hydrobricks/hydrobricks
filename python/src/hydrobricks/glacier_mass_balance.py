@@ -212,13 +212,6 @@ class GlacierMassBalance:
         # Nullify the areas of the elevation bands with no glacier water equivalent
         self.areas_perc[increment, self.we[increment] == 0] = 0
 
-    def _setting_last_iteration_to_zero(self):
-        """
-        Set the last iteration to zero.
-        """
-        self.we[-1] = 0
-        self.areas_perc[-1] = 0
-
     def _final_width_scaling(self):
         """
         Similar to _width_scaling, but for the case when the glacier area is not
@@ -286,12 +279,11 @@ class GlacierMassBalance:
         """
         self._initialization()
 
-        for increment in range(1, self.nb_increments + 1):
+        for increment in range(1, self.nb_increments):  # last row kept with zeros
             self._compute_delta_h(increment)
             self._update_glacier_thickness(increment)
             self._width_scaling(increment)
 
-        self._setting_last_iteration_to_zero()
         self._final_width_scaling()
         self._update_hydro_unit_glacier_areas()
         self._save_to_file()
@@ -349,10 +341,13 @@ def plot_figure_2b(elevation_bands):
         if i % 20 == 0:
             trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0],
                                       areas_lookup_table.iloc[i, :].values)
-            plt.plot(trick_to_plot / areas_df["Glacier area [m²]"][8:-7], all_bands,
+            ratio = trick_to_plot / areas_df["Glacier area [m²]"][8:-7].values
+            ratio[np.isnan(ratio) | np.isinf(ratio)] = 0
+            plt.plot(ratio, all_bands,
                      drawstyle="steps-post", color="black")
     plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
     plt.ylabel('Elevation (m a.s.l.)')
+    plt.xlim(0,)
 
     plt.figure()
     thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
@@ -389,16 +384,6 @@ def plot_figure_2b(elevation_bands):
              [x + 5 for x in areas_df["Elevation [m a.s.l.]"]], drawstyle="steps-post", color='red')
     plt.xlabel('Glacier volume (m³)')
     plt.ylabel('Elevation (m a.s.l.)')
-
-    plt.figure()
-    for i in range(len(areas_lookup_table)):
-        volumes = areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / WATER_EQ
-        if i == 0:
-            plt.axhline(y=np.sum(volumes), color='r', linestyle='-')
-        plt.plot(i, np.sum(volumes), marker="o", color="black")
-    plt.axhline(y=0, color='r', linestyle='-')
-    plt.xlabel('Increment')
-    plt.ylabel('Glacier volume (m³)')
 
     plt.show()
 

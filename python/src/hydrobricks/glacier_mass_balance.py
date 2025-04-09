@@ -254,6 +254,9 @@ class GlacierMassBalance:
         followed by one column for each elevation zone with the areal glacier cover
         area (in % of catchment area)."
         """
+        if not self.save_to_file:
+            return
+
         # Write record to the lookup table
         lookup_table = pd.DataFrame(
             self.hydro_unit_glacier_areas_m2,
@@ -287,128 +290,3 @@ class GlacierMassBalance:
         self._final_width_scaling()
         self._update_hydro_unit_glacier_areas()
         self._save_to_file()
-
-    def run(self):
-        self.loop_through_the_steps()
-
-
-
-
-
-
-
-def plot_figure_2b(elevation_bands):
-    """
-    Reproduces Figure 2b.
-    """
-
-    areas_lookup_table = pd.read_csv("details_glacier_areas_evolution.csv", index_col=0)
-    we_lookup_table = pd.read_csv("details_glacier_we_evolution.csv", index_col=0)
-
-    band_width = elevation_bands[1] - elevation_bands[0]
-    all_bands = elevation_bands - band_width / 2
-    all_bands = np.append(all_bands, elevation_bands[-1] + band_width / 2)
-
-    path = R"C:\Data\Projects\Hydrobricks\Reference models\Delta-h\\"
-    areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
-    # Grey lines
-    for i in range(len(areas_lookup_table)):
-        if i % 5 == 0:
-            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0],
-                                      areas_lookup_table.iloc[i, :].values)
-            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
-    # Black lines
-    for i in range(len(areas_lookup_table)):
-        if i % 20 == 0:
-            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0],
-                                      areas_lookup_table.iloc[i, :].values)
-            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
-    plt.plot(areas_df["Glacier area [m²]"], [x + 5 for x in areas_df["Elevation [m a.s.l.]"]],
-             drawstyle="steps-post", color='red')
-    plt.xlabel('Glacier area (scaled) (m²)')
-    plt.ylabel('Elevation (m a.s.l.)')
-    plt.xlim(0,)
-    plt.tight_layout()
-
-    plt.figure()
-    # Grey lines
-    for i in range(len(areas_lookup_table)):
-        if i % 5 == 0:
-            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0],
-                                      areas_lookup_table.iloc[i, :].values)
-            plt.plot(trick_to_plot / areas_df["Glacier area [m²]"][8:-7], all_bands,
-                     drawstyle="steps-post", color="lightgrey")
-    # Black lines
-    for i in range(len(areas_lookup_table)):
-        if i % 20 == 0:
-            trick_to_plot = np.append(areas_lookup_table.iloc[i, :].values[0],
-                                      areas_lookup_table.iloc[i, :].values)
-            ratio = trick_to_plot / areas_df["Glacier area [m²]"][8:-7].values
-            ratio[np.isnan(ratio) | np.isinf(ratio)] = 0
-            plt.plot(ratio, all_bands,
-                     drawstyle="steps-post", color="black")
-    plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
-    plt.ylabel('Elevation (m a.s.l.)')
-    plt.xlim(0,)
-    plt.tight_layout()
-
-    plt.figure()
-    # Grey lines
-    for i in range(len(areas_lookup_table)):
-        if i % 5 == 0:
-            trick_to_plot = np.append(
-                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / (1000 * WATER_EQ),
-                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / (1000 * WATER_EQ))
-            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="lightgrey")
-    # Black lines
-    for i in range(len(areas_lookup_table)):
-        if i % 20 == 0:
-            trick_to_plot = np.append(
-                areas_lookup_table.iloc[i, :].values[0] * we_lookup_table.iloc[i, :].values[0] / (1000 * WATER_EQ),
-                areas_lookup_table.iloc[i, :].values * we_lookup_table.iloc[i, :].values / (1000 * WATER_EQ))
-            plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color="black")
-    trick_to_plot = np.append(
-        areas_lookup_table.iloc[0, :].values[0] * we_lookup_table.iloc[0, :].values[0] / (1000 * WATER_EQ),
-        areas_lookup_table.iloc[0, :].values * we_lookup_table.iloc[0, :].values / (1000 * WATER_EQ))
-    plt.plot(trick_to_plot, all_bands, drawstyle="steps-post", color='red')
-    plt.xlabel('Glacier volume (m³)')
-    plt.ylabel('Elevation (m a.s.l.)')
-    plt.xlim(0,)
-    plt.tight_layout()
-
-    plt.show()
-
-
-def main():
-    # Data from Huss and Seibert
-    path = R"C:\Data\Projects\Hydrobricks\Reference models\Delta-h\\"
-    areas_df = pd.read_csv(path + "histogram2_values_corr.csv")
-    thicknesses_df = pd.read_csv(path + "histogram3_values_corr.csv")
-    length = int(len(areas_df["Elevation [m a.s.l.]"].values) / 4)  # For steps of 10 m, and zones of 40 m.
-    ids = [i for i in range(length) for _ in range(4)]
-    catchment_area_m2 = 100000000
-
-    # Water equivalent (w.e.) conversion + m to mm conversion
-    water_equivalents_mm = thicknesses_df["Glacier thickness [m]"].values * WATER_EQ * 1000
-
-    glacier_data = {"elevation_bands_m": areas_df["Elevation [m a.s.l.]"].values,  # Median elevation for each
-                    # elevation band i. An elevation band is smaller than a HRU, usually around 10 m high.
-                    "elevation_zone_id": ids,  # For each elevation band i, the ID of the corresponding elevation
-                    # zone (the HRU).
-                    "initial_water_equivalents_mm": water_equivalents_mm,  # W.e. in mm (depth) for each elevation band i
-                    "initial_areas_m2": areas_df["Glacier area [m²]"].values}  # Glaciated areas for each elev. band i
-
-    glacier_df = pd.DataFrame(glacier_data)
-    # We have to remove the bands with no glacier area (otherwise the min and max elevations are wrong)
-    glacier_df = glacier_df.drop(glacier_df[glacier_df.initial_areas_m2 == 0].index)
-
-    nb_increments = 100  # This means that the lookup table consists of glacier areas per elevation
-    # zone for 101 different glacier mass situations, ranging from the initial glacier mass to zero.
-
-    glacier = GlacierMassBalance(glacier_df, catchment_area_m2, nb_increments)
-    glacier.loop_through_the_steps()
-
-    plot_figure_2b(elevation_bands=glacier_df.elevation_bands_m.values)
-
-
-main()

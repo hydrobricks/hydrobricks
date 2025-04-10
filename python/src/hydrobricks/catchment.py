@@ -3,10 +3,10 @@ from pathlib import Path
 import numpy as np
 
 import hydrobricks as hb
-from hydrobricks.catchment_components.connectivity import Connectivity
-from hydrobricks.catchment_components.discretization import Discretization
-from hydrobricks.catchment_components.solar_radiation import SolarRadiation
-from hydrobricks.catchment_components.topography import Topography
+from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
+from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
+from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
+from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
 
 if hb.has_shapely:
     from shapely.geometry import mapping
@@ -78,10 +78,10 @@ class Catchment:
         self._extract_outline(outline)
         self._extract_area(outline)
 
-        self.topography = Topography(self)
-        self.discretization = Discretization(self)
-        self.connectivity = Connectivity(self)
-        self.solar_radiation = SolarRadiation(self)
+        self.topography = CatchmentTopography(self)
+        self.discretization = CatchmentDiscretization(self)
+        self.connectivity = CatchmentConnectivity(self)
+        self.solar_radiation = PotentialSolarRadiation(self)
 
     def __del__(self):
         if self.dem is not None:

@@ -4,7 +4,7 @@ from scipy import ndimage
 import hydrobricks as hb
 
 
-class Connectivity:
+class CatchmentConnectivity:
     """
     Class to handle connectivity of catchments.
     """

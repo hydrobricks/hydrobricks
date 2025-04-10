@@ -24,7 +24,7 @@ from hydrobricks.constants import (
 )
 
 
-class SolarRadiation:
+class PotentialSolarRadiation:
     """
     A class to handle solar radiation data for a catchment area.
     """
@@ -485,7 +485,7 @@ class SolarRadiation:
         Compute the solar azimuth relative to the north.
         See get_solar_azimuth_to_south() for more details.
         """
-        azimuth = SolarRadiation.get_solar_azimuth_to_south(
+        azimuth = PotentialSolarRadiation.get_solar_azimuth_to_south(
             hour_angles, lat_rad, solar_declination)
         azimuth += 180
 

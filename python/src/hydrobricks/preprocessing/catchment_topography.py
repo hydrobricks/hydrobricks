@@ -15,7 +15,7 @@ if hb.has_shapely:
 if hb.has_rasterio:
     from rasterio.mask import mask
 
-class Topography:
+class CatchmentTopography:
     """
     A class to represent the topography of a catchment.
     """

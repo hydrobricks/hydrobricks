@@ -109,7 +109,7 @@ except ImportError:
     has_matplotlib = False
 else:
     has_matplotlib = True
-    from .plotting import *  # noqa
+    from .plots.plot_results import *  # noqa
 
 from . import utils
 from .catchment import Catchment

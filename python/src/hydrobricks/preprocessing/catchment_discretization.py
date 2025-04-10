@@ -5,7 +5,7 @@ import numpy as np
 import hydrobricks as hb
 
 
-class Discretization:
+class CatchmentDiscretization:
     """
     Class to handle the discretization of catchments.
     """

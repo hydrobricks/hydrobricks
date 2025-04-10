@@ -52,7 +52,7 @@ class GlacierEvolutionDeltaH:
         self.excess_melt_we = 0
 
     def compute_lookup_table(self, glacier_data_csv, nb_increments=100,
-                             update_width=False, update_width_reference='initial'):
+                             update_width=True, update_width_reference='initial'):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
         calculated using the delta-h method (Huss et al., 2010) using the

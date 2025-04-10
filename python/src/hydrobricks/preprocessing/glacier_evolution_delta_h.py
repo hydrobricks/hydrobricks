@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 import hydrobricks as hb
+from hydrobricks.constants import WATER_EQ
 
 
 class GlacierEvolutionDeltaH:
@@ -16,17 +18,19 @@ class GlacierEvolutionDeltaH:
       14, 815–829, https://doi.org/10.5194/hess-14-815-2010, 2010.
     """
 
-    def __init__(self, catchment):
+    def __init__(self, hydro_units):
         """
         Initialize the GlacierMassBalance class.
 
         Parameters
         ----------
-        catchment : hb.Catchment
-            The catchment object.
+        hydro_units : hb.HydroUnit
+            The hydro unit object.
         """
-        self.catchment = catchment
+        self.hydro_units = hydro_units.hydro_units
+        self.catchment_area = np.sum(self.hydro_units.area.values)
         self.hydro_unit_ids = None
+        self.elevation_bands = None
 
         # Tables
         self.lookup_table = None
@@ -46,13 +50,38 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
 
-    def compute_lookup_table(self, nb_increments=100, update_width=False,
-                             update_width_reference='initial'):
+    def compute_lookup_table(self, glacier_data_csv, nb_increments=100,
+                             update_width=False, update_width_reference='initial'):
         """
-        Seibert et al. (2018): "Melt the glacier in steps of 1 % of its total mass"
+        Prepare the glacier mass balance lookup table. The glacier mass balance is
+        calculated using the delta-h method (Huss et al., 2010) using the
+        lookup table method (Seibert et al., 2018). The glacier mass balance is
+        calculated for each elevation band and melt increment and is synthesized
+        in a lookup table per hydro unit.
 
         Parameters
         ----------
+        glacier_data_csv : str
+            Path to the CSV file containing glacier data. An elevation band is smaller
+            than a hydro unit, usually around 10 m high. It should contain the
+            following columns:
+            - elevation: Elevation (m) for each elevation band i (e.g. every 10m).
+            - glacier_area: Glacier area (m2) for each elevation band i.
+            - glacier_thickness: Glacier thickness (m) for each elevation band i.
+            - hydro_unit_id: Hydro unit ID for each elevation band i.
+
+            Format example:
+            elevation	glacier_area	glacier_thickness   hydro_unit_id
+            m	        m2	            m                   2
+            1670	    0	            0                   2
+            1680	    0	            0                   2
+            1690	    2500	        14.7                2
+            1700	    9375	        23.2                3
+            1710	    11875	        25.2                3
+            1720	    9375	        23.2                3
+            1730	    9375	        23.2                3
+            ...	        ...	            ...                 ...
+
         nb_increments : int, optional
             Number of increments for glacier mass balance calculation. Default is 100.
         update_width : bool, optional
@@ -64,34 +93,32 @@ class GlacierEvolutionDeltaH:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
         """
+        # Read the glacier data
+        glacier_df = pd.read_csv(glacier_data_csv, skiprows=[1])
 
+        # We have to remove the bands with no glacier area
+        # (otherwise the min and max elevations are wrong)
+        glacier_df = glacier_df.drop(glacier_df[glacier_df.glacier_area == 0].index)
 
+        # Extract the relevant columns
+        elevation_bands = glacier_df['elevation'].values
+        initial_areas_m2 = glacier_df['glacier_area'].values
+        initial_we_mm = glacier_df['glacier_thickness'].values * WATER_EQ * 1000
+        hydro_unit_ids = glacier_df['hydro_unit_id'].values
 
+        nb_elevation_bands = len(elevation_bands)
 
-        # Basic properties
-        elevation_bands_m = glacier_df['elevation_bands_m'].values
-        hydro_unit_ids = glacier_df['elevation_zone_id'].values
-        nb_elevation_bands = len(elevation_bands_m)
-
-
-
-
-
-
-
-
-
-
-        # Water equivalent in mm (depth) for each elevation band i, and for each increment.
-        self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
-        self.we[0] = glacier_df['initial_water_equivalents_mm']  # Initialization
-        self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
-        self.areas_perc[0] = glacier_df['initial_areas_m2'] / self.catchment.area  # Initialization
-        self.lookup_table = np.zeros((nb_increments + 1, len(self.hydro_unit_ids)))
-        self.hydro_unit_ids = np.unique(hydro_unit_ids)
         self.excess_melt_we = 0
+        self.elevation_bands = elevation_bands
+        self.hydro_unit_ids = hydro_unit_ids
+        self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
+        self.we[0] = initial_we_mm  # Initialization
+        self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
+        self.areas_perc[0] = initial_areas_m2 / self.catchment_area  # Initialization
+        self.lookup_table = np.zeros((nb_increments + 1,
+                                      len(np.unique(hydro_unit_ids))))
 
-        self._initialization(elevation_bands_m)
+        self._initialization()
 
         for increment in range(1, nb_increments):  # last row kept with zeros
             self._compute_delta_h(increment, nb_increments)
@@ -103,29 +130,34 @@ class GlacierEvolutionDeltaH:
 
         self._update_hydro_unit_glacier_areas()
 
-    def save_to_file(self):
+    def save_as_csv(self, output_dir):
+        output_dir = Path(output_dir)
+
         # Write record to the lookup table
         lookup_table = pd.DataFrame(
             self.lookup_table,
             index=range(self.lookup_table.shape[0]),
-            columns=self.hydro_unit_ids)
-        lookup_table.to_csv("glacier_evolution_lookup_table.csv")
+            columns=np.unique(self.hydro_unit_ids))
+        lookup_table.to_csv(
+            output_dir / "glacier_evolution_lookup_table.csv")
 
         if self.areas_perc is not None:
             details_glacier_areas = pd.DataFrame(
-                self.areas_perc * self.catchment.area,
+                self.areas_perc * self.catchment_area,
                 index=range(self.areas_perc.shape[0]),
                 columns=range(len(self.areas_perc[0])))
-            details_glacier_areas.to_csv("details_glacier_areas_evolution.csv")
+            details_glacier_areas.to_csv(
+                output_dir / "details_glacier_areas_evolution.csv")
 
         if self.we is not None:
             details_glacier_we = pd.DataFrame(
                 self.we,
                 index=range(self.we.shape[0]),
                 columns=range(len(self.we[0])))
-            details_glacier_we.to_csv("details_glacier_we_evolution.csv")
+            details_glacier_we.to_csv(
+                output_dir / "details_glacier_we_evolution.csv")
 
-    def _initialization(self, elevation_bands):
+    def _initialization(self):
         """
         Step 1 of Seibert et al. (2018): Calculation of the initial total glacier mass
         and normalization of glacier elevations. Selection of the right glacial
@@ -138,14 +170,14 @@ class GlacierEvolutionDeltaH:
 
         # Normalize glacier elevations (Eq. 3)
         # elevations: absolute elevation for each elevation band i
-        max_elevation_m = np.max(elevation_bands)
-        min_elevation_m = np.min(elevation_bands)
-        self.norm_elevations = ((max_elevation_m - elevation_bands) /
+        max_elevation_m = np.max(self.elevation_bands)
+        min_elevation_m = np.min(self.elevation_bands)
+        self.norm_elevations = ((max_elevation_m - self.elevation_bands) /
                                 (max_elevation_m - min_elevation_m))
 
         # Choose the glacial parametrization (Huss et al., 2010, Fig. 2a)
         glacier_area_km2 = (np.sum(self.areas_perc[0]) *
-                            self.catchment.area / (1000 * 1000))
+                            self.catchment_area / (1000 * 1000))
         self._set_delta_h_parametrization(glacier_area_km2)
 
     def _set_delta_h_parametrization(self, glacier_area_km2):
@@ -268,18 +300,17 @@ class GlacierEvolutionDeltaH:
             self.we[i, mask] *= (self.areas_perc[0, mask] /
                                  self.areas_perc[i, mask])
 
-    def _update_hydro_unit_glacier_areas(self, hydro_unit_ids):
+    def _update_hydro_unit_glacier_areas(self):
         """
         Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled) areas for all
         respective elevation bands which are covered by glaciers (i.e. glacier water
         equivalent ≥ 0) for each elevation zone."
         """
         # Update elevation zone areas
-        for i, hydro_unit_id in enumerate(np.unique(hydro_unit_ids)):
-            indices = np.where(hydro_unit_ids == hydro_unit_id)[0]
+        for i, hydro_unit_id in enumerate(np.unique(self.hydro_unit_ids)):
+            indices = np.where(self.hydro_unit_ids == hydro_unit_id)[0]
             if len(indices) != 0:
                 self.lookup_table[:, i] = np.sum(
-                    self.areas_perc[:, indices], axis=1) * self.catchment.area
+                    self.areas_perc[:, indices], axis=1) * self.catchment_area
             else:
                 self.lookup_table[:, i] = 0
-

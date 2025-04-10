@@ -1,11 +1,13 @@
 import os.path
 import tempfile
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 import hydrobricks as hb
+
 #from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
 from hydrobricks.constants import WATER_EQ as WE
 

@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 import hydrobricks as hb
 from hydrobricks.constants import WATER_EQ
@@ -71,16 +72,16 @@ class GlacierEvolutionDeltaH:
             - hydro_unit_id: Hydro unit ID for each elevation band i.
 
             Format example:
-            elevation	glacier_area	glacier_thickness   hydro_unit_id
-            m	        m2	            m                   2
-            1670	    0	            0                   2
-            1680	    0	            0                   2
-            1690	    2500	        14.7                2
-            1700	    9375	        23.2                3
-            1710	    11875	        25.2                3
-            1720	    9375	        23.2                3
-            1730	    9375	        23.2                3
-            ...	        ...	            ...                 ...
+            elevation   glacier_area    glacier_thickness   hydro_unit_id
+            m           m2              m                   2
+            1670        0               0                   2
+            1680        0               0                   2
+            1690        2500            14.7                2
+            1700        9375            23.2                3
+            1710        11875           25.2                3
+            1720        9375            23.2                3
+            1730        9375            23.2                3
+            ...         ...             ...                 ...
 
         nb_increments : int, optional
             Number of increments for glacier mass balance calculation. Default is 100.

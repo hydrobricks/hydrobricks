@@ -78,14 +78,38 @@ class Catchment:
         self._extract_outline(outline)
         self._extract_area(outline)
 
-        self.topography = CatchmentTopography(self)
-        self.discretization = CatchmentDiscretization(self)
-        self.connectivity = CatchmentConnectivity(self)
-        self.solar_radiation = PotentialSolarRadiation(self)
+        self._topography = None
+        self._discretization = None
+        self._connectivity = None
+        self._solar_radiation = None
 
     def __del__(self):
         if self.dem is not None:
             self.dem.close()
+
+    @property
+    def topography(self):
+        if self._topography is None:
+            self._topography = CatchmentTopography(self)
+        return self._topography
+
+    @property
+    def discretization(self):
+        if self._discretization is None:
+            self._discretization = CatchmentDiscretization(self)
+        return self._discretization
+
+    @property
+    def connectivity(self):
+        if self._connectivity is None:
+            self._connectivity = CatchmentConnectivity(self)
+        return self._connectivity
+
+    @property
+    def solar_radiation(self):
+        if self._solar_radiation is None:
+            self._solar_radiation = PotentialSolarRadiation(self)
+        return self._solar_radiation
 
     def extract_dem(self, dem_path) -> bool:
         """
@@ -548,19 +572,19 @@ class Catchment:
             raise ValueError("Unknown data format.")
 
     # Copy the docstring from attached classes
-    discretize_by.__doc__ = Discretization.discretize_by.__doc__
-    create_elevation_bands.__doc__ = Discretization.create_elevation_bands.__doc__
-    get_mean_elevation.__doc__ = Topography.get_mean_elevation.__doc__
-    resample_dem_and_calculate_slope_aspect.__doc__ = Topography.resample_dem_and_calculate_slope_aspect.__doc__
-    calculate_slope_aspect.__doc__ = Topography.calculate_slope_aspect.__doc__
-    get_hillshade.__doc__ = Topography.get_hillshade.__doc__
-    calculate_connectivity.__doc__ = Connectivity.calculate.__doc__
-    calculate_daily_potential_radiation.__doc__ = SolarRadiation.calculate_daily_potential_radiation.__doc__
-    calculate_cast_shadows.__doc__ = SolarRadiation.calculate_cast_shadows.__doc__
-    load_mean_annual_radiation_raster.__doc__ = SolarRadiation.load_mean_annual_radiation_raster.__doc__
-    upscale_and_save_mean_annual_radiation_rasters.__doc__ = SolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
-    get_solar_declination_rad.__doc__ = SolarRadiation.get_solar_declination_rad.__doc__
-    get_solar_hour_angle_limit.__doc__ = SolarRadiation.get_solar_hour_angle_limit.__doc__
-    get_solar_zenith.__doc__ = SolarRadiation.get_solar_zenith.__doc__
-    get_solar_azimuth_to_south.__doc__ = SolarRadiation.get_solar_azimuth_to_south.__doc__
-    get_solar_azimuth_to_north.__doc__ = SolarRadiation.get_solar_azimuth_to_north.__doc__
+    discretize_by.__doc__ = CatchmentDiscretization.discretize_by.__doc__
+    create_elevation_bands.__doc__ = CatchmentDiscretization.create_elevation_bands.__doc__
+    get_mean_elevation.__doc__ = CatchmentTopography.get_mean_elevation.__doc__
+    resample_dem_and_calculate_slope_aspect.__doc__ = CatchmentTopography.resample_dem_and_calculate_slope_aspect.__doc__
+    calculate_slope_aspect.__doc__ = CatchmentTopography.calculate_slope_aspect.__doc__
+    get_hillshade.__doc__ = CatchmentTopography.get_hillshade.__doc__
+    calculate_connectivity.__doc__ = CatchmentConnectivity.calculate.__doc__
+    calculate_daily_potential_radiation.__doc__ = PotentialSolarRadiation.calculate_daily_potential_radiation.__doc__
+    calculate_cast_shadows.__doc__ = PotentialSolarRadiation.calculate_cast_shadows.__doc__
+    load_mean_annual_radiation_raster.__doc__ = PotentialSolarRadiation.load_mean_annual_radiation_raster.__doc__
+    upscale_and_save_mean_annual_radiation_rasters.__doc__ = PotentialSolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
+    get_solar_declination_rad.__doc__ = PotentialSolarRadiation.get_solar_declination_rad.__doc__
+    get_solar_hour_angle_limit.__doc__ = PotentialSolarRadiation.get_solar_hour_angle_limit.__doc__
+    get_solar_zenith.__doc__ = PotentialSolarRadiation.get_solar_zenith.__doc__
+    get_solar_azimuth_to_south.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_south.__doc__
+    get_solar_azimuth_to_north.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_north.__doc__

@@ -1,12 +1,14 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from constants import WATER_EQ
+
+import _hydrobricks as _hb
+
+from .behaviour import Behaviour
 
 
-class GlacierMassBalance:
+class BehaviourGlacierEvolutionDeltaH(Behaviour):
     """
-    Class for glacier mass balance. It is based on the following papers:
+    Class for glacier evolution based on the following papers:
     - Seibert, J., Vis, M. J. P., Kohn, I., Weiler, M., and Stahl, K.: Technical note:
       Representing glacier geometry changes in a semi-distributed hydrological model,
       Hydrol. Earth Syst. Sci., 22, 2211–2224,
@@ -45,6 +47,9 @@ class GlacierMassBalance:
         save_to_file : bool, optional
             Whether to save the lookup table to a file. Default is True.
         """
+        super().__init__()
+        self.behaviour = _hb.BehaviourGlacierEvolutionDeltaH()
+
         # Options
         self.nb_increments = nb_increments
         self.update_width = update_width

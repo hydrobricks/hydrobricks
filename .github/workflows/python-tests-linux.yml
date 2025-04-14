@@ -31,15 +31,6 @@ jobs:
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
 
-    - name: Cache vcpkg
-      uses: actions/cache@v3
-      with:
-        path: |
-          ./vcpkg/installed
-          ./vcpkg/buildtrees
-          ./vcpkg/packages
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
-
     - name: Get dependencies
       run: vcpkg install
 

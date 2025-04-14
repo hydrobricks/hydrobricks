@@ -218,11 +218,15 @@ class Catchment:
             res_area.append(round(n_cells * self.dem.res[0] * self.dem.res[1], 2))
 
             # Compute the mean elevation of the unit
-            res_elevation_mean.append(self.topography.extract_unit_mean_elevation(mask_unit))
+            res_elevation_mean.append(
+                self.topography.extract_unit_mean_elevation(mask_unit))
             if not self.hydro_units.has('elevation'):
-                res_elevation.append(self.topography.extract_unit_mean_elevation(mask_unit))
-                res_elevation_min.append(self.topography.extract_unit_min_elevation(mask_unit))
-                res_elevation_max.append(self.topography.extract_unit_max_elevation(mask_unit))
+                res_elevation.append(
+                    self.topography.extract_unit_mean_elevation(mask_unit))
+                res_elevation_min.append(
+                    self.topography.extract_unit_min_elevation(mask_unit))
+                res_elevation_max.append(
+                    self.topography.extract_unit_max_elevation(mask_unit))
 
             # Compute the slope and aspect of the unit
             res_slope.append(self.topography.extract_unit_mean_slope(mask_unit))
@@ -482,7 +486,8 @@ class Catchment:
         """
         Call the upscale_and_save_mean_annual_radiation_rasters method of the SolarRadiation class.
         """
-        return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(*args, **kwargs)
+        return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
+            *args, **kwargs)
 
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs):

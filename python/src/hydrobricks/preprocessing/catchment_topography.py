@@ -15,6 +15,7 @@ if hb.has_shapely:
 if hb.has_rasterio:
     from rasterio.mask import mask
 
+
 class CatchmentTopography:
     """
     A class to represent the topography of a catchment.
@@ -32,7 +33,6 @@ class CatchmentTopography:
         self.catchment = catchment
         self.slope = None
         self.aspect = None
-
 
     def get_mean_elevation(self):
         """
@@ -74,7 +74,8 @@ class CatchmentTopography:
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            xr_dem = hb.rxr.open_rasterio(self.catchment.dem.files[0]).drop_vars('band')[0]
+            dem_file = self.catchment.dem.files[0]
+            xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
 
         x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
         y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
@@ -123,7 +124,8 @@ class CatchmentTopography:
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            xr_dem = hb.rxr.open_rasterio(self.catchment.dem.files[0]).drop_vars('band')[0]
+            dem_file = self.catchment.dem.files[0]
+            xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
@@ -176,7 +178,6 @@ class CatchmentTopography:
                   np.cos((azimuth_rad - np.pi / 2.0) - aspect))
 
         return 255 * (shaded + 1) / 2
-
 
     def extract_unit_mean_aspect(self, mask_unit):
         aspect_rad = np.radians(self.aspect[mask_unit])

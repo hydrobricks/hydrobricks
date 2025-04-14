@@ -80,7 +80,8 @@ class PotentialSolarRadiation:
         """
         # Resample the DEM and calculate the slope and aspect
         dem, masked_dem_data, slope, aspect = (
-            self.catchment.topography.resample_dem_and_calculate_slope_aspect(resolution, output_path))
+            self.catchment.topography.resample_dem_and_calculate_slope_aspect(
+                resolution, output_path))
         n_rows = slope.shape[0]
         n_cols = slope.shape[1]
 
@@ -89,7 +90,8 @@ class PotentialSolarRadiation:
 
         # Get some catchment attributes
         mean_elevation = self.catchment.topography.get_mean_elevation()
-        mean_lat, _ = self.catchment.extract_unit_mean_lat_lon(self.catchment.masked_dem_data)
+        mean_lat, _ = self.catchment.extract_unit_mean_lat_lon(
+            self.catchment.masked_dem_data)
         lat_rad = mean_lat * TO_RAD
 
         # Compute the solar declination

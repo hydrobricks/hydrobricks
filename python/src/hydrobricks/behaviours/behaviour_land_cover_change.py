@@ -1,12 +1,13 @@
 import warnings
 
-import _hydrobricks as _hb
-import hydrobricks as hb
 import numpy as np
 import pandas as pd
 
-from .behaviour import Behaviour
+import _hydrobricks as _hb
+import hydrobricks as hb
+
 from ..units import Unit, convert_unit
+from .behaviour import Behaviour
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping

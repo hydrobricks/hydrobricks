@@ -1,7 +1,8 @@
 from pathlib import Path
 
-import hydrobricks as hb
 import numpy as np
+
+import hydrobricks as hb
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography

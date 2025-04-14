@@ -14,6 +14,9 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
 
+    env:
+      VCPKG_LIBRARY_LINKAGE: static
+
     steps:
     - uses: actions/checkout@v4
 
@@ -47,6 +50,7 @@ jobs:
 
     env:
       CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
+      VCPKG_LIBRARY_LINKAGE: static
 
     steps:
       - uses: actions/checkout@v4

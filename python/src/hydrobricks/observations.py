@@ -66,7 +66,8 @@ class Observations(TimeSeries1D):
             # Map the mean discharge back to the original DataFrame based on
             # the day of year
             df['mean_discharge'] = df['day_of_year'].map(mean_discharge_df)
-            df.to_csv('mean_discharge.csv', columns=['mean_discharge'], float_format='%.12f')
+            df.to_csv('mean_discharge.csv', columns=['mean_discharge'],
+                      float_format='%.12f')
             df.to_csv('data.csv', columns=['data'], float_format='%.12f')
 
             if start_date and end_date:
@@ -88,7 +89,8 @@ class Observations(TimeSeries1D):
             comparing_years = np.unique(idx.year)
 
             comparing_df = df.set_index('date')
-            comparing_df = comparing_df[(comparing_df.index >= start_date) & (comparing_df.index <= end_date)]
+            comparing_df = comparing_df[
+                (comparing_df.index >= start_date) & (comparing_df.index <= end_date)]
         else:
             comparing_years = years
             comparing_df = df
@@ -96,7 +98,8 @@ class Observations(TimeSeries1D):
         if all_combinations:
             metrics = []
             # Generate all possible combinations (order matters, repetitions allowed)
-            all_combinations = list(itertools.product(years, repeat=len(comparing_years)))
+            all_combinations = list(
+                itertools.product(years, repeat=len(comparing_years)))
 
             for sampled_years in all_combinations:
                 sampled_years = np.array(sampled_years)  # Convert tuple to array
@@ -106,21 +109,24 @@ class Observations(TimeSeries1D):
                         continue
 
                 new_df = df.loc[sampled_years].copy()
-                value = hb.evaluate(new_df.data.values, comparing_df.data.values, metric)
+                value = hb.evaluate(new_df.data.values, comparing_df.data.values,
+                                    metric)
                 metrics.append(value)
 
         else:
             metrics = np.empty(n_evals)
             i = 0
             while i < n_evals - 1:
-                sampled_years = np.random.choice(years, size=len(comparing_years), replace=True)
+                sampled_years = np.random.choice(years, size=len(comparing_years),
+                                                 replace=True)
                 if with_exclusion:
                     diff = sampled_years - comparing_years
                     if not np.all(diff):  # Skip if exclusion condition isn't met
                         continue
                 i += 1
                 new_df = df.loc[sampled_years].copy()
-                value = hb.evaluate(new_df.data.values, comparing_df.data.values, metric)
+                value = hb.evaluate(new_df.data.values, comparing_df.data.values,
+                                    metric)
                 metrics[i] = value
 
         ref_metric = np.mean(metrics)

@@ -131,7 +131,29 @@ class GlacierEvolutionDeltaH:
 
         self._update_hydro_unit_glacier_areas()
 
+    def get_lookup_table(self):
+        """
+        Get the glacier evolution lookup table.
+
+        Returns
+        -------
+        pd.DataFrame
+            The glacier evolution lookup table.
+        """
+        return pd.DataFrame(
+            self.lookup_table,
+            index=range(self.lookup_table.shape[0]),
+            columns=np.unique(self.hydro_unit_ids))
+
     def save_as_csv(self, output_dir):
+        """
+        Save the glacier evolution lookup table as a CSV file.
+
+        Parameters
+        ----------
+        output_dir : str|Path
+            Path to the directory where the CSV file will be saved.
+        """
         output_dir = Path(output_dir)
 
         # Write record to the lookup table

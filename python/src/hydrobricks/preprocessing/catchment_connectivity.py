@@ -169,7 +169,8 @@ class CatchmentConnectivity:
             raise ValueError("Unknown mode.")
 
         # Add the connectivity to the hydro units
-        self.catchment.hydro_units.hydro_units[('connectivity', '-')] = df[('connectivity', '-')]
+        self.catchment.hydro_units.hydro_units[('connectivity', '-')] = df[
+            ('connectivity', '-')]
 
         return df
 

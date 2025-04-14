@@ -21,7 +21,6 @@ class CatchmentDiscretization:
         """
         self.catchment = catchment
 
-
     def create_elevation_bands(self, method='equal_intervals', number=100, distance=50,
                                min_elevation=None, max_elevation=None):
         """
@@ -46,12 +45,12 @@ class CatchmentDiscretization:
         self.discretize_by('elevation', method, number, distance,
                            min_elevation, max_elevation)
 
-    def discretize_by(self, criteria, elevation_method='equal_intervals', elevation_number=100,
-                      elevation_distance=100, min_elevation=None, max_elevation=None,
-                      slope_method='equal_intervals', slope_number=6, slope_distance=15,
-                      min_slope=0, max_slope=90, radiation_method='equal_intervals',
-                      radiation_number=5, radiation_distance=50, min_radiation=None,
-                      max_radiation=None):
+    def discretize_by(self, criteria, elevation_method='equal_intervals',
+                      elevation_number=100, elevation_distance=100, min_elevation=None,
+                      max_elevation=None, slope_method='equal_intervals',
+                      slope_number=6, slope_distance=15, min_slope=0, max_slope=90,
+                      radiation_method='equal_intervals', radiation_number=5,
+                      radiation_distance=50, min_radiation=None, max_radiation=None):
         """
         Construction of the elevation bands based on the chosen method.
 
@@ -134,7 +133,8 @@ class CatchmentDiscretization:
                     criteria_dict['elevation'].append(elevations[i:i + 2])
             elif elevation_method == 'quantiles':
                 elevations = np.nanquantile(
-                    self.catchment.masked_dem_data, np.linspace(0, 1, num=elevation_number))
+                    self.catchment.masked_dem_data,
+                    np.linspace(0, 1, num=elevation_number))
                 for i in range(len(elevations) - 1):
                     criteria_dict['elevation'].append(elevations[i:i + 2])
             else:
@@ -154,7 +154,8 @@ class CatchmentDiscretization:
                 for i in range(len(slopes) - 1):
                     criteria_dict['slope'].append(slopes[i:i + 2])
             elif slope_method == 'quantiles':
-                slopes = np.nanquantile(self.catchment.topography.slope, np.linspace(0, 1, num=slope_number))
+                slopes = np.nanquantile(self.catchment.topography.slope,
+                                        np.linspace(0, 1, num=slope_number))
                 for i in range(len(slopes) - 1):
                     criteria_dict['slope'].append(slopes[i:i + 2])
             else:
@@ -171,17 +172,20 @@ class CatchmentDiscretization:
             if radiation_method == 'equal_intervals':
                 dist = radiation_distance
                 if min_radiation is None:
-                    min_radiation = np.nanmin(self.catchment.solar_radiation.mean_annual_radiation)
+                    min_radiation = np.nanmin(
+                        self.catchment.solar_radiation.mean_annual_radiation)
                     min_radiation = min_radiation - (min_radiation % dist)
                 if max_radiation is None:
-                    max_radiation = np.nanmax(self.catchment.solar_radiation.mean_annual_radiation)
+                    max_radiation = np.nanmax(
+                        self.catchment.solar_radiation.mean_annual_radiation)
                     max_radiation = max_radiation + (dist - max_radiation % dist)
                 radiations = np.arange(min_radiation, max_radiation + dist, dist)
                 for i in range(len(radiations) - 1):
                     criteria_dict['radiation'].append(radiations[i:i + 2])
             elif radiation_method == 'quantiles':
                 radiations = np.nanquantile(
-                    self.catchment.solar_radiation.mean_annual_radiation, np.linspace(0, 1, num=radiation_number))
+                    self.catchment.solar_radiation.mean_annual_radiation,
+                    np.linspace(0, 1, num=radiation_number))
                 for i in range(len(radiations) - 1):
                     criteria_dict['radiation'].append(radiations[i:i + 2])
             else:
@@ -226,22 +230,25 @@ class CatchmentDiscretization:
                             np.logical_and(self.catchment.topography.aspect >= 0,
                                            self.catchment.topography.aspect < 45))
                     elif criterion == 'E':
-                        mask_aspect = np.logical_and(self.catchment.topography.aspect >= 45,
-                                                     self.catchment.topography.aspect < 135)
+                        mask_aspect = np.logical_and(
+                            self.catchment.topography.aspect >= 45,
+                            self.catchment.topography.aspect < 135)
                     elif criterion == 'S':
-                        mask_aspect = np.logical_and(self.catchment.topography.aspect >= 135,
-                                                     self.catchment.topography.aspect < 225)
+                        mask_aspect = np.logical_and(
+                            self.catchment.topography.aspect >= 135,
+                            self.catchment.topography.aspect < 225)
                     elif criterion == 'W':
-                        mask_aspect = np.logical_and(self.catchment.topography.aspect >= 225,
-                                                     self.catchment.topography.aspect < 315)
+                        mask_aspect = np.logical_and(
+                            self.catchment.topography.aspect >= 225,
+                            self.catchment.topography.aspect < 315)
                     else:
                         raise ValueError("Unknown aspect value.")
                     mask_unit = np.logical_and(mask_unit, mask_aspect)
                 elif criterion_name == 'radiation':
-                    mask_radi = np.logical_and(
-                        self.catchment.solar_radiation.mean_annual_radiation >= criterion[0],
-                        self.catchment.solar_radiation.mean_annual_radiation < criterion[1])
-                    mask_unit = np.logical_and(mask_unit, mask_radi)
+                    radiation = self.catchment.solar_radiation.mean_annual_radiation
+                    mask_radiation = np.logical_and(radiation >= criterion[0],
+                                               radiation < criterion[1])
+                    mask_unit = np.logical_and(mask_unit, mask_radiation)
 
             # If the unit is empty, skip it
             if np.count_nonzero(mask_unit) == 0:
@@ -287,22 +294,32 @@ class CatchmentDiscretization:
         self.catchment.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
         if res_elevation:
-            self.catchment.hydro_units.add_property(('elevation', 'm'), res_elevation)
-            self.catchment.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
-            self.catchment.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
+            self.catchment.hydro_units.add_property(
+                ('elevation', 'm'), res_elevation)
+            self.catchment.hydro_units.add_property(
+                ('elevation_min', 'm'), res_elevation_min)
+            self.catchment.hydro_units.add_property(
+                ('elevation_max', 'm'), res_elevation_max)
 
         if res_slope:
-            self.catchment.hydro_units.add_property(('slope', 'deg'), res_slope)
-            self.catchment.hydro_units.add_property(('slope_min', 'deg'), res_slope_min)
-            self.catchment.hydro_units.add_property(('slope_max', 'deg'), res_slope_max)
+            self.catchment.hydro_units.add_property(
+                ('slope', 'deg'), res_slope)
+            self.catchment.hydro_units.add_property(
+                ('slope_min', 'deg'), res_slope_min)
+            self.catchment.hydro_units.add_property(
+                ('slope_max', 'deg'), res_slope_max)
 
         if res_aspect_class:
-            self.catchment.hydro_units.add_property(('aspect_class', '-'), res_aspect_class)
+            self.catchment.hydro_units.add_property(
+                ('aspect_class', '-'), res_aspect_class)
 
         if res_radiation:
-            self.catchment.hydro_units.add_property(('radiation', 'W/m2'), res_radiation)
-            self.catchment.hydro_units.add_property(('radiation_min', 'W/m2'), res_radiation_min)
-            self.catchment.hydro_units.add_property(('radiation_max', 'W/m2'), res_radiation_max)
+            self.catchment.hydro_units.add_property(
+                ('radiation', 'W/m2'), res_radiation)
+            self.catchment.hydro_units.add_property(
+                ('radiation_min', 'W/m2'), res_radiation_min)
+            self.catchment.hydro_units.add_property(
+                ('radiation_max', 'W/m2'), res_radiation_max)
 
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()

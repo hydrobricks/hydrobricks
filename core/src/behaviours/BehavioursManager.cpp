@@ -23,7 +23,7 @@ bool BehavioursManager::AddBehaviour(Behaviour* behaviour) {
     wxASSERT(behaviour);
     behaviour->SetManager(this);
 
-    int behaviourIndex = int(m_behaviours.size());
+    int behaviourIndex = static_cast<int>(m_behaviours.size());
     m_behaviours.push_back(behaviour);
 
     int index = 0;
@@ -51,7 +51,7 @@ bool BehavioursManager::AddBehaviour(Behaviour* behaviour) {
 }
 
 int BehavioursManager::GetBehavioursNb() {
-    return (int)m_behaviours.size();
+    return static_cast<int>(m_behaviours.size());
 }
 
 int BehavioursManager::GetBehaviourItemsNb() {

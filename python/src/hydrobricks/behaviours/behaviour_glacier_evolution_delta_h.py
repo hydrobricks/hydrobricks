@@ -21,7 +21,7 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
         super().__init__()
         self.behaviour = _hb.BehaviourGlacierEvolutionDeltaH()
 
-    def load_from_csv(self, dir_path, hydro_units, land_cover='glacier',
+    def load_from_csv(self, dir_path, land_cover='glacier',
                       file_name='glacier_evolution_lookup_table.csv',
                       update_month='October'):
         """
@@ -36,8 +36,6 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
         ----------
         dir_path : str|Path
             Path to the directory containing the lookup table.
-        hydro_units : HydroUnits
-            The HydroUnits instance containing the hydro units.
         land_cover : str
             The land cover name to apply the changes. Default is 'glacier'.
         file_name : str
@@ -66,11 +64,10 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
 
         lookup_table = pd.read_csv(full_path)
 
-        self._populate_bounded_instance(lookup_table, hydro_units, land_cover,
-                                        update_month)
+        self._populate_bounded_instance(lookup_table, land_cover, update_month)
 
-    def get_from_object(self, obj: GlacierEvolutionDeltaH, hydro_units,
-                        land_cover='glacier', update_month='October'):
+    def get_from_object(self, obj: GlacierEvolutionDeltaH, land_cover='glacier',
+                        update_month='October'):
         """
         Get the glacier evolution lookup table from the GlacierEvolutionDeltaH
         instance.
@@ -79,21 +76,37 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
         ----------
         obj : GlacierEvolutionDeltaH
             The GlacierEvolutionDeltaH instance.
-        hydro_units : HydroUnits
-            The HydroUnits instance containing the hydro units.
         land_cover : str
             The land cover name to apply the changes. Default is 'glacier'.
         update_month : str
-            The month to apply the changes. Default is 'October'. The update will
-            be applied at the beginning of the month, every year.
+            The month to apply the changes (full English name). Default is 'October'.
+            The update will be applied at the beginning of the month, every year.
         """
         if not isinstance(obj, GlacierEvolutionDeltaH):
             raise ValueError("The object is not a GlacierEvolutionDeltaH instance.")
 
         lookup_table = obj.get_lookup_table()
-        self._populate_bounded_instance(lookup_table, hydro_units, land_cover,
-                                        update_month)
+        self._populate_bounded_instance(lookup_table, land_cover, update_month)
 
-    def _populate_bounded_instance(self, lookup_table, hydro_units, land_cover,
-                                   update_month):
-        pass
+    def _populate_bounded_instance(self, lookup_table, land_cover, update_month):
+
+        # Convert the month name to a number
+        month_mapping = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4,
+            'May': 5, 'June': 6, 'July': 7, 'August': 8,
+            'September': 9, 'October': 10, 'November': 11, 'December': 12
+        }
+        month_num = month_mapping.get(update_month, None)
+        if month_num is None:
+            raise ValueError(f"Invalid month name: {update_month}")
+
+        # Get the hydro unit ids from the first row
+        hu_ids = lookup_table.columns[1:].astype(int).values
+
+        # Get the increments from the first column
+        increments = lookup_table.iloc[:, 0].astype(float).values
+
+        # Get the areas from the rest of the table
+        areas = lookup_table.iloc[:, 1:].astype(float).values
+
+        self.behaviour.add_change(month_num, land_cover, hu_ids, increments, areas)

@@ -9,7 +9,7 @@ helper_appenzell = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-0
                                     end_date='2020-12-31')
 helper_appenzell.create_hydro_units_from_csv_file()
 forcing_appenzell = helper_appenzell.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True)
+    ref_elevation=1253, use_precip_gradient=True)
 obs_appenzell = helper_appenzell.get_obs_data_from_csv_file()
 socont_appenzell, _ = helper_appenzell.get_model_and_params_socont()
 
@@ -18,7 +18,7 @@ helper_stgallen = ModelSetupHelper('ch_sitter_stgallen', start_date='1981-01-01'
                                    end_date='2020-12-31')
 helper_stgallen.create_hydro_units_from_csv_file()
 forcing_stgallen = helper_stgallen.get_forcing_data_from_csv_file(
-    ref_elevation=1040, use_precip_gradient=True)
+    ref_elevation=1045, use_precip_gradient=True)
 obs_stgallen = helper_stgallen.get_obs_data_from_csv_file()
 socont_stgallen, parameters = helper_stgallen.get_model_and_params_socont()
 

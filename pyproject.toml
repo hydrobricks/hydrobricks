@@ -1,3 +1,41 @@
+[project]
+name = "hydrobricks"
+version = "0.7.6"
+authors = [
+    { name = "Pascal Horton", email = "pascal.horton@unibe.ch" },
+    { name = "Anne-Laure Argentin" },
+]
+description = "A modular hydrological modelling framework"
+readme = "python/README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+dependencies = [
+    "cftime",
+    "numpy",
+    "HydroErr",
+    "pandas",
+    "pyyaml",
+    "StrEnum",
+    "dask",
+    "dask-expr"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=6.0"]
+
+[project.urls]
+"Source Code" = "https://github.com/hydrobricks/hydrobricks"
+"Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
+
+[tool.setuptools]
+packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours"]
+package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours" }
+
 [build-system]
 requires = [
     "setuptools>=42",
@@ -31,6 +69,7 @@ test-requires = [
     "pyyaml",
     "StrEnum",
     "dask",
+    "dask-expr",
     "geopandas",
     "netCDF4",
     "pyet",
@@ -38,12 +77,15 @@ test-requires = [
     "rioxarray",
     "shapely",
     "xarray",
+    "pyarrow",
     "xarray-spatial",
+    "pysheds",
+    "datashader==0.17.0a0"
 ]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37-*", "cp38-*", "cp313-*", "pp*"]
+skip = ["*musllinux*", "cp37-*", "cp38-*", "cp39-*", "pp*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

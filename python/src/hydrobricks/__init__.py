@@ -62,6 +62,14 @@ else:
     has_pyproj = True
 
 try:
+    import pysheds
+except ImportError:
+    has_pysheds = False
+else:
+    has_pysheds = True
+    from pysheds.grid import Grid as pyshedsGrid
+
+try:
     import xarray as xr
 except ImportError:
     has_xarray = False
@@ -76,6 +84,13 @@ else:
     has_rioxarray = True
     if not has_xarray:
         raise ImportError("xarray is required to use rioxarray.")
+
+try:
+    import pyarrow as pa
+except ImportError:
+    has_pyarrow = False
+else:
+    has_pyarrow = True
 
 try:
     import xrspatial as xrs
@@ -94,7 +109,7 @@ except ImportError:
     has_matplotlib = False
 else:
     has_matplotlib = True
-    from .plotting import *  # noqa
+    from .plots.plot_results import *  # noqa
 
 from . import utils
 from .catchment import Catchment
@@ -111,4 +126,4 @@ __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries'
            'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
            'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
            'Dataset', 'rasterio', 'gpd', 'shapely', 'SpotpySetup', 'spotpy', 'pyet',
-           'pyproj', 'xr', 'rxr', 'xrs', 'evaluate')
+           'pyproj', 'pysheds', 'pyshedsGrid', 'xr', 'rxr', 'xrs', 'evaluate')

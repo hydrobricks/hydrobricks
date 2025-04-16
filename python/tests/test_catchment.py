@@ -263,3 +263,19 @@ def test_radiation_calculation_resolution():
         shutil.rmtree(working_dir)
     except Exception:
         print("Failed to clean up.")
+
+
+@pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
+def test_single_connectivity_on_elevation_bands():
+    catchment = hb.Catchment(CATCHMENT_OUTLINE)
+    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.discretize_by(['elevation'], elevation_distance=100)
+
+    df = catchment.calculate_connectivity(mode='single', force_connectivity=False)
+
+    assert df.loc[df[('id', '-')] == 1, ('connectivity', '-')][0] == {}
+
+    for i in range(2, 19):
+        keys = df.loc[df[('id', '-')] == i, ('connectivity', '-')].values[0].keys()
+        key = list(keys)[0]
+        assert key == i - 1

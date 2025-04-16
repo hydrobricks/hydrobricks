@@ -8,8 +8,8 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
     : ProcessOutflow(container),
       m_slope(0),
       m_beta(nullptr),
-      m_areaUnit(0),
       m_areaFraction(nullptr),
+      m_areaUnit(0),
       m_exponent(5.0 / 3.0) {}
 
 void ProcessRunoffSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {

@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BUILD_TYPE: RelWithDebInfo
+      BUILD_TYPE: Debug
       CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
 
     steps:

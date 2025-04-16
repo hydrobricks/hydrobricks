@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
+from hydrobricks.behaviours import BehaviourLandCoverChange
 from hydrobricks.constants import WATER_EQ
 
 
@@ -50,6 +51,70 @@ class GlacierEvolutionDeltaH:
         self.norm_delta_we = np.nan
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
+        
+    def compute_initial_glacier_data(self, catchment, ice_shapefile,
+                                     filename, ice_thickness=None):
+        """
+        Prepare the initial file used for the computation of the glacial mass 
+        balance.
+        
+        Parameters
+        ----------
+        ice_shapefile : str
+            Path to the SHP file containing the glacier extents. 
+        ice_thickness : str
+            Path to the TIF file containing the glacier thickness.
+            Default is None.
+            
+        Returns
+        -------
+        Path to the initial CSV file to be used in compute_lookup_table().
+        """
+        
+        # List the files and dates
+        glacier = [ice_shapefile]
+        time = ['2000-01-01']
+        
+        # Create the behaviour land cover change object and the corresponding dataframe
+        changes, [glacier_df, ground_df] = BehaviourLandCoverChange.create_behaviour_for_glaciers(
+            catchment, time, glacier, with_debris=False, method='raster',
+            interpolate_yearly=False)
+        
+        glacier_df = glacier_df.rename(columns={time[0]: 'glacier_area', 
+                                                'hydro_unit': 'hydro_unit_id'})
+        
+        # Extract the relevant info into a DataFrame, merge on matching ID fields, drop the 'id' field
+        elevation_df = catchment.hydro_units.hydro_units[['id', 'elevation']]
+        elevation_df.columns = elevation_df.columns.get_level_values(0)
+        glacier_df = glacier_df.merge(elevation_df, left_on='hydro_unit_id', right_on='id', how='left')
+        glacier_df.drop(columns='id', inplace=True)
+        
+        # Extract the ice thickness from a TIF file created either from 
+        # geophysical measurements or calculated based on an inversion 
+        # of surface topography (Farinotti et al., 2009a,b; Huss et al., 2010)).
+        if ice_thickness:
+            pass
+        
+        # Estimation of the overall ice volume using the Bahr et al. (1997)
+        # formula, to estimate the mean ice thickness.
+        else:
+            total_area = np.sum(glacier_df['glacier_area'])
+            total_volume = np.power(total_area, 1.36)
+            mean_thickness = total_volume / total_area
+            nonzero_mask = glacier_df['glacier_area'] != 0
+            glacier_df['glacier_thickness'] = glacier_df['glacier_area']
+            glacier_df.loc[nonzero_mask, 'glacier_thickness'] = mean_thickness
+            
+        glacier_df.columns = [
+            (col, 'm2') if col == 'glacier_area' 
+            else (col, 'm') if col in ['elevation', 'glacier_thickness']
+            else (col, '-') if col == 'hydro_unit_id'
+            else (col, '')
+            for col in glacier_df.columns
+        ]
+        glacier_df.columns = pd.MultiIndex.from_tuples(glacier_df.columns)
+        glacier_df.to_csv(filename, index=False)
+        
 
     def compute_lookup_table(self, glacier_data_csv, nb_increments=100,
                              update_width=True, update_width_reference='initial'):
@@ -73,7 +138,7 @@ class GlacierEvolutionDeltaH:
 
             Format example:
             elevation   glacier_area    glacier_thickness   hydro_unit_id
-            m           m2              m                   2
+            m           m2              m                   -
             1670        0               0                   2
             1680        0               0                   2
             1690        2500            14.7                2
@@ -253,7 +318,7 @@ class GlacierEvolutionDeltaH:
         relates a decrease in glacier thickness to a reduction of the glacier area
         within the respective elevation band. In other words, this approach also allows
         for glacier area shrinkage at higher elevations, which mimics the typical
-        spatial effect of the downwasting of glaciers."
+        spatial effect of the downwasting of glaciers. Relation from Bahr et al. (1997)."
         """
         # Width scaling (Eq. 7)
         if update_width:

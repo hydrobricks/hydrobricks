@@ -110,12 +110,12 @@ class BehaviourLandCoverChange(Behaviour):
         ----------
         catchment : Catchment
             The catchment to extract the glacier cover changes for.
-        times : str|list
+        times : list of str
             Date of the land cover, in the format: yyyy-mm-dd.
-        full_glaciers : str|Path
+        full_glaciers : list of str|Path
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_glaciers : str|Path, optional
+        debris_glaciers : list of str|Path, optional
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
         with_debris : bool, optional

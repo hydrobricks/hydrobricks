@@ -325,25 +325,43 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-    def get_dem_x_resolution(self):
+    def get_raster_x_resolution(self, attr_name: str = "dem"):
         """
         Get the DEM x resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
 
         Returns
         -------
         The DEM x resolution.
         """
-        return abs(self.dem.transform[0])
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
+        raster = getattr(self, attr_name)
+        return abs(raster.transform[0])
 
-    def get_dem_y_resolution(self):
+    def get_raster_y_resolution(self, attr_name: str = "dem"):
         """
         Get the DEM y resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
 
         Returns
         -------
         The DEM y resolution.
         """
-        return abs(self.dem.transform[4])
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
+        raster = getattr(self, attr_name)
+        return abs(raster.transform[4])
 
     def get_dem_pixel_area(self):
         """
@@ -353,7 +371,7 @@ class Catchment:
         -------
         The DEM pixel area.
         """
-        return self.get_dem_x_resolution() * self.get_dem_y_resolution()
+        return self.get_raster_x_resolution() * self.get_raster_y_resolution()
 
     def get_dem_mean_lat_lon(self):
         # Central coordinates of the catchment
@@ -388,8 +406,8 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         xy = self.dem.xy(i, j)
-        x_size = self.get_dem_x_resolution()
-        y_size = self.get_dem_y_resolution()
+        x_size = self.get_raster_x_resolution()
+        y_size = self.get_raster_y_resolution()
         x_min = xy[0] - x_size / 2
         y_min = xy[1] - y_size / 2
         x_max = xy[0] + x_size / 2

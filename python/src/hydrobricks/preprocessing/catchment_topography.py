@@ -77,8 +77,8 @@ class CatchmentTopography:
             dem_file = self.catchment.dem.files[0]
             xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
 
-        x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
-        y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
+        x_downscale_factor = self.catchment.get_raster_x_resolution(attr_name) / resolution
+        y_downscale_factor = self.catchment.get_raster_y_resolution(attr_name) / resolution
 
         new_width = int(xr_dem.rio.width * x_downscale_factor)
         new_height = int(xr_dem.rio.height * y_downscale_factor)
@@ -151,8 +151,8 @@ class CatchmentTopography:
         A numpy array containing hillshade values.
         """
         x, y = np.gradient(self.catchment.dem.read(1))
-        x_pixel_size = self.catchment.get_dem_x_resolution()
-        y_pixel_size = self.catchment.get_dem_y_resolution()
+        x_pixel_size = self.catchment.get_raster_x_resolution()
+        y_pixel_size = self.catchment.get_raster_y_resolution()
 
         if azimuth > 360.0:
             raise ValueError(

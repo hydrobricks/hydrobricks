@@ -19,8 +19,10 @@ TEST_FILES_DIR = Path(
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
 GLACIER_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'sgi_2016.shp'
+GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'IceThickness.tif'
 
 GLACIER_DATA = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glacier_data.csv'
+GLACIER_OUTPUT = TEST_FILES_DIR / 'ch_rhone_gletsch'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -50,7 +52,8 @@ working_dir = Path(tmp_dir)
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(catchment.hydro_units)
 # Compute the lookup table. In Seibert et al. (2018), the glacier width is not updated
 # during the iterations.
-glacier_evolution.compute_initial_glacier_data(catchment, GLACIER_OUTLINE, GLACIER_DATA, ice_thickness=None)
+glacier_evolution.compute_initial_glacier_data(catchment, GLACIER_OUTLINE, GLACIER_DATA, 
+                                               GLACIER_OUTPUT, ice_thickness=GLACIER_ICE_THICKNESS)
 glacier_evolution.compute_lookup_table(GLACIER_DATA, update_width=False)
 glacier_evolution.save_as_csv(working_dir)
 

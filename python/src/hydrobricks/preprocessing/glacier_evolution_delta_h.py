@@ -53,7 +53,7 @@ class GlacierEvolutionDeltaH:
         self.excess_melt_we = 0
         
     def compute_initial_glacier_data(self, catchment, ice_shapefile,
-                                     filename, ice_thickness=None):
+                                     filename, output_path, ice_thickness=None):
         """
         Prepare the initial file used for the computation of the glacial mass 
         balance.
@@ -93,8 +93,34 @@ class GlacierEvolutionDeltaH:
         # geophysical measurements or calculated based on an inversion 
         # of surface topography (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness:
-            pass
-        
+            if not hb.has_pyproj:
+                raise ImportError("pyproj is required to do this.")
+    
+            unit_ids = np.unique(catchment.map_unit_ids)
+            unit_ids = unit_ids[unit_ids != 0]
+    
+            res_thickness = []
+            catchment.extract_raster(ice_thickness, 'ice_thickness')
+            catchment.ice_thickness, catchment.masked_ice_thickness_data, _ = catchment.topography.resample_raster(catchment.get_raster_x_resolution(), output_path, 'ice_thickness')
+    
+            for _, unit_id in enumerate(unit_ids):
+                mask_unit = catchment.map_unit_ids == unit_id
+                masked_data = catchment.masked_ice_thickness_data[mask_unit]
+
+                # Compute the mean elevation of the unit
+                if masked_data.size > 0 and not np.isnan(masked_data).all():
+                    mean_thickness = round(float(np.nanmean(masked_data)), 2)
+                else:
+                    mean_thickness = 0.0
+                res_thickness.append(mean_thickness)
+                
+            unit_thickness_map = dict(zip(unit_ids, res_thickness))
+            glacier_df['glacier_thickness'] = glacier_df['hydro_unit_id'].map(unit_thickness_map).fillna(0)
+            
+            # Assert that zeros in glacier_area and ice_thickness are consistent
+            condition = ((glacier_df["glacier_area"] == 0) == (glacier_df["glacier_thickness"] == 0))
+            assert condition.all(), "Mismatch between glacier_area and glacier_thickness zeros!"
+            
         # Estimation of the overall ice volume using the Bahr et al. (1997)
         # formula, to estimate the mean ice thickness.
         else:

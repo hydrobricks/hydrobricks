@@ -43,6 +43,78 @@ class CatchmentTopography:
         The catchment mean elevation.
         """
         return np.nanmean(self.catchment.masked_dem_data)
+    
+    def resample_raster(self, resolution, output_path, attr_name: str = "dem"):
+        """
+        Resample the DEM to the given resolution.
+
+        Parameters
+        ----------
+        resolution : ?float
+            Desired pixel resolution.
+        output_path : str|Path
+            Path of the directory to save the downsampled DEM to.
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
+
+        Returns
+        -------
+        The downsampled DEM, the masked downsampled DEM data.
+        """
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
+        
+        if not hb.has_rasterio:
+            raise ImportError("rasterio is required to do this.")
+        if not hb.has_pyarrow:
+            raise ImportError("pyarrow is required to do this.")
+        if not hb.has_xrspatial:
+            raise ImportError("xarray-spatial is required to do this.")
+
+        # Only resample the DEM if the resolution is different from the original
+        raster = getattr(self.catchment, attr_name)
+        if resolution is None or resolution == self.catchment.get_raster_x_resolution(attr_name):
+            masked_data = getattr(self.catchment, f"masked_{attr_name}_data")
+            return raster, masked_data
+        
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            raster_file = raster.files[0]
+            xr_raster = hb.rxr.open_rasterio(raster_file).drop_vars('band')[0]
+            
+        x_downscale_factor = self.catchment.get_raster_x_resolution(attr_name) / resolution
+        y_downscale_factor = self.catchment.get_raster_y_resolution(attr_name) / resolution
+
+        new_width = int(xr_raster.rio.width * x_downscale_factor)
+        new_height = int(xr_raster.rio.height * y_downscale_factor)
+        
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            xr_raster_downsampled = xr_raster.rio.reproject(
+                xr_raster.rio.crs,
+                shape=(new_height, new_width),
+                resampling=Resampling.bilinear,
+            )
+
+        # Save the downsampled DEM to a file
+        if isinstance(output_path, str):
+            output_path = Path(output_path)
+        filepath = output_path / f'downsampled_{attr_name}.tif'
+        xr_raster_downsampled.rio.to_raster(filepath)
+        
+        # Reopen the downsampled DEM as a rasterio dataset
+        new_raster = hb.rasterio.open(filepath)
+        if self.catchment.outline is not None:
+            geoms = [mapping(polygon) for polygon in self.catchment.outline]
+            new_masked_raster_data, _ = mask(new_raster, geoms, crop=False)
+        else:
+            new_masked_raster_data = new_raster.read(1)
+        new_masked_raster_data[new_masked_raster_data == new_raster.nodata] = np.nan
+        if len(new_masked_raster_data.shape) == 3:
+            new_masked_raster_data = new_masked_raster_data[0]
+            
+        return new_raster, new_masked_raster_data, xr_raster_downsampled
 
     def resample_dem_and_calculate_slope_aspect(self, resolution, output_path):
         """
@@ -59,54 +131,14 @@ class CatchmentTopography:
         -------
         The downsampled DEM, the masked downsampled DEM data, the slope and the aspect.
         """
-        if not hb.has_rasterio:
-            raise ImportError("rasterio is required to do this.")
-        if not hb.has_pyarrow:
-            raise ImportError("pyarrow is required to do this.")
-        if not hb.has_xrspatial:
-            raise ImportError("xarray-spatial is required to do this.")
 
         # Only resample the DEM if the resolution is different from the original
-        if resolution is None or resolution == self.catchment.get_dem_x_resolution():
+        if resolution is None or resolution == self.catchment.get_raster_x_resolution():
             if self.slope is None or self.aspect is None:
                 self.calculate_slope_aspect()
             return self.catchment.dem, self.catchment.masked_dem_data, self.slope, self.aspect
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            dem_file = self.catchment.dem.files[0]
-            xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
-
-        x_downscale_factor = self.catchment.get_raster_x_resolution(attr_name) / resolution
-        y_downscale_factor = self.catchment.get_raster_y_resolution(attr_name) / resolution
-
-        new_width = int(xr_dem.rio.width * x_downscale_factor)
-        new_height = int(xr_dem.rio.height * y_downscale_factor)
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            xr_dem_downsampled = xr_dem.rio.reproject(
-                xr_dem.rio.crs,
-                shape=(new_height, new_width),
-                resampling=Resampling.bilinear,
-            )
-
-        # Save the downsampled DEM to a file
-        if isinstance(output_path, str):
-            output_path = Path(output_path)
-        filepath = output_path / 'downsampled_dem.tif'
-        xr_dem_downsampled.rio.to_raster(filepath)
-
-        # Reopen the downsampled DEM as a rasterio dataset
-        new_dem = hb.rasterio.open(filepath)
-        if self.catchment.outline is not None:
-            geoms = [mapping(polygon) for polygon in self.catchment.outline]
-            new_masked_dem_data, _ = mask(new_dem, geoms, crop=False)
-        else:
-            new_masked_dem_data = new_dem.read(1)
-        new_masked_dem_data[new_masked_dem_data == new_dem.nodata] = np.nan
-        if len(new_masked_dem_data.shape) == 3:
-            new_masked_dem_data = new_masked_dem_data[0]
+        new_dem, new_masked_dem_data, xr_dem_downsampled = self.resample_raster(resolution, output_path)
         new_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
         new_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
         xr_dem_downsampled.close()

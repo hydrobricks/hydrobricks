@@ -22,7 +22,7 @@ working_dir = Path(tmp_dir)
 
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
-catchment.extract_dem(CATCHMENT_DEM)
+catchment.extract_raster(CATCHMENT_DEM)
 
 catchment.calculate_daily_potential_radiation(str(working_dir), resolution=25)
 print("Results were saved in: ", working_dir)

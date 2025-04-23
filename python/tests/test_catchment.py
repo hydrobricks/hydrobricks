@@ -31,14 +31,14 @@ def test_dem_extraction():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    assert catchment.extract_dem(CATCHMENT_DEM)
+    assert catchment.extract_raster(CATCHMENT_DEM)
 
 
 def test_elevation_bands_equal_intervalss():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     area_sum = catchment.hydro_units.hydro_units['area'].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
@@ -48,7 +48,7 @@ def test_elevation_bands_quantiles():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='quantiles', number=25)
     area_sum = catchment.hydro_units.hydro_units['area'].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
@@ -58,7 +58,7 @@ def test_get_mean_elevation():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     mean_elevation = catchment.get_mean_elevation()
     assert 1200 < mean_elevation < 1300
 
@@ -67,7 +67,7 @@ def test_save_unit_ids_raster():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
@@ -78,20 +78,20 @@ def test_load_units_from_raster():
     if not has_required_packages():
         return
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
         catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
-        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2.extract_raster(CATCHMENT_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir))
         assert np.allclose(catchment2.map_unit_ids, catchment.map_unit_ids)
 
 
 def test_load_units_from_raster_prepare_attributes():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     df1 = catchment.hydro_units.hydro_units
 
@@ -99,7 +99,7 @@ def test_load_units_from_raster_prepare_attributes():
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
         catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
-        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2.extract_raster(CATCHMENT_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir))
         df2 = catchment2.get_hydro_units_attributes().hydro_units
 
@@ -111,7 +111,7 @@ def test_load_units_from_raster_prepare_attributes():
 
 def test_discretize_by_elevation_and_aspect():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.discretize_by(criteria=['elevation', 'aspect'],
                             elevation_method='equal_intervals', elevation_distance=100)
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
@@ -182,7 +182,7 @@ def test_radiation_calculation():
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
-        catchment.extract_dem(dem_path)
+        catchment.extract_raster(dem_path)
 
         catchment.calculate_daily_potential_radiation(
             str(Path(tmp_dir)), with_cast_shadows=False)
@@ -215,7 +215,7 @@ def test_radiation_calculation_with_cast_shadows():
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
-        catchment.extract_dem(dem_path)
+        catchment.extract_raster(dem_path)
 
         catchment.calculate_daily_potential_radiation(
             str(Path(tmp_dir)), with_cast_shadows=True)
@@ -251,7 +251,7 @@ def test_radiation_calculation_resolution():
     working_dir = Path(tmp_dir)
 
     catchment = hb.Catchment()
-    catchment.extract_dem(dem_path)
+    catchment.extract_raster(dem_path)
 
     catchment.calculate_daily_potential_radiation(
         str(working_dir), resolution=100, with_cast_shadows=False)
@@ -268,7 +268,7 @@ def test_radiation_calculation_resolution():
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
     catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.extract_raster(CATCHMENT_DEM)
     catchment.discretize_by(['elevation'], elevation_distance=100)
 
     df = catchment.calculate_connectivity(mode='single', force_connectivity=False)

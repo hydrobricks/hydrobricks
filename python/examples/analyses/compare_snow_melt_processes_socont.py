@@ -45,7 +45,7 @@ for method in methods:
     if method == 'temperature_index':
         catchment = hb.Catchment(helper.get_catchment_dir() / 'outline.shp')
         if not (helper.working_dir / 'daily_potential_radiation.nc').exists():
-            catchment.extract_dem(helper.get_catchment_dir() / 'dem.tif')
+            catchment.extract_raster(helper.get_catchment_dir() / 'dem.tif')
             catchment.calculate_daily_potential_radiation(
                 str(helper.working_dir),  resolution=25)
 

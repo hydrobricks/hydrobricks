@@ -21,7 +21,7 @@ working_dir = Path(tmp_dir)
 
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
-catchment.extract_raster(CATCHMENT_DEM)
+catchment.extract_dem(CATCHMENT_DEM)
 
 # Compute the slope and aspect
 catchment.calculate_slope_aspect()

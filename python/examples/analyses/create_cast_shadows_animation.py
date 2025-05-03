@@ -33,7 +33,7 @@ resolution = None
 
 # Prepare catchment data
 catchment = hb.Catchment()
-catchment.extract_raster(CATCHMENT_DEM)
+catchment.extract_dem(CATCHMENT_DEM)
 hillshade = catchment.get_hillshade()
 
 dem, masked_dem_data, slope, aspect = (

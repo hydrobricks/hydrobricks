@@ -23,7 +23,7 @@ working_dir = Path(tmp_dir)
 
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
-catchment.extract_raster(CATCHMENT_DEM)
+catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
 catchment.create_elevation_bands(method='equal_intervals', distance=50)

@@ -71,6 +71,8 @@ class Catchment:
         self.outline = None
         self.dem = None
         self.masked_dem_data = None
+        self.ice_thickness = None
+        self.masked_ice_thickness_data = None
         self.map_unit_ids = None
         self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
                                          hydro_units_data)
@@ -111,7 +113,7 @@ class Catchment:
             self._solar_radiation = PotentialSolarRadiation(self)
         return self._solar_radiation
 
-    def extract_dem(self, dem_path) -> bool:
+    def extract_raster(self, raster_path, attr_name: str = "dem") -> bool:
         """
         Extract the DEM data for the catchment. Does not handle change in coordinates.
 
@@ -119,33 +121,41 @@ class Catchment:
         ----------
         dem_path : str|Path
             Path of the DEM file.
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
 
         Returns
         -------
         True if successful, False otherwise.
         """
-        if not Path(dem_path).is_file():
-            raise FileNotFoundError(f"File {dem_path} does not exist.")
+        if not Path(raster_path).is_file():
+            raise FileNotFoundError(f"File {raster_path} does not exist.")
 
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_shapely:
             raise ImportError("shapely is required to do this.")
+        
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
 
         try:
-            src = hb.rasterio.open(dem_path)
+            src = hb.rasterio.open(raster_path)
             self._check_crs(src)
-            self.dem = src
+            setattr(self, attr_name, src)
 
             if self.outline is not None:
                 geoms = [mapping(polygon) for polygon in self.outline]
-                self.masked_dem_data, _ = mask(src, geoms, crop=False)
+                masked_data, _ = mask(src, geoms, crop=False)
             else:
-                self.masked_dem_data = src.read(1)
+                masked_data = src.read(1)
 
-            self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
-            if len(self.masked_dem_data.shape) == 3:
-                self.masked_dem_data = self.masked_dem_data[0]
+            masked_data[masked_data == src.nodata] = np.nan
+            if len(masked_data.shape) == 3:
+                masked_data = masked_data[0]
+            
+            setattr(self, f"masked_{attr_name}_data", masked_data)
             return True
         except ValueError as e:
             print(e)
@@ -325,25 +335,43 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-    def get_dem_x_resolution(self):
+    def get_raster_x_resolution(self, attr_name: str = "dem"):
         """
         Get the DEM x resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
 
         Returns
         -------
         The DEM x resolution.
         """
-        return abs(self.dem.transform[0])
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
+        raster = getattr(self, attr_name)
+        return abs(raster.transform[0])
 
-    def get_dem_y_resolution(self):
+    def get_raster_y_resolution(self, attr_name: str = "dem"):
         """
         Get the DEM y resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute to process: 'dem' or 'ice_thickness'.
+            Default: 'dem'.
 
         Returns
         -------
         The DEM y resolution.
         """
-        return abs(self.dem.transform[4])
+        if attr_name not in ['dem', 'ice_thickness']:
+            raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
+        raster = getattr(self, attr_name)
+        return abs(raster.transform[4])
 
     def get_dem_pixel_area(self):
         """
@@ -353,7 +381,7 @@ class Catchment:
         -------
         The DEM pixel area.
         """
-        return self.get_dem_x_resolution() * self.get_dem_y_resolution()
+        return self.get_raster_x_resolution() * self.get_raster_y_resolution()
 
     def get_dem_mean_lat_lon(self):
         # Central coordinates of the catchment
@@ -388,8 +416,8 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         xy = self.dem.xy(i, j)
-        x_size = self.get_dem_x_resolution()
-        y_size = self.get_dem_y_resolution()
+        x_size = self.get_raster_x_resolution()
+        y_size = self.get_raster_y_resolution()
         x_min = xy[0] - x_size / 2
         y_min = xy[1] - y_size / 2
         x_max = xy[0] + x_size / 2

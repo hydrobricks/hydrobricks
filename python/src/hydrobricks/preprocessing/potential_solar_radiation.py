@@ -169,7 +169,7 @@ class PotentialSolarRadiation:
             daily_radiation, dem, masked_dem_data, day_of_year, output_path)
 
         # If DEM is the downsampled one, close it
-        if dem.res[0] != self.catchment.get_dem_x_resolution():
+        if dem.res[0] != self.catchment.get_raster_x_resolution():
             dem.close()
 
     def load_mean_annual_radiation_raster(self, dir_path,
@@ -213,7 +213,7 @@ class PotentialSolarRadiation:
         res_path = Path(output_path) / output_filename
 
         # If both resolutions are the same, just save the mean annual radiation
-        if dem.res[0] == self.catchment.get_dem_x_resolution():
+        if dem.res[0] == self.catchment.get_raster_x_resolution():
             with hb.rasterio.open(res_path, 'w', **profile) as dst:
                 dst.write(mean_annual_radiation, 1)
             self.mean_annual_radiation = mean_annual_radiation

@@ -21,7 +21,7 @@ working_dir = Path(tmp_dir)
 
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
-catchment.extract_dem(CATCHMENT_DEM)
+catchment.extract_raster(CATCHMENT_DEM)
 
 # Compute hydrological units or load them from a raster with
 # catchment.load_unit_ids_from_raster(working_dir, 'unit_ids.tif')

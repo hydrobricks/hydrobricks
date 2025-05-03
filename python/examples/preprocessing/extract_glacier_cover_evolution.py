@@ -24,7 +24,7 @@ working_dir = Path(tmp_dir)
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE, land_cover_types=['ground', 'glacier'],
                          land_cover_names=['ground', 'glacier'])
-catchment.extract_dem(CATCHMENT_DEM)
+catchment.extract_raster(CATCHMENT_DEM)
 
 # Create elevation bands
 catchment.create_elevation_bands(method='equal_intervals', distance=50)

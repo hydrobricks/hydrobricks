@@ -136,7 +136,7 @@ class Catchment:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_shapely:
             raise ImportError("shapely is required to do this.")
-        
+
         if attr_name not in ['dem', 'ice_thickness']:
             raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
 
@@ -154,7 +154,7 @@ class Catchment:
             masked_data[masked_data == src.nodata] = np.nan
             if len(masked_data.shape) == 3:
                 masked_data = masked_data[0]
-            
+
             setattr(self, f"masked_{attr_name}_data", masked_data)
             return True
         except ValueError as e:

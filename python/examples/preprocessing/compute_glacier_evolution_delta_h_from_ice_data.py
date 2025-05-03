@@ -52,7 +52,7 @@ working_dir = Path(tmp_dir)
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(catchment.hydro_units)
 # Compute the lookup table. In Seibert et al. (2018), the glacier width is not updated
 # during the iterations.
-glacier_evolution.compute_initial_glacier_data(catchment, GLACIER_OUTLINE, GLACIER_DATA, 
+glacier_evolution.compute_initial_glacier_data(catchment, GLACIER_OUTLINE, GLACIER_DATA,
                                                GLACIER_OUTPUT, ice_thickness=GLACIER_ICE_THICKNESS)
 glacier_evolution.compute_lookup_table(GLACIER_DATA, update_width=False)
 glacier_evolution.save_as_csv(working_dir)

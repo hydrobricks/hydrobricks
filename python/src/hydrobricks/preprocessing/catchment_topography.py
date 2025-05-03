@@ -43,7 +43,7 @@ class CatchmentTopography:
         The catchment mean elevation.
         """
         return np.nanmean(self.catchment.masked_dem_data)
-    
+
     def resample_raster(self, resolution, output_path, attr_name: str = "dem"):
         """
         Resample the DEM to the given resolution.
@@ -64,7 +64,7 @@ class CatchmentTopography:
         """
         if attr_name not in ['dem', 'ice_thickness']:
             raise ValueError("Attribute should be 'dem' or 'ice_thickness'.")
-        
+
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
         if not hb.has_pyarrow:
@@ -77,18 +77,18 @@ class CatchmentTopography:
         if resolution is None or resolution == self.catchment.get_raster_x_resolution(attr_name):
             masked_data = getattr(self.catchment, f"masked_{attr_name}_data")
             return raster, masked_data
-        
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             raster_file = raster.files[0]
             xr_raster = hb.rxr.open_rasterio(raster_file).drop_vars('band')[0]
-            
+
         x_downscale_factor = self.catchment.get_raster_x_resolution(attr_name) / resolution
         y_downscale_factor = self.catchment.get_raster_y_resolution(attr_name) / resolution
 
         new_width = int(xr_raster.rio.width * x_downscale_factor)
         new_height = int(xr_raster.rio.height * y_downscale_factor)
-        
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             xr_raster_downsampled = xr_raster.rio.reproject(
@@ -102,7 +102,7 @@ class CatchmentTopography:
             output_path = Path(output_path)
         filepath = output_path / f'downsampled_{attr_name}.tif'
         xr_raster_downsampled.rio.to_raster(filepath)
-        
+
         # Reopen the downsampled DEM as a rasterio dataset
         new_raster = hb.rasterio.open(filepath)
         if self.catchment.outline is not None:
@@ -113,7 +113,7 @@ class CatchmentTopography:
         new_masked_raster_data[new_masked_raster_data == new_raster.nodata] = np.nan
         if len(new_masked_raster_data.shape) == 3:
             new_masked_raster_data = new_masked_raster_data[0]
-            
+
         return new_raster, new_masked_raster_data, xr_raster_downsampled
 
     def resample_dem_and_calculate_slope_aspect(self, resolution, output_path):

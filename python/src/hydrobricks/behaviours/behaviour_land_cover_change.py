@@ -318,8 +318,8 @@ class BehaviourLandCoverChange(Behaviour):
                   f"{bare_ice_percentage:.1f}% of bare ice.")
 
         # Extract the pixel size
-        x_size = catchment.get_raster_x_resolution()
-        y_size = catchment.get_raster_y_resolution()
+        x_size = catchment.get_dem_x_resolution()
+        y_size = catchment.get_dem_y_resolution()
         px_area = catchment.get_dem_pixel_area()
 
         # Define the method to extract the pixels touching the glaciers

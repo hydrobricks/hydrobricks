@@ -100,8 +100,8 @@ class GlacierEvolutionDeltaH:
             unit_ids = unit_ids[unit_ids != 0]
 
             res_thickness = []
-            catchment.extract_raster(ice_thickness, 'ice_thickness')
-            catchment.ice_thickness, catchment.masked_ice_thickness_data, _ = catchment.topography.resample_raster(catchment.get_raster_x_resolution(), output_path, 'ice_thickness')
+            catchment.extract_dem(ice_thickness, 'ice_thickness')
+            catchment.ice_thickness, catchment.masked_ice_thickness_data, _ = catchment.topography.resample_raster(catchment.get_dem_x_resolution(), output_path, 'ice_thickness')
 
             for _, unit_id in enumerate(unit_ids):
                 mask_unit = catchment.map_unit_ids == unit_id

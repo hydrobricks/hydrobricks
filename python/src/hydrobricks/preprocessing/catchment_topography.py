@@ -74,7 +74,7 @@ class CatchmentTopography:
 
         # Only resample the DEM if the resolution is different from the original
         raster = getattr(self.catchment, attr_name)
-        if resolution is None or resolution == self.catchment.get_raster_x_resolution(attr_name):
+        if resolution is None or resolution == self.catchment.get_dem_x_resolution(attr_name):
             masked_data = getattr(self.catchment, f"masked_{attr_name}_data")
             return raster, masked_data
 
@@ -83,8 +83,8 @@ class CatchmentTopography:
             raster_file = raster.files[0]
             xr_raster = hb.rxr.open_rasterio(raster_file).drop_vars('band')[0]
 
-        x_downscale_factor = self.catchment.get_raster_x_resolution(attr_name) / resolution
-        y_downscale_factor = self.catchment.get_raster_y_resolution(attr_name) / resolution
+        x_downscale_factor = self.catchment.get_dem_x_resolution(attr_name) / resolution
+        y_downscale_factor = self.catchment.get_dem_y_resolution(attr_name) / resolution
 
         new_width = int(xr_raster.rio.width * x_downscale_factor)
         new_height = int(xr_raster.rio.height * y_downscale_factor)
@@ -133,7 +133,7 @@ class CatchmentTopography:
         """
 
         # Only resample the DEM if the resolution is different from the original
-        if resolution is None or resolution == self.catchment.get_raster_x_resolution():
+        if resolution is None or resolution == self.catchment.get_dem_x_resolution():
             if self.slope is None or self.aspect is None:
                 self.calculate_slope_aspect()
             return self.catchment.dem, self.catchment.dem_data, self.slope, self.aspect
@@ -183,8 +183,8 @@ class CatchmentTopography:
         A numpy array containing hillshade values.
         """
         x, y = np.gradient(self.catchment.dem.read(1))
-        x_pixel_size = self.catchment.get_raster_x_resolution()
-        y_pixel_size = self.catchment.get_raster_y_resolution()
+        x_pixel_size = self.catchment.get_dem_x_resolution()
+        y_pixel_size = self.catchment.get_dem_y_resolution()
 
         if azimuth > 360.0:
             raise ValueError(

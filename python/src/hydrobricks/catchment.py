@@ -465,26 +465,28 @@ class Catchment:
 
     def calculate_daily_potential_radiation(self, *args, **kwargs):
         """
-        Call the calculate_daily_potential_radiation method of the SolarRadiation class.
+        Call the calculate_daily_potential_radiation method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.calculate_daily_potential_radiation(*args, **kwargs)
 
     @staticmethod
     def calculate_cast_shadows(*args, **kwargs):
         """
-        Call the calculate_cast_shadows method of the SolarRadiation class.
+        Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.calculate_cast_shadows(*args, **kwargs)
+        return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
     def load_mean_annual_radiation_raster(self, *args, **kwargs):
         """
-        Call the load_mean_annual_radiation_raster method of the SolarRadiation class.
+        Call the load_mean_annual_radiation_raster method of the PotentialSolarRadiation class.
         """
         return self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
     def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
         """
-        Call the upscale_and_save_mean_annual_radiation_rasters method of the SolarRadiation class.
+        Call the upscale_and_save_mean_annual_radiation_rasters method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
             *args, **kwargs)
@@ -492,37 +494,37 @@ class Catchment:
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs):
         """
-        Call the get_solar_declination_rad method of the SolarRadiation class.
+        Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_declination_rad(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
     def get_solar_hour_angle_limit(*args, **kwargs):
         """
-        Call the get_solar_hour_angle_limit method of the SolarRadiation class.
+        Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
     def get_solar_zenith(*args, **kwargs):
         """
-        Call the get_solar_zenith method of the SolarRadiation class.
+        Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_zenith(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_south(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_south method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_north(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_north method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit):
         # Get rows and cols of the unit

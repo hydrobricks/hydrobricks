@@ -571,7 +571,7 @@ class Catchment:
         self._check_crs(shapefile)
         geoms = shapefile.geometry.values
         self.outline = geoms
-        
+
     def _extract_raster(self, raster_path) -> [hb.rasterio.DatasetReader, np.ndarray]:
         """
         Extract raster data for the catchment. Does not handle change in coordinates.

@@ -40,7 +40,7 @@ class Catchment:
         The outline of the catchment.
     dem : rasterio.DatasetReader
         The DEM of the catchment [m].
-    masked_dem_data : np.ndarray
+    dem_data : np.ndarray
         The masked DEM data of the catchment.
     slope : np.ndarray
         The slope map of the catchment [degrees].
@@ -70,7 +70,8 @@ class Catchment:
         self.crs = None
         self.outline = None
         self.dem = None
-        self.masked_dem_data = None
+        self.dem_data = None
+        self.attributes = {}
         self.map_unit_ids = None
         self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
                                          hydro_units_data)
@@ -111,48 +112,122 @@ class Catchment:
             self._solar_radiation = PotentialSolarRadiation(self)
         return self._solar_radiation
 
-    def extract_dem(self, dem_path) -> bool:
+    def extract_dem(self, raster_path) -> bool:
         """
         Extract the DEM data for the catchment. Does not handle change in coordinates.
 
         Parameters
         ----------
-        dem_path : str|Path
-            Path of the DEM file.
+        raster_path : str|Path
+            Path of the DEM raster file.
 
         Returns
         -------
         True if successful, False otherwise.
         """
-        if not Path(dem_path).is_file():
-            raise FileNotFoundError(f"File {dem_path} does not exist.")
+        self.dem, self.dem_data = self._extract_raster(raster_path)
+        if self.dem is None:
+            return False
 
-        if not hb.has_rasterio:
-            raise ImportError("rasterio is required to do this.")
-        if not hb.has_shapely:
-            raise ImportError("shapely is required to do this.")
+        return True
 
-        try:
-            src = hb.rasterio.open(dem_path)
-            self._check_crs(src)
-            self.dem = src
+    def extract_attribute_raster(
+            self, raster_path: str | Path, attr_name: str,
+            resample_to_dem_resolution: bool = True, resampling: str = 'average',
+            replace_nans_by_zeros: bool = True) -> bool:
+        """
+        Extract spatial attributes (raster) for the catchment.
+        Does not handle change in coordinates.
 
-            if self.outline is not None:
-                geoms = [mapping(polygon) for polygon in self.outline]
-                self.masked_dem_data, _ = mask(src, geoms, crop=False)
+        Parameters
+        ----------
+        raster_path : str|Path
+            Path of the DEM file.
+        attr_name : str
+            Name of the attribute.
+        resample_to_dem_resolution : bool
+            If True, resample the attribute to the DEM resolution.
+        resampling: str
+            Resampling method to use. Default is 'average'. Options are listed under
+            https://rasterio.readthedocs.io/en/stable/api/rasterio.enums.html#rasterio.enums.Resampling
+        replace_nans_by_zeros: bool
+            If True, replace NaN values by 0. Default is True.
+
+        Returns
+        -------
+        True if successful, False otherwise.
+        """
+        src, data = self._extract_raster(raster_path)
+        if src is None:
+            return False
+
+        if replace_nans_by_zeros:
+            data[np.isnan(data)] = 0
+
+        if resample_to_dem_resolution:
+            if resampling == 'nearest':
+                resampling_id = 0
+            elif resampling == 'bilinear':
+                resampling_id = 1
+            elif resampling == 'cubic':
+                resampling_id = 2
+            elif resampling == 'cubic_spline':
+                resampling_id = 3
+            elif resampling == 'lanczos':
+                resampling_id = 4
+            elif resampling == 'average':
+                resampling_id = 5
+            elif resampling == 'mode':
+                resampling_id = 6
+            elif resampling == 'gauss':
+                resampling_id = 7
+            elif resampling == 'max':
+                resampling_id = 8
+            elif resampling == 'min':
+                resampling_id = 9
+            elif resampling == 'med':
+                resampling_id = 10
+            elif resampling == 'q1':
+                resampling_id = 11
+            elif resampling == 'q3':
+                resampling_id = 12
+            elif resampling == 'sum':
+                resampling_id = 13
+            elif resampling == 'rms':
+                resampling_id = 14
             else:
-                self.masked_dem_data = src.read(1)
+                raise ValueError(f"Unknown resampling method: {resampling}")
 
-            self.masked_dem_data[self.masked_dem_data == src.nodata] = np.nan
-            if len(self.masked_dem_data.shape) == 3:
-                self.masked_dem_data = self.masked_dem_data[0]
-            return True
-        except ValueError as e:
-            print(e)
-            return False
-        except Exception as e:
-            print(e)
-            return False
+            # Resample the attribute to the DEM resolution
+            data = hb.rasterio.warp.reproject(
+                data,
+                destination=self.dem_data,
+                src_transform=src.transform,
+                dst_transform=self.dem.transform,
+                src_crs=src.crs,
+                dst_crs=self.dem.crs,
+                resampling=resampling_id
+            )[0]
+
+            # Create a MemoryFile to store the reprojected data
+            with hb.rasterio.io.MemoryFile() as memfile:
+                with memfile.open(
+                        driver='GTiff',
+                        height=data.shape[0],
+                        width=data.shape[1],
+                        count=1,
+                        dtype=data.dtype,
+                        crs=self.dem.crs,
+                        transform=self.dem.transform
+                ) as dataset:
+                    dataset.write(data, 1)
+
+                # Open the dataset as a rasterio object
+                src = memfile.open()
+
+        self.attributes[attr_name] = {"src": src, "data": data}
+
+        return True
 
     def get_hydro_units_nb(self):
         """
@@ -345,6 +420,42 @@ class Catchment:
         """
         return abs(self.dem.transform[4])
 
+    def get_attribute_raster_x_resolution(self, attr_name: str = "dem"):
+        """
+        Get the given attribute raster x resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute.
+
+        Returns
+        -------
+        The attribute raster x resolution.
+        """
+        if attr_name not in self.attributes.keys():
+            raise ValueError(f"Attribute raster {attr_name} not found.")
+
+        return abs(self.attributes[attr_name].src.transform[0])
+
+    def get_attribute_raster_y_resolution(self, attr_name: str = "dem"):
+        """
+        Get the given attribute raster y resolution.
+
+        Parameters
+        ----------
+        attr_name : str
+            Name of the attribute.
+
+        Returns
+        -------
+        The attribute raster y resolution.
+        """
+        if attr_name not in self.attributes.keys():
+            raise ValueError(f"Attribute raster {attr_name} not found.")
+
+        return abs(self.attributes[attr_name].src.transform[4])
+
     def get_dem_pixel_area(self):
         """
         Get the DEM pixel area.
@@ -472,19 +583,21 @@ class Catchment:
     @staticmethod
     def calculate_cast_shadows(*args, **kwargs):
         """
-        Call the calculate_cast_shadows method of the SolarRadiation class.
+        Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.calculate_cast_shadows(*args, **kwargs)
+        return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
     def load_mean_annual_radiation_raster(self, *args, **kwargs):
         """
-        Call the load_mean_annual_radiation_raster method of the SolarRadiation class.
+        Call the load_mean_annual_radiation_raster method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
     def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
         """
-        Call the upscale_and_save_mean_annual_radiation_rasters method of the SolarRadiation class.
+        Call the upscale_and_save_mean_annual_radiation_rasters method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
             *args, **kwargs)
@@ -492,37 +605,37 @@ class Catchment:
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs):
         """
-        Call the get_solar_declination_rad method of the SolarRadiation class.
+        Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_declination_rad(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
     def get_solar_hour_angle_limit(*args, **kwargs):
         """
-        Call the get_solar_hour_angle_limit method of the SolarRadiation class.
+        Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
     def get_solar_zenith(*args, **kwargs):
         """
-        Call the get_solar_zenith method of the SolarRadiation class.
+        Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_zenith(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_south(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_south method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_north(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_north method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit):
         # Get rows and cols of the unit
@@ -557,6 +670,53 @@ class Catchment:
         self._check_crs(shapefile)
         geoms = shapefile.geometry.values
         self.outline = geoms
+
+    def _extract_raster(self, raster_path) -> [hb.rasterio.DatasetReader, np.ndarray]:
+        """
+        Extract raster data for the catchment. Does not handle change in coordinates.
+
+        Parameters
+        ----------
+        raster_path : str|Path
+            Path of the DEM file.
+
+        Returns
+        -------
+        src : rasterio.DatasetReader
+            The rasterio dataset reader object.
+        masked_data : np.ndarray
+            The masked raster data.
+        """
+        if not Path(raster_path).is_file():
+            raise FileNotFoundError(f"File {raster_path} does not exist.")
+
+        if not hb.has_rasterio:
+            raise ImportError("rasterio is required to do this.")
+        if not hb.has_shapely:
+            raise ImportError("shapely is required to do this.")
+
+        try:
+            src = hb.rasterio.open(raster_path)
+            self._check_crs(src)
+
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                masked_data, _ = mask(src, geoms, crop=False)
+            else:
+                masked_data = src.read(1)
+
+            masked_data[masked_data == src.nodata] = np.nan
+            if len(masked_data.shape) == 3:
+                masked_data = masked_data[0]
+
+            return src, masked_data
+
+        except ValueError as e:
+            print(e)
+            return None
+        except Exception as e:
+            print(e)
+            return None
 
     def _check_crs(self, data):
         data_crs = self._get_crs_from_file(data)

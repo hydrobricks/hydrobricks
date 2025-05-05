@@ -51,6 +51,8 @@ class CMakeBuild(build_ext):
                 subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
             os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
             os.environ["PATH"] = os.pathsep.join([os.environ["VCPKG_ROOT"], os.environ["PATH"]])
+        else:
+            print(f"-- VCPKG_ROOT found: {os.environ['VCPKG_ROOT']}")
 
         os.environ["CMAKE_TOOLCHAIN_FILE"] = os.path.join(
             os.environ["VCPKG_ROOT"], "scripts/buildsystems/vcpkg.cmake"

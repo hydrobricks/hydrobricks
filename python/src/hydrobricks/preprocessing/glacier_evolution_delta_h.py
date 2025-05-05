@@ -223,7 +223,7 @@ class GlacierEvolutionDeltaH:
 
         elif glacier_df is not None:
             self.glacier_df = glacier_df
-            
+
         assert self.glacier_df is not None, \
             "Glacier data is not defined. Please provide a CSV file or a DataFrame."
 

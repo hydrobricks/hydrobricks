@@ -131,7 +131,10 @@ class Catchment:
 
         return True
 
-    def extract_attribute_raster(self, raster_path, attr_name: str) -> bool:
+    def extract_attribute_raster(
+            self, raster_path: str | Path, attr_name: str,
+            resample_to_dem_resolution: bool = True, resampling: str = 'average',
+            replace_nans_by_zeros: bool = True) -> bool:
         """
         Extract spatial attributes (raster) for the catchment.
         Does not handle change in coordinates.
@@ -142,6 +145,13 @@ class Catchment:
             Path of the DEM file.
         attr_name : str
             Name of the attribute.
+        resample_to_dem_resolution : bool
+            If True, resample the attribute to the DEM resolution.
+        resampling: str
+            Resampling method to use. Default is 'average'. Options are listed under
+            https://rasterio.readthedocs.io/en/stable/api/rasterio.enums.html#rasterio.enums.Resampling
+        replace_nans_by_zeros: bool
+            If True, replace NaN values by 0. Default is True.
 
         Returns
         -------
@@ -151,7 +161,72 @@ class Catchment:
         if src is None:
             return False
 
+        if replace_nans_by_zeros:
+            data[np.isnan(data)] = 0
+
+        if resample_to_dem_resolution:
+            if resampling == 'nearest':
+                resampling_id = 0
+            elif resampling == 'bilinear':
+                resampling_id = 1
+            elif resampling == 'cubic':
+                resampling_id = 2
+            elif resampling == 'cubic_spline':
+                resampling_id = 3
+            elif resampling == 'lanczos':
+                resampling_id = 4
+            elif resampling == 'average':
+                resampling_id = 5
+            elif resampling == 'mode':
+                resampling_id = 6
+            elif resampling == 'gauss':
+                resampling_id = 7
+            elif resampling == 'max':
+                resampling_id = 8
+            elif resampling == 'min':
+                resampling_id = 9
+            elif resampling == 'med':
+                resampling_id = 10
+            elif resampling == 'q1':
+                resampling_id = 11
+            elif resampling == 'q3':
+                resampling_id = 12
+            elif resampling == 'sum':
+                resampling_id = 13
+            elif resampling == 'rms':
+                resampling_id = 14
+            else:
+                raise ValueError(f"Unknown resampling method: {resampling}")
+
+            # Resample the attribute to the DEM resolution
+            data = hb.rasterio.warp.reproject(
+                data,
+                destination=self.dem_data,
+                src_transform=src.transform,
+                dst_transform=self.dem.transform,
+                src_crs=src.crs,
+                dst_crs=self.dem.crs,
+                resampling=resampling_id
+            )[0]
+
+            # Create a MemoryFile to store the reprojected data
+            with hb.rasterio.io.MemoryFile() as memfile:
+                with memfile.open(
+                        driver='GTiff',
+                        height=data.shape[0],
+                        width=data.shape[1],
+                        count=1,
+                        dtype=data.dtype,
+                        crs=self.dem.crs,
+                        transform=self.dem.transform
+                ) as dataset:
+                    dataset.write(data, 1)
+
+                # Open the dataset as a rasterio object
+                src = memfile.open()
+
         self.attributes[attr_name] = {"src": src, "data": data}
+
         return True
 
     def get_hydro_units_nb(self):
@@ -508,19 +583,21 @@ class Catchment:
     @staticmethod
     def calculate_cast_shadows(*args, **kwargs):
         """
-        Call the calculate_cast_shadows method of the SolarRadiation class.
+        Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.calculate_cast_shadows(*args, **kwargs)
+        return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
     def load_mean_annual_radiation_raster(self, *args, **kwargs):
         """
-        Call the load_mean_annual_radiation_raster method of the SolarRadiation class.
+        Call the load_mean_annual_radiation_raster method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
     def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
         """
-        Call the upscale_and_save_mean_annual_radiation_rasters method of the SolarRadiation class.
+        Call the upscale_and_save_mean_annual_radiation_rasters method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
             *args, **kwargs)
@@ -528,37 +605,37 @@ class Catchment:
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs):
         """
-        Call the get_solar_declination_rad method of the SolarRadiation class.
+        Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_declination_rad(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
     def get_solar_hour_angle_limit(*args, **kwargs):
         """
-        Call the get_solar_hour_angle_limit method of the SolarRadiation class.
+        Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
     def get_solar_zenith(*args, **kwargs):
         """
-        Call the get_solar_zenith method of the SolarRadiation class.
+        Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_zenith(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_south(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_south method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
     def get_solar_azimuth_to_north(*args, **kwargs):
         """
-        Call the get_solar_azimuth_to_north method of the SolarRadiation class.
+        Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
-        return SolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
+        return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit):
         # Get rows and cols of the unit

@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-
-#from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
 from hydrobricks.constants import WATER_EQ as WE
 
 # Paths
@@ -34,7 +32,7 @@ hydro_units.load_from_csv(
 # Glacier evolution
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
 # Compute the lookup table. In Seibert et al. (2018), the glacier width is not updated
-# during the iterations.
+# during the iterations (update_width=False), but we would recommend to do so.
 glacier_evolution.compute_lookup_table(GLACIER_DATA, update_width=False)
 glacier_evolution.save_as_csv(working_dir)
 

@@ -5,7 +5,7 @@ import pandas as pd
 
 import hydrobricks as hb
 from hydrobricks.behaviours import BehaviourLandCoverChange
-from hydrobricks.constants import WATER_EQ
+from hydrobricks.constants import WATER_EQ as WE
 
 
 class GlacierEvolutionDeltaH:
@@ -20,7 +20,7 @@ class GlacierEvolutionDeltaH:
       14, 815–829, https://doi.org/10.5194/hess-14-815-2010, 2010.
     """
 
-    def __init__(self, hydro_units):
+    def __init__(self, hydro_units = None):
         """
         Initialize the GlacierMassBalance class.
 
@@ -29,8 +29,12 @@ class GlacierEvolutionDeltaH:
         hydro_units : hb.HydroUnit
             The hydro unit object.
         """
-        self.hydro_units = hydro_units.hydro_units
-        self.catchment_area = np.sum(self.hydro_units.area.values)
+        self.glacier_df = None
+        self.hydro_units = None
+        self.catchment_area = None
+        if hydro_units is not None:
+            self.hydro_units = hydro_units.hydro_units
+            self.catchment_area = np.sum(self.hydro_units.area.values)
         self.hydro_unit_ids = None
         self.elevation_bands = None
 
@@ -139,11 +143,14 @@ class GlacierEvolutionDeltaH:
             for col in glacier_df.columns
         ]
         glacier_df.columns = pd.MultiIndex.from_tuples(glacier_df.columns)
-        glacier_df.to_csv(filename, index=False)
+
+        self.glacier_df = glacier_df
 
 
-    def compute_lookup_table(self, glacier_data_csv, nb_increments=100,
-                             update_width=True, update_width_reference='initial'):
+
+    def compute_lookup_table(self, glacier_data_csv = None, glacier_df = None,
+                             nb_increments=100, update_width=True,
+                             update_width_reference='initial'):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
         calculated using the delta-h method (Huss et al., 2010) using the
@@ -153,7 +160,7 @@ class GlacierEvolutionDeltaH:
 
         Parameters
         ----------
-        glacier_data_csv : str
+        glacier_data_csv : str, optional
             Path to the CSV file containing glacier data. An elevation band is smaller
             than a hydro unit, usually around 10 m high. It should contain the
             following columns:
@@ -174,6 +181,11 @@ class GlacierEvolutionDeltaH:
             1730        9375            23.2                3
             ...         ...             ...                 ...
 
+            If not provided, the glacier data is assumed to be already loaded in the
+            glacier_df attribute or to be passed as a DataFrame.
+
+        glacier_df : pd.DataFrame, optional
+            DataFrame containing glacier data. Alternative to glacier_data_csv.
         nb_increments : int, optional
             Number of increments for glacier mass balance calculation. Default is 100.
         update_width : bool, optional
@@ -185,18 +197,35 @@ class GlacierEvolutionDeltaH:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
         """
-        # Read the glacier data
-        glacier_df = pd.read_csv(glacier_data_csv, skiprows=[1])
+        assert self.hydro_units is not None, \
+            "Hydro units are not defined. Please load them first."
+        assert self.catchment_area is not None, \
+            "Catchment area is not defined."
 
-        # We have to remove the bands with no glacier area
-        # (otherwise the min and max elevations are wrong)
-        glacier_df = glacier_df.drop(glacier_df[glacier_df.glacier_area == 0].index)
+        if glacier_data_csv is not None and glacier_df is not None:
+            raise ValueError("Please provide either glacier_data_csv or glacier_df, "
+                             "not both.")
 
-        # Extract the relevant columns
-        elevation_bands = glacier_df['elevation'].values
-        initial_areas_m2 = glacier_df['glacier_area'].values
-        initial_we_mm = glacier_df['glacier_thickness'].values * WATER_EQ * 1000
-        hydro_unit_ids = glacier_df['hydro_unit_id'].values
+        if glacier_data_csv is not None:
+            # Read the glacier data
+            self.glacier_df = pd.read_csv(glacier_data_csv, skiprows=[1])
+
+            # We have to remove the bands with no glacier area
+            # (otherwise the min and max elevations are wrong)
+            self.glacier_df = self.glacier_df.drop(
+                self.glacier_df[self.glacier_df.glacier_area == 0].index)
+
+            # Extract the relevant columns
+            elevation_bands = self.glacier_df['elevation'].values
+            initial_areas_m2 = self.glacier_df['glacier_area'].values
+            initial_we_mm = self.glacier_df['glacier_thickness'].values * WE * 1000
+            hydro_unit_ids = self.glacier_df['hydro_unit_id'].values
+
+        elif glacier_df is not None:
+            self.glacier_df = glacier_df
+            
+        assert self.glacier_df is not None, \
+            "Glacier data is not defined. Please provide a CSV file or a DataFrame."
 
         nb_elevation_bands = len(elevation_bands)
 

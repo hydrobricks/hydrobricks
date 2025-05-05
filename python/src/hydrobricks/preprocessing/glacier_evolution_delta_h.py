@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.behaviours import BehaviourLandCoverChange
 from hydrobricks.constants import WATER_EQ as WE
 
 if hb.has_shapely:
@@ -12,6 +11,7 @@ if hb.has_shapely:
 
 if hb.has_rasterio:
     from rasterio.mask import mask
+
 
 class GlacierEvolutionDeltaH:
     """

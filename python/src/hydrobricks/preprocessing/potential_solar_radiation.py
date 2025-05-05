@@ -91,7 +91,7 @@ class PotentialSolarRadiation:
         # Get some catchment attributes
         mean_elevation = self.catchment.topography.get_mean_elevation()
         mean_lat, _ = self.catchment.extract_unit_mean_lat_lon(
-            self.catchment.masked_dem_data)
+            self.catchment.dem_data)
         lat_rad = mean_lat * TO_RAD
 
         # Compute the solar declination

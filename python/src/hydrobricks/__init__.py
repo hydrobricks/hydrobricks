@@ -1,5 +1,6 @@
 import importlib.util
 
+
 class LazyImport:
     def __init__(self, module_name):
         self.module_name = module_name
@@ -77,7 +78,6 @@ has_matplotlib = is_module_available("matplotlib")
 if has_matplotlib:
     plt = LazyImport("matplotlib.pyplot")
     from .plots.plot_results import *  # noqa
-
 
 from . import utils
 from .catchment import Catchment

@@ -55,7 +55,10 @@ known_first_party = ["_hydrobricks", "hydrobricks", "hydrobricks.*"]
 minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",  # Treat all warnings as errors
+    "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning"
+]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
@@ -74,7 +77,7 @@ test-requires = [
     "pyet",
     "rasterio",
     "rioxarray",
-    "shapely==2.0.7",
+    "shapely",
     "xarray",
     "pyarrow",
     "xarray-spatial",

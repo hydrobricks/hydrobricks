@@ -73,6 +73,7 @@ FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
     GIT_TAG master)
+set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
 
 include_directories(${yaml-cpp_SOURCE_DIR}/include)

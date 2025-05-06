@@ -11,6 +11,7 @@ class LazyImport:
             self.module = importlib.import_module(self.module_name)
         return getattr(self.module, item)
 
+
 def is_module_available(module_name):
     """Check if a module is available for import."""
     return importlib.util.find_spec(module_name) is not None
@@ -77,7 +78,6 @@ if has_xrspatial:
 has_matplotlib = is_module_available("matplotlib")
 if has_matplotlib:
     plt = LazyImport("matplotlib.pyplot")
-    from .plots.plot_results import *  # noqa
 
 from . import utils
 from .catchment import Catchment

@@ -1,4 +1,5 @@
 import importlib.util
+import warnings
 
 
 class LazyImport:
@@ -28,7 +29,9 @@ from _hydrobricks import (
 
 has_netcdf = is_module_available("netCDF4")
 if has_netcdf:
-    Dataset = LazyImport("netCDF4.Dataset")
+    warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
+    from netCDF4 import Dataset
+    warnings.resetwarnings()
 
 has_rasterio = is_module_available("rasterio")
 if has_rasterio:

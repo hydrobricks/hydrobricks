@@ -1,7 +1,4 @@
-cmake_minimum_required(VERSION 3.5) # Needed for yaml-cpp vcpkg package
-set(CMAKE_POLICY_VERSION_MINIMUM
-    3.5
-    CACHE STRING "Set minimum CMake policy version")
+cmake_minimum_required(VERSION 3.15)
 
 include(FetchContent)
 
@@ -24,7 +21,6 @@ set(CMAKE_TOOLCHAIN_FILE
     CACHE STRING "Vcpkg toolchain file")
 message(STATUS "VCPKG_TARGET_TRIPLET = ${VCPKG_TARGET_TRIPLET}")
 set(VCPKG_LIBRARY_LINKAGE "static")
-set(VCPKG_CMAKE_CONFIGURE_OPTIONS "-DCMAKE_POLICY_VERSION_MINIMUM=3.4")
 
 # Project name
 project(hydrobricks)

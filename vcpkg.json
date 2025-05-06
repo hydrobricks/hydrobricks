@@ -6,7 +6,6 @@
     "vcpkg-tool-ninja",
     "eigen3",
     "gtest",
-    "yaml-cpp",
     {
       "name": "netcdf-c",
       "features": [

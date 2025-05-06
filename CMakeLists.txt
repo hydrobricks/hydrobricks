@@ -68,6 +68,18 @@ link_directories(${wxWidgets_BINARY_DIR}/lib)
 message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
 message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
 
+# Get and build yaml-cpp (master branch)
+FetchContent_Declare(
+    yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG master)
+FetchContent_MakeAvailable(yaml-cpp)
+
+include_directories(${yaml-cpp_SOURCE_DIR}/include)
+link_directories(${yaml-cpp_BINARY_DIR}/lib)
+message(STATUS "yaml-cpp include dir = ${yaml-cpp_SOURCE_DIR}/include")
+message(STATUS "yaml-cpp lib dir = ${yaml-cpp_BINARY_DIR}/lib")
+
 # Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically (without control of the version)
 FetchContent_Declare(
     pybind11
@@ -78,7 +90,6 @@ FetchContent_Declare(
 find_package(netCDF CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
-find_package(yaml-cpp CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 
 # Enable Visual Leak Detector

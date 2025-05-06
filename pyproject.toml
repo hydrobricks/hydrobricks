@@ -147,5 +147,5 @@ before-all = [ # Independent of Python version
     "vcpkg install",
 ]
 before-build = [  # Depends on Python version
-    "pip install cmake==3.30.0",
+    "pip install cmake",
 ]

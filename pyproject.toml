@@ -74,7 +74,7 @@ test-requires = [
     "pyet",
     "rasterio",
     "rioxarray",
-    "shapely",
+    "shapely==2.0.7",
     "xarray",
     "pyarrow",
     "xarray-spatial",

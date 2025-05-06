@@ -41,7 +41,7 @@ class CMakeBuild(build_ext):
         # Ensure VCPKG is set up
         os.environ["VCPKG_LIBRARY_LINKAGE"] = "static"
         os.environ["VCPKG_CMAKE_CONFIGURE_OPTIONS"] = \
-            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.4"
         if "VCPKG_ROOT" not in os.environ:
             print("-- VCPKG_ROOT not found. Setting up vcpkg...")
             if not os.path.exists("vcpkg"):

@@ -16,7 +16,7 @@ jobs:
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
-      VCPKG_CMAKE_CONFIGURE_OPTIONS: "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+      VCPKG_CMAKE_CONFIGURE_OPTIONS: "-DCMAKE_POLICY_VERSION_MINIMUM=3.4"
 
     steps:
     - uses: actions/checkout@v4

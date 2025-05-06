@@ -91,7 +91,7 @@ manylinux-ppc64le-image = "manylinux_2_28"
 manylinux-s390x-image = "manylinux_2_28"
 manylinux-pypy_x86_64-image = "manylinux_2_28"
 manylinux-pypy_aarch64-image = "manylinux_2_28"
-environment = {VCPKG_LIBRARY_LINKAGE="static",VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"}
+environment = {VCPKG_LIBRARY_LINKAGE="static",VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_POLICY_VERSION_MINIMUM=3.4"}
 build-verbosity = 1
 
 [tool.cibuildwheel.linux]
@@ -108,7 +108,7 @@ before-all = [ # Independent of Python version
     "cd ..",
     # Install vcpkg dependencies
     "export VCPKG_LIBRARY_LINKAGE=static",
-    "export VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.5'",
+    "export VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.4'",
     "vcpkg install",
 ]
 before-build = [ # Depends on Python version
@@ -126,7 +126,7 @@ before-all = [ # Independent of Python version
     "cd ..",
     # Install vcpkg dependencies
     "set VCPKG_LIBRARY_LINKAGE=static",
-    "set VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.5'",
+    "set VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.4'",
     "vcpkg install",
 ]
 before-build = [ # Depends on Python version
@@ -146,7 +146,7 @@ before-all = [ # Independent of Python version
     "cd ..",
     # Install vcpkg dependencies
     "export VCPKG_LIBRARY_LINKAGE=static",
-    "exportv VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.5'",
+    "exportv VCPKG_CMAKE_CONFIGURE_OPTIONS='-DCMAKE_POLICY_VERSION_MINIMUM=3.4'",
     "vcpkg install",
 ]
 before-build = [  # Depends on Python version

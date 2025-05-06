@@ -8,8 +8,17 @@
     "eigen3",
     "gtest",
     "yaml-cpp",
-    "zlib",
-    "netcdf-c",
-    "hdf5"
+    {
+      "name": "netcdf-c",
+      "features": [
+        "hdf5"
+      ]
+    },
+    {
+      "name": "hdf5",
+      "features": [
+        "zlib"
+      ]
+    }
   ]
 }

@@ -121,7 +121,7 @@ class CMakeBuild(build_ext):
             if hasattr(self, "parallel") and self.parallel:
                 build_args.append(f"-j{self.parallel}")
 
-        subprocess.check_call(["vcpkg", "install", "--debug"])
+        subprocess.check_call(["vcpkg", "install"])
         subprocess.check_call(["cmake", ext.source_dir] + cmake_args, cwd=build_temp)
         subprocess.check_call(["cmake", "--build", "."] + build_args, cwd=build_temp)
 

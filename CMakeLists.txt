@@ -1,4 +1,8 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.5) # Needed for yaml-cpp vcpkg package
+set(CMAKE_POLICY_VERSION_MINIMUM
+    3.5
+    CACHE STRING "Set minimum CMake policy version")
+
 include(FetchContent)
 
 if (POLICY CMP0043)

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.constants import WATER_EQ as WE
+from hydrobricks.constants import ICE_WE
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -44,7 +44,8 @@ class GlacierEvolutionDeltaH:
         self.elevation_bands = None
 
         # Tables
-        self.lookup_table = None
+        self.lookup_table_area = None
+        self.lookup_table_volume = None
         self.we = None
         self.areas_perc = None
 
@@ -156,7 +157,7 @@ class GlacierEvolutionDeltaH:
 
         return self.glacier_df
 
-    def compute_lookup_table(self, glacier_data_csv = None, glacier_df = None,
+    def compute_lookup_table(self, glacier_profile_csv = None, glacier_df = None,
                              nb_increments=100, update_width=True,
                              update_width_reference='initial'):
         """
@@ -168,7 +169,7 @@ class GlacierEvolutionDeltaH:
 
         Parameters
         ----------
-        glacier_data_csv : str, optional
+        glacier_profile_csv : str, optional
             Path to the CSV file containing glacier data. An elevation band is smaller
             than a hydro unit, usually around 10 m high. It should contain the
             following columns:
@@ -193,7 +194,7 @@ class GlacierEvolutionDeltaH:
             glacier_df attribute or to be passed as a DataFrame.
 
         glacier_df : pd.DataFrame, optional
-            DataFrame containing glacier data. Alternative to glacier_data_csv.
+            DataFrame containing glacier data. Alternative to glacier_profile_csv.
         nb_increments : int, optional
             Number of increments for glacier mass balance calculation. Default is 100.
         update_width : bool, optional
@@ -210,13 +211,13 @@ class GlacierEvolutionDeltaH:
         assert self.catchment_area is not None, \
             "Catchment area is not defined."
 
-        if glacier_data_csv is not None and glacier_df is not None:
-            raise ValueError("Please provide either glacier_data_csv or glacier_df, "
+        if glacier_profile_csv is not None and glacier_df is not None:
+            raise ValueError("Please provide either glacier_profile_csv or glacier_df, "
                              "not both.")
 
-        if glacier_data_csv is not None:
+        if glacier_profile_csv is not None:
             # Read the glacier data
-            self.glacier_df = pd.read_csv(glacier_data_csv)
+            self.glacier_df = pd.read_csv(glacier_profile_csv, header=[0, 1])
         elif glacier_df is not None:
             self.glacier_df = glacier_df
         assert self.glacier_df is not None, \
@@ -230,7 +231,7 @@ class GlacierEvolutionDeltaH:
         # Extract the relevant columns
         elevation_bands = self.glacier_df[('elevation', 'm')].values
         initial_areas_m2 = self.glacier_df[('glacier_area', 'm2')].values
-        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values * WE * 1000
+        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values * ICE_WE * 1000
         hydro_unit_ids = self.glacier_df[('hydro_unit_id', '-')].values
 
         nb_elevation_bands = len(elevation_bands)
@@ -242,8 +243,10 @@ class GlacierEvolutionDeltaH:
         self.we[0] = initial_we_mm  # Initialization
         self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
         self.areas_perc[0] = initial_areas_m2 / self.catchment_area  # Initialization
-        self.lookup_table = np.zeros((nb_increments + 1,
-                                      len(np.unique(hydro_unit_ids))))
+        self.lookup_table_area = np.zeros((nb_increments + 1,
+                                           len(np.unique(hydro_unit_ids))))
+        self.lookup_table_volume = np.zeros((nb_increments + 1,
+                                             len(np.unique(hydro_unit_ids))))
 
         self._initialization()
 
@@ -255,18 +258,25 @@ class GlacierEvolutionDeltaH:
         if not update_width:
             self._final_width_scaling()
 
-        self._update_hydro_unit_glacier_areas()
+        self._update_lookup_tables()
 
     def save_as_csv(self, output_dir):
         output_dir = Path(output_dir)
 
         # Write record to the lookup table
-        lookup_table = pd.DataFrame(
-            self.lookup_table,
-            index=range(self.lookup_table.shape[0]),
+        lookup_table_area = pd.DataFrame(
+            self.lookup_table_area,
+            index=range(self.lookup_table_area.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
-        lookup_table.to_csv(
-            output_dir / "glacier_evolution_lookup_table.csv")
+        lookup_table_area.to_csv(
+            output_dir / "glacier_evolution_lookup_table_area.csv")
+
+        lookup_table_volume = pd.DataFrame(
+            self.lookup_table_volume,
+            index=range(self.lookup_table_volume.shape[0]),
+            columns=np.unique(self.hydro_unit_ids))
+        lookup_table_volume.to_csv(
+            output_dir / "glacier_evolution_lookup_table_volume.csv")
 
         if self.areas_perc is not None:
             details_glacier_areas = pd.DataFrame(
@@ -427,7 +437,7 @@ class GlacierEvolutionDeltaH:
             self.we[i, mask] *= (self.areas_perc[0, mask] /
                                  self.areas_perc[i, mask])
 
-    def _update_hydro_unit_glacier_areas(self):
+    def _update_lookup_tables(self):
         """
         Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled) areas for all
         respective elevation bands which are covered by glaciers (i.e. glacier water
@@ -437,10 +447,13 @@ class GlacierEvolutionDeltaH:
         for i, hydro_unit_id in enumerate(np.unique(self.hydro_unit_ids)):
             indices = np.where(self.hydro_unit_ids == hydro_unit_id)[0]
             if len(indices) != 0:
-                self.lookup_table[:, i] = np.sum(
-                    self.areas_perc[:, indices], axis=1) * self.catchment_area
+                areas = self.areas_perc[:, indices] * self.catchment_area
+                self.lookup_table_area[:, i] = np.sum(areas, axis=1)
+                volumes = self.we[:, indices] * areas / (ICE_WE * 1000)
+                self.lookup_table_volume[:, i] = np.sum(volumes, axis=1)
             else:
-                self.lookup_table[:, i] = 0
+                self.lookup_table_area[:, i] = 0
+                self.lookup_table_volume[:, i] = 0
 
     @staticmethod
     def _discretize_elevation_bands(catchment, elevation_bands_distance=10):

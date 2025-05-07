@@ -61,6 +61,7 @@ if has_pyproj:
 has_pysheds = is_module_available("pysheds")
 if has_pysheds:
     pysheds = LazyImport("pysheds")
+    from pysheds.grid import Grid as pyshedsGrid
 
 has_xarray = is_module_available("xarray")
 if has_xarray:

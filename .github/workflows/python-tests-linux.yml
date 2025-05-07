@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
@@ -21,7 +21,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install system libraries
-      run: sudo apt-get install tree libhdf5-dev libnetcdf-dev
+      run: sudo apt-get install tree
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
@@ -30,15 +30,6 @@ jobs:
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
-
-    - name: Cache vcpkg
-      uses: actions/cache@v3
-      with:
-        path: |
-          ./vcpkg/installed
-          ./vcpkg/buildtrees
-          ./vcpkg/packages
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
 
     - name: Get dependencies
       run: vcpkg install
@@ -50,6 +41,13 @@ jobs:
 
     - name: Install the package
       run: pip install .
+
+    - name: Upload Build Logs
+      if: failure() # Only upload logs if the workflow fails
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-${{ matrix.python-version }}
+        path: /home/runner/work/hydrobricks/hydrobricks/vcpkg/buildtrees/**/*.log
 
     - name: Test
       run: pytest ./python/tests

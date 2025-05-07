@@ -1,4 +1,5 @@
 import importlib.util
+import warnings
 
 
 class LazyImport:
@@ -10,6 +11,7 @@ class LazyImport:
         if self.module is None:
             self.module = importlib.import_module(self.module_name)
         return getattr(self.module, item)
+
 
 def is_module_available(module_name):
     """Check if a module is available for import."""
@@ -27,7 +29,9 @@ from _hydrobricks import (
 
 has_netcdf = is_module_available("netCDF4")
 if has_netcdf:
-    Dataset = LazyImport("netCDF4.Dataset")
+    warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
+    from netCDF4 import Dataset
+    warnings.resetwarnings()
 
 has_rasterio = is_module_available("rasterio")
 if has_rasterio:
@@ -57,6 +61,7 @@ if has_pyproj:
 has_pysheds = is_module_available("pysheds")
 if has_pysheds:
     pysheds = LazyImport("pysheds")
+    from pysheds.grid import Grid as pyshedsGrid
 
 has_xarray = is_module_available("xarray")
 if has_xarray:
@@ -77,7 +82,6 @@ if has_xrspatial:
 has_matplotlib = is_module_available("matplotlib")
 if has_matplotlib:
     plt = LazyImport("matplotlib.pyplot")
-    from .plots.plot_results import *  # noqa
 
 from . import utils
 from .catchment import Catchment

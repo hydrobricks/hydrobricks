@@ -3,3 +3,4 @@ max-line-length = 88
 per-file-ignores =
     model.py:F401
     spotpy_setup.py:F401
+    __init__.py:E402

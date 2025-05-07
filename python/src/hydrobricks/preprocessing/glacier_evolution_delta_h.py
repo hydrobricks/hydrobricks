@@ -151,6 +151,8 @@ class GlacierEvolutionDeltaH:
             glacier_df.loc[nonzero_mask, ('glacier_thickness', 'm')] = mean_thickness
 
         self.glacier_df = glacier_df
+        self.hydro_units = catchment.hydro_units.hydro_units
+        self.catchment_area = np.sum(self.hydro_units.area.values)
 
         return self.glacier_df
 
@@ -214,24 +216,22 @@ class GlacierEvolutionDeltaH:
 
         if glacier_data_csv is not None:
             # Read the glacier data
-            self.glacier_df = pd.read_csv(glacier_data_csv, skiprows=[1])
-
-            # We have to remove the bands with no glacier area
-            # (otherwise the min and max elevations are wrong)
-            self.glacier_df = self.glacier_df.drop(
-                self.glacier_df[self.glacier_df.glacier_area == 0].index)
-
-            # Extract the relevant columns
-            elevation_bands = self.glacier_df['elevation'].values
-            initial_areas_m2 = self.glacier_df['glacier_area'].values
-            initial_we_mm = self.glacier_df['glacier_thickness'].values * WE * 1000
-            hydro_unit_ids = self.glacier_df['hydro_unit_id'].values
-
+            self.glacier_df = pd.read_csv(glacier_data_csv)
         elif glacier_df is not None:
             self.glacier_df = glacier_df
-
         assert self.glacier_df is not None, \
             "Glacier data is not defined. Please provide a CSV file or a DataFrame."
+
+        # We have to remove the bands with no glacier area
+        # (otherwise the min and max elevations are wrong)
+        self.glacier_df = self.glacier_df.drop(
+            self.glacier_df[self.glacier_df[('glacier_area', 'm2')] == 0].index)
+
+        # Extract the relevant columns
+        elevation_bands = self.glacier_df[('elevation', 'm')].values
+        initial_areas_m2 = self.glacier_df[('glacier_area', 'm2')].values
+        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values * WE * 1000
+        hydro_unit_ids = self.glacier_df[('hydro_unit_id', '-')].values
 
         nb_elevation_bands = len(elevation_bands)
 

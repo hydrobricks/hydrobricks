@@ -40,6 +40,9 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest] #, macos-latest ]
 
+    env:
+      VCPKG_LIBRARY_LINKAGE: static
+
     steps:
       - uses: actions/checkout@v4
 

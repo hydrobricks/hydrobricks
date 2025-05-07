@@ -14,8 +14,8 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', 'tests', 'files', 'catchments'
 )
-HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units.csv'
-GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile.csv'
+HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units_50m.csv'
+GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile_id_50m.csv'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:

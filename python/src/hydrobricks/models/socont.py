@@ -11,6 +11,7 @@ class Socont(Model):
         self.options['soil_storage_nb'] = 1
         self.options['surface_runoff'] = 'socont_runoff'
         self.options['snow_melt_process'] = 'melt:degree_day'
+        self.options['snow_ice_transformation'] = False
         self.allowed_land_cover_types = ['ground', 'glacier']
 
         self._set_options(kwargs)
@@ -49,6 +50,16 @@ class Socont(Model):
                         }
                     }
                 }
+
+                if self.options['snow_ice_transformation']:
+                    self.structure[cover_name + '_snowpack'] = {
+                        'processes': {
+                            'transformation': {
+                                'kind': 'transformation:snow_ice',
+                                'target': cover_name + ':ice',
+                            }
+                        }
+                    }
 
         if 'glacier' in self.land_cover_types:
             # Basin storages for contributions from the glacierized area

@@ -39,7 +39,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "outflow:overflow" || processType == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     }
-    if (processType == "transformation:snow_to_ice" || processType == "transform:snow_to_ice") {
+    if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIce(snowBrick->GetSnowContainer());
@@ -107,7 +107,7 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "outflow:overflow" || processType == "overflow") {
         ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_to_ice" || processType == "transform:snow_to_ice") {
+    } else if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
         ProcessTransformSnowToIce::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {
         ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);

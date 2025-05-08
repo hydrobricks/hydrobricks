@@ -45,7 +45,7 @@ class SnowIceModel : public ::testing::Test {
 
         // Add transformation of snow to ice
         m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.AddBrickProcess("snow_ice_transfo", "transform:snow_to_ice", "glacier:ice");
+        m_model.AddBrickProcess("snow_ice_transfo", "transform:snow_ice", "glacier:ice");
         m_model.SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
 
         // Add process to direct meltwater to the outlet

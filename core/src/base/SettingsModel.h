@@ -99,7 +99,7 @@ class SettingsModel : public wxObject {
 
     void AddProcessForcing(const string& name);
 
-    void AddProcessOutput(const string& target);
+    void AddProcessOutput(const string& target, const string& fluxType = "water");
 
     void SetProcessOutputsAsInstantaneous();
 

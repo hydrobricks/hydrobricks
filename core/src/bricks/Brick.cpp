@@ -70,6 +70,9 @@ void Brick::SetParameters(const BrickSettings& brickSettings) {
 
 void Brick::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
+    if (flux->GetType() != "water") {
+        throw InvalidArgument(wxString::Format(_("The flux type '%s' should be water."), flux->GetType()));
+    }
     m_water->AttachFluxIn(flux);
 }
 

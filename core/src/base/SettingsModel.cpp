@@ -172,7 +172,15 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     m_selectedProcess = &m_selectedBrick->processes[m_selectedBrick->processes.size() - 1];
 
     if (!target.empty()) {
-        AddProcessOutput(target);
+        // If the target contains ":", separate into target and fluxType
+        auto pos = target.find(':');
+        if (pos != string::npos) {
+            string fluxType = target.substr(pos + 1);
+            string targetSub = target.substr(0, pos);
+            AddProcessOutput(targetSub, fluxType);
+        } else {
+            AddProcessOutput(target);
+        }
     }
     if (log || m_logAll) {
         AddProcessLogging("output");
@@ -238,11 +246,12 @@ void SettingsModel::AddProcessForcing(const string& name) {
     }
 }
 
-void SettingsModel::AddProcessOutput(const string& target) {
+void SettingsModel::AddProcessOutput(const string& target, const string& fluxType) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
     outputSettings.target = target;
+    outputSettings.fluxType = fluxType;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 

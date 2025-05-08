@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
-#define HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
+#ifndef HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H
+#define HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H
 
 #include "Forcing.h"
 #include "Includes.h"
-#include "ProcessOutflow.h"
+#include "ProcessTransform.h"
 
-class ProcessOutflowPercolation : public ProcessOutflow {
+class ProcessTransformSnowToIce : public ProcessTransform {
   public:
-    explicit ProcessOutflowPercolation(WaterContainer* container);
+    explicit ProcessTransformSnowToIce(WaterContainer* container);
 
-    ~ProcessOutflowPercolation() override = default;
+    ~ProcessTransformSnowToIce() override = default;
 
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
@@ -26,4 +26,4 @@ class ProcessOutflowPercolation : public ProcessOutflow {
   private:
 };
 
-#endif  // HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
+#endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H

@@ -23,56 +23,66 @@ Process::Process(WaterContainer* container)
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     if (processSettings.type == "outflow:linear") {
         return new ProcessOutflowLinear(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:percolation") {
+    }
+    if (processSettings.type == "outflow:percolation") {
         return new ProcessOutflowPercolation(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:direct") {
+    }
+    if (processSettings.type == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "outflow:rest_direct") {
+    }
+    if (processSettings.type == "outflow:rest_direct") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
-    } else if (processSettings.type == "runoff:socont") {
+    }
+    if (processSettings.type == "runoff:socont") {
         return new ProcessRunoffSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "infiltration:socont") {
+    }
+    if (processSettings.type == "infiltration:socont") {
         return new ProcessInfiltrationSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "overflow") {
+    }
+    if (processSettings.type == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
-    } else if (processSettings.type == "et:socont") {
+    }
+    if (processSettings.type == "et:socont") {
         return new ProcessETSocont(brick->GetWaterContainer());
-    } else if (processSettings.type == "melt:degree_day") {
+    }
+    if (processSettings.type == "melt:degree_day") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
-        } else if (brick->IsGlacier()) {
+        }
+        if (brick->IsGlacier()) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
-        } else {
-            throw ConceptionIssue(
-                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
-    } else if (processSettings.type == "melt:degree_day_aspect") {
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
+    }
+    if (processSettings.type == "melt:degree_day_aspect") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDayAspect(snowBrick->GetSnowContainer());
-        } else if (brick->IsGlacier()) {
+        }
+        if (brick->IsGlacier()) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
-        } else {
-            throw ConceptionIssue(
-                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
-    } else if (processSettings.type == "melt:temperature_index") {
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
+    }
+    if (processSettings.type == "melt:temperature_index") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
-        } else if (brick->IsGlacier()) {
+        }
+        if (brick->IsGlacier()) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
-        } else {
-            throw ConceptionIssue(
-                wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
         }
-    } else {
-        throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processSettings.type));
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
+
+    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processSettings.type));
 
     return nullptr;
 }

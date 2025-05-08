@@ -100,6 +100,8 @@ class Brick : public wxObject {
 
     virtual void Finalize();
 
+    virtual void UpdateContent(double value, const string& type = "water");
+
     virtual void UpdateContentFromInputs();
 
     virtual void ApplyConstraints(double timeStep);

@@ -109,6 +109,14 @@ void Brick::Finalize() {
     m_water->Finalize();
 }
 
+void Brick::UpdateContent(double value, const string& type) {
+    if (type == "water") {
+        m_water->UpdateContent(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
+    }
+}
+
 void Brick::UpdateContentFromInputs() {
     m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
 }

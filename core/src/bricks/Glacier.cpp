@@ -60,6 +60,16 @@ void Glacier::Finalize() {
     m_water->Finalize();
 }
 
+void Glacier::UpdateContent(double value, const string& type) {
+    if (type == "water") {
+        m_water->UpdateContent(value);
+    } else if (type == "ice") {
+        m_ice->UpdateContent(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
+}
+
 void Glacier::UpdateContentFromInputs() {
     m_ice->AddAmountToDynamicContentChange(m_ice->SumIncomingFluxes());
     m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());

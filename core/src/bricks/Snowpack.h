@@ -30,6 +30,8 @@ class Snowpack : public SurfaceComponent {
 
     void Finalize() override;
 
+    void UpdateContent(double value, const string& type) override;
+
     void UpdateContentFromInputs() override;
 
     void ApplyConstraints(double timeStep) override;

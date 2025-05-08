@@ -47,6 +47,16 @@ void Snowpack::Finalize() {
     m_water->Finalize();
 }
 
+void Snowpack::UpdateContent(double value, const string& type) {
+    if (type == "water") {
+        m_water->UpdateContent(value);
+    } else if (type == "snow") {
+        m_snow->UpdateContent(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
+}
+
 void Snowpack::UpdateContentFromInputs() {
     m_snow->AddAmountToStaticContentChange(m_snow->SumIncomingFluxes());
     m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());

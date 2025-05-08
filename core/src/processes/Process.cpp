@@ -13,6 +13,7 @@
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
+#include "ProcessTransformSnowToIce.h"
 #include "ProcessRunoffSocont.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
@@ -21,31 +22,41 @@ Process::Process(WaterContainer* container)
     : m_container(container) {}
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
-    if (processSettings.type == "outflow:linear") {
+    string processType = processSettings.type;
+
+    if (processType == "outflow:linear") {
         return new ProcessOutflowLinear(brick->GetWaterContainer());
     }
-    if (processSettings.type == "outflow:percolation") {
+    if (processType == "outflow:percolation" || processType == "percolation") {
         return new ProcessOutflowPercolation(brick->GetWaterContainer());
     }
-    if (processSettings.type == "outflow:direct") {
+    if (processType == "outflow:direct") {
         return new ProcessOutflowDirect(brick->GetWaterContainer());
     }
-    if (processSettings.type == "outflow:rest_direct") {
+    if (processType == "outflow:rest_direct") {
         return new ProcessOutflowRestDirect(brick->GetWaterContainer());
     }
-    if (processSettings.type == "runoff:socont") {
-        return new ProcessRunoffSocont(brick->GetWaterContainer());
-    }
-    if (processSettings.type == "infiltration:socont") {
-        return new ProcessInfiltrationSocont(brick->GetWaterContainer());
-    }
-    if (processSettings.type == "overflow") {
+    if (processType == "outflow:overflow" || processType == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     }
-    if (processSettings.type == "et:socont") {
+    if (processType == "transformation:snow_to_ice" || processType == "transform:snow_to_ice") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessTransformSnowToIce(snowBrick->GetSnowContainer());
+        }
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
+    }
+    if (processType == "runoff:socont") {
+        return new ProcessRunoffSocont(brick->GetWaterContainer());
+    }
+    if (processType == "infiltration:socont") {
+        return new ProcessInfiltrationSocont(brick->GetWaterContainer());
+    }
+    if (processType == "et:socont") {
         return new ProcessETSocont(brick->GetWaterContainer());
     }
-    if (processSettings.type == "melt:degree_day") {
+    if (processType == "melt:degree_day") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
@@ -57,7 +68,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
-    if (processSettings.type == "melt:degree_day_aspect") {
+    if (processType == "melt:degree_day_aspect") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDayAspect(snowBrick->GetSnowContainer());
@@ -69,7 +80,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
-    if (processSettings.type == "melt:temperature_index") {
+    if (processType == "melt:temperature_index") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
@@ -82,26 +93,26 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
 
-    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processSettings.type));
-
-    return nullptr;
+    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processType));
 }
 
 bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
     if (processType == "outflow:linear") {
         ProcessOutflowLinear::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:percolation") {
+    } else if (processType == "outflow:percolation" || processType == "percolation") {
         ProcessOutflowPercolation::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "outflow:direct") {
         ProcessOutflowDirect::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "outflow:rest_direct") {
         ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "outflow:overflow" || processType == "overflow") {
+        ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transformation:snow_to_ice" || processType == "transform:snow_to_ice") {
+        ProcessTransformSnowToIce::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {
         ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "infiltration:socont") {
         ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "overflow") {
-        ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "et:socont") {
         ProcessETSocont::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "melt:degree_day") {

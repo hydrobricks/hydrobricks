@@ -503,6 +503,7 @@ void SettingsModel::SelectHydroUnitBrick(int index) {
     wxASSERT(m_modelStructures.size() == 1);
 
     m_selectedBrick = &m_selectedStructure->hydroUnitBricks[index];
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectSubBasinBrick(int index) {
@@ -510,6 +511,7 @@ void SettingsModel::SelectSubBasinBrick(int index) {
     wxASSERT(m_modelStructures.size() == 1);
 
     m_selectedBrick = &m_selectedStructure->subBasinBricks[index];
+    m_selectedProcess = nullptr;
 }
 
 bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
@@ -517,6 +519,7 @@ bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
     for (auto& brick : m_selectedStructure->hydroUnitBricks) {
         if (brick.name == name) {
             m_selectedBrick = &brick;
+            m_selectedProcess = nullptr;
             return true;
         }
     }
@@ -529,6 +532,7 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
     for (auto& brick : m_selectedStructure->subBasinBricks) {
         if (brick.name == name) {
             m_selectedBrick = &brick;
+            m_selectedProcess = nullptr;
             return true;
         }
     }
@@ -540,18 +544,21 @@ void SettingsModel::SelectHydroUnitBrick(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
         throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectProcess(int index) {

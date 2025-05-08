@@ -22,10 +22,6 @@ void Glacier::SetParameters(const BrickSettings& brickSettings) {
         if (GetParameterValuePointer(brickSettings, "infinite_storage")) {
             m_ice->SetAsInfiniteStorage();
         }
-    } else {
-        m_ice->SetAsInfiniteStorage();
-        wxLogWarning(_("No option found to specify if the glacier has an infinite storage. Defaulting to true."));
-        // wxLogWarning(_("The glacier has no infinite storage. An initial water equivalent must be provided."));
     }
 
     if (HasParameter(brickSettings, "no_melt_when_snow_cover")) {

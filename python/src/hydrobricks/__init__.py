@@ -1,4 +1,22 @@
+import importlib.util
 import warnings
+
+
+class LazyImport:
+    def __init__(self, module_name):
+        self.module_name = module_name
+        self.module = None
+
+    def __getattr__(self, item):
+        if self.module is None:
+            self.module = importlib.import_module(self.module_name)
+        return getattr(self.module, item)
+
+
+def is_module_available(module_name):
+    """Check if a module is available for import."""
+    return importlib.util.find_spec(module_name) is not None
+
 
 from _hydrobricks import (
     close_log,
@@ -9,107 +27,61 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
-try:
+has_netcdf = is_module_available("netCDF4")
+if has_netcdf:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
     from netCDF4 import Dataset
     warnings.resetwarnings()
-except ImportError:
-    has_netcdf = False
-else:
-    has_netcdf = True
 
-try:
-    import rasterio
-except ImportError:
-    has_rasterio = False
-else:
-    has_rasterio = True
+has_rasterio = is_module_available("rasterio")
+if has_rasterio:
+    rasterio = LazyImport("rasterio")
 
-try:
-    import geopandas as gpd
-except ImportError:
-    has_geopandas = False
-else:
-    has_geopandas = True
+has_geopandas = is_module_available("geopandas")
+if has_geopandas:
+    gpd = LazyImport("geopandas")
 
-try:
-    import shapely
-except ImportError:
-    has_shapely = False
-else:
-    has_shapely = True
+has_shapely = is_module_available("shapely")
+if has_shapely:
+    shapely = LazyImport("shapely")
 
-try:
-    import spotpy
-except ImportError:
-    has_spotpy = False
-else:
-    has_spotpy = True
+has_spotpy = is_module_available("spotpy")
+if has_spotpy:
+    spotpy = LazyImport("spotpy")
     from .trainer import SpotpySetup
 
-try:
-    import pyet
-except ImportError:
-    has_pyet = False
-else:
-    has_pyet = True
+has_pyet = is_module_available("pyet")
+if has_pyet:
+    pyet = LazyImport("pyet")
 
-try:
-    import pyproj
-except ImportError:
-    has_pyproj = False
-else:
-    has_pyproj = True
+has_pyproj = is_module_available("pyproj")
+if has_pyproj:
+    pyproj = LazyImport("pyproj")
 
-try:
-    import pysheds
-except ImportError:
-    has_pysheds = False
-else:
-    has_pysheds = True
+has_pysheds = is_module_available("pysheds")
+if has_pysheds:
+    pysheds = LazyImport("pysheds")
     from pysheds.grid import Grid as pyshedsGrid
 
-try:
-    import xarray as xr
-except ImportError:
-    has_xarray = False
-else:
-    has_xarray = True
+has_xarray = is_module_available("xarray")
+if has_xarray:
+    xr = LazyImport("xarray")
 
-try:
-    import rioxarray as rxr
-except ImportError:
-    has_rioxarray = False
-else:
-    has_rioxarray = True
-    if not has_xarray:
-        raise ImportError("xarray is required to use rioxarray.")
+has_rioxarray = is_module_available("rioxarray")
+if has_rioxarray:
+    rxr = LazyImport("rioxarray")
 
-try:
-    import pyarrow as pa
-except ImportError:
-    has_pyarrow = False
-else:
-    has_pyarrow = True
+has_pyarrow = is_module_available("pyarrow")
+if has_pyarrow:
+    pyarrow = LazyImport("pyarrow")
 
-try:
-    import xrspatial as xrs
-except ImportError:
-    has_xrspatial = False
-else:
-    has_xrspatial = True
-    if not has_xarray:
-        raise ImportError("xarray is required to use xrspatial.")
-    if not has_rioxarray:
-        raise ImportError("rioxarray is required to use xrspatial.")
+has_xrspatial = is_module_available("xrspatial")
+if has_xrspatial:
+    xrs = LazyImport("xrspatial")
 
-try:
-    import matplotlib.pyplot as plt  # noqa
-except ImportError:
-    has_matplotlib = False
-else:
-    has_matplotlib = True
-    from .plots.plot_results import *  # noqa
+has_matplotlib = is_module_available("matplotlib")
+if has_matplotlib:
+    plt = LazyImport("matplotlib.pyplot")
 
 from . import utils
 from .catchment import Catchment
@@ -126,4 +98,4 @@ __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries'
            'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
            'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
            'Dataset', 'rasterio', 'gpd', 'shapely', 'SpotpySetup', 'spotpy', 'pyet',
-           'pyproj', 'pysheds', 'pyshedsGrid', 'xr', 'rxr', 'xrs', 'evaluate')
+           'pyproj', 'pysheds', 'xr', 'rxr', 'xrs', 'evaluate')

@@ -8,11 +8,10 @@ authors = [
 description = "A modular hydrological modelling framework"
 readme = "python/README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 classifiers = [
     "Programming Language :: C++",
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
+    "Programming Language :: Python :: 3"
 ]
 dependencies = [
     "cftime",
@@ -33,8 +32,8 @@ test = ["pytest>=6.0"]
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
 
 [tool.setuptools]
-packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours"]
-package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours" }
+packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours", "hydrobricks.plotting", "hydrobricks.preprocessing"]
+package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours", "hydrobricks.plotting" = "python/src/hydrobricks/plotting", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing" }
 
 [build-system]
 requires = [
@@ -56,7 +55,10 @@ known_first_party = ["_hydrobricks", "hydrobricks", "hydrobricks.*"]
 minversion = "6.0"
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",  # Treat all warnings as errors
+    "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning"
+]
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]

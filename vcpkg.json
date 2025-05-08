@@ -4,12 +4,21 @@
   "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
   "dependencies": [
     "vcpkg-tool-ninja",
-    "vcpkg-cmake",
     "eigen3",
     "gtest",
-    "yaml-cpp",
-    "zlib",
-    "netcdf-c",
-    "hdf5"
+    {
+      "name": "netcdf-c",
+      "features": [
+        "hdf5"
+      ]
+    },
+    {
+      "name": "hdf5",
+      "default-features": false,
+      "features": [
+        "cpp",
+        "zlib"
+      ]
+    }
   ]
 }

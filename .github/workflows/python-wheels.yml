@@ -40,11 +40,14 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest] #, macos-latest ]
 
+    env:
+      VCPKG_LIBRARY_LINKAGE: static
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@v2.23.3
         env:
           CIBW_ARCHS: auto64
 

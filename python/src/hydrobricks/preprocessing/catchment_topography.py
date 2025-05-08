@@ -42,7 +42,7 @@ class CatchmentTopography:
         -------
         The catchment mean elevation.
         """
-        return np.nanmean(self.catchment.masked_dem_data)
+        return np.nanmean(self.catchment.dem_data)
 
     def resample_dem_and_calculate_slope_aspect(self, resolution, output_path):
         """
@@ -70,7 +70,7 @@ class CatchmentTopography:
         if resolution is None or resolution == self.catchment.get_dem_x_resolution():
             if self.slope is None or self.aspect is None:
                 self.calculate_slope_aspect()
-            return self.catchment.dem, self.catchment.masked_dem_data, self.slope, self.aspect
+            return self.catchment.dem, self.catchment.dem_data, self.slope, self.aspect
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
@@ -101,17 +101,17 @@ class CatchmentTopography:
         new_dem = hb.rasterio.open(filepath)
         if self.catchment.outline is not None:
             geoms = [mapping(polygon) for polygon in self.catchment.outline]
-            new_masked_dem_data, _ = mask(new_dem, geoms, crop=False)
+            new_dem_data, _ = mask(new_dem, geoms, crop=False)
         else:
-            new_masked_dem_data = new_dem.read(1)
-        new_masked_dem_data[new_masked_dem_data == new_dem.nodata] = np.nan
-        if len(new_masked_dem_data.shape) == 3:
-            new_masked_dem_data = new_masked_dem_data[0]
+            new_dem_data = new_dem.read(1)
+        new_dem_data[new_dem_data == new_dem.nodata] = np.nan
+        if len(new_dem_data.shape) == 3:
+            new_dem_data = new_dem_data[0]
         new_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
         new_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
         xr_dem_downsampled.close()
 
-        return new_dem, new_masked_dem_data, new_slope, new_aspect
+        return new_dem, new_dem_data, new_slope, new_aspect
 
     def calculate_slope_aspect(self):
         """
@@ -193,10 +193,10 @@ class CatchmentTopography:
         return round(float(np.nanmean(self.slope[mask_unit])), 2)
 
     def extract_unit_mean_elevation(self, mask_unit):
-        return round(float(np.nanmean(self.catchment.masked_dem_data[mask_unit])), 2)
+        return round(float(np.nanmean(self.catchment.dem_data[mask_unit])), 2)
 
     def extract_unit_min_elevation(self, mask_unit):
-        return round(float(np.nanmin(self.catchment.masked_dem_data[mask_unit])), 2)
+        return round(float(np.nanmin(self.catchment.dem_data[mask_unit])), 2)
 
     def extract_unit_max_elevation(self, mask_unit):
-        return round(float(np.nanmax(self.catchment.masked_dem_data[mask_unit])), 2)
+        return round(float(np.nanmax(self.catchment.dem_data[mask_unit])), 2)

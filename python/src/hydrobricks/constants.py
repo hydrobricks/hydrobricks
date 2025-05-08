@@ -22,4 +22,4 @@ AIR_MOLAR_MASS = 0.0289644  # Molar mass of Earth's air [kg/mol]
 # For the glacier melt
 ICE_DENSITY = 900  # Ice density [kg/m³]
 WATER_DENSITY = 1000  # Water density [kg/m³]
-WATER_EQ = ICE_DENSITY / WATER_DENSITY  # Water equivalent [-]
+ICE_WE = ICE_DENSITY / WATER_DENSITY  # Water equivalent [-]

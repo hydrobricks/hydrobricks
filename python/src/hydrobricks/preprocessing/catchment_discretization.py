@@ -113,7 +113,7 @@ class CatchmentDiscretization:
         if 'radiation' in criteria and self.catchment.solar_radiation.mean_annual_radiation is None:
             raise RuntimeError("Please first compute the radiation.")
 
-        self.map_unit_ids = np.zeros(self.catchment.masked_dem_data.shape)
+        self.map_unit_ids = np.zeros(self.catchment.dem_data.shape)
 
         # Create a dict to store the criteria
         criteria_dict = {}
@@ -123,17 +123,17 @@ class CatchmentDiscretization:
             if elevation_method == 'equal_intervals':
                 dist = elevation_distance
                 if min_elevation is None:
-                    min_elevation = np.nanmin(self.catchment.masked_dem_data)
+                    min_elevation = np.nanmin(self.catchment.dem_data)
                     min_elevation = min_elevation - (min_elevation % dist)
                 if max_elevation is None:
-                    max_elevation = np.nanmax(self.catchment.masked_dem_data)
+                    max_elevation = np.nanmax(self.catchment.dem_data)
                     max_elevation = max_elevation + (dist - max_elevation % dist)
                 elevations = np.arange(min_elevation, max_elevation + dist, dist)
                 for i in range(len(elevations) - 1):
                     criteria_dict['elevation'].append(elevations[i:i + 2])
             elif elevation_method == 'quantiles':
                 elevations = np.nanquantile(
-                    self.catchment.masked_dem_data,
+                    self.catchment.dem_data,
                     np.linspace(0, 1, num=elevation_number))
                 for i in range(len(elevations) - 1):
                     criteria_dict['elevation'].append(elevations[i:i + 2])
@@ -207,15 +207,15 @@ class CatchmentDiscretization:
 
         unit_id = 1
         for i, criteria in enumerate(combinations):
-            mask_unit = np.ones(self.catchment.masked_dem_data.shape, dtype=bool)
+            mask_unit = np.ones(self.catchment.dem_data.shape, dtype=bool)
             # Mask nan values
-            mask_unit[np.isnan(self.catchment.masked_dem_data)] = False
+            mask_unit[np.isnan(self.catchment.dem_data)] = False
 
             for criterion_name, criterion in zip(combinations_keys, criteria):
                 if criterion_name == 'elevation':
                     mask_elev = np.logical_and(
-                        self.catchment.masked_dem_data >= criterion[0],
-                        self.catchment.masked_dem_data < criterion[1])
+                        self.catchment.dem_data >= criterion[0],
+                        self.catchment.dem_data < criterion[1])
                     mask_unit = np.logical_and(mask_unit, mask_elev)
                 elif criterion_name == 'slope':
                     mask_slope = np.logical_and(

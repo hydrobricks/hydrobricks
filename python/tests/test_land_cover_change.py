@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
-import hydrobricks.behaviours as behaviours
+import hydrobricks.actions as actions
 import hydrobricks.models as models
 
 TEST_FILES_DIR = Path(
@@ -60,7 +60,7 @@ def changes_data():
 
 
 def test_load_from_csv(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -72,7 +72,7 @@ def test_load_from_csv(hydro_units_csv):
 
 
 def test_load_from_csv_by_id(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice_with_ids.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -84,7 +84,7 @@ def test_load_from_csv_by_id(hydro_units_csv):
 
 
 def test_load_from_two_files(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -100,8 +100,8 @@ def test_load_from_two_files(hydro_units_csv):
     assert changes.get_changes_nb() == 444
 
 
-def test_add_behaviour_to_model(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+def test_add_action_to_model(hydro_units_csv):
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -109,11 +109,11 @@ def test_add_behaviour_to_model(hydro_units_csv):
     )
 
     model = models.Socont()
-    assert model.add_behaviour(changes)
+    assert model.add_action(changes)
 
 
-def test_behaviour_correctly_set_in_model(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+def test_action_correctly_set_in_model(hydro_units_csv):
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -124,13 +124,13 @@ def test_behaviour_correctly_set_in_model(hydro_units_csv):
     cover_types = ['ground', 'glacier']
     model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 
-    assert model.add_behaviour(changes)
-    assert model.get_behaviours_nb() == 1
-    assert model.get_behaviour_items_nb() == 232
+    assert model.add_action(changes)
+    assert model.get_actions_nb() == 1
+    assert model.get_action_items_nb() == 232
 
 
-def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
-    changes = behaviours.BehaviourLandCoverChange()
+def test_action_2_files_correctly_set_in_model(hydro_units_csv):
+    changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
         hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
@@ -146,17 +146,17 @@ def test_behaviour_2_files_correctly_set_in_model(hydro_units_csv):
     cover_types = ['ground', 'glacier', 'glacier']
     model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
 
-    assert model.add_behaviour(changes)
-    assert model.get_behaviours_nb() == 1
-    assert model.get_behaviour_items_nb() == 444
+    assert model.add_action(changes)
+    assert model.get_actions_nb() == 1
+    assert model.get_action_items_nb() == 444
 
 
 def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data):
     files = changes_data[0]
     times = changes_data[1]
 
-    # Create the behaviour land cover change object and the corresponding dataframe
-    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+    # Create the action land cover change object and the corresponding dataframe
+    changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
         catchment_gletsch, times, files, with_debris=False, method='raster',
         interpolate_yearly=False)
 
@@ -184,8 +184,8 @@ def test_extract_glacier_cover_evolution_vector(catchment_gletsch, changes_data)
     files = changes_data[0]
     times = changes_data[1]
 
-    # Create the behaviour land cover change object and the corresponding dataframe
-    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+    # Create the action land cover change object and the corresponding dataframe
+    changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
         catchment_gletsch, times, files, with_debris=False, method='vector',
         interpolate_yearly=False)
 
@@ -213,8 +213,8 @@ def test_extract_glacier_cover_evolution_interpolate(catchment_gletsch, changes_
     files = changes_data[0]
     times = changes_data[1]
 
-    # Create the behaviour land cover change object and the corresponding dataframe
-    changes, df = behaviours.BehaviourLandCoverChange.create_behaviour_for_glaciers(
+    # Create the action land cover change object and the corresponding dataframe
+    changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
         catchment_gletsch, times, files, with_debris=False, method='raster',
         interpolate_yearly=True)
 

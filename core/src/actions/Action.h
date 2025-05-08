@@ -1,14 +1,14 @@
-#ifndef HYDROBRICKS_BEHAVIOUR_H
-#define HYDROBRICKS_BEHAVIOUR_H
+#ifndef HYDROBRICKS_ACTION_H
+#define HYDROBRICKS_ACTION_H
 
-#include "BehavioursManager.h"
+#include "ActionsManager.h"
 #include "Includes.h"
 
-class Behaviour : public wxObject {
+class Action : public wxObject {
   public:
-    Behaviour();
+    Action();
 
-    ~Behaviour() override = default;
+    ~Action() override = default;
 
     void Reset();
 
@@ -16,7 +16,7 @@ class Behaviour : public wxObject {
 
     int GetIndexForInsertion(double date);
 
-    void SetManager(BehavioursManager* manager) {
+    void SetManager(ActionsManager* manager) {
         m_manager = manager;
     }
 
@@ -33,11 +33,11 @@ class Behaviour : public wxObject {
     }
 
   protected:
-    BehavioursManager* m_manager;
+    ActionsManager* m_manager;
     int m_cursor;
     vecDouble m_dates;
 
   private:
 };
 
-#endif  // HYDROBRICKS_BEHAVIOUR_H
+#endif  // HYDROBRICKS_ACTION_H

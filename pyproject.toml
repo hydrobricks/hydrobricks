@@ -32,8 +32,8 @@ test = ["pytest>=6.0"]
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
 
 [tool.setuptools]
-packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.behaviours", "hydrobricks.plotting", "hydrobricks.preprocessing"]
-package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.behaviours" = "python/src/hydrobricks/behaviours", "hydrobricks.plotting" = "python/src/hydrobricks/plotting", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing" }
+packages = ["hydrobricks", "hydrobricks.models", "hydrobricks.actions", "hydrobricks.plotting", "hydrobricks.preprocessing"]
+package-dir = { "hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.actions" = "python/src/hydrobricks/actions", "hydrobricks.plotting" = "python/src/hydrobricks/plotting", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing" }
 
 [build-system]
 requires = [

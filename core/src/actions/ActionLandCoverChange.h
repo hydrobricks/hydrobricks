@@ -1,14 +1,14 @@
-#ifndef HYDROBRICKS_BEHAVIOUR_LAND_COVER_CHANGE_H
-#define HYDROBRICKS_BEHAVIOUR_LAND_COVER_CHANGE_H
+#ifndef HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H
+#define HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H
 
-#include "Behaviour.h"
+#include "Action.h"
 #include "Includes.h"
 
-class BehaviourLandCoverChange : public Behaviour {
+class ActionLandCoverChange : public Action {
   public:
-    BehaviourLandCoverChange();
+    ActionLandCoverChange();
 
-    ~BehaviourLandCoverChange() override = default;
+    ~ActionLandCoverChange() override = default;
 
     void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
 
@@ -32,4 +32,4 @@ class BehaviourLandCoverChange : public Behaviour {
     int GetLandCoverId(const string& landCoverName);
 };
 
-#endif  // HYDROBRICKS_BEHAVIOUR_LAND_COVER_CHANGE_H
+#endif  // HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H

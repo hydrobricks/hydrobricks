@@ -1,17 +1,17 @@
-#ifndef HYDROBRICKS_BEHAVIOUR_UPDATER_H
-#define HYDROBRICKS_BEHAVIOUR_UPDATER_H
+#ifndef HYDROBRICKS_ACTION_UPDATER_H
+#define HYDROBRICKS_ACTION_UPDATER_H
 
 #include "HydroUnit.h"
 #include "Includes.h"
 
 class ModelHydro;
-class Behaviour;
+class Action;
 
-class BehavioursManager : public wxObject {
+class ActionsManager : public wxObject {
   public:
-    BehavioursManager();
+    ActionsManager();
 
-    ~BehavioursManager() override = default;
+    ~ActionsManager() override = default;
 
     void Reset();
 
@@ -21,11 +21,11 @@ class BehavioursManager : public wxObject {
 
     void SetModel(ModelHydro* model);
 
-    bool AddBehaviour(Behaviour* behaviour);
+    bool AddAction(Action* action);
 
-    int GetBehavioursNb();
+    int GetActionsNb();
 
-    int GetBehaviourItemsNb();
+    int GetActionItemsNb();
 
     void DateUpdate(double date);
 
@@ -39,11 +39,11 @@ class BehavioursManager : public wxObject {
     bool m_active;
     ModelHydro* m_model;
     int m_cursorManager;
-    vector<Behaviour*> m_behaviours;
+    vector<Action*> m_actions;
     vecDouble m_dates;
-    vecInt m_behaviourIndices;
+    vecInt m_actionIndices;
 
   private:
 };
 
-#endif  // HYDROBRICKS_BEHAVIOUR_UPDATER_H
+#endif  // HYDROBRICKS_ACTION_UPDATER_H

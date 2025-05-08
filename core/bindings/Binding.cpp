@@ -3,8 +3,8 @@
 #include <pybind11/stl.h>
 #include <wx/log.h>
 
-#include "Behaviour.h"
-#include "BehaviourLandCoverChange.h"
+#include "Action.h"
+#include "ActionLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
@@ -96,9 +96,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin.",
              "model_settings"_a, "basin_settings"_a)
-        .def("add_behaviour", &ModelHydro::AddBehaviour, "Adding a behaviour to the model.", "behaviour"_a)
-        .def("get_behaviours_nb", &ModelHydro::GetBehavioursNb, "Get the number of behaviours.")
-        .def("get_behaviour_items_nb", &ModelHydro::GetBehaviourItemsNb, "Get the number of behaviour items.")
+        .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
+        .def("get_actions_nb", &ModelHydro::GetActionsNb, "Get the number of actions.")
+        .def("get_action_items_nb", &ModelHydro::GetActionItemsNb, "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -121,13 +121,13 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the total change in snow storage.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
-    py::class_<Behaviour>(m, "Behaviour").def(py::init<>());
+    py::class_<Action>(m, "Action").def(py::init<>());
 
-    py::class_<BehaviourLandCoverChange, Behaviour>(m, "BehaviourLandCoverChange")
+    py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
-        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_changes_nb", &BehaviourLandCoverChange::GetChangesNb)
-        .def("get_land_covers_nb", &BehaviourLandCoverChange::GetLandCoversNb);
+        .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
+        .def("get_changes_nb", &ActionLandCoverChange::GetChangesNb)
+        .def("get_land_covers_nb", &ActionLandCoverChange::GetLandCoversNb);
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

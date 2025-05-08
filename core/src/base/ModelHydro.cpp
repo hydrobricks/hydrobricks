@@ -13,8 +13,8 @@
 ModelHydro::ModelHydro(SubBasin* subBasin)
     : m_subBasin(subBasin) {
     m_processor.SetModel(this);
-    m_behavioursManager.SetModel(this);
-    m_timer.SetBehavioursManager(&m_behavioursManager);
+    m_actionsManager.SetModel(this);
+    m_timer.SetActionsManager(&m_actionsManager);
     m_timer.SetParametersUpdater(&m_parametersUpdater);
 }
 
@@ -825,7 +825,7 @@ bool ModelHydro::Run() {
 void ModelHydro::Reset() {
     m_timer.Reset();
     m_logger.Reset();
-    m_behavioursManager.Reset();
+    m_actionsManager.Reset();
     m_subBasin->Reset();
 }
 
@@ -880,16 +880,16 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
     return true;
 }
 
-bool ModelHydro::AddBehaviour(Behaviour* behaviour) {
-    return m_behavioursManager.AddBehaviour(behaviour);
+bool ModelHydro::AddAction(Action* action) {
+    return m_actionsManager.AddAction(action);
 }
 
-int ModelHydro::GetBehavioursNb() {
-    return m_behavioursManager.GetBehavioursNb();
+int ModelHydro::GetActionsNb() {
+    return m_actionsManager.GetActionsNb();
 }
 
-int ModelHydro::GetBehaviourItemsNb() {
-    return m_behavioursManager.GetBehaviourItemsNb();
+int ModelHydro::GetActionItemsNb() {
+    return m_actionsManager.GetActionItemsNb();
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {

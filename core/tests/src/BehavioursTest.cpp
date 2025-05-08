@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "BehaviourLandCoverChange.h"
+#include "ActionLandCoverChange.h"
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 #include "helpers.h"
 
-class BehavioursInModel : public ::testing::Test {
+class ActionsInModel : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -45,7 +45,7 @@ class BehavioursInModel : public ::testing::Test {
     }
 };
 
-TEST_F(BehavioursInModel, LandCoverChangeWorks) {
+TEST_F(ActionsInModel, LandCoverChangeWorks) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
@@ -69,15 +69,15 @@ TEST_F(BehavioursInModel, LandCoverChangeWorks) {
     ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    BehaviourLandCoverChange behaviour;
-    behaviour.AddChange(GetMJD(2020, 1, 2), 2, "glacier", 60);
-    behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier", 70);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 2, "glacier", 80);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
-    EXPECT_TRUE(model.AddBehaviour(&behaviour));
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 2), 2, "glacier", 60);
+    action.AddChange(GetMJD(2020, 1, 4), 2, "glacier", 70);
+    action.AddChange(GetMJD(2020, 1, 6), 2, "glacier", 80);
+    action.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
+    EXPECT_TRUE(model.AddAction(&action));
 
-    EXPECT_EQ(model.GetBehavioursNb(), 1);
-    EXPECT_EQ(model.GetBehaviourItemsNb(), 4);
+    EXPECT_EQ(model.GetActionsNb(), 1);
+    EXPECT_EQ(model.GetActionItemsNb(), 4);
 
     EXPECT_TRUE(model.Run());
 
@@ -87,7 +87,7 @@ TEST_F(BehavioursInModel, LandCoverChangeWorks) {
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f);
 }
 
-class BehavioursInModel2LandCovers : public ::testing::Test {
+class ActionsInModel2LandCovers : public ::testing::Test {
   protected:
     SettingsModel m_model;
     TimeSeriesUniform* m_tsPrecip{};
@@ -126,7 +126,7 @@ class BehavioursInModel2LandCovers : public ::testing::Test {
     }
 };
 
-TEST_F(BehavioursInModel2LandCovers, LandCoverChangeWorks) {
+TEST_F(ActionsInModel2LandCovers, LandCoverChangeWorks) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
@@ -153,16 +153,16 @@ TEST_F(BehavioursInModel2LandCovers, LandCoverChangeWorks) {
     ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    BehaviourLandCoverChange behaviour;
-    behaviour.AddChange(GetMJD(2020, 1, 2), 2, "glacier_ice", 20);
-    behaviour.AddChange(GetMJD(2020, 1, 2), 2, "glacier_debris", 30);
-    behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier_ice", 10);
-    behaviour.AddChange(GetMJD(2020, 1, 4), 2, "glacier_debris", 40);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier_ice", 20);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 3, "glacier_debris", 30);
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 2), 2, "glacier_ice", 20);
+    action.AddChange(GetMJD(2020, 1, 2), 2, "glacier_debris", 30);
+    action.AddChange(GetMJD(2020, 1, 4), 2, "glacier_ice", 10);
+    action.AddChange(GetMJD(2020, 1, 4), 2, "glacier_debris", 40);
+    action.AddChange(GetMJD(2020, 1, 6), 3, "glacier_ice", 20);
+    action.AddChange(GetMJD(2020, 1, 6), 3, "glacier_debris", 30);
     // Note: changing the ground area will impact the balance here.
 
-    EXPECT_TRUE(model.AddBehaviour(&behaviour));
+    EXPECT_TRUE(model.AddAction(&action));
 
     EXPECT_TRUE(model.Run());
 
@@ -192,7 +192,7 @@ TEST_F(BehavioursInModel2LandCovers, LandCoverChangeWorks) {
     EXPECT_NEAR(balance, 0.0, 0.0000001);
 }
 
-TEST_F(BehavioursInModel2LandCovers, DatesGetSortedCorrectly) {
+TEST_F(ActionsInModel2LandCovers, DatesGetSortedCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
@@ -215,18 +215,18 @@ TEST_F(BehavioursInModel2LandCovers, DatesGetSortedCorrectly) {
     ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    BehaviourLandCoverChange behaviour;
-    behaviour.AddChange(GetMJD(2020, 1, 2), 1, "glacier_ice", 20);
-    behaviour.AddChange(GetMJD(2020, 1, 4), 1, "glacier_ice", 10);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 2, "glacier_ice", 20);
-    behaviour.AddChange(GetMJD(2020, 1, 2), 1, "glacier_debris", 30);
-    behaviour.AddChange(GetMJD(2020, 1, 4), 1, "glacier_debris", 40);
-    behaviour.AddChange(GetMJD(2020, 1, 6), 2, "glacier_debris", 30);
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 2), 1, "glacier_ice", 20);
+    action.AddChange(GetMJD(2020, 1, 4), 1, "glacier_ice", 10);
+    action.AddChange(GetMJD(2020, 1, 6), 2, "glacier_ice", 20);
+    action.AddChange(GetMJD(2020, 1, 2), 1, "glacier_debris", 30);
+    action.AddChange(GetMJD(2020, 1, 4), 1, "glacier_debris", 40);
+    action.AddChange(GetMJD(2020, 1, 6), 2, "glacier_debris", 30);
     // Note: changing the ground area will impact the balance here.
 
-    EXPECT_TRUE(model.AddBehaviour(&behaviour));
+    EXPECT_TRUE(model.AddAction(&action));
 
-    vecDouble dates = model.GetBehavioursManager()->GetDates();
+    vecDouble dates = model.GetActionsManager()->GetDates();
 
     for (int i = 0; i < dates.size() - 1; ++i) {
         EXPECT_TRUE(dates[i] <= dates[i + 1]);

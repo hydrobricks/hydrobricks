@@ -1,12 +1,12 @@
-#include "BehaviourLandCoverChange.h"
+#include "ActionLandCoverChange.h"
 
 #include "FileNetcdf.h"
 #include "HydroUnit.h"
 #include "ModelHydro.h"
 
-BehaviourLandCoverChange::BehaviourLandCoverChange() = default;
+ActionLandCoverChange::ActionLandCoverChange() = default;
 
-void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, const string& landCoverName, double area) {
+void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string& landCoverName, double area) {
     int landCoverId = GetLandCoverId(landCoverName);
 
     int index = GetIndexForInsertion(date);
@@ -17,7 +17,7 @@ void BehaviourLandCoverChange::AddChange(double date, int hydroUnitId, const str
     m_areas.insert(m_areas.begin() + index, area);
 }
 
-bool BehaviourLandCoverChange::Apply(double) {
+bool ActionLandCoverChange::Apply(double) {
     wxASSERT(m_dates.size() > m_cursor);
     wxASSERT(m_hydroUnitIds.size() > m_cursor);
     wxASSERT(m_areas.size() > m_cursor);
@@ -31,7 +31,7 @@ bool BehaviourLandCoverChange::Apply(double) {
     return unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 }
 
-int BehaviourLandCoverChange::GetLandCoverId(const string& landCoverName) {
+int ActionLandCoverChange::GetLandCoverId(const string& landCoverName) {
     int landCoverId = -1;
     for (int i = 0; i < m_landCoverNames.size(); ++i) {
         if (m_landCoverNames[i] == landCoverName) {

@@ -196,28 +196,28 @@ class Model(ABC):
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
 
-    def add_behaviour(self, behaviour) -> bool:
+    def add_action(self, action) -> bool:
         """
-        Add a behaviour to the model.
+        Add a action to the model.
 
         Parameters
         ----------
-        behaviour : Behaviour
-            The behaviour object. The dates must be sorted.
+        action : Action
+            The action object. The dates must be sorted.
         """
-        return self.model.add_behaviour(behaviour.behaviour)
+        return self.model.add_action(action.action)
 
-    def get_behaviours_nb(self) -> int:
+    def get_actions_nb(self) -> int:
         """
-        Get the number of behaviours (types of behaviours) registered in the model.
+        Get the number of actions (types of actions) registered in the model.
         """
-        return self.model.get_behaviours_nb()
+        return self.model.get_actions_nb()
 
-    def get_behaviour_items_nb(self) -> int:
+    def get_action_items_nb(self) -> int:
         """
-        Get the number of behaviour items (individual triggers) registered in the model.
+        Get the number of action items (individual triggers) registered in the model.
         """
-        return self.model.get_behaviour_items_nb()
+        return self.model.get_action_items_nb()
 
     def create_config_file(self, directory, name, file_type='both'):
         """

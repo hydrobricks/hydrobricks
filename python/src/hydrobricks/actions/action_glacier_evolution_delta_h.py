@@ -4,11 +4,11 @@ import pandas as pd
 import _hydrobricks as _hb
 import hydrobricks as hb
 
-from .behaviour import Behaviour
+from .action import Action
 from ..preprocessing import GlacierEvolutionDeltaH
 
 
-class BehaviourGlacierEvolutionDeltaH(Behaviour):
+class ActionGlacierEvolutionDeltaH(Action):
     """
     Class for the glacier evolution based on the delta-h method.
 
@@ -19,7 +19,7 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
 
     def __init__(self):
         super().__init__()
-        self.behaviour = _hb.BehaviourGlacierEvolutionDeltaH()
+        self.action = _hb.ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(self, dir_path, land_cover='glacier',
                       file_name='glacier_evolution_lookup_table.csv',
@@ -109,4 +109,4 @@ class BehaviourGlacierEvolutionDeltaH(Behaviour):
         # Get the areas from the rest of the table
         areas = lookup_table.iloc[:, 1:].astype(float).values
 
-        self.behaviour.add_change(month_num, land_cover, hu_ids, increments, areas)
+        self.action.add_change(month_num, land_cover, hu_ids, increments, areas)

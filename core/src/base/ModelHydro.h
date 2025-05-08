@@ -31,6 +31,8 @@ class ModelHydro : public wxObject {
 
     void SaveAsInitialState();
 
+    bool SetInitialState(int hydroUnitId, const string& brickName, double amount);
+
     bool DumpOutputs(const string& path);
 
     axd GetOutletDischarge();

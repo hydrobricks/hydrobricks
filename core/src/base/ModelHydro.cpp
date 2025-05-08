@@ -833,6 +833,19 @@ void ModelHydro::SaveAsInitialState() {
     m_subBasin->SaveAsInitialState();
 }
 
+bool ModelHydro::SetInitialState(int hydroUnitId, const string& brickName, double amount) {
+    HydroUnit* hydroUnit = m_subBasin->GetHydroUnitById(hydroUnitId);
+    if (!hydroUnit->HasBrick(brickName)) {
+        wxLogError(_("No brick found with the name '%s'"), brickName);
+        return false;
+    }
+
+    Brick* brick = hydroUnit->GetBrick(brickName);
+    brick->GetWaterContainer()->SetInitialState(amount);
+
+    return true;
+}
+
 bool ModelHydro::DumpOutputs(const string& path) {
     return m_logger.DumpOutputs(path);
 }

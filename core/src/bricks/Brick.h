@@ -100,6 +100,8 @@ class Brick : public wxObject {
 
     virtual void Finalize();
 
+    virtual void SetInitialState(double value, const string& type = "water");
+
     virtual void UpdateContent(double value, const string& type = "water");
 
     virtual void UpdateContentFromInputs();

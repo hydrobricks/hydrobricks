@@ -31,6 +31,8 @@ class Glacier : public LandCover {
 
     void Finalize() override;
 
+    void SetInitialState(double value, const string& type) override;
+
     void UpdateContent(double value, const string& type) override;
 
     void UpdateContentFromInputs() override;

@@ -46,6 +46,7 @@ void Glacier::AttachFluxIn(Flux* flux) {
 
 bool Glacier::IsOk() {
     if (!m_ice->IsOk()) {
+        wxLogError(_("The glacier ice container is not OK (brick %s)."), m_name);
         return false;
     }
     return Brick::IsOk();
@@ -58,6 +59,16 @@ WaterContainer* Glacier::GetIceContainer() {
 void Glacier::Finalize() {
     m_ice->Finalize();
     m_water->Finalize();
+}
+
+void Glacier::SetInitialState(double value, const string& type) {
+    if (type == "water") {
+        m_water->SetInitialState(value);
+    } else if (type == "ice") {
+        m_ice->SetInitialState(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
 }
 
 void Glacier::UpdateContent(double value, const string& type) {

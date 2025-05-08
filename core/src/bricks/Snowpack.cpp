@@ -47,6 +47,16 @@ void Snowpack::Finalize() {
     m_water->Finalize();
 }
 
+void Snowpack::SetInitialState(double value, const string& type) {
+    if (type == "water") {
+        m_water->SetInitialState(value);
+    } else if (type == "snow") {
+        m_snow->SetInitialState(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
+}
+
 void Snowpack::UpdateContent(double value, const string& type) {
     if (type == "water") {
         m_water->UpdateContent(value);

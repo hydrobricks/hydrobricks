@@ -138,7 +138,7 @@ class Brick : public wxObject {
   protected:
     string m_name;
     bool m_needsSolver;
-    WaterContainer* m_container;
+    WaterContainer* m_water;
     vector<Process*> m_processes;
 
   private:

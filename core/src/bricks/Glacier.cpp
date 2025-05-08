@@ -7,12 +7,12 @@ Glacier::Glacier()
 }
 
 void Glacier::Reset() {
-    m_container->Reset();
+    m_water->Reset();
     m_ice->Reset();
 }
 
 void Glacier::SaveAsInitialState() {
-    m_container->SaveAsInitialState();
+    m_water->SaveAsInitialState();
     m_ice->SaveAsInitialState();
 }
 
@@ -38,7 +38,7 @@ void Glacier::AttachFluxIn(Flux* flux) {
     if (flux->GetType() == "ice") {
         m_ice->AttachFluxIn(flux);
     } else if (flux->GetType() == "water") {
-        m_container->AttachFluxIn(flux);
+        m_water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
     }
@@ -57,22 +57,22 @@ WaterContainer* Glacier::GetIceContainer() {
 
 void Glacier::Finalize() {
     m_ice->Finalize();
-    m_container->Finalize();
+    m_water->Finalize();
 }
 
 void Glacier::UpdateContentFromInputs() {
     m_ice->AddAmountToDynamicContentChange(m_ice->SumIncomingFluxes());
-    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
+    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
 }
 
 void Glacier::ApplyConstraints(double timeStep) {
     m_ice->ApplyConstraints(timeStep);
-    m_container->ApplyConstraints(timeStep);
+    m_water->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Glacier::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_container->GetDynamicContentChanges()) {
+    for (auto const& var : m_water->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
     for (auto const& var : m_ice->GetDynamicContentChanges()) {

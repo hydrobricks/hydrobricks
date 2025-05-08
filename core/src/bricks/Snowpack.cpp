@@ -7,12 +7,12 @@ Snowpack::Snowpack()
 }
 
 void Snowpack::Reset() {
-    m_container->Reset();
+    m_water->Reset();
     m_snow->Reset();
 }
 
 void Snowpack::SaveAsInitialState() {
-    m_container->SaveAsInitialState();
+    m_water->SaveAsInitialState();
     m_snow->SaveAsInitialState();
 }
 
@@ -25,7 +25,7 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     if (flux->GetType() == "snow") {
         m_snow->AttachFluxIn(flux);
     } else if (flux->GetType() == "water") {
-        m_container->AttachFluxIn(flux);
+        m_water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
     }
@@ -44,22 +44,22 @@ WaterContainer* Snowpack::GetSnowContainer() {
 
 void Snowpack::Finalize() {
     m_snow->Finalize();
-    m_container->Finalize();
+    m_water->Finalize();
 }
 
 void Snowpack::UpdateContentFromInputs() {
     m_snow->AddAmountToStaticContentChange(m_snow->SumIncomingFluxes());
-    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
+    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {
     m_snow->ApplyConstraints(timeStep);
-    m_container->ApplyConstraints(timeStep);
+    m_water->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Snowpack::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_container->GetDynamicContentChanges()) {
+    for (auto const& var : m_water->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
     for (auto const& var : m_snow->GetDynamicContentChanges()) {

@@ -10,12 +10,12 @@
 
 Brick::Brick()
     : m_needsSolver(true),
-      m_container(nullptr) {
-    m_container = new WaterContainer(this);
+      m_water(nullptr) {
+    m_water = new WaterContainer(this);
 }
 
 Brick::~Brick() {
-    wxDELETE(m_container);
+    wxDELETE(m_water);
 }
 
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
@@ -39,14 +39,14 @@ Brick* Brick::Factory(const BrickSettings& brickSettings) {
 }
 
 void Brick::Reset() {
-    m_container->Reset();
+    m_water->Reset();
     for (auto process : m_processes) {
         process->Reset();
     }
 }
 
 void Brick::SaveAsInitialState() {
-    m_container->SaveAsInitialState();
+    m_water->SaveAsInitialState();
 }
 
 bool Brick::IsOk() {
@@ -59,18 +59,18 @@ bool Brick::IsOk() {
             return false;
         }
     }
-    return m_container->IsOk();
+    return m_water->IsOk();
 }
 
 void Brick::SetParameters(const BrickSettings& brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
-        m_container->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
+        m_water->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
 }
 
 void Brick::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    m_container->AttachFluxIn(flux);
+    m_water->AttachFluxIn(flux);
 }
 
 bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
@@ -103,23 +103,23 @@ Process* Brick::GetProcess(int index) {
 }
 
 void Brick::Finalize() {
-    m_container->Finalize();
+    m_water->Finalize();
 }
 
 void Brick::UpdateContentFromInputs() {
-    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
+    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    m_container->ApplyConstraints(timeStep);
+    m_water->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {
-    return m_container;
+    return m_water;
 }
 
 vecDoublePt Brick::GetDynamicContentChanges() {
-    return m_container->GetDynamicContentChanges();
+    return m_water->GetDynamicContentChanges();
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
@@ -149,8 +149,8 @@ int Brick::GetProcessesConnectionsNb() {
 }
 
 double* Brick::GetBaseValuePointer(const string& name) {
-    if (name == "content" && m_container) {
-        return m_container->GetContentPointer();
+    if (name == "content" && m_water) {
+        return m_water->GetContentPointer();
     }
 
     return nullptr;

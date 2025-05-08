@@ -19,7 +19,7 @@ class ModelBasics : public ::testing::Test {
         m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model1.AddHydroUnitBrick("storage", "storage");
         m_model1.AddBrickForcing("precipitation");
-        m_model1.AddBrickLogging("content");
+        m_model1.AddBrickLogging("water_content");
         m_model1.AddBrickProcess("outflow", "outflow:linear");
         m_model1.SetProcessParameterValue("response_factor", 0.3f);
         m_model1.AddProcessLogging("output");
@@ -32,13 +32,13 @@ class ModelBasics : public ::testing::Test {
         m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "day");
         m_model2.AddHydroUnitBrick("storage_1", "storage");
         m_model2.AddBrickForcing("precipitation");
-        m_model2.AddBrickLogging("content");
+        m_model2.AddBrickLogging("water_content");
         m_model2.AddBrickProcess("outflow", "outflow:linear");
         m_model2.SetProcessParameterValue("response_factor", 0.5f);
         m_model2.AddProcessLogging("output");
         m_model2.AddProcessOutput("storage_2");
         m_model2.AddHydroUnitBrick("storage_2", "storage");
-        m_model2.AddBrickLogging("content");
+        m_model2.AddBrickLogging("water_content");
         m_model2.AddBrickProcess("outflow", "outflow:linear");
         m_model2.SetProcessParameterValue("response_factor", 0.3f);
         m_model2.AddProcessLogging("output");

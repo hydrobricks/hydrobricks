@@ -62,7 +62,12 @@ void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     m_selectedBrick = &m_selectedStructure->hydroUnitBricks[m_selectedStructure->hydroUnitBricks.size() - 1];
 
     if (m_logAll) {
-        AddBrickLogging("content");
+        AddBrickLogging("water_content");
+        if (type == "glacier") {
+            AddBrickLogging("ice_content");
+        } else if (type == "snowpack") {
+            AddBrickLogging("snow_content");
+        }
     }
 }
 
@@ -77,7 +82,12 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
     m_selectedBrick = &m_selectedStructure->subBasinBricks[m_selectedStructure->subBasinBricks.size() - 1];
 
     if (m_logAll) {
-        AddBrickLogging("content");
+        AddBrickLogging("water_content");
+        if (type == "glacier") {
+            AddBrickLogging("ice_content");
+        } else if (type == "snowpack") {
+            AddBrickLogging("snow_content");
+        }
     }
 }
 
@@ -451,10 +461,6 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
         SetSurfaceComponentParent(brickSettings.name);
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
-
-        if (m_logAll) {
-            AddBrickLogging("snow");
-        }
     }
 }
 

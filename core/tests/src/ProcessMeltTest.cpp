@@ -20,7 +20,7 @@ class SnowpackModel : public ::testing::Test {
 
         // Snowpack brick
         m_model.AddHydroUnitBrick("snowpack", "snowpack");
-        m_model.AddBrickLogging({"content", "snow"});
+        m_model.AddBrickLogging({"water_content", "snow_content"});
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
@@ -147,7 +147,7 @@ class SnowpackModelWithAspect : public ::testing::Test {
 
         // Snowpack brick
         m_model.AddHydroUnitBrick("snowpack", "snowpack");
-        m_model.AddBrickLogging({"content", "snow"});
+        m_model.AddBrickLogging({"water_content", "snow_content"});
 
         // Snow melt process
         m_model.AddBrickProcess("melt", "melt:degree_day_aspect");

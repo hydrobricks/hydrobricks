@@ -168,7 +168,7 @@ int Brick::GetProcessesConnectionsNb() {
 }
 
 double* Brick::GetBaseValuePointer(const string& name) {
-    if (name == "content" && m_water) {
+    if ((name == "water" || name == "water_content") && m_water) {
         return m_water->GetContentPointer();
     }
 

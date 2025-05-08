@@ -104,7 +104,7 @@ vecDoublePt Glacier::GetDynamicContentChanges() {
 }
 
 double* Glacier::GetValuePointer(const string& name) {
-    if (name == "ice") {
+    if (name == "ice" || name == "ice_content") {
         return m_ice->GetContentPointer();
     }
 

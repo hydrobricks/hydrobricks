@@ -56,7 +56,7 @@ class SolverLinearStorage : public ::testing::Test {
         // Main storage
         m_model.AddHydroUnitBrick("storage", "storage");
         m_model.AddBrickForcing("precipitation");
-        m_model.AddBrickLogging("content");
+        m_model.AddBrickLogging("water_content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
         m_model.SetProcessParameterValue("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
@@ -201,7 +201,7 @@ class Solver2LinearStorages : public ::testing::Test {
         // First storage
         m_model.AddHydroUnitBrick("storage_1", "storage");
         m_model.AddBrickForcing("precipitation");
-        m_model.AddBrickLogging("content");
+        m_model.AddBrickLogging("water_content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
         m_model.SetProcessParameterValue("response_factor", 0.5f);
         m_model.AddProcessLogging("output");
@@ -209,7 +209,7 @@ class Solver2LinearStorages : public ::testing::Test {
 
         // Second storage
         m_model.AddHydroUnitBrick("storage_2", "storage");
-        m_model.AddBrickLogging("content");
+        m_model.AddBrickLogging("water_content");
         m_model.AddBrickProcess("outflow", "outflow:linear");
         m_model.SetProcessParameterValue("response_factor", 0.3f);
         m_model.AddProcessLogging("output");
@@ -361,7 +361,7 @@ class SolverLinearStorageWithET : public ::testing::Test {
         // Main storage
         m_model.AddHydroUnitBrick("storage", "storage");
         m_model.AddBrickForcing("precipitation");
-        m_model.AddBrickLogging("content");
+        m_model.AddBrickLogging("water_content");
         m_model.AddBrickParameter("capacity", 20);
 
         // Linear outflow process

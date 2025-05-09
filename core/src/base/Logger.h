@@ -57,6 +57,8 @@ class Logger : public wxObject {
 
     double GetTotalSnowStorageChanges();
 
+    double GetTotalGlacierStorageChanges();
+
     const vecAxd& GetSubBasinValues() {
         return m_subBasinValues;
     }

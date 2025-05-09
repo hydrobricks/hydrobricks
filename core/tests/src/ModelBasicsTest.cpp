@@ -180,6 +180,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("euler_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SelectProcess("outflow");
     settingsModel.SetProcessParameterValue("response_factor", 0.0f);
 
     model.Initialize(settingsModel, basinSettings);
@@ -215,6 +216,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("heun_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SelectProcess("outflow");
     settingsModel.SetProcessParameterValue("response_factor", 0.0f);
 
     model.Initialize(settingsModel, basinSettings);
@@ -250,6 +252,7 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
     SettingsModel settingsModel = m_model1;
     settingsModel.SetSolver("runge_kutta");
     settingsModel.SelectHydroUnitBrick("storage");
+    settingsModel.SelectProcess("outflow");
     settingsModel.SetProcessParameterValue("response_factor", 0.0f);
 
     model.Initialize(settingsModel, basinSettings);

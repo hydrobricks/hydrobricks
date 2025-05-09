@@ -320,6 +320,7 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 
         // Snow melt process
         m_model.SelectHydroUnitBrick("glacier_snowpack");
+        m_model.SelectProcess("melt");
         m_model.SetProcessParameterValue("degree_day_factor", 2.0f);
         m_model.AddProcessLogging("output");
 

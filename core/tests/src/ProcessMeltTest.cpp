@@ -244,6 +244,7 @@ class GlacierModel : public ::testing::Test {
 
         // Glacier melt process
         m_model.AddBrickProcess("melt", "melt:degree_day");
+        m_model.AddBrickParameter("infinite_storage", 1.0);
         m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
         m_model.SetProcessParameterValue("melting_temperature", 2.0f);
         m_model.AddProcessLogging("output");

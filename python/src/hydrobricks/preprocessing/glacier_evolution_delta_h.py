@@ -305,14 +305,14 @@ class GlacierEvolutionDeltaH:
             index=range(self.lookup_table_area.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
         lookup_table_area.to_csv(
-            output_dir / "glacier_evolution_lookup_table_area.csv")
+            output_dir / "glacier_evolution_lookup_table_area.csv", index=False)
 
         lookup_table_volume = pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
         lookup_table_volume.to_csv(
-            output_dir / "glacier_evolution_lookup_table_volume.csv")
+            output_dir / "glacier_evolution_lookup_table_volume.csv", index=False)
 
         if self.areas_perc is not None:
             details_glacier_areas = pd.DataFrame(
@@ -320,7 +320,7 @@ class GlacierEvolutionDeltaH:
                 index=range(self.areas_perc.shape[0]),
                 columns=range(len(self.areas_perc[0])))
             details_glacier_areas.to_csv(
-                output_dir / "details_glacier_areas_evolution.csv")
+                output_dir / "details_glacier_areas_evolution.csv", index=False)
 
         if self.we is not None:
             details_glacier_we = pd.DataFrame(
@@ -328,7 +328,7 @@ class GlacierEvolutionDeltaH:
                 index=range(self.we.shape[0]),
                 columns=range(len(self.we[0])))
             details_glacier_we.to_csv(
-                output_dir / "details_glacier_we_evolution.csv")
+                output_dir / "details_glacier_we_evolution.csv", index=False)
 
     def _initialization(self):
         """

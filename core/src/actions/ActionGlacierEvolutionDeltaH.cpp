@@ -6,13 +6,12 @@
 ActionGlacierEvolutionDeltaH::ActionGlacierEvolutionDeltaH() = default;
 
 void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
-                                                   const axi& increments, const axxd& areas, const axxd& volumes) {
+                                                   const axxd& areas, const axxd& volumes) {
     m_month = month;
     m_landCoverName = landCoverName;
     m_hydroUnitIds = hydroUnitIds;
-    m_increments = increments;
-    m_areas = areas;
-    m_volumes = volumes;
+    m_tableArea = areas;
+    m_tableVolume = volumes;
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {

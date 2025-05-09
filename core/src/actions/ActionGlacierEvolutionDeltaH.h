@@ -11,7 +11,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
     ~ActionGlacierEvolutionDeltaH() override = default;
 
     void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
-                                                       const axi& increments, const axxd& areas, const axxd& volumes);
+                                                       const axxd& areas, const axxd& volumes);
 
     bool Apply(double date) override;
 
@@ -27,25 +27,20 @@ class ActionGlacierEvolutionDeltaH : public Action {
         return m_hydroUnitIds;
     }
 
-    axi GetIncrements() {
-        return m_increments;
+    axxd GetLookupTableArea() {
+        return m_tableArea;
     }
 
-    axxd GetAreas() {
-        return m_areas;
-    }
-
-    axxd GetVolumes() {
-        return m_volumes;
+    axxd GetLookupTableVolume() {
+        return m_tableVolume;
     }
 
   protected:
     int m_month;
     string m_landCoverName;
     axi m_hydroUnitIds;
-    axi m_increments;
-    axxd m_areas;
-    axxd m_volumes;
+    axxd m_tableArea;
+    axxd m_tableVolume;
 };
 
 #endif  // HYDROBRICKS_ACTION_GLACIER_EVOLUTION_DELTA_H_H

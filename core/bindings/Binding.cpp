@@ -133,15 +133,15 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")
         .def(py::init<>())
         .def("add_lookup_tables", &ActionGlacierEvolutionDeltaH::AddLookupTables, "month_num"_a, "land_cover"_a,
-             "hu_ids"_a, "increments"_a, "areas"_a, "volumes"_a)
+             "hu_ids"_a, "areas"_a, "volumes"_a)
         .def("get_month", &ActionGlacierEvolutionDeltaH::GetMonth, "Get the month of the glacier update.")
         .def("get_land_cover_name", &ActionGlacierEvolutionDeltaH::GetLandCoverName,
              "Get the land cover name (glacier name).")
         .def("get_hydro_unit_ids", &ActionGlacierEvolutionDeltaH::GetHydroUnitIds,
              "Get the hydro unit ids of the glacier.")
-        .def("get_increments", &ActionGlacierEvolutionDeltaH::GetIncrements, "Get the increments of the lookup table.")
-        .def("get_areas", &ActionGlacierEvolutionDeltaH::GetAreas, "Get the area lookup table.")
-        .def("get_volumes", &ActionGlacierEvolutionDeltaH::GetVolumes, "Get the volumes lookup table.");
+        .def("get_lookup_table_area", &ActionGlacierEvolutionDeltaH::GetLookupTableArea, "Get the area lookup table.")
+        .def("get_lookup_table_volume", &ActionGlacierEvolutionDeltaH::GetLookupTableVolume,
+             "Get the volumes lookup table.");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

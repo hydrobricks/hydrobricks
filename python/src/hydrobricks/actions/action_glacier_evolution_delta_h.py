@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 import _hydrobricks as _hb
 import hydrobricks as hb
@@ -28,10 +29,9 @@ class ActionGlacierEvolutionDeltaH(Action):
         """
         Read the glacier evolution lookup table from a csv file. The file should
         contain the glacier area evolution (in m2) for each hydro unit and increment
-        (typically 100). The first column should contain the increments, starting from
-        0 for the initial condition to 100 for the complete glacier disappearance.
-        The first row should contain the hydro unit ids for the units containing
-        glaciers.
+        (typically 100). The first row should contain the hydro unit ids for the units
+        containing glaciers. There should be no index column in the file; the first
+        column should contain data.
 
         Parameters
         ----------
@@ -52,16 +52,16 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Example of a file (with areas in m2)
         -----------------
-        	2	    3	    4	    5	    6
-        0	2500.0	48125.0	34375.0	54375.0	65000.0
-        1	2125.2	44069.6	31544.8	51044.3	61726.6
-        2	1668.2	39600.1	28428.8	47478.1	58268.9
-        3	1024.3	34555.2	24914.0	43617.1	54591.8
-        4	0	    28628.9	20776.8	39371.4	50646.9
-        5	0	    21024.9	15298.5	34564.7	46342.8
-        6	0	    7906.0	7475.2	28921.9	41597.3
-        7	0	    0	    1231.4	21121.3	36034.0
-        8	0	    0	    0	    10242.1	28498.8
+        2	    3	    4	    5	    6
+        2500.0	48125.0	34375.0	54375.0	65000.0
+        2125.2	44069.6	31544.8	51044.3	61726.6
+        1668.2	39600.1	28428.8	47478.1	58268.9
+        1024.3	34555.2	24914.0	43617.1	54591.8
+        0	    28628.9	20776.8	39371.4	50646.9
+        0	    21024.9	15298.5	34564.7	46342.8
+        0	    7906.0	7475.2	28921.9	41597.3
+        0	    0	    1231.4	21121.3	36034.0
+        0	    0	    0	    10242.1	28498.8
         """
         if isinstance(dir_path, str):
             dir_path = Path(dir_path)
@@ -74,8 +74,8 @@ class ActionGlacierEvolutionDeltaH(Action):
         self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
                                         land_cover, update_month)
 
-    def get_from_object(self, obj: GlacierEvolutionDeltaH, land_cover='glacier',
-                        update_month='October'):
+    def load_from(self, obj: GlacierEvolutionDeltaH, land_cover='glacier',
+                  update_month='October'):
         """
         Get the glacier evolution lookup table from the GlacierEvolutionDeltaH
         instance.
@@ -100,6 +100,61 @@ class ActionGlacierEvolutionDeltaH(Action):
         self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
                                         land_cover, update_month)
 
+    def get_month(self):
+        """
+        Get the month to apply the changes.
+
+        Returns
+        -------
+        int
+            The month to apply the changes.
+        """
+        return self.action.get_month()
+
+    def get_land_cover_name(self):
+        """
+        Get the land cover name (glacier name) to apply the changes.
+
+        Returns
+        -------
+        str
+            The land cover name (glacier name) to apply the changes.
+        """
+        return self.action.get_land_cover_name()
+
+    def get_hydro_unit_ids(self):
+        """
+        Get the lookup table hydro unit ids.
+
+        Returns
+        -------
+        np.ndarray
+            The lookup table hydro unit ids.
+        """
+        return self.action.get_hydro_unit_ids()
+
+    def get_lookup_table_area(self):
+        """
+        Get the lookup table areas.
+
+        Returns
+        -------
+        np.ndarray
+            The lookup table areas.
+        """
+        return self.action.get_lookup_table_area()
+
+    def get_lookup_table_volume(self):
+        """
+        Get the lookup table volumes.
+
+        Returns
+        -------
+        np.ndarray
+            The lookup table volumes.
+        """
+        return self.action.get_lookup_table_volume()
+
     def _populate_bounded_instance(self, lookup_table_area, lookup_table_volume,
                                    land_cover, update_month):
 
@@ -121,20 +176,18 @@ class ActionGlacierEvolutionDeltaH(Action):
             raise ValueError("Month must be a string or an integer.")
 
         # Get the hydro unit ids from the first row
-        hu_ids = lookup_table_area.columns[1:].astype(int).values
-        assert lookup_table_volume.columns[1:].astype(int).values == hu_ids, \
+        hu_ids = lookup_table_area.columns.astype(int).values
+        hu_ids_volume = lookup_table_volume.columns.astype(int).values
+        assert np.array_equal(hu_ids, hu_ids_volume), \
             "The hydro unit ids in the area and volume tables do not match."
 
-        # Get the increments from the first column
-        increments = lookup_table_area.iloc[:, 0].astype(float).values
-        assert lookup_table_volume.iloc[:, 0].astype(float).values == increments, \
-            "The increments in the area and volume tables do not match."
-
         # Get the areas from the rest of the table
-        areas = lookup_table_area.iloc[:, 1:].astype(float).values
+        areas = lookup_table_area.astype(float).values
 
         # Get the volumes from the rest of the table
-        volumes = lookup_table_volume.iloc[:, 1:].astype(float).values
+        volumes = lookup_table_volume.astype(float).values
 
-        self.action.add_lookup_tables(month_num, land_cover, hu_ids, increments,
-                                      areas, volumes)
+        assert areas.shape == volumes.shape, \
+            "The areas and volumes tables do not have the same shape."
+
+        self.action.add_lookup_tables(month_num, land_cover, hu_ids, areas, volumes)

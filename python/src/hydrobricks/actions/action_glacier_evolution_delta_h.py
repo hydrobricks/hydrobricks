@@ -22,7 +22,8 @@ class ActionGlacierEvolutionDeltaH(Action):
         self.action = _hb.ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(self, dir_path, land_cover='glacier',
-                      file_name='glacier_evolution_lookup_table.csv',
+                      filename_area='glacier_evolution_lookup_table_area.csv',
+                      filename_volume='glacier_evolution_lookup_table_volume.csv',
                       update_month='October'):
         """
         Read the glacier evolution lookup table from a csv file. The file should
@@ -38,12 +39,16 @@ class ActionGlacierEvolutionDeltaH(Action):
             Path to the directory containing the lookup table.
         land_cover : str
             The land cover name to apply the changes. Default is 'glacier'.
-        file_name : str
-            Name of the lookup table file. Default is
-            'glacier_evolution_lookup_table.csv'.
-        update_month : str
-            The month to apply the changes. Default is 'October'. The update will
-            be applied at the beginning of the month, every year.
+        filename_area : str
+            Name of the lookup table file for the glacier area. Default is
+            'glacier_evolution_lookup_table_area.csv'.
+        filename_volume : str
+            Name of the lookup table file for the glacier volume. Default is
+            'glacier_evolution_lookup_table_volume.csv'.
+        update_month : str|int
+            The month to apply the changes. Full english name or number (1-12).
+            The update will be applied at the beginning of the month, every year.
+            Default is 'October'.
 
         Example of a file (with areas in m2)
         -----------------
@@ -60,11 +65,14 @@ class ActionGlacierEvolutionDeltaH(Action):
         """
         if isinstance(dir_path, str):
             dir_path = Path(dir_path)
-        full_path = dir_path / file_name
+        full_path_area = dir_path / filename_area
+        full_path_volume = dir_path / filename_volume
 
-        lookup_table = pd.read_csv(full_path)
+        lookup_table_area = pd.read_csv(full_path_area)
+        lookup_table_volume = pd.read_csv(full_path_volume)
 
-        self._populate_bounded_instance(lookup_table, land_cover, update_month)
+        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
+                                        land_cover, update_month)
 
     def get_from_object(self, obj: GlacierEvolutionDeltaH, land_cover='glacier',
                         update_month='October'):
@@ -78,35 +86,55 @@ class ActionGlacierEvolutionDeltaH(Action):
             The GlacierEvolutionDeltaH instance.
         land_cover : str
             The land cover name to apply the changes. Default is 'glacier'.
-        update_month : str
-            The month to apply the changes (full English name). Default is 'October'.
+        update_month : str|int
+            The month to apply the changes. Full english name or number (1-12).
             The update will be applied at the beginning of the month, every year.
+            Default is 'October'.
         """
         if not isinstance(obj, GlacierEvolutionDeltaH):
             raise ValueError("The object is not a GlacierEvolutionDeltaH instance.")
 
-        lookup_table = obj.get_lookup_table()
-        self._populate_bounded_instance(lookup_table, land_cover, update_month)
+        lookup_table_area = obj.get_lookup_table_area()
+        lookup_table_volume = obj.get_lookup_table_volume()
 
-    def _populate_bounded_instance(self, lookup_table, land_cover, update_month):
+        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
+                                        land_cover, update_month)
+
+    def _populate_bounded_instance(self, lookup_table_area, lookup_table_volume,
+                                   land_cover, update_month):
 
         # Convert the month name to a number
-        month_mapping = {
-            'January': 1, 'February': 2, 'March': 3, 'April': 4,
-            'May': 5, 'June': 6, 'July': 7, 'August': 8,
-            'September': 9, 'October': 10, 'November': 11, 'December': 12
-        }
-        month_num = month_mapping.get(update_month, None)
-        if month_num is None:
-            raise ValueError(f"Invalid month name: {update_month}")
+        if isinstance(update_month, int):
+            if update_month < 1 or update_month > 12:
+                raise ValueError("Month number must be between 1 and 12.")
+            month_num = update_month
+        elif isinstance(update_month, str):
+            month_mapping = {
+                'January': 1, 'February': 2, 'March': 3, 'April': 4,
+                'May': 5, 'June': 6, 'July': 7, 'August': 8,
+                'September': 9, 'October': 10, 'November': 11, 'December': 12
+            }
+            month_num = month_mapping.get(update_month, None)
+            if month_num is None:
+                raise ValueError(f"Invalid month name: {update_month}")
+        else:
+            raise ValueError("Month must be a string or an integer.")
 
         # Get the hydro unit ids from the first row
-        hu_ids = lookup_table.columns[1:].astype(int).values
+        hu_ids = lookup_table_area.columns[1:].astype(int).values
+        assert lookup_table_volume.columns[1:].astype(int).values == hu_ids, \
+            "The hydro unit ids in the area and volume tables do not match."
 
         # Get the increments from the first column
-        increments = lookup_table.iloc[:, 0].astype(float).values
+        increments = lookup_table_area.iloc[:, 0].astype(float).values
+        assert lookup_table_volume.iloc[:, 0].astype(float).values == increments, \
+            "The increments in the area and volume tables do not match."
 
         # Get the areas from the rest of the table
-        areas = lookup_table.iloc[:, 1:].astype(float).values
+        areas = lookup_table_area.iloc[:, 1:].astype(float).values
 
-        self.action.add_change(month_num, land_cover, hu_ids, increments, areas)
+        # Get the volumes from the rest of the table
+        volumes = lookup_table_volume.iloc[:, 1:].astype(float).values
+
+        self.action.add_lookup_tables(month_num, land_cover, hu_ids, increments,
+                                      areas, volumes)

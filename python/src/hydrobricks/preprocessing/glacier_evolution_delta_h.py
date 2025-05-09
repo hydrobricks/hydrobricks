@@ -95,19 +95,19 @@ class GlacierEvolutionDeltaH:
             catchment, map_bands_ids, glacier_outline)
 
         # Create the dataframe for the glacier data
-        glacier_df = pd.DataFrame(
-            columns=[('band_id', '-'),
-                     ('elevation', 'm'),
-                     ('glacier_area', 'm2'),
-                     ('glacier_thickness', 'm'),
-                     ('hydro_unit_id', '-')])
-
-        # Append the data to the dataframe
+        glacier_df = None
         for band_id, unit_id, area in glacier_patches:
             new_row = pd.DataFrame(
                 [[band_id, elevations[band_id - 1], area, 0.0, unit_id]],
-                columns=glacier_df.columns)
-            glacier_df = pd.concat([glacier_df, new_row], ignore_index=True)
+                columns=[('band_id', '-'),
+                         ('elevation', 'm'),
+                         ('glacier_area', 'm2'),
+                         ('glacier_thickness', 'm'),
+                         ('hydro_unit_id', '-')])
+            if glacier_df is None:
+                glacier_df = new_row
+            else:
+                glacier_df = pd.concat([glacier_df, new_row], ignore_index=True)
 
         # Extract the ice thickness from a TIF file created either from geophysical
         # measurements or calculated based on an inversion of surface topography
@@ -260,18 +260,32 @@ class GlacierEvolutionDeltaH:
 
         self._update_lookup_tables()
 
-    def get_lookup_table(self):
+    def get_lookup_table_area(self):
         """
-        Get the glacier evolution lookup table.
+        Get the glacier area evolution lookup table.
 
         Returns
         -------
         pd.DataFrame
-            The glacier evolution lookup table.
+            The glacier area evolution lookup table.
         """
         return pd.DataFrame(
-            self.lookup_table,
-            index=range(self.lookup_table.shape[0]),
+            self.lookup_table_area,
+            index=range(self.lookup_table_area.shape[0]),
+            columns=np.unique(self.hydro_unit_ids))
+
+    def get_lookup_table_volume(self):
+        """
+        Get the glacier volume evolution lookup table.
+
+        Returns
+        -------
+        pd.DataFrame
+            The glacier volume evolution lookup table.
+        """
+        return pd.DataFrame(
+            self.lookup_table_volume,
+            index=range(self.lookup_table_volume.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
 
     def save_as_csv(self, output_dir):
@@ -416,25 +430,25 @@ class GlacierEvolutionDeltaH:
         # Width scaling (Eq. 7)
         if update_width:
             if update_width_reference == 'previous':
-                mask = self.we[increment - 1] > 0
-                self.areas_perc[increment, mask] = (
-                        self.areas_perc[increment - 1, mask] * np.power(
-                    self.we[increment, mask] / self.we[increment - 1, mask], 0.5))
+                pos_we = self.we[increment - 1] > 0
+                self.areas_perc[increment, pos_we] = (
+                        self.areas_perc[increment - 1, pos_we] * np.power(
+                    self.we[increment, pos_we] / self.we[increment - 1, pos_we], 0.5))
 
             elif update_width_reference == 'initial':
-                mask = self.we[0] > 0
-                self.areas_perc[increment, mask] = (
-                        self.areas_perc[0, mask] * np.power(
-                    self.we[increment, mask] / self.we[0, mask], 0.5))
+                pos_we = self.we[0] > 0
+                self.areas_perc[increment, pos_we] = (
+                        self.areas_perc[0, pos_we] * np.power(
+                    self.we[increment, pos_we] / self.we[0, pos_we], 0.5))
 
             else:
                 raise ValueError("update_width_reference should be either 'previous' "
                                  "or 'initial'.")
 
             # Conservation of the w.e.
-            mask = self.we[increment] > 0
-            self.we[increment, mask] *= (self.areas_perc[increment - 1, mask] /
-                                         self.areas_perc[increment, mask])
+            pos_we = self.we[increment] > 0
+            self.we[increment, pos_we] *= (self.areas_perc[increment - 1, pos_we] /
+                                         self.areas_perc[increment, pos_we])
         else:
             # If the glacier width is not updated, keep the previous glacier area.
             self.areas_perc[increment] = self.areas_perc[increment - 1]
@@ -449,15 +463,15 @@ class GlacierEvolutionDeltaH:
         """
         # Width scaling (Eq. 7)
         for i in range(1, len(self.we)):
-            mask = self.we[0] > 0
-            self.areas_perc[i, mask] = (
-                    self.areas_perc[0, mask] * np.power(
-                self.we[i, mask] / self.we[0, mask], 0.5))
+            pos_we = self.we[0] > 0
+            self.areas_perc[i, pos_we] = (
+                    self.areas_perc[0, pos_we] * np.power(
+                self.we[i, pos_we] / self.we[0, pos_we], 0.5))
 
             # Conservation of the w.e.
-            mask = self.we[i] > 0
-            self.we[i, mask] *= (self.areas_perc[0, mask] /
-                                 self.areas_perc[i, mask])
+            pos_we = self.we[i] > 0
+            self.we[i, pos_we] *= (self.areas_perc[0, pos_we] /
+                                 self.areas_perc[i, pos_we])
 
     def _update_lookup_tables(self):
         """

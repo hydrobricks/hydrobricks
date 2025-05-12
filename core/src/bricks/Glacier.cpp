@@ -19,7 +19,7 @@ void Glacier::SaveAsInitialState() {
 void Glacier::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
-        if (GetParameterValuePointer(brickSettings, "infinite_storage")) {
+        if (*GetParameterValuePointer(brickSettings, "infinite_storage")) {
             m_ice->SetAsInfiniteStorage();
         }
     }

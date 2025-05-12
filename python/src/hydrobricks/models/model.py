@@ -198,7 +198,7 @@ class Model(ABC):
 
     def add_action(self, action) -> bool:
         """
-        Add a action to the model.
+        Add an action to the model.
 
         Parameters
         ----------

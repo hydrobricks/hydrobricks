@@ -117,6 +117,14 @@ void Brick::SetInitialState(double value, const string& type) {
     }
 }
 
+double Brick::GetContent(const string& type) {
+    if (type == "water") {
+        return m_water->GetContentWithoutChanges();
+    }
+
+    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
+}
+
 void Brick::UpdateContent(double value, const string& type) {
     if (type == "water") {
         m_water->UpdateContent(value);

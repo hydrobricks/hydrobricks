@@ -13,6 +13,8 @@ class ActionGlacierEvolutionDeltaH : public Action {
     void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
                                                        const axxd& areas, const axxd& volumes);
 
+    bool ActionGlacierEvolutionDeltaH::Init();
+
     bool Apply() override;
 
     string GetLandCoverName() {
@@ -32,10 +34,12 @@ class ActionGlacierEvolutionDeltaH : public Action {
     }
 
   protected:
+    int m_lastRow{0};
     string m_landCoverName;
     axi m_hydroUnitIds;
     axxd m_tableArea;
     axxd m_tableVolume;
+    double m_initialGlacierWE{0.0};
 };
 
 #endif  // HYDROBRICKS_ACTION_GLACIER_EVOLUTION_DELTA_H_H

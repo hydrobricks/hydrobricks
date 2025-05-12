@@ -67,6 +67,17 @@ void Glacier::SetInitialState(double value, const string& type) {
     }
 }
 
+double Glacier::GetContent(const string& type) {
+    if (type == "water") {
+        return m_water->GetContentWithoutChanges();
+    }
+    if (type == "ice") {
+        return m_ice->GetContentWithoutChanges();
+    }
+
+    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+}
+
 void Glacier::UpdateContent(double value, const string& type) {
     if (type == "water") {
         m_water->UpdateContent(value);

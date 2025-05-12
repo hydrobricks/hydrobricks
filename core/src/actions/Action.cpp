@@ -7,6 +7,10 @@ Action::Action()
       m_cursor(0),
       m_recursive(false) {}
 
+bool Action::Init() {
+    return true;
+}
+
 bool Action::Apply() {
     return false;
 }
@@ -28,6 +32,8 @@ bool Action::ApplyIfRecursive(const Time date) {
             return Apply();
         }
     }
+
+    return true;
 }
 
 void Action::Reset() {

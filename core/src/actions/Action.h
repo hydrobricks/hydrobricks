@@ -12,6 +12,8 @@ class Action : public wxObject {
 
     void Reset();
 
+    bool virtual Init();
+
     bool virtual Apply();
 
     bool virtual Apply(double date);

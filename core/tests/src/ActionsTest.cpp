@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "ActionGlacierEvolutionDeltaH.h"
 #include "ActionLandCoverChange.h"
 #include "ModelHydro.h"
 #include "SettingsModel.h"
@@ -21,7 +22,7 @@ class ActionsInModel : public ::testing::Test {
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage", false);
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
@@ -85,6 +86,76 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f);
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f);
     EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f);
+}
+
+TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
+    // Change the model settings to cover a larger time period
+    m_model.SetTimer("2000-01-01", "2020-12-31", 1, "day");
+    int nbTimeSteps = GetMJD(2020, 12, 31) - GetMJD(2000, 1, 1) + 1;
+
+    auto precip = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    vecDouble valuesPrecip(nbTimeSteps, 0.0);
+    precip->SetValues(valuesPrecip);
+    m_tsPrecip->SetData(precip);
+
+    auto temperature = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    vecDouble valuesTemp(nbTimeSteps, 2.0);
+    temperature->SetValues(valuesTemp);
+    m_tsTemp->SetData(temperature);
+
+    auto pet = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    vecDouble valuesPet(nbTimeSteps, 0.0);
+    pet->SetValues(valuesPet);
+    m_tsPet->SetData(pet);
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 10000);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+    basinSettings.AddHydroUnit(2, 10000);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+    basinSettings.AddHydroUnit(3, 10000);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    ActionGlacierEvolutionDeltaH action;
+    axi hydroUnitIds(3);
+    hydroUnitIds << 1, 2, 3;
+    axxd areas = axxd::Zero(4, 3);
+    areas << 5000, 5000, 5000,
+             2000, 3000, 4000,
+              0,   1000, 2000,
+              0,      0,    0;
+    axxd volumes = axxd::Zero(4, 3);
+    volumes << 50000, 50000, 50000,
+               10000, 35000, 40000,
+                 0,    5000, 10000,
+                 0,       0,     0;
+    action.AddLookupTables(10, "glacier", hydroUnitIds, areas, volumes);
+
+    EXPECT_TRUE(model.AddAction(&action));
+
+    EXPECT_EQ(model.GetActionsNb(), 1);
+
+    EXPECT_TRUE(model.Run());
+
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
 }
 
 class ActionsInModel2LandCovers : public ::testing::Test {
@@ -226,7 +297,7 @@ TEST_F(ActionsInModel2LandCovers, DatesGetSortedCorrectly) {
 
     EXPECT_TRUE(model.AddAction(&action));
 
-    vecDouble dates = model.GetActionsManager()->GetDates();
+    vecDouble dates = model.GetActionsManager()->GetSporadicActionDates();
 
     for (int i = 0; i < dates.size() - 1; ++i) {
         EXPECT_TRUE(dates[i] <= dates[i + 1]);

@@ -32,6 +32,8 @@ class Snowpack : public SurfaceComponent {
 
     void SetInitialState(double value, const string& type) override;
 
+    double GetContent(const string& type) override;
+
     void UpdateContent(double value, const string& type) override;
 
     void UpdateContentFromInputs() override;

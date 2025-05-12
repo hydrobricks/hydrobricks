@@ -57,6 +57,17 @@ void Snowpack::SetInitialState(double value, const string& type) {
     }
 }
 
+double Snowpack::GetContent(const string& type) {
+    if (type == "water") {
+        return m_water->GetContentWithoutChanges();
+    }
+    if (type == "snow") {
+        return m_snow->GetContentWithoutChanges();
+    }
+
+    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+}
+
 void Snowpack::UpdateContent(double value, const string& type) {
     if (type == "water") {
         m_water->UpdateContent(value);

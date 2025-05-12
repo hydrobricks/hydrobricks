@@ -21,6 +21,10 @@ void ActionsManager::Reset() {
 bool ActionsManager::AddAction(Action* action) {
     wxASSERT(action);
     action->SetManager(this);
+    if (!action->Init()) {
+        wxLogError(_("Action initialization failed."));
+        return false;
+    }
 
     int actionIndex = static_cast<int>(m_actions.size());
     m_actions.push_back(action);

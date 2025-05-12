@@ -411,14 +411,18 @@ class Model(ABC):
     def _set_structure_basics(self):
         with_snow = True
         snow_melt_process = 'melt:degree_day'
+        snow_ice_transformation = False
         if 'with_snow' in self.options:
             with_snow = self.options['with_snow']
         if 'snow_melt_process' in self.options:
             with_snow = True
             snow_melt_process = self.options['snow_melt_process']
+        if 'snow_ice_transformation' in self.options:
+            snow_ice_transformation = True
         self.settings.generate_base_structure(
             self.land_cover_names, self.land_cover_types, with_snow=with_snow,
-            snow_melt_process=snow_melt_process)
+            snow_melt_process=snow_melt_process,
+            snow_ice_transformation=snow_ice_transformation)
 
     def _set_structure_brick(self, brick, key):
         if brick['kind'] == 'land_cover':

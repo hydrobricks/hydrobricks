@@ -27,7 +27,7 @@ class SnowIceModel : public ::testing::Test {
         m_model.AddLandCoverBrick("glacier", "glacier");
 
         // Snowpacks
-        m_model.GenerateSnowpacks("melt:degree_day");
+        m_model.GenerateSnowpacks("melt:degree_day", true);
         m_model.SelectHydroUnitBrick("glacier_snowpack");
         m_model.SelectProcess("melt");
         m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
@@ -42,11 +42,6 @@ class SnowIceModel : public ::testing::Test {
         m_model.AddBrickProcess("melt", "melt:degree_day", "glacier:water");
         m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
         m_model.SetProcessParameterValue("melting_temperature", 2.0f);
-
-        // Add transformation of snow to ice
-        m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.AddBrickProcess("snow_ice_transfo", "transform:snow_ice", "glacier:ice");
-        m_model.SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
 
         // Add process to direct meltwater to the outlet
         m_model.SelectHydroUnitBrick("ground_snowpack");

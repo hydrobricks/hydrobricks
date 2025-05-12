@@ -133,7 +133,7 @@ class SettingsModel : public wxObject {
 
     void GeneratePrecipitationSplitters(bool withSnow);
 
-    void GenerateSnowpacks(const string& snowMeltProcess);
+    void GenerateSnowpacks(const string& snowMeltProcess, bool snowIceTransformation = false);
 
     void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
 

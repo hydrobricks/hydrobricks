@@ -735,6 +735,13 @@ class ParameterSet:
                         f"The snow melt process option "
                         f"{options['snow_melt_process']} is not recognised.")
 
+            if 'snow_ice_transformation' in options:
+                if options['snow_ice_transformation']:
+                    self.define_parameter(
+                        component='type:snowpack', name='snow_ice_transformation_rate',
+                        unit='mm/d', aliases=['snow_ice_rate'], min_value=0,
+                        max_value=0.005, default_value=0.002, mandatory=True)
+
     @staticmethod
     def _check_min_max_consistency(min_value, max_value):
         if min_value is None or max_value is None:

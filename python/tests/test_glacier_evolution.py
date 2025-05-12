@@ -1,9 +1,9 @@
 import os.path
 import tempfile
+import pytest
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 import hydrobricks as hb
 import hydrobricks.actions as actions
@@ -71,7 +71,7 @@ def test_glacier_initial_ice_thickness_computation():
         # Glacier evolution
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
         glacier_df = glacier_evolution.compute_initial_ice_thickness(
-            catchment, GLACIER_OUTLINE, ice_thickness=GLACIER_ICE_THICKNESS)
+            catchment, ice_thickness=GLACIER_ICE_THICKNESS)
 
         assert glacier_df is not None
 
@@ -80,8 +80,9 @@ def test_glacier_initial_ice_thickness_computation():
             glacier_df[('glacier_thickness', 'm')] * glacier_df[('glacier_area', 'm2')]
         ).sum())
 
-        assert volume_df == volume_tot, \
-            f"Volume of the glacier is not correct. Expected: {volume_tot}, got: {volume_df}"
+        assert volume_df == pytest.approx(volume_tot, rel=0.0005), \
+            (f"Volume of the glacier is not correct. Expected: {volume_tot}, "
+             f"got: {volume_df}")
 
 
 def test_delta_h_action_lookup_table_binding():

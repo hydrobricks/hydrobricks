@@ -62,7 +62,7 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
 
-    def compute_initial_ice_thickness(self, catchment, glacier_outline,
+    def compute_initial_ice_thickness(self, catchment, glacier_outline=None,
                                       ice_thickness=None, elevation_bands_distance=10):
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -74,11 +74,13 @@ class GlacierEvolutionDeltaH:
             The catchment object.
         glacier_outline : str
             Path to the SHP file containing the glacier extents.
+            If None, the glacier extents are extracted from the ice thickness geotiff.
+            Either this or ice_thickness should be provided.
         ice_thickness : str
             Path to the TIF file containing the glacier thickness.
             If None, the ice thickness is estimated based on the glacier area
             using the Bahr et al. (1997) formula.
-            Default is None.
+            Either this or glacier_outline should be provided.
         elevation_bands_distance : int
             Distance between elevation bands in meters. Default is 10 m.
 
@@ -86,13 +88,41 @@ class GlacierEvolutionDeltaH:
         -------
         The glacier_df DataFrame containing the glacier data.
         """
+        if glacier_outline is None and ice_thickness is None:
+            raise ValueError("Either glacier_outline or ice_thickness "
+                             "should be provided.")
+
+        if glacier_outline is not None and ice_thickness is not None:
+            raise ValueError("Either glacier_outline or ice_thickness "
+                             "should be provided, not both.")
+
         # Discretize the DEM into elevation bands at the given distance
         elevations, map_bands_ids = self._discretize_elevation_bands(
             catchment, elevation_bands_distance)
 
-        # Extract the glacier cover from the shapefile
-        glacier_patches = self._extract_glacier_cover(
-            catchment, map_bands_ids, glacier_outline)
+        # Extract the ice thickness from a TIF file created either from geophysical
+        # measurements or calculated based on an inversion of surface topography
+        # (Farinotti et al., 2009a,b; Huss et al., 2010)).
+        if ice_thickness is not None:
+            if not hb.has_pyproj:
+                raise ImportError("pyproj is required to do this.")
+
+            # Extract the ice thickness and resample it to the DEM resolution
+            catchment.extract_attribute_raster(
+                ice_thickness, 'ice_thickness', resample_to_dem_resolution=True,
+                resampling='average')
+            ice_thickness = catchment.attributes['ice_thickness']['data']
+            ice_thickness[catchment.dem_data == 0] = 0.0
+
+            glaciers_mask = np.zeros(catchment.dem_data.shape)
+            glaciers_mask[ice_thickness > 0] = 1
+        else:
+            # Extract the glacier cover from the shapefile
+            glaciers_mask = self._extract_glacier_mask_from_shapefile(
+                catchment, glacier_outline)
+
+        glacier_patches = self._get_glacier_patches(catchment, map_bands_ids,
+                                                    glaciers_mask)
 
         # Create the dataframe for the glacier data
         glacier_df = None
@@ -112,16 +142,7 @@ class GlacierEvolutionDeltaH:
         # Extract the ice thickness from a TIF file created either from geophysical
         # measurements or calculated based on an inversion of surface topography
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
-        if ice_thickness:
-            if not hb.has_pyproj:
-                raise ImportError("pyproj is required to do this.")
-
-            # Extract the ice thickness and resample it to the DEM resolution
-            catchment.extract_attribute_raster(
-                ice_thickness, 'ice_thickness', resample_to_dem_resolution=True,
-                resampling='average')
-            ice_thickness = catchment.attributes['ice_thickness']['data']
-
+        if ice_thickness is not None:
             # Update the dataframe with the ice thickness
             for i, row in glacier_df.iterrows():
                 band_id = row[('band_id', '-')]
@@ -135,7 +156,7 @@ class GlacierEvolutionDeltaH:
 
                 # Compute the mean thickness
                 if masked_thickness.size > 0 and not np.isnan(masked_thickness).all():
-                    mean_thickness = round(float(np.nanmean(masked_thickness)), 2)
+                    mean_thickness = round(float(np.nanmean(masked_thickness)), 3)
                 else:
                     mean_thickness = 0.0
 
@@ -532,7 +553,7 @@ class GlacierEvolutionDeltaH:
 
         return elevations, map_bands_ids
 
-    def _extract_glacier_cover(self, catchment, map_bands_ids, glacier_outline):
+    def _extract_glacier_mask_from_shapefile(self, catchment, glacier_outline):
         """ Extract the glacier cover from shapefiles."""
         # Clip the glaciers to the catchment extent
         all_glaciers = hb.gpd.read_file(glacier_outline)
@@ -545,11 +566,16 @@ class GlacierEvolutionDeltaH:
             raise ValueError("The catchment outline must be a (multi)polygon.")
         glaciers = self._simplify_df_geometries(glaciers)
 
+        # Get the glacier mask
+        glaciers_mask = self._mask_dem(catchment, glaciers, -9999)
+
+        return glaciers_mask
+
+    @staticmethod
+    def _get_glacier_patches(catchment, map_bands_ids, glaciers_mask):
         # Extract the pixel size
         px_area = catchment.get_dem_pixel_area()
 
-        # Get the glacier mask
-        glaciers_mask = self._mask_dem(catchment, glaciers, -9999)
         map_bands_ids = np.where(glaciers_mask > 0, map_bands_ids, 0)
 
         band_ids = np.unique(map_bands_ids)
@@ -575,7 +601,7 @@ class GlacierEvolutionDeltaH:
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
-        dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=False)
+        dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=True)
         dem_masked[dem_masked == catchment.dem.nodata] = nodata
         if len(dem_masked.shape) == 3:
             dem_masked = dem_masked[0]

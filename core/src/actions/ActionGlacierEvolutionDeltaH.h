@@ -13,11 +13,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
     void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
                                                        const axxd& areas, const axxd& volumes);
 
-    bool Apply(double date) override;
-
-    int GetMonth() {
-        return m_month;
-    }
+    bool Apply() override;
 
     string GetLandCoverName() {
         return m_landCoverName;
@@ -36,7 +32,6 @@ class ActionGlacierEvolutionDeltaH : public Action {
     }
 
   protected:
-    int m_month;
     string m_landCoverName;
     axi m_hydroUnitIds;
     axxd m_tableArea;

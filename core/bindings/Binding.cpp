@@ -99,7 +99,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_actions_nb", &ModelHydro::GetActionsNb, "Get the number of actions.")
-        .def("get_action_items_nb", &ModelHydro::GetActionItemsNb, "Get the number of action items.")
+        .def("get_sporadic_action_items_nb", &ModelHydro::GetSporadicActionItemsNb, "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -134,7 +134,6 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("add_lookup_tables", &ActionGlacierEvolutionDeltaH::AddLookupTables, "month_num"_a, "land_cover"_a,
              "hu_ids"_a, "areas"_a, "volumes"_a)
-        .def("get_month", &ActionGlacierEvolutionDeltaH::GetMonth, "Get the month of the glacier update.")
         .def("get_land_cover_name", &ActionGlacierEvolutionDeltaH::GetLandCoverName,
              "Get the land cover name (glacier name).")
         .def("get_hydro_unit_ids", &ActionGlacierEvolutionDeltaH::GetHydroUnitIds,

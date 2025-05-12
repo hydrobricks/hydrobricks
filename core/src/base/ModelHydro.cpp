@@ -888,8 +888,8 @@ int ModelHydro::GetActionsNb() {
     return m_actionsManager.GetActionsNb();
 }
 
-int ModelHydro::GetActionItemsNb() {
-    return m_actionsManager.GetActionItemsNb();
+int ModelHydro::GetSporadicActionItemsNb() {
+    return m_actionsManager.GetSporadicActionItemsNb();
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {

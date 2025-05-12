@@ -25,23 +25,23 @@ class ActionsManager : public wxObject {
 
     int GetActionsNb();
 
-    int GetActionItemsNb();
+    int GetSporadicActionItemsNb();
 
     void DateUpdate(double date);
 
     HydroUnit* GetHydroUnitById(int id);
 
-    vecDouble GetDates() {
-        return m_dates;
+    vecDouble GetSporadicActionDates() {
+        return m_sporadicActionDates;
     }
 
   protected:
-    bool m_active;
     ModelHydro* m_model;
     int m_cursorManager;
     vector<Action*> m_actions;
-    vecDouble m_dates;
-    vecInt m_actionIndices;
+    vecDouble m_sporadicActionDates;
+    vecInt m_sporadicActionIndices;
+    vecInt m_recursiveActionIndices;
 
   private:
 };

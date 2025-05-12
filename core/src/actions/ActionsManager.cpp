@@ -1,10 +1,10 @@
 #include "Action.h"
 #include "ActionsManager.h"
 #include "ModelHydro.h"
+#include "Utils.h"
 
 ActionsManager::ActionsManager()
-    : m_active(false),
-      m_model(nullptr),
+    : m_model(nullptr),
       m_cursorManager(0) {}
 
 void ActionsManager::SetModel(ModelHydro* model) {
@@ -25,26 +25,29 @@ bool ActionsManager::AddAction(Action* action) {
     int actionIndex = static_cast<int>(m_actions.size());
     m_actions.push_back(action);
 
-    int index = 0;
-    for (auto date : action->GetDates()) {
-        // Reset the index if needed.
-        if (!m_dates.empty() && m_dates[index] > date) {
-            index = 0;
-        }
-
-        // Find index to insert the date accordingly.
-        for (int i = index; i < m_dates.size(); ++i) {
-            if (date <= m_dates[i]) {
-                break;
+    if (action->IsRecursive()) {
+        m_recursiveActionIndices.push_back(actionIndex);
+    } else {
+        int index = 0;
+        for (auto date : action->GetSporadicDates()) {
+            // Reset the index if needed.
+            if (!m_sporadicActionDates.empty() && m_sporadicActionDates[index] > date) {
+                index = 0;
             }
-            index++;
-        }
 
-        // Insert date and action.
-        m_dates.insert(m_dates.begin() + index, date);
-        m_actionIndices.insert(m_actionIndices.begin() + index, actionIndex);
+            // Find index to insert the date accordingly.
+            for (int i = index; i < m_sporadicActionDates.size(); ++i) {
+                if (date <= m_sporadicActionDates[i]) {
+                    break;
+                }
+                index++;
+            }
+
+            // Insert date and action.
+            m_sporadicActionDates.insert(m_sporadicActionDates.begin() + index, date);
+            m_sporadicActionIndices.insert(m_sporadicActionIndices.begin() + index, actionIndex);
+        }
     }
-    m_active = true;
 
     return true;
 }
@@ -53,26 +56,37 @@ int ActionsManager::GetActionsNb() {
     return static_cast<int>(m_actions.size());
 }
 
-int ActionsManager::GetActionItemsNb() {
+int ActionsManager::GetSporadicActionItemsNb() {
     int items = 0;
     for (auto action : m_actions) {
-        items += action->GetItemsNb();
+        items += action->GetSporadicItemsNb();
     }
 
     return items;
 }
 
 void ActionsManager::DateUpdate(double date) {
-    if (!m_active) {
+    // Recursive actions
+    if (!m_recursiveActionIndices.empty()) {
+        Time dateStruct = GetTimeStructFromMJD(date);
+        for (int actionIndex : m_recursiveActionIndices) {
+            if (!m_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
+                throw InvalidArgument(_("Application of a recursive action failed."));
+            }
+        }
+    }
+
+    if (m_sporadicActionDates.empty()) {
         return;
     }
-    wxASSERT(m_dates.size() == m_actionIndices.size());
 
-    while (m_dates.size() > m_cursorManager && m_dates[m_cursorManager] <= date) {
-        if (!m_actions[m_actionIndices[m_cursorManager]]->Apply(date)) {
-            throw InvalidArgument(_("Application of a action failed."));
+    // Sporadic actions
+    wxASSERT(m_sporadicActionDates.size() == m_sporadicActionIndices.size());
+    while (m_sporadicActionDates.size() > m_cursorManager && m_sporadicActionDates[m_cursorManager] <= date) {
+        if (!m_actions[m_sporadicActionIndices[m_cursorManager]]->Apply(date)) {
+            throw InvalidArgument(_("Application of a sporadic action failed."));
         }
-        m_actions[m_actionIndices[m_cursorManager]]->IncrementCursor();
+        m_actions[m_sporadicActionIndices[m_cursorManager]]->IncrementCursor();
         m_cursorManager++;
     }
 }

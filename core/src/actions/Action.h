@@ -12,7 +12,11 @@ class Action : public wxObject {
 
     void Reset();
 
+    bool virtual Apply();
+
     bool virtual Apply(double date);
+
+    bool virtual ApplyIfRecursive(const Time date);
 
     int GetIndexForInsertion(double date);
 
@@ -20,22 +24,29 @@ class Action : public wxObject {
         m_manager = manager;
     }
 
-    vecDouble GetDates() {
-        return m_dates;
+    vecDouble GetSporadicDates() {
+        return m_sporadicDates;
     }
 
-    int GetItemsNb() {
-        return (int)m_dates.size();
+    int GetSporadicItemsNb() {
+        return (int)m_sporadicDates.size();
     }
 
     void IncrementCursor() {
         m_cursor++;
     }
 
+    bool IsRecursive() {
+        return m_recursive;
+    }
+
   protected:
     ActionsManager* m_manager;
     int m_cursor;
-    vecDouble m_dates;
+    vecDouble m_sporadicDates;
+    bool m_recursive;
+    vecInt m_recursiveMonths;
+    vecInt m_recursiveDays;
 
   private:
 };

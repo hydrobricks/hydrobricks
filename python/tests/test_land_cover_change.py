@@ -126,7 +126,7 @@ def test_action_correctly_set_in_model(hydro_units_csv):
 
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
-    assert model.get_action_items_nb() == 232
+    assert model.get_sporadic_action_items_nb() == 232
 
 
 def test_action_2_files_correctly_set_in_model(hydro_units_csv):
@@ -148,7 +148,7 @@ def test_action_2_files_correctly_set_in_model(hydro_units_csv):
 
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
-    assert model.get_action_items_nb() == 444
+    assert model.get_sporadic_action_items_nb() == 444
 
 
 def test_extract_glacier_cover_evolution_raster(catchment_gletsch, changes_data):

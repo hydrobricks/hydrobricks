@@ -49,7 +49,7 @@ class ModelHydro : public wxObject {
 
     int GetActionsNb();
 
-    int GetActionItemsNb();
+    int GetSporadicActionItemsNb();
 
     bool CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data);
 

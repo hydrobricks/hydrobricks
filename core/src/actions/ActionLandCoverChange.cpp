@@ -10,14 +10,14 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
 
     int index = GetIndexForInsertion(date);
 
-    m_dates.insert(m_dates.begin() + index, date);
+    m_sporadicDates.insert(m_sporadicDates.begin() + index, date);
     m_hydroUnitIds.insert(m_hydroUnitIds.begin() + index, hydroUnitId);
     m_landCoverIds.insert(m_landCoverIds.begin() + index, landCoverId);
     m_areas.insert(m_areas.begin() + index, area);
 }
 
 bool ActionLandCoverChange::Apply(double) {
-    wxASSERT(m_dates.size() > m_cursor);
+    wxASSERT(m_sporadicDates.size() > m_cursor);
     wxASSERT(m_hydroUnitIds.size() > m_cursor);
     wxASSERT(m_areas.size() > m_cursor);
     wxASSERT(m_landCoverIds.size() > m_cursor);

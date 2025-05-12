@@ -77,7 +77,7 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     EXPECT_TRUE(model.AddAction(&action));
 
     EXPECT_EQ(model.GetActionsNb(), 1);
-    EXPECT_EQ(model.GetActionItemsNb(), 4);
+    EXPECT_EQ(model.GetSporadicActionItemsNb(), 4);
 
     EXPECT_TRUE(model.Run());
 

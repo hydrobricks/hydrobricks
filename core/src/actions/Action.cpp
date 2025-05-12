@@ -4,10 +4,30 @@
 
 Action::Action()
     : m_manager(nullptr),
-      m_cursor(0) {}
+      m_cursor(0),
+      m_recursive(false) {}
+
+bool Action::Apply() {
+    return false;
+}
 
 bool Action::Apply(double) {
     return false;
+}
+
+bool Action::ApplyIfRecursive(const Time date) {
+    for (int month : m_recursiveMonths) {
+        if (month != date.month) {
+            continue;
+        }
+        for (int day : m_recursiveDays) {
+            if (day != date.day) {
+                continue;
+            }
+
+            return Apply();
+        }
+    }
 }
 
 void Action::Reset() {
@@ -16,7 +36,7 @@ void Action::Reset() {
 
 int Action::GetIndexForInsertion(double date) {
     int index = 0;
-    for (double storedDate : m_dates) {
+    for (double storedDate : m_sporadicDates) {
         if (date <= storedDate) {
             break;
         }

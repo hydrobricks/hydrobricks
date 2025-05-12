@@ -213,11 +213,12 @@ class Model(ABC):
         """
         return self.model.get_actions_nb()
 
-    def get_action_items_nb(self) -> int:
+    def get_sporadic_action_items_nb(self) -> int:
         """
-        Get the number of action items (individual triggers) registered in the model.
+        Get the number of sporadic (non-recursive) action items (individual triggers)
+        registered in the model.
         """
-        return self.model.get_action_items_nb()
+        return self.model.get_sporadic_action_items_nb()
 
     def create_config_file(self, directory, name, file_type='both'):
         """

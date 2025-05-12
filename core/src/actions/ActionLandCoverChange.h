@@ -15,7 +15,7 @@ class ActionLandCoverChange : public Action {
     bool Apply(double date) override;
 
     int GetChangesNb() {
-        return int(m_dates.size());
+        return int(m_sporadicDates.size());
     }
 
     int GetLandCoversNb() {

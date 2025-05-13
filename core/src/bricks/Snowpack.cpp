@@ -7,12 +7,12 @@ Snowpack::Snowpack()
 }
 
 void Snowpack::Reset() {
-    m_container->Reset();
+    m_water->Reset();
     m_snow->Reset();
 }
 
 void Snowpack::SaveAsInitialState() {
-    m_container->SaveAsInitialState();
+    m_water->SaveAsInitialState();
     m_snow->SaveAsInitialState();
 }
 
@@ -25,7 +25,7 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     if (flux->GetType() == "snow") {
         m_snow->AttachFluxIn(flux);
     } else if (flux->GetType() == "water") {
-        m_container->AttachFluxIn(flux);
+        m_water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
     }
@@ -44,22 +44,53 @@ WaterContainer* Snowpack::GetSnowContainer() {
 
 void Snowpack::Finalize() {
     m_snow->Finalize();
-    m_container->Finalize();
+    m_water->Finalize();
+}
+
+void Snowpack::SetInitialState(double value, const string& type) {
+    if (type == "water") {
+        m_water->SetInitialState(value);
+    } else if (type == "snow") {
+        m_snow->SetInitialState(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
+}
+
+double Snowpack::GetContent(const string& type) {
+    if (type == "water") {
+        return m_water->GetContentWithoutChanges();
+    }
+    if (type == "snow") {
+        return m_snow->GetContentWithoutChanges();
+    }
+
+    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+}
+
+void Snowpack::UpdateContent(double value, const string& type) {
+    if (type == "water") {
+        m_water->UpdateContent(value);
+    } else if (type == "snow") {
+        m_snow->UpdateContent(value);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    }
 }
 
 void Snowpack::UpdateContentFromInputs() {
     m_snow->AddAmountToStaticContentChange(m_snow->SumIncomingFluxes());
-    m_container->AddAmountToDynamicContentChange(m_container->SumIncomingFluxes());
+    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {
     m_snow->ApplyConstraints(timeStep);
-    m_container->ApplyConstraints(timeStep);
+    m_water->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Snowpack::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_container->GetDynamicContentChanges()) {
+    for (auto const& var : m_water->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
     for (auto const& var : m_snow->GetDynamicContentChanges()) {
@@ -70,7 +101,7 @@ vecDoublePt Snowpack::GetDynamicContentChanges() {
 }
 
 double* Snowpack::GetValuePointer(const string& name) {
-    if (name == "snow") {
+    if (name == "snow" || name == "snow_content") {
         return m_snow->GetContentPointer();
     }
 

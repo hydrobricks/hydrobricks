@@ -109,17 +109,18 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
 
     // Check components
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
-    // [0] "ground:content"
+    // [0] "ground:water_content"
     // [1] "ground:outflow:output"
-    // [2] "glacier:content"
-    // [3] "glacier:melt:output"
-    // [4] "glacier:outflow:output"
-    // [5] "ground_snowpack:content"
-    // [6] "ground_snowpack:snow"
-    // [7] "ground_snowpack:melt:output"
-    // [8] "glacier_snowpack:content"
-    // [9] "glacier_snowpack:snow"
-    // [10] "glacier_snowpack:melt:output"
+    // [2] "glacier:water_content"
+    // [3] "glacier:ice_content"
+    // [4] "glacier:melt:output"
+    // [5] "glacier:outflow:output"
+    // [6] "ground_snowpack:water_content"
+    // [7] "ground_snowpack:snow_content"
+    // [8] "ground_snowpack:melt:output"
+    // [9] "glacier_snowpack:water_content"
+    // [10] "glacier_snowpack:snow_content"
+    // [11] "glacier_snowpack:melt:output"
 
     vecDouble expectedNull = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedSWE = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
@@ -133,13 +134,13 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
         EXPECT_NEAR(unitContent[0](j, 0), expectedNull[j], 0.000001);        // ground:content (direct flow)
         EXPECT_NEAR(unitContent[1](j, 0), expectedGroundOut[j], 0.000001);   // ground:outflow:output
         EXPECT_NEAR(unitContent[2](j, 0), expectedNull[j], 0.000001);        // glacier:content (direct flow)
-        EXPECT_NEAR(unitContent[3](j, 0), expectedIceMelt[j], 0.000001);     // glacier:melt:output
-        EXPECT_NEAR(unitContent[4](j, 0), expectedGlacierOut[j], 0.000001);  // glacier:outflow:output
-        EXPECT_NEAR(unitContent[5](j, 0), expectedNull[j], 0.000001);        // ground_snowpack:content (water)
-        EXPECT_NEAR(unitContent[6](j, 0), expectedSWE[j], 0.000001);         // ground_snowpack:snow
-        EXPECT_NEAR(unitContent[7](j, 0), expectedSnowMelt[j], 0.000001);    // ground_snowpack:melt:output
-        EXPECT_NEAR(unitContent[8](j, 0), expectedNull[j], 0.000001);        // glacier_snowpack:content (water)
-        EXPECT_NEAR(unitContent[9](j, 0), expectedSWE[j], 0.000001);         // glacier_snowpack:snow
-        EXPECT_NEAR(unitContent[10](j, 0), expectedSnowMelt[j], 0.000001);   // glacier_snowpack:melt:output
+        EXPECT_NEAR(unitContent[4](j, 0), expectedIceMelt[j], 0.000001);     // glacier:melt:output
+        EXPECT_NEAR(unitContent[5](j, 0), expectedGlacierOut[j], 0.000001);  // glacier:outflow:output
+        EXPECT_NEAR(unitContent[6](j, 0), expectedNull[j], 0.000001);        // ground_snowpack:content (water)
+        EXPECT_NEAR(unitContent[7](j, 0), expectedSWE[j], 0.000001);         // ground_snowpack:snow
+        EXPECT_NEAR(unitContent[8](j, 0), expectedSnowMelt[j], 0.000001);    // ground_snowpack:melt:output
+        EXPECT_NEAR(unitContent[9](j, 0), expectedNull[j], 0.000001);        // glacier_snowpack:content (water)
+        EXPECT_NEAR(unitContent[10](j, 0), expectedSWE[j], 0.000001);        // glacier_snowpack:snow
+        EXPECT_NEAR(unitContent[11](j, 0), expectedSnowMelt[j], 0.000001);   // glacier_snowpack:melt:output
     }
 }

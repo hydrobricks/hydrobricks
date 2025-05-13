@@ -32,7 +32,7 @@ bool Hydrobricks::OnInit() {
     // Init
     InitHydrobricks();
 
-    // Call default behaviour
+    // Call default action
     if (!wxApp::OnInit()) {
         CleanUp();
         return false;

@@ -11,6 +11,8 @@ class Socont(Model):
         self.options['soil_storage_nb'] = 1
         self.options['surface_runoff'] = 'socont_runoff'
         self.options['snow_melt_process'] = 'melt:degree_day'
+        self.options['snow_ice_transformation'] = False
+        self.options['glacier_infinite_storage'] = True
         self.allowed_land_cover_types = ['ground', 'glacier']
 
         self._set_options(kwargs)
@@ -34,7 +36,7 @@ class Socont(Model):
                     'kind': 'land_cover',
                     'parameters': {
                         'no_melt_when_snow_cover': True,
-                        'infinite_storage': True
+                        'infinite_storage': self.options['glacier_infinite_storage']
                     },
                     'processes': {
                         'outflow_rain_snowmelt': {

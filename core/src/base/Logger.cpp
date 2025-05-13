@@ -333,10 +333,16 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
 }
 
 double Logger::GetTotalWaterStorageChanges() {
-    return GetSubBasinFinalStorageState(":content") - GetSubBasinInitialStorageState(":content") +
-           GetHydroUnitsFinalStorageState(":content") - GetHydroUnitsInitialStorageState(":content");
+    return GetSubBasinFinalStorageState(":water_content") - GetSubBasinInitialStorageState(":water_content") +
+           GetHydroUnitsFinalStorageState(":water_content") - GetHydroUnitsInitialStorageState(":water_content");
 }
 
 double Logger::GetTotalSnowStorageChanges() {
-    return GetHydroUnitsFinalStorageState(":snow") - GetHydroUnitsInitialStorageState(":snow");
+    return GetSubBasinFinalStorageState(":snow_content") - GetSubBasinInitialStorageState(":snow_content") +
+           GetHydroUnitsFinalStorageState(":snow_content") - GetHydroUnitsInitialStorageState(":snow_content");
+}
+
+double Logger::GetTotalGlacierStorageChanges() {
+    return GetSubBasinFinalStorageState(":ice_content") - GetSubBasinInitialStorageState(":ice_content") +
+           GetHydroUnitsFinalStorageState(":ice_content") - GetHydroUnitsInitialStorageState(":ice_content");
 }

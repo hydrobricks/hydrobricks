@@ -517,7 +517,7 @@ class ParameterSet:
             The model structure.
         """
         # General parameters
-        self._generate_snow_parameters(options)
+        self._generate_snow_parameters(options, land_cover_types, land_cover_names)
 
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names,
@@ -677,7 +677,7 @@ class ParameterSet:
                 raise RuntimeError(f"The glacier melt method {melt_method} is not "
                                    f"recognised in parameters generation.")
 
-    def _generate_snow_parameters(self, options):
+    def _generate_snow_parameters(self, options, land_cover_types, land_cover_names):
         if 'snow_melt_process' in options or 'with_snow' in options:
             self.define_parameter(
                 component='snow_rain_transition', name='transition_start', unit='°C',
@@ -734,6 +734,17 @@ class ParameterSet:
                     raise RuntimeError(
                         f"The snow melt process option "
                         f"{options['snow_melt_process']} is not recognised.")
+
+            if 'snow_ice_transformation' in options:
+                if options['snow_ice_transformation']:
+                    for i, cover_name in enumerate(land_cover_names):
+                        if land_cover_types[i] != 'glacier':
+                            continue
+                        self.define_parameter(
+                            component=f'{cover_name}_snowpack',
+                            name='snow_ice_transformation_rate', unit='mm/d',
+                            aliases=['snow_ice_rate'], min_value=0, max_value=0.005,
+                            default_value=0.002, mandatory=True)
 
     @staticmethod
     def _check_min_max_consistency(min_value, max_value):

@@ -21,9 +21,7 @@ class SurfaceComponent : public Brick {
 
     void SetAreaFraction(double value);
 
-    bool IsNull() override {
-        return m_areaFraction <= PRECISION;
-    }
+    bool IsNull() override;
 
     virtual void SetParent(LandCover* parent) {
         m_parent = parent;

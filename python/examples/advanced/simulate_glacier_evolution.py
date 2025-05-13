@@ -2,6 +2,8 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 import hydrobricks as hb
 import hydrobricks.models as models
 from hydrobricks.actions import ActionGlacierEvolutionDeltaH
@@ -13,7 +15,8 @@ TEST_FILES_DIR = Path(
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'ice_thickness.tif'
+GLACIER_ICE_THICKNESS = (TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' /
+                         'ice_thickness.tif')
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'meteo.csv'
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'discharge.csv'
 
@@ -33,7 +36,8 @@ catchment.extract_dem(CATCHMENT_DEM)
 # Create elevation bands
 catchment.create_elevation_bands(method='equal_intervals', distance=100)
 
-# Glacier evolution
+# Glacier evolution. This is for demonstration purposes only as the glacier
+# volume/extent from 2016 is used for the 1981 initial conditions!
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment, ice_thickness=GLACIER_ICE_THICKNESS)
@@ -61,7 +65,7 @@ socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
 parameters = socont.generate_parameters()
 parameters.set_values({'A': 458, 'a_snow': 3, 'k_slow_1': 0.9, 'k_slow_2': 0.8,
                        'k_quick': 1, 'percol': 9.8, 'snow_ice_rate': 0.002,
-                       'a_ice': 6, 'k_ice': 0.5, 'k_snow':0.1})
+                       'a_ice': 6, 'k_ice': 0.5, 'k_snow': 0.1})
 
 # Meteo data
 ref_elevation = 2702  # Reference altitude for the meteo data
@@ -86,7 +90,7 @@ socont.setup(spatial_structure=catchment.hydro_units, output_path=str(working_di
              start_date='1981-01-01', end_date='2020-12-31')
 
 # Add the glacier evolution action to the model
-#socont.add_action(changes)
+socont.add_action(changes)
 
 # Initialize and run the model
 socont.run(parameters=parameters, forcing=forcing)
@@ -100,6 +104,14 @@ socont.dump_outputs(str(working_dir))
 # Load the netcdf file
 results = hb.Results(str(working_dir) + '/results.nc')
 
-# List the hydro units components available
-results.list_hydro_units_components()
+glacier_fractions = results.results.land_cover_fractions[1, :, :]
+hydro_units_areas = results.results.hydro_units_areas
+glacier_areas = hydro_units_areas * glacier_fractions
+glacier_areas = glacier_areas.sum(axis=0)
 
+# Plot glacier area. This is for demonstration purposes only as the glacier
+# volume/extent from 2016 is used for the 1981 initial conditions!
+plt.plot(results.results.time, glacier_areas)
+plt.title('Glacier area evolution')
+plt.tight_layout()
+plt.show()

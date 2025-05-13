@@ -28,6 +28,7 @@ class SnowIceModel : public ::testing::Test {
 
         // Snowpacks
         m_model.GenerateSnowpacks("melt:degree_day", true);
+        m_model.SetParameterValue("glacier_snowpack", "snow_ice_transformation_rate", 0.002);
         m_model.SelectHydroUnitBrick("glacier_snowpack");
         m_model.SelectProcess("melt");
         m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
@@ -104,19 +105,19 @@ TEST_F(SnowIceModel, SnowIceTransformation) {
     vecDouble expectedSnowMeltGround = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0, 0.0};
     vecDouble expectedSnowMeltIce = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 7.0 - 0.014, 0.0};
     vecDouble expectedIceMelt = {0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 6.0, 9.0, 18.0, 21.0};
-    vecDouble glacierContent = {100.0, 100.002, 100.004, 100.006, 100.008, 100.010 - 3, 100.012 - 9,
-                                100.014 - 18, 100.014 - 36, 100.014 - 57};
+    vecDouble glacierContent = {100.0,       100.002,     100.004,      100.006,      100.008,
+                                100.010 - 3, 100.012 - 9, 100.014 - 18, 100.014 - 36, 100.014 - 57};
     vecDouble expectedWaterRetention = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     vecDouble expectedSWEGround = {0.0, 10.0, 20.0, 25.0, 25.0, 22.0, 16.0, 7.0, 0.0, 0.0};
-    vecDouble expectedSWEGlacier = {0.0, 10.0 - 0.002, 20.0 - 0.004, 25.0 - 0.006, 25.0 - 0.008,
-                                    22.0 - 0.010, 16.0 - 0.012, 7.0 - 0.014, 0.0, 0.0};
+    vecDouble expectedSWEGlacier = {0.0,          10.0 - 0.002, 20.0 - 0.004, 25.0 - 0.006, 25.0 - 0.008,
+                                    22.0 - 0.010, 16.0 - 0.012, 7.0 - 0.014,  0.0,          0.0};
     vecDouble snowIceTransfo = {0.0, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002, 0.0, 0.0};
 
     for (int j = 0; j < expectedSWEGround.size(); ++j) {
         // Melt processes
         EXPECT_NEAR(unitContent[8](j, 0), expectedSnowMeltGround[j], 0.000001);  // Ground snowpack
-        EXPECT_NEAR(unitContent[12](j, 0), expectedSnowMeltIce[j], 0.000001);  // Glacier snowpack
-        EXPECT_NEAR(unitContent[4](j, 0), expectedIceMelt[j], 0.000001);  // Glacier ice melt
+        EXPECT_NEAR(unitContent[12](j, 0), expectedSnowMeltIce[j], 0.000001);    // Glacier snowpack
+        EXPECT_NEAR(unitContent[4](j, 0), expectedIceMelt[j], 0.000001);         // Glacier ice melt
         // Ice content
         EXPECT_NEAR(unitContent[3](j, 0), glacierContent[j], 0.000001);
         // Ground snowpack
@@ -128,4 +129,30 @@ TEST_F(SnowIceModel, SnowIceTransformation) {
         // Snow to ice transformation
         EXPECT_NEAR(unitContent[13](j, 0), snowIceTransfo[j], 0.000001);
     }
+}
+
+TEST_F(SnowIceModel, SnowIceTransformationWithNullFraction) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+    basinSettings.AddLandCover("glacier", "", 0.0);
+    basinSettings.AddHydroUnit(2, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+    basinSettings.AddLandCover("glacier", "", 0.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    // Set initial glacier content
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+
+    EXPECT_TRUE(model.Run());
 }

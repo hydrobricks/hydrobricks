@@ -147,12 +147,12 @@ class Model(ABC):
 
             timer.stop(show_time=False)
 
-        except RuntimeError:
-            print("A runtime exception occurred.")
-        except TypeError:
-            print("A type error exception occurred.")
-        except Exception:
-            print("An exception occurred.")
+        except RuntimeError as e:
+            print("A runtime exception occurred: ", e)
+        except TypeError as e:
+            print("A type error exception occurred: ", e)
+        except Exception as e:
+            print("An exception occurred: ", e)
 
     @staticmethod
     def cleanup():

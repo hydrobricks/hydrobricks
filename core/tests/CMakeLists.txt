@@ -20,7 +20,7 @@ list(
     APPEND
     inc_dirs
     "${CMAKE_SOURCE_DIR}/core/src/base"
-    "${CMAKE_SOURCE_DIR}/core/src/behaviours"
+    "${CMAKE_SOURCE_DIR}/core/src/actions"
     "${CMAKE_SOURCE_DIR}/core/src/bricks"
     "${CMAKE_SOURCE_DIR}/core/src/containers"
     "${CMAKE_SOURCE_DIR}/core/src/fluxes"

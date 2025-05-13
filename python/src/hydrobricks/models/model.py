@@ -147,12 +147,12 @@ class Model(ABC):
 
             timer.stop(show_time=False)
 
-        except RuntimeError:
-            print("A runtime exception occurred.")
-        except TypeError:
-            print("A type error exception occurred.")
-        except Exception:
-            print("An exception occurred.")
+        except RuntimeError as e:
+            print("A runtime exception occurred: ", e)
+        except TypeError as e:
+            print("A type error exception occurred: ", e)
+        except Exception as e:
+            print("An exception occurred: ", e)
 
     @staticmethod
     def cleanup():
@@ -196,28 +196,29 @@ class Model(ABC):
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
 
-    def add_behaviour(self, behaviour) -> bool:
+    def add_action(self, action) -> bool:
         """
-        Add a behaviour to the model.
+        Add an action to the model.
 
         Parameters
         ----------
-        behaviour : Behaviour
-            The behaviour object. The dates must be sorted.
+        action : Action
+            The action object. The dates must be sorted.
         """
-        return self.model.add_behaviour(behaviour.behaviour)
+        return self.model.add_action(action.action)
 
-    def get_behaviours_nb(self) -> int:
+    def get_actions_nb(self) -> int:
         """
-        Get the number of behaviours (types of behaviours) registered in the model.
+        Get the number of actions (types of actions) registered in the model.
         """
-        return self.model.get_behaviours_nb()
+        return self.model.get_actions_nb()
 
-    def get_behaviour_items_nb(self) -> int:
+    def get_sporadic_action_items_nb(self) -> int:
         """
-        Get the number of behaviour items (individual triggers) registered in the model.
+        Get the number of sporadic (non-recursive) action items (individual triggers)
+        registered in the model.
         """
-        return self.model.get_behaviour_items_nb()
+        return self.model.get_sporadic_action_items_nb()
 
     def create_config_file(self, directory, name, file_type='both'):
         """
@@ -410,14 +411,18 @@ class Model(ABC):
     def _set_structure_basics(self):
         with_snow = True
         snow_melt_process = 'melt:degree_day'
+        snow_ice_transformation = False
         if 'with_snow' in self.options:
             with_snow = self.options['with_snow']
         if 'snow_melt_process' in self.options:
             with_snow = True
             snow_melt_process = self.options['snow_melt_process']
+        if 'snow_ice_transformation' in self.options:
+            snow_ice_transformation = True
         self.settings.generate_base_structure(
             self.land_cover_names, self.land_cover_types, with_snow=with_snow,
-            snow_melt_process=snow_melt_process)
+            snow_melt_process=snow_melt_process,
+            snow_ice_transformation=snow_ice_transformation)
 
     def _set_structure_brick(self, brick, key):
         if brick['kind'] == 'land_cover':

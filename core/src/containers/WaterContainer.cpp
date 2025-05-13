@@ -23,7 +23,7 @@ bool WaterContainer::IsOk() {
             return true;
         }
     }
-    wxLogError(_("The water container of the brick %s has no process attached."), GetParentBrick()->GetName());
+    wxLogError(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName());
 
     return false;
 }

@@ -11,7 +11,6 @@ TEST_FILES_DIR = Path(
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-GLACIER_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'sgi_2016.shp'
 GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'ice_thickness.tif'
 
 # Create temporary directory
@@ -32,7 +31,7 @@ catchment.create_elevation_bands(method='equal_intervals', distance=100)
 # Glacier evolution
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
-    catchment, GLACIER_OUTLINE, ice_thickness=GLACIER_ICE_THICKNESS)
+    catchment, ice_thickness=GLACIER_ICE_THICKNESS)
 
 # It can then optionally be saved as a csv file
 glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)

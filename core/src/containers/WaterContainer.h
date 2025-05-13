@@ -84,6 +84,15 @@ class WaterContainer : public wxObject {
         return &m_content;
     }
 
+    /**
+     * Set the initial state of the water container.
+     *
+     * @param value initial state [mm]
+     */
+    void SetInitialState(double value) {
+        m_initialState = value;
+    }
+
     void UpdateContent(double value) {
         if (m_infiniteStorage) {
             throw ConceptionIssue(_("Trying to set the content of an infinite storage."));

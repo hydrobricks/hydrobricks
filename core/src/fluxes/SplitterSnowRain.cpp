@@ -34,7 +34,8 @@ void SplitterSnowRain::AttachForcing(Forcing* forcing) {
 double* SplitterSnowRain::GetValuePointer(const string& name) {
     if (name == "rain") {
         return m_outputs[0]->GetAmountPointer();
-    } else if (name == "snow") {
+    }
+    if (name == "snow") {
         return m_outputs[1]->GetAmountPointer();
     }
 

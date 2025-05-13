@@ -8,7 +8,7 @@ TimeMachine::TimeMachine()
       m_timeStepUnit(Day),
       m_timeStepInDays(0),
       m_parametersUpdater(nullptr),
-      m_behavioursManager(nullptr) {}
+      m_actionsManager(nullptr) {}
 
 void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit) {
     m_date = start;
@@ -53,8 +53,8 @@ void TimeMachine::IncrementTime() {
     if (m_parametersUpdater) {
         m_parametersUpdater->DateUpdate(m_date);
     }
-    if (m_behavioursManager) {
-        m_behavioursManager->DateUpdate(m_date);
+    if (m_actionsManager) {
+        m_actionsManager->DateUpdate(m_date);
     }
 }
 

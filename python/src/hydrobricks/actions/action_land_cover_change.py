@@ -7,7 +7,7 @@ import _hydrobricks as _hb
 import hydrobricks as hb
 
 from ..units import Unit, convert_unit
-from .behaviour import Behaviour
+from .action import Action
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -20,12 +20,12 @@ m2 = Unit.M2
 km2 = Unit.KM2
 
 
-class BehaviourLandCoverChange(Behaviour):
+class ActionLandCoverChange(Action):
     """Class for the land cover changes."""
 
     def __init__(self):
         super().__init__()
-        self.behaviour = _hb.BehaviourLandCoverChange()
+        self.action = _hb.ActionLandCoverChange()
 
     def load_from_csv(self, path, hydro_units, land_cover, area_unit,
                       match_with='elevation'):
@@ -89,22 +89,22 @@ class BehaviourLandCoverChange(Behaviour):
         """
         Get the number of changes registered.
         """
-        return self.behaviour.get_changes_nb()
+        return self.action.get_changes_nb()
 
     def get_land_covers_nb(self):
         """
         Get the number of land covers registered.
         """
-        return self.behaviour.get_land_covers_nb()
+        return self.action.get_land_covers_nb()
 
     @classmethod
-    def create_behaviour_for_glaciers(cls, catchment, times, full_glaciers,
+    def create_action_for_glaciers(cls, catchment, times, full_glaciers,
                                       debris_glaciers=None, with_debris=False,
                                       method='vector', interpolate_yearly=True):
         """
         Extract the glacier cover changes from shapefiles, creates a
-        BehaviourLandCoverChange object, and assign the computed land cover
-        changes to the BehaviourLandCoverChange object.
+        ActionLandCoverChange object, and assign the computed land cover
+        changes to the ActionLandCoverChange object.
 
         Parameters
         ----------
@@ -131,8 +131,8 @@ class BehaviourLandCoverChange(Behaviour):
 
         Returns
         -------
-        changes : BehaviourLandCoverChange
-            A BehaviourLandCoverChange object setup with the cover areas
+        changes : ActionLandCoverChange
+            A ActionLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
         changes_df : DataFrame list
             A list of the dataframes containing the cover areas extracted from the
@@ -152,14 +152,14 @@ class BehaviourLandCoverChange(Behaviour):
             raise ValueError("The catchment has not been discretized "
                              "(hydro units missing).")
 
-        changes = hb.behaviours.BehaviourLandCoverChange()
-        changes_df = changes._create_behaviour_for_glaciers(
+        changes = hb.actions.ActionLandCoverChange()
+        changes_df = changes._create_action_for_glaciers(
             catchment, full_glaciers, debris_glaciers, times, with_debris, method,
             interpolate_yearly)
 
         return changes, changes_df
 
-    def _create_behaviour_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
+    def _create_action_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
                                        times, with_debris, method, interpolate_yearly):
 
         if len(full_glaciers) != len(times):
@@ -506,4 +506,4 @@ class BehaviourLandCoverChange(Behaviour):
                 area = float(file_content.loc[row, col])
                 if not np.isnan(area):
                     area = convert_unit(area, area_unit, Unit.M2)
-                    self.behaviour.add_change(mjd, hu_id, land_cover, area)
+                    self.action.add_change(mjd, hu_id, land_cover, area)

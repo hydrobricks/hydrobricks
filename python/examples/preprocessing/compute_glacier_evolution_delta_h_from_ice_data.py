@@ -35,7 +35,7 @@ glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment, GLACIER_OUTLINE, ice_thickness=GLACIER_ICE_THICKNESS)
 
 # It can then optionally be saved as a csv file
-glacier_df.to_csv(working_dir / 'glacier_data.csv', index=False)
+glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 
 # The lookup table can be computed and saved as a csv file
 glacier_evolution.compute_lookup_table()

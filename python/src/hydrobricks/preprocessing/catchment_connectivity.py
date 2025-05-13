@@ -54,7 +54,7 @@ class CatchmentConnectivity:
 
         # Create a pysheds instance
         dem_path = self.catchment.dem.files[0]
-        grid = hb.pysheds.grid.Grid.from_raster(dem_path)
+        grid = hb.pyshedsGrid.from_raster(dem_path)
         dem = grid.read_raster(dem_path)
 
         # Fill pits and depressions in DEM and resolve flats

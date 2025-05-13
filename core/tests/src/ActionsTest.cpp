@@ -135,15 +135,9 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     axi hydroUnitIds(3);
     hydroUnitIds << 1, 2, 3;
     axxd areas = axxd::Zero(4, 3);
-    areas << 5000, 5000, 5000,
-             2000, 3000, 4000,
-              0,   1000, 2000,
-              0,      0,    0;
+    areas << 5000, 5000, 5000, 2000, 3000, 4000, 0, 1000, 2000, 0, 0, 0;
     axxd volumes = axxd::Zero(4, 3);
-    volumes << 50000, 50000, 50000,
-               10000, 35000, 40000,
-                 0,    5000, 10000,
-                 0,       0,     0;
+    volumes << 50000, 50000, 50000, 10000, 35000, 40000, 0, 5000, 10000, 0, 0, 0;
     action.AddLookupTables(10, "glacier", hydroUnitIds, areas, volumes);
 
     EXPECT_TRUE(model.AddAction(&action));

@@ -140,7 +140,7 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
         EXPECT_NEAR(unitContent[7](j, 0), expectedSWE[j], 0.000001);         // ground_snowpack:snow
         EXPECT_NEAR(unitContent[8](j, 0), expectedSnowMelt[j], 0.000001);    // ground_snowpack:melt:output
         EXPECT_NEAR(unitContent[9](j, 0), expectedNull[j], 0.000001);        // glacier_snowpack:content (water)
-        EXPECT_NEAR(unitContent[10](j, 0), expectedSWE[j], 0.000001);         // glacier_snowpack:snow
+        EXPECT_NEAR(unitContent[10](j, 0), expectedSWE[j], 0.000001);        // glacier_snowpack:snow
         EXPECT_NEAR(unitContent[11](j, 0), expectedSnowMelt[j], 0.000001);   // glacier_snowpack:melt:output
     }
 }

@@ -1,9 +1,9 @@
 import os.path
 import tempfile
-import pytest
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import hydrobricks as hb
 import hydrobricks.actions as actions

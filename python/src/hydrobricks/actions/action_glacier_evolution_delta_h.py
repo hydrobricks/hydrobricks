@@ -1,12 +1,13 @@
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 import _hydrobricks as _hb
 import hydrobricks as hb
 
-from .action import Action
 from ..preprocessing import GlacierEvolutionDeltaH
+from .action import Action
 
 
 class ActionGlacierEvolutionDeltaH(Action):
@@ -52,16 +53,16 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Example of a file (with areas in m2)
         -----------------
-        2	    3	    4	    5	    6
-        2500.0	48125.0	34375.0	54375.0	65000.0
-        2125.2	44069.6	31544.8	51044.3	61726.6
-        1668.2	39600.1	28428.8	47478.1	58268.9
-        1024.3	34555.2	24914.0	43617.1	54591.8
-        0	    28628.9	20776.8	39371.4	50646.9
-        0	    21024.9	15298.5	34564.7	46342.8
-        0	    7906.0	7475.2	28921.9	41597.3
-        0	    0	    1231.4	21121.3	36034.0
-        0	    0	    0	    10242.1	28498.8
+        2       3       4       5       6
+        2500.0  48125.0 34375.0 54375.0 65000.0
+        2125.2  44069.6 31544.8 51044.3 61726.6
+        1668.2  39600.1 28428.8 47478.1 58268.9
+        1024.3  34555.2 24914.0 43617.1 54591.8
+        0       28628.9 20776.8 39371.4 50646.9
+        0       21024.9 15298.5 34564.7 46342.8
+        0       7906.0  7475.2  28921.9 41597.3
+        0       0       1231.4  21121.3 36034.0
+        0       0       0       10242.1 28498.8
         """
         if isinstance(dir_path, str):
             dir_path = Path(dir_path)

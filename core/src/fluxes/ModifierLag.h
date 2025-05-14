@@ -9,9 +9,6 @@ class ModifierLag : public Modifier {
     explicit ModifierLag();
 
     ~ModifierLag() override = default;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_MODIFIER_LAG_H

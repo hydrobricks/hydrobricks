@@ -13,9 +13,6 @@ class SolverHeunExplicit : public Solver {
      * @copydoc Solver::Solve()
      */
     bool Solve() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_SOLVER_HEUN_EXPLICIT_H

@@ -12,9 +12,6 @@ class Storage : public Brick {
      * @copydoc Brick::SetParameters()
      */
     void SetParameters(const BrickSettings& brickSettings) override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_STORAGE_H

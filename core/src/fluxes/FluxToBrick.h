@@ -20,12 +20,13 @@ class FluxToBrick : public Flux {
      */
     double GetAmount() override;
 
+    /**
+     * @copydoc Flux::UpdateFlux()
+     */
     void UpdateFlux(double amount) override;
 
   protected:
     Brick* m_toBrick;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_H

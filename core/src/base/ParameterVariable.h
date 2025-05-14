@@ -11,8 +11,6 @@ class ParameterVariable : public Parameter {
 
   protected:
     vecFloat m_values;
-
-  private:
 };
 
 class ParameterVariableYearly : public ParameterVariable {
@@ -21,14 +19,26 @@ class ParameterVariableYearly : public ParameterVariable {
 
     ~ParameterVariableYearly() override = default;
 
+    /**
+     * Set the values of the parameter for a range of years.
+     *
+     * @param yearStart start year
+     * @param yearEnd end year
+     * @param values values for each year
+     * @return true if the values were set successfully, false otherwise
+     */
     bool SetValues(int yearStart, int yearEnd, const vecFloat& values);
 
+    /**
+     * Update the parameter value for a specific year.
+     *
+     * @param year year to update
+     * @return true if the parameter was updated successfully, false otherwise
+     */
     bool UpdateParameter(int year);
 
   protected:
     vecInt m_reference;
-
-  private:
 };
 
 class ParameterVariableMonthly : public ParameterVariable {
@@ -37,12 +47,21 @@ class ParameterVariableMonthly : public ParameterVariable {
 
     ~ParameterVariableMonthly() override = default;
 
+    /**
+     * Set the values of the parameter for each month.
+     *
+     * @param values values for each month
+     * @return true if the values were set successfully, false otherwise
+     */
     bool SetValues(const vecFloat& values);
 
+    /**
+     * Update the parameter value for a specific month.
+     *
+     * @param month month to update
+     * @return true if the parameter was updated successfully, false otherwise
+     */
     bool UpdateParameter(int month);
-
-  protected:
-  private:
 };
 
 class ParameterVariableDates : public ParameterVariable {
@@ -51,15 +70,26 @@ class ParameterVariableDates : public ParameterVariable {
 
     ~ParameterVariableDates() override = default;
 
+    /**
+     * Set the values of the parameter for a range of dates.
+     *
+     * @param time vector of dates
+     * @param values values for each date
+     * @return true if the values were set successfully, false otherwise
+     */
     bool SetTimeAndValues(const vecDouble& time, const vecFloat& values);
 
+    /**
+     * Update the parameter value for a specific date.
+     *
+     * @param timeReference date to update
+     * @return true if the parameter was updated successfully, false otherwise
+     */
     bool UpdateParameter(double timeReference);
 
   protected:
     vecFloat m_values;
     vecDouble m_reference;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PARAMETER_VARIABLE_H

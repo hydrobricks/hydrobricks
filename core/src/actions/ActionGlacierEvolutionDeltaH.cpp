@@ -57,7 +57,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
     return true;
 }
 
-bool ActionGlacierEvolutionDeltaH::Apply() {
+bool ActionGlacierEvolutionDeltaH::Apply(double) {
     // Get the list of hydro units.
     auto subBasin = m_manager->GetModel()->GetSubBasin();
 

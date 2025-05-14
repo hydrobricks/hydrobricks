@@ -8,9 +8,6 @@ class Modifier : public wxObject {
     explicit Modifier();
 
     ~Modifier() override = default;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_MODIFIER_H

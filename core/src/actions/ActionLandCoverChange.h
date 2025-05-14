@@ -10,15 +10,39 @@ class ActionLandCoverChange : public Action {
 
     ~ActionLandCoverChange() override = default;
 
+    /**
+     * Add a land cover change to the action.
+     *
+     * @param date date of the change.
+     * @param hydroUnitId ID of the hydro unit.
+     * @param landCoverName name of the land cover.
+     * @param area area of the land cover.
+     */
     void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
 
+    /**
+     * Apply the action to the model.
+     *
+     * @param date date of the action.
+     * @return true if the action was applied successfully.
+     */
     bool Apply(double date) override;
 
-    int GetChangesNb() {
+    /**
+     * Get the number of changes in the action.
+     *
+     * @return the number of changes in the action.
+     */
+    int GetChangesNb() const {
         return int(m_sporadicDates.size());
     }
 
-    int GetLandCoversNb() {
+    /**
+     * Get the number of land covers in the action.
+     *
+     * @return the number of land covers in the action.
+     */
+    int GetLandCoversNb() const {
         return int(m_landCoverNames.size());
     }
 

@@ -100,6 +100,12 @@ class Brick : public wxObject {
 
     virtual void Finalize();
 
+    virtual void SetInitialState(double value, const string& type = "water");
+
+    virtual double GetContent(const string& type = "water");
+
+    virtual void UpdateContent(double value, const string& type = "water");
+
     virtual void UpdateContentFromInputs();
 
     virtual void ApplyConstraints(double timeStep);
@@ -138,7 +144,7 @@ class Brick : public wxObject {
   protected:
     string m_name;
     bool m_needsSolver;
-    WaterContainer* m_container;
+    WaterContainer* m_water;
     vector<Process*> m_processes;
 
   private:

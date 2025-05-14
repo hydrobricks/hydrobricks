@@ -88,3 +88,4 @@ jobs:
           fail_ci_if_error: true
           flags: core
           files: ${{github.workspace}}/bin/hydrobricks-coverage.info
+          gcov_ignore: "*/tests/*"

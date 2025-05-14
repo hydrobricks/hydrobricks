@@ -576,7 +576,8 @@ class Catchment:
 
     def calculate_daily_potential_radiation(self, *args, **kwargs):
         """
-        Call the calculate_daily_potential_radiation method of the SolarRadiation class.
+        Call the calculate_daily_potential_radiation method of the
+        PotentialSolarRadiation class.
         """
         return self.solar_radiation.calculate_daily_potential_radiation(*args, **kwargs)
 

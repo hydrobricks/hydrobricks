@@ -57,7 +57,8 @@ class ModelSettings:
         return self.settings.set_parameter_value(component, name, float(value))
 
     def generate_base_structure(self, land_cover_names, land_cover_types,
-                                with_snow=True, snow_melt_process='melt:degree_day'):
+                                with_snow=True, snow_melt_process='melt:degree_day',
+                                snow_ice_transformation=False):
         """
         Generate basic elements
 
@@ -71,6 +72,8 @@ class ModelSettings:
             Account for snow
         snow_melt_process : str
             Snow melt process
+        snow_ice_transformation : bool
+            Account for snow-ice transformation
         """
         if len(land_cover_names) != len(land_cover_types):
             raise RuntimeError('The length of the land cover names '
@@ -89,7 +92,7 @@ class ModelSettings:
 
         # Snowpack
         if with_snow:
-            self.settings.generate_snowpacks(snow_melt_process)
+            self.settings.generate_snowpacks(snow_melt_process, snow_ice_transformation)
 
     def generate_snowpacks(self, snow_melt_process):
         """

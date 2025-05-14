@@ -22,3 +22,14 @@ void SurfaceComponent::SetAreaFraction(double value) {
         }
     }
 }
+
+bool SurfaceComponent::IsNull() {
+    if (m_areaFraction <= PRECISION) {
+        return true;
+    }
+    if (m_parent && m_parent->IsNull()) {
+        return true;
+    }
+
+    return false;
+}

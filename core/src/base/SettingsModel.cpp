@@ -62,7 +62,12 @@ void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     m_selectedBrick = &m_selectedStructure->hydroUnitBricks[m_selectedStructure->hydroUnitBricks.size() - 1];
 
     if (m_logAll) {
-        AddBrickLogging("content");
+        AddBrickLogging("water_content");
+        if (type == "glacier") {
+            AddBrickLogging("ice_content");
+        } else if (type == "snowpack") {
+            AddBrickLogging("snow_content");
+        }
     }
 }
 
@@ -77,7 +82,12 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
     m_selectedBrick = &m_selectedStructure->subBasinBricks[m_selectedStructure->subBasinBricks.size() - 1];
 
     if (m_logAll) {
-        AddBrickLogging("content");
+        AddBrickLogging("water_content");
+        if (type == "glacier") {
+            AddBrickLogging("ice_content");
+        } else if (type == "snowpack") {
+            AddBrickLogging("snow_content");
+        }
     }
 }
 
@@ -172,7 +182,15 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     m_selectedProcess = &m_selectedBrick->processes[m_selectedBrick->processes.size() - 1];
 
     if (!target.empty()) {
-        AddProcessOutput(target);
+        // If the target contains ":", separate into target and fluxType
+        auto pos = target.find(':');
+        if (pos != string::npos) {
+            string fluxType = target.substr(pos + 1);
+            string targetSub = target.substr(0, pos);
+            AddProcessOutput(targetSub, fluxType);
+        } else {
+            AddProcessOutput(target);
+        }
     }
     if (log || m_logAll) {
         AddProcessLogging("output");
@@ -238,11 +256,12 @@ void SettingsModel::AddProcessForcing(const string& name) {
     }
 }
 
-void SettingsModel::AddProcessOutput(const string& target) {
+void SettingsModel::AddProcessOutput(const string& target, const string& fluxType) {
     wxASSERT(m_selectedProcess);
 
     OutputSettings outputSettings;
     outputSettings.target = target;
+    outputSettings.fluxType = fluxType;
     m_selectedProcess->outputs.push_back(outputSettings);
 }
 
@@ -431,7 +450,7 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
     }
 }
 
-void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
+void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess, bool snowIceTransformation) {
     wxASSERT(m_selectedStructure);
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
@@ -443,8 +462,9 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
 
         AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
 
-        if (m_logAll) {
-            AddBrickLogging("snow");
+        if (snowIceTransformation && brickSettings.type == "glacier") {
+            AddBrickProcess("snow_ice_transfo", "transform:snow_ice", brickSettings.name + ":ice");
+            SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
         }
     }
 }
@@ -488,6 +508,7 @@ void SettingsModel::SelectHydroUnitBrick(int index) {
     wxASSERT(m_modelStructures.size() == 1);
 
     m_selectedBrick = &m_selectedStructure->hydroUnitBricks[index];
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectSubBasinBrick(int index) {
@@ -495,6 +516,7 @@ void SettingsModel::SelectSubBasinBrick(int index) {
     wxASSERT(m_modelStructures.size() == 1);
 
     m_selectedBrick = &m_selectedStructure->subBasinBricks[index];
+    m_selectedProcess = nullptr;
 }
 
 bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
@@ -502,6 +524,7 @@ bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
     for (auto& brick : m_selectedStructure->hydroUnitBricks) {
         if (brick.name == name) {
             m_selectedBrick = &brick;
+            m_selectedProcess = nullptr;
             return true;
         }
     }
@@ -514,6 +537,7 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
     for (auto& brick : m_selectedStructure->subBasinBricks) {
         if (brick.name == name) {
             m_selectedBrick = &brick;
+            m_selectedProcess = nullptr;
             return true;
         }
     }
@@ -525,18 +549,21 @@ void SettingsModel::SelectHydroUnitBrick(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
         throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
         throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
+    m_selectedProcess = nullptr;
 }
 
 void SettingsModel::SelectProcess(int index) {

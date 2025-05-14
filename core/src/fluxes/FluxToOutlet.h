@@ -17,9 +17,6 @@ class FluxToOutlet : public Flux {
      * @copydoc Flux::GetAmount()
      */
     double GetAmount() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_OUTLET_H

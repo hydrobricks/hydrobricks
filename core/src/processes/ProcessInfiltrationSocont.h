@@ -11,6 +11,11 @@ class ProcessInfiltrationSocont : public ProcessInfiltration {
 
     ~ProcessInfiltrationSocont() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -19,9 +24,10 @@ class ProcessInfiltrationSocont : public ProcessInfiltration {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_INFILTRATION_SOCONT_H

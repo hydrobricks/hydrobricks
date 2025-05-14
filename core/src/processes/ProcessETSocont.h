@@ -11,6 +11,11 @@ class ProcessETSocont : public ProcessET {
 
     ~ProcessETSocont() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,15 +23,19 @@ class ProcessETSocont : public ProcessET {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
   protected:
     Forcing* m_pet;
     float m_exponent;
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_ET_SOCONT_H

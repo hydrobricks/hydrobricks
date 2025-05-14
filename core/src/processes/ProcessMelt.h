@@ -16,12 +16,15 @@ class ProcessMelt : public Process {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::GetConnectionsNb()
+     */
     int GetConnectionsNb() override;
 
+    /**
+     * @copydoc Process::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_H

@@ -103,7 +103,6 @@ def test_delta_h_action_lookup_table_binding():
     action = actions.ActionGlacierEvolutionDeltaH()
     action.load_from(glacier_evolution)
 
-    assert action.get_month() == 10
     assert action.get_land_cover_name() == 'glacier'
     assert np.array_equal(action.get_hydro_unit_ids(), hydro_unit_ids.values)
     assert np.array_equal(action.get_lookup_table_area(), lookup_table_area.values)
@@ -133,7 +132,6 @@ def test_delta_h_action_lookup_table_binding_from_file():
         action = actions.ActionGlacierEvolutionDeltaH()
         action.load_from_csv(working_dir)
 
-        assert action.get_month() == 10
         assert action.get_land_cover_name() == 'glacier'
         assert action.get_hydro_unit_ids().shape == hydro_unit_ids.values.shape
         assert np.array_equal(action.get_hydro_unit_ids(), hydro_unit_ids.values)

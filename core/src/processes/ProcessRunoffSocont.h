@@ -13,6 +13,11 @@ class ProcessRunoffSocont : public ProcessOutflow {
 
     ~ProcessRunoffSocont() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -32,11 +37,17 @@ class ProcessRunoffSocont : public ProcessOutflow {
     double m_areaUnit;       // [m^2]
     double m_exponent;
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
 
+    /**
+     * Get the area of the hydro unit.
+     *
+     * @return The area of the hydro unit in square meters.
+     */
     double GetArea();
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_RUNOFF_SOCONT_H

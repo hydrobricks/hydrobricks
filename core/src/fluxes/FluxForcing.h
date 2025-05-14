@@ -19,16 +19,22 @@ class FluxForcing : public Flux {
      */
     double GetAmount() override;
 
+    /**
+     * Attach a forcing to the flux.
+     *
+     * @param forcing the forcing to attach.
+     */
     void AttachForcing(Forcing* forcing);
 
+    /**
+     * @copydoc Flux::IsForcing()
+     */
     bool IsForcing() override {
         return true;
     }
 
   protected:
     Forcing* m_forcing;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_FORCING_H

@@ -279,18 +279,30 @@ class GlacierEvolutionDeltaH:
             output_dir / "glacier_evolution_lookup_table_volume.csv")
 
         if self.areas_perc is not None:
+            columns = pd.MultiIndex.from_arrays([range(len(self.areas_perc[0])),
+                                                 self.hydro_unit_ids, 
+                                                 self.elevation_bands], 
+                                                 names=['id', 
+                                                        'hydro_unit_id', 
+                                                        'elevation_band'])
             details_glacier_areas = pd.DataFrame(
                 self.areas_perc * self.catchment_area,
                 index=range(self.areas_perc.shape[0]),
-                columns=range(len(self.areas_perc[0])))
+                columns=columns)
             details_glacier_areas.to_csv(
                 output_dir / "details_glacier_areas_evolution.csv")
 
         if self.we is not None:
+            columns = pd.MultiIndex.from_arrays([range(len(self.we[0])),
+                                                 self.hydro_unit_ids, 
+                                                 self.elevation_bands], 
+                                                 names=['id', 
+                                                        'hydro_unit_id', 
+                                                        'elevation_band'])
             details_glacier_we = pd.DataFrame(
                 self.we,
                 index=range(self.we.shape[0]),
-                columns=range(len(self.we[0])))
+                columns=columns)
             details_glacier_we.to_csv(
                 output_dir / "details_glacier_we_evolution.csv")
 

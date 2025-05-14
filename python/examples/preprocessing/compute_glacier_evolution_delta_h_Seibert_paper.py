@@ -40,9 +40,9 @@ print(f"Files saved to: {working_dir}")
 
 # Load the results from the CSV files
 areas_evol = pd.read_csv(
-    working_dir / "details_glacier_areas_evolution.csv", index_col=0)
+    working_dir / "details_glacier_areas_evolution.csv", index_col=0, header=[0, 1, 2])
 we_evol = pd.read_csv(
-    working_dir / "details_glacier_we_evolution.csv", index_col=0)
+    working_dir / "details_glacier_we_evolution.csv", index_col=0, header=[0, 1, 2])
 init_glacier_df = pd.read_csv(GLACIER_PROFILE, skiprows=[1])
 init_glacier_df = init_glacier_df.drop(
     init_glacier_df[init_glacier_df.glacier_area == 0].index)

@@ -1,16 +1,16 @@
 from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-
+from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
 from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
-from hydrobricks.hydro_units import HydroUnits
 
 if hb.has_shapely:
     from shapely.geometry import mapping

@@ -1,12 +1,16 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
-
-from hydrobricks.units import Unit, convert_unit_df, get_unit_enum, \
-    get_unit_from_df_column
+from hydrobricks.units import (
+    Unit,
+    convert_unit_df,
+    get_unit_enum,
+    get_unit_from_df_column,
+)
 
 
 class HydroUnits:

@@ -1,19 +1,18 @@
 from __future__ import annotations
+
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 import _hydrobricks as _hb
 import hydrobricks as hb
 import hydrobricks.utils as utils
-
-from hydrobricks.units import Unit, convert_unit
 from hydrobricks.actions.action import Action
-from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.catchment import Catchment
-
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.units import Unit, convert_unit
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping

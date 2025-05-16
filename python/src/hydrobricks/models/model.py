@@ -1,20 +1,20 @@
 from __future__ import annotations
+
 import os
-import numpy as np
 from abc import ABC, abstractmethod
 
 import HydroErr
+import numpy as np
 
 import _hydrobricks as _hb
 import hydrobricks as hb
 import hydrobricks.utils as utils
 from _hydrobricks import ModelHydro
-
-from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
-from hydrobricks.parameters import ParameterSet
+from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.parameters import ParameterSet
 from hydrobricks.trainer import evaluate
 
 

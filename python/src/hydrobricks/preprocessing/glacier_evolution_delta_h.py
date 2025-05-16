@@ -1,17 +1,17 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-
 from hydrobricks.constants import ICE_WE
 
 if TYPE_CHECKING:
-    from hydrobricks.hydro_units import HydroUnits
     from hydrobricks.catchment import Catchment
+    from hydrobricks.hydro_units import HydroUnits
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping

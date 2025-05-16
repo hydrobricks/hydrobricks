@@ -19,7 +19,8 @@ class IceContainer : public WaterContainer {
     /**
      * Set the option to not melt when snow cover is present.
      *
-     * @param value Pointer to a float value. If the value is greater than 0, melting is disabled when snow cover is present.
+     * @param value Pointer to a float value. If the value is greater than 0, melting is disabled when snow cover is
+     * present.
      */
     void SetNoMeltWhenSnowCover(const float* value) {
         wxASSERT(value);

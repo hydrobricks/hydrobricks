@@ -127,7 +127,6 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
 }
 
 int Hydrobricks::OnRun() {
-
     return wxApp::OnRun();
 }
 

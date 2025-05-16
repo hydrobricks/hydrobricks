@@ -80,8 +80,8 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     ~TimeSeriesDataRegular() override = default;
 
     /**
-    * @copydoc TimeSeriesData::SetValues()
-    */
+     * @copydoc TimeSeriesData::SetValues()
+     */
     bool SetValues(const vecDouble& values) override;
 
     /**

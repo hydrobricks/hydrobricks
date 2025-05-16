@@ -3,6 +3,7 @@ import spotpy
 from examples._helpers.models_setup_helper import ModelSetupHelper
 
 import hydrobricks as hb
+import hydrobricks.trainer as trainer
 
 # Select the methods to compare
 methods = ['temperature_index', 'degree_day', 'degree_day_aspect']
@@ -79,8 +80,8 @@ for method in methods:
                                       'precip_gradient']
 
     # Setup SPOTPY
-    spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
-                                obj_func='kge_2012')
+    spot_setup = trainer.SpotpySetup(
+        socont, parameters, forcing, obs, warmup=365, obj_func='kge_2012')
 
     # Run spotpy
     sampler = spotpy.algorithms.sceua(spot_setup, dbformat='csv',

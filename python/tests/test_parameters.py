@@ -228,13 +228,13 @@ def parameter_set():
     return parameter_set
 
 
-def test_create_json_parameter_file_created(parameter_set):
+def test_create_json_parameter_file_created(parameter_set: hb.ParameterSet):
     with tempfile.TemporaryDirectory() as tmp_dir:
         parameter_set.save_as(tmp_dir, 'parameters', 'json')
         assert os.path.isfile(Path(tmp_dir) / 'parameters.json')
 
 
-def test_create_json_parameter_file_content(parameter_set):
+def test_create_json_parameter_file_content(parameter_set: hb.ParameterSet):
     with tempfile.TemporaryDirectory() as tmp_dir:
         parameter_set.save_as(tmp_dir, 'parameters', 'json')
         txt = Path(tmp_dir + '/parameters.json').read_text()
@@ -242,13 +242,13 @@ def test_create_json_parameter_file_content(parameter_set):
         assert '"capacity": 200' in txt
 
 
-def test_create_yaml_parameter_file_created(parameter_set):
+def test_create_yaml_parameter_file_created(parameter_set: hb.ParameterSet):
     with tempfile.TemporaryDirectory() as tmp_dir:
         parameter_set.save_as(tmp_dir, 'parameters', 'yaml')
         assert os.path.isfile(Path(tmp_dir) / 'parameters.yaml')
 
 
-def test_create_yaml_parameter_file_content(parameter_set):
+def test_create_yaml_parameter_file_content(parameter_set: hb.ParameterSet):
     with tempfile.TemporaryDirectory() as tmp_dir:
         parameter_set.save_as(tmp_dir, 'parameters', 'yaml')
         txt = Path(tmp_dir + '/parameters.yaml').read_text()
@@ -256,7 +256,7 @@ def test_create_yaml_parameter_file_content(parameter_set):
         assert 'capacity: 200' in txt
 
 
-def test_set_random_values(parameter_set):
+def test_set_random_values(parameter_set: hb.ParameterSet):
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
         component='snowpack', name='melt_factor', aliases=['dd'],
@@ -276,7 +276,7 @@ def test_set_random_values(parameter_set):
     assert parameter_set.get('A') <= 3000
 
 
-def test_set_random_values_with_lists(parameter_set):
+def test_set_random_values_with_lists(parameter_set: hb.ParameterSet):
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
         component='snowpack', name='melt_factor', aliases=['dd'],
@@ -302,7 +302,7 @@ def test_set_random_values_with_lists(parameter_set):
     assert parameter_set.get('A')[1] <= 200
 
 
-def test_reset_random_values_with_lists(parameter_set):
+def test_reset_random_values_with_lists(parameter_set: hb.ParameterSet):
     parameter_set = hb.ParameterSet()
     parameter_set.define_parameter(
         component='snowpack', name='melt_factor', aliases=['dd'],
@@ -315,13 +315,13 @@ def test_reset_random_values_with_lists(parameter_set):
     assert parameter_set.get('dd')[1] <= 3
 
 
-def test_get_model_only_parameters(parameter_set):
+def test_get_model_only_parameters(parameter_set: hb.ParameterSet):
     parameter_set.add_data_parameter('lapse', 0.6, min_value=0, max_value=1)
     model_params = parameter_set.get_model_parameters()
     assert len(model_params) == 3
 
 
-def test_change_parameter_range(parameter_set):
+def test_change_parameter_range(parameter_set: hb.ParameterSet):
     parameter_set.change_range('a_snow', 2, 8)
     assert parameter_set.parameters.loc[0].at['min'] == 2
     assert parameter_set.parameters.loc[0].at['max'] == 8
@@ -344,19 +344,19 @@ def parameter_set_constraints():
     return parameter_set
 
 
-def test_define_constraints_satisfied(parameter_set_constraints):
+def test_define_constraints_satisfied(parameter_set_constraints: hb.ParameterSet):
     assert len(parameter_set_constraints.constraints) == 2
     parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.3, 'k3': 0.4})
     assert parameter_set_constraints.constraints_satisfied()
 
 
-def test_define_constraints_not_satisfied(parameter_set_constraints):
+def test_define_constraints_not_satisfied(parameter_set_constraints: hb.ParameterSet):
     assert len(parameter_set_constraints.constraints) == 2
     parameter_set_constraints.set_values({'k1': 0.2, 'k2': 0.1, 'k3': 0.4})
     assert not parameter_set_constraints.constraints_satisfied()
 
 
-def test_define_constraints_removed(parameter_set_constraints):
+def test_define_constraints_removed(parameter_set_constraints: hb.ParameterSet):
     assert len(parameter_set_constraints.constraints) == 2
     parameter_set_constraints.remove_constraint('k1', '<', 'k2')
     assert len(parameter_set_constraints.constraints) == 1

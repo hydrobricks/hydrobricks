@@ -15,7 +15,7 @@ def validate_kwargs(kwargs, allowed_kwargs):
             raise TypeError('Keyword argument not understood:', kwarg)
 
 
-def dump_config_file(content, directory, name, file_type='yaml'):
+def dump_config_file(content, directory: str, name: str, file_type: str = 'yaml'):
     directory = Path(directory)
 
     # Dump YAML file
@@ -30,7 +30,7 @@ def dump_config_file(content, directory, name, file_type='yaml'):
             outfile.write(json_object)
 
 
-def date_as_mjd(date):
+def date_as_mjd(date: str | pd.Timestamp | pd.DatetimeIndex) -> float | np.ndarray:
     if isinstance(date, str):
         return pd.to_datetime(date).to_julian_date() - 2400000.5
     if isinstance(date, pd.Timestamp):
@@ -40,7 +40,7 @@ def date_as_mjd(date):
     return mjd
 
 
-def jd_to_date(jd):
+def jd_to_date(jd: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Transform julian date numbers to year, month and day (array-based).
     From https://gist.github.com/jiffyclub/1294443
@@ -78,7 +78,7 @@ def jd_to_date(jd):
     return year, month, day
 
 
-def days_to_hours_mins(days):
+def days_to_hours_mins(days: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Transform a number of days to hours and minutes"""
     hours = days * 24.
     hours, hour = np.modf(hours)
@@ -89,7 +89,7 @@ def days_to_hours_mins(days):
     return hour.astype(int), minute.astype(int)
 
 
-def mjd_to_datetime(mjd):
+def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
     """Transform modified julian dates to datetime instances (array-based)."""
     jd = mjd + 2400000.5
     year, month, day = jd_to_date(jd)
@@ -108,7 +108,7 @@ def mjd_to_datetime(mjd):
     return date
 
 
-def compute_area(shapefile):
+def compute_area(shapefile: pd.DataFrame) -> float:
     """Compute the area of a shapefile in square meters."""
     area = 0
     for _, row in shapefile.iterrows():
@@ -121,7 +121,7 @@ def compute_area(shapefile):
 class Timer:
     """Timer to time code execution. Based on: https://pypi.org/project/codetiming/"""
 
-    def __init__(self, text=None):
+    def __init__(self, text: str | None = None):
         self._start_time = None
         self.last = None
         self.logger = print
@@ -136,10 +136,10 @@ class Timer:
 
         self._start_time = time.perf_counter()
 
-    def stop(self, show_time=True):
+    def stop(self, show_time: bool = True) -> float:
         """Stop the timer, and report the elapsed time."""
         if not show_time:
-            return
+            return 0
 
         if self._start_time is None:
             raise RuntimeError("Timer is not running. Use .start() to start it")

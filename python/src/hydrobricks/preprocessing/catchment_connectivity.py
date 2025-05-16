@@ -1,7 +1,13 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import numpy as np
+import pandas as pd
 from scipy import ndimage
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 
 class CatchmentConnectivity:
@@ -9,18 +15,22 @@ class CatchmentConnectivity:
     Class to handle connectivity of catchments.
     """
 
-    def __init__(self, catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the Connectivity class.
 
         Parameters
         ----------
-        catchment : hb.Catchment
+        catchment
             The catchment object.
         """
         self.catchment = catchment
 
-    def calculate(self, mode='multiple', force_connectivity=True):
+    def calculate(
+            self,
+            mode: str = 'multiple',
+            force_connectivity: bool = True
+    ) -> pd.DataFrame:
         """
         Calculate the connectivity between hydro units using a flow accumulation
         partition. Connectivity between hydro units is forced to stay within the
@@ -28,11 +38,11 @@ class CatchmentConnectivity:
 
         Parameters
         ----------
-        mode : str
+        mode
             The mode to calculate the connectivity:
             'single' = keep the highest connectivity only
             'multiple' = keep all connectivity values (multiple connections)
-        force_connectivity : bool
+        force_connectivity
             If True, all hydro units are forced to have a connection to another hydro unit.
             When there is no downstream hydro unit, the connectivity is set to the neighboring
             hydro units, proportionally to the length of the common border.
@@ -84,7 +94,7 @@ class CatchmentConnectivity:
         # Compute the connectivity
         self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
 
-        def remove_connectivity_out(row):
+        def remove_connectivity_out(row: pd.Series) -> pd.Series:
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -95,7 +105,7 @@ class CatchmentConnectivity:
 
             return row
 
-        def connect_to_neighbours(row):
+        def connect_to_neighbours(row: pd.Series) -> pd.Series:
             # Look for hydro units without connectivity and connect them to the neighboring hydro units
             unit_id = row[('id', '-')]
             connectivity = row[('connectivity', '-')]
@@ -117,7 +127,7 @@ class CatchmentConnectivity:
             row[('connectivity', '-')] = connectivity
             return row
 
-        def normalize_connectivity(row):
+        def normalize_connectivity(row: pd.Series) -> pd.Series:
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -141,7 +151,7 @@ class CatchmentConnectivity:
             row[('connectivity', '-')] = connectivity
             return row
 
-        def keep_highest_connectivity(row):
+        def keep_highest_connectivity(row: pd.Series) -> pd.Series:
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -174,7 +184,12 @@ class CatchmentConnectivity:
 
         return df
 
-    def _sum_contributing_flow_acc(self, df, flow_acc, flow_dir):
+    def _sum_contributing_flow_acc(
+            self,
+            df: pd.DataFrame,
+            flow_acc: np.ndarray,
+            flow_dir: np.ndarray
+    ):
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):

@@ -3,6 +3,7 @@ import spotpy
 from examples._helpers.models_setup_helper import ModelSetupHelper
 
 import hydrobricks as hb
+import hydrobricks.trainer as trainer
 
 # Set up the model
 helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
@@ -21,8 +22,8 @@ parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_
 parameters.set_prior('a_snow', spotpy.parameter.Normal(mean=4, stddev=2))
 
 # Setup SPOTPY
-spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
-                            obj_func=spotpy.objectivefunctions.nashsutcliffe)
+spot_setup = trainer.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
+                                 obj_func=spotpy.objectivefunctions.nashsutcliffe)
 
 # Select number of runs and run spotpy
 nb_runs = 10000

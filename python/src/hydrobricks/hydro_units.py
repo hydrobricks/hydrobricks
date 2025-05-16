@@ -5,7 +5,8 @@ from pathlib import Path
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
 
-from .units import Unit, convert_unit_df, get_unit_enum, get_unit_from_df_column
+from hydrobricks.units import Unit, convert_unit_df, get_unit_enum, \
+    get_unit_from_df_column
 
 
 class HydroUnits:

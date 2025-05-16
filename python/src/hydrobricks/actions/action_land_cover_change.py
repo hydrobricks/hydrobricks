@@ -1,3 +1,4 @@
+from __future__ import annotations
 import warnings
 
 import numpy as np
@@ -6,9 +7,13 @@ from pathlib import Path
 
 import _hydrobricks as _hb
 import hydrobricks as hb
+import hydrobricks.utils as utils
 
-from ..units import Unit, convert_unit
-from .action import Action
+from hydrobricks.units import Unit, convert_unit
+from hydrobricks.actions.action import Action
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.catchment import Catchment
+
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -31,7 +36,7 @@ class ActionLandCoverChange(Action):
     def load_from_csv(
             self,
             path: str | Path,
-            hydro_units: hb.HydroUnits,
+            hydro_units: HydroUnits,
             land_cover: str,
             area_unit: str,
             match_with: str = 'elevation'
@@ -107,14 +112,14 @@ class ActionLandCoverChange(Action):
     @classmethod
     def create_action_for_glaciers(
             cls,
-            catchment: hb.Catchment,
+            catchment: Catchment,
             times: list[str],
             full_glaciers: list[str] | Path,
             debris_glaciers: list[str] | Path | None = None,
             with_debris: bool = False,
             method: str = 'vector',
             interpolate_yearly: bool = True
-    ) -> tuple[hb.ActionLandCoverChange, list[pd.DataFrame]]:
+    ) -> tuple[ActionLandCoverChange, list[pd.DataFrame]]:
         """
         Extract the glacier cover changes from shapefiles, creates a
         ActionLandCoverChange object, and assign the computed land cover
@@ -166,7 +171,7 @@ class ActionLandCoverChange(Action):
             raise ValueError("The catchment has not been discretized "
                              "(hydro units missing).")
 
-        changes = hb.actions.ActionLandCoverChange()
+        changes = ActionLandCoverChange()
         changes_df = changes._create_action_for_glaciers(
             catchment, full_glaciers, debris_glaciers, times, with_debris, method,
             interpolate_yearly)
@@ -175,7 +180,7 @@ class ActionLandCoverChange(Action):
 
     def _create_action_for_glaciers(
             self,
-            catchment: hb.Catchment,
+            catchment: Catchment,
             full_glaciers: list[str] | Path,
             debris_glaciers: list[str] | Path | None,
             times: list[str],
@@ -265,7 +270,7 @@ class ActionLandCoverChange(Action):
 
     def _extract_glacier_cover_change(
             self,
-            catchment: hb.Catchment,
+            catchment: Catchment,
             glaciers_shapefile: str | Path,
             debris_shapefile: str | Path | None,
             method: str = 'vector'
@@ -314,7 +319,7 @@ class ActionLandCoverChange(Action):
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
-        glaciated_area = hb.utils.compute_area(glaciers)
+        glaciated_area = utils.compute_area(glaciers)
         non_glaciated_area = catchment.area - glaciated_area
 
         # Compute the debris-covered area of the glacier
@@ -336,7 +341,7 @@ class ActionLandCoverChange(Action):
               f"glaciated.")
 
         if debris_shapefile is not None:
-            debris_glaciated_area = hb.utils.compute_area(glaciers_debris)
+            debris_glaciated_area = utils.compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
             print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
@@ -458,7 +463,7 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _create_new_change_dataframe(
-            hydro_units: hb.HydroUnits,
+            hydro_units: HydroUnits,
             n_unit_ids: int
     ) -> pd.DataFrame:
         changes_df = pd.DataFrame(index=range(n_unit_ids))
@@ -500,7 +505,7 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _mask_dem(
-            catchment: hb.Catchment,
+            catchment: Catchment,
             shapefile: hb.gpd.GeoDataFrame,
             nodata: float,
             all_touched: bool = False
@@ -518,7 +523,7 @@ class ActionLandCoverChange(Action):
     @staticmethod
     def _match_hydro_unit_ids(
             file_content: pd.DataFrame,
-            hydro_units: hb.HydroUnits,
+            hydro_units: HydroUnits,
             match_with: str
     ):
         hu_df = hydro_units.hydro_units
@@ -550,7 +555,7 @@ class ActionLandCoverChange(Action):
             if col == 'hydro_unit' or col == 0:
                 continue
             # Extract date from column name
-            mjd = hb.utils.date_as_mjd(col)
+            mjd = utils.date_as_mjd(col)
 
             for row in range(len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']

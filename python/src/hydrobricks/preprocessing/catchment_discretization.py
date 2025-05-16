@@ -1,8 +1,13 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import itertools
 
 import numpy as np
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 
 class CatchmentDiscretization:
@@ -10,7 +15,7 @@ class CatchmentDiscretization:
     Class to handle the discretization of catchments.
     """
 
-    def __init__(self, catchment: hb.Catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the Discretization class.
 

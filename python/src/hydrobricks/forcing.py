@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sys
 
 if sys.version_info < (3, 11):
@@ -17,9 +18,11 @@ from cftime import num2date
 from pathlib import Path
 
 import hydrobricks as hb
-from hydrobricks.constants import TO_RAD
 
-from .time_series import TimeSeries1D, TimeSeries2D
+from hydrobricks.constants import TO_RAD
+from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.parameters import ParameterSet
 
 
 class Forcing:
@@ -46,9 +49,9 @@ class Forcing:
         WIND = auto()  # Wind speed [m s-1]
         PRESSURE = auto()  # Atmospheric pressure [kPa]
 
-    def __init__(self, hydro_units: hb.HydroUnits):
+    def __init__(self, hydro_units: HydroUnits):
         # Check hydro units
-        if not isinstance(hydro_units, hb.HydroUnits):
+        if not isinstance(hydro_units, HydroUnits):
             raise TypeError('The hydro_units argument must be a HydroUnits '
                             f'object, not {type(hydro_units)}.')
         if len(hydro_units.hydro_units) == 0:
@@ -278,7 +281,7 @@ class Forcing:
 
     def apply_operations(
             self,
-            parameters: hb.ParameterSet = None,
+            parameters: ParameterSet = None,
             apply_to_all: bool = True
     ):
         """
@@ -404,7 +407,7 @@ class Forcing:
     def _apply_operations_of_type(
             self,
             operation_type: str,
-            parameters: hb.ParameterSet | None = None,
+            parameters: ParameterSet | None = None,
             apply_to_all: bool = True
     ):
         for operation_ref in self._operations:

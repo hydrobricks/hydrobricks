@@ -27,7 +27,7 @@ def hydro_units():
 
 
 @pytest.fixture
-def forcing(hydro_units):
+def forcing(hydro_units: hb.HydroUnits):
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
         CATCHMENT_DIR / 'meteo.csv', column_time='date', time_format='%d/%m/%Y',
@@ -42,7 +42,7 @@ def parameters():
     return parameters
 
 
-def test_forcing_get_variable_enum(hydro_units):
+def test_forcing_get_variable_enum(hydro_units: hb.HydroUnits):
     forcing = hb.Forcing(hydro_units)
     assert forcing.get_variable_enum('precipitation') == hb.Forcing.Variable.P
     assert forcing.get_variable_enum('precip') == hb.Forcing.Variable.P
@@ -85,7 +85,7 @@ def test_forcing_get_variable_enum(hydro_units):
     assert forcing.get_variable_enum('wind') == hb.Forcing.Variable.WIND
 
 
-def test_forcing_load_station_data_from_csv(hydro_units):
+def test_forcing_load_station_data_from_csv(hydro_units: hb.HydroUnits):
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
         CATCHMENT_DIR / 'meteo.csv', column_time='date', time_format='%d/%m/%Y',
@@ -99,7 +99,7 @@ def test_forcing_load_station_data_from_csv(hydro_units):
     assert forcing.data1D.data[2].shape[0] > 0
 
 
-def test_correct_station_data(forcing):
+def test_correct_station_data(forcing: hb.Forcing):
     forcing.correct_station_data(
         variable='precipitation', method='additive',
         correction='param:precip_corr')
@@ -108,7 +108,7 @@ def test_correct_station_data(forcing):
     assert forcing._operations[0]['method'] == 'additive'
 
 
-def test_spatialize_from_station_data(forcing):
+def test_spatialize_from_station_data(forcing: hb.Forcing):
     forcing.spatialize_from_station_data(
         variable='temperature', method='additive_elevation_gradient',
         ref_elevation=1250, gradient='param:temp_gradients')
@@ -121,7 +121,7 @@ def test_spatialize_from_station_data(forcing):
     assert forcing._operations[0]['method'] == 'additive_elevation_gradient'
 
 
-def test_compute_pet(forcing):
+def test_compute_pet(forcing: hb.Forcing):
     forcing.compute_pet(
         method='Priestley-Taylor', use=['t', 'rs', 'tmax', 'tmin', 'rh', 'lat'])
     assert len(forcing._operations) == 1
@@ -129,7 +129,8 @@ def test_compute_pet(forcing):
     assert forcing._operations[0]['method'] == 'Priestley-Taylor'
 
 
-def test_apply_prior_correction_multiplicative(forcing, parameters):
+def test_apply_prior_correction_multiplicative(
+        forcing: hb.Forcing, parameters: hb.ParameterSet):
     parameters.add_data_parameter('precip_corr_factor', 0.85)
     forcing.correct_station_data(
         variable='precipitation', method='multiplicative',
@@ -140,7 +141,8 @@ def test_apply_prior_correction_multiplicative(forcing, parameters):
     assert sum_after == pytest.approx(sum_before * 0.85)
 
 
-def test_apply_prior_correction_additive(forcing, parameters):
+def test_apply_prior_correction_additive(
+        forcing: hb.Forcing, parameters: hb.ParameterSet):
     parameters.add_data_parameter('temp_corr_factor', 1.1)
     forcing.correct_station_data(
         variable='temperature', method='additive',
@@ -152,7 +154,8 @@ def test_apply_prior_correction_additive(forcing, parameters):
     assert sum_after == pytest.approx(sum_before + data_length * 1.1)
 
 
-def test_apply_spatialization_from_station_data_temperature(forcing, parameters):
+def test_apply_spatialization_from_station_data_temperature(
+        forcing: hb.Forcing, parameters: hb.ParameterSet):
     parameters.add_data_parameter('temp_gradients', -0.6)
     forcing.spatialize_from_station_data(
         variable='temperature', ref_elevation=1250,
@@ -165,7 +168,8 @@ def test_apply_spatialization_from_station_data_temperature(forcing, parameters)
     assert diff_50m == pytest.approx(0.6/2)
 
 
-def test_apply_spatialization_from_station_data_precipitation(forcing, parameters):
+def test_apply_spatialization_from_station_data_precipitation(
+        forcing: hb.Forcing, parameters: hb.ParameterSet):
     parameters.add_data_parameter('precip_gradient', 1.1)
     forcing.spatialize_from_station_data(
         variable='precipitation', ref_elevation=1250,
@@ -176,7 +180,7 @@ def test_apply_spatialization_from_station_data_precipitation(forcing, parameter
                                             len(forcing.hydro_units))
 
 
-def test_apply_pet_computation_wrong_variable_name(forcing):
+def test_apply_pet_computation_wrong_variable_name(forcing: hb.Forcing):
     if not hb.has_pyet:
         return
     forcing.compute_pet(
@@ -185,7 +189,7 @@ def test_apply_pet_computation_wrong_variable_name(forcing):
         forcing.apply_operations()
 
 
-def test_apply_pet_computation_variables_not_available(forcing):
+def test_apply_pet_computation_variables_not_available(forcing: hb.Forcing):
     if not hb.has_pyet:
         return
     forcing.compute_pet(
@@ -195,7 +199,7 @@ def test_apply_pet_computation_variables_not_available(forcing):
         forcing.apply_operations()
 
 
-def test_apply_pet_computation_hamon(forcing):
+def test_apply_pet_computation_hamon(forcing: hb.Forcing):
     if not hb.has_pyet:
         return
     forcing.spatialize_from_station_data(
@@ -208,7 +212,7 @@ def test_apply_pet_computation_hamon(forcing):
     assert 'pet' in forcing.data2D.data_name
 
 
-def test_apply_pet_computation_linacre(forcing):
+def test_apply_pet_computation_linacre(forcing: hb.Forcing):
     if not hb.has_pyet:
         return
     # Faking tmin and tmax
@@ -232,7 +236,7 @@ def test_apply_pet_computation_linacre(forcing):
     assert 'pet' in forcing.data2D.data_name
 
 
-def test_create_file(forcing):
+def test_create_file(forcing: hb.Forcing):
     if not hb.has_netcdf:
         return
 
@@ -246,7 +250,8 @@ def test_create_file(forcing):
         assert os.path.isfile(tmp_dir + '/test.nc')
 
 
-def test_load_file(forcing, hydro_units):
+def test_load_file(forcing: hb.Forcing, parameters: hb.ParameterSet,
+                   hydro_units: hb.HydroUnits):
     if not hb.has_netcdf:
         return
 
@@ -266,7 +271,7 @@ def test_load_file(forcing, hydro_units):
         assert forcing2.data2D.data[1].shape == forcing.data2D.data[1].shape
 
 
-def test_regrid_from_netcdf_single_file(hydro_units):
+def test_regrid_from_netcdf_single_file(hydro_units: hb.HydroUnits):
     if not has_gridded_data_packages():
         return
 
@@ -282,7 +287,7 @@ def test_regrid_from_netcdf_single_file(hydro_units):
     assert forcing.data2D.data[0].shape[1] == 36
 
 
-def test_regrid_from_netcdf_multiple_files(hydro_units):
+def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
     if not has_gridded_data_packages():
         return
 

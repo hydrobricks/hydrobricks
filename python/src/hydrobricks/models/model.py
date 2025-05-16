@@ -1,4 +1,4 @@
-import importlib
+from __future__ import annotations
 import os
 import numpy as np
 from abc import ABC, abstractmethod
@@ -7,9 +7,15 @@ import HydroErr
 
 import _hydrobricks as _hb
 import hydrobricks as hb
+import hydrobricks.utils as utils
 from _hydrobricks import ModelHydro
 
-from .model_settings import ModelSettings
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.actions.action import Action
+from hydrobricks.forcing import Forcing
+from hydrobricks.parameters import ParameterSet
+from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.trainer import evaluate
 
 
 class Model(ABC):
@@ -57,7 +63,7 @@ class Model(ABC):
 
     def setup(
             self,
-            spatial_structure: hb.HydroUnits,
+            spatial_structure: HydroUnits,
             output_path: str,
             start_date: str,
             end_date: str | None = None
@@ -109,17 +115,17 @@ class Model(ABC):
 
     def run(
             self,
-            parameters: hb.ParameterSet,
-            forcing: hb.Forcing | None = None
+            parameters: ParameterSet,
+            forcing: Forcing | None = None
     ):
         """
         Setup and run the model.
 
         Parameters
         ----------
-        parameters : ParameterSet
+        parameters
             The parameters for the given model.
-        forcing : Forcing
+        forcing
             The forcing data.
 
         Return
@@ -146,7 +152,7 @@ class Model(ABC):
             if not self.model.is_ok():
                 raise RuntimeError('Model is not OK.')
 
-            timer = hb.utils.Timer()
+            timer = utils.Timer()
             timer.start()
 
             if not self.model.run():
@@ -167,34 +173,34 @@ class Model(ABC):
 
     def initialize_state_variables(
             self,
-            parameters: hb.ParameterSet,
-            forcing: hb.Forcing | None = None
+            parameters: ParameterSet,
+            forcing: Forcing | None = None
     ):
         """
         Run the model and save the state variables as initial values.
 
         Parameters
         ----------
-        parameters : ParameterSet
+        parameters
             The parameters for the given model.
-        forcing : Forcing
+        forcing
             The forcing data.
         """
         self.run(parameters, forcing)
         self.model.save_as_initial_state()
 
-    def set_forcing(self, forcing: hb.Forcing):
+    def set_forcing(self, forcing: Forcing):
         """
         Set the forcing data.
 
         Parameters
         ----------
-        forcing : Forcing
+        forcing
             The forcing data.
         """
         self.model.clear_time_series()
         time = forcing.data2D.time.to_numpy()
-        time = hb.utils.date_as_mjd(time)
+        time = utils.date_as_mjd(time)
         ids = self.spatial_structure.get_ids().to_numpy().flatten()
         for data_name, data in zip(forcing.data2D.data_name, forcing.data2D.data):
             data_name = str(data_name)
@@ -207,13 +213,13 @@ class Model(ABC):
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
 
-    def add_action(self, action: hb.Action) -> bool:
+    def add_action(self, action: Action) -> bool:
         """
         Add an action to the model.
 
         Parameters
         ----------
-        action : Action
+        action
             The action object. The dates must be sorted.
         """
         return self.model.add_action(action.action)
@@ -245,11 +251,11 @@ class Model(ABC):
 
         Parameters
         ----------
-        directory : str
+        directory
             The directory to write the file.
-        name : str
+        name
             The name of the generated file.
-        file_type : file_type
+        file_type
             The type of file to generate: 'json', 'yaml', or 'both'.
         """
         settings = {
@@ -262,7 +268,7 @@ class Model(ABC):
             },
             'logger': 'all' if self.record_all else ''
         }
-        hb.utils.dump_config_file(settings, directory, name, file_type)
+        utils.dump_config_file(settings, directory, name, file_type)
 
     def get_outlet_discharge(self) -> np.ndarray:
         """
@@ -336,12 +342,12 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        return hb.evaluate(self.get_outlet_discharge()[warmup:],
-                           observations[warmup:],
-                           metric)
+        return evaluate(self.get_outlet_discharge()[warmup:],
+                        observations[warmup:],
+                        metric)
 
-    def generate_parameters(self) -> hb.ParameterSet:
-        ps = hb.ParameterSet()
+    def generate_parameters(self) -> ParameterSet:
+        ps = ParameterSet()
         ps.generate_parameters(self.land_cover_types, self.land_cover_names,
                                self.options, self.structure)
 
@@ -402,7 +408,7 @@ class Model(ABC):
 
     def _validate_kwargs(self, kwargs):
         # Validate optional keyword arguments.
-        hb.utils.validate_kwargs(kwargs, self.allowed_kwargs)
+        utils.validate_kwargs(kwargs, self.allowed_kwargs)
 
     def _generate_structure(self):
         """
@@ -482,7 +488,7 @@ class Model(ABC):
             process, process_data['kind'], target,
             log=log, instantaneous=instantaneous)
 
-    def _set_parameter_values(self, parameters: hb.ParameterSet):
+    def _set_parameter_values(self, parameters: ParameterSet):
         model_params = parameters.get_model_parameters()
         for _, param in model_params.iterrows():
             if not self.settings.set_parameter_value(
@@ -490,7 +496,7 @@ class Model(ABC):
                 raise RuntimeError('Failed setting parameter values.')
         self.model.update_parameters(self.settings.settings)
 
-    def _set_forcing(self, forcing: hb.Forcing | None):
+    def _set_forcing(self, forcing: Forcing | None):
         if forcing is not None:
             self.set_forcing(forcing)
         elif not self.model.forcing_loaded():

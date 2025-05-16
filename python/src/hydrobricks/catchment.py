@@ -1,13 +1,16 @@
+from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
+
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
 from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
+from hydrobricks.hydro_units import HydroUnits
 
 if hb.has_shapely:
     from shapely.geometry import mapping
@@ -78,8 +81,8 @@ class Catchment:
         self.dem_data = None
         self.attributes = {}
         self.map_unit_ids = None
-        self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
-                                         hydro_units_data)
+        self.hydro_units = HydroUnits(land_cover_types, land_cover_names,
+                                      hydro_units_data)
 
         self._extract_outline(outline)
         self._extract_area(outline)
@@ -264,7 +267,7 @@ class Catchment:
 
         return self.hydro_units.hydro_units.elevation
 
-    def get_hydro_units_attributes(self) -> hb.HydroUnits:
+    def get_hydro_units_attributes(self) -> HydroUnits:
         """
         Extract the hydro units attributes.
 

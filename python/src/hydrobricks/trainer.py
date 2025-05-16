@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import importlib
 import os
 from datetime import datetime
@@ -6,12 +8,28 @@ import numpy as np
 
 import hydrobricks as hb
 
+if TYPE_CHECKING:
+    from hydrobricks.models.model import Model
+    from hydrobricks.parameters import ParameterSet
+    from hydrobricks.forcing import Forcing
+    from hydrobricks.observations import Observations
+
 
 class SpotpySetup:
 
-    def __init__(self, model, params, forcing, obs, warmup=365, obj_func=None,
-                 invert_obj_func=False, dump_outputs=False, dump_forcing=False,
-                 dump_dir=''):
+    def __init__(
+            self,
+            model: Model,
+            params: ParameterSet,
+            forcing: Forcing,
+            obs: Observations,
+            warmup: int = 365,
+            obj_func: str | callable | None = None,
+            invert_obj_func: bool = False,
+            dump_outputs: bool = False,
+            dump_forcing: bool = False,
+            dump_dir: str = ''
+    ):
         self.model = [model] if not isinstance(model, list) else model
         self.params = params
         self.params_spotpy = params.get_for_spotpy()
@@ -42,7 +60,7 @@ class SpotpySetup:
         if not obj_func:
             print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
-    def parameters(self):
+    def parameters(self) -> hb.spotpy.parameter:
         x = None
         for i in range(1000):
             x = hb.spotpy.parameter.generate(self.params_spotpy)
@@ -60,13 +78,13 @@ class SpotpySetup:
 
         return x
 
-    def simulation(self, x):
+    def simulation(self, x: hb.spotpy.parameter) -> list[np.ndarray]:
         params = self.params
         param_values = dict(zip(x.name, x.random))
         params.set_values(param_values)
 
         if not params.constraints_satisfied() or not params.range_satisfied():
-            return np.random.rand(len(self.obs[self.warmup:]))
+            return [np.random.rand(len(self.obs[self.warmup:]))]
 
         all_sim = []
         for model, forcing, i in zip(self.model, self.forcing, range(len(self.model))):
@@ -91,20 +109,25 @@ class SpotpySetup:
 
         return all_sim
 
-    def evaluation(self):
+    def evaluation(self) -> list[np.ndarray]:
         all_obs = []
         for obs in self.obs:
             all_obs.append(obs[self.warmup:])
 
         return all_obs
 
-    def objectivefunction(self, simulation, evaluation, params=None):
+    def objectivefunction(
+            self,
+            simulation: list[np.ndarray],
+            evaluation: list[np.ndarray],
+            params: hb.spotpy.parameter | None = None
+    ) -> float:
         all_like = []
         for sim, obs in zip(simulation, evaluation):
             if not self.obj_func:
                 like = hb.spotpy.objectivefunctions.kge_non_parametric(obs, sim)
             elif isinstance(self.obj_func, str):
-                like = hb.evaluate(sim, obs, self.obj_func)
+                like = evaluate(sim, obs, self.obj_func)
             else:
                 like = self.obj_func(obs, sim)
 
@@ -117,18 +140,18 @@ class SpotpySetup:
         return np.mean(all_like)
 
 
-def evaluate(simulation, observation, metric):
+def evaluate(simulation: np.array, observation: np.array, metric: str) -> float:
     """
     Evaluate the simulation using the provided metric (goodness of fit).
 
     Parameters
     ----------
-    simulation : np.array
+    simulation
         The predicted time series.
-    observation : np.array
+    observation
         The time series of the observations with dates matching the simulated
         series.
-    metric : str
+    metric
         The abbreviation of the function as defined in HydroErr
         (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
         Examples: nse, kge_2012, ...

@@ -1,10 +1,17 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
+
 from hydrobricks.constants import ICE_WE
+
+if TYPE_CHECKING:
+    from hydrobricks.hydro_units import HydroUnits
+    from hydrobricks.catchment import Catchment
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -25,7 +32,7 @@ class GlacierEvolutionDeltaH:
       14, 815–829, https://doi.org/10.5194/hess-14-815-2010, 2010.
     """
 
-    def __init__(self, hydro_units: hb.HydroUnit | None = None):
+    def __init__(self, hydro_units: HydroUnits | None = None):
         """
         Initialize the GlacierMassBalance class.
 
@@ -64,7 +71,7 @@ class GlacierEvolutionDeltaH:
 
     def compute_initial_ice_thickness(
             self,
-            catchment: hb.Catchment,
+            catchment: Catchment,
             glacier_outline: str | None = None,
             ice_thickness: str | None = None,
             elevation_bands_distance: int = 10
@@ -528,7 +535,7 @@ class GlacierEvolutionDeltaH:
 
     @staticmethod
     def _discretize_elevation_bands(
-            catchment: hb.Catchment,
+            catchment: Catchment,
             elevation_bands_distance: int = 10
     ) -> tuple[np.ndarray, np.ndarray]:
         """ Discretize the DEM into elevation bands at the given distance."""
@@ -572,7 +579,7 @@ class GlacierEvolutionDeltaH:
 
     def _extract_glacier_mask_from_shapefile(
             self,
-            catchment: hb.Catchment,
+            catchment: Catchment,
             glacier_outline: str | Path
     ) -> np.ndarray:
         """ Extract the glacier cover from shapefiles."""
@@ -594,7 +601,7 @@ class GlacierEvolutionDeltaH:
 
     @staticmethod
     def _get_glacier_patches(
-            catchment: hb.Catchment,
+            catchment: Catchment,
             map_bands_ids: np.ndarray,
             glaciers_mask: np.ndarray
     ) -> list[tuple[int, int, float]]:
@@ -623,7 +630,7 @@ class GlacierEvolutionDeltaH:
 
     @staticmethod
     def _mask_dem(
-            catchment: hb.Catchment,
+            catchment: Catchment,
             shapefile: hb.gpd.GeoDataFrame,
             nodata: int = -9999
     ) -> np.ndarray:

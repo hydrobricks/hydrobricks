@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import math
 import warnings
 from pathlib import Path
@@ -5,6 +7,9 @@ from pathlib import Path
 import numpy as np
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 if hb.has_rasterio:
     from rasterio.enums import Resampling
@@ -21,20 +26,20 @@ class CatchmentTopography:
     A class to represent the topography of a catchment.
     """
 
-    def __init__(self, catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the Topography class.
 
         Parameters
         ----------
-        catchment : hb.Catchment
+        catchment
             The catchment object.
         """
         self.catchment = catchment
         self.slope = None
         self.aspect = None
 
-    def get_mean_elevation(self):
+    def get_mean_elevation(self) -> float:
         """
         Get the catchment mean elevation.
 
@@ -44,15 +49,19 @@ class CatchmentTopography:
         """
         return np.nanmean(self.catchment.dem_data)
 
-    def resample_dem_and_calculate_slope_aspect(self, resolution, output_path):
+    def resample_dem_and_calculate_slope_aspect(
+            self,
+            resolution: float,
+            output_path: str | Path | None = None
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Resample the DEM and calculate the slope and aspect of the whole DEM.
 
         Parameters
         ----------
-        resolution : ?float
+        resolution
             Desired pixel resolution.
-        output_path : str|Path
+        output_path
             Path of the directory to save the downsampled DEM to.
 
         Returns
@@ -129,7 +138,12 @@ class CatchmentTopography:
             self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
             self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
 
-    def get_hillshade(self, azimuth=315, altitude=45, z_factor=1):
+    def get_hillshade(
+            self,
+            azimuth: float = 315,
+            altitude: float = 45,
+            z_factor: float = 1
+    ) -> np.ndarray:
         """
         Create a hillshade from the DEM.
 
@@ -139,11 +153,11 @@ class CatchmentTopography:
 
         Parameters
         ----------
-        azimuth : float
+        azimuth
             The desired azimuth for the hillshade.
-        altitude : float
+        altitude
             The desired sun angle altitude for the hillshade.
-        z_factor : float
+        z_factor
             The z factor to amplify the relief.
 
         Returns
@@ -179,7 +193,7 @@ class CatchmentTopography:
 
         return 255 * (shaded + 1) / 2
 
-    def extract_unit_mean_aspect(self, mask_unit):
+    def extract_unit_mean_aspect(self, mask_unit: np.ndarray) -> float:
         aspect_rad = np.radians(self.aspect[mask_unit])
         circular_mean_aspect_rad = math.atan2(np.mean(np.sin(aspect_rad)),
                                               np.mean(np.cos(aspect_rad)))
@@ -189,14 +203,14 @@ class CatchmentTopography:
 
         return circular_mean_aspect_deg
 
-    def extract_unit_mean_slope(self, mask_unit):
+    def extract_unit_mean_slope(self, mask_unit: np.ndarray) -> float:
         return round(float(np.nanmean(self.slope[mask_unit])), 2)
 
-    def extract_unit_mean_elevation(self, mask_unit):
+    def extract_unit_mean_elevation(self, mask_unit: np.ndarray) -> float:
         return round(float(np.nanmean(self.catchment.dem_data[mask_unit])), 2)
 
-    def extract_unit_min_elevation(self, mask_unit):
+    def extract_unit_min_elevation(self, mask_unit: np.ndarray) -> float:
         return round(float(np.nanmin(self.catchment.dem_data[mask_unit])), 2)
 
-    def extract_unit_max_elevation(self, mask_unit):
+    def extract_unit_max_elevation(self, mask_unit: np.ndarray) -> float:
         return round(float(np.nanmax(self.catchment.dem_data[mask_unit])), 2)

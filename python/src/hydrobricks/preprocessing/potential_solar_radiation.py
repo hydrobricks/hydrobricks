@@ -1,9 +1,14 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import warnings
 from pathlib import Path
 
 import numpy as np
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 if hb.has_rasterio:
     from rasterio.enums import Resampling
@@ -29,7 +34,7 @@ class PotentialSolarRadiation:
     A class to handle solar radiation data for a catchment area.
     """
 
-    def __init__(self, catchment: hb.Catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the SolarRadiation class.
 

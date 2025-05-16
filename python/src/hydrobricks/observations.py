@@ -1,3 +1,4 @@
+from __future__ import annotations
 import itertools
 
 import numpy as np
@@ -5,7 +6,8 @@ import pandas as pd
 
 import hydrobricks as hb
 
-from .time_series import TimeSeries1D
+from hydrobricks.time_series import TimeSeries1D
+from hydrobricks.trainer import evaluate
 
 
 class Observations(TimeSeries1D):
@@ -80,7 +82,7 @@ class Observations(TimeSeries1D):
             if start_date and end_date:
                 df = df[(df.index >= start_date) & (df.index <= end_date)]
 
-            ref_metric = hb.evaluate(df.mean_discharge.values, df.data.values, metric)
+            ref_metric = evaluate(df.mean_discharge.values, df.data.values, metric)
             return ref_metric
 
         if len(years) == 1:
@@ -116,8 +118,8 @@ class Observations(TimeSeries1D):
                         continue
 
                 new_df = df.loc[sampled_years].copy()
-                value = hb.evaluate(new_df.data.values, comparing_df.data.values,
-                                    metric)
+                value = evaluate(new_df.data.values, comparing_df.data.values,
+                                 metric)
                 metrics.append(value)
 
         else:
@@ -132,8 +134,7 @@ class Observations(TimeSeries1D):
                         continue
                 i += 1
                 new_df = df.loc[sampled_years].copy()
-                value = hb.evaluate(new_df.data.values, comparing_df.data.values,
-                                    metric)
+                value = evaluate(new_df.data.values, comparing_df.data.values, metric)
                 metrics[i] = value
 
         ref_metric = float(np.mean(metrics))

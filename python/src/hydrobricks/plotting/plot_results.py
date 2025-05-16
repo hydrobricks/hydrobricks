@@ -7,6 +7,8 @@ from matplotlib.colors import LightSource, ListedColormap
 
 import hydrobricks as hb
 
+from hydrobricks.results import Results
+
 
 def plot_hydrograph(
         obs: np.ndarray,
@@ -44,7 +46,7 @@ def plot_hydrograph(
 
 
 def plot_map_hydro_unit_value(
-        results: hb.Results,
+        results: Results,
         unit_ids_raster_path: str,
         component: str,
         date: str,
@@ -109,7 +111,7 @@ def plot_map_hydro_unit_value(
 
 
 def create_animated_map_hydro_unit_value(
-        results: hb.Results,
+        results: Results,
         unit_ids_raster_path: str,
         component: str,
         start_date: str,

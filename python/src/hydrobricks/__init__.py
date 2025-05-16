@@ -78,10 +78,6 @@ has_xrspatial = is_module_available("xrspatial")
 if has_xrspatial:
     xrs = LazyImport("xrspatial")
 
-has_matplotlib = is_module_available("matplotlib")
-if has_matplotlib:
-    plt = LazyImport("matplotlib.pyplot")
-
 from .catchment import Catchment
 from .models.model import Model
 from .forcing import Forcing
@@ -97,4 +93,4 @@ __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries'
            'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
            'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
            'Dataset', 'rasterio', 'gpd', 'shapely', 'spotpy', 'pyet', 'pyproj',
-           'pysheds', 'xr', 'rxr', 'xrs', 'evaluate')
+           'pysheds', 'xr', 'rxr', 'xrs', 'evaluate', 'pyshedsGrid')

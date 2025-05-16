@@ -8,7 +8,7 @@ import hydrobricks.trainer as trainer
 # Set up the model
 helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
                           end_date='2020-12-31')
-helper.create_hydro_units_from_csv_file()
+helper.create_hydro_units_from_csv_file(filename='hydro_units_elevation.csv')
 forcing = helper.get_forcing_data_from_csv_file(
     ref_elevation=1253, use_precip_gradient=True)
 obs = helper.get_obs_data_from_csv_file()

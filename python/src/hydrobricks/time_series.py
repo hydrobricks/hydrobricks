@@ -3,6 +3,7 @@ import os
 import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -29,26 +30,33 @@ class TimeSeries1D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def load_from_csv(self, path, column_time, time_format, content, start_date=None,
-                      end_date=None):
+    def load_from_csv(
+            self,
+            path: str | Path,
+            column_time: str,
+            time_format: str,
+            content: dict,
+            start_date: datetime | None = None,
+            end_date: datetime | None = None
+    ):
         """
         Read time series data from csv file.
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the csv file containing hydro units data.
-        column_time : str
+        column_time
             Column name containing the time.
-        time_format : str
+        time_format
             Format of the time
-        content : dict
+        content
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
-        start_date : datetime, optional
+        start_date
             Start date of the time series (used to select the period of interest).
             If None, the first date of the file is used.
-        end_date : datetime, optional
+        end_date
             End date of the time series (used to select the period of interest).
             If None, the last date of the file is used.
         """
@@ -74,10 +82,19 @@ class TimeSeries2D(TimeSeries):
     def __init__(self):
         super().__init__()
 
-    def regrid_from_netcdf(self, path, file_pattern=None, data_crs=None, var_name=None,
-                           dim_time='time', dim_x='x', dim_y='y',
-                           raster_hydro_units=None, method='weights',
-                           weights_block_size=100):
+    def regrid_from_netcdf(
+            self,
+            path: str | Path,
+            file_pattern: str = None,
+            data_crs: int | None = None,
+            var_name: str | None = None,
+            dim_time: str = 'time',
+            dim_x: str = 'x',
+            dim_y: str = 'y',
+            raster_hydro_units: str | Path | None = None,
+            method: str = 'weights',
+            weights_block_size: int = 100
+    ):
         """
         Regrid time series data from netcdf files. The spatialization is done using a
         raster of hydro unit ids. The meteorological data is resampled to the DEM
@@ -85,29 +102,29 @@ class TimeSeries2D(TimeSeries):
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to a netcdf file containing the data or to a folder containing
             multiple files.
-        file_pattern : str, optional
+        file_pattern
             Pattern of the files to read. If None, the path is considered to be
             a single file.
-        data_crs : int, optional
+        data_crs
             CRS (as EPSG id) of the netcdf file. If None, the CRS is read from the file.
-        var_name : str
+        var_name
             Name of the variable to read.
-        dim_time : str
+        dim_time
             Name of the time dimension.
-        dim_x : str
+        dim_x
             Name of the x dimension.
-        dim_y : str
+        dim_y
             Name of the y dimension.
-        raster_hydro_units : str|Path
+        raster_hydro_units
             Path to a raster containing the hydro unit ids to use for the
             spatialization.
-        method : str
+        method
             Method to use for the spatialization. Can be 'reproject' or 'weights'.
             It does not change the result but the 'weights' method is faster.
-        weights_block_size : int
+        weights_block_size
             Size of the block of time steps to use for the 'weights' method.
             Default: 100.
         """
@@ -300,8 +317,14 @@ class TimeSeries2D(TimeSeries):
         elapsed_time = time.time() - start_time
         print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
 
-    def _extract_time_step_data_reproject(self, data_var, unit_id_masks, unit_ids,
-                                          unit_ids_nb, t):
+    def _extract_time_step_data_reproject(
+            self,
+            data_var: hb.xr.DataArray,
+            unit_id_masks: list,
+            unit_ids: hb.xr.DataArray,
+            unit_ids_nb: int,
+            t: int
+    ):
         # Print message very 20 time steps
         if t % 20 == 0:
             print(f"Extracting {self.time[t]}")
@@ -317,8 +340,13 @@ class TimeSeries2D(TimeSeries):
             # Average the meteorological data in the unit.
             self.data[-1][t, u] = np.nanmean(val)
 
-    def _extract_time_step_data_weights(self, data_var, unit_weights, i_block,
-                                        block_size):
+    def _extract_time_step_data_weights(
+            self,
+            data_var: hb.xr.DataArray,
+            unit_weights: list,
+            i_block: int,
+            block_size: int
+    ):
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
         i_end = min(i_end, data_var.shape[0])
@@ -335,7 +363,10 @@ class TimeSeries2D(TimeSeries):
                 axis=(1, 2))
 
     @staticmethod
-    def _parse_crs(data, file_crs):
+    def _parse_crs(
+            data: hb.xr.DataArray | hb.xr.Dataset,
+            file_crs: int
+    ) -> int:
         if file_crs is None:
             if 'crs' in data.attrs:
                 # Try to get it from the global attributes

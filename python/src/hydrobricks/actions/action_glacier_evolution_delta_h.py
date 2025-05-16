@@ -23,10 +23,14 @@ class ActionGlacierEvolutionDeltaH(Action):
         super().__init__()
         self.action = _hb.ActionGlacierEvolutionDeltaH()
 
-    def load_from_csv(self, dir_path, land_cover='glacier',
-                      filename_area='glacier_evolution_lookup_table_area.csv',
-                      filename_volume='glacier_evolution_lookup_table_volume.csv',
-                      update_month='October'):
+    def load_from_csv(
+            self,
+            dir_path: str | Path,
+            land_cover: str = 'glacier',
+            filename_area: str = 'glacier_evolution_lookup_table_area.csv',
+            filename_volume: str = 'glacier_evolution_lookup_table_volume.csv',
+            update_month: str | int = 'October'
+    ):
         """
         Read the glacier evolution lookup table from a csv file. The file should
         contain the glacier area evolution (in m2) for each hydro unit and increment
@@ -36,17 +40,17 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Parameters
         ----------
-        dir_path : str|Path
+        dir_path
             Path to the directory containing the lookup table.
-        land_cover : str
+        land_cover
             The land cover name to apply the changes. Default is 'glacier'.
-        filename_area : str
+        filename_area
             Name of the lookup table file for the glacier area. Default is
             'glacier_evolution_lookup_table_area.csv'.
-        filename_volume : str
+        filename_volume
             Name of the lookup table file for the glacier volume. Default is
             'glacier_evolution_lookup_table_volume.csv'.
-        update_month : str|int
+        update_month
             The month to apply the changes. Full english name or number (1-12).
             The update will be applied at the beginning of the month, every year.
             Default is 'October'.
@@ -75,19 +79,23 @@ class ActionGlacierEvolutionDeltaH(Action):
         self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
                                         land_cover, update_month)
 
-    def load_from(self, obj: GlacierEvolutionDeltaH, land_cover='glacier',
-                  update_month='October'):
+    def load_from(
+            self,
+            obj: GlacierEvolutionDeltaH,
+            land_cover: str = 'glacier',
+            update_month: str | int = 'October'
+    ):
         """
         Get the glacier evolution lookup table from the GlacierEvolutionDeltaH
         instance.
 
         Parameters
         ----------
-        obj : GlacierEvolutionDeltaH
+        obj
             The GlacierEvolutionDeltaH instance.
-        land_cover : str
+        land_cover
             The land cover name to apply the changes. Default is 'glacier'.
-        update_month : str|int
+        update_month
             The month to apply the changes. Full english name or number (1-12).
             The update will be applied at the beginning of the month, every year.
             Default is 'October'.
@@ -101,63 +109,63 @@ class ActionGlacierEvolutionDeltaH(Action):
         self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
                                         land_cover, update_month)
 
-    def get_month(self):
+    def get_month(self) -> int:
         """
         Get the month to apply the changes.
 
         Returns
         -------
-        int
-            The month to apply the changes.
+        The month to apply the changes.
         """
         return self.action.get_month()
 
-    def get_land_cover_name(self):
+    def get_land_cover_name(self) -> str:
         """
         Get the land cover name (glacier name) to apply the changes.
 
         Returns
         -------
-        str
-            The land cover name (glacier name) to apply the changes.
+        The land cover name (glacier name) to apply the changes.
         """
         return self.action.get_land_cover_name()
 
-    def get_hydro_unit_ids(self):
+    def get_hydro_unit_ids(self) -> np.ndarray:
         """
         Get the lookup table hydro unit ids.
 
         Returns
         -------
-        np.ndarray
-            The lookup table hydro unit ids.
+        The lookup table hydro unit ids.
         """
         return self.action.get_hydro_unit_ids()
 
-    def get_lookup_table_area(self):
+    def get_lookup_table_area(self) -> np.ndarray:
         """
         Get the lookup table areas.
 
         Returns
         -------
-        np.ndarray
-            The lookup table areas.
+        The lookup table areas.
         """
         return self.action.get_lookup_table_area()
 
-    def get_lookup_table_volume(self):
+    def get_lookup_table_volume(self) -> np.ndarray:
         """
         Get the lookup table volumes.
 
         Returns
         -------
-        np.ndarray
-            The lookup table volumes.
+        The lookup table volumes.
         """
         return self.action.get_lookup_table_volume()
 
-    def _populate_bounded_instance(self, lookup_table_area, lookup_table_volume,
-                                   land_cover, update_month):
+    def _populate_bounded_instance(
+            self,
+            lookup_table_area: pd.DataFrame,
+            lookup_table_volume: pd.DataFrame,
+            land_cover: str,
+            update_month: str | int
+    ):
 
         # Convert the month name to a number
         if isinstance(update_month, int):

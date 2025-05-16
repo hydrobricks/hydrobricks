@@ -4,7 +4,7 @@ from .model import Model
 class Socont(Model):
     """Socont model implementation"""
 
-    def __init__(self, name='socont', **kwargs):
+    def __init__(self, name: str = 'socont', **kwargs):
         super().__init__(name=name, **kwargs)
 
         # Default options

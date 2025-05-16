@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 import _hydrobricks as _hb
 import hydrobricks as hb
@@ -27,8 +28,14 @@ class ActionLandCoverChange(Action):
         super().__init__()
         self.action = _hb.ActionLandCoverChange()
 
-    def load_from_csv(self, path, hydro_units, land_cover, area_unit,
-                      match_with='elevation'):
+    def load_from_csv(
+            self,
+            path: str | Path,
+            hydro_units: hb.HydroUnits,
+            land_cover: str,
+            area_unit: str,
+            match_with: str = 'elevation'
+    ):
         """
         Read land cover changes from a csv file. Such file should contain the
         changes for a single land cover. Multiple files can be loaded consecutively.
@@ -40,15 +47,15 @@ class ActionLandCoverChange(Action):
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the csv file containing hydro units data.
-        hydro_units : HydroUnits
+        hydro_units
             The hydro units to match the land cover changes against.
-        land_cover : str
+        land_cover
             Name of the land cover to change.
-        area_unit: str
+        area_unit
             Unit for the area values: "m2" or "km2"
-        match_with : str
+        match_with
             Information used to identify the hydro units. Options: 'elevation', 'id'
 
         Example of a file (with areas in km2)
@@ -85,22 +92,29 @@ class ActionLandCoverChange(Action):
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(land_cover, area_unit, file_content)
 
-    def get_changes_nb(self):
+    def get_changes_nb(self) -> int:
         """
         Get the number of changes registered.
         """
         return self.action.get_changes_nb()
 
-    def get_land_covers_nb(self):
+    def get_land_covers_nb(self) -> int:
         """
         Get the number of land covers registered.
         """
         return self.action.get_land_covers_nb()
 
     @classmethod
-    def create_action_for_glaciers(cls, catchment, times, full_glaciers,
-                                      debris_glaciers=None, with_debris=False,
-                                      method='vector', interpolate_yearly=True):
+    def create_action_for_glaciers(
+            cls,
+            catchment: hb.Catchment,
+            times: list[str],
+            full_glaciers: list[str] | Path,
+            debris_glaciers: list[str] | Path | None = None,
+            with_debris: bool = False,
+            method: str = 'vector',
+            interpolate_yearly: bool = True
+    ) -> tuple[hb.ActionLandCoverChange, list[pd.DataFrame]]:
         """
         Extract the glacier cover changes from shapefiles, creates a
         ActionLandCoverChange object, and assign the computed land cover
@@ -108,33 +122,33 @@ class ActionLandCoverChange(Action):
 
         Parameters
         ----------
-        catchment : Catchment
+        catchment
             The catchment to extract the glacier cover changes for.
-        times : list of str
+        times
             Date of the land cover, in the format: yyyy-mm-dd.
-        full_glaciers : list of str|Path
+        full_glaciers
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_glaciers : list of str|Path, optional
+        debris_glaciers
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
-        with_debris : bool, optional
+        with_debris
             True if the simulation requires debris-covered and clean-ice area
             computations, False otherwise.
-        method : str, optional
+        method
             The method to extract the glacier cover changes:
             'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
-        interpolate_yearly : bool, optional
+        interpolate_yearly
             True if the changes should be interpolated to a yearly time step,
             False otherwise (no interpolation).
 
         Returns
         -------
-        changes : ActionLandCoverChange
+        changes
             A ActionLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
-        changes_df : DataFrame list
+        changes_df
             A list of the dataframes containing the cover areas extracted from the
             shapefiles. If with_debris is True, the list contains 3 dataframes:
             [glacier_ice, glacier_debris, ground]. If with_debris is False, the list
@@ -159,8 +173,16 @@ class ActionLandCoverChange(Action):
 
         return changes, changes_df
 
-    def _create_action_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
-                                       times, with_debris, method, interpolate_yearly):
+    def _create_action_for_glaciers(
+            self,
+            catchment: hb.Catchment,
+            full_glaciers: list[str] | Path,
+            debris_glaciers: list[str] | Path | None,
+            times: list[str],
+            with_debris: bool,
+            method: str,
+            interpolate_yearly: bool
+    ):
 
         if len(full_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
@@ -241,35 +263,40 @@ class ActionLandCoverChange(Action):
         else:
             return [glacier_df, ground_df]
 
-    def _extract_glacier_cover_change(self, catchment, glaciers_shapefile,
-                                      debris_shapefile, method='vector'):
+    def _extract_glacier_cover_change(
+            self,
+            catchment: hb.Catchment,
+            glaciers_shapefile: str | Path,
+            debris_shapefile: str | Path | None,
+            method: str = 'vector'
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract the glacier cover changes from shapefiles.
 
         Parameters
         ----------
-        catchment : Catchment
+        catchment
             The catchment to extract the glacier cover changes for.
-        glaciers_shapefile : str|Path
+        glaciers_shapefile
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_shapefile : str|Path
+        debris_shapefile
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
-        method : str, optional
+        method
             The method to extract the glacier cover changes:
             'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
 
         Returns
         -------
-        glacier_area : array
+        glacier_area
             Area covered by glacier for each HydroUnit.
-        bare_ice_area : array
+        bare_ice_area
             Area covered by clean-ice glacier for each HydroUnit.
-        debris_area : array
+        debris_area
             Area covered by debris-covered glacier for each HydroUnit.
-        other_area : array
+        other_area
             Area covered by rock for each HydroUnit.
         """
         if method not in ['vector', 'raster']:
@@ -414,7 +441,10 @@ class ActionLandCoverChange(Action):
         return glacier_area, bare_ice_area, debris_area, other_area
 
     @staticmethod
-    def _interpolate_yearly(data, times):
+    def _interpolate_yearly(
+            data: np.ndarray,
+            times: list[str]
+    ) -> tuple[np.ndarray, pd.DatetimeIndex]:
         # Transform the times to datetime instances
         times_dt = pd.to_datetime(times)
         times_full = pd.date_range(times_dt[0], times_dt[-1], freq='YS')
@@ -427,7 +457,10 @@ class ActionLandCoverChange(Action):
         return data_full, times_full
 
     @staticmethod
-    def _create_new_change_dataframe(hydro_units, n_unit_ids):
+    def _create_new_change_dataframe(
+            hydro_units: hb.HydroUnits,
+            n_unit_ids: int
+    ) -> pd.DataFrame:
         changes_df = pd.DataFrame(index=range(n_unit_ids))
         changes_df.insert(loc=0, column='hydro_unit', value=0)
         ids = hydro_units.hydro_units[('id', '-')].values.squeeze()
@@ -435,7 +468,7 @@ class ActionLandCoverChange(Action):
         return changes_df
 
     @staticmethod
-    def _compute_intersection_area(intersecting_geoms):
+    def _compute_intersection_area(intersecting_geoms: list[MultiPolygon]) -> float:
         if len(intersecting_geoms) == 0:
             return 0
 
@@ -445,14 +478,18 @@ class ActionLandCoverChange(Action):
         return merged_geometry.area
 
     @staticmethod
-    def _get_intersections(pixel_geo, objects, intersecting_geoms):
+    def _get_intersections(
+            pixel_geo: MultiPolygon,
+            objects: hb.gpd.GeoDataFrame,
+            intersecting_geoms: list[MultiPolygon]
+    ):
         for _, obj in objects.iterrows():
             intersection = pixel_geo.intersection(obj['geometry'])
             if not intersection.is_empty:
                 intersecting_geoms.append(intersection)
 
     @staticmethod
-    def _simplify_df_geometries(df):
+    def _simplify_df_geometries(df: hb.gpd.GeoDataFrame) -> hb.gpd.GeoDataFrame:
         # Merge the polygons
         df['new_col'] = 0
         df = df.dissolve(by='new_col', as_index=False)
@@ -462,7 +499,12 @@ class ActionLandCoverChange(Action):
         return df
 
     @staticmethod
-    def _mask_dem(catchment, shapefile, nodata, all_touched=False):
+    def _mask_dem(
+            catchment: hb.Catchment,
+            shapefile: hb.gpd.GeoDataFrame,
+            nodata: float,
+            all_touched: bool = False
+    ) -> np.ndarray:
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
@@ -474,7 +516,11 @@ class ActionLandCoverChange(Action):
         return dem_masked
 
     @staticmethod
-    def _match_hydro_unit_ids(file_content, hydro_units, match_with):
+    def _match_hydro_unit_ids(
+            file_content: pd.DataFrame,
+            hydro_units: hb.HydroUnits,
+            match_with: str
+    ):
         hu_df = hydro_units.hydro_units
         for row, change in file_content.iterrows():
             if match_with == 'elevation':
@@ -486,7 +532,7 @@ class ActionLandCoverChange(Action):
             file_content.at[row, 'hydro_unit'] = hu_df.at[idx_id, ('id', '-')]
 
     @staticmethod
-    def _remove_rows_with_no_changes(file_content):
+    def _remove_rows_with_no_changes(file_content: pd.DataFrame):
         for row, change in file_content.iterrows():
             diff = change.to_numpy(dtype=float)[1:]
             diff = diff[0:-1] - diff[1:]
@@ -494,7 +540,12 @@ class ActionLandCoverChange(Action):
                 if v_diff == 0:
                     file_content.iloc[row, i_diff + 2] = np.nan
 
-    def _populate_bounded_instance(self, land_cover, area_unit, file_content):
+    def _populate_bounded_instance(
+            self,
+            land_cover: str,
+            area_unit: str,
+            file_content: pd.DataFrame
+    ):
         for col in list(file_content):
             if col == 'hydro_unit' or col == 0:
                 continue

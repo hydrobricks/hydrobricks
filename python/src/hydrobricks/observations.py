@@ -14,9 +14,16 @@ class Observations(TimeSeries1D):
     def __init__(self):
         super().__init__()
 
-    def compute_reference_metric(self, metric, start_date=None, end_date=None,
-                                 with_exclusion=False, mean_discharge=False,
-                                 all_combinations=False, n_evals=100):
+    def compute_reference_metric(
+            self,
+            metric: str,
+            start_date: str | None = None,
+            end_date: str | None = None,
+            with_exclusion: bool = False,
+            mean_discharge: bool = False,
+            all_combinations: bool = False,
+            n_evals: int = 100
+    ) -> float:
         """
         Compute a reference for the provided metric (goodness of fit)
         by block bootstrapping the observed series n_evals times (100 times by default),
@@ -25,25 +32,25 @@ class Observations(TimeSeries1D):
 
         Parameters
         ----------
-        metric : str
+        metric
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
-        start_date : str
+        start_date
             Start date for which the observed data should be compared to the
             mean of all years.
-        end_date : str
+        end_date
             End date for which the observed data should be compared to the
             mean of all years.
-        with_exclusion : binary
+        with_exclusion
             If True, avoid using the same year's data for the same position in the
             bootstrapped sample, ensuring no self-selection for specific years.
-        mean_discharge : binary
+        mean_discharge
             If True, computes the average on the discharge directly rather than on
             the result of the HydroErr function.
-        all_combinations : binary
+        all_combinations
             If True uses all combinations possible for the bootstrapping.
-        n_evals : int
+        n_evals
             Number of evaluations to perform (default: 100).
 
         Returns
@@ -129,7 +136,7 @@ class Observations(TimeSeries1D):
                                     metric)
                 metrics[i] = value
 
-        ref_metric = np.mean(metrics)
+        ref_metric = float(np.mean(metrics))
         print("Reference metric is ", ref_metric)
 
         return ref_metric

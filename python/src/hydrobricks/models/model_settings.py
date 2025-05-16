@@ -4,75 +4,95 @@ from _hydrobricks import SettingsModel
 class ModelSettings:
     """Base class for the model settings"""
 
-    def __init__(self, solver='heun_explicit', record_all=False, **kwargs):
+    def __init__(
+            self,
+            solver: str = 'heun_explicit',
+            record_all: bool = False,
+            **kwargs: dict
+    ):
         """
         Parameters
         ----------
-        solver : str
+        solver
             Solver to use
-        record_all : bool
+        record_all
             Record all state and flux values
-        kwargs : dict
+        kwargs
             Keyword arguments
         """
         self.settings = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
 
-    def set_timer(self, start_date, end_date, time_step=1, time_step_unit='day'):
+    def set_timer(
+            self,
+            start_date: str,
+            end_date: str,
+            time_step: int = 1,
+            time_step_unit: str = 'day'
+    ):
         """
         Set the timer
 
         Parameters
         ----------
-        start_date : str
+        start_date
             Start date of the simulation
-        end_date : str
+        end_date
             End date of the simulation
-        time_step : int
+        time_step
             Time step
-        time_step_unit : str
+        time_step_unit
             Time step unit
         """
         self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
-    def set_parameter_value(self, component, name, value):
+    def set_parameter_value(
+            self,
+            component: str,
+            name: str,
+            value: float
+    ) -> bool:
         """
         Set a parameter value
 
         Parameters
         ----------
-        component : str
+        component
             Name of the component
-        name : str
+        name
             Name of the parameter
-        value : float
+        value
             Value of the parameter
 
         Returns
         -------
-        bool
-            True if the parameter was set successfully, False otherwise.
+        True if the parameter was set successfully, False otherwise.
         """
         return self.settings.set_parameter_value(component, name, float(value))
 
-    def generate_base_structure(self, land_cover_names, land_cover_types,
-                                with_snow=True, snow_melt_process='melt:degree_day',
-                                snow_ice_transformation=False):
+    def generate_base_structure(
+            self,
+            land_cover_names: list[str],
+            land_cover_types: list[str],
+            with_snow: bool = True,
+            snow_melt_process: str = 'melt:degree_day',
+            snow_ice_transformation: bool = False
+    ):
         """
         Generate basic elements
 
         Parameters
         ----------
-        land_cover_names : list
+        land_cover_names
             List of land cover names
-        land_cover_types : list
+        land_cover_types
             List of land cover types
-        with_snow : bool
+        with_snow
             Account for snow
-        snow_melt_process : str
+        snow_melt_process
             Snow melt process
-        snow_ice_transformation : bool
+        snow_ice_transformation
             Account for snow-ice transformation
         """
         if len(land_cover_names) != len(land_cover_types):
@@ -94,82 +114,89 @@ class ModelSettings:
         if with_snow:
             self.settings.generate_snowpacks(snow_melt_process, snow_ice_transformation)
 
-    def generate_snowpacks(self, snow_melt_process):
+    def generate_snowpacks(self, snow_melt_process: str):
         """
         Generate snowpacks
 
         Parameters
         ----------
-        snow_melt_process : str
+        snow_melt_process
             Snow melt process
         """
         self.settings.generate_snowpacks(snow_melt_process)
 
-    def add_land_cover_brick(self, name, kind):
+    def add_land_cover_brick(self, name: str, kind: str):
         """
         Add a land cover brick
 
         Parameters
         ----------
-        name : str
+        name
             Name of the land cover brick
-        kind : str
+        kind
             Type of the land cover brick
         """
         self.settings.add_land_cover_brick(name, kind)
 
-    def add_hydro_unit_brick(self, name, kind):
+    def add_hydro_unit_brick(self, name: str, kind: str):
         """
         Add a hydro unit brick
 
         Parameters
         ----------
-        name : str
+        name
             Name of the hydro unit brick
-        kind : str
+        kind
             Type of the hydro unit brick
         """
         self.settings.add_hydro_unit_brick(name, kind)
 
-    def add_sub_basin_brick(self, name, kind):
+    def add_sub_basin_brick(self, name: str, kind: str):
         """
         Add a sub basin brick
 
         Parameters
         ----------
-        name : str
+        name
             Name of the sub basin brick
-        kind : str
+        kind
             Type of the sub basin brick
         """
         self.settings.add_sub_basin_brick(name, kind)
 
-    def select_hydro_unit_brick(self, name):
+    def select_hydro_unit_brick(self, name: str):
         """
         Select a hydro unit brick
 
         Parameters
         ----------
-        name : str
+        name
             Name of the hydro unit brick
         """
         self.settings.select_hydro_unit_brick(name)
 
-    def add_brick_process(self, name, kind, target='', log=False, instantaneous=False):
+    def add_brick_process(
+            self,
+            name: str,
+            kind: str,
+            target: str = '',
+            log: bool = False,
+            instantaneous: bool = False
+    ):
         """
         Add a brick process
 
         Parameters
         ----------
-        name : str
+        name
             Name of the brick process
-        kind : str
+        kind
             Type of the brick process
-        target : str
+        target
             Target of the process output
-        log : bool
+        log
             Log the brick process
-        instantaneous : bool
+        instantaneous
             Process outputs are instantaneous
         """
         self.settings.add_brick_process(name, kind, target, log)
@@ -182,43 +209,53 @@ class ModelSettings:
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
 
-    def add_brick_parameter(self, name, value, kind='constant'):
+    def add_brick_parameter(
+            self,
+            name: str,
+            value: int | float | bool,
+            kind: str = 'constant'
+    ):
         """
         Add a brick parameter
 
         Parameters
         ----------
-        name : str
+        name
             Name of the brick parameter
-        value : int|float|bool
+        value
             Value of the brick parameter
-        kind : str
+        kind
             Type of the brick parameter (for now has to be 'constant')
         """
         self.settings.add_brick_parameter(name, float(value), kind)
 
-    def add_process_parameter(self, name, value, kind='constant'):
+    def add_process_parameter(
+            self,
+            name: str,
+            value: int | float | bool,
+            kind: str = 'constant'
+    ):
         """
         Add a process parameter
 
         Parameters
         ----------
-        name : str
+        name
             Name of the process parameter
-        value : int|float|bool
+        value
             Value of the process parameter
-        kind : str
+        kind
             Type of the process parameter (for now has to be 'constant')
         """
         self.settings.add_process_parameter(name, float(value), kind)
 
-    def add_logging_to(self, item):
+    def add_logging_to(self, item: str):
         """
         Add logging to an item
 
         Parameters
         ----------
-        item : str
+        item
             Name of the item
         """
         self.settings.add_logging_to(item)

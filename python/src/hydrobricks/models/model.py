@@ -1,5 +1,6 @@
 import importlib
 import os
+import numpy as np
 from abc import ABC, abstractmethod
 
 import HydroErr
@@ -15,7 +16,7 @@ class Model(ABC):
     """Base class for the models"""
 
     @abstractmethod
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name: str | None = None, **kwargs):
         self.name = name
         self.model = ModelHydro()
         self.spatial_structure = None
@@ -51,27 +52,29 @@ class Model(ABC):
         return self._name
 
     @name.setter
-    def name(self, name):
+    def name(self, name: str):
         self._name = name
 
-    def setup(self, spatial_structure, output_path, start_date, end_date):
+    def setup(
+            self,
+            spatial_structure: hb.HydroUnits,
+            output_path: str,
+            start_date: str,
+            end_date: str | None = None
+    ):
         """
         Setup and run the model.
 
         Parameters
         ----------
-        spatial_structure : HydroUnits
+        spatial_structure
             The spatial structure of the catchment.
-        output_path: str
+        output_path
             Path to save the results.
-        start_date: str
+        start_date
             Starting date of the computation
-        end_date: str
+        end_date
             Ending date of the computation
-
-        Return
-        ------
-        The predicted discharge time series
         """
         if self._is_initialized:
             raise RuntimeError('The model has already been initialized. '
@@ -104,7 +107,11 @@ class Model(ABC):
         except Exception:
             print("An exception occurred.")
 
-    def run(self, parameters, forcing=None):
+    def run(
+            self,
+            parameters: hb.ParameterSet,
+            forcing: hb.Forcing | None = None
+    ):
         """
         Setup and run the model.
 
@@ -158,7 +165,11 @@ class Model(ABC):
     def cleanup():
         _hb.close_log()
 
-    def initialize_state_variables(self, parameters, forcing=None):
+    def initialize_state_variables(
+            self,
+            parameters: hb.ParameterSet,
+            forcing: hb.Forcing | None = None
+    ):
         """
         Run the model and save the state variables as initial values.
 
@@ -172,7 +183,7 @@ class Model(ABC):
         self.run(parameters, forcing)
         self.model.save_as_initial_state()
 
-    def set_forcing(self, forcing):
+    def set_forcing(self, forcing: hb.Forcing):
         """
         Set the forcing data.
 
@@ -196,7 +207,7 @@ class Model(ABC):
         if not self.model.attach_time_series_to_hydro_units():
             raise RuntimeError('Attaching time series failed.')
 
-    def add_action(self, action) -> bool:
+    def add_action(self, action: hb.Action) -> bool:
         """
         Add an action to the model.
 
@@ -220,7 +231,12 @@ class Model(ABC):
         """
         return self.model.get_sporadic_action_items_nb()
 
-    def create_config_file(self, directory, name, file_type='both'):
+    def create_config_file(
+            self,
+            directory: str,
+            name: str,
+            file_type: str = 'both'
+    ):
         """
         Create a configuration file describing the model structure.
 
@@ -248,61 +264,66 @@ class Model(ABC):
         }
         hb.utils.dump_config_file(settings, directory, name, file_type)
 
-    def get_outlet_discharge(self):
+    def get_outlet_discharge(self) -> np.ndarray:
         """
         Get the computed outlet discharge.
         """
         return self.model.get_outlet_discharge()
 
-    def get_total_outlet_discharge(self):
+    def get_total_outlet_discharge(self) -> float:
         """
         Get the outlet discharge total.
         """
         return self.model.get_total_outlet_discharge()
 
-    def get_total_et(self):
+    def get_total_et(self) -> float:
         """
         Get the total amount of water lost by evapotranspiration.
         """
         return self.model.get_total_et()
 
-    def get_total_water_storage_changes(self):
+    def get_total_water_storage_changes(self) -> float:
         """
         Get the total change in water storage.
         """
         return self.model.get_total_water_storage_changes()
 
-    def get_total_snow_storage_changes(self):
+    def get_total_snow_storage_changes(self) -> float:
         """
         Get the total change in snow storage.
         """
         return self.model.get_total_snow_storage_changes()
 
-    def dump_outputs(self, path):
+    def dump_outputs(self, path: str):
         """
         Write the model outputs to a netcdf file.
 
         Parameters
         ----------
-        path: str
+        path
             Path to the target file.
         """
         self.model.dump_outputs(path)
 
-    def eval(self, metric, observations, warmup=0):
+    def eval(
+            self,
+            metric: str,
+            observations: np.ndarray,
+            warmup: int = 0
+    ) -> float:
         """
         Evaluate the simulation using the provided metric (goodness of fit).
 
         Parameters
         ----------
-        metric : str
+        metric
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
-        observations : np.array
+        observations
             The time series of the observations with dates matching the simulated
             series.
-        warmup : int
+        warmup
             The number of days of warmup period. This option is used to
             discard the warmup period from the evaluation. It is useful when
             conducting a run with a specific parameter set and comparing
@@ -319,7 +340,7 @@ class Model(ABC):
                            observations[warmup:],
                            metric)
 
-    def generate_parameters(self):
+    def generate_parameters(self) -> hb.ParameterSet:
         ps = hb.ParameterSet()
         ps.generate_parameters(self.land_cover_types, self.land_cover_names,
                                self.options, self.structure)
@@ -424,7 +445,7 @@ class Model(ABC):
             snow_melt_process=snow_melt_process,
             snow_ice_transformation=snow_ice_transformation)
 
-    def _set_structure_brick(self, brick, key):
+    def _set_structure_brick(self, brick: dict, key: str):
         if brick['kind'] == 'land_cover':
             self.settings.select_hydro_unit_brick(key)
         else:
@@ -435,7 +456,12 @@ class Model(ABC):
             else:
                 raise RuntimeError(f'Brick {key} has an invalid "attach_to" value.')
 
-    def _set_structure_process(self, key, process, process_data):
+    def _set_structure_process(
+            self,
+            key: str,
+            process: str,
+            process_data: dict
+    ):
         instantaneous = False
         if 'instantaneous' in process_data:
             instantaneous = process_data['instantaneous']
@@ -456,7 +482,7 @@ class Model(ABC):
             process, process_data['kind'], target,
             log=log, instantaneous=instantaneous)
 
-    def _set_parameter_values(self, parameters):
+    def _set_parameter_values(self, parameters: hb.ParameterSet):
         model_params = parameters.get_model_parameters()
         for _, param in model_params.iterrows():
             if not self.settings.set_parameter_value(
@@ -464,7 +490,7 @@ class Model(ABC):
                 raise RuntimeError('Failed setting parameter values.')
         self.model.update_parameters(self.settings.settings)
 
-    def _set_forcing(self, forcing):
+    def _set_forcing(self, forcing: hb.Forcing | None):
         if forcing is not None:
             self.set_forcing(forcing)
         elif not self.model.forcing_loaded():

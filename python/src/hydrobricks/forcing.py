@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 11):
@@ -11,18 +12,17 @@ else:
     from enum import StrEnum
 
 from enum import auto
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from cftime import num2date
-from pathlib import Path
 
 import hydrobricks as hb
-
 from hydrobricks.constants import TO_RAD
-from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
 
 class Forcing:

@@ -1,18 +1,19 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
 import importlib
 import os
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import hydrobricks as hb
 
 if TYPE_CHECKING:
-    from hydrobricks.models.model import Model
-    from hydrobricks.parameters import ParameterSet
     from hydrobricks.forcing import Forcing
+    from hydrobricks.models.model import Model
     from hydrobricks.observations import Observations
+    from hydrobricks.parameters import ParameterSet
 
 
 class SpotpySetup:

@@ -79,9 +79,9 @@ if has_xrspatial:
     xrs = LazyImport("xrspatial")
 
 from .catchment import Catchment
-from .models.model import Model
 from .forcing import Forcing
 from .hydro_units import HydroUnits
+from .models.model import Model
 from .observations import Observations
 from .parameters import ParameterSet
 from .results import Results

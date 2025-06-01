@@ -16,16 +16,22 @@ class ProcessET : public Process {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::GetConnectionsNb()
+     */
     int GetConnectionsNb() override;
 
+    /**
+     * @copydoc Process::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
 
+    /**
+     * @copydoc Process::ToAtmosphere()
+     */
     bool ToAtmosphere() override {
         return true;
     }
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_ET_H

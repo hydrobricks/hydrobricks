@@ -11,13 +11,17 @@ class Connector : public wxObject {
 
     ~Connector() override = default;
 
+    /**
+     * Connect two sub-basins.
+     *
+     * @param in The input sub-basin.
+     * @param out The output sub-basin.
+     */
     void Connect(SubBasin* in, SubBasin* out);
 
   protected:
     SubBasin* m_in;
     SubBasin* m_out;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_CONNECTOR_H

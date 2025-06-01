@@ -27,8 +27,9 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.calculate_slope_aspect()
 
 # Discretize the catchment by elevation and aspect
-catchment.discretize_by(criteria=['elevation', 'aspect'], elevation_method='equal_intervals',
-                        elevation_distance=100)
+catchment.discretize_by(
+    criteria=['elevation', 'aspect'], elevation_method='equal_intervals',
+    elevation_distance=100)
 
 # Save elevation bands to a raster
 catchment.save_unit_ids_raster(working_dir)

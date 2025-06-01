@@ -33,7 +33,7 @@ bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin
     return true;
 }
 
-bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinProp) {
+bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
     try {
         BuildModelStructure(modelSettings);
 
@@ -44,7 +44,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinPr
             m_logger.RecordFractions();
         }
         m_logger.InitContainers(m_timer.GetTimeStepsNb(), m_subBasin, modelSettings);
-        if (!m_subBasin->AssignFractions(basinProp)) {
+        if (!m_subBasin->AssignFractions(basinSettings)) {
             return false;
         }
         ConnectLoggerToValues(modelSettings);
@@ -855,6 +855,10 @@ double ModelHydro::GetTotalWaterStorageChanges() {
 
 double ModelHydro::GetTotalSnowStorageChanges() {
     return m_logger.GetTotalSnowStorageChanges();
+}
+
+double ModelHydro::GetTotalGlacierStorageChanges() {
+    return m_logger.GetTotalGlacierStorageChanges();
 }
 
 bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {

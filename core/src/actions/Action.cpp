@@ -7,12 +7,12 @@ Action::Action()
       m_cursor(0),
       m_recursive(false) {}
 
-bool Action::Init() {
-    return true;
+void Action::Reset() {
+    m_cursor = 0;
 }
 
-bool Action::Apply() {
-    return false;
+bool Action::Init() {
+    return true;
 }
 
 bool Action::Apply(double) {
@@ -34,10 +34,6 @@ bool Action::ApplyIfRecursive(const Time date) {
     }
 
     return true;
-}
-
-void Action::Reset() {
-    m_cursor = 0;
 }
 
 int Action::GetIndexForInsertion(double date) {

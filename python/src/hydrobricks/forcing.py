@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 11):
@@ -10,6 +12,7 @@ else:
     from enum import StrEnum
 
 from enum import auto
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,8 +20,9 @@ from cftime import num2date
 
 import hydrobricks as hb
 from hydrobricks.constants import TO_RAD
-
-from .time_series import TimeSeries1D, TimeSeries2D
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.parameters import ParameterSet
+from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
 
 class Forcing:
@@ -45,9 +49,9 @@ class Forcing:
         WIND = auto()  # Wind speed [m s-1]
         PRESSURE = auto()  # Atmospheric pressure [kPa]
 
-    def __init__(self, hydro_units):
+    def __init__(self, hydro_units: HydroUnits):
         # Check hydro units
-        if not isinstance(hydro_units, hb.HydroUnits):
+        if not isinstance(hydro_units, HydroUnits):
             raise TypeError('The hydro_units argument must be a HydroUnits '
                             f'object, not {type(hydro_units)}.')
         if len(hydro_units.hydro_units) == 0:
@@ -61,17 +65,17 @@ class Forcing:
         self._operations = []
         self._is_initialized = False
 
-    def is_initialized(self):
+    def is_initialized(self) -> bool:
         """ Return True if the forcing is initialized. """
         return self._is_initialized
 
-    def get_variable_enum(self, variable):
+    def get_variable_enum(self, variable: str) -> Variable:
         """
         Match the variable name to the enum corresponding value.
 
         Parameters
         ----------
-        variable : str
+        variable
             Variable name.
         """
         if variable in self.Variable.__members__:
@@ -109,7 +113,7 @@ class Forcing:
         else:
             raise ValueError(f'Variable {variable} is not recognized.')
 
-    def _can_be_negative(self, variable):
+    def _can_be_negative(self, variable: Variable) -> bool:
         if variable in [self.Variable.P, self.Variable.PET, self.Variable.RH,
                         self.Variable.RH_MIN, self.Variable.RH_MAX, self.Variable.R_NET,
                         self.Variable.R_SOLAR, self.Variable.SD, self.Variable.WIND,
@@ -121,19 +125,25 @@ class Forcing:
         else:
             raise ValueError(f'Undefined if variable {variable} can be negative.')
 
-    def load_station_data_from_csv(self, path, column_time, time_format, content):
+    def load_station_data_from_csv(
+            self,
+            path: str | Path,
+            column_time: str,
+            time_format: str,
+            content: dict[str, str] | dict[str, Variable] = None
+    ):
         """
         Read 1D time series data from csv file.
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the csv file containing hydro units data.
-        column_time : str
+        column_time
             Column name containing the time.
-        time_format : str
+        time_format
             Format of the time
-        content : dict
+        content
             Type of data and column name containing the data.
             Example: {'precipitation': 'Precipitation (mm)'}
         """
@@ -269,15 +279,19 @@ class Forcing:
 
         self._operations.append(kwargs)
 
-    def apply_operations(self, parameters=None, apply_to_all=True):
+    def apply_operations(
+            self,
+            parameters: ParameterSet = None,
+            apply_to_all: bool = True
+    ):
         """
         Apply the pre-defined operations.
 
         Parameters
         ----------
-        parameters : ParameterSet
+        parameters
             The parameter object instance.
-        apply_to_all : bool
+        apply_to_all
             If True, the operations will be applied to all variables. If False, the
             operations will only be applied to the variables related to parameters
             defined in the parameters.allow_changing list. This is useful to avoid
@@ -293,15 +307,15 @@ class Forcing:
 
         self._is_initialized = True
 
-    def save_as(self, path, max_compression=False):
+    def save_as(self, path: str | Path, max_compression: bool = False):
         """
         Create a netCDF file with the data.
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path of the file to create.
-        max_compression : bool
+        max_compression
             Option to allow maximum compression for data in file.
         """
         if not hb.has_netcdf:
@@ -342,13 +356,13 @@ class Forcing:
 
         nc.close()
 
-    def load_from(self, path):
+    def load_from(self, path: str | Path):
         """
         Load data from a netCDF file created using save_as().
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path of the file to read.
         """
         if not hb.has_netcdf:
@@ -383,15 +397,19 @@ class Forcing:
 
         nc.close()
 
-    def get_total_precipitation(self):
+    def get_total_precipitation(self) -> float:
         idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
         areas = self.hydro_units[('area', 'm2')]
         tot_precip = data * areas.values / areas.sum()
         return tot_precip.sum()
 
-    def _apply_operations_of_type(self, operation_type, parameters=None,
-                                  apply_to_all=True):
+    def _apply_operations_of_type(
+            self,
+            operation_type: str,
+            parameters: ParameterSet | None = None,
+            apply_to_all: bool = True
+    ):
         for operation_ref in self._operations:
             operation = operation_ref.copy()
 
@@ -429,7 +447,12 @@ class Forcing:
                 else:
                     raise ValueError(f'Unknown operation type: {operation_type}')
 
-    def _apply_prior_correction(self, variable, method='multiplicative', **kwargs):
+    def _apply_prior_correction(
+            self,
+            variable: str,
+            method: str = 'multiplicative',
+            **kwargs
+    ):
         variable = self.get_variable_enum(variable)
         idx = self.data1D.data_name.index(variable)
 
@@ -447,8 +470,12 @@ class Forcing:
         else:
             raise ValueError(f'Unknown method: {method}')
 
-    def _apply_spatialization_from_station_data(self, variable, method='default',
-                                                **kwargs):
+    def _apply_spatialization_from_station_data(
+            self,
+            variable: str,
+            method: str = 'default',
+            **kwargs
+    ):
         # Checking that the correction_factor option is not used here anymore
         if 'correction_factor' in kwargs:
             raise ValueError('The correction_factor option is to be used only '
@@ -556,8 +583,12 @@ class Forcing:
             self.data2D.data_name.append(variable)
             self.data2D.time = self.data1D.time
 
-    def _apply_spatialization_from_gridded_data(self, variable, method='default',
-                                                **kwargs):
+    def _apply_spatialization_from_gridded_data(
+            self,
+            variable: str,
+            method: str = 'default',
+            **kwargs
+    ):
         variable = self.get_variable_enum(variable)
 
         # Specify default methods
@@ -581,7 +612,7 @@ class Forcing:
         else:
             raise ValueError(f'Unknown method: {method}')
 
-    def _apply_pet_computation(self, method, use, **kwargs):
+    def _apply_pet_computation(self, method: str, use: list[str], **kwargs):
         if not hb.has_pyet:
             raise ImportError("pyet is required to do this.")
 
@@ -623,7 +654,7 @@ class Forcing:
             self.data2D.data[idx] = pet
 
     @staticmethod
-    def _compute_pet(method, pyet_args):
+    def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:
         if method in ['Penman', 'penman']:
             return hb.pyet.penman(**pyet_args)
         elif method in ['Penman-Monteith', 'pm']:
@@ -667,7 +698,12 @@ class Forcing:
         else:
             raise ValueError(f'Unknown PET method: {method}')
 
-    def _set_pyet_variables_data(self, pyet_args, use, i_unit):
+    def _set_pyet_variables_data(
+            self,
+            pyet_args: dict,
+            use: list[str],
+            i_unit: int
+    ) -> dict:
         for v in use:
             v = self.get_variable_enum(v)
             idx = self.data2D.data_name.index(v)
@@ -690,7 +726,7 @@ class Forcing:
 
         return pyet_args
 
-    def _check_variables_available(self, use):
+    def _check_variables_available(self, use: list[str]):
         # Check if all variables are available
         use = [self.get_variable_enum(v) for v in use]
         for v in use:
@@ -698,7 +734,7 @@ class Forcing:
                 raise ValueError(f"Variable {v} is not available.")
 
     @staticmethod
-    def _remove_lat_elevation_options(use):
+    def _remove_lat_elevation_options(use: list[str]):
         # Remove latitude and elevation from the list
         use = [u for u in use if u not in ['latitude', 'lat', 'elevation']]
         return use

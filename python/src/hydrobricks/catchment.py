@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 import hydrobricks as hb
+from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
@@ -21,13 +25,13 @@ class Catchment:
 
     Parameters
     ----------
-    outline : str|Path
+    outline
         Path to the outline of the catchment.
-    land_cover_types : list, optional
+    land_cover_types
         The land cover types of the catchment.
-    land_cover_names : list, optional
+    land_cover_names
         The land cover names of the catchment.
-    hydro_units_data : pd.DataFrame, optional
+    hydro_units_data
         The hydro units data of the catchment.
 
     Attributes
@@ -52,8 +56,12 @@ class Catchment:
         The hydro units of the catchment.
     """
 
-    def __init__(self, outline=None, land_cover_types=None, land_cover_names=None,
-                 hydro_units_data=None):
+    def __init__(
+            self,
+            outline: str | Path | None = None,
+            land_cover_types: list[str] | None = None,
+            land_cover_names: list[str] | None = None,
+            hydro_units_data: pd.DataFrame | None = None):
         # Check that the required packages are installed
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
@@ -73,8 +81,8 @@ class Catchment:
         self.dem_data = None
         self.attributes = {}
         self.map_unit_ids = None
-        self.hydro_units = hb.HydroUnits(land_cover_types, land_cover_names,
-                                         hydro_units_data)
+        self.hydro_units = HydroUnits(land_cover_types, land_cover_names,
+                                      hydro_units_data)
 
         self._extract_outline(outline)
         self._extract_area(outline)
@@ -89,36 +97,36 @@ class Catchment:
             self.dem.close()
 
     @property
-    def topography(self):
+    def topography(self) -> CatchmentTopography:
         if self._topography is None:
             self._topography = CatchmentTopography(self)
         return self._topography
 
     @property
-    def discretization(self):
+    def discretization(self) -> CatchmentDiscretization:
         if self._discretization is None:
             self._discretization = CatchmentDiscretization(self)
         return self._discretization
 
     @property
-    def connectivity(self):
+    def connectivity(self) -> CatchmentConnectivity:
         if self._connectivity is None:
             self._connectivity = CatchmentConnectivity(self)
         return self._connectivity
 
     @property
-    def solar_radiation(self):
+    def solar_radiation(self) -> PotentialSolarRadiation:
         if self._solar_radiation is None:
             self._solar_radiation = PotentialSolarRadiation(self)
         return self._solar_radiation
 
-    def extract_dem(self, raster_path) -> bool:
+    def extract_dem(self, raster_path: str | Path) -> bool:
         """
         Extract the DEM data for the catchment. Does not handle change in coordinates.
 
         Parameters
         ----------
-        raster_path : str|Path
+        raster_path
             Path of the DEM raster file.
 
         Returns
@@ -132,25 +140,29 @@ class Catchment:
         return True
 
     def extract_attribute_raster(
-            self, raster_path: str | Path, attr_name: str,
-            resample_to_dem_resolution: bool = True, resampling: str = 'average',
-            replace_nans_by_zeros: bool = True) -> bool:
+            self,
+            raster_path: str | Path,
+            attr_name: str,
+            resample_to_dem_resolution: bool = True,
+            resampling: str = 'average',
+            replace_nans_by_zeros: bool = True
+    ) -> bool:
         """
         Extract spatial attributes (raster) for the catchment.
         Does not handle change in coordinates.
 
         Parameters
         ----------
-        raster_path : str|Path
+        raster_path
             Path of the DEM file.
-        attr_name : str
+        attr_name
             Name of the attribute.
-        resample_to_dem_resolution : bool
+        resample_to_dem_resolution
             If True, resample the attribute to the DEM resolution.
-        resampling: str
+        resampling
             Resampling method to use. Default is 'average'. Options are listed under
             https://rasterio.readthedocs.io/en/stable/api/rasterio.enums.html#rasterio.enums.Resampling
-        replace_nans_by_zeros: bool
+        replace_nans_by_zeros
             If True, replace NaN values by 0. Default is True.
 
         Returns
@@ -229,7 +241,7 @@ class Catchment:
 
         return True
 
-    def get_hydro_units_nb(self):
+    def get_hydro_units_nb(self) -> int:
         """
         Get the number of hydro units.
 
@@ -242,7 +254,7 @@ class Catchment:
 
         return len(self.hydro_units.hydro_units)
 
-    def get_hydro_units_elevations(self):
+    def get_hydro_units_elevations(self) -> np.ndarray:
         """
         Get the elevation of the hydro units.
 
@@ -255,7 +267,7 @@ class Catchment:
 
         return self.hydro_units.hydro_units.elevation
 
-    def get_hydro_units_attributes(self):
+    def get_hydro_units_attributes(self) -> HydroUnits:
         """
         Extract the hydro units attributes.
 
@@ -330,13 +342,13 @@ class Catchment:
 
         return self.hydro_units
 
-    def save_hydro_units_to_csv(self, path):
+    def save_hydro_units_to_csv(self, path: str | Path):
         """
         Save the hydro units to a csv file.
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the output file.
         """
         if self.hydro_units is None:
@@ -344,15 +356,19 @@ class Catchment:
 
         self.hydro_units.save_to_csv(path)
 
-    def save_unit_ids_raster(self, output_path, output_filename='unit_ids.tif'):
+    def save_unit_ids_raster(
+            self,
+            output_path: str | Path,
+            output_filename: str = 'unit_ids.tif'
+    ):
         """
         Save the unit ids raster to a file.
 
         Parameters
         ----------
-        output_path : str|Path
+        output_path
             Path to the output file.
-        output_filename : str, optional
+        output_filename
             Name of the output file. Default is 'unit_ids.tif'.
         """
         if self.map_unit_ids is None:
@@ -371,15 +387,19 @@ class Catchment:
         with hb.rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
-    def load_unit_ids_from_raster(self, dir_path, filename='unit_ids.tif'):
+    def load_unit_ids_from_raster(
+            self,
+            dir_path: str,
+            filename: str = 'unit_ids.tif'
+    ):
         """
         Load hydro units from a raster file.
 
         Parameters
         ----------
-        dir_path : str
+        dir_path
             Path to the directory containing the raster file.
-        filename : str, optional
+        filename
             Name of the raster file. Default is 'unit_ids.tif'.
         """
         if not hb.has_rasterio:
@@ -400,7 +420,7 @@ class Catchment:
 
             self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
 
-    def get_dem_x_resolution(self):
+    def get_dem_x_resolution(self) -> float:
         """
         Get the DEM x resolution.
 
@@ -410,7 +430,7 @@ class Catchment:
         """
         return abs(self.dem.transform[0])
 
-    def get_dem_y_resolution(self):
+    def get_dem_y_resolution(self) -> float:
         """
         Get the DEM y resolution.
 
@@ -420,13 +440,13 @@ class Catchment:
         """
         return abs(self.dem.transform[4])
 
-    def get_attribute_raster_x_resolution(self, attr_name: str = "dem"):
+    def get_attribute_raster_x_resolution(self, attr_name: str = "dem") -> float:
         """
         Get the given attribute raster x resolution.
 
         Parameters
         ----------
-        attr_name : str
+        attr_name
             Name of the attribute.
 
         Returns
@@ -438,13 +458,13 @@ class Catchment:
 
         return abs(self.attributes[attr_name].src.transform[0])
 
-    def get_attribute_raster_y_resolution(self, attr_name: str = "dem"):
+    def get_attribute_raster_y_resolution(self, attr_name: str = "dem") -> float:
         """
         Get the given attribute raster y resolution.
 
         Parameters
         ----------
-        attr_name : str
+        attr_name
             Name of the attribute.
 
         Returns
@@ -456,7 +476,7 @@ class Catchment:
 
         return abs(self.attributes[attr_name].src.transform[4])
 
-    def get_dem_pixel_area(self):
+    def get_dem_pixel_area(self) -> float:
         """
         Get the DEM pixel area.
 
@@ -466,7 +486,7 @@ class Catchment:
         """
         return self.get_dem_x_resolution() * self.get_dem_y_resolution()
 
-    def get_dem_mean_lat_lon(self):
+    def get_dem_mean_lat_lon(self) -> tuple[float, float]:
         # Central coordinates of the catchment
         mean_x = self.dem.bounds[0] + (self.dem.bounds[2] - self.dem.bounds[0]) / 2
         if self.dem.bounds[3] > self.dem.bounds[1]:
@@ -480,15 +500,15 @@ class Catchment:
 
         return mean_lat, mean_lon
 
-    def create_dem_pixel_geometry(self, i, j):
+    def create_dem_pixel_geometry(self, i: int, j: int) -> hb.shapely.geometry.Polygon:
         """
         Create a shapely geometry of the DEM pixel.
 
         Parameters
         ----------
-        i : int
+        i
             The row of the pixel.
-        j : int
+        j
             The column of the pixel.
 
         Returns
@@ -508,16 +528,19 @@ class Catchment:
 
         return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
 
-    def initialize_area_from_land_cover_change(self, land_cover_name,
-                                               land_cover_change):
+    def initialize_area_from_land_cover_change(
+            self,
+            land_cover_name: str,
+            land_cover_change: pd.DataFrame
+    ):
         """
         Initialize the HydroUnits cover area from a land cover change object.
 
         Parameters
         ----------
-        land_cover_name : str
+        land_cover_name
             The name of the land cover to initialize.
-        land_cover_change : pd.DataFrame
+        land_cover_change
             The land cover change dataframe.
         """
         if self.map_unit_ids is None:
@@ -536,21 +559,23 @@ class Catchment:
         """
         Call the discretize_by method of the Discretization class.
         """
-        return self.discretization.discretize_by(*args, **kwargs)
+        self.discretization.discretize_by(*args, **kwargs)
 
     def create_elevation_bands(self, *args, **kwargs):
         """
         Call the create_elevation_bands method of the Discretization class.
         """
-        return self.discretization.create_elevation_bands(*args, **kwargs)
+        self.discretization.create_elevation_bands(*args, **kwargs)
 
-    def get_mean_elevation(self):
+    def get_mean_elevation(self) -> float:
         """
         Call the get_mean_elevation method of the Topography class.
         """
         return self.topography.get_mean_elevation()
 
-    def resample_dem_and_calculate_slope_aspect(self, *args, **kwargs):
+    def resample_dem_and_calculate_slope_aspect(
+            self, *args, **kwargs
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Call the resample_dem_and_calculate_slope_aspect method of the Topography class.
         """
@@ -560,15 +585,15 @@ class Catchment:
         """
         Call the calculate_slope_aspect method of the Topography class.
         """
-        return self.topography.calculate_slope_aspect()
+        self.topography.calculate_slope_aspect()
 
-    def get_hillshade(self, *args, **kwargs):
+    def get_hillshade(self, *args, **kwargs) -> np.ndarray:
         """
         Call the get_hillshade method of the Topography class.
         """
         return self.topography.get_hillshade(*args, **kwargs)
 
-    def calculate_connectivity(self, *args, **kwargs):
+    def calculate_connectivity(self, *args, **kwargs) -> pd.DataFrame:
         """
         Call the calculate_connectivity method of the Connectivity class.
         """
@@ -579,10 +604,10 @@ class Catchment:
         Call the calculate_daily_potential_radiation method of the
         PotentialSolarRadiation class.
         """
-        return self.solar_radiation.calculate_daily_potential_radiation(*args, **kwargs)
+        self.solar_radiation.calculate_daily_potential_radiation(*args, **kwargs)
 
     @staticmethod
-    def calculate_cast_shadows(*args, **kwargs):
+    def calculate_cast_shadows(*args, **kwargs) -> np.ndarray:
         """
         Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
@@ -593,52 +618,52 @@ class Catchment:
         Call the load_mean_annual_radiation_raster method of the
         PotentialSolarRadiation class.
         """
-        return self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
+        self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
     def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
         """
         Call the upscale_and_save_mean_annual_radiation_rasters method of the
         PotentialSolarRadiation class.
         """
-        return self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
+        self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
             *args, **kwargs)
 
     @staticmethod
-    def get_solar_declination_rad(*args, **kwargs):
+    def get_solar_declination_rad(*args, **kwargs) -> float:
         """
         Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
         return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
-    def get_solar_hour_angle_limit(*args, **kwargs):
+    def get_solar_hour_angle_limit(*args, **kwargs) -> float | np.ndarray:
         """
         Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
         return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
-    def get_solar_zenith(*args, **kwargs):
+    def get_solar_zenith(*args, **kwargs) -> float | np.ndarray:
         """
         Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
         return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
-    def get_solar_azimuth_to_south(*args, **kwargs):
+    def get_solar_azimuth_to_south(*args, **kwargs) -> np.ndarray:
         """
         Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
         return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
-    def get_solar_azimuth_to_north(*args, **kwargs):
+    def get_solar_azimuth_to_north(*args, **kwargs) -> float | np.ndarray:
         """
         Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
         return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
-    def extract_unit_mean_lat_lon(self, mask_unit):
+    def extract_unit_mean_lat_lon(self, mask_unit: np.ndarray) -> tuple[float, float]:
         # Get rows and cols of the unit
         rows, cols = np.where(mask_unit)
 
@@ -655,7 +680,7 @@ class Catchment:
 
         return mean_lat, mean_lon
 
-    def _extract_area(self, outline):
+    def _extract_area(self, outline: hb.shapely.geometry.Polygon):
         # The outline has to be given in meters.
         if not outline:
             return
@@ -664,7 +689,7 @@ class Catchment:
         area = hb.utils.compute_area(shapefile)
         self.area = area
 
-    def _extract_outline(self, outline):
+    def _extract_outline(self, outline: hb.shapely.geometry.Polygon):
         if not outline:
             return
         shapefile = hb.gpd.read_file(outline)
@@ -672,20 +697,23 @@ class Catchment:
         geoms = shapefile.geometry.values
         self.outline = geoms
 
-    def _extract_raster(self, raster_path) -> [hb.rasterio.DatasetReader, np.ndarray]:
+    def _extract_raster(
+            self,
+            raster_path: str | Path
+    ) -> [hb.rasterio.DatasetReader, np.ndarray] | None:
         """
         Extract raster data for the catchment. Does not handle change in coordinates.
 
         Parameters
         ----------
-        raster_path : str|Path
+        raster_path
             Path of the DEM file.
 
         Returns
         -------
-        src : rasterio.DatasetReader
+        src
             The rasterio dataset reader object.
-        masked_data : np.ndarray
+        masked_data
             The masked raster data.
         """
         if not Path(raster_path).is_file():
@@ -719,7 +747,7 @@ class Catchment:
             print(e)
             return None
 
-    def _check_crs(self, data):
+    def _check_crs(self, data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
         data_crs = self._get_crs_from_file(data)
         if self.crs is None:
             self.crs = data_crs
@@ -729,7 +757,7 @@ class Catchment:
                                  "catchment.")
 
     @staticmethod
-    def _get_crs_from_file(data):
+    def _get_crs_from_file(data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
         if isinstance(data, hb.rasterio.DatasetReader):
             return data.crs
         elif isinstance(data, hb.gpd.GeoDataFrame):

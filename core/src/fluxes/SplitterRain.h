@@ -14,18 +14,28 @@ class SplitterRain : public Splitter {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Splitter::SetParameters()
+     */
     void SetParameters(const SplitterSettings& splitterSettings) override;
 
+    /**
+     * @copydoc Splitter::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
+    /**
+     * @copydoc Splitter::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
 
+    /**
+     * @copydoc Splitter::Compute()
+     */
     void Compute() override;
 
   protected:
     Forcing* m_precipitation;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_SPLITTER_RAIN_H

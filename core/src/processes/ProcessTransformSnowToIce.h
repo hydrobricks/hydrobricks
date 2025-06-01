@@ -11,6 +11,11 @@ class ProcessTransformSnowToIce : public ProcessTransform {
 
     ~ProcessTransformSnowToIce() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -21,9 +26,10 @@ class ProcessTransformSnowToIce : public ProcessTransform {
   protected:
     float* m_rate;  // [mm/d]
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H

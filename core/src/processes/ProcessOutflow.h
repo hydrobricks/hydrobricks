@@ -11,6 +11,11 @@ class ProcessOutflow : public Process {
 
     ~ProcessOutflow() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,12 +23,15 @@ class ProcessOutflow : public Process {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::GetConnectionsNb()
+     */
     int GetConnectionsNb() override;
 
+    /**
+     * @copydoc Process::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_OUTFLOW_H

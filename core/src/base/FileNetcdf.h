@@ -264,6 +264,11 @@ class FileNetcdf : public wxObject {
     int m_ncId;
 
   private:
+    /**
+     * Check the NetCDF status and throw an exception if an error occurred.
+     *
+     * @param status The NetCDF status to check.
+     */
     void CheckNcStatus(int status);
 };
 

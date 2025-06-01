@@ -13,12 +13,15 @@ class Urban : public LandCover {
      */
     void SetParameters(const BrickSettings& brickSettings) override;
 
+    /**
+     * @copydoc Brick::ApplyConstraints()
+     */
     void ApplyConstraints(double timeStep) override;
 
+    /**
+     * @copydoc Brick::Finalize()
+     */
     void Finalize() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_URBAN_H

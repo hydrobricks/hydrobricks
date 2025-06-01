@@ -13,15 +13,30 @@ class HydroUnitProperty : public wxObject {
 
     ~HydroUnitProperty() override = default;
 
+    /**
+     * Get the value of the property.
+     *
+     * @param unit The unit to convert the value to. If empty, the original unit is used.
+     * @return The value of the property.
+     */
     double GetValue(const string& unit = "") const;
 
+    /**
+     * Get the value of the property as a string.
+     *
+     * @return The value of the property as a string.
+     */
     string GetValueString() const;
 
+    /**
+     * Get the name of the property.
+     *
+     * @return The name of the property.
+     */
     string GetName() {
         return m_name;
     }
 
-  protected:
   private:
     string m_name;
     string m_unit;

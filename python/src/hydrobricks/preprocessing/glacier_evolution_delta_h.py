@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
 from hydrobricks.constants import ICE_WE
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
+    from hydrobricks.hydro_units import HydroUnits
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -25,13 +32,13 @@ class GlacierEvolutionDeltaH:
       14, 815–829, https://doi.org/10.5194/hess-14-815-2010, 2010.
     """
 
-    def __init__(self, hydro_units = None):
+    def __init__(self, hydro_units: HydroUnits | None = None):
         """
         Initialize the GlacierMassBalance class.
 
         Parameters
         ----------
-        hydro_units : hb.HydroUnit
+        hydro_units
             The hydro unit object.
         """
         self.glacier_df = None
@@ -62,26 +69,31 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
 
-    def compute_initial_ice_thickness(self, catchment, glacier_outline=None,
-                                      ice_thickness=None, elevation_bands_distance=10):
+    def compute_initial_ice_thickness(
+            self,
+            catchment: Catchment,
+            glacier_outline: str | None = None,
+            ice_thickness: str | None = None,
+            elevation_bands_distance: int = 10
+    ) -> pd.DataFrame:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
         for the glacier mass balance calculation.
 
         Parameters
         ----------
-        catchment : hb.Catchment
+        catchment
             The catchment object.
-        glacier_outline : str
+        glacier_outline
             Path to the SHP file containing the glacier extents.
             If None, the glacier extents are extracted from the ice thickness geotiff.
             Either this or ice_thickness should be provided.
-        ice_thickness : str
+        ice_thickness
             Path to the TIF file containing the glacier thickness.
             If None, the ice thickness is estimated based on the glacier area
             using the Bahr et al. (1997) formula.
             Either this or glacier_outline should be provided.
-        elevation_bands_distance : int
+        elevation_bands_distance
             Distance between elevation bands in meters. Default is 10 m.
 
         Returns
@@ -178,9 +190,14 @@ class GlacierEvolutionDeltaH:
 
         return self.glacier_df
 
-    def compute_lookup_table(self, glacier_profile_csv = None, glacier_df = None,
-                             nb_increments=100, update_width=True,
-                             update_width_reference='initial'):
+    def compute_lookup_table(
+            self,
+            glacier_profile_csv: str | None = None,
+            glacier_df: pd.DataFrame | None = None,
+            nb_increments: int = 100,
+            update_width: bool = True,
+            update_width_reference: str = 'initial'
+    ):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
         calculated using the delta-h method (Huss et al., 2010) using the
@@ -190,7 +207,7 @@ class GlacierEvolutionDeltaH:
 
         Parameters
         ----------
-        glacier_profile_csv : str, optional
+        glacier_profile_csv
             Path to the CSV file containing glacier data. An elevation band is smaller
             than a hydro unit, usually around 10 m high. It should contain the
             following columns:
@@ -214,14 +231,14 @@ class GlacierEvolutionDeltaH:
             If not provided, the glacier data is assumed to be already loaded in the
             glacier_df attribute or to be passed as a DataFrame.
 
-        glacier_df : pd.DataFrame, optional
+        glacier_df
             DataFrame containing glacier data. Alternative to glacier_profile_csv.
-        nb_increments : int, optional
+        nb_increments
             Number of increments for glacier mass balance calculation. Default is 100.
-        update_width : bool, optional
+        update_width
             Whether to update the glacier width at each iteration (Eq. 7 Seibert et al.,
             2018). Default is True.
-        update_width_reference : str, optional
+        update_width_reference
             Reference for updating the glacier width (Eq. 7 Seibert et al., 2018).
             Default is 'initial'. Options are:
             - 'initial': Use the initial glacier width.
@@ -252,7 +269,8 @@ class GlacierEvolutionDeltaH:
         # Extract the relevant columns
         elevation_bands = self.glacier_df[('elevation', 'm')].values
         initial_areas_m2 = self.glacier_df[('glacier_area', 'm2')].values
-        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values * ICE_WE * 1000
+        initial_we_mm = self.glacier_df[
+                            ('glacier_thickness', 'm')].values * ICE_WE * 1000
         hydro_unit_ids = self.glacier_df[('hydro_unit_id', '-')].values
 
         nb_elevation_bands = len(elevation_bands)
@@ -281,41 +299,39 @@ class GlacierEvolutionDeltaH:
 
         self._update_lookup_tables()
 
-    def get_lookup_table_area(self):
+    def get_lookup_table_area(self) -> pd.DataFrame:
         """
         Get the glacier area evolution lookup table.
 
         Returns
         -------
-        pd.DataFrame
-            The glacier area evolution lookup table.
+        The glacier area evolution lookup table.
         """
         return pd.DataFrame(
             self.lookup_table_area,
             index=range(self.lookup_table_area.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
 
-    def get_lookup_table_volume(self):
+    def get_lookup_table_volume(self) -> pd.DataFrame:
         """
         Get the glacier volume evolution lookup table.
 
         Returns
         -------
-        pd.DataFrame
-            The glacier volume evolution lookup table.
+        The glacier volume evolution lookup table.
         """
         return pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
             columns=np.unique(self.hydro_unit_ids))
 
-    def save_as_csv(self, output_dir):
+    def save_as_csv(self, output_dir: str | Path):
         """
         Save the glacier evolution lookup table as a CSV file.
 
         Parameters
         ----------
-        output_dir : str|Path
+        output_dir
             Path to the directory where the CSV file will be saved.
         """
         output_dir = Path(output_dir)
@@ -374,7 +390,7 @@ class GlacierEvolutionDeltaH:
                             self.catchment_area / (1000 * 1000))
         self._set_delta_h_parametrization(glacier_area_km2)
 
-    def _set_delta_h_parametrization(self, glacier_area_km2):
+    def _set_delta_h_parametrization(self, glacier_area_km2: float):
         """
         Delta-h parametrization of the glacier. See Huss et al. (2010).
         """
@@ -394,7 +410,7 @@ class GlacierEvolutionDeltaH:
             self.c_coeff = 0.09
             self.gamma_coeff = 2
 
-    def _compute_delta_h(self, increment, nb_increments):
+    def _compute_delta_h(self, increment: int, nb_increments: int):
         """
         Step 2 of Seibert et al. (2018): Apply the delta-h method to calculate the
         change in glacier mass balance.
@@ -418,7 +434,7 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = glacier_we_change_mm / (
             np.sum(self.areas_perc[increment - 1] * self.norm_delta_we))
 
-    def _update_glacier_thickness(self, increment):
+    def _update_glacier_thickness(self, increment: int):
         """
         Step 3 of Seibert et al. (2018): "For each elevation band reduce the glacier
         water equivalent according to the empirical functions from Huss et al. (2010)
@@ -440,7 +456,12 @@ class GlacierEvolutionDeltaH:
         self.excess_melt_we = - np.sum(np.where(new_we < 0, new_we, 0) *
                                        self.areas_perc[increment - 1])
 
-    def _width_scaling(self, increment, update_width, update_width_reference):
+    def _width_scaling(
+            self,
+            increment: int,
+            update_width: bool,
+            update_width_reference: str = 'initial'
+    ):
         """
         Step 4 of Seibert et al. (2018): "The width scaling within each elevation band
         relates a decrease in glacier thickness to a reduction of the glacier area
@@ -469,7 +490,7 @@ class GlacierEvolutionDeltaH:
             # Conservation of the w.e.
             pos_we = self.we[increment] > 0
             self.we[increment, pos_we] *= (self.areas_perc[increment - 1, pos_we] /
-                                         self.areas_perc[increment, pos_we])
+                                           self.areas_perc[increment, pos_we])
         else:
             # If the glacier width is not updated, keep the previous glacier area.
             self.areas_perc[increment] = self.areas_perc[increment - 1]
@@ -492,7 +513,7 @@ class GlacierEvolutionDeltaH:
             # Conservation of the w.e.
             pos_we = self.we[i] > 0
             self.we[i, pos_we] *= (self.areas_perc[0, pos_we] /
-                                 self.areas_perc[i, pos_we])
+                                   self.areas_perc[i, pos_we])
 
     def _update_lookup_tables(self):
         """
@@ -513,7 +534,10 @@ class GlacierEvolutionDeltaH:
                 self.lookup_table_volume[:, i] = 0
 
     @staticmethod
-    def _discretize_elevation_bands(catchment, elevation_bands_distance=10):
+    def _discretize_elevation_bands(
+            catchment: Catchment,
+            elevation_bands_distance: int = 10
+    ) -> tuple[np.ndarray, np.ndarray]:
         """ Discretize the DEM into elevation bands at the given distance."""
         # Check that the catchment has been discretized
         if catchment.map_unit_ids is None:
@@ -553,7 +577,11 @@ class GlacierEvolutionDeltaH:
 
         return elevations, map_bands_ids
 
-    def _extract_glacier_mask_from_shapefile(self, catchment, glacier_outline):
+    def _extract_glacier_mask_from_shapefile(
+            self,
+            catchment: Catchment,
+            glacier_outline: str | Path
+    ) -> np.ndarray:
         """ Extract the glacier cover from shapefiles."""
         # Clip the glaciers to the catchment extent
         all_glaciers = hb.gpd.read_file(glacier_outline)
@@ -572,7 +600,11 @@ class GlacierEvolutionDeltaH:
         return glaciers_mask
 
     @staticmethod
-    def _get_glacier_patches(catchment, map_bands_ids, glaciers_mask):
+    def _get_glacier_patches(
+            catchment: Catchment,
+            map_bands_ids: np.ndarray,
+            glaciers_mask: np.ndarray
+    ) -> list[tuple[int, int, float]]:
         # Extract the pixel size
         px_area = catchment.get_dem_pixel_area()
 
@@ -597,7 +629,11 @@ class GlacierEvolutionDeltaH:
         return glacier_patches
 
     @staticmethod
-    def _mask_dem(catchment, shapefile, nodata):
+    def _mask_dem(
+            catchment: Catchment,
+            shapefile: hb.gpd.GeoDataFrame,
+            nodata: int = -9999
+    ) -> np.ndarray:
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
@@ -609,7 +645,7 @@ class GlacierEvolutionDeltaH:
         return dem_masked
 
     @staticmethod
-    def _simplify_df_geometries(df):
+    def _simplify_df_geometries(df: hb.gpd.GeoDataFrame) -> hb.gpd.GeoDataFrame:
         # Merge the polygons
         df['new_col'] = 0
         df = df.dissolve(by='new_col', as_index=False)

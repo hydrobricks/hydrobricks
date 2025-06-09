@@ -573,8 +573,13 @@ class GlacierEvolutionDeltaH:
         for increment in range(1, nb_increments):
             for i, elev_idx in enumerate(np.arange(len(self.unique_elevation_bands))):
                 band_mask = self.inverse_indices == elev_idx
+                # Scaling each aspect/radiation area in the total band proportionally
                 self.areas_perc[increment, band_mask] *= self.elev_band_areas_perc[increment, elev_idx] / self.elev_band_areas_perc[0, elev_idx]
-                self.we[increment, band_mask] *= self.elev_band_we[increment, elev_idx] / self.elev_band_we[0, elev_idx]
+                # Adjusting the thickness so that the water equivalent remains constant
+                if self.elev_band_areas_perc[increment, elev_idx] == 0:
+                    self.we[increment, band_mask] = 0
+                else:
+                    self.we[increment, band_mask] *= self.elev_band_areas_perc[0, elev_idx] / self.elev_band_areas_perc[increment, elev_idx]
 
     def _update_lookup_tables(self):
         """

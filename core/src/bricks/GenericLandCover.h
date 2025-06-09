@@ -13,12 +13,15 @@ class GenericLandCover : public LandCover {
      */
     void SetParameters(const BrickSettings& brickSettings) override;
 
+    /**
+     * @copydoc Brick::ApplyConstraints()
+     */
     void ApplyConstraints(double timeStep) override;
 
+    /**
+     * @copydoc Brick::Finalize()
+     */
     void Finalize() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_GENERIC_LAND_COVER_H

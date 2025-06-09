@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import _hydrobricks as _hb
 import hydrobricks as hb
-
-from ..units import Unit, convert_unit
-from .behaviour import Behaviour
+import hydrobricks.utils as utils
+from hydrobricks.actions.action import Action
+from hydrobricks.catchment import Catchment
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.units import Unit, convert_unit
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping
@@ -20,15 +25,21 @@ m2 = Unit.M2
 km2 = Unit.KM2
 
 
-class BehaviourLandCoverChange(Behaviour):
+class ActionLandCoverChange(Action):
     """Class for the land cover changes."""
 
     def __init__(self):
         super().__init__()
-        self.behaviour = _hb.BehaviourLandCoverChange()
+        self.action = _hb.ActionLandCoverChange()
 
-    def load_from_csv(self, path, hydro_units, land_cover, area_unit,
-                      match_with='elevation'):
+    def load_from_csv(
+            self,
+            path: str | Path,
+            hydro_units: HydroUnits,
+            land_cover: str,
+            area_unit: str,
+            match_with: str = 'elevation'
+    ):
         """
         Read land cover changes from a csv file. Such file should contain the
         changes for a single land cover. Multiple files can be loaded consecutively.
@@ -40,15 +51,15 @@ class BehaviourLandCoverChange(Behaviour):
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the csv file containing hydro units data.
-        hydro_units : HydroUnits
+        hydro_units
             The hydro units to match the land cover changes against.
-        land_cover : str
+        land_cover
             Name of the land cover to change.
-        area_unit: str
+        area_unit
             Unit for the area values: "m2" or "km2"
-        match_with : str
+        match_with
             Information used to identify the hydro units. Options: 'elevation', 'id'
 
         Example of a file (with areas in km2)
@@ -85,56 +96,63 @@ class BehaviourLandCoverChange(Behaviour):
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(land_cover, area_unit, file_content)
 
-    def get_changes_nb(self):
+    def get_changes_nb(self) -> int:
         """
         Get the number of changes registered.
         """
-        return self.behaviour.get_changes_nb()
+        return self.action.get_changes_nb()
 
-    def get_land_covers_nb(self):
+    def get_land_covers_nb(self) -> int:
         """
         Get the number of land covers registered.
         """
-        return self.behaviour.get_land_covers_nb()
+        return self.action.get_land_covers_nb()
 
     @classmethod
-    def create_behaviour_for_glaciers(cls, catchment, times, full_glaciers,
-                                      debris_glaciers=None, with_debris=False,
-                                      method='vector', interpolate_yearly=True):
+    def create_action_for_glaciers(
+            cls,
+            catchment: Catchment,
+            times: list[str],
+            full_glaciers: list[str] | Path,
+            debris_glaciers: list[str] | Path | None = None,
+            with_debris: bool = False,
+            method: str = 'vector',
+            interpolate_yearly: bool = True
+    ) -> tuple[ActionLandCoverChange, list[pd.DataFrame]]:
         """
         Extract the glacier cover changes from shapefiles, creates a
-        BehaviourLandCoverChange object, and assign the computed land cover
-        changes to the BehaviourLandCoverChange object.
+        ActionLandCoverChange object, and assign the computed land cover
+        changes to the ActionLandCoverChange object.
 
         Parameters
         ----------
-        catchment : Catchment
+        catchment
             The catchment to extract the glacier cover changes for.
-        times : list of str
+        times
             Date of the land cover, in the format: yyyy-mm-dd.
-        full_glaciers : list of str|Path
+        full_glaciers
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_glaciers : list of str|Path, optional
+        debris_glaciers
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
-        with_debris : bool, optional
+        with_debris
             True if the simulation requires debris-covered and clean-ice area
             computations, False otherwise.
-        method : str, optional
+        method
             The method to extract the glacier cover changes:
             'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
-        interpolate_yearly : bool, optional
+        interpolate_yearly
             True if the changes should be interpolated to a yearly time step,
             False otherwise (no interpolation).
 
         Returns
         -------
-        changes : BehaviourLandCoverChange
-            A BehaviourLandCoverChange object setup with the cover areas
+        changes
+            A ActionLandCoverChange object setup with the cover areas
             extracted from the shapefiles.
-        changes_df : DataFrame list
+        changes_df
             A list of the dataframes containing the cover areas extracted from the
             shapefiles. If with_debris is True, the list contains 3 dataframes:
             [glacier_ice, glacier_debris, ground]. If with_debris is False, the list
@@ -152,15 +170,23 @@ class BehaviourLandCoverChange(Behaviour):
             raise ValueError("The catchment has not been discretized "
                              "(hydro units missing).")
 
-        changes = hb.behaviours.BehaviourLandCoverChange()
-        changes_df = changes._create_behaviour_for_glaciers(
+        changes = ActionLandCoverChange()
+        changes_df = changes._create_action_for_glaciers(
             catchment, full_glaciers, debris_glaciers, times, with_debris, method,
             interpolate_yearly)
 
         return changes, changes_df
 
-    def _create_behaviour_for_glaciers(self, catchment, full_glaciers, debris_glaciers,
-                                       times, with_debris, method, interpolate_yearly):
+    def _create_action_for_glaciers(
+            self,
+            catchment: Catchment,
+            full_glaciers: list[str] | Path,
+            debris_glaciers: list[str] | Path | None,
+            times: list[str],
+            with_debris: bool,
+            method: str,
+            interpolate_yearly: bool
+    ):
 
         if len(full_glaciers) != len(times):
             raise ValueError("The number of shapefiles and dates must be equal.")
@@ -241,35 +267,40 @@ class BehaviourLandCoverChange(Behaviour):
         else:
             return [glacier_df, ground_df]
 
-    def _extract_glacier_cover_change(self, catchment, glaciers_shapefile,
-                                      debris_shapefile, method='vector'):
+    def _extract_glacier_cover_change(
+            self,
+            catchment: Catchment,
+            glaciers_shapefile: str | Path,
+            debris_shapefile: str | Path | None,
+            method: str = 'vector'
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract the glacier cover changes from shapefiles.
 
         Parameters
         ----------
-        catchment : Catchment
+        catchment
             The catchment to extract the glacier cover changes for.
-        glaciers_shapefile : str|Path
+        glaciers_shapefile
             Path to the shapefile containing the extent of the glaciers
             (debris-covered and clean ice together).
-        debris_shapefile : str|Path
+        debris_shapefile
             Path to the shapefile containing the extent of the debris-covered
             glaciers.
-        method : str, optional
+        method
             The method to extract the glacier cover changes:
             'vector' = vectorial extraction (more precise)
             'raster' = raster extraction (faster)
 
         Returns
         -------
-        glacier_area : array
+        glacier_area
             Area covered by glacier for each HydroUnit.
-        bare_ice_area : array
+        bare_ice_area
             Area covered by clean-ice glacier for each HydroUnit.
-        debris_area : array
+        debris_area
             Area covered by debris-covered glacier for each HydroUnit.
-        other_area : array
+        other_area
             Area covered by rock for each HydroUnit.
         """
         if method not in ['vector', 'raster']:
@@ -287,7 +318,7 @@ class BehaviourLandCoverChange(Behaviour):
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
-        glaciated_area = hb.utils.compute_area(glaciers)
+        glaciated_area = utils.compute_area(glaciers)
         non_glaciated_area = catchment.area - glaciated_area
 
         # Compute the debris-covered area of the glacier
@@ -309,7 +340,7 @@ class BehaviourLandCoverChange(Behaviour):
               f"glaciated.")
 
         if debris_shapefile is not None:
-            debris_glaciated_area = hb.utils.compute_area(glaciers_debris)
+            debris_glaciated_area = utils.compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
             print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
@@ -414,7 +445,10 @@ class BehaviourLandCoverChange(Behaviour):
         return glacier_area, bare_ice_area, debris_area, other_area
 
     @staticmethod
-    def _interpolate_yearly(data, times):
+    def _interpolate_yearly(
+            data: np.ndarray,
+            times: list[str]
+    ) -> tuple[np.ndarray, pd.DatetimeIndex]:
         # Transform the times to datetime instances
         times_dt = pd.to_datetime(times)
         times_full = pd.date_range(times_dt[0], times_dt[-1], freq='YS')
@@ -427,7 +461,10 @@ class BehaviourLandCoverChange(Behaviour):
         return data_full, times_full
 
     @staticmethod
-    def _create_new_change_dataframe(hydro_units, n_unit_ids):
+    def _create_new_change_dataframe(
+            hydro_units: HydroUnits,
+            n_unit_ids: int
+    ) -> pd.DataFrame:
         changes_df = pd.DataFrame(index=range(n_unit_ids))
         changes_df.insert(loc=0, column='hydro_unit', value=0)
         ids = hydro_units.hydro_units[('id', '-')].values.squeeze()
@@ -435,7 +472,7 @@ class BehaviourLandCoverChange(Behaviour):
         return changes_df
 
     @staticmethod
-    def _compute_intersection_area(intersecting_geoms):
+    def _compute_intersection_area(intersecting_geoms: list[MultiPolygon]) -> float:
         if len(intersecting_geoms) == 0:
             return 0
 
@@ -445,14 +482,18 @@ class BehaviourLandCoverChange(Behaviour):
         return merged_geometry.area
 
     @staticmethod
-    def _get_intersections(pixel_geo, objects, intersecting_geoms):
+    def _get_intersections(
+            pixel_geo: MultiPolygon,
+            objects: hb.gpd.GeoDataFrame,
+            intersecting_geoms: list[MultiPolygon]
+    ):
         for _, obj in objects.iterrows():
             intersection = pixel_geo.intersection(obj['geometry'])
             if not intersection.is_empty:
                 intersecting_geoms.append(intersection)
 
     @staticmethod
-    def _simplify_df_geometries(df):
+    def _simplify_df_geometries(df: hb.gpd.GeoDataFrame) -> hb.gpd.GeoDataFrame:
         # Merge the polygons
         df['new_col'] = 0
         df = df.dissolve(by='new_col', as_index=False)
@@ -462,7 +503,12 @@ class BehaviourLandCoverChange(Behaviour):
         return df
 
     @staticmethod
-    def _mask_dem(catchment, shapefile, nodata, all_touched=False):
+    def _mask_dem(
+            catchment: Catchment,
+            shapefile: hb.gpd.GeoDataFrame,
+            nodata: float,
+            all_touched: bool = False
+    ) -> np.ndarray:
         geoms = []
         for geo in shapefile.geometry.values:
             geoms.append(mapping(geo))
@@ -474,7 +520,11 @@ class BehaviourLandCoverChange(Behaviour):
         return dem_masked
 
     @staticmethod
-    def _match_hydro_unit_ids(file_content, hydro_units, match_with):
+    def _match_hydro_unit_ids(
+            file_content: pd.DataFrame,
+            hydro_units: HydroUnits,
+            match_with: str
+    ):
         hu_df = hydro_units.hydro_units
         for row, change in file_content.iterrows():
             if match_with == 'elevation':
@@ -486,7 +536,7 @@ class BehaviourLandCoverChange(Behaviour):
             file_content.at[row, 'hydro_unit'] = hu_df.at[idx_id, ('id', '-')]
 
     @staticmethod
-    def _remove_rows_with_no_changes(file_content):
+    def _remove_rows_with_no_changes(file_content: pd.DataFrame):
         for row, change in file_content.iterrows():
             diff = change.to_numpy(dtype=float)[1:]
             diff = diff[0:-1] - diff[1:]
@@ -494,16 +544,21 @@ class BehaviourLandCoverChange(Behaviour):
                 if v_diff == 0:
                     file_content.iloc[row, i_diff + 2] = np.nan
 
-    def _populate_bounded_instance(self, land_cover, area_unit, file_content):
+    def _populate_bounded_instance(
+            self,
+            land_cover: str,
+            area_unit: str,
+            file_content: pd.DataFrame
+    ):
         for col in list(file_content):
             if col == 'hydro_unit' or col == 0:
                 continue
             # Extract date from column name
-            mjd = hb.utils.date_as_mjd(col)
+            mjd = utils.date_as_mjd(col)
 
             for row in range(len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']
                 area = float(file_content.loc[row, col])
                 if not np.isnan(area):
                     area = convert_unit(area, area_unit, Unit.M2)
-                    self.behaviour.add_change(mjd, hu_id, land_cover, area)
+                    self.action.add_change(mjd, hu_id, land_cover, area)

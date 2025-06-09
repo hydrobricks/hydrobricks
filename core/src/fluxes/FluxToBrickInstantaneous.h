@@ -15,6 +15,9 @@ class FluxToBrickInstantaneous : public FluxToBrick {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Flux::IsInstantaneous()
+     */
     bool IsInstantaneous() override {
         return true;
     }
@@ -24,12 +27,17 @@ class FluxToBrickInstantaneous : public FluxToBrick {
      */
     double GetAmount() override;
 
+    /**
+     * Get the real amount of water that has been transferred to the brick.
+     *
+     * @return The real amount of water that has been transferred to the brick.
+     */
     double GetRealAmount();
 
+    /**
+     * @copydoc Flux::UpdateFlux()
+     */
     void UpdateFlux(double amount) override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_INSTANTANEOUS_H

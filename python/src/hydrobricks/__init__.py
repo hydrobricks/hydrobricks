@@ -48,7 +48,6 @@ if has_shapely:
 has_spotpy = is_module_available("spotpy")
 if has_spotpy:
     spotpy = LazyImport("spotpy")
-    from .trainer import SpotpySetup
 
 has_pyet = is_module_available("pyet")
 if has_pyet:
@@ -79,14 +78,10 @@ has_xrspatial = is_module_available("xrspatial")
 if has_xrspatial:
     xrs = LazyImport("xrspatial")
 
-has_matplotlib = is_module_available("matplotlib")
-if has_matplotlib:
-    plt = LazyImport("matplotlib.pyplot")
-
-from . import utils
 from .catchment import Catchment
 from .forcing import Forcing
 from .hydro_units import HydroUnits
+from .models.model import Model
 from .observations import Observations
 from .parameters import ParameterSet
 from .results import Results
@@ -97,5 +92,5 @@ init()
 __all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
            'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
            'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
-           'Dataset', 'rasterio', 'gpd', 'shapely', 'SpotpySetup', 'spotpy', 'pyet',
-           'pyproj', 'pysheds', 'xr', 'rxr', 'xrs', 'evaluate')
+           'Dataset', 'rasterio', 'gpd', 'shapely', 'spotpy', 'pyet', 'pyproj',
+           'pysheds', 'xr', 'rxr', 'xrs', 'evaluate', 'pyshedsGrid')

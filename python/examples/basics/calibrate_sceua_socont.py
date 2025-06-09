@@ -3,11 +3,12 @@ import spotpy
 from examples._helpers.models_setup_helper import ModelSetupHelper
 
 import hydrobricks as hb
+import hydrobricks.trainer as trainer
 
 # Set up the model
 helper = ModelSetupHelper('ch_sitter_appenzell', start_date='1981-01-01',
                           end_date='2020-12-31')
-helper.create_hydro_units_from_csv_file()
+helper.create_hydro_units_from_csv_file(filename='hydro_units_elevation.csv')
 forcing = helper.get_forcing_data_from_csv_file(
     ref_elevation=1250, use_precip_gradient=True)
 obs = helper.get_obs_data_from_csv_file()
@@ -18,8 +19,8 @@ parameters.allow_changing = ['a_snow', 'k_quick', 'A', 'k_slow_1', 'percol', 'k_
                              'precip_corr_factor']
 
 # Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
-spot_setup = hb.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
-                            obj_func='kge_2012', invert_obj_func=True)
+spot_setup = trainer.SpotpySetup(socont, parameters, forcing, obs, warmup=365,
+                                 obj_func='kge_2012', invert_obj_func=True)
 
 # Select number of maximum repetitions and run spotpy
 max_rep = 4000

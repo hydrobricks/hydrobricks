@@ -10,31 +10,55 @@ class TimeSeriesUniform : public TimeSeries {
 
     ~TimeSeriesUniform() override;
 
+    /**
+     * Set the time series data.
+     *
+     * @param data pointer to the time series data.
+     */
     void SetData(TimeSeriesData* data) {
         wxASSERT(data);
         m_data = data;
     }
 
+    /**
+     * @copydoc TimeSeries::SetCursorToDate()
+     */
     bool SetCursorToDate(double date) override;
 
+    /**
+     * @copydoc TimeSeries::AdvanceOneTimeStep()
+     */
     bool AdvanceOneTimeStep() override;
 
+    /**
+     * @copydoc TimeSeries::IsDistributed()
+     */
     bool IsDistributed() override {
         return false;
     }
 
+    /**
+     * @copydoc TimeSeries::GetStart()
+     */
     double GetStart() override;
 
+    /**
+     * @copydoc TimeSeries::GetEnd()
+     */
     double GetEnd() override;
 
+    /**
+     * @copydoc TimeSeries::GetTotal()
+     */
     double GetTotal(const SettingsBasin* basinSettings) override;
 
+    /**
+     * @copydoc TimeSeries::GetDataPointer()
+     */
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
     TimeSeriesData* m_data;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_UNIFORM_H

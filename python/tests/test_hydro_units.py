@@ -42,7 +42,7 @@ def hydro_units():
 
 
 @pytest.fixture
-def hydro_units_csv(hydro_units):
+def hydro_units_csv(hydro_units: hb.HydroUnits):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
         column_elevation='Elevation Bands',
@@ -52,7 +52,7 @@ def hydro_units_csv(hydro_units):
     return hydro_units
 
 
-def test_load_from_csv(hydro_units_csv):
+def test_load_from_csv(hydro_units_csv: hb.HydroUnits):
     hu = hydro_units_csv.hydro_units
     assert hu.loc[0].at['id'].values == 1
     assert hu.loc[10].at['id'].values == 11
@@ -80,7 +80,7 @@ def test_load_from_csv(hydro_units_csv):
             pytest.approx(0.023, abs=0.001))
 
 
-def test_create_file(hydro_units_csv):
+def test_create_file(hydro_units_csv: hb.HydroUnits):
     if not hb.has_netcdf:
         return
 

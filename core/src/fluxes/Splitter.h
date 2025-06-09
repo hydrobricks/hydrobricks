@@ -12,6 +12,12 @@ class Splitter : public wxObject {
   public:
     explicit Splitter();
 
+    /**
+     * Factory method to create a splitter.
+     *
+     * @param splitterSettings settings of the splitter containing the parameters.
+     * @return a pointer to the splitter.
+     */
     static Splitter* Factory(const SplitterSettings& splitterSettings);
 
     /**
@@ -28,8 +34,20 @@ class Splitter : public wxObject {
      */
     virtual void SetParameters(const SplitterSettings& splitterSettings) = 0;
 
+    /**
+     * Get the value pointer of a parameter.
+     *
+     * @param splitterSettings settings of the splitter containing the parameters.
+     * @param name name of the parameter.
+     * @return pointer to the value of the parameter.
+     */
     float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
 
+    /**
+     * Attach forcing.
+     *
+     * @param forcing incoming forcing
+     */
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();
     }
@@ -54,14 +72,32 @@ class Splitter : public wxObject {
         m_outputs.push_back(flux);
     }
 
+    /**
+     * Get the pointer to an output value.
+     *
+     * @param name name of the output value.
+     */
     virtual double* GetValuePointer(const string& name) = 0;
 
+    /**
+     * Compute the output value.
+     */
     virtual void Compute() = 0;
 
+    /**
+     * Get the name of the splitter.
+     *
+     * @return name of the splitter.
+     */
     string GetName() {
         return m_name;
     }
 
+    /**
+     * Set the name of the splitter.
+     *
+     * @param name name of the splitter.
+     */
     void SetName(const string& name) {
         m_name = name;
     }
@@ -70,8 +106,6 @@ class Splitter : public wxObject {
     string m_name;
     vector<Flux*> m_inputs;
     vector<Flux*> m_outputs;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

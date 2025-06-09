@@ -14,12 +14,24 @@ class SplitterSnowRain : public Splitter {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Splitter::SetParameters()
+     */
     void SetParameters(const SplitterSettings& splitterSettings) override;
 
+    /**
+     * @copydoc Splitter::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
+    /**
+     * @copydoc Splitter::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
 
+    /**
+     * @copydoc Splitter::Compute()
+     */
     void Compute() override;
 
   protected:
@@ -27,8 +39,6 @@ class SplitterSnowRain : public Splitter {
     Forcing* m_temperature;
     float* m_transitionStart;  // [°C]
     float* m_transitionEnd;    // [°C]
-
-  private:
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_H

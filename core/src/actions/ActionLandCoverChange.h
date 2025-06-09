@@ -1,0 +1,59 @@
+#ifndef HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H
+#define HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H
+
+#include "Action.h"
+#include "Includes.h"
+
+class ActionLandCoverChange : public Action {
+  public:
+    ActionLandCoverChange();
+
+    ~ActionLandCoverChange() override = default;
+
+    /**
+     * Add a land cover change to the action.
+     *
+     * @param date date of the change.
+     * @param hydroUnitId ID of the hydro unit.
+     * @param landCoverName name of the land cover.
+     * @param area area of the land cover.
+     */
+    void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
+
+    /**
+     * Apply the action to the model.
+     *
+     * @param date date of the action.
+     * @return true if the action was applied successfully.
+     */
+    bool Apply(double date) override;
+
+    /**
+     * Get the number of changes in the action.
+     *
+     * @return the number of changes in the action.
+     */
+    int GetChangesNb() const {
+        return int(m_sporadicDates.size());
+    }
+
+    /**
+     * Get the number of land covers in the action.
+     *
+     * @return the number of land covers in the action.
+     */
+    int GetLandCoversNb() const {
+        return int(m_landCoverNames.size());
+    }
+
+  protected:
+    vecInt m_hydroUnitIds;
+    vecInt m_landCoverIds;
+    vecStr m_landCoverNames;
+    vecDouble m_areas;
+
+  private:
+    int GetLandCoverId(const string& landCoverName);
+};
+
+#endif  // HYDROBRICKS_ACTION_LAND_COVER_CHANGE_H

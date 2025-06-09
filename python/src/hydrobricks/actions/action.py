@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 
-class Behaviour(ABC):
-    """Base class for the behaviours"""
+class Action(ABC):
+    """Base class for the actions"""
 
     @abstractmethod
     def __init__(self):

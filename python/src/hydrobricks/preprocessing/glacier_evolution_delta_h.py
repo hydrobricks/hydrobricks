@@ -516,21 +516,14 @@ class GlacierEvolutionDeltaH:
             else:
                 raise ValueError("update_width_reference should be either 'previous' "
                                  "or 'initial'.")
-
-            # Redistribute the scaling between the aspect/radiation discretization
-            # Apply ratio per elevation band
-            self.areas_perc[increment] = np.zeros_like(self.areas_perc[increment - 1])
-            for elev_idx in range(len(self.unique_elevation_bands)):
-                if self.elev_band_areas_perc[increment, elev_idx] > 0:
-                    ratio = self.elev_band_areas_perc[increment, elev_idx] / self.elev_band_areas_perc[increment - 1, elev_idx]
-                    band_mask = self.inverse_indices == elev_idx
-                    self.areas_perc[increment, band_mask] = self.areas_perc[increment - 1, band_mask] * ratio
-                    assert ~np.isnan(ratio).any()
                     
             # Conservation of the w.e.
             pos_we = self.we[increment] > 0
             self.we[increment, pos_we] *= (self.areas_perc[increment - 1, pos_we] /
                                            self.areas_perc[increment, pos_we])
+            
+            # Nullify the areas of the elevation bands with no glacier water equivalent
+            self.areas_perc[increment, self.we[increment] == 0] = 0
         else:
             # If the glacier width is not updated, keep the previous glacier area.
             self.elev_band_areas_perc[increment] = self.elev_band_areas_perc[increment - 1]

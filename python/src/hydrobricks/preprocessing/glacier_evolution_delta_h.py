@@ -524,6 +524,15 @@ class GlacierEvolutionDeltaH:
             
             # Nullify the areas of the elevation bands with no glacier water equivalent
             self.areas_perc[increment, self.we[increment] == 0] = 0
+            
+            # TODO: No radiation implemented in this option yet.
+            try:
+                if len(self.elev_band_areas_perc[increment]) != len(self.areas_perc[increment]):
+                    raise ValueError("Discretization by radiation or aspect is not implemented with the option update_width=True.")
+            except ValueError as e:
+                print(e)
+                raise
+            self.elev_band_areas_perc[increment] = self.areas_perc[increment]
         else:
             # If the glacier width is not updated, keep the previous glacier area.
             self.elev_band_areas_perc[increment] = self.elev_band_areas_perc[increment - 1]

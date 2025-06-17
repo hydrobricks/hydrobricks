@@ -68,13 +68,18 @@ class GlacierEvolutionDeltaH:
         self.norm_delta_we = np.nan
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
+        
+        # Areas based on topography
+        self.ice_thicknesses = [{}]
+        self.glacier_patches = None
 
     def compute_initial_ice_thickness(
             self,
             catchment: Catchment,
             glacier_outline: str | None = None,
             ice_thickness: str | None = None,
-            elevation_bands_distance: int = 10
+            elevation_bands_distance: int = 10,
+            area_from_topo: bool = True
     ) -> pd.DataFrame:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -135,6 +140,7 @@ class GlacierEvolutionDeltaH:
 
         glacier_patches = self._get_glacier_patches(catchment, map_bands_ids,
                                                     glaciers_mask)
+        self.glacier_patches = glacier_patches
 
         # Create the dataframe for the glacier data
         glacier_df = None
@@ -164,6 +170,8 @@ class GlacierEvolutionDeltaH:
                 mask_band = map_bands_ids == band_id
                 mask_unit = catchment.map_unit_ids == unit_id
                 masked_thickness = ice_thickness[mask_band & mask_unit]
+                if area_from_topo:
+                    self.ice_thicknesses[0][unit_id] = masked_thickness
                 masked_thickness = masked_thickness[masked_thickness > 0]
 
                 # Compute the mean thickness
@@ -196,7 +204,8 @@ class GlacierEvolutionDeltaH:
             glacier_df: pd.DataFrame | None = None,
             nb_increments: int = 100,
             update_width: bool = True,
-            update_width_reference: str = 'initial'
+            update_width_reference: str = 'initial',
+            area_from_topo: bool = True
     ):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
@@ -286,6 +295,8 @@ class GlacierEvolutionDeltaH:
                                            len(np.unique(hydro_unit_ids))))
         self.lookup_table_volume = np.zeros((nb_increments + 1,
                                              len(np.unique(hydro_unit_ids))))
+        for _ in range(nb_increments):
+            self.ice_thicknesses.append({})
         
         # In case the catchment is discretized by radiation or aspect
         self.unique_elevation_bands, self.inverse_indices = np.unique(elevation_bands, return_inverse=True)
@@ -303,7 +314,7 @@ class GlacierEvolutionDeltaH:
 
         for increment in range(1, nb_increments):  # last row kept with zeros
             self._compute_delta_h(increment, nb_increments)
-            self._update_glacier_thickness(increment)
+            self._update_glacier_thickness(increment, area_from_topo)
             self._width_scaling(increment, update_width, update_width_reference)
 
         if not update_width:
@@ -464,7 +475,7 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = glacier_we_change_mm / (
             np.sum(self.elev_band_areas_perc[increment - 1] * self.unique_norm_delta_we))
 
-    def _update_glacier_thickness(self, increment: int):
+    def _update_glacier_thickness(self, increment: int, area_from_topo: bool):
         """
         Step 3 of Seibert et al. (2018): "For each elevation band reduce the glacier
         water equivalent according to the empirical functions from Huss et al. (2010)
@@ -478,13 +489,36 @@ class GlacierEvolutionDeltaH:
         # Update glacier thicknesses (Eq. 6)
         # Glacier water equivalent reduction
         we_reduction_mm = self.scaling_factor_mm * self.norm_delta_we
-        new_we = self.we[increment - 1] - we_reduction_mm
-
-        self.we[increment] = np.where(new_we < 0, 0, new_we)
-
-        # This excess melt is taken into account in Step 2.
-        self.excess_melt_we = - np.sum(np.where(new_we < 0, new_we, 0) *
-                                       self.areas_perc[increment - 1])
+        
+        if area_from_topo:
+            
+            # Extract the bands IDs that present some glacier surface, and get their numbers
+            glacier_band_ids = [patch[0] for patch in self.glacier_patches]
+            nb_glacier_band_ids = len(glacier_band_ids)
+            
+            # Compute the melt per band
+            band_excess_melt = np.zeros(nb_glacier_band_ids)
+            for band_id in range(nb_glacier_band_ids):
+                if band_id in self.ice_thicknesses[increment - 1]:
+                    new_ice_thicknesses = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[band_id]
+            
+                    self.ice_thicknesses[increment][band_id] = np.where(new_ice_thicknesses < 0, 0, new_ice_thicknesses)
+            
+                    band_excess_melt[band_id] = np.sum(np.where(new_ice_thicknesses < 0, new_ice_thicknesses, 0))
+                else:
+                    band_excess_melt[band_id] = 0
+                    
+            # This excess melt is taken into account in Step 2.
+            self.excess_melt_we = - np.sum(band_excess_melt * self.areas_perc[increment - 1])
+            
+        else:
+            new_we = self.we[increment - 1] - we_reduction_mm
+    
+            self.we[increment] = np.where(new_we < 0, 0, new_we)
+    
+            # This excess melt is taken into account in Step 2.
+            self.excess_melt_we = - np.sum(np.where(new_we < 0, new_we, 0) *
+                                           self.areas_perc[increment - 1])
 
     def _width_scaling(
             self,

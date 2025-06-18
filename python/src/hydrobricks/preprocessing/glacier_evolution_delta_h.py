@@ -171,7 +171,7 @@ class GlacierEvolutionDeltaH:
                 mask_unit = catchment.map_unit_ids == unit_id
                 masked_thickness = ice_thickness[mask_band & mask_unit]
                 if area_from_topo:
-                    self.ice_thicknesses[0][unit_id] = masked_thickness
+                    self.ice_thicknesses[0][unit_id] = masked_thickness * 1000
                 masked_thickness = masked_thickness[masked_thickness > 0]
 
                 # Compute the mean thickness

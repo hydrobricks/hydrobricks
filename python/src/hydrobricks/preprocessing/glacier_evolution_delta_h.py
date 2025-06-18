@@ -171,7 +171,7 @@ class GlacierEvolutionDeltaH:
                 mask_unit = catchment.map_unit_ids == unit_id
                 masked_thickness = ice_thickness[mask_band & mask_unit]
                 if area_from_topo:
-                    self.ice_thicknesses[0][band_id] = masked_thickness * 1000
+                    self.ice_thicknesses[0][band_id] = masked_thickness * ICE_WE * 1000
                 masked_thickness = masked_thickness[masked_thickness > 0]
 
                 # Compute the mean thickness
@@ -289,7 +289,13 @@ class GlacierEvolutionDeltaH:
         self.elevation_bands = elevation_bands
         self.hydro_unit_ids = hydro_unit_ids
         self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
-        self.we[0] = initial_we_mm  # Initialization
+        if area_from_topo:
+            # Extract the bands IDs that present some glacier surface, and get their numbers
+            glacier_band_ids = [patch[0] for patch in self.glacier_patches]
+            for i, band_id in enumerate(glacier_band_ids):
+                self.we[0][i] = np.mean(self.ice_thicknesses[0][band_id])
+        else:
+            self.we[0] = initial_we_mm  # Initialization
         self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
         self.areas_perc[0] = initial_areas_m2 / self.catchment_area  # Initialization
         self.lookup_table_area = np.zeros((nb_increments + 1,

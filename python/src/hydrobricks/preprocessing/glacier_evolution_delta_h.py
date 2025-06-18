@@ -200,6 +200,7 @@ class GlacierEvolutionDeltaH:
 
     def compute_lookup_table(
             self,
+            catchment: Catchment,
             glacier_profile_csv: str | None = None,
             glacier_df: pd.DataFrame | None = None,
             nb_increments: int = 100,
@@ -315,9 +316,9 @@ class GlacierEvolutionDeltaH:
         for increment in range(1, nb_increments):  # last row kept with zeros
             self._compute_delta_h(increment, nb_increments)
             self._update_glacier_thickness(increment, area_from_topo)
-            self._width_scaling(increment, update_width, update_width_reference)
+            self._width_scaling(catchment, increment, update_width, area_from_topo, update_width_reference)
 
-        if not update_width:
+        if not update_width and not area_from_topo:
             self._final_width_scaling(nb_increments)
 
         self._update_lookup_tables()
@@ -522,8 +523,10 @@ class GlacierEvolutionDeltaH:
 
     def _width_scaling(
             self,
+            catchment: Catchment,
             increment: int,
             update_width: bool,
+            area_from_topo: bool,
             update_width_reference: str = 'initial'
     ):
         """
@@ -583,9 +586,30 @@ class GlacierEvolutionDeltaH:
                 if self.elev_band_we[increment, elev_idx] == 0:
                     self.areas_perc[increment, band_mask] = 0
             # Nullify the areas of the elevation bands with no glacier water equivalent
-            self.elev_band_areas_perc[increment, self.elev_band_we[increment] == 0] = 0
-
-    def _final_width_scaling(self, nb_increments):
+            if not area_from_topo:
+                self.elev_band_areas_perc[increment, self.elev_band_we[increment] == 0] = 0
+            else:
+                # Extract the bands IDs that present some glacier surface, and get their numbers
+                glacier_band_ids = [patch[0] for patch in self.glacier_patches]
+                #nb_glacier_band_ids = len(glacier_band_ids)
+                
+                px_area = catchment.get_dem_pixel_area()
+                
+                # Compute the melt per band
+                areas = np.zeros(len(glacier_band_ids))
+                #for band_id in range(nb_glacier_band_ids):
+                for i, band_id in enumerate(glacier_band_ids):
+                    if band_id in self.ice_thicknesses[increment]:
+                        ice_thickness = self.ice_thicknesses[increment][band_id]
+                        areas[i] = np.count_nonzero(ice_thickness) * px_area
+                    else:
+                        areas[i] = 0
+                self.elev_band_areas_perc[increment] = areas / self.catchment_area
+                        
+            # Update
+            for elev_idx in range(len(self.unique_elevation_bands)):
+                band_mask = self.inverse_indices == elev_idx
+                self.areas_perc[increment, band_mask] = np.sum(self.elev_band_areas_perc[increment, elev_idx])
         """
         Similar to _width_scaling, but for the case when the glacier area is not
         updated during the loop.

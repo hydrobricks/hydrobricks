@@ -495,22 +495,26 @@ class GlacierEvolutionDeltaH:
             
             # Extract the bands IDs that present some glacier surface, and get their numbers
             glacier_band_ids = [patch[0] for patch in self.glacier_patches]
-            nb_glacier_band_ids = len(glacier_band_ids)
             
             # Compute the melt per band
-            band_excess_melt = np.zeros(nb_glacier_band_ids)
-            for band_id in range(nb_glacier_band_ids):
+            band_excess_melt = np.zeros(len(glacier_band_ids))
+            for i, band_id in enumerate(glacier_band_ids):
                 if band_id in self.ice_thicknesses[increment - 1]:
-                    new_ice_thicknesses = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[band_id]
+                    new_ice_thicknesses = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[i]
             
                     self.ice_thicknesses[increment][band_id] = np.where(new_ice_thicknesses < 0, 0, new_ice_thicknesses)
             
-                    band_excess_melt[band_id] = np.sum(np.where(new_ice_thicknesses < 0, new_ice_thicknesses, 0))
+                    #over_melt = np.sum(np.where(new_ice_thicknesses < 0, new_ice_thicknesses, 0))
+                    
+                    mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
+                    
+                    band_excess_melt[i] = np.where(mean < 0, mean, 0)
                 else:
-                    band_excess_melt[band_id] = 0
+                    band_excess_melt[i] = 0
                     
             # This excess melt is taken into account in Step 2.
             self.excess_melt_we = - np.sum(band_excess_melt * self.areas_perc[increment - 1])
+            assert(not np.isnan(self.excess_melt_we))
             
         else:
             new_we = self.we[increment - 1] - we_reduction_mm
@@ -610,6 +614,9 @@ class GlacierEvolutionDeltaH:
             for elev_idx in range(len(self.unique_elevation_bands)):
                 band_mask = self.inverse_indices == elev_idx
                 self.areas_perc[increment, band_mask] = np.sum(self.elev_band_areas_perc[increment, elev_idx])
+                
+
+    def _final_width_scaling(self, nb_increments: int):
         """
         Similar to _width_scaling, but for the case when the glacier area is not
         updated during the loop.

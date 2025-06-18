@@ -508,6 +508,8 @@ class GlacierEvolutionDeltaH:
                     
                     mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
                     
+                    self.we[increment][i] = np.where(mean < 0, 0, mean)
+                    
                     band_excess_melt[i] = np.where(mean < 0, mean, 0)
                 else:
                     band_excess_melt[i] = 0

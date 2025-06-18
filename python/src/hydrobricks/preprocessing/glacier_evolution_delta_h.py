@@ -94,7 +94,7 @@ class GlacierEvolutionDeltaH:
             If None, the glacier extents are extracted from the ice thickness geotiff.
             Either this or ice_thickness should be provided.
         ice_thickness
-            Path to the TIF file containing the glacier thickness.
+            Path to the TIF file containing the glacier thickness in meters.
             If None, the ice thickness is estimated based on the glacier area
             using the Bahr et al. (1997) formula.
             Either this or glacier_outline should be provided.

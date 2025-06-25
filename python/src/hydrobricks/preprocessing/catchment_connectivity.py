@@ -31,7 +31,8 @@ class CatchmentConnectivity:
     def calculate(
             self,
             mode: str = 'multiple',
-            force_connectivity: bool = True
+            force_connectivity: bool = True,
+            precision: int = 3
     ) -> pd.DataFrame:
         """
         Calculate the connectivity between hydro units using a flow accumulation
@@ -50,6 +51,9 @@ class CatchmentConnectivity:
             hydro units, proportionally to the length of the common border.
             If False, and if a hydro unit contributes mostly to surfaces out of the catchment,
             the connectivity will be nulled.
+        precision
+            The precision of the connectivity values. Default is 3.
+            This is used to round the connectivity values to a given number of decimal places.
 
         Returns
         -------
@@ -135,7 +139,28 @@ class CatchmentConnectivity:
             row[('connectivity', '-')] = connectivity
             return row
 
-        def normalize_connectivity(row: pd.Series) -> pd.Series:
+        def _normalize_row(connect: dict) -> dict:
+            total_flow = sum(connect.values())
+            for k in connect:
+                connect[k] /= total_flow
+
+            return connect
+
+        def _round_and_normalize_row(connect: dict, precision: int) -> dict:
+            total = sum(connect.values())
+            scaled = {k: v * (10 ** precision) for k, v in connect.items()}
+            floored = {k: int(v) for k, v in scaled.items()}
+            remainder = {k: v - floored[k] for k, v in scaled.items()}
+
+            # Distribute the remaining difference to the largest remainders
+            diff = int(round(total * (10 ** precision))) - sum(floored.values())
+            for k in sorted(remainder, key=remainder.get, reverse=True)[:diff]:
+                floored[k] += 1
+
+            # Scale back to the original precision
+            return {k: floored[k] / (10 ** precision) for k in floored}
+
+        def normalize_connectivity(row: pd.Series, precision:int = 3) -> pd.Series:
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -151,17 +176,16 @@ class CatchmentConnectivity:
                 del connectivity[0]
 
             # Normalize the connectivity within the catchment
-            total_flow = sum(connectivity.values())
-            if total_flow == 0:
+            if sum(connectivity.values()) == 0:
                 return row
-            for key in connectivity:
-                connectivity[key] /= total_flow
+            connectivity = _normalize_row(connectivity)
 
             # Remove connectivity if it is less than 0.01 (1% of the total flow)
             connectivity = {k: v for k, v in connectivity.items() if v >= 0.01}
-            total_flow = sum(connectivity.values())
-            for key in connectivity:
-                connectivity[key] /= total_flow
+            connectivity = _normalize_row(connectivity)
+
+            # Round the connectivity values
+            connectivity = _round_and_normalize_row(connectivity, precision)
 
             row[('connectivity', '-')] = connectivity
             return row
@@ -187,7 +211,7 @@ class CatchmentConnectivity:
             df = df.apply(connect_to_neighbours, axis=1)
 
         if mode == 'multiple':
-            df = df.apply(normalize_connectivity, axis=1)
+            df = df.apply(normalize_connectivity, axis=1, args=(precision,))
         elif mode == 'single':
             df = df.apply(keep_highest_connectivity, axis=1)
         else:

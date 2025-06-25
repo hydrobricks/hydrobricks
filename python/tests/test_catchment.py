@@ -13,8 +13,12 @@ FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'tests', 'files'
 )
-CATCHMENT_OUTLINE = FILES_DIR / 'catchments' / 'ch_sitter_appenzell' / 'outline.shp'
-CATCHMENT_DEM = FILES_DIR / 'catchments' / 'ch_sitter_appenzell' / 'dem.tif'
+SITTER_OUTLINE = FILES_DIR / 'catchments' / 'ch_sitter_appenzell' / 'outline.shp'
+SITTER_DEM = FILES_DIR / 'catchments' / 'ch_sitter_appenzell' / 'dem.tif'
+RHONE_OUTLINE = FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'outline.shp'
+RHONE_DEM = FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'dem.tif'
+RHONE_UIDS = FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'unit_ids_radiation.tif'
+RHONE_HUS = FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.csv'
 
 
 def has_required_packages() -> bool:
@@ -24,21 +28,21 @@ def has_required_packages() -> bool:
 def test_shapefile_parsing():
     if not has_required_packages():
         return
-    hb.Catchment(CATCHMENT_OUTLINE)
+    hb.Catchment(SITTER_OUTLINE)
 
 
 def test_dem_extraction():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    assert catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    assert catchment.extract_dem(SITTER_DEM)
 
 
 def test_elevation_bands_equal_intervalss():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     area_sum = catchment.hydro_units.hydro_units['area'].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
@@ -47,8 +51,8 @@ def test_elevation_bands_equal_intervalss():
 def test_elevation_bands_quantiles():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.create_elevation_bands(method='quantiles', number=25)
     area_sum = catchment.hydro_units.hydro_units['area'].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
@@ -57,8 +61,8 @@ def test_elevation_bands_quantiles():
 def test_get_mean_elevation():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     mean_elevation = catchment.get_mean_elevation()
     assert 1200 < mean_elevation < 1300
 
@@ -66,8 +70,8 @@ def test_get_mean_elevation():
 def test_save_unit_ids_raster():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
@@ -77,29 +81,29 @@ def test_save_unit_ids_raster():
 def test_load_units_from_raster():
     if not has_required_packages():
         return
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
-        catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
-        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2 = hb.Catchment(SITTER_OUTLINE)
+        catchment2.extract_dem(SITTER_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir))
         assert np.allclose(catchment2.map_unit_ids, catchment.map_unit_ids)
 
 
 def test_load_units_from_raster_prepare_attributes():
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.create_elevation_bands(method='equal_intervals', distance=50)
     df1 = catchment.hydro_units.hydro_units
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
-        catchment2 = hb.Catchment(CATCHMENT_OUTLINE)
-        catchment2.extract_dem(CATCHMENT_DEM)
+        catchment2 = hb.Catchment(SITTER_OUTLINE)
+        catchment2.extract_dem(SITTER_DEM)
         catchment2.load_unit_ids_from_raster(Path(tmp_dir))
         df2 = catchment2.get_hydro_units_attributes().hydro_units
 
@@ -110,8 +114,8 @@ def test_load_units_from_raster_prepare_attributes():
 
 
 def test_discretize_by_elevation_and_aspect():
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.discretize_by(criteria=['elevation', 'aspect'],
                             elevation_method='equal_intervals', elevation_distance=100)
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
@@ -267,8 +271,8 @@ def test_radiation_calculation_resolution():
 
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
-    catchment = hb.Catchment(CATCHMENT_OUTLINE)
-    catchment.extract_dem(CATCHMENT_DEM)
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
     catchment.discretize_by(['elevation'], elevation_distance=100)
 
     df = catchment.calculate_connectivity(mode='single', force_connectivity=False)
@@ -279,3 +283,15 @@ def test_single_connectivity_on_elevation_bands():
         keys = df.loc[df[('id', '-')] == i, ('connectivity', '-')].values[0].keys()
         key = list(keys)[0]
         assert key == i - 1
+
+
+@pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
+def test_connectivity_on_discontinuous_hydro_units():
+    catchment = hb.Catchment(RHONE_OUTLINE)
+    catchment.extract_dem(RHONE_DEM)
+    catchment.load_hydro_units_from_csv(RHONE_HUS)
+    catchment.load_unit_ids_from_raster(RHONE_UIDS)
+
+    df = catchment.calculate_connectivity(mode='multiple', force_connectivity=True)
+
+    assert df.empty is False

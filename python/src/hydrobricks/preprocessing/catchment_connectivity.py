@@ -77,6 +77,12 @@ class CatchmentConnectivity:
         # Compute flow direction and flow accumulation
         flow_dir = grid.flowdir(inflated_dem, routing='d8', nodata_out=np.int64(0))
 
+        # Check that the hydro units are defined
+        if len(self.catchment.hydro_units.hydro_units) == 0:
+            raise ValueError("No hydro units defined in the catchment. "
+                             "Please define the hydro units before "
+                             "calculating the connectivity.")
+
         # Create a dataframe with the hydro units IDs and a column of empty dictionaries
         df = self.catchment.hydro_units.hydro_units[[('id', '-')]].copy()
         df[('connectivity', '-')] = [{} for _ in range(len(df))]
@@ -150,6 +156,13 @@ class CatchmentConnectivity:
                 return row
             for key in connectivity:
                 connectivity[key] /= total_flow
+
+            # Remove connectivity if it is less than 0.01 (1% of the total flow)
+            connectivity = {k: v for k, v in connectivity.items() if v >= 0.01}
+            total_flow = sum(connectivity.values())
+            for key in connectivity:
+                connectivity[key] /= total_flow
+
             row[('connectivity', '-')] = connectivity
             return row
 

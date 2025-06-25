@@ -356,6 +356,20 @@ class Catchment:
 
         self.hydro_units.save_to_csv(path)
 
+    def load_hydro_units_from_csv(self, path: str | Path):
+        """
+        Load hydro units from a csv file.
+
+        Parameters
+        ----------
+        path
+            Path to the csv file.
+        """
+        if not hb.has_geopandas:
+            raise ImportError("geopandas is required to do this.")
+
+        self.hydro_units.load_from_csv(path)
+
     def save_unit_ids_raster(
             self,
             output_path: str | Path,
@@ -389,7 +403,7 @@ class Catchment:
 
     def load_unit_ids_from_raster(
             self,
-            dir_path: str,
+            path: str,
             filename: str = 'unit_ids.tif'
     ):
         """
@@ -397,15 +411,21 @@ class Catchment:
 
         Parameters
         ----------
-        dir_path
-            Path to the directory containing the raster file.
+        path
+            Path to the directory containing the raster file. If the path is a file,
+            it will be used as the full path.
         filename
             Name of the raster file. Default is 'unit_ids.tif'.
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
 
-        full_path = Path(dir_path) / filename
+        # If path is a file, use it directly
+        if Path(path).is_file():
+            full_path = Path(path)
+        else:
+            full_path = Path(path) / filename
+
         with hb.rasterio.open(full_path) as src:
             self._check_crs(src)
             if self.outline is not None:

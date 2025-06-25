@@ -70,6 +70,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "name"_a, "value"_a)
         .def("add_hydro_unit_property_double", &SettingsBasin::AddHydroUnitPropertyDouble, "Set a hydro unit property.",
              "name"_a, "value"_a, "unit"_a)
+        .def("add_lateral_connection", &SettingsBasin::AddLateralConnection, "Add a lateral connection between two hydro units.",
+             "giver_hydro_unit_id"_a, "receiver_hydro_unit_id"_a, "fraction"_a, "type"_a = "")
+        .def("get_lateral_connections_nb", &SettingsBasin::GetLateralConnectionsNb,
+             "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
     py::class_<SubBasin>(m, "SubBasin")

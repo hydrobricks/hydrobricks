@@ -11,6 +11,9 @@ TEST_FILES_DIR = Path(
     '..', '..', 'tests', 'files',
 )
 
+RHONE_HUS = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.csv'
+RHONE_CONNECT = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'connectivity_elevation_radiation.csv'
+
 
 def test_hydro_units_creation():
     hb.HydroUnits()
@@ -86,3 +89,11 @@ def test_create_file(hydro_units_csv: hb.HydroUnits):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         hydro_units_csv.save_as(tmp_dir + '/test.nc')
+
+
+def test_set_connectivity():
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(RHONE_HUS)
+    hydro_units.set_connectivity(RHONE_CONNECT)
+
+    assert hydro_units.settings.get_lateral_connections_nb() == 360

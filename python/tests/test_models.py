@@ -11,9 +11,9 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', 'tests', 'files', 'catchments'
 )
-CATCHMENT_BANDS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'hydro_units_elevation.csv'
-CATCHMENT_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
-CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
+SITTER_HUS = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'hydro_units_elevation.csv'
+SITTER_METEO = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'meteo.csv'
+SITTER_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 
 
 def test_socont_creation():
@@ -106,7 +106,7 @@ def test_socont_with_1_soil_storage_closes_water_balance():
     # Preparation of the hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        CATCHMENT_BANDS, column_elevation='elevation',
+        SITTER_HUS, column_elevation='elevation',
         column_area='area')
 
     # Preparation of the forcing data
@@ -114,7 +114,7 @@ def test_socont_with_1_soil_storage_closes_water_balance():
     station_precip_alt = 1250  # Precipitation reference altitude
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
-        CATCHMENT_METEO, column_time='date', time_format='%d/%m/%Y',
+        SITTER_METEO, column_time='date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
     forcing.spatialize_from_station_data(
@@ -166,7 +166,7 @@ def test_socont_with_2_soil_storages_closes_water_balance():
     # Preparation of the hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        CATCHMENT_BANDS, column_elevation='elevation',
+        SITTER_HUS, column_elevation='elevation',
         column_area='area')
 
     # Preparation of the forcing data
@@ -174,7 +174,7 @@ def test_socont_with_2_soil_storages_closes_water_balance():
     station_precip_alt = 1250  # Precipitation reference altitude
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
-        CATCHMENT_METEO, column_time='date', time_format='%d/%m/%Y',
+        SITTER_METEO, column_time='date', time_format='%d/%m/%Y',
         content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)',
                  'pet': 'pet_sim(mm/day)'})
     forcing.spatialize_from_station_data(
@@ -222,7 +222,7 @@ def test_error_is_raised_if_parameter_missing():
     # Preparation of the hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        CATCHMENT_BANDS, column_elevation='elevation',
+        SITTER_HUS, column_elevation='elevation',
         column_area='area')
 
     socont.setup(spatial_structure=hydro_units, output_path=tmp_dir.name,

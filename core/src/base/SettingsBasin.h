@@ -36,6 +36,13 @@ struct HydroUnitSettings {
     vector<HydroUnitPropertyString> propertiesString;
 };
 
+struct LateralConnectionSettings {
+    string type;
+    int giverHydroUnitId;
+    int receiverHydroUnitId;
+    double fraction;
+};
+
 class SettingsBasin : public wxObject {
   public:
     explicit SettingsBasin();
@@ -75,6 +82,16 @@ class SettingsBasin : public wxObject {
      * @param value value of the property.
      */
     void AddHydroUnitPropertyString(const string& name, const string& value);
+
+    /**
+     * Add a lateral connection between two hydro units.
+     *
+     * @param giverHydroUnitId ID of the hydro unit giving the connection.
+     * @param receiverHydroUnitId ID of the hydro unit receiving the connection.
+     * @param fraction fraction of the connection.
+     * @param type type of the lateral connection.
+     */
+    void AddLateralConnection(int giverHydroUnitId, int receiverHydroUnitId, double fraction, const string& type = "");
 
     /**
      * Clear all hydro units.
@@ -158,6 +175,15 @@ class SettingsBasin : public wxObject {
     }
 
     /**
+     * Get the number of lateral connections.
+     *
+     * @return number of lateral connections.
+     */
+    int GetLateralConnectionsNb() const {
+        return static_cast<int>(m_lateralConnections.size());
+    }
+
+    /**
      * Get the total area of the sub basin (all hydro units).
      *
      * @return total area of the sub basin.
@@ -166,6 +192,7 @@ class SettingsBasin : public wxObject {
 
   private:
     vector<HydroUnitSettings> m_hydroUnits;
+    vector<LateralConnectionSettings> m_lateralConnections;
     HydroUnitSettings* m_selectedHydroUnit;
 };
 

@@ -44,6 +44,17 @@ void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string&
     m_selectedHydroUnit->propertiesString.push_back(property);
 }
 
+void SettingsBasin::AddLateralConnection(int giverHydroUnitId, int receiverHydroUnitId, double fraction,
+                                         const string& type) {
+    LateralConnectionSettings connection;
+    connection.type = type;
+    connection.giverHydroUnitId = giverHydroUnitId;
+    connection.receiverHydroUnitId = receiverHydroUnitId;
+    connection.fraction = fraction;
+
+    m_lateralConnections.push_back(connection);
+}
+
 void SettingsBasin::Clear() {
     m_hydroUnits.clear();
     m_selectedHydroUnit = nullptr;

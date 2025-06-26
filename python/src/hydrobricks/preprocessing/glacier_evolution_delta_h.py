@@ -506,18 +506,29 @@ class GlacierEvolutionDeltaH:
             band_excess_melt = np.zeros(len(glacier_band_ids))
             for i, band_id in enumerate(glacier_band_ids):
                 if band_id in self.ice_thicknesses[increment - 1]:
-                    diff = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[i]
-                    self.ice_thicknesses[increment][band_id] = np.where(diff < 0, 0, diff)
-                    self.we[increment][i] = np.mean(self.ice_thicknesses[increment][band_id])
-            
-                    over_melt = np.mean(np.where(diff < 0, diff, 0))
-                    #mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
                     
-                    mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
+                    mean_thickness = np.mean(self.ice_thicknesses[increment - 1][band_id])
+                    if mean_thickness > we_reduction_mm[i]:
+                        to_remove = we_reduction_mm[i]
+                        self.ice_thicknesses[increment][band_id] = self.ice_thicknesses[increment - 1][band_id]
+                        EPSILON = 1e-6  # avoid infinite loops due to floating point errors
+                        while to_remove > 0:
+                            diff = self.ice_thicknesses[increment][band_id] - to_remove
+                            diff = np.where(np.abs(diff) < EPSILON, 0, diff)
+                            assert(not np.isinf(diff).any())
+                            self.ice_thicknesses[increment][band_id] = np.where(diff < 0, 0, diff)
+                            remain = np.where(diff < 0, diff, 0)
+                            to_remove = - np.mean(remain)
+                            
+                        self.we[increment][i] = np.mean(self.ice_thicknesses[increment][band_id])
+                        over_melt = 0
                     
-                    self.we[increment][i] = np.where(mean < 0, 0, mean)
+                    else:
+                        self.we[increment][i] = 0
+                        over_melt = mean_thickness - we_reduction_mm[i]
                     
-                    band_excess_melt[i] = np.where(mean < 0, mean, 0)
+                    band_excess_melt[i] = over_melt
+                    assert(not np.isnan(over_melt))
                 else:
                     band_excess_melt[i] = 0
                     

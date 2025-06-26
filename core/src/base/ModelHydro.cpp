@@ -708,9 +708,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
         for (const auto& logItem : brickSettings.logItems) {
             for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
-                HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-                valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
-                            ->GetBaseValuePointer(logItem);
+                auto unit = m_subBasin->GetHydroUnit(iUnit);
+                auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
+                valPt = brick->GetBaseValuePointer(logItem);
                 if (valPt == nullptr) {
                     valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
                                 ->GetValuePointer(logItem);
@@ -729,10 +729,10 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
             for (const auto& logItem : processSettings.logItems) {
                 for (int iUnit = 0; iUnit < m_subBasin->GetHydroUnitsNb(); ++iUnit) {
-                    HydroUnit* unit = m_subBasin->GetHydroUnit(iUnit);
-                    valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
-                                ->GetProcess(iProcess)
-                                ->GetValuePointer(logItem);
+                    auto unit = m_subBasin->GetHydroUnit(iUnit);
+                    auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
+                    auto process = brick->GetProcess(iProcess);
+                    valPt = process->GetValuePointer(logItem);
                     if (valPt == nullptr) {
                         throw ShouldNotHappen();
                     }

@@ -146,6 +146,15 @@ class SettingsBasin : public wxObject {
     }
 
     /**
+     * Get the lateral connections settings.
+     *
+     * @return vector of lateral connection settings.
+     */
+    vector<LateralConnectionSettings> GetLateralConnections() const {
+        return m_lateralConnections;
+    }
+
+    /**
      * Get the number of hydro units.
      *
      * @return number of hydro units.

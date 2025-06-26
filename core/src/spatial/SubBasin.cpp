@@ -29,6 +29,8 @@ bool SubBasin::Initialize(SettingsBasin& basinSettings) {
 
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     m_needsCleanup = true;
+
+    // Create the hydro units
     for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
         basinSettings.SelectUnit(iUnit);
 

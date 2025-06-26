@@ -1,0 +1,34 @@
+#include "ProcessLateral.h"
+
+#include "Brick.h"
+#include "WaterContainer.h"
+
+ProcessLateral::ProcessLateral(WaterContainer* container)
+    : Process(container) {}
+
+bool ProcessLateral::IsOk() {
+    if (m_outputs.size() == 0) {
+        wxLogError(_("Lateral processes need at least 1 connection."));
+        return false;
+    }
+
+    return true;
+}
+
+int ProcessLateral::GetConnectionsNb() {
+    return m_outputs.size();
+}
+
+double* ProcessLateral::GetValuePointer(const string& name) {
+    // Parse the name to get the connection index (output_i).
+    if (name.substr(0, 7) == "output_") {
+        int index = std::stoi(name.substr(7));
+        if (index < 0 || index >= static_cast<int>(m_outputs.size())) {
+            wxLogError(_("Invalid output index: %d"), index);
+            return nullptr;
+        }
+        return m_outputs[index]->GetAmountPointer();
+    }
+
+    return nullptr;
+}

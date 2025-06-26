@@ -506,11 +506,12 @@ class GlacierEvolutionDeltaH:
             band_excess_melt = np.zeros(len(glacier_band_ids))
             for i, band_id in enumerate(glacier_band_ids):
                 if band_id in self.ice_thicknesses[increment - 1]:
-                    new_ice_thicknesses = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[i]
+                    diff = self.ice_thicknesses[increment - 1][band_id] - we_reduction_mm[i]
+                    self.ice_thicknesses[increment][band_id] = np.where(diff < 0, 0, diff)
+                    self.we[increment][i] = np.mean(self.ice_thicknesses[increment][band_id])
             
-                    self.ice_thicknesses[increment][band_id] = np.where(new_ice_thicknesses < 0, 0, new_ice_thicknesses)
-            
-                    #over_melt = np.sum(np.where(new_ice_thicknesses < 0, new_ice_thicknesses, 0))
+                    over_melt = np.mean(np.where(diff < 0, diff, 0))
+                    #mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
                     
                     mean = np.mean(self.ice_thicknesses[increment - 1][band_id]) - we_reduction_mm[i]
                     
@@ -603,7 +604,6 @@ class GlacierEvolutionDeltaH:
             else:
                 # Extract the bands IDs that present some glacier surface, and get their numbers
                 glacier_band_ids = [patch[0] for patch in self.glacier_patches]
-                #nb_glacier_band_ids = len(glacier_band_ids)
                 
                 px_area = catchment.get_dem_pixel_area()
                 
@@ -621,8 +621,7 @@ class GlacierEvolutionDeltaH:
             # Update
             for elev_idx in range(len(self.unique_elevation_bands)):
                 band_mask = self.inverse_indices == elev_idx
-                self.areas_perc[increment, band_mask] = np.sum(self.elev_band_areas_perc[increment, elev_idx])
-                
+                self.areas_perc[increment, band_mask] = np.sum(self.elev_band_areas_perc[increment, elev_idx])                
 
     def _final_width_scaling(self, nb_increments: int):
         """

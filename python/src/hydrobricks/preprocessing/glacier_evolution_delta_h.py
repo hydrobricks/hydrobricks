@@ -627,7 +627,14 @@ class GlacierEvolutionDeltaH:
                         areas[i] = np.count_nonzero(ice_thickness) * px_area
                     else:
                         areas[i] = 0
-                self.elev_band_areas_perc[increment] = areas / self.catchment_area
+                
+                    self.elev_band_areas_perc[increment][i] = areas[i] / self.catchment_area
+                
+                    # Conservation of the w.e.
+                    if band_id in self.ice_thicknesses[increment]:
+                        self.ice_thicknesses[increment][band_id] *= (self.elev_band_areas_perc[increment - 1][i] /
+                                                                     self.elev_band_areas_perc[increment][i])
+                        self.we[increment][i] = np.mean(self.ice_thicknesses[increment][band_id])
                         
             # Update
             for elev_idx in range(len(self.unique_elevation_bands)):

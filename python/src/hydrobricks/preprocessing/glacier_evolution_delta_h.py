@@ -70,12 +70,13 @@ class GlacierEvolutionDeltaH:
         self.excess_melt_we = 0
         
         # Areas based on topography
-        self.ice_thicknesses = [{}]
+        self.ice_thicknesses = None
         self.glacier_patches = None
 
     def compute_initial_ice_thickness(
             self,
             catchment: Catchment,
+            nb_increments: int = 100,
             glacier_outline: str | None = None,
             ice_thickness: str | None = None,
             elevation_bands_distance: int = 10,
@@ -161,6 +162,12 @@ class GlacierEvolutionDeltaH:
         # measurements or calculated based on an inversion of surface topography
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness is not None:
+            self.ice_thicknesses = np.empty((nb_increments + 1, len(glacier_df)), dtype=object)
+            # Fill each element with an empty list
+            for i in range(self.ice_thicknesses.shape[0]):
+                for j in range(self.ice_thicknesses.shape[1]):
+                    self.ice_thicknesses[i, j] = np.array([], dtype=np.float64)
+            
             # Update the dataframe with the ice thickness
             for i, row in glacier_df.iterrows():
                 band_id = row[('band_id', '-')]
@@ -172,8 +179,7 @@ class GlacierEvolutionDeltaH:
                 masked_thickness = ice_thickness[mask_band & mask_unit]
                 masked_thickness = masked_thickness[masked_thickness > 0]
                 if area_from_topo:
-                    self.ice_thicknesses[0][band_id] = masked_thickness * ICE_WE * 1000
-                    self.ice_thicknesses[0][i] = masked_thickness * ICE_WE * 1000
+                    self.ice_thicknesses[0, i] = masked_thickness * ICE_WE * 1000
 
                 # Compute the mean thickness
                 if masked_thickness.size > 0 and not np.isnan(masked_thickness).all():
@@ -292,7 +298,7 @@ class GlacierEvolutionDeltaH:
         self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
         if area_from_topo:
             for i in range(len(self.elevation_bands)):
-                self.we[0][i] = np.mean(self.ice_thicknesses[0][i])
+                self.we[0, i] = np.mean(self.ice_thicknesses[0, i])
         else:
             self.we[0] = initial_we_mm  # Initialization
         self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
@@ -301,8 +307,6 @@ class GlacierEvolutionDeltaH:
                                            len(np.unique(hydro_unit_ids))))
         self.lookup_table_volume = np.zeros((nb_increments + 1,
                                              len(np.unique(hydro_unit_ids))))
-        for _ in range(nb_increments):
-            self.ice_thicknesses.append({})
         
         # In case the catchment is discretized by radiation or aspect
         self.unique_elevation_bands, self.inverse_indices = np.unique(elevation_bands, return_inverse=True)
@@ -499,37 +503,36 @@ class GlacierEvolutionDeltaH:
         if area_from_topo:
             
             # Compute the melt per band
-            band_excess_melt = np.zeros(len(self.elevation_bands))
+            excess_melt = np.zeros(len(self.elevation_bands))
             for i in range(len(self.elevation_bands)):
-                if i in self.ice_thicknesses[increment - 1]:
-                    
-                    mean_thickness = np.mean(self.ice_thicknesses[increment - 1][i])
-                    if mean_thickness > we_reduction_mm[i]:
-                        to_remove = we_reduction_mm[i]
-                        self.ice_thicknesses[increment][i] = self.ice_thicknesses[increment - 1][i]
-                        EPSILON = 1e-6  # avoid infinite loops due to floating point errors
-                        while to_remove > 0:
-                            diff = self.ice_thicknesses[increment][i] - to_remove
-                            diff = np.where(np.abs(diff) < EPSILON, 0, diff)
-                            assert(not np.isinf(diff).any())
-                            self.ice_thicknesses[increment][i] = np.where(diff < 0, 0, diff)
-                            remain = np.where(diff < 0, diff, 0)
-                            to_remove = - np.mean(remain)
-                            
-                        self.we[increment][i] = np.mean(self.ice_thicknesses[increment][i])
-                        over_melt = 0
-                    
-                    else:
-                        self.we[increment][i] = 0
-                        over_melt = mean_thickness - we_reduction_mm[i]
-                    
-                    band_excess_melt[i] = over_melt
-                    assert(not np.isnan(over_melt))
+                if self.ice_thicknesses[increment - 1, i].size > 0:
+                    mean_thickness = np.mean(self.ice_thicknesses[increment - 1, i])
                 else:
-                    band_excess_melt[i] = 0
+                    mean_thickness = 0.0
+                if mean_thickness > we_reduction_mm[i]:
+                    to_remove = we_reduction_mm[i]
+                    self.ice_thicknesses[increment, i] = self.ice_thicknesses[increment - 1, i]
+                    EPSILON = 1e-6  # avoid infinite loops due to floating point errors
+                    while to_remove > 0:
+                        diff = self.ice_thicknesses[increment, i] - to_remove
+                        diff = np.where(np.abs(diff) < EPSILON, 0, diff)
+                        assert(not np.isinf(diff).any())
+                        self.ice_thicknesses[increment, i] = np.where(diff < 0, 0, diff)
+                        remain = np.where(diff < 0, diff, 0)
+                        to_remove = - np.mean(remain)
+                        
+                    self.we[increment, i] = np.mean(self.ice_thicknesses[increment, i])
+                    over_melt = 0
+                
+                else:
+                    self.we[increment, i] = 0
+                    over_melt = mean_thickness - we_reduction_mm[i]
+
+                print("increment", increment)
+                excess_melt[i] = over_melt
                     
             # This excess melt is taken into account in Step 2.
-            self.excess_melt_we = - np.sum(band_excess_melt * self.areas_perc[increment - 1])
+            self.excess_melt_we = - np.sum(excess_melt * self.areas_perc[increment - 1])
             assert(not np.isnan(self.excess_melt_we))
             
         else:
@@ -613,29 +616,22 @@ class GlacierEvolutionDeltaH:
                 
                 # Compute the melt per band
                 areas = np.zeros(len(self.elevation_bands))
-                for i, elev_idx in enumerate(np.arange(len(self.unique_elevation_bands))):
-                    if i in self.ice_thicknesses[increment]:
-                        ice_thickness = self.ice_thicknesses[increment][i]
-                        areas[i] = np.count_nonzero(ice_thickness) * px_area
-                    else:
-                        areas[i] = 0
+                for i in range(len(self.elevation_bands)):
+                    ice_thickness = self.ice_thicknesses[increment, i]
+                    areas[i] = np.count_nonzero(ice_thickness) * px_area
+                    self.areas_perc[increment, i] = areas[i] / self.catchment_area
                     
                 for i, elev_idx in enumerate(np.arange(len(self.unique_elevation_bands))):
                     band_mask = self.inverse_indices == elev_idx  # bands with this elevation
-                    self.elev_band_areas_perc[increment][elev_idx] = areas[band_mask].sum() / self.catchment_area
+                    self.elev_band_areas_perc[increment, elev_idx] = self.areas_perc[increment, band_mask].sum()
                 
                     # Conservation of the w.e.
-                    if i in self.ice_thicknesses[increment]:
-                        if self.ice_thicknesses[increment][i].sum() != 0:
-                            self.ice_thicknesses[increment][i] *= (self.elev_band_areas_perc[increment - 1][elev_idx] /
-                                                                         self.elev_band_areas_perc[increment][elev_idx])
-                        self.we[increment][i] = np.mean(self.ice_thicknesses[increment][i])
+                    if any(np.sum(arr) != 0 for arr in self.ice_thicknesses[increment, band_mask]):
+                        print("self.ice_thicknesses[increment, band_mask]", self.ice_thicknesses[increment, band_mask])
+                        self.ice_thicknesses[increment, band_mask] *= (self.elev_band_areas_perc[increment - 1, elev_idx] /
+                                                                       self.elev_band_areas_perc[increment, elev_idx])
+                    #self.we[increment, band_mask] = np.mean(self.ice_thicknesses[increment, band_mask])
                         
-            # Update
-            for elev_idx in range(len(self.unique_elevation_bands)):
-                band_mask = self.inverse_indices == elev_idx
-                self.areas_perc[increment, band_mask] = np.sum(self.elev_band_areas_perc[increment, elev_idx])                
-
     def _final_width_scaling(self, nb_increments: int):
         """
         Similar to _width_scaling, but for the case when the glacier area is not

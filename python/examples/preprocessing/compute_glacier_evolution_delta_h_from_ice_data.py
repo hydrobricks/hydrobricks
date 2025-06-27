@@ -50,7 +50,7 @@ glacier_df = glacier_evolution.compute_initial_ice_thickness(
 glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 
 # The lookup table can be computed and saved as a csv file
-glacier_evolution.compute_lookup_table(update_width=False)
+glacier_evolution.compute_lookup_table(catchment, update_width=False)
 glacier_evolution.save_as_csv(working_dir)
 
 print(f"Files saved to: {working_dir}")
@@ -83,6 +83,22 @@ for i in range(0, len(areas_evol), 20):  # Black lines
 volume = areas_evol.iloc[0, :].values * we_evol.iloc[0, :].values / (1000 * ICE_WE)
 plt.plot(volume, elevation_bands, drawstyle="steps-post", color='red')
 plt.xlabel('Glacier volume (m³)')
+plt.ylabel('Elevation (m a.s.l.)')
+plt.xlim(0, )
+plt.tight_layout()
+plt.show()
+
+# Figure 2b - Absolute glacier volume per elevation band
+plt.figure()
+for i in range(0, len(areas_evol), 5):  # Grey lines
+    thickness = we_evol.iloc[i, :].values / (1000 * ICE_WE)
+    plt.plot(thickness, elevation_bands, drawstyle="steps-post", color="lightgrey")
+for i in range(0, len(areas_evol), 20):  # Black lines
+    thickness = we_evol.iloc[i, :].values / (1000 * ICE_WE)
+    plt.plot(thickness, elevation_bands, drawstyle="steps-post", color="black")
+thickness = we_evol.iloc[0, :].values / (1000 * ICE_WE)
+plt.plot(thickness, elevation_bands, drawstyle="steps-post", color='red')
+plt.xlabel('Glacier thickness (m)')
 plt.ylabel('Elevation (m a.s.l.)')
 plt.xlim(0, )
 plt.tight_layout()
@@ -125,12 +141,23 @@ plt.tight_layout()
 plt.show()
 
 plt.figure()
-for i in range(0, len(areas_evol), 5):  # Grey lines
+for i in range(0, len(areas_evol), 1):  # Grey lines
     volume = np.sum(areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values / (1000 * ICE_WE))
-    print(i, volume)
+    plt.plot(i, volume, color="black", marker='o')
+plt.xlabel('Increment')
+plt.ylabel('Glacier volume (m³)')
+plt.figure()
+for i in range(0, len(areas_evol), 1):  # Grey lines
+    volume = np.mean(we_evol.iloc[i, :].values)
     plt.plot(i, volume, color="lightgrey", marker='o')
-plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
-plt.ylabel('Elevation (m a.s.l.)')
+plt.xlabel('Increment')
+plt.ylabel('Glacier thickness (m)')
+plt.figure()
+for i in range(0, len(areas_evol), 1):  # Grey lines
+    areas = np.sum(areas_evol.iloc[i, :].values)
+    plt.plot(i, areas, color="lightgrey", marker='o')
+plt.xlabel('Increment')
+plt.ylabel('Glacier area (scaled) (m²)')
 #plt.xlim(0, )
 plt.tight_layout()
 plt.show()

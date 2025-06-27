@@ -71,7 +71,6 @@ class GlacierEvolutionDeltaH:
         
         # Areas based on topography
         self.ice_thicknesses = None
-        self.glacier_patches = None
 
     def compute_initial_ice_thickness(
             self,
@@ -141,7 +140,6 @@ class GlacierEvolutionDeltaH:
 
         glacier_patches = self._get_glacier_patches(catchment, map_bands_ids,
                                                     glaciers_mask)
-        self.glacier_patches = glacier_patches
 
         # Create the dataframe for the glacier data
         glacier_df = None

@@ -628,7 +628,7 @@ class GlacierEvolutionDeltaH:
                         print("self.ice_thicknesses[increment, band_mask]", self.ice_thicknesses[increment, band_mask])
                         self.ice_thicknesses[increment, band_mask] *= (self.elev_band_areas_perc[increment - 1, elev_idx] /
                                                                        self.elev_band_areas_perc[increment, elev_idx])
-                    #self.we[increment, band_mask] = np.mean(self.ice_thicknesses[increment, band_mask])
+                        self.we[increment, band_mask] = np.mean(np.concatenate(self.ice_thicknesses[increment, band_mask]))
                         
     def _final_width_scaling(self, nb_increments: int):
         """

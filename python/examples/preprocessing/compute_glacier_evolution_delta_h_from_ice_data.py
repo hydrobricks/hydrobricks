@@ -58,7 +58,7 @@ print(f"Files saved to: {working_dir}")
 # Load the results from the CSV files
 areas_evol = pd.read_csv(
     working_dir / "details_glacier_areas_evolution.csv", header=[0, 1, 2])
-we_evol = pd.read_csv(
+we_raw = pd.read_csv(
     working_dir / "details_glacier_we_evolution.csv", header=[0, 1, 2])
 init_glacier_df = pd.read_csv(working_dir / "glacier_profile.csv")
 init_glacier_df = init_glacier_df.drop(
@@ -66,8 +66,11 @@ init_glacier_df = init_glacier_df.drop(
 
 # Group by elevation in case we have radiation / aspect discretization
 init_glacier_df = init_glacier_df.groupby("('elevation', 'm')").sum().reset_index()
+# Sum of weights (total area per group)
+total_area = areas_evol.groupby(axis=1, level=2).sum()
+weighted_sum = (we_raw * areas_evol).groupby(axis=1, level=2).sum()
+we_evol = (weighted_sum / total_area).fillna(0)
 areas_evol = areas_evol.groupby(axis=1, level=2).sum()
-we_evol = we_evol.groupby(axis=1, level=2).sum()
 
 # Reproduce the plots from Seibert et al. (2018)
 elevation_bands = np.unique(init_glacier_df["('elevation', 'm')"])
@@ -146,13 +149,15 @@ for i in range(0, len(areas_evol), 1):  # Grey lines
     plt.plot(i, volume, color="black", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier volume (m³)')
+
 plt.figure()
 for i in range(0, len(areas_evol), 1):  # Grey lines
-    volume = np.mean(we_evol.iloc[i, :].values)
-    plt.plot(i, volume, color="lightgrey", marker='o')
+    thickness = np.mean(we_evol.iloc[i, :].values)
+    plt.plot(i, thickness, color="lightgrey", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier thickness (m)')
 plt.figure()
+
 for i in range(0, len(areas_evol), 1):  # Grey lines
     areas = np.sum(areas_evol.iloc[i, :].values)
     plt.plot(i, areas, color="lightgrey", marker='o')

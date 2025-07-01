@@ -315,7 +315,7 @@ class GlacierEvolutionDeltaH:
         for i, elev_idx in enumerate(np.arange(nb_unique_elevation_bands)):
             band_mask = self.inverse_indices == elev_idx  # bands with this elevation
             self.elev_band_areas_perc[0, elev_idx] = self.areas_perc[0, band_mask].sum()
-            percentages = self.areas_perc[0, band_mask] / self.areas_perc[0, band_mask].sum()
+            percentages = self.areas_perc[0, band_mask] / self.elev_band_areas_perc[0, elev_idx]
             self.elev_band_we[0, elev_idx] = np.sum(self.we[0, band_mask] * percentages)
 
         self._initialization()

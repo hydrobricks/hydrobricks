@@ -595,19 +595,19 @@ class GlacierEvolutionDeltaH:
             # If the glacier width is not updated, keep the previous glacier area.
             self.elev_band_areas_perc[increment] = self.elev_band_areas_perc[increment - 1]
             self.areas_perc[increment] = self.areas_perc[increment - 1]
-            # Update
-            for elev_idx in range(len(self.unique_elevation_bands)):
-                band_mask = self.inverse_indices == elev_idx
-                if self.areas_perc[increment - 1, band_mask].sum() == 0:
-                    percentages = 0
-                else:
-                    percentages = self.areas_perc[increment - 1, band_mask] / self.areas_perc[increment - 1, band_mask].sum()
-                self.elev_band_we[increment, elev_idx] = np.sum(self.we[increment, band_mask] * percentages)
-                # Nullify the areas of the elevation bands with no glacier water equivalent
-                if self.elev_band_we[increment, elev_idx] == 0:
-                    self.areas_perc[increment, band_mask] = 0
-            # Nullify the areas of the elevation bands with no glacier water equivalent
             if not area_from_topo:
+                # Update
+                for elev_idx in range(len(self.unique_elevation_bands)):
+                    band_mask = self.inverse_indices == elev_idx
+                    if self.areas_perc[increment - 1, band_mask].sum() == 0:
+                        percentages = 0
+                    else:
+                        percentages = self.areas_perc[increment - 1, band_mask] / self.areas_perc[increment - 1, band_mask].sum()
+                    self.elev_band_we[increment, elev_idx] = np.sum(self.we[increment, band_mask] * percentages)
+                    # Nullify the areas of the elevation bands with no glacier water equivalent
+                    if self.elev_band_we[increment, elev_idx] == 0:
+                        self.areas_perc[increment, band_mask] = 0
+                # Nullify the areas of the elevation bands with no glacier water equivalent
                 self.elev_band_areas_perc[increment, self.elev_band_we[increment] == 0] = 0
             else:
                 px_area = catchment.get_dem_pixel_area()

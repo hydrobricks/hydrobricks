@@ -618,17 +618,15 @@ class GlacierEvolutionDeltaH:
                     ice_thickness = self.ice_thicknesses[increment, i]
                     areas[i] = np.count_nonzero(ice_thickness) * px_area
                     self.areas_perc[increment, i] = areas[i] / self.catchment_area
+                    # Conservation of the w.e.
+                    self.ice_thicknesses[increment, i] *= (self.areas_perc[increment - 1, i] /
+                                                           self.areas_perc[increment, i])
                     
+                # Updating the band areas and band thicknesses
                 for i, elev_idx in enumerate(np.arange(len(self.unique_elevation_bands))):
                     band_mask = self.inverse_indices == elev_idx  # bands with this elevation
                     self.elev_band_areas_perc[increment, elev_idx] = self.areas_perc[increment, band_mask].sum()
-                
-                    # Conservation of the w.e.
-                    if any(np.sum(arr) != 0 for arr in self.ice_thicknesses[increment, band_mask]):
-                        print("self.ice_thicknesses[increment, band_mask]", self.ice_thicknesses[increment, band_mask])
-                        self.ice_thicknesses[increment, band_mask] *= (self.elev_band_areas_perc[increment - 1, elev_idx] /
-                                                                       self.elev_band_areas_perc[increment, elev_idx])
-                        self.we[increment, band_mask] = np.mean(np.concatenate(self.ice_thicknesses[increment, band_mask]))
+                    self.we[increment, band_mask] = np.mean(np.concatenate(self.ice_thicknesses[increment, band_mask]))
                         
     def _final_width_scaling(self, nb_increments: int):
         """

@@ -500,14 +500,11 @@ class GlacierEvolutionDeltaH:
         
         if area_from_topo:
             
-            # Compute the melt per band
+            # Compute the melt
             excess_melt = np.zeros(len(self.elevation_bands))
             for i in range(len(self.elevation_bands)):
-                if self.ice_thicknesses[increment - 1, i].size > 0:
-                    mean_thickness = np.mean(self.ice_thicknesses[increment - 1, i])
-                else:
-                    mean_thickness = 0.0
-                if mean_thickness > we_reduction_mm[i]:
+                
+                if self.we[increment - 1, i] > we_reduction_mm[i]:
                     to_remove = we_reduction_mm[i]
                     self.ice_thicknesses[increment, i] = self.ice_thicknesses[increment - 1, i]
                     EPSILON = 1e-6  # avoid infinite loops due to floating point errors
@@ -518,15 +515,18 @@ class GlacierEvolutionDeltaH:
                         self.ice_thicknesses[increment, i] = np.where(diff < 0, 0, diff)
                         remain = np.where(diff < 0, diff, 0)
                         to_remove = - np.mean(remain)
-                        
-                    self.we[increment, i] = np.mean(self.ice_thicknesses[increment, i])
+                    
+                    # Update the mean thickness
+                    if self.ice_thicknesses[increment, i].size > 0:
+                        self.we[increment, i] = np.mean(self.ice_thicknesses[increment, i])
+                    else:
+                        self.we[increment, i] = 0.0
                     over_melt = 0
                 
                 else:
                     self.we[increment, i] = 0
-                    over_melt = mean_thickness - we_reduction_mm[i]
-
-                print("increment", increment)
+                    over_melt = self.we[increment - 1, i] - we_reduction_mm[i]
+                
                 excess_melt[i] = over_melt
                     
             # This excess melt is taken into account in Step 2.
@@ -596,7 +596,7 @@ class GlacierEvolutionDeltaH:
             self.elev_band_areas_perc[increment] = self.elev_band_areas_perc[increment - 1]
             self.areas_perc[increment] = self.areas_perc[increment - 1]
             if not area_from_topo:
-                # Update
+                # Update ice thickness per band
                 for elev_idx in range(len(self.unique_elevation_bands)):
                     band_mask = self.inverse_indices == elev_idx
                     if self.areas_perc[increment - 1, band_mask].sum() == 0:
@@ -612,21 +612,23 @@ class GlacierEvolutionDeltaH:
             else:
                 px_area = catchment.get_dem_pixel_area()
                 
-                # Compute the melt per band
+                # Compute the melt
                 areas = np.zeros(len(self.elevation_bands))
                 for i in range(len(self.elevation_bands)):
                     ice_thickness = self.ice_thicknesses[increment, i]
                     areas[i] = np.count_nonzero(ice_thickness) * px_area
                     self.areas_perc[increment, i] = areas[i] / self.catchment_area
                     # Conservation of the w.e.
-                    self.ice_thicknesses[increment, i] *= (self.areas_perc[increment - 1, i] /
-                                                           self.areas_perc[increment, i])
+                    if self.we[increment, i] > 0:
+                        self.ice_thicknesses[increment, i] *= (self.areas_perc[increment - 1, i] /
+                                                               self.areas_perc[increment, i])
+                        self.we[increment, i] = np.mean(self.ice_thicknesses[increment, i])
                     
                 # Updating the band areas and band thicknesses
                 for i, elev_idx in enumerate(np.arange(len(self.unique_elevation_bands))):
                     band_mask = self.inverse_indices == elev_idx  # bands with this elevation
                     self.elev_band_areas_perc[increment, elev_idx] = self.areas_perc[increment, band_mask].sum()
-                    self.we[increment, band_mask] = np.mean(np.concatenate(self.ice_thicknesses[increment, band_mask]))
+                    self.elev_band_we[increment, elev_idx] = np.mean(np.concatenate(self.ice_thicknesses[increment, band_mask]))
                         
     def _final_width_scaling(self, nb_increments: int):
         """
@@ -646,7 +648,7 @@ class GlacierEvolutionDeltaH:
             # Conservation of the w.e.
             band_mask = self.elev_band_we[i] > 0
             self.elev_band_we[i, band_mask] *= (self.elev_band_areas_perc[0, band_mask] /
-                                           self.elev_band_areas_perc[i, band_mask])
+                                                self.elev_band_areas_perc[i, band_mask])
             
         # Redistribution following the aspect/radiation discretization.
         for increment in range(1, nb_increments):

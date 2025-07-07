@@ -81,8 +81,11 @@ class Catchment:
         self.dem_data = None
         self.attributes = {}
         self.map_unit_ids = None
-        self.hydro_units = HydroUnits(land_cover_types, land_cover_names,
-                                      hydro_units_data)
+        self.hydro_units = HydroUnits(
+            land_cover_types,
+            land_cover_names,
+            hydro_units_data
+        )
 
         self._extract_outline(outline)
         self._extract_area(outline)
@@ -342,7 +345,10 @@ class Catchment:
 
         # Sort the hydro units by descending elevation
         self.hydro_units.hydro_units.sort_values(
-            by=('elevation', 'm'), ascending=False, inplace=True)
+            by=('elevation', 'm'),
+            ascending=False,
+            inplace=True
+        )
 
         return self.hydro_units
 
@@ -400,7 +406,8 @@ class Catchment:
             dtype=hb.rasterio.uint16,
             count=1,
             compress='lzw',
-            nodata=0)
+            nodata=0
+        )
 
         with hb.rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
@@ -574,7 +581,9 @@ class Catchment:
             raise ValueError("You should not initialize the 'ground' land cover type.")
 
         self.hydro_units.initialize_from_land_cover_change(
-            land_cover_name, land_cover_change)
+            land_cover_name,
+            land_cover_change
+        )
 
     def initialize_land_cover_fractions(self):
         self.hydro_units.initialize_land_cover_fractions()
@@ -650,7 +659,8 @@ class Catchment:
         PotentialSolarRadiation class.
         """
         self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
-            *args, **kwargs)
+            *args, **kwargs
+        )
 
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs) -> float:

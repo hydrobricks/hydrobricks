@@ -144,8 +144,11 @@ class HydroUnits:
         if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
             area_idx = self.hydro_units.columns.get_loc('area')
-            self.hydro_units.drop(self.hydro_units.columns[area_idx], axis=1,
-                                  inplace=True)
+            self.hydro_units.drop(
+                self.hydro_units.columns[area_idx],
+                axis=1,
+                inplace=True
+            )
             self.hydro_units[('area', 'm2')] = new_area
 
         self.populate_bounded_instance()
@@ -307,20 +310,31 @@ class HydroUnits:
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
-        self.hydro_units.sort_values(by=('elevation', 'm'), ascending=False,
-                                     inplace=True)
+        self.hydro_units.sort_values(
+            by=('elevation', 'm'),
+            ascending=False,
+            inplace=True
+        )
 
         for _, row in self.hydro_units.iterrows():
-            self.settings.add_hydro_unit(int(row['id'].values[0]),
-                                         float(row['area'].values[0]),
-                                         float(row['elevation'].values[0]))
+            self.settings.add_hydro_unit(
+                int(row['id'].values[0]),
+                float(row['area'].values[0]),
+                float(row['elevation'].values[0])
+            )
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
-                    self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
+                    self.settings.add_hydro_unit_property_str(
+                        prop,
+                        row[prop].values[0]
+                    )
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop, float(row[prop].values[0]), unit)
+                        prop,
+                        float(row[prop].values[0]),
+                        unit
+                    )
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = float(row[self.prefix_fraction + cover_name].values[0])

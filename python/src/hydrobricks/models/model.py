@@ -26,8 +26,12 @@ class Model(ABC):
         self.name = name
         self.model = ModelHydro()
         self.spatial_structure = None
-        self.allowed_kwargs = {'solver', 'record_all', 'land_cover_types',
-                               'land_cover_names'}
+        self.allowed_kwargs = {
+            'solver',
+            'record_all',
+            'land_cover_types',
+            'land_cover_names'
+        }
         self._is_initialized = False
 
         # Default options
@@ -48,7 +52,8 @@ class Model(ABC):
         # Setting base settings
         self.settings = ModelSettings(
             solver=self.solver,
-            record_all=self.record_all)
+            record_all=self.record_all
+        )
 
     def __del__(self):
         self.cleanup()
@@ -101,7 +106,8 @@ class Model(ABC):
             # Initialize the model (with sub basin creation)
             if not self.model.init_with_basin(
                     self.settings.settings,
-                    spatial_structure.settings):
+                    spatial_structure.settings
+            ):
                 raise RuntimeError('Basin creation failed.')
 
             self._is_initialized = True
@@ -342,14 +348,20 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        return evaluate(self.get_outlet_discharge()[warmup:],
-                        observations[warmup:],
-                        metric)
+        return evaluate(
+            self.get_outlet_discharge()[warmup:],
+            observations[warmup:],
+            metric
+        )
 
     def generate_parameters(self) -> ParameterSet:
         ps = ParameterSet()
-        ps.generate_parameters(self.land_cover_types, self.land_cover_names,
-                               self.options, self.structure)
+        ps.generate_parameters(
+            self.land_cover_types,
+            self.land_cover_names,
+            self.options,
+            self.structure
+        )
 
         for alias_key, alias_value in self.parameter_aliases.items():
             if ps.has(alias_key):
@@ -485,8 +497,12 @@ class Model(ABC):
                                    f'({process}) without a target.')
 
         self.settings.add_brick_process(
-            process, process_data['kind'], target,
-            log=log, instantaneous=instantaneous)
+            process,
+            process_data['kind'],
+            target,
+            log=log,
+            instantaneous=instantaneous
+        )
 
     def _set_parameter_values(self, parameters: ParameterSet):
         model_params = parameters.get_model_parameters()

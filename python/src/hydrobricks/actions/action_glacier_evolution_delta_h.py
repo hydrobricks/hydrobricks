@@ -77,8 +77,12 @@ class ActionGlacierEvolutionDeltaH(Action):
         lookup_table_area = pd.read_csv(full_path_area)
         lookup_table_volume = pd.read_csv(full_path_volume)
 
-        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
-                                        land_cover, update_month)
+        self._populate_bounded_instance(
+            lookup_table_area,
+            lookup_table_volume,
+            land_cover,
+            update_month
+        )
 
     def load_from(
             self,
@@ -107,8 +111,12 @@ class ActionGlacierEvolutionDeltaH(Action):
         lookup_table_area = obj.get_lookup_table_area()
         lookup_table_volume = obj.get_lookup_table_volume()
 
-        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
-                                        land_cover, update_month)
+        self._populate_bounded_instance(
+            lookup_table_area,
+            lookup_table_volume,
+            land_cover,
+            update_month
+        )
 
     def get_month(self) -> int:
         """

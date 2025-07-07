@@ -104,6 +104,8 @@ class HydroUnits:
         elif 'elevation' in file_content.columns:
             vals, unit = self._get_column_values_unit('elevation', file_content)
             self.add_property(('elevation', unit), vals)
+        else:
+            raise ValueError('The "elevation" column is required in the file.')
 
         if column_area is not None and columns_areas is not None:
             raise ValueError('The "column_area" and "columns_areas" cannot be '
@@ -298,15 +300,20 @@ class HydroUnits:
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():
-            if prop[0] in ['id', 'area']:
+            if prop[0] in ['id', 'area', 'elevation']:
                 continue
             if 'fraction-' in prop[0]:
                 continue
             properties.append(prop[0])
 
+        # Sort the hydro units by decreasing elevation
+        self.hydro_units.sort_values(by=('elevation', 'm'), ascending=False,
+                                     inplace=True)
+
         for _, row in self.hydro_units.iterrows():
             self.settings.add_hydro_unit(int(row['id'].values[0]),
-                                         float(row['area'].values[0]))
+                                         float(row['area'].values[0]),
+                                         float(row['elevation'].values[0]))
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
                     self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])

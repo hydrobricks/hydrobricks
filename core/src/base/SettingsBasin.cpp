@@ -8,16 +8,18 @@ SettingsBasin::SettingsBasin()
 
 SettingsBasin::~SettingsBasin() = default;
 
-void SettingsBasin::AddHydroUnit(int id, double area) {
+void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     HydroUnitSettings unit;
     unit.id = id;
     unit.area = area;
+    unit.elevation = elevation;
     m_hydroUnits.push_back(unit);
     m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
 }
 
 void SettingsBasin::AddLandCover(const string& name, const string& type, double fraction) {
     wxASSERT(m_selectedHydroUnit);
+
     LandCoverSettings element;
     element.name = name;
     element.type = type;

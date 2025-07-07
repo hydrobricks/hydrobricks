@@ -30,6 +30,7 @@ struct HydroUnitPropertyString {
 struct HydroUnitSettings {
     int id;
     double area;
+    double elevation;
     vector<LandCoverSettings> landCovers;
     vector<SurfaceComponentSettings> surfaceComponents;
     vector<HydroUnitPropertyDouble> propertiesDouble;
@@ -54,8 +55,9 @@ class SettingsBasin : public wxObject {
      *
      * @param id ID of the hydro unit.
      * @param area area of the hydro unit.
+     * @param elevation elevation of the hydro unit.
      */
-    void AddHydroUnit(int id, double area);
+    void AddHydroUnit(int id, double area, double elevation = -9999);
 
     /**
      * Add a new land cover to the selected hydro unit.

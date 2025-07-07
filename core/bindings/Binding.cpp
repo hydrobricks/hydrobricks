@@ -63,7 +63,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
-             "area"_a)
+             "area"_a, "elevation"_a = -9999)
         .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",

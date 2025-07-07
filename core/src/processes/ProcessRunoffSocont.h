@@ -31,7 +31,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float _slope;           // []
+    float _slope;           // [m/m]
     float* _beta;           // []
     double* _areaFraction;  // []
     double _areaUnit;       // [m^2]

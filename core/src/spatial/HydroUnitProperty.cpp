@@ -19,18 +19,26 @@ HydroUnitProperty::HydroUnitProperty(string name, string valueString, string uni
 double HydroUnitProperty::GetValue(const string& unit) const {
     if (_unit == unit) {
         return _value;
-    } else if (_unit == "degrees") {
+    }
+    if (_unit == "degrees" || _unit == "deg") {
+        if (unit == "degrees" || unit == "deg") {
+            return _value;
+        }
         if (unit == "radians") {
             return _value * M_PI / 180.0;
-        } else if (unit == "percent") {
+        }
+        if (unit == "percent") {
             return 100 * tan(_value * M_PI / 180.0);
-        } else if (unit == "m/m") {
+        }
+        if (unit == "m/m") {
             return tan(_value * M_PI / 180.0);
         }
-    } else if (_unit == "m2" || _unit == "m^2") {
+    }
+    if (_unit == "m2" || _unit == "m^2") {
         if (unit == "ha") {
             return _value / 10000.0;
-        } else if (unit == "km2") {
+        }
+        if (unit == "km2") {
             return _value / 1000000.0;
         }
     }

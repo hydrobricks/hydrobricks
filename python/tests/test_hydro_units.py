@@ -20,20 +20,26 @@ def test_hydro_units_creation():
 
 
 def test_hydro_units_creation_with_land_covers():
-    hb.HydroUnits(land_cover_types=['ground', 'glacier'],
-                  land_cover_names=['ground', 'glacier'])
+    hb.HydroUnits(
+        land_cover_types=['ground', 'glacier'],
+        land_cover_names=['ground', 'glacier']
+    )
 
 
 def test_hydro_units_creation_with_land_covers_mismatch():
     with pytest.raises(ValueError):
-        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
-                      land_cover_names=None)
+        hb.HydroUnits(
+            land_cover_types=['ground', 'glacier', 'glacier'],
+            land_cover_names=None
+        )
 
 
 def test_hydro_units_creation_with_land_covers_size_mismatch():
     with pytest.raises(ValueError):
-        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
-                      land_cover_names=['ground', 'glacier'])
+        hb.HydroUnits(
+            land_cover_types=['ground', 'glacier', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
 
 
 @pytest.fixture
@@ -49,9 +55,12 @@ def hydro_units_csv(hydro_units: hb.HydroUnits):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
         column_elevation='Elevation Bands',
-        columns_areas={'ground': 'Sum_Area Non Glacier Band',
-                       'glacier_ice': 'Sum_Area ICE Band',
-                       'glacier_debris': 'Sum_Area Debris Band'})
+        columns_areas={
+            'ground': 'Sum_Area Non Glacier Band',
+            'glacier_ice': 'Sum_Area ICE Band',
+            'glacier_debris': 'Sum_Area Debris Band'
+        }
+    )
     return hydro_units
 
 

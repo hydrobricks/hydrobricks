@@ -28,8 +28,12 @@ catchment.calculate_slope_aspect()
 
 # Discretize the catchment by elevation and aspect
 catchment.discretize_by(
-    criteria=['elevation', 'slope'], elevation_method='equal_intervals',
-    elevation_distance=200, slope_method='equal_intervals', slope_distance=15)
+    criteria=['elevation', 'slope'],
+    elevation_method='equal_intervals',
+    elevation_distance=200,
+    slope_method='equal_intervals',
+    slope_distance=15
+)
 
 # Save elevation bands to a raster
 catchment.save_unit_ids_raster(working_dir)

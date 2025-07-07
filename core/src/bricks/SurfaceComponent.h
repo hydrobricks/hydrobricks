@@ -24,7 +24,7 @@ class SurfaceComponent : public Brick {
      * @return The area fraction of this component.
      */
     double GetAreaFraction() const {
-        return m_areaFraction;
+        return _areaFraction;
     }
 
     /**
@@ -45,13 +45,13 @@ class SurfaceComponent : public Brick {
      * @param parent The parent land cover of this component.
      */
     virtual void SetParent(LandCover* parent) {
-        m_parent = parent;
-        m_parent->SurfaceComponentAdded(this);
+        _parent = parent;
+        _parent->SurfaceComponentAdded(this);
     }
 
   protected:
-    LandCover* m_parent;
-    double m_areaFraction;
+    LandCover* _parent;
+    double _areaFraction;
 };
 
 #endif  // HYDROBRICKS_SURFACE_COMPONENT_H

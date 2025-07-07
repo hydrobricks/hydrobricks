@@ -34,7 +34,7 @@ class ActionLandCoverChange : public Action {
      * @return the number of changes in the action.
      */
     int GetChangesNb() const {
-        return static_cast<int>(m_sporadicDates.size());
+        return static_cast<int>(_sporadicDates.size());
     }
 
     /**
@@ -43,14 +43,14 @@ class ActionLandCoverChange : public Action {
      * @return the number of land covers in the action.
      */
     int GetLandCoversNb() const {
-        return static_cast<int>(m_landCoverNames.size());
+        return static_cast<int>(_landCoverNames.size());
     }
 
   protected:
-    vecInt m_hydroUnitIds;
-    vecInt m_landCoverIds;
-    vecStr m_landCoverNames;
-    vecDouble m_areas;
+    vecInt _hydroUnitIds;
+    vecInt _landCoverIds;
+    vecStr _landCoverNames;
+    vecDouble _areas;
 
   private:
     int GetLandCoverId(const string& landCoverName);

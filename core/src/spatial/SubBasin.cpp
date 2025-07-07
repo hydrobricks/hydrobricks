@@ -4,13 +4,13 @@
 #include "SurfaceComponent.h"
 
 SubBasin::SubBasin()
-    : m_area(0),
-      m_outletTotal(0),
-      m_needsCleanup(false) {}
+    : _area(0),
+      _outletTotal(0),
+      _needsCleanup(false) {}
 
 SubBasin::~SubBasin() {
-    if (m_needsCleanup) {
-        for (auto& hydroUnit : m_hydroUnits) {
+    if (_needsCleanup) {
+        for (auto& hydroUnit : _hydroUnits) {
             wxDELETE(hydroUnit);
         }
     }
@@ -28,7 +28,7 @@ bool SubBasin::Initialize(SettingsBasin& basinSettings) {
 }
 
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
-    m_needsCleanup = true;
+    _needsCleanup = true;
 
     // Create the hydro units
     for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
@@ -61,7 +61,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < basinSettings.GetLandCoversNb(); ++iElement) {
                 LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
 
-                auto brick = dynamic_cast<LandCover*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                auto brick = dynamic_cast<LandCover*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
                 wxASSERT(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
@@ -69,7 +69,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentsNb(); ++iElement) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
-                auto brick = dynamic_cast<SurfaceComponent*>(m_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                auto brick = dynamic_cast<SurfaceComponent*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
                 wxASSERT(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
@@ -83,38 +83,38 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
 }
 
 void SubBasin::Reset() {
-    for (auto brick : m_bricks) {
+    for (auto brick : _bricks) {
         brick->Reset();
     }
-    for (auto hydroUnit : m_hydroUnits) {
+    for (auto hydroUnit : _hydroUnits) {
         hydroUnit->Reset();
     }
-    for (auto flux : m_outletFluxes) {
+    for (auto flux : _outletFluxes) {
         flux->Reset();
     }
 }
 
 void SubBasin::SaveAsInitialState() {
-    for (auto brick : m_bricks) {
+    for (auto brick : _bricks) {
         brick->Reset();
     }
-    for (auto hydroUnit : m_hydroUnits) {
+    for (auto hydroUnit : _hydroUnits) {
         hydroUnit->Reset();
     }
 }
 
 bool SubBasin::IsOk() {
-    if (m_hydroUnits.empty()) {
+    if (_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));
         return false;
     }
-    for (auto unit : m_hydroUnits) {
+    for (auto unit : _hydroUnits) {
         if (!unit->IsOk()) return false;
     }
-    for (auto brick : m_bricks) {
+    for (auto brick : _bricks) {
         if (!brick->IsOk()) return false;
     }
-    for (auto splitter : m_splitters) {
+    for (auto splitter : _splitters) {
         if (!splitter->IsOk()) return false;
     }
 
@@ -123,32 +123,32 @@ bool SubBasin::IsOk() {
 
 void SubBasin::AddBrick(Brick* brick) {
     wxASSERT(brick);
-    m_bricks.push_back(brick);
+    _bricks.push_back(brick);
 }
 
 void SubBasin::AddSplitter(Splitter* splitter) {
     wxASSERT(splitter);
-    m_splitters.push_back(splitter);
+    _splitters.push_back(splitter);
 }
 
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
-    m_hydroUnits.push_back(unit);
-    m_area += unit->GetArea();
+    _hydroUnits.push_back(unit);
+    _area += unit->GetArea();
 }
 
 int SubBasin::GetHydroUnitsNb() {
-    return static_cast<int>(m_hydroUnits.size());
+    return static_cast<int>(_hydroUnits.size());
 }
 
 HydroUnit* SubBasin::GetHydroUnit(int index) {
-    wxASSERT(m_hydroUnits.size() > index);
-    wxASSERT(m_hydroUnits[index]);
+    wxASSERT(_hydroUnits.size() > index);
+    wxASSERT(_hydroUnits[index]);
 
-    return m_hydroUnits[index];
+    return _hydroUnits[index];
 }
 
 HydroUnit* SubBasin::GetHydroUnitById(int id) {
-    for (auto unit : m_hydroUnits) {
+    for (auto unit : _hydroUnits) {
         if (unit->GetId() == id) {
             return unit;
         }
@@ -159,8 +159,8 @@ HydroUnit* SubBasin::GetHydroUnitById(int id) {
 
 vecInt SubBasin::GetHydroUnitIds() {
     vecInt ids;
-    ids.reserve(m_hydroUnits.size());
-    for (auto unit : m_hydroUnits) {
+    ids.reserve(_hydroUnits.size());
+    for (auto unit : _hydroUnits) {
         ids.push_back(unit->GetId());
     }
 
@@ -169,8 +169,8 @@ vecInt SubBasin::GetHydroUnitIds() {
 
 vecDouble SubBasin::GetHydroUnitAreas() {
     vecDouble areas;
-    areas.reserve(m_hydroUnits.size());
-    for (auto unit : m_hydroUnits) {
+    areas.reserve(_hydroUnits.size());
+    for (auto unit : _hydroUnits) {
         areas.push_back(unit->GetArea());
     }
 
@@ -178,22 +178,22 @@ vecDouble SubBasin::GetHydroUnitAreas() {
 }
 
 int SubBasin::GetBricksCount() {
-    return static_cast<int>(m_bricks.size());
+    return static_cast<int>(_bricks.size());
 }
 
 int SubBasin::GetSplittersCount() {
-    return static_cast<int>(m_splitters.size());
+    return static_cast<int>(_splitters.size());
 }
 
 Brick* SubBasin::GetBrick(int index) {
-    wxASSERT(m_bricks.size() > index);
-    wxASSERT(m_bricks[index]);
+    wxASSERT(_bricks.size() > index);
+    wxASSERT(_bricks[index]);
 
-    return m_bricks[index];
+    return _bricks[index];
 }
 
 bool SubBasin::HasBrick(const string& name) {
-    for (auto brick : m_bricks) {
+    for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return true;
         }
@@ -202,7 +202,7 @@ bool SubBasin::HasBrick(const string& name) {
 }
 
 Brick* SubBasin::GetBrick(const string& name) {
-    for (auto brick : m_bricks) {
+    for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return brick;
         }
@@ -212,14 +212,14 @@ Brick* SubBasin::GetBrick(const string& name) {
 }
 
 Splitter* SubBasin::GetSplitter(int index) {
-    wxASSERT(m_splitters.size() > index);
-    wxASSERT(m_splitters[index]);
+    wxASSERT(_splitters.size() > index);
+    wxASSERT(_splitters[index]);
 
-    return m_splitters[index];
+    return _splitters[index];
 }
 
 bool SubBasin::HasSplitter(const string& name) {
-    for (auto splitter : m_splitters) {
+    for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return true;
         }
@@ -228,7 +228,7 @@ bool SubBasin::HasSplitter(const string& name) {
 }
 
 Splitter* SubBasin::GetSplitter(const string& name) {
-    for (auto splitter : m_splitters) {
+    for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return splitter;
         }
@@ -238,27 +238,27 @@ Splitter* SubBasin::GetSplitter(const string& name) {
 }
 
 bool SubBasin::HasIncomingFlow() {
-    return !m_inConnectors.empty();
+    return !_inConnectors.empty();
 }
 
 void SubBasin::AddInputConnector(Connector* connector) {
     wxASSERT(connector);
-    m_inConnectors.push_back(connector);
+    _inConnectors.push_back(connector);
 }
 
 void SubBasin::AddOutputConnector(Connector* connector) {
     wxASSERT(connector);
-    m_outConnectors.push_back(connector);
+    _outConnectors.push_back(connector);
 }
 
 void SubBasin::AttachOutletFlux(Flux* flux) {
     wxASSERT(flux);
-    m_outletFluxes.push_back(flux);
+    _outletFluxes.push_back(flux);
 }
 
 double* SubBasin::GetValuePointer(const string& name) {
     if (name == "outlet") {
-        return &m_outletTotal;
+        return &_outletTotal;
     }
     wxLogError(_("Element '%s' not found"), name);
 
@@ -266,9 +266,9 @@ double* SubBasin::GetValuePointer(const string& name) {
 }
 
 bool SubBasin::ComputeOutletDischarge() {
-    m_outletTotal = 0;
-    for (auto flux : m_outletFluxes) {
-        m_outletTotal += flux->GetAmount();
+    _outletTotal = 0;
+    for (auto flux : _outletFluxes) {
+        _outletTotal += flux->GetAmount();
     }
 
     return true;

@@ -19,7 +19,7 @@
 #include "WaterContainer.h"
 
 Process::Process(WaterContainer* container)
-    : m_container(container) {}
+    : _container(container) {}
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     string processType = processSettings.type;
@@ -130,7 +130,7 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
 }
 
 void Process::Reset() {
-    for (auto flux : m_outputs) {
+    for (auto flux : _outputs) {
         flux->Reset();
     }
 }
@@ -166,7 +166,7 @@ float* Process::GetParameterValuePointer(const ProcessSettings& processSettings,
 }
 
 vecDouble Process::GetChangeRates() {
-    if (m_container->GetContentWithChanges() <= PRECISION) {
+    if (_container->GetContentWithChanges() <= PRECISION) {
         vecDouble res(GetConnectionsNb());
         std::fill(res.begin(), res.end(), 0);
         return res;
@@ -176,19 +176,19 @@ vecDouble Process::GetChangeRates() {
 }
 
 void Process::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(m_outputs.size() > index);
+    wxASSERT(_outputs.size() > index);
     wxASSERT(rate);
-    m_outputs[index]->LinkChangeRate(rate);
+    _outputs[index]->LinkChangeRate(rate);
 }
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
-    wxASSERT(m_outputs.size() > connectionIndex);
+    wxASSERT(_outputs.size() > connectionIndex);
     wxASSERT(rate >= 0);
     if (rate > PRECISION) {
-        m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
-        m_container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
+        _outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
+        _container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
     } else {
-        m_outputs[connectionIndex]->UpdateFlux(0);
+        _outputs[connectionIndex]->UpdateFlux(0);
     }
 }
 
@@ -199,7 +199,7 @@ double* Process::GetValuePointer(const string&) {
 double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 
-    vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
+    vector<Process*> otherProcesses = _container->GetParentBrick()->GetProcesses();
     for (auto process : otherProcesses) {
         wxASSERT(process);
         if (process == this) {

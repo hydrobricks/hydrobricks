@@ -24,7 +24,7 @@ class ProcessTransformSnowToIceConstant : public ProcessTransform {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* m_rate;  // [mm/d]
+    float* _rate;  // [mm/d]
 
     /**
      * @copydoc Process::GetRates()

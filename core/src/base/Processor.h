@@ -52,7 +52,7 @@ class Processor : public wxObject {
      * @return the pointer to the state variables vector.
      */
     vecDoublePt* GetStateVariablesVectorPt() {
-        return &m_stateVariableChanges;
+        return &_stateVariableChanges;
     }
 
     /**
@@ -61,7 +61,7 @@ class Processor : public wxObject {
      * @return the pointer to the iterable bricks vector.
      */
     vector<Brick*>* GetIterableBricksVectorPt() {
-        return &m_iterableBricks;
+        return &_iterableBricks;
     }
 
     /**
@@ -70,7 +70,7 @@ class Processor : public wxObject {
      * @return the number of solvable connections.
      */
     int GetNbSolvableConnections() const {
-        return m_solvableConnectionsNb;
+        return _solvableConnectionsNb;
     }
 
     /**
@@ -79,17 +79,17 @@ class Processor : public wxObject {
      * @return the number of direct connections.
      */
     int GetNbDirectConnections() const {
-        return m_directConnectionsNb;
+        return _directConnectionsNb;
     }
 
   protected:
-    Solver* m_solver;
-    ModelHydro* m_model;
-    int m_solvableConnectionsNb;
-    int m_directConnectionsNb;
-    vecDoublePt m_stateVariableChanges;
-    vector<Brick*> m_iterableBricks;
-    axd m_changeRatesNoSolver;
+    Solver* _solver;
+    ModelHydro* _model;
+    int _solvableConnectionsNb;
+    int _directConnectionsNb;
+    vecDoublePt _stateVariableChanges;
+    vector<Brick*> _iterableBricks;
+    axd _changeRatesNoSolver;
 
   private:
     /**

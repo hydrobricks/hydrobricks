@@ -60,7 +60,7 @@ class Brick : public wxObject {
      */
     void AddProcess(Process* process) {
         wxASSERT(process);
-        m_processes.push_back(process);
+        _processes.push_back(process);
     }
 
     /**
@@ -86,7 +86,7 @@ class Brick : public wxObject {
      * @return true if the brick needs to be handled by the solver.
      */
     bool NeedsSolver() const {
-        return m_needsSolver;
+        return _needsSolver;
     }
 
     /**
@@ -196,7 +196,7 @@ class Brick : public wxObject {
      * @return vector of pointers to the processes.
      */
     vector<Process*>& GetProcesses() {
-        return m_processes;
+        return _processes;
     }
 
     /**
@@ -205,7 +205,7 @@ class Brick : public wxObject {
      * @return name of the brick.
      */
     string GetName() {
-        return m_name;
+        return _name;
     }
 
     /**
@@ -214,7 +214,7 @@ class Brick : public wxObject {
      * @param name new name of the brick.
      */
     void SetName(const string& name) {
-        m_name = name;
+        _name = name;
     }
 
     /**
@@ -253,10 +253,10 @@ class Brick : public wxObject {
     virtual double* GetValuePointer(const string& name);
 
   protected:
-    string m_name;
-    bool m_needsSolver;
-    WaterContainer* m_water;
-    vector<Process*> m_processes;
+    string _name;
+    bool _needsSolver;
+    WaterContainer* _water;
+    vector<Process*> _processes;
 };
 
 #endif  // HYDROBRICKS_BRICK_H

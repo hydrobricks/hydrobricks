@@ -96,7 +96,7 @@ class Snowpack : public SurfaceComponent {
     bool HasSnow();
 
   protected:
-    SnowContainer* m_snow;
+    SnowContainer* _snow;
 };
 
 #endif  // HYDROBRICKS_SNOWPACK_H

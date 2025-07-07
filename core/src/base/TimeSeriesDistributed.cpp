@@ -4,19 +4,19 @@ TimeSeriesDistributed::TimeSeriesDistributed(VariableType type)
     : TimeSeries(type) {}
 
 TimeSeriesDistributed::~TimeSeriesDistributed() {
-    for (auto data : m_data) {
+    for (auto data : _data) {
         wxDELETE(data);
     }
 }
 
 void TimeSeriesDistributed::AddData(TimeSeriesData* data, int unitId) {
     wxASSERT(data);
-    m_data.push_back(data);
-    m_unitIds.push_back(unitId);
+    _data.push_back(data);
+    _unitIds.push_back(unitId);
 }
 
 bool TimeSeriesDistributed::SetCursorToDate(double date) {
-    for (auto data : m_data) {
+    for (auto data : _data) {
         if (!data->SetCursorToDate(date)) {
             return false;
         }
@@ -26,7 +26,7 @@ bool TimeSeriesDistributed::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesDistributed::AdvanceOneTimeStep() {
-    for (auto data : m_data) {
+    for (auto data : _data) {
         if (!data->AdvanceOneTimeStep()) {
             return false;
         }
@@ -36,13 +36,13 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
 }
 
 double TimeSeriesDistributed::GetStart() {
-    wxASSERT(!m_data.empty());
-    return m_data[0]->GetStart();
+    wxASSERT(!_data.empty());
+    return _data[0]->GetStart();
 }
 
 double TimeSeriesDistributed::GetEnd() {
-    wxASSERT(!m_data.empty());
-    return m_data[0]->GetEnd();
+    wxASSERT(!_data.empty());
+    return _data[0]->GetEnd();
 }
 
 double TimeSeriesDistributed::GetTotal(const SettingsBasin* basinSettings) {
@@ -59,11 +59,11 @@ double TimeSeriesDistributed::GetTotal(const SettingsBasin* basinSettings) {
 }
 
 TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
-    wxASSERT(m_data.size() == m_unitIds.size());
+    wxASSERT(_data.size() == _unitIds.size());
 
-    for (int i = 0; i < m_data.size(); ++i) {
-        if (m_unitIds[i] == unitId) {
-            return m_data[i];
+    for (int i = 0; i < _data.size(); ++i) {
+        if (_unitIds[i] == unitId) {
+            return _data[i];
         }
     }
 

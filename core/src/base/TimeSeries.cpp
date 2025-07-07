@@ -5,7 +5,7 @@
 #include "TimeSeriesUniform.h"
 
 TimeSeries::TimeSeries(VariableType type)
-    : m_type(type) {}
+    : _type(type) {}
 
 bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
     try {

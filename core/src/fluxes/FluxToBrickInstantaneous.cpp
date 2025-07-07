@@ -14,15 +14,15 @@ double FluxToBrickInstantaneous::GetAmount() {
 }
 
 double FluxToBrickInstantaneous::GetRealAmount() {
-    return m_amount;
+    return _amount;
 }
 
 void FluxToBrickInstantaneous::UpdateFlux(double amount) {
-    wxASSERT(m_toBrick);
-    if (m_fractionTotal < 1.0) {
-        m_amount = amount * m_fractionTotal;  // Still need to keep it.
+    wxASSERT(_toBrick);
+    if (_fractionTotal < 1.0) {
+        _amount = amount * _fractionTotal;  // Still need to keep it.
     } else {
-        m_amount = amount;
+        _amount = amount;
     }
-    m_toBrick->GetWaterContainer()->AddAmountToStaticContentChange(m_amount);
+    _toBrick->GetWaterContainer()->AddAmountToStaticContentChange(_amount);
 }

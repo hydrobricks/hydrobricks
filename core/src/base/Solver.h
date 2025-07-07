@@ -32,7 +32,7 @@ class Solver : public wxObject {
      */
     void Connect(Processor* processor) {
         wxASSERT(processor);
-        m_processor = processor;
+        _processor = processor;
     }
 
     /**
@@ -41,10 +41,10 @@ class Solver : public wxObject {
     void InitializeContainers();
 
   protected:
-    Processor* m_processor;
-    axxd m_stateVariableChanges;
-    axxd m_changeRates;
-    int m_nIterations;
+    Processor* _processor;
+    axxd _stateVariableChanges;
+    axxd _changeRates;
+    int _nIterations;
 
     /**
      * Save the state variables.

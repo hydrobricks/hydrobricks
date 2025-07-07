@@ -12,9 +12,9 @@ class HydroUnitLateralConnection : public wxObject {
     ~HydroUnitLateralConnection() override = default;
 
   private:
-    HydroUnit* m_receiver;
-    double m_fraction;
-    string m_type;
+    HydroUnit* _receiver;
+    double _fraction;
+    string _type;
 };
 
 #endif  // HYDROBRICKS_HYDRO_UNIT_LATERAL_CONNECTION_H

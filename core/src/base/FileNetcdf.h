@@ -261,7 +261,7 @@ class FileNetcdf : public wxObject {
     void PutAttText(const string& attName, const string& value, int varId = NC_GLOBAL);
 
   protected:
-    int m_ncId;
+    int _ncId;
 
   private:
     /**

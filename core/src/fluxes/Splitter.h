@@ -59,7 +59,7 @@ class Splitter : public wxObject {
      */
     void AttachFluxIn(Flux* flux) {
         wxASSERT(flux);
-        m_inputs.push_back(flux);
+        _inputs.push_back(flux);
     }
 
     /**
@@ -69,7 +69,7 @@ class Splitter : public wxObject {
      */
     void AttachFluxOut(Flux* flux) {
         wxASSERT(flux);
-        m_outputs.push_back(flux);
+        _outputs.push_back(flux);
     }
 
     /**
@@ -90,7 +90,7 @@ class Splitter : public wxObject {
      * @return name of the splitter.
      */
     string GetName() {
-        return m_name;
+        return _name;
     }
 
     /**
@@ -99,13 +99,13 @@ class Splitter : public wxObject {
      * @param name name of the splitter.
      */
     void SetName(const string& name) {
-        m_name = name;
+        _name = name;
     }
 
   protected:
-    string m_name;
-    vector<Flux*> m_inputs;
-    vector<Flux*> m_outputs;
+    string _name;
+    vector<Flux*> _inputs;
+    vector<Flux*> _outputs;
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

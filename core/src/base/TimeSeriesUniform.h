@@ -17,7 +17,7 @@ class TimeSeriesUniform : public TimeSeries {
      */
     void SetData(TimeSeriesData* data) {
         wxASSERT(data);
-        m_data = data;
+        _data = data;
     }
 
     /**
@@ -58,7 +58,7 @@ class TimeSeriesUniform : public TimeSeries {
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
-    TimeSeriesData* m_data;
+    TimeSeriesData* _data;
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_UNIFORM_H

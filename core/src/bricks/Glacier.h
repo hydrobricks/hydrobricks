@@ -95,7 +95,7 @@ class Glacier : public LandCover {
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
   protected:
-    IceContainer* m_ice;
+    IceContainer* _ice;
 };
 
 #endif  // HYDROBRICKS_GLACIER_H

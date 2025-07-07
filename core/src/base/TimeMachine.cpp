@@ -1,36 +1,36 @@
 #include "TimeMachine.h"
 
 TimeMachine::TimeMachine()
-    : m_date(0),
-      m_start(0),
-      m_end(0),
-      m_timeStep(0),
-      m_timeStepUnit(Day),
-      m_timeStepInDays(0),
-      m_parametersUpdater(nullptr),
-      m_actionsManager(nullptr) {}
+    : _date(0),
+      _start(0),
+      _end(0),
+      _timeStep(0),
+      _timeStepUnit(Day),
+      _timeStepInDays(0),
+      _parametersUpdater(nullptr),
+      _actionsManager(nullptr) {}
 
 void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit) {
-    m_date = start;
-    m_start = start;
-    m_end = end;
-    m_timeStep = timeStep;
-    m_timeStepUnit = timeStepUnit;
+    _date = start;
+    _start = start;
+    _end = end;
+    _timeStep = timeStep;
+    _timeStepUnit = timeStepUnit;
     UpdateTimeStepInDays();
 }
 
 void TimeMachine::Initialize(const TimerSettings& settings) {
-    m_start = ParseDate(settings.start, guess);
-    m_end = ParseDate(settings.end, guess);
-    m_date = m_start;
-    m_timeStep = settings.timeStep;
+    _start = ParseDate(settings.start, guess);
+    _end = ParseDate(settings.end, guess);
+    _date = _start;
+    _timeStep = settings.timeStep;
 
     if (settings.timeStepUnit == "day") {
-        m_timeStepUnit = Day;
+        _timeStepUnit = Day;
     } else if (settings.timeStepUnit == "hour") {
-        m_timeStepUnit = Hour;
+        _timeStepUnit = Hour;
     } else if (settings.timeStepUnit == "minute") {
-        m_timeStepUnit = Minute;
+        _timeStepUnit = Minute;
     } else {
         throw InvalidArgument(_("Time step unit unrecognized or not implemented."));
     }
@@ -39,45 +39,45 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
 }
 
 void TimeMachine::Reset() {
-    m_date = m_start;
+    _date = _start;
 }
 
 bool TimeMachine::IsOver() {
-    return m_date > m_end;
+    return _date > _end;
 }
 
 void TimeMachine::IncrementTime() {
-    wxASSERT(m_timeStepInDays > 0);
-    m_date += m_timeStepInDays;
+    wxASSERT(_timeStepInDays > 0);
+    _date += _timeStepInDays;
 
-    if (m_parametersUpdater) {
-        m_parametersUpdater->DateUpdate(m_date);
+    if (_parametersUpdater) {
+        _parametersUpdater->DateUpdate(_date);
     }
-    if (m_actionsManager) {
-        m_actionsManager->DateUpdate(m_date);
+    if (_actionsManager) {
+        _actionsManager->DateUpdate(_date);
     }
 }
 
 int TimeMachine::GetTimeStepsNb() {
-    wxASSERT(m_timeStepInDays > 0);
-    return static_cast<int>(1 + (m_end - m_start) / m_timeStepInDays);
+    wxASSERT(_timeStepInDays > 0);
+    return static_cast<int>(1 + (_end - _start) / _timeStepInDays);
 }
 
 void TimeMachine::UpdateTimeStepInDays() {
-    switch (m_timeStepUnit) {
+    switch (_timeStepUnit) {
         case Variable:
             throw NotImplemented();
         case Week:
-            m_timeStepInDays = m_timeStep * 7;
+            _timeStepInDays = _timeStep * 7;
             break;
         case Day:
-            m_timeStepInDays = m_timeStep;
+            _timeStepInDays = _timeStep;
             break;
         case Hour:
-            m_timeStepInDays = m_timeStep / 24.0;
+            _timeStepInDays = _timeStep / 24.0;
             break;
         case Minute:
-            m_timeStepInDays = m_timeStep / 1440.0;
+            _timeStepInDays = _timeStep / 1440.0;
             break;
         default:
             wxLogError(_("The provided time step unit is not allowed."));

@@ -24,7 +24,7 @@ class ActionsManager : public wxObject {
      * @return pointer to the model.
      */
     ModelHydro* GetModel() {
-        return m_model;
+        return _model;
     }
 
     /**
@@ -77,16 +77,16 @@ class ActionsManager : public wxObject {
      * @return vector of sporadic action dates.
      */
     vecDouble GetSporadicActionDates() {
-        return m_sporadicActionDates;
+        return _sporadicActionDates;
     }
 
   protected:
-    ModelHydro* m_model;
-    int m_cursorManager;
-    vector<Action*> m_actions;
-    vecDouble m_sporadicActionDates;
-    vecInt m_sporadicActionIndices;
-    vecInt m_recursiveActionIndices;
+    ModelHydro* _model;
+    int _cursorManager;
+    vector<Action*> _actions;
+    vecDouble _sporadicActionDates;
+    vecInt _sporadicActionIndices;
+    vecInt _recursiveActionIndices;
 
   private:
 };

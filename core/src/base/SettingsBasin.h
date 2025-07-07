@@ -120,8 +120,8 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected hydro unit.
      */
     HydroUnitSettings GetHydroUnitSettings(int index) const {
-        wxASSERT(m_hydroUnits.size() > index);
-        return m_hydroUnits[index];
+        wxASSERT(_hydroUnits.size() > index);
+        return _hydroUnits[index];
     }
 
     /**
@@ -131,9 +131,9 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected land cover.
      */
     LandCoverSettings GetLandCoverSettings(int index) const {
-        wxASSERT(m_selectedHydroUnit);
-        wxASSERT(m_selectedHydroUnit->landCovers.size() > index);
-        return m_selectedHydroUnit->landCovers[index];
+        wxASSERT(_selectedHydroUnit);
+        wxASSERT(_selectedHydroUnit->landCovers.size() > index);
+        return _selectedHydroUnit->landCovers[index];
     }
 
     /**
@@ -143,9 +143,9 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected surface component.
      */
     SurfaceComponentSettings GetSurfaceComponentSettings(int index) const {
-        wxASSERT(m_selectedHydroUnit);
-        wxASSERT(m_selectedHydroUnit->surfaceComponents.size() > index);
-        return m_selectedHydroUnit->surfaceComponents[index];
+        wxASSERT(_selectedHydroUnit);
+        wxASSERT(_selectedHydroUnit->surfaceComponents.size() > index);
+        return _selectedHydroUnit->surfaceComponents[index];
     }
 
     /**
@@ -154,7 +154,7 @@ class SettingsBasin : public wxObject {
      * @return vector of lateral connection settings.
      */
     vector<LateralConnectionSettings> GetLateralConnections() const {
-        return m_lateralConnections;
+        return _lateralConnections;
     }
 
     /**
@@ -163,7 +163,7 @@ class SettingsBasin : public wxObject {
      * @return number of hydro units.
      */
     int GetHydroUnitsNb() const {
-        return static_cast<int>(m_hydroUnits.size());
+        return static_cast<int>(_hydroUnits.size());
     }
 
     /**
@@ -172,8 +172,8 @@ class SettingsBasin : public wxObject {
      * @return number of land covers.
      */
     int GetLandCoversNb() const {
-        wxASSERT(m_selectedHydroUnit);
-        return static_cast<int>(m_selectedHydroUnit->landCovers.size());
+        wxASSERT(_selectedHydroUnit);
+        return static_cast<int>(_selectedHydroUnit->landCovers.size());
     }
 
     /**
@@ -182,8 +182,8 @@ class SettingsBasin : public wxObject {
      * @return number of surface components.
      */
     int GetSurfaceComponentsNb() const {
-        wxASSERT(m_selectedHydroUnit);
-        return static_cast<int>(m_selectedHydroUnit->surfaceComponents.size());
+        wxASSERT(_selectedHydroUnit);
+        return static_cast<int>(_selectedHydroUnit->surfaceComponents.size());
     }
 
     /**
@@ -192,7 +192,7 @@ class SettingsBasin : public wxObject {
      * @return number of lateral connections.
      */
     int GetLateralConnectionsNb() const {
-        return static_cast<int>(m_lateralConnections.size());
+        return static_cast<int>(_lateralConnections.size());
     }
 
     /**
@@ -203,9 +203,9 @@ class SettingsBasin : public wxObject {
     double GetTotalArea() const;
 
   private:
-    vector<HydroUnitSettings> m_hydroUnits;
-    vector<LateralConnectionSettings> m_lateralConnections;
-    HydroUnitSettings* m_selectedHydroUnit;
+    vector<HydroUnitSettings> _hydroUnits;
+    vector<LateralConnectionSettings> _lateralConnections;
+    HydroUnitSettings* _selectedHydroUnit;
 };
 
 #endif  // HYDROBRICKS_SETTING_BASIN_H

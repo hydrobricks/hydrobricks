@@ -41,7 +41,7 @@ class Flux : public wxObject {
      * @param rate the change rate value pointer.
      */
     void LinkChangeRate(double* rate) {
-        m_changeRate = rate;
+        _changeRate = rate;
     }
 
     /**
@@ -50,7 +50,7 @@ class Flux : public wxObject {
      * @return the change rate value pointer.
      */
     double* GetChangeRatePointer() {
-        return m_changeRate;
+        return _changeRate;
     }
 
     /**
@@ -59,7 +59,7 @@ class Flux : public wxObject {
      * @return the amount of water outgoing the flux
      */
     double* GetAmountPointer() {
-        return &m_amount;
+        return &_amount;
     }
 
     /**
@@ -84,7 +84,7 @@ class Flux : public wxObject {
      * Set the flux as static.
      */
     void SetAsStatic() {
-        m_static = true;
+        _static = true;
     }
 
     /**
@@ -93,7 +93,7 @@ class Flux : public wxObject {
      * @return true if the flux is static.
      */
     bool IsStatic() {
-        return m_static;
+        return _static;
     }
 
     /**
@@ -102,7 +102,7 @@ class Flux : public wxObject {
      * @return true if the flux needs weighting.
      */
     bool NeedsWeighting() {
-        return m_needsWeighting;
+        return _needsWeighting;
     }
 
     /**
@@ -111,7 +111,7 @@ class Flux : public wxObject {
      * @param value true if the flux needs weighting.
      */
     void NeedsWeighting(bool value) {
-        m_needsWeighting = value;
+        _needsWeighting = value;
     }
 
     /**
@@ -120,7 +120,7 @@ class Flux : public wxObject {
      * @return the fraction of the unit area.
      */
     void SetFractionUnitArea(double value) {
-        m_fractionUnitArea = value;
+        _fractionUnitArea = value;
         UpdateFractionTotal();
     }
 
@@ -130,7 +130,7 @@ class Flux : public wxObject {
      * @param value the fraction of the land cover.
      */
     void SetFractionLandCover(double value) {
-        m_fractionLandCover = value;
+        _fractionLandCover = value;
         UpdateFractionTotal();
     }
 
@@ -138,7 +138,7 @@ class Flux : public wxObject {
      * Update the fraction total.
      */
     void UpdateFractionTotal() {
-        m_fractionTotal = m_fractionUnitArea * m_fractionLandCover;
+        _fractionTotal = _fractionUnitArea * _fractionLandCover;
     }
 
     /**
@@ -147,7 +147,7 @@ class Flux : public wxObject {
      * @return the flux type.
      */
     string GetType() {
-        return m_type;
+        return _type;
     }
 
     /**
@@ -156,19 +156,19 @@ class Flux : public wxObject {
      * @param type the flux type.
      */
     void SetType(const string& type) {
-        m_type = type;
+        _type = type;
     }
 
   protected:
-    double m_amount;
-    double* m_changeRate;
-    bool m_static;
-    bool m_needsWeighting;
-    double m_fractionUnitArea;
-    double m_fractionLandCover;
-    double m_fractionTotal;
-    Modifier* m_modifier;
-    string m_type;
+    double _amount;
+    double* _changeRate;
+    bool _static;
+    bool _needsWeighting;
+    double _fractionUnitArea;
+    double _fractionLandCover;
+    double _fractionTotal;
+    Modifier* _modifier;
+    string _type;
 };
 
 #endif  // HYDROBRICKS_FLUX_H

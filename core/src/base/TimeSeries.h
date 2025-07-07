@@ -88,11 +88,11 @@ class TimeSeries : public wxObject {
      * @return the variable type of the time series.
      */
     VariableType GetVariableType() {
-        return m_type;
+        return _type;
     }
 
   protected:
-    VariableType m_type;
+    VariableType _type;
 
   private:
     /**

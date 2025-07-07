@@ -31,11 +31,11 @@ class ProcessRunoffSocont : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float m_slope;           // []
-    float* m_beta;           // []
-    double* m_areaFraction;  // []
-    double m_areaUnit;       // [m^2]
-    double m_exponent;
+    float _slope;           // []
+    float* _beta;           // []
+    double* _areaFraction;  // []
+    double _areaUnit;       // [m^2]
+    double _exponent;
 
     /**
      * @copydoc Process::GetRates()

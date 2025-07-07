@@ -44,7 +44,7 @@ class ParametersUpdater : public wxObject {
      * @return previous date in MJD format.
      */
     double GetPreviousDate() {
-        return m_previousDate;
+        return _previousDate;
     }
 
   protected:
@@ -70,11 +70,11 @@ class ParametersUpdater : public wxObject {
     void ChangingDate(double date);
 
   private:
-    bool m_active;
-    double m_previousDate;
-    vector<ParameterVariableYearly*> m_parametersYearly;
-    vector<ParameterVariableMonthly*> m_parametersMonthly;
-    vector<ParameterVariableDates*> m_parametersDates;
+    bool _active;
+    double _previousDate;
+    vector<ParameterVariableYearly*> _parametersYearly;
+    vector<ParameterVariableMonthly*> _parametersMonthly;
+    vector<ParameterVariableDates*> _parametersDates;
 };
 
 #endif  // HYDROBRICKS_PARAMETERS_UPDATER_H

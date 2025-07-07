@@ -10,70 +10,70 @@
 
 class SnowIceModel : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
-    TimeSeriesUniform* m_tsTemp{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
 
     void SetUp() override {
-        m_model.SetSolver("heun_explicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model.SetLogAll(true);
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
 
         // Precipitation
-        m_model.GeneratePrecipitationSplitters(true);
+        _model.GeneratePrecipitationSplitters(true);
 
         // Add default ground land cover
-        m_model.AddLandCoverBrick("ground", "ground");
-        m_model.AddLandCoverBrick("glacier", "glacier");
+        _model.AddLandCoverBrick("ground", "ground");
+        _model.AddLandCoverBrick("glacier", "glacier");
 
         // Snowpacks
-        m_model.GenerateSnowpacks("melt:degree_day");
-        m_model.AddSnowIceTransformation();
-        m_model.SetParameterValue("glacier_snowpack", "snow_ice_transformation_rate", 0.002f);
-        m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.SelectProcess("melt");
-        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
-        m_model.SelectHydroUnitBrick("ground_snowpack");
-        m_model.SelectProcess("melt");
-        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.GenerateSnowpacks("melt:degree_day");
+        _model.AddSnowIceTransformation();
+        _model.SetParameterValue("glacier_snowpack", "snow_ice_transformation_rate", 0.002f);
+        _model.SelectHydroUnitBrick("glacier_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Ice melt
-        m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickProcess("melt", "melt:degree_day", "glacier:water");
-        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.SelectHydroUnitBrick("glacier");
+        _model.AddBrickProcess("melt", "melt:degree_day", "glacier:water");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Add process to direct meltwater to the outlet
-        m_model.SelectHydroUnitBrick("ground_snowpack");
-        m_model.AddBrickProcess("meltwater", "outflow:direct");
-        m_model.AddProcessOutput("outlet");
-        m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.AddBrickProcess("meltwater", "outflow:direct");
-        m_model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.AddBrickProcess("meltwater", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("glacier_snowpack");
+        _model.AddBrickProcess("meltwater", "outflow:direct");
+        _model.AddProcessOutput("outlet");
 
         // Add process to direct water to the outlet
-        m_model.SelectHydroUnitBrick("ground");
-        m_model.AddBrickProcess("outflow", "outflow:direct");
-        m_model.AddProcessOutput("outlet");
-        m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickProcess("outflow", "outflow:direct");
-        m_model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("ground");
+        _model.AddBrickProcess("outflow", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("glacier");
+        _model.AddBrickProcess("outflow", "outflow:direct");
+        _model.AddProcessOutput("outlet");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
 
         auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        m_tsTemp = new TimeSeriesUniform(Temperature);
-        m_tsTemp->SetData(temperature);
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
-        wxDELETE(m_tsTemp);
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
     }
 };
 
@@ -87,11 +87,11 @@ TEST_F(SnowIceModel, SnowIceTransformation) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content
@@ -145,11 +145,11 @@ TEST_F(SnowIceModel, SnowIceTransformationWithNullFraction) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content

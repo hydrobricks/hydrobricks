@@ -211,7 +211,7 @@ class HydroUnit : public wxObject {
      * @return The type of the hydro unit.
      */
     Types GetType() {
-        return m_type;
+        return _type;
     }
 
     /**
@@ -220,7 +220,7 @@ class HydroUnit : public wxObject {
      * @param id The ID to set.
      */
     void SetId(int id) {
-        m_id = id;
+        _id = id;
     }
 
     /**
@@ -229,7 +229,7 @@ class HydroUnit : public wxObject {
      * @return The area of the hydro unit in square meters.
      */
     double GetArea() const {
-        return m_area;
+        return _area;
     }
 
     /**
@@ -238,19 +238,19 @@ class HydroUnit : public wxObject {
      * @return The ID of the hydro unit.
      */
     int GetId() const {
-        return m_id;
+        return _id;
     }
 
   protected:
-    Types m_type;
-    int m_id;
-    double m_area;  // m2
-    vector<HydroUnitProperty*> m_properties;
-    vector<HydroUnitLateralConnection*> m_lateralConnections;
-    vector<Brick*> m_bricks;
-    vector<LandCover*> m_landCoverBricks;
-    vector<Splitter*> m_splitters;
-    vector<Forcing*> m_forcing;
+    Types _type;
+    int _id;
+    double _area;  // m2
+    vector<HydroUnitProperty*> _properties;
+    vector<HydroUnitLateralConnection*> _lateralConnections;
+    vector<Brick*> _bricks;
+    vector<LandCover*> _landCoverBricks;
+    vector<Splitter*> _splitters;
+    vector<Forcing*> _forcing;
 };
 
 #endif

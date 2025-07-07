@@ -8,40 +8,40 @@
 
 class ModelSocontBasic : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
-    TimeSeriesUniform* m_tsTemp{};
-    TimeSeriesUniform* m_tsPet{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
+    TimeSeriesUniform* _tsPet{};
 
     void SetUp() override {
-        m_model.SetLogAll();
-        m_model.SetSolver("heun_explicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model.SetLogAll(true);
+        _model.SetLogAll();
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
 
         vecStr landCoverTypes = {"ground", "glacier"};
         vecStr landCoverNames = {"ground", "glacier"};
-        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 2, "linear_storage");
+        GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
 
         auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        m_tsTemp = new TimeSeriesUniform(Temperature);
-        m_tsTemp->SetData(temperature);
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
 
         auto pet = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        m_tsPet = new TimeSeriesUniform(PET);
-        m_tsPet->SetData(pet);
+        _tsPet = new TimeSeriesUniform(PET);
+        _tsPet->SetData(pet);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
-        wxDELETE(m_tsTemp);
-        wxDELETE(m_tsPet);
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
+        wxDELETE(_tsPet);
     }
 };
 
@@ -56,7 +56,7 @@ TEST_F(ModelSocontBasic, ModelBuildsCorrectly) {
 
     ModelHydro model(&subBasin);
 
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 }
 
@@ -70,12 +70,12 @@ TEST_F(ModelSocontBasic, ModelRunsCorrectly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -90,17 +90,17 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithoutGlacierMelt) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.SelectHydroUnitBrick("glacier");
-    m_model.SelectProcess("melt");
-    m_model.SetProcessParameterValue("degree_day_factor", 0.0f);
+    _model.SelectHydroUnitBrick("glacier");
+    _model.SelectProcess("melt");
+    _model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -130,7 +130,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
     auto precipValues = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
@@ -139,8 +139,8 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
     tsPrecip->SetData(precipValues);
 
     ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -173,12 +173,12 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithHeunExplicit) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -208,13 +208,13 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithEulerExplicit) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    m_model.SetSolver("euler_explicit");
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    _model.SetSolver("euler_explicit");
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -244,13 +244,13 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithRungeKutta) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    m_model.SetSolver("runge_kutta");
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    _model.SetSolver("runge_kutta");
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -283,7 +283,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
     auto precipValues = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
@@ -292,8 +292,8 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
     tsPrecip->SetData(precipValues);
 
     ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -325,20 +325,20 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.SelectHydroUnitBrick("glacier");
-    m_model.SelectProcess("melt");
-    m_model.SetProcessParameterValue("degree_day_factor", 0.0f);
+    _model.SelectHydroUnitBrick("glacier");
+    _model.SelectProcess("melt");
+    _model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
-    m_model.SelectHydroUnitBrick("slow_reservoir");
-    m_model.SetBrickParameterValue("capacity", 0);
+    _model.SelectHydroUnitBrick("slow_reservoir");
+    _model.SetBrickParameterValue("capacity", 0);
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -370,17 +370,17 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMelt) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.SelectHydroUnitBrick("glacier");
-    m_model.SelectProcess("melt");
-    m_model.SetProcessParameterValue("degree_day_factor", 0.0f);
+    _model.SelectHydroUnitBrick("glacier");
+    _model.SelectProcess("melt");
+    _model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -413,12 +413,12 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnits) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -457,12 +457,12 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -531,40 +531,40 @@ TEST(ModelSocont, WaterBalanceCloses) {
 
 class ModelSocontSingleLandCover : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
-    TimeSeriesUniform* m_tsTemp{};
-    TimeSeriesUniform* m_tsPet{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
+    TimeSeriesUniform* _tsPet{};
 
     void SetUp() override {
-        m_model.SetLogAll();
-        m_model.SetSolver("runge_kutta");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model.SetLogAll(true);
+        _model.SetLogAll();
+        _model.SetSolver("runge_kutta");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
 
         vecStr landCoverTypes = {"ground"};
         vecStr landCoverNames = {"ground"};
-        GenerateStructureSocont(m_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
+        GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 13.8, 59.3, 34.2, 13.7, 26.1, 9.8, 0.0, 0.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
 
         auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
-        m_tsTemp = new TimeSeriesUniform(Temperature);
-        m_tsTemp->SetData(temperature);
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
 
         auto pet = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        m_tsPet = new TimeSeriesUniform(PET);
-        m_tsPet->SetData(pet);
+        _tsPet = new TimeSeriesUniform(PET);
+        _tsPet->SetData(pet);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
-        wxDELETE(m_tsTemp);
-        wxDELETE(m_tsPet);
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
+        wxDELETE(_tsPet);
     }
 };
 
@@ -577,16 +577,16 @@ TEST_F(ModelSocontSingleLandCover, QuickDischargeIsCorrect) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.SetParameterValue("surface_runoff", "beta", 301);
-    m_model.SetParameterValue("slow_reservoir", "capacity", 0);
+    _model.SetParameterValue("surface_runoff", "beta", 301);
+    _model.SetParameterValue("slow_reservoir", "capacity", 0);
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

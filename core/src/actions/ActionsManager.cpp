@@ -5,16 +5,16 @@
 #include "Utils.h"
 
 ActionsManager::ActionsManager()
-    : m_model(nullptr),
-      m_cursorManager(0) {}
+    : _model(nullptr),
+      _cursorManager(0) {}
 
 void ActionsManager::SetModel(ModelHydro* model) {
-    m_model = model;
+    _model = model;
 }
 
 void ActionsManager::Reset() {
-    m_cursorManager = 0;
-    for (auto action : m_actions) {
+    _cursorManager = 0;
+    for (auto action : _actions) {
         action->Reset();
     }
 }
@@ -27,30 +27,30 @@ bool ActionsManager::AddAction(Action* action) {
         return false;
     }
 
-    int actionIndex = static_cast<int>(m_actions.size());
-    m_actions.push_back(action);
+    int actionIndex = static_cast<int>(_actions.size());
+    _actions.push_back(action);
 
     if (action->IsRecursive()) {
-        m_recursiveActionIndices.push_back(actionIndex);
+        _recursiveActionIndices.push_back(actionIndex);
     } else {
         int index = 0;
         for (auto date : action->GetSporadicDates()) {
             // Reset the index if needed.
-            if (!m_sporadicActionDates.empty() && m_sporadicActionDates[index] > date) {
+            if (!_sporadicActionDates.empty() && _sporadicActionDates[index] > date) {
                 index = 0;
             }
 
             // Find index to insert the date accordingly.
-            for (int i = index; i < m_sporadicActionDates.size(); ++i) {
-                if (date <= m_sporadicActionDates[i]) {
+            for (int i = index; i < _sporadicActionDates.size(); ++i) {
+                if (date <= _sporadicActionDates[i]) {
                     break;
                 }
                 index++;
             }
 
             // Insert date and action.
-            m_sporadicActionDates.insert(m_sporadicActionDates.begin() + index, date);
-            m_sporadicActionIndices.insert(m_sporadicActionIndices.begin() + index, actionIndex);
+            _sporadicActionDates.insert(_sporadicActionDates.begin() + index, date);
+            _sporadicActionIndices.insert(_sporadicActionIndices.begin() + index, actionIndex);
         }
     }
 
@@ -58,12 +58,12 @@ bool ActionsManager::AddAction(Action* action) {
 }
 
 int ActionsManager::GetActionsNb() {
-    return static_cast<int>(m_actions.size());
+    return static_cast<int>(_actions.size());
 }
 
 int ActionsManager::GetSporadicActionItemsNb() {
     int items = 0;
-    for (auto action : m_actions) {
+    for (auto action : _actions) {
         items += action->GetSporadicItemsNb();
     }
 
@@ -72,30 +72,30 @@ int ActionsManager::GetSporadicActionItemsNb() {
 
 void ActionsManager::DateUpdate(double date) {
     // Recursive actions
-    if (!m_recursiveActionIndices.empty()) {
+    if (!_recursiveActionIndices.empty()) {
         Time dateStruct = GetTimeStructFromMJD(date);
-        for (int actionIndex : m_recursiveActionIndices) {
-            if (!m_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
+        for (int actionIndex : _recursiveActionIndices) {
+            if (!_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
                 throw InvalidArgument(_("Application of a recursive action failed."));
             }
         }
     }
 
-    if (m_sporadicActionDates.empty()) {
+    if (_sporadicActionDates.empty()) {
         return;
     }
 
     // Sporadic actions
-    wxASSERT(m_sporadicActionDates.size() == m_sporadicActionIndices.size());
-    while (m_sporadicActionDates.size() > m_cursorManager && m_sporadicActionDates[m_cursorManager] <= date) {
-        if (!m_actions[m_sporadicActionIndices[m_cursorManager]]->Apply(date)) {
+    wxASSERT(_sporadicActionDates.size() == _sporadicActionIndices.size());
+    while (_sporadicActionDates.size() > _cursorManager && _sporadicActionDates[_cursorManager] <= date) {
+        if (!_actions[_sporadicActionIndices[_cursorManager]]->Apply(date)) {
             throw InvalidArgument(_("Application of a sporadic action failed."));
         }
-        m_actions[m_sporadicActionIndices[m_cursorManager]]->IncrementCursor();
-        m_cursorManager++;
+        _actions[_sporadicActionIndices[_cursorManager]]->IncrementCursor();
+        _cursorManager++;
     }
 }
 
 HydroUnit* ActionsManager::GetHydroUnitById(int id) {
-    return m_model->GetSubBasin()->GetHydroUnitById(id);
+    return _model->GetSubBasin()->GetHydroUnitById(id);
 }

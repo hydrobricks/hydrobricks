@@ -26,7 +26,7 @@ class FluxToBrick : public Flux {
     void UpdateFlux(double amount) override;
 
   protected:
-    Brick* m_toBrick;
+    Brick* _toBrick;
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_H

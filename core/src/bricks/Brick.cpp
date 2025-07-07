@@ -9,13 +9,13 @@
 #include "Vegetation.h"
 
 Brick::Brick()
-    : m_needsSolver(true),
-      m_water(nullptr) {
-    m_water = new WaterContainer(this);
+    : _needsSolver(true),
+      _water(nullptr) {
+    _water = new WaterContainer(this);
 }
 
 Brick::~Brick() {
-    wxDELETE(m_water);
+    wxDELETE(_water);
 }
 
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
@@ -39,32 +39,32 @@ Brick* Brick::Factory(const BrickSettings& brickSettings) {
 }
 
 void Brick::Reset() {
-    m_water->Reset();
-    for (auto process : m_processes) {
+    _water->Reset();
+    for (auto process : _processes) {
         process->Reset();
     }
 }
 
 void Brick::SaveAsInitialState() {
-    m_water->SaveAsInitialState();
+    _water->SaveAsInitialState();
 }
 
 bool Brick::IsOk() {
-    if (m_processes.empty()) {
-        wxLogError(_("The brick %s has no process attached"), m_name);
+    if (_processes.empty()) {
+        wxLogError(_("The brick %s has no process attached"), _name);
         return false;
     }
-    for (auto process : m_processes) {
+    for (auto process : _processes) {
         if (!process->IsOk()) {
             return false;
         }
     }
-    return m_water->IsOk();
+    return _water->IsOk();
 }
 
 void Brick::SetParameters(const BrickSettings& brickSettings) {
     if (HasParameter(brickSettings, "capacity")) {
-        m_water->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
+        _water->SetMaximumCapacity(GetParameterValuePointer(brickSettings, "capacity"));
     }
 }
 
@@ -73,7 +73,7 @@ void Brick::AttachFluxIn(Flux* flux) {
     if (flux->GetType() != "water") {
         throw InvalidArgument(wxString::Format(_("The flux type '%s' should be water."), flux->GetType()));
     }
-    m_water->AttachFluxIn(flux);
+    _water->AttachFluxIn(flux);
 }
 
 bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
@@ -99,19 +99,19 @@ float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const
 }
 
 Process* Brick::GetProcess(int index) {
-    wxASSERT(m_processes.size() > index);
-    wxASSERT(m_processes[index]);
+    wxASSERT(_processes.size() > index);
+    wxASSERT(_processes[index]);
 
-    return m_processes[index];
+    return _processes[index];
 }
 
 void Brick::Finalize() {
-    m_water->Finalize();
+    _water->Finalize();
 }
 
 void Brick::SetInitialState(double value, const string& type) {
     if (type == "water") {
-        m_water->SetInitialState(value);
+        _water->SetInitialState(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
     }
@@ -119,7 +119,7 @@ void Brick::SetInitialState(double value, const string& type) {
 
 double Brick::GetContent(const string& type) {
     if (type == "water") {
-        return m_water->GetContentWithoutChanges();
+        return _water->GetContentWithoutChanges();
     }
 
     throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
@@ -127,31 +127,31 @@ double Brick::GetContent(const string& type) {
 
 void Brick::UpdateContent(double value, const string& type) {
     if (type == "water") {
-        m_water->UpdateContent(value);
+        _water->UpdateContent(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
     }
 }
 
 void Brick::UpdateContentFromInputs() {
-    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
+    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
 }
 
 void Brick::ApplyConstraints(double timeStep) {
-    m_water->ApplyConstraints(timeStep);
+    _water->ApplyConstraints(timeStep);
 }
 
 WaterContainer* Brick::GetWaterContainer() {
-    return m_water;
+    return _water;
 }
 
 vecDoublePt Brick::GetDynamicContentChanges() {
-    return m_water->GetDynamicContentChanges();
+    return _water->GetDynamicContentChanges();
 }
 
 vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     vecDoublePt values;
-    for (auto const& process : m_processes) {
+    for (auto const& process : _processes) {
         vecDoublePt processValues = process->GetStateVariables();
 
         if (processValues.empty()) {
@@ -168,7 +168,7 @@ vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
 int Brick::GetProcessesConnectionsNb() {
     int counter = 0;
 
-    for (auto const& process : m_processes) {
+    for (auto const& process : _processes) {
         counter += process->GetConnectionsNb();
     }
 
@@ -176,8 +176,8 @@ int Brick::GetProcessesConnectionsNb() {
 }
 
 double* Brick::GetBaseValuePointer(const string& name) {
-    if ((name == "water" || name == "water_content") && m_water) {
-        return m_water->GetContentPointer();
+    if ((name == "water" || name == "water_content") && _water) {
+        return _water->GetContentPointer();
     }
 
     return nullptr;

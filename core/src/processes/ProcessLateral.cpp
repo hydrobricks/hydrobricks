@@ -7,7 +7,7 @@ ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
 
 bool ProcessLateral::IsOk() {
-    if (m_outputs.size() == 0) {
+    if (_outputs.size() == 0) {
         wxLogError(_("Lateral processes need at least 1 connection."));
         return false;
     }
@@ -16,18 +16,18 @@ bool ProcessLateral::IsOk() {
 }
 
 int ProcessLateral::GetConnectionsNb() {
-    return m_outputs.size();
+    return _outputs.size();
 }
 
 double* ProcessLateral::GetValuePointer(const string& name) {
     // Parse the name to get the connection index (output_i).
     if (name.substr(0, 7) == "output_") {
         int index = std::stoi(name.substr(7));
-        if (index < 0 || index >= static_cast<int>(m_outputs.size())) {
+        if (index < 0 || index >= static_cast<int>(_outputs.size())) {
             wxLogError(_("Invalid output index: %d"), index);
             return nullptr;
         }
-        return m_outputs[index]->GetAmountPointer();
+        return _outputs[index]->GetAmountPointer();
     }
 
     return nullptr;

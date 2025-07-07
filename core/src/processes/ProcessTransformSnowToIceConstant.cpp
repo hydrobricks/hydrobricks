@@ -4,7 +4,7 @@
 
 ProcessTransformSnowToIceConstant::ProcessTransformSnowToIceConstant(WaterContainer* container)
     : ProcessTransform(container),
-      m_rate(nullptr) {}
+      _rate(nullptr) {}
 
 void ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("snow_ice_transformation_rate", 0.002f);
@@ -13,12 +13,12 @@ void ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(Sett
 void ProcessTransformSnowToIceConstant::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     if (HasParameter(processSettings, "snow_ice_transformation_rate")) {
-        m_rate = GetParameterValuePointer(processSettings, "snow_ice_transformation_rate");
+        _rate = GetParameterValuePointer(processSettings, "snow_ice_transformation_rate");
     } else {
-        m_rate = GetParameterValuePointer(processSettings, "rate");
+        _rate = GetParameterValuePointer(processSettings, "rate");
     }
 }
 
 vecDouble ProcessTransformSnowToIceConstant::GetRates() {
-    return {*m_rate};
+    return {*_rate};
 }

@@ -39,6 +39,18 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
         unit->SetProperties(unitSettings);
         AddHydroUnit(unit);
     }
+
+    // Create the lateral connections
+    for (auto connection : basinSettings.GetLateralConnections()) {
+        HydroUnit* giver = GetHydroUnitById(connection.giverHydroUnitId);
+        HydroUnit* receiver = GetHydroUnitById(connection.receiverHydroUnitId);
+
+        if (giver && receiver) {
+            giver->AddLateralConnection(receiver, connection.fraction, connection.type);
+        } else {
+            wxLogError(_("Invalid hydro unit IDs in lateral connection settings."));
+        }
+    }
 }
 
 bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {

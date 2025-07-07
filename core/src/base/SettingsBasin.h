@@ -90,8 +90,9 @@ class SettingsBasin : public wxObject {
      *
      * @param giverHydroUnitId ID of the hydro unit giving the connection.
      * @param receiverHydroUnitId ID of the hydro unit receiving the connection.
-     * @param fraction fraction of the connection.
-     * @param type type of the lateral connection.
+     * @param fraction The fraction of the flow that is transferred.
+     * @param type The type of the lateral connection (optional). It is unused in the current implementation, but can be
+     * used for future extensions (for example, to differentiate between snow and groundwater).
      */
     void AddLateralConnection(int giverHydroUnitId, int receiverHydroUnitId, double fraction, const string& type = "");
 

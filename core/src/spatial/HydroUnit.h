@@ -4,6 +4,7 @@
 #include "Brick.h"
 #include "Forcing.h"
 #include "HydroUnitProperty.h"
+#include "HydroUnitLateralConnection.h"
 #include "Includes.h"
 #include "LandCover.h"
 #include "Splitter.h"
@@ -100,6 +101,16 @@ class HydroUnit : public wxObject {
      * @return The forcing of the specified type.
      */
     Forcing* GetForcing(VariableType type);
+
+    /**
+     * Add a lateral connection to the hydro unit.
+     *
+     * @param receiver The hydro unit that receives the lateral connection.
+     * @param fraction The fraction of the flow that is transferred.
+     * @param type The type of the lateral connection (optional). It is unused in the current implementation, but can be
+     * used for future extensions (for example, to differentiate between snow and groundwater).
+     */
+    void AddLateralConnection(HydroUnit* receiver, double fraction, const string& type = "");
 
     /**
      * Get the number of bricks in the hydro unit.
@@ -235,6 +246,7 @@ class HydroUnit : public wxObject {
     int m_id;
     double m_area;  // m2
     vector<HydroUnitProperty*> m_properties;
+    vector<HydroUnitLateralConnection*> m_lateralConnections;
     vector<Brick*> m_bricks;
     vector<LandCover*> m_landCoverBricks;
     vector<Splitter*> m_splitters;

@@ -105,6 +105,15 @@ Forcing* HydroUnit::GetForcing(VariableType type) {
     return nullptr;
 }
 
+void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const string& type) {
+    wxASSERT(receiver);
+    if (fraction <= 0 || fraction > 1) {
+        throw ConceptionIssue(wxString::Format(_("The fraction (%f) is not in the range ]0 .. 1]"), fraction));
+    }
+
+    m_lateralConnections.push_back(new HydroUnitLateralConnection(receiver, fraction, type));
+}
+
 int HydroUnit::GetBricksCount() {
     return int(m_bricks.size());
 }

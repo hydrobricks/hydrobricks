@@ -340,6 +340,10 @@ class Catchment:
 
         self.area = sum(res_area)
 
+        # Sort the hydro units by descending elevation
+        self.hydro_units.hydro_units.sort_values(
+            by=('elevation', 'm'), ascending=False, inplace=True)
+
         return self.hydro_units
 
     def save_hydro_units_to_csv(self, path: str | Path):

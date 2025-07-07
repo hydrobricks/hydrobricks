@@ -164,7 +164,7 @@ def test_apply_spatialization_from_station_data_temperature(
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape == (len(forcing.data1D.time),
                                             len(forcing.hydro_units))
-    diff_50m = forcing.data2D.data[0][0, 0] - forcing.data2D.data[0][0, 1]
+    diff_50m = forcing.data2D.data[0][0, 1] - forcing.data2D.data[0][0, 0]
     assert diff_50m == pytest.approx(0.6/2)
 
 

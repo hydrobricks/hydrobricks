@@ -27,7 +27,8 @@ class SnowIceModel : public ::testing::Test {
         m_model.AddLandCoverBrick("glacier", "glacier");
 
         // Snowpacks
-        m_model.GenerateSnowpacks("melt:degree_day", true);
+        m_model.GenerateSnowpacks("melt:degree_day");
+        m_model.AddSnowIceTransformation();
         m_model.SetParameterValue("glacier_snowpack", "snow_ice_transformation_rate", 0.002f);
         m_model.SelectHydroUnitBrick("glacier_snowpack");
         m_model.SelectProcess("melt");

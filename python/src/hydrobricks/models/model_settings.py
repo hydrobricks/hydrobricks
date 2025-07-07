@@ -112,18 +112,9 @@ class ModelSettings:
 
         # Snowpack
         if with_snow:
-            self.settings.generate_snowpacks(snow_melt_process, snow_ice_transformation)
-
-    def generate_snowpacks(self, snow_melt_process: str):
-        """
-        Generate snowpacks
-
-        Parameters
-        ----------
-        snow_melt_process
-            Snow melt process
-        """
-        self.settings.generate_snowpacks(snow_melt_process)
+            self.settings.generate_snowpacks(snow_melt_process)
+            if snow_ice_transformation:
+                self.settings.add_snow_ice_transformation()
 
     def add_land_cover_brick(self, name: str, kind: str):
         """

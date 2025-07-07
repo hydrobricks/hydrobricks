@@ -469,6 +469,20 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess, bool snowIc
     }
 }
 
+void SettingsModel::AddSnowIceTransformation() {
+    wxASSERT(m_selectedStructure);
+
+    for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
+        BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
+
+        if (brickSettings.type == "glacier") {
+            AddBrickProcess("snow_ice_transfo", "transform:snow_ice", brickSettings.name + ":ice");
+            SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
+        }
+    }
+}
+
 void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess) {
     wxASSERT(m_selectedStructure);
 

@@ -323,6 +323,12 @@ class SettingsModel : public wxObject {
     void GenerateSnowpacks(const string& snowMeltProcess, bool snowIceTransformation = false);
 
     /**
+     * Add a snow-ice transformation process to the model.
+     * This is used for glacier bricks to transform snow into ice.
+     */
+    void AddSnowIceTransformation();
+
+    /**
      * Generate snowpacks with water retention.
      *
      * @param snowMeltProcess name of the snow melt process.

@@ -53,8 +53,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "component"_a, "name"_a, "value"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true)
-        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a,
-             "snow_ice_transformation"_a = false)
+        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
+        .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
+             "Add the snow-ice transformation process.")
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,

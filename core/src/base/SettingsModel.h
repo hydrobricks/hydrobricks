@@ -324,8 +324,19 @@ class SettingsModel : public wxObject {
     /**
      * Add a snow-ice transformation process to the model.
      * This is used for glacier bricks to transform snow into ice.
+     *
+     * @param transformationProcess name of the transformation process.
      */
-    void AddSnowIceTransformation();
+    void AddSnowIceTransformation(const string& transformationProcess = "transform:snow_ice_constant");
+
+    /**
+     * Add a snow redistribution process to the model.
+     *
+     * @param redistributionProcess name of the redistribution process.
+     * @param skipGlaciers if true, do not redistribute snow for snowpacks on glaciers.
+     */
+    void AddSnowRedistribution(const string& redistributionProcess = "redistribute:snow_slide",
+                               bool skipGlaciers = false);
 
     /**
      * Generate snowpacks with water retention.

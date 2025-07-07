@@ -464,7 +464,7 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     }
 }
 
-void SettingsModel::AddSnowIceTransformation() {
+void SettingsModel::AddSnowIceTransformation(const string& transformationProcess) {
     wxASSERT(m_selectedStructure);
 
     for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
@@ -472,9 +472,23 @@ void SettingsModel::AddSnowIceTransformation() {
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
 
         if (brickSettings.type == "glacier") {
-            AddBrickProcess("snow_ice_transfo", "transform:snow_ice_constant", brickSettings.name + ":ice");
+            AddBrickProcess("snow_ice_transfo", transformationProcess, brickSettings.name + ":ice");
             SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
         }
+    }
+}
+
+void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, bool skipGlaciers) {
+    wxASSERT(m_selectedStructure);
+
+    for (int brickSettingsIndex : m_selectedStructure->landCoverBricks) {
+        BrickSettings brickSettings = m_selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        if (skipGlaciers && brickSettings.type == "glacier") {
+            continue; // Skip glaciers for redistribution
+        }
+        SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
+        AddBrickProcess("redistribute", redistributionProcess, "lateral:snow");
+        SetProcessParameterValue("redistribution_rate", 0.1f);
     }
 }
 

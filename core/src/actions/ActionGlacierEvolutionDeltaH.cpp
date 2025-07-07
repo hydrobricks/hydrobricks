@@ -17,7 +17,7 @@ void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& land
     _tableVolume = volumes;
 
     double initialVolume = _tableVolume.row(0).sum();
-    _initialGlacierWE = initialVolume * g_iceDensity;  // Convert to mm w.e.
+    _initialGlacierWE = initialVolume * constants::iceDensity;  // Convert to mm w.e.
 }
 
 bool ActionGlacierEvolutionDeltaH::Init() {
@@ -49,7 +49,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
             wxLogError(_("The land cover %s was not found in hydro unit %d"), _landCoverName, id);
             return false;
         }
-        double iceWE = _tableVolume(0, i) * g_iceDensity / areaRef;
+        double iceWE = _tableVolume(0, i) * constants::iceDensity / areaRef;
         brick->UpdateContent(iceWE, "ice");
         brick->SetInitialState(iceWE, "ice");
     }

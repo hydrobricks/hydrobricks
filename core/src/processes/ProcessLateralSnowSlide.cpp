@@ -1,13 +1,12 @@
-#include "ProcessSnowSlide.h"
-
 #include "Brick.h"
+#include "ProcessLateralSnowSlide.h"
 #include "WaterContainer.h"
 
-ProcessSnowSlide::ProcessSnowSlide(WaterContainer* container)
-    : Process(container) {}
+ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
+    : ProcessLateral(container) {}
 
-bool ProcessSnowSlide::IsOk() {
-    if (m_outputs.empty()) {
+bool ProcessLateralSnowSlide::IsOk() {
+    if (_outputs.empty()) {
         wxLogError(_("A SnowSlide process must have at least 1 output."));
         return false;
     }

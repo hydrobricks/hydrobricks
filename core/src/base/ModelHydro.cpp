@@ -38,7 +38,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         BuildModelStructure(modelSettings);
 
         _timer.Initialize(modelSettings.GetTimerSettings());
-        g_timeStepInDays = *_timer.GetTimeStepPointer();
+        config::timeStepInDays = *_timer.GetTimeStepPointer();
         _processor.Initialize(modelSettings.GetSolverSettings());
         if (modelSettings.LogAll()) {
             _logger.RecordFractions();

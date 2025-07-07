@@ -154,11 +154,11 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        process->GetWaterContainer()->ApplyConstraints(g_timeStepInDays);
+        process->GetWaterContainer()->ApplyConstraints(config::timeStepInDays);
 
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {
-            process->ApplyChange(i, _changeRatesNoSolver(iRate), g_timeStepInDays);
+            process->ApplyChange(i, _changeRatesNoSolver(iRate), config::timeStepInDays);
             _changeRatesNoSolver(iRate) = 0;
             iRate++;
             ptIndex++;

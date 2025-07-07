@@ -445,7 +445,7 @@ class Model(ABC):
             with_snow = True
             snow_melt_process = self.options['snow_melt_process']
         if 'snow_ice_transformation' in self.options:
-            snow_ice_transformation = True
+            snow_ice_transformation = self.options['snow_ice_transformation']
         self.settings.generate_base_structure(
             self.land_cover_names, self.land_cover_types, with_snow=with_snow,
             snow_melt_process=snow_melt_process,

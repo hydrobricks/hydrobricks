@@ -318,9 +318,8 @@ class SettingsModel : public wxObject {
      * Generate snowpacks.
      *
      * @param snowMeltProcess name of the snow melt process.
-     * @param snowIceTransformation true if snow-ice transformation is included, false otherwise.
      */
-    void GenerateSnowpacks(const string& snowMeltProcess, bool snowIceTransformation = false);
+    void GenerateSnowpacks(const string& snowMeltProcess);
 
     /**
      * Add a snow-ice transformation process to the model.

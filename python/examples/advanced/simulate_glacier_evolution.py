@@ -55,11 +55,15 @@ changes.load_from(glacier_evolution, land_cover='glacier',
                   update_month='October')
 
 # Model structure with specific options
-socont = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage",
-                       record_all=True, snow_ice_transformation=True,
-                       glacier_infinite_storage=0,
-                       land_cover_types=['ground', 'glacier'],
-                       land_cover_names=['ground', 'glacier'])
+socont = models.Socont(
+    soil_storage_nb=2,
+    surface_runoff="linear_storage",
+    record_all=True,
+    glacier_infinite_storage=0,
+    snow_ice_transformation="transform:snow_ice_constant",
+    land_cover_types=['ground', 'glacier'],
+    land_cover_names=['ground', 'glacier']
+)
 
 # Parameters
 parameters = socont.generate_parameters()

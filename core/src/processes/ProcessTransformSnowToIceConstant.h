@@ -1,15 +1,15 @@
-#ifndef HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H
-#define HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H
+#ifndef HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICECONSTANT_H
+#define HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICECONSTANT_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "ProcessTransform.h"
 
-class ProcessTransformSnowToIce : public ProcessTransform {
+class ProcessTransformSnowToIceConstant : public ProcessTransform {
   public:
-    explicit ProcessTransformSnowToIce(WaterContainer* container);
+    explicit ProcessTransformSnowToIceConstant(WaterContainer* container);
 
-    ~ProcessTransformSnowToIce() override = default;
+    ~ProcessTransformSnowToIceConstant() override = default;
 
     /**
      * Register the process parameters and forcing in the settings model.
@@ -32,4 +32,4 @@ class ProcessTransformSnowToIce : public ProcessTransform {
     vecDouble GetRates() override;
 };
 
-#endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICE_H
+#endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICECONSTANT_H

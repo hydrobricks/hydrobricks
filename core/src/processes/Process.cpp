@@ -14,7 +14,7 @@
 #include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
 #include "ProcessRunoffSocont.h"
-#include "ProcessTransformSnowToIce.h"
+#include "ProcessTransformSnowToIceConstant.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
@@ -39,10 +39,10 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "outflow:overflow" || processType == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     }
-    if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
+    if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessTransformSnowToIce(snowBrick->GetSnowContainer());
+            return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
         }
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
@@ -107,8 +107,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "outflow:overflow" || processType == "overflow") {
         ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
-        ProcessTransformSnowToIce::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
+        ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {
         ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "infiltration:socont") {

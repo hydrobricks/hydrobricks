@@ -60,7 +60,7 @@ void TimeMachine::IncrementTime() {
 
 int TimeMachine::GetTimeStepsNb() {
     wxASSERT(m_timeStepInDays > 0);
-    return int(1 + (m_end - m_start) / m_timeStepInDays);
+    return static_cast<int>(1 + (m_end - m_start) / m_timeStepInDays);
 }
 
 void TimeMachine::UpdateTimeStepInDays() {

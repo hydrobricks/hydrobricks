@@ -137,7 +137,7 @@ void SubBasin::AddHydroUnit(HydroUnit* unit) {
 }
 
 int SubBasin::GetHydroUnitsNb() {
-    return int(m_hydroUnits.size());
+    return static_cast<int>(m_hydroUnits.size());
 }
 
 HydroUnit* SubBasin::GetHydroUnit(int index) {
@@ -178,11 +178,11 @@ vecDouble SubBasin::GetHydroUnitAreas() {
 }
 
 int SubBasin::GetBricksCount() {
-    return int(m_bricks.size());
+    return static_cast<int>(m_bricks.size());
 }
 
 int SubBasin::GetSplittersCount() {
-    return int(m_splitters.size());
+    return static_cast<int>(m_splitters.size());
 }
 
 Brick* SubBasin::GetBrick(int index) {

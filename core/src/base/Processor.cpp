@@ -84,7 +84,7 @@ void Processor::StoreStateVariableChanges(vecDoublePt& values) {
 }
 
 int Processor::GetNbStateVariables() {
-    return int(m_stateVariableChanges.size());
+    return static_cast<int>(m_stateVariableChanges.size());
 }
 
 bool Processor::ProcessTimeStep() {

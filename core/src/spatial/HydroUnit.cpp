@@ -115,11 +115,11 @@ void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const
 }
 
 int HydroUnit::GetBricksCount() {
-    return int(m_bricks.size());
+    return static_cast<int>(m_bricks.size());
 }
 
 int HydroUnit::GetSplittersCount() {
-    return int(m_splitters.size());
+    return static_cast<int>(m_splitters.size());
 }
 
 Brick* HydroUnit::GetBrick(int index) {

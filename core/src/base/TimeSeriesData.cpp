@@ -36,7 +36,7 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeS
       m_timeStepUnit(timeStepUnit) {}
 
 bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
-    double calcEnd = IncrementDateBy(m_start, m_timeStep * int(values.size() - 1), m_timeStepUnit);
+    double calcEnd = IncrementDateBy(m_start, m_timeStep * static_cast<int>(values.size() - 1), m_timeStepUnit);
     if (calcEnd != m_end) {
         wxLogError(_("The size of the time series data does not match the time properties."));
         wxLogError(_("End of the data (%d) != end of the dates (%d)."), calcEnd, m_end);
@@ -78,13 +78,13 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 
     switch (m_timeStepUnit) {
         case Day:
-            m_cursor = int(dt);
+            m_cursor = static_cast<int>(dt);
             break;
         case Hour:
-            m_cursor = int(dt) * 24;
+            m_cursor = static_cast<int>(dt) * 24;
             break;
         case Minute:
-            m_cursor = int(dt) * 1440;
+            m_cursor = static_cast<int>(dt) * 1440;
             break;
         default:
             throw NotImplemented();

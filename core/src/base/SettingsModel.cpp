@@ -473,7 +473,6 @@ void SettingsModel::AddSnowIceTransformation(const string& transformationProcess
 
         if (brickSettings.type == "glacier") {
             AddBrickProcess("snow_ice_transfo", transformationProcess, brickSettings.name + ":ice");
-            SetProcessParameterValue("snow_ice_transformation_rate", 0.002f);
         }
     }
 }
@@ -487,8 +486,7 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
             continue; // Skip glaciers for redistribution
         }
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
-        AddBrickProcess("redistribute", redistributionProcess, "lateral:snow");
-        SetProcessParameterValue("redistribution_rate", 0.1f);
+        AddBrickProcess("snow_redistribution", redistributionProcess, "lateral:snow");
     }
 }
 

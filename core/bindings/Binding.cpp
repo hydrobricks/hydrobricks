@@ -57,7 +57,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_constant")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution,
-             "Add the snow redistribution process.", "redistribution_process"_a = "redistribute:snow_slide")
+             "Add the snow redistribution process.", "redistribution_process"_a = "transport:snow_slide")
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,

@@ -5,6 +5,7 @@
 #include "HydroUnit.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
 #include "ProcessMeltTemperatureIndex.h"
@@ -109,6 +110,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
         ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transport:snow_slide") {
+        ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {
         ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "infiltration:socont") {

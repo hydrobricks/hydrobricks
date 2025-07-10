@@ -2,15 +2,15 @@
 
 TimeSeriesUniform::TimeSeriesUniform(VariableType type)
     : TimeSeries(type),
-      m_data(nullptr) {}
+      _data(nullptr) {}
 
 TimeSeriesUniform::~TimeSeriesUniform() {
-    wxDELETE(m_data);
+    wxDELETE(_data);
 }
 
 bool TimeSeriesUniform::SetCursorToDate(double date) {
-    wxASSERT(m_data);
-    if (!m_data->SetCursorToDate(date)) {
+    wxASSERT(_data);
+    if (!_data->SetCursorToDate(date)) {
         return false;
     }
 
@@ -18,8 +18,8 @@ bool TimeSeriesUniform::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesUniform::AdvanceOneTimeStep() {
-    wxASSERT(m_data);
-    if (!m_data->AdvanceOneTimeStep()) {
+    wxASSERT(_data);
+    if (!_data->AdvanceOneTimeStep()) {
         return false;
     }
 
@@ -27,13 +27,13 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
 }
 
 double TimeSeriesUniform::GetStart() {
-    wxASSERT(m_data);
-    return m_data->GetStart();
+    wxASSERT(_data);
+    return _data->GetStart();
 }
 
 double TimeSeriesUniform::GetEnd() {
-    wxASSERT(m_data);
-    return m_data->GetEnd();
+    wxASSERT(_data);
+    return _data->GetEnd();
 }
 
 double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
@@ -41,6 +41,6 @@ double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
 }
 
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
-    wxASSERT(m_data);
-    return m_data;
+    wxASSERT(_data);
+    return _data;
 }

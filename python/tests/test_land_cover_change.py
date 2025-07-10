@@ -18,7 +18,8 @@ TEST_FILES_DIR = Path(
 def hydro_units():
     hydro_units = hb.HydroUnits(
         land_cover_types=['ground', 'glacier', 'glacier'],
-        land_cover_names=['ground', 'glacier_ice', 'glacier_debris'])
+        land_cover_names=['ground', 'glacier_ice', 'glacier_debris']
+    )
     return hydro_units
 
 
@@ -27,9 +28,12 @@ def hydro_units_csv(hydro_units: hb.HydroUnits):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
         column_elevation='Elevation Bands',
-        columns_areas={'ground': 'Sum_Area Non Glacier Band',
-                       'glacier_ice': 'Sum_Area ICE Band',
-                       'glacier_debris': 'Sum_Area Debris Band'})
+        columns_areas={
+            'ground': 'Sum_Area Non Glacier Band',
+            'glacier_ice': 'Sum_Area ICE Band',
+            'glacier_debris': 'Sum_Area Debris Band'
+        }
+    )
     return hydro_units
 
 
@@ -38,10 +42,15 @@ def catchment_gletsch():
     catchment = hb.Catchment(
         TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'outline.shp',
         land_cover_types=['ground', 'glacier'],
-        land_cover_names=['ground', 'glacier'])
+        land_cover_names=['ground', 'glacier']
+    )
     catchment.extract_dem(
-        TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'dem.tif')
-    catchment.create_elevation_bands(method='equal_intervals', distance=50)
+        TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'dem.tif'
+    )
+    catchment.create_elevation_bands(
+        method='equal_intervals',
+        distance=50
+    )
 
     return catchment
 
@@ -49,12 +58,20 @@ def catchment_gletsch():
 @pytest.fixture
 def changes_data():
     glacier_dir = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'glaciers'
-    glaciers = [f'{glacier_dir}/sgi_1850.shp',
-                f'{glacier_dir}/sgi_1931.shp',
-                f'{glacier_dir}/sgi_1973.shp',
-                f'{glacier_dir}/sgi_2010.shp',
-                f'{glacier_dir}/sgi_2016.shp']
-    times = ['1850-01-01', '1931-01-01', '1973-01-01', '2010-01-01', '2016-01-01']
+    glaciers = [
+        f'{glacier_dir}/sgi_1850.shp',
+        f'{glacier_dir}/sgi_1931.shp',
+        f'{glacier_dir}/sgi_1973.shp',
+        f'{glacier_dir}/sgi_2010.shp',
+        f'{glacier_dir}/sgi_2016.shp'
+    ]
+    times = [
+        '1850-01-01',
+        '1931-01-01',
+        '1973-01-01',
+        '2010-01-01',
+        '2016-01-01'
+    ]
 
     return [glaciers, times]
 
@@ -63,7 +80,9 @@ def test_load_from_csv(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='elevation'
     )
 
@@ -75,7 +94,9 @@ def test_load_from_csv_by_id(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice_with_ids.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='id'
     )
 
@@ -87,12 +108,16 @@ def test_load_from_two_files(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='elevation'
     )
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
-        hydro_units_csv, land_cover='glacier_debris', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_debris',
+        area_unit='km2',
         match_with='elevation'
     )
 
@@ -104,7 +129,9 @@ def test_add_action_to_model(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='elevation'
     )
 
@@ -116,13 +143,18 @@ def test_action_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='elevation'
     )
 
     cover_names = ['ground', 'glacier_ice']
     cover_types = ['ground', 'glacier']
-    model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
+    model = models.Socont(
+        land_cover_names=cover_names,
+        land_cover_types=cover_types
+    )
 
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
@@ -133,18 +165,25 @@ def test_action_2_files_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     changes = actions.ActionLandCoverChange()
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_ice.csv',
-        hydro_units_csv, land_cover='glacier_ice', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_ice',
+        area_unit='km2',
         match_with='elevation'
     )
     changes.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'surface_changes_glacier_debris.csv',
-        hydro_units_csv, land_cover='glacier_debris', area_unit='km2',
+        hydro_units_csv,
+        land_cover='glacier_debris',
+        area_unit='km2',
         match_with='elevation'
     )
 
     cover_names = ['ground', 'glacier_ice', 'glacier_debris']
     cover_types = ['ground', 'glacier', 'glacier']
-    model = models.Socont(land_cover_names=cover_names, land_cover_types=cover_types)
+    model = models.Socont(
+        land_cover_names=cover_names,
+        land_cover_types=cover_types
+    )
 
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
@@ -158,8 +197,13 @@ def test_extract_glacier_cover_evolution_raster(
 
     # Create the action land cover change object and the corresponding dataframe
     changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
-        catchment_gletsch, times, files, with_debris=False, method='raster',
-        interpolate_yearly=False)
+        catchment_gletsch,
+        times,
+        files,
+        with_debris=False,
+        method='raster',
+        interpolate_yearly=False
+    )
 
     assert changes.get_land_covers_nb() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
@@ -188,8 +232,13 @@ def test_extract_glacier_cover_evolution_vector(
 
     # Create the action land cover change object and the corresponding dataframe
     changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
-        catchment_gletsch, times, files, with_debris=False, method='vector',
-        interpolate_yearly=False)
+        catchment_gletsch,
+        times,
+        files,
+        with_debris=False,
+        method='vector',
+        interpolate_yearly=False
+    )
 
     assert changes.get_land_covers_nb() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
@@ -218,8 +267,13 @@ def test_extract_glacier_cover_evolution_interpolate(
 
     # Create the action land cover change object and the corresponding dataframe
     changes, df = actions.ActionLandCoverChange.create_action_for_glaciers(
-        catchment_gletsch, times, files, with_debris=False, method='raster',
-        interpolate_yearly=True)
+        catchment_gletsch,
+        times,
+        files,
+        with_debris=False,
+        method='raster',
+        interpolate_yearly=True
+    )
 
     assert changes.get_land_covers_nb() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)

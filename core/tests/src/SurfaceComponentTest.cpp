@@ -10,70 +10,70 @@
 
 class GlacierComponentModel : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
-    TimeSeriesUniform* m_tsTemp{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
 
     void SetUp() override {
-        m_model.SetSolver("heun_explicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model.SetLogAll(true);
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
 
         // Precipitation
-        m_model.GeneratePrecipitationSplitters(true);
+        _model.GeneratePrecipitationSplitters(true);
 
         // Land cover elements
-        m_model.AddLandCoverBrick("ground", "generic_land_cover");
-        m_model.AddLandCoverBrick("glacier", "glacier");
-        m_model.GenerateSnowpacks("melt:degree_day");
+        _model.AddLandCoverBrick("ground", "generic_land_cover");
+        _model.AddLandCoverBrick("glacier", "glacier");
+        _model.GenerateSnowpacks("melt:degree_day");
 
         // Rain/snow splitter
-        m_model.SelectHydroUnitSplitter("snow_rain_transition");
-        m_model.AddSplitterParameter("transition_start", 0.0f);
-        m_model.AddSplitterParameter("transition_end", 2.0f);
+        _model.SelectHydroUnitSplitter("snow_rain_transition");
+        _model.AddSplitterParameter("transition_start", 0.0f);
+        _model.AddSplitterParameter("transition_end", 2.0f);
 
         // Snow melt process on ground
-        m_model.SelectHydroUnitBrick("ground_snowpack");
-        m_model.SelectProcess("melt");
-        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Snow melt process on glacier
-        m_model.SelectHydroUnitBrick("glacier_snowpack");
-        m_model.SelectProcess("melt");
-        m_model.SetProcessParameterValue("degree_day_factor", 3.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.SelectHydroUnitBrick("glacier_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
 
         // Glacier melt process
-        m_model.SelectHydroUnitBrick("glacier");
-        m_model.AddBrickParameter("no_melt_when_snow_cover", 1.0);
-        m_model.AddBrickParameter("infinite_storage", 1.0);
-        m_model.AddBrickProcess("melt", "melt:degree_day", "glacier");
-        m_model.SetProcessParameterValue("degree_day_factor", 4.0f);
-        m_model.SetProcessParameterValue("melting_temperature", 1.0f);
-        m_model.SetProcessOutputsAsInstantaneous();
-        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        m_model.SetProcessOutputsAsInstantaneous();
+        _model.SelectHydroUnitBrick("glacier");
+        _model.AddBrickParameter("no_melt_when_snow_cover", 1.0);
+        _model.AddBrickParameter("infinite_storage", 1.0);
+        _model.AddBrickProcess("melt", "melt:degree_day", "glacier");
+        _model.SetProcessParameterValue("degree_day_factor", 4.0f);
+        _model.SetProcessParameterValue("melting_temperature", 1.0f);
+        _model.SetProcessOutputsAsInstantaneous();
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        _model.SetProcessOutputsAsInstantaneous();
 
         // Land cover brick for the bare ground with a direct outflow
-        m_model.SelectHydroUnitBrick("ground");
-        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        _model.SelectHydroUnitBrick("ground");
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
-        m_model.AddLoggingToItem("outlet");
+        _model.AddLoggingToItem("outlet");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
 
         auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        m_tsTemp = new TimeSeriesUniform(Temperature);
-        m_tsTemp->SetData(temperature);
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
-        wxDELETE(m_tsTemp);
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
     }
 };
 
@@ -87,11 +87,11 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

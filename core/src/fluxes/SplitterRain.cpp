@@ -2,10 +2,10 @@
 
 SplitterRain::SplitterRain()
     : Splitter(),
-      m_precipitation(nullptr) {}
+      _precipitation(nullptr) {}
 
 bool SplitterRain::IsOk() {
-    if (m_outputs.size() != 1) {
+    if (_outputs.size() != 1) {
         wxLogError(_("SplitterRain should have 1 output."));
         return false;
     }
@@ -19,7 +19,7 @@ void SplitterRain::SetParameters(const SplitterSettings&) {
 
 void SplitterRain::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Precipitation) {
-        m_precipitation = forcing;
+        _precipitation = forcing;
     } else {
         throw InvalidArgument("Forcing must be of type Precipitation");
     }
@@ -27,12 +27,12 @@ void SplitterRain::AttachForcing(Forcing* forcing) {
 
 double* SplitterRain::GetValuePointer(const string& name) {
     if (name == "rain") {
-        return m_outputs[0]->GetAmountPointer();
+        return _outputs[0]->GetAmountPointer();
     }
 
     return nullptr;
 }
 
 void SplitterRain::Compute() {
-    m_outputs[0]->UpdateFlux(m_precipitation->GetValue());
+    _outputs[0]->UpdateFlux(_precipitation->GetValue());
 }

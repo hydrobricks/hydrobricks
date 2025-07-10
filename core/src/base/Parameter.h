@@ -15,7 +15,7 @@ class Parameter : public wxObject {
      * @return true if the parameter is linked to a process.
      */
     bool IsLinked() const {
-        return m_linked;
+        return _linked;
     }
 
     /**
@@ -24,7 +24,7 @@ class Parameter : public wxObject {
      * @param value true if the parameter is linked to a process.
      */
     void SetAsLinked(bool value = true) {
-        m_linked = value;
+        _linked = value;
     }
 
     /**
@@ -33,7 +33,7 @@ class Parameter : public wxObject {
      * @return the name of the parameter.
      */
     string GetName() const {
-        return m_name;
+        return _name;
     }
 
     /**
@@ -42,7 +42,7 @@ class Parameter : public wxObject {
      * @param name the name of the parameter.
      */
     void SetName(const string& name) {
-        m_name = name;
+        _name = name;
     }
 
     /**
@@ -51,7 +51,7 @@ class Parameter : public wxObject {
      * @return the parameter value.
      */
     float GetValue() const {
-        return m_value;
+        return _value;
     }
 
     /**
@@ -60,7 +60,7 @@ class Parameter : public wxObject {
      * @return pointer to the parameter value.
      */
     float* GetValuePointer() {
-        return &m_value;
+        return &_value;
     }
 
     /**
@@ -69,13 +69,13 @@ class Parameter : public wxObject {
      * @param val the parameter value.
      */
     void SetValue(float val) {
-        m_value = val;
+        _value = val;
     }
 
   protected:
-    bool m_linked;
-    string m_name;
-    float m_value;
+    bool _linked;
+    string _name;
+    float _value;
 };
 
 #endif  // HYDROBRICKS_PARAMETER_H

@@ -11,26 +11,35 @@ TEST_FILES_DIR = Path(
     '..', '..', 'tests', 'files',
 )
 
+RHONE_HUS = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.csv'
+RHONE_CONNECT = TEST_FILES_DIR / 'catchments' / 'ch_rhone_gletsch' / 'connectivity_elevation_radiation.csv'
+
 
 def test_hydro_units_creation():
     hb.HydroUnits()
 
 
 def test_hydro_units_creation_with_land_covers():
-    hb.HydroUnits(land_cover_types=['ground', 'glacier'],
-                  land_cover_names=['ground', 'glacier'])
+    hb.HydroUnits(
+        land_cover_types=['ground', 'glacier'],
+        land_cover_names=['ground', 'glacier']
+    )
 
 
 def test_hydro_units_creation_with_land_covers_mismatch():
     with pytest.raises(ValueError):
-        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
-                      land_cover_names=None)
+        hb.HydroUnits(
+            land_cover_types=['ground', 'glacier', 'glacier'],
+            land_cover_names=None
+        )
 
 
 def test_hydro_units_creation_with_land_covers_size_mismatch():
     with pytest.raises(ValueError):
-        hb.HydroUnits(land_cover_types=['ground', 'glacier', 'glacier'],
-                      land_cover_names=['ground', 'glacier'])
+        hb.HydroUnits(
+            land_cover_types=['ground', 'glacier', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
 
 
 @pytest.fixture
@@ -46,9 +55,12 @@ def hydro_units_csv(hydro_units: hb.HydroUnits):
     hydro_units.load_from_csv(
         TEST_FILES_DIR / 'parsing' / 'hydro_units_absolute_areas.csv',
         column_elevation='Elevation Bands',
-        columns_areas={'ground': 'Sum_Area Non Glacier Band',
-                       'glacier_ice': 'Sum_Area ICE Band',
-                       'glacier_debris': 'Sum_Area Debris Band'})
+        columns_areas={
+            'ground': 'Sum_Area Non Glacier Band',
+            'glacier_ice': 'Sum_Area ICE Band',
+            'glacier_debris': 'Sum_Area Debris Band'
+        }
+    )
     return hydro_units
 
 
@@ -86,3 +98,11 @@ def test_create_file(hydro_units_csv: hb.HydroUnits):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         hydro_units_csv.save_as(tmp_dir + '/test.nc')
+
+
+def test_set_connectivity():
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(RHONE_HUS)
+    hydro_units.set_connectivity(RHONE_CONNECT)
+
+    assert hydro_units.settings.get_lateral_connections_nb() == 360

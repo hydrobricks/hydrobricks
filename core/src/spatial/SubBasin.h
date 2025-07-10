@@ -222,19 +222,19 @@ class SubBasin : public wxObject {
      * @return The area of the sub-basin in square meters.
      */
     double GetArea() {
-        return m_area;
+        return _area;
     }
 
   protected:
-    double m_area;  // m2
-    double m_outletTotal;
-    bool m_needsCleanup;
-    vector<Brick*> m_bricks;
-    vector<Splitter*> m_splitters;
-    vector<HydroUnit*> m_hydroUnits;
-    vector<Connector*> m_inConnectors;
-    vector<Connector*> m_outConnectors;
-    vector<Flux*> m_outletFluxes;
+    double _area;  // m2
+    double _outletTotal;
+    bool _needsCleanup;
+    vector<Brick*> _bricks;
+    vector<Splitter*> _splitters;
+    vector<HydroUnit*> _hydroUnits;
+    vector<Connector*> _inConnectors;
+    vector<Connector*> _outConnectors;
+    vector<Flux*> _outletFluxes;
 };
 
 #endif

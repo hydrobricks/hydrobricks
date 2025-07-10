@@ -4,7 +4,7 @@
 
 SolverRK4::SolverRK4()
     : Solver() {
-    m_nIterations = 5;
+    _nIterations = 5;
 }
 
 bool SolverRK4::Solve() {
@@ -59,12 +59,12 @@ bool SolverRK4::Solve() {
     ResetStateVariableChanges();
 
     // Final change rate
-    m_changeRates.col(
-        4) = (m_changeRates.col(0) + 2 * m_changeRates.col(1) + 2 * m_changeRates.col(2) + m_changeRates.col(3)) / 6;
+    _changeRates.col(
+        4) = (_changeRates.col(0) + 2 * _changeRates.col(1) + 2 * _changeRates.col(2) + _changeRates.col(3)) / 6;
 
     // Apply the final rates
     ApplyConstraintsFor(4);
-    ApplyProcesses(m_changeRates.col(4));
+    ApplyProcesses(_changeRates.col(4));
     Finalize();
 
     return true;

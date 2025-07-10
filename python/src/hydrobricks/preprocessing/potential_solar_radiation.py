@@ -118,12 +118,23 @@ class PotentialSolarRadiation:
                 print('Computing radiation for day', day_of_year[i])
 
             # List of hour angles throughout the day.
-            ha_list = np.arange(-ha_limit[i], ha_limit[i] + time_interval,
-                                time_interval)
+            ha_list = np.arange(
+                -ha_limit[i],
+                ha_limit[i] + time_interval,
+                time_interval
+            )
 
             # Compute the zenith and azimuth
-            zenith = self.get_solar_zenith(ha_list, lat_rad, solar_declin[i])
-            azimuth = self.get_solar_azimuth_to_south(ha_list, lat_rad, solar_declin[i])
+            zenith = self.get_solar_zenith(
+                ha_list,
+                lat_rad,
+                solar_declin[i]
+            )
+            azimuth = self.get_solar_azimuth_to_south(
+                ha_list,
+                lat_rad,
+                solar_declin[i]
+            )
 
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
@@ -134,15 +145,27 @@ class PotentialSolarRadiation:
                     continue
 
                 incidence_angle = self._calculate_angle_of_incidence(
-                    zenith[j], slope, azimuth[j], aspect)
+                    zenith[j],
+                    slope,
+                    azimuth[j],
+                    aspect
+                )
                 potential_radiation = self._calculate_radiation_hock_equation(
-                    mean_elevation, atmos_transmissivity, day_of_year[i],
-                    zenith[j], incidence_angle)
+                    mean_elevation,
+                    atmos_transmissivity,
+                    day_of_year[i],
+                    zenith[j],
+                    incidence_angle
+                )
 
                 # Account for cast shadows
                 if with_cast_shadows:
                     cast_shadows = self.calculate_cast_shadows(
-                        dem, masked_dem_data, zenith[j], azimuth[j])
+                        dem,
+                        masked_dem_data,
+                        zenith[j],
+                        azimuth[j]
+                    )
                     potential_radiation = potential_radiation * (1 - cast_shadows)
 
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
@@ -159,7 +182,10 @@ class PotentialSolarRadiation:
         mean_annual_radiation = np.full((n_rows, n_cols), np.nan)
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(
-            mean_annual_radiation, dem, output_path)
+            mean_annual_radiation,
+            dem,
+            output_path
+        )
 
         # Put the mask back on (we need the surrounding topography in the steps before)
         # And make sure the padding lines are also set to nans and not 0
@@ -171,7 +197,12 @@ class PotentialSolarRadiation:
 
         # Save the daily potential radiation to a netcdf file
         self._save_potential_radiation_netcdf(
-            daily_radiation, dem, masked_dem_data, day_of_year, output_path)
+            daily_radiation,
+            dem,
+            masked_dem_data,
+            day_of_year,
+            output_path
+        )
 
         # If DEM is the downsampled one, close it
         if dem.res[0] != self.catchment.get_dem_x_resolution():
@@ -594,11 +625,13 @@ class PotentialSolarRadiation:
 
             return empty_matrix
 
-        solar_radiation = (SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
-                           atmos_transmissivity **
-                           (local_pressure / (SEA_ATM_PRESSURE *
-                                              np.cos(zenith * TO_RAD))) *
-                           np.cos(incidence_angle))
+        solar_radiation = (
+                SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
+                atmos_transmissivity ** (
+                        local_pressure / (SEA_ATM_PRESSURE * np.cos(zenith * TO_RAD))
+                ) *
+                np.cos(incidence_angle)
+        )
 
         return solar_radiation
 
@@ -696,13 +729,16 @@ class PotentialSolarRadiation:
         xs = np.array(xs).reshape(masked_dem_data.shape)[0, :]
         ys = np.array(ys).reshape(masked_dem_data.shape)[:, 0]
 
-        ds = hb.xr.DataArray(radiation,
-                             name='radiation',
-                             dims=['day_of_year', 'y', 'x'],
-                             coords={
-                                 "x": xs,
-                                 "y": ys,
-                                 "day_of_year": day_of_year})
+        ds = hb.xr.DataArray(
+            radiation,
+            name='radiation',
+            dims=['day_of_year', 'y', 'x'],
+            coords={
+                "x": xs,
+                "y": ys,
+                "day_of_year": day_of_year
+            }
+        )
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj

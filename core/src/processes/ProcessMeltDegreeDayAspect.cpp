@@ -6,9 +6,9 @@
 
 ProcessMeltDegreeDayAspect::ProcessMeltDegreeDayAspect(WaterContainer* container)
     : ProcessMelt(container),
-      m_temperature(nullptr),
-      m_degreeDayFactor(nullptr),
-      m_meltingTemperature(nullptr) {}
+      _temperature(nullptr),
+      _degreeDayFactor(nullptr),
+      _meltingTemperature(nullptr) {}
 
 void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor_n", 3);
@@ -22,13 +22,13 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;
     }
-    if (m_temperature == nullptr) {
+    if (_temperature == nullptr) {
         return false;
     }
-    if (m_degreeDayFactor == nullptr) {
+    if (_degreeDayFactor == nullptr) {
         return false;
     }
-    if (m_meltingTemperature == nullptr) {
+    if (_meltingTemperature == nullptr) {
         return false;
     }
 
@@ -36,46 +36,46 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
 }
 
 void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
-    m_aspectClass = unit->GetPropertyString("aspect_class");
+    _aspectClass = unit->GetPropertyString("aspect_class");
 }
 
 void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
-    m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
+    _meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 
-    if (m_aspectClass == "north" || m_aspectClass == "N") {
-        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_n");
-    } else if (m_aspectClass == "south" || m_aspectClass == "S") {
-        m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_s");
-    } else if (m_aspectClass == "east" || m_aspectClass == "west" || m_aspectClass == "E" || m_aspectClass == "W") {
+    if (_aspectClass == "north" || _aspectClass == "N") {
+        _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_n");
+    } else if (_aspectClass == "south" || _aspectClass == "S") {
+        _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_s");
+    } else if (_aspectClass == "east" || _aspectClass == "west" || _aspectClass == "E" || _aspectClass == "W") {
         if (HasParameter(processSettings, "degree_day_factor_ew")) {
-            m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
+            _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_ew");
         } else if (HasParameter(processSettings, "degree_day_factor_we")) {
-            m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
+            _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
         } else {
             throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
         }
     } else {
-        throw InvalidArgument("Invalid aspect: " + m_aspectClass);
+        throw InvalidArgument("Invalid aspect: " + _aspectClass);
     }
 }
 
 void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
-        m_temperature = forcing;
+        _temperature = forcing;
     } else {
         throw InvalidArgument("Forcing must be of type Temperature");
     }
 }
 
 vecDouble ProcessMeltDegreeDayAspect::GetRates() {
-    if (!m_container->ContentAccessible()) {
+    if (!_container->ContentAccessible()) {
         return {0};
     }
 
     double melt = 0;
-    if (m_temperature->GetValue() >= *m_meltingTemperature) {
-        melt = (m_temperature->GetValue() - *m_meltingTemperature) * *m_degreeDayFactor;
+    if (_temperature->GetValue() >= *_meltingTemperature) {
+        melt = (_temperature->GetValue() - *_meltingTemperature) * *_degreeDayFactor;
     }
 
     return {melt};

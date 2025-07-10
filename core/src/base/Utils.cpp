@@ -154,7 +154,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
                 last = mid - 1;
             } else {
                 // Return found index
-                return int(mid - start);
+                return static_cast<int>(mid - start);
             }
         }
 
@@ -170,7 +170,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
         // If the value was not found, return closest value inside tolerance
         if (std::abs(value - *last) <= std::abs(value - *(last + 1))) {
             if (std::abs(value - *last) <= tolerance) {
-                return int(last - start);
+                return static_cast<int>(last - start);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance
                 if (value > *end || value < *start) {
@@ -186,7 +186,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
             }
         } else {
             if (std::abs(value - *(last + 1)) <= tolerance) {
-                return int(last - start + 1);
+                return static_cast<int>(last - start + 1);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance
                 if (value > *end || value < *start) {
@@ -204,7 +204,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
     } else if (*last < *first) {
         // Binary search
         while (first <= last) {
-            length = int(last - first);
+            length = static_cast<int>(last - first);
             mid = first + length / 2;
             if (value - tolerance > *mid) {
                 last = mid - 1;
@@ -212,7 +212,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
                 first = mid + 1;
             } else {
                 // Return found index
-                return int(mid - start);
+                return static_cast<int>(mid - start);
             }
         }
 
@@ -228,7 +228,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
         // If the value was not found, return closest value inside tolerance
         if (std::abs(value - *first) <= std::abs(value - *(first - 1))) {
             if (std::abs(value - *first) <= tolerance) {
-                return int(first - start);
+                return static_cast<int>(first - start);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance.
                 if (value < *end || value > *start) {
@@ -244,7 +244,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
             }
         } else {
             if (std::abs(value - *(first - 1)) <= tolerance) {
-                return int(first - start - 1);
+                return static_cast<int>(first - start - 1);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance.
                 if (value < *end || value > *start) {

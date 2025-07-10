@@ -85,8 +85,10 @@ class ActionLandCoverChange(Action):
                 raise ValueError("The first column of the file does not contain the "
                                  "hydro unit ids.")
             # Set the first column name to 'hydro_unit'
-            file_content.rename(columns={file_content.columns[0]: 'hydro_unit'},
-                                inplace=True)
+            file_content.rename(
+                columns={file_content.columns[0]: 'hydro_unit'},
+                inplace=True
+            )
         else:
             file_content.insert(loc=0, column='hydro_unit', value=0)
             self._match_hydro_unit_ids(file_content, hydro_units, match_with)
@@ -172,8 +174,14 @@ class ActionLandCoverChange(Action):
 
         changes = ActionLandCoverChange()
         changes_df = changes._create_action_for_glaciers(
-            catchment, full_glaciers, debris_glaciers, times, with_debris, method,
-            interpolate_yearly)
+            catchment,
+            full_glaciers,
+            debris_glaciers,
+            times,
+            with_debris,
+            method,
+            interpolate_yearly
+        )
 
         return changes, changes_df
 
@@ -218,7 +226,11 @@ class ActionLandCoverChange(Action):
         for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
             print(f"Extracting glacier cover changes for {time}...")
             glacier, ice, debris, other = self._extract_glacier_cover_change(
-                catchment, glacier_shp, debris_shp, method=method)
+                catchment,
+                glacier_shp,
+                debris_shp,
+                method=method
+            )
             glacier_np[:, times.index(time)] = glacier
             ice_np[:, times.index(time)] = ice
             debris_np[:, times.index(time)] = debris
@@ -363,12 +375,20 @@ class ActionLandCoverChange(Action):
                   f"of {px_area} m².")
 
         # Get the glacier mask
-        glaciers_mask = self._mask_dem(catchment, glaciers, 0,
-                                       all_touched=all_touched)
+        glaciers_mask = self._mask_dem(
+            catchment,
+            glaciers,
+            nodata=0,
+            all_touched=all_touched
+        )
         debris_mask = None
         if debris_shapefile is not None:
-            debris_mask = self._mask_dem(catchment, glaciers_debris, 0,
-                                         all_touched=all_touched)
+            debris_mask = self._mask_dem(
+                catchment,
+                glaciers_debris,
+                nodata=0,
+                all_touched=all_touched
+            )
 
         unit_ids = np.unique(catchment.map_unit_ids)
         unit_ids = unit_ids[unit_ids != 0]
@@ -384,8 +404,10 @@ class ActionLandCoverChange(Action):
 
             if method == 'vector':
                 warnings.filterwarnings(
-                    "ignore", category=RuntimeWarning,
-                    message="invalid value encountered in intersection")
+                    "ignore",
+                    category=RuntimeWarning,
+                    message="invalid value encountered in intersection"
+                )
 
                 # Create an empty list to store the pixel geometries
                 pixels_geoms = []

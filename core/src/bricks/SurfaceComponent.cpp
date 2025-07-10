@@ -4,30 +4,34 @@
 #include "LandCover.h"
 
 SurfaceComponent::SurfaceComponent()
-    : Brick(),
-      m_parent(nullptr),
-      m_areaFraction(1.0) {
-    m_needsSolver = false;
+    : _parent(nullptr),
+      _areaFraction(1.0) {
+    _needsSolver = false;
 }
 
 void SurfaceComponent::SetAreaFraction(double value) {
-    wxASSERT(m_parent);
-    m_areaFraction = value;
-    for (auto process : m_processes) {
+    wxASSERT(_parent);
+    _areaFraction = value;
+    for (auto process : _processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
-                value *= m_parent->GetAreaFraction();
+                value *= _parent->GetAreaFraction();
                 output->SetFractionLandCover(value);
             }
         }
     }
 }
 
+double SurfaceComponent::GetParentAreaFraction() {
+    wxASSERT(_parent);
+    return _parent->GetAreaFraction();
+}
+
 bool SurfaceComponent::IsNull() {
-    if (m_areaFraction <= PRECISION) {
+    if (_areaFraction <= PRECISION) {
         return true;
     }
-    if (m_parent && m_parent->IsNull()) {
+    if (_parent && _parent->IsNull()) {
         return true;
     }
 

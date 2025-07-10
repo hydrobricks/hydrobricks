@@ -3,6 +3,7 @@
 
 #include "Brick.h"
 #include "Forcing.h"
+#include "HydroUnitLateralConnection.h"
 #include "HydroUnitProperty.h"
 #include "Includes.h"
 #include "LandCover.h"
@@ -102,6 +103,16 @@ class HydroUnit : public wxObject {
     Forcing* GetForcing(VariableType type);
 
     /**
+     * Add a lateral connection to the hydro unit.
+     *
+     * @param receiver The hydro unit that receives the lateral connection.
+     * @param fraction The fraction of the flow that is transferred.
+     * @param type The type of the lateral connection (optional). It is unused in the current implementation, but can be
+     * used for future extensions (for example, to differentiate between snow and groundwater).
+     */
+    void AddLateralConnection(HydroUnit* receiver, double fraction, const string& type = "");
+
+    /**
      * Get the number of bricks in the hydro unit.
      *
      * @return The number of bricks.
@@ -138,6 +149,21 @@ class HydroUnit : public wxObject {
      * @return The brick with the specified name.
      */
     Brick* GetBrick(const string& name);
+
+    /**
+     * Get a vector of all snowpack bricks in the hydro unit.
+     *
+     * @return A vector of pointers to the snowpack bricks.
+     */
+    vector<Brick*> GetSnowpacks() const {
+        vector<Brick*> snowBricks;
+        for (auto& brick : _bricks) {
+            if (brick->IsSnowpack()) {
+                snowBricks.push_back(brick);
+            }
+        }
+        return snowBricks;
+    }
 
     /**
      * Get a land cover by its name.
@@ -200,7 +226,7 @@ class HydroUnit : public wxObject {
      * @return The type of the hydro unit.
      */
     Types GetType() {
-        return m_type;
+        return _type;
     }
 
     /**
@@ -209,7 +235,7 @@ class HydroUnit : public wxObject {
      * @param id The ID to set.
      */
     void SetId(int id) {
-        m_id = id;
+        _id = id;
     }
 
     /**
@@ -218,7 +244,7 @@ class HydroUnit : public wxObject {
      * @return The area of the hydro unit in square meters.
      */
     double GetArea() const {
-        return m_area;
+        return _area;
     }
 
     /**
@@ -227,18 +253,28 @@ class HydroUnit : public wxObject {
      * @return The ID of the hydro unit.
      */
     int GetId() const {
-        return m_id;
+        return _id;
+    }
+
+    /**
+     * Get the lateral connections of the hydro unit.
+     *
+     * @return A vector of lateral connections associated with the hydro unit.
+     */
+    vector<HydroUnitLateralConnection*> GetLateralConnections() const {
+        return _lateralConnections;
     }
 
   protected:
-    Types m_type;
-    int m_id;
-    double m_area;  // m2
-    vector<HydroUnitProperty*> m_properties;
-    vector<Brick*> m_bricks;
-    vector<LandCover*> m_landCoverBricks;
-    vector<Splitter*> m_splitters;
-    vector<Forcing*> m_forcing;
+    Types _type;
+    int _id;
+    double _area;  // m2
+    vector<HydroUnitProperty*> _properties;
+    vector<HydroUnitLateralConnection*> _lateralConnections;
+    vector<Brick*> _bricks;
+    vector<LandCover*> _landCoverBricks;
+    vector<Splitter*> _splitters;
+    vector<Forcing*> _forcing;
 };
 
 #endif

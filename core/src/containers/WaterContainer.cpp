@@ -4,17 +4,17 @@
 #include "FluxToBrickInstantaneous.h"
 
 WaterContainer::WaterContainer(Brick* brick)
-    : m_content(0),
-      m_contentChangeDynamic(0),
-      m_contentChangeStatic(0),
-      m_initialState(0),
-      m_capacity(nullptr),
-      m_infiniteStorage(false),
-      m_parent(brick),
-      m_overflow(nullptr) {}
+    : _content(0),
+      _contentChangeDynamic(0),
+      _contentChangeStatic(0),
+      _initialState(0),
+      _capacity(nullptr),
+      _infiniteStorage(false),
+      _parent(brick),
+      _overflow(nullptr) {}
 
 bool WaterContainer::IsOk() {
-    if (m_inputs.empty()) {
+    if (_inputs.empty()) {
         return true;
     }
 
@@ -29,27 +29,27 @@ bool WaterContainer::IsOk() {
 }
 
 void WaterContainer::SubtractAmountFromDynamicContentChange(double change) {
-    if (m_infiniteStorage) return;
-    m_contentChangeDynamic -= change;
+    if (_infiniteStorage) return;
+    _contentChangeDynamic -= change;
 }
 
 void WaterContainer::AddAmountToDynamicContentChange(double change) {
-    if (m_infiniteStorage) return;
-    m_contentChangeDynamic += change;
+    if (_infiniteStorage) return;
+    _contentChangeDynamic += change;
 }
 
 void WaterContainer::AddAmountToStaticContentChange(double change) {
-    if (m_infiniteStorage) return;
-    m_contentChangeStatic += change;
+    if (_infiniteStorage) return;
+    _contentChangeStatic += change;
 }
 
 void WaterContainer::ApplyConstraints(double timeStep) {
-    if (m_infiniteStorage) return;
+    if (_infiniteStorage) return;
 
     // Get outgoing change rates
     vecDoublePt outgoingRates;
     double outputs = 0;
-    for (auto process : m_parent->GetProcesses()) {
+    for (auto process : _parent->GetProcesses()) {
         if (process->GetWaterContainer() != this) {
             continue;
         }
@@ -74,7 +74,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     vecDoublePt incomingRates;
     double inputs = 0;
     double inputsStatic = 0;
-    for (auto& input : m_inputs) {
+    for (auto& input : _inputs) {
         if (input->IsInstantaneous()) {
             inputsStatic += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
             continue;
@@ -123,18 +123,18 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
-        if (content + inputsStatic + change * timeStep > *m_capacity) {
-            double diff = (content + inputsStatic + change * timeStep - *m_capacity) / timeStep;
+        if (content + inputsStatic + change * timeStep > *_capacity) {
+            double diff = (content + inputsStatic + change * timeStep - *_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
-                if (m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer() != nullptr) {
-                    *(m_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
+                if (_overflow->GetOutputFluxes()[0]->GetChangeRatePointer() != nullptr) {
+                    *(_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
                     return;
                 }
                 throw ShouldNotHappen();
             }
             // Check that it is not only due to forcing
-            if (content + inputsStatic > *m_capacity) {
+            if (content + inputsStatic > *_capacity) {
                 throw ConceptionIssue(
                     _("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
@@ -153,7 +153,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 }
 
 void WaterContainer::SetOutgoingRatesToZero() {
-    for (auto process : m_parent->GetProcesses()) {
+    for (auto process : _parent->GetProcesses()) {
         if (process->GetWaterContainer() != this) {
             continue;
         }
@@ -170,26 +170,26 @@ void WaterContainer::SetOutgoingRatesToZero() {
 }
 
 void WaterContainer::Finalize() {
-    if (m_infiniteStorage) return;
-    m_content += m_contentChangeDynamic + m_contentChangeStatic;
-    m_contentChangeDynamic = 0;
-    m_contentChangeStatic = 0;
-    wxASSERT(m_content >= -PRECISION);
+    if (_infiniteStorage) return;
+    _content += _contentChangeDynamic + _contentChangeStatic;
+    _contentChangeDynamic = 0;
+    _contentChangeStatic = 0;
+    wxASSERT(_content >= -PRECISION);
 }
 
 void WaterContainer::Reset() {
-    m_content = m_initialState;
-    m_contentChangeDynamic = 0;
-    m_contentChangeStatic = 0;
+    _content = _initialState;
+    _contentChangeDynamic = 0;
+    _contentChangeStatic = 0;
 }
 
 void WaterContainer::SaveAsInitialState() {
-    m_initialState = m_content;
+    _initialState = _content;
 }
 
 double WaterContainer::SumIncomingFluxes() {
     double sum = 0;
-    for (auto& input : m_inputs) {
+    for (auto& input : _inputs) {
         sum += input->GetAmount();
     }
 
@@ -201,7 +201,7 @@ bool WaterContainer::ContentAccessible() const {
 }
 
 vecDoublePt WaterContainer::GetDynamicContentChanges() {
-    return vecDoublePt{&m_contentChangeDynamic};
+    return vecDoublePt{&_contentChangeDynamic};
 }
 
 double WaterContainer::GetTargetFillingRatio() {

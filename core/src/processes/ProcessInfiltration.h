@@ -37,11 +37,11 @@ class ProcessInfiltration : public Process {
      * @copydoc Process::SetTargetBrick()
      */
     void SetTargetBrick(Brick* targetBrick) override {
-        m_targetBrick = targetBrick;
+        _targetBrick = targetBrick;
     }
 
   protected:
-    Brick* m_targetBrick;
+    Brick* _targetBrick;
 
     /**
      * Get the water content of the target brick.

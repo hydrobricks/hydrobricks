@@ -4,21 +4,21 @@
 
 FluxToBrick::FluxToBrick(Brick* brick)
     : Flux(),
-      m_toBrick(brick) {}
+      _toBrick(brick) {}
 
 bool FluxToBrick::IsOk() {
     return true;
 }
 
 double FluxToBrick::GetAmount() {
-    return m_amount;
+    return _amount;
 }
 
 void FluxToBrick::UpdateFlux(double amount) {
-    wxASSERT(m_toBrick);
-    if (m_fractionTotal < 1.0) {
-        m_amount = amount * m_fractionTotal;
+    wxASSERT(_toBrick);
+    if (_fractionTotal < 1.0) {
+        _amount = amount * _fractionTotal;
     } else {
-        m_amount = amount;
+        _amount = amount;
     }
 }

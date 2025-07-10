@@ -75,49 +75,49 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
     wxString input = wxEmptyString;
 
     if (parser.Found("model-file", &input)) {
-        m_modelFile = input;
+        _modelFile = input;
     } else {
         wxLogError("The argument 'model-file' is missing.");
         return false;
     }
 
     if (parser.Found("parameters-file", &input)) {
-        m_parametersFile = input;
+        _parametersFile = input;
     } else {
         wxLogError("The argument 'parameters-file' is missing.");
         return false;
     }
 
     if (parser.Found("basin-file", &input)) {
-        m_basinFile = input;
+        _basinFile = input;
     } else {
         wxLogError("The argument 'basin-file' is missing.");
         return false;
     }
 
     if (parser.Found("data-file", &input)) {
-        m_dataFile = input;
+        _dataFile = input;
     } else {
         wxLogError("The argument 'data-file' is missing.");
         return false;
     }
 
     if (parser.Found("output-path", &input)) {
-        m_outputPath = input;
+        _outputPath = input;
     } else {
         wxLogError("The argument 'output-path' is missing.");
         return false;
     }
 
     if (parser.Found("start-date", &input)) {
-        m_startDate = input;
+        _startDate = input;
     } else {
         wxLogError("The argument 'start-date' is missing.");
         return false;
     }
 
     if (parser.Found("end-date", &input)) {
-        m_endDate = input;
+        _endDate = input;
     } else {
         wxLogError("The argument 'end-date' is missing.");
         return false;

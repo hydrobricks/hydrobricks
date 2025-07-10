@@ -3,12 +3,12 @@
 #include "ModelHydro.h"
 
 Action::Action()
-    : m_manager(nullptr),
-      m_cursor(0),
-      m_recursive(false) {}
+    : _manager(nullptr),
+      _cursor(0),
+      _recursive(false) {}
 
 void Action::Reset() {
-    m_cursor = 0;
+    _cursor = 0;
 }
 
 bool Action::Init() {
@@ -20,11 +20,11 @@ bool Action::Apply(double) {
 }
 
 bool Action::ApplyIfRecursive(const Time date) {
-    for (int month : m_recursiveMonths) {
+    for (int month : _recursiveMonths) {
         if (month != date.month) {
             continue;
         }
-        for (int day : m_recursiveDays) {
+        for (int day : _recursiveDays) {
             if (day != date.day) {
                 continue;
             }
@@ -38,7 +38,7 @@ bool Action::ApplyIfRecursive(const Time date) {
 
 int Action::GetIndexForInsertion(double date) {
     int index = 0;
-    for (double storedDate : m_sporadicDates) {
+    for (double storedDate : _sporadicDates) {
         if (date <= storedDate) {
             break;
         }

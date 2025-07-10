@@ -2,66 +2,66 @@
 
 Glacier::Glacier()
     : LandCover(),
-      m_ice(nullptr) {
-    m_ice = new IceContainer(this);
+      _ice(nullptr) {
+    _ice = new IceContainer(this);
 }
 
 void Glacier::Reset() {
-    m_water->Reset();
-    m_ice->Reset();
+    _water->Reset();
+    _ice->Reset();
 }
 
 void Glacier::SaveAsInitialState() {
-    m_water->SaveAsInitialState();
-    m_ice->SaveAsInitialState();
+    _water->SaveAsInitialState();
+    _ice->SaveAsInitialState();
 }
 
 void Glacier::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
         if (*GetParameterValuePointer(brickSettings, "infinite_storage")) {
-            m_ice->SetAsInfiniteStorage();
+            _ice->SetAsInfiniteStorage();
         }
     }
 
     if (HasParameter(brickSettings, "no_melt_when_snow_cover")) {
-        m_ice->SetNoMeltWhenSnowCover(GetParameterValuePointer(brickSettings, "no_melt_when_snow_cover"));
+        _ice->SetNoMeltWhenSnowCover(GetParameterValuePointer(brickSettings, "no_melt_when_snow_cover"));
     }
 }
 
 void Glacier::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
     if (flux->GetType() == "ice") {
-        m_ice->AttachFluxIn(flux);
+        _ice->AttachFluxIn(flux);
     } else if (flux->GetType() == "water") {
-        m_water->AttachFluxIn(flux);
+        _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
     }
 }
 
 bool Glacier::IsOk() {
-    if (!m_ice->IsOk()) {
-        wxLogError(_("The glacier ice container is not OK (brick %s)."), m_name);
+    if (!_ice->IsOk()) {
+        wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
     }
     return Brick::IsOk();
 }
 
 WaterContainer* Glacier::GetIceContainer() {
-    return m_ice;
+    return _ice;
 }
 
 void Glacier::Finalize() {
-    m_ice->Finalize();
-    m_water->Finalize();
+    _ice->Finalize();
+    _water->Finalize();
 }
 
 void Glacier::SetInitialState(double value, const string& type) {
     if (type == "water") {
-        m_water->SetInitialState(value);
+        _water->SetInitialState(value);
     } else if (type == "ice") {
-        m_ice->SetInitialState(value);
+        _ice->SetInitialState(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
     }
@@ -69,10 +69,10 @@ void Glacier::SetInitialState(double value, const string& type) {
 
 double Glacier::GetContent(const string& type) {
     if (type == "water") {
-        return m_water->GetContentWithoutChanges();
+        return _water->GetContentWithoutChanges();
     }
     if (type == "ice") {
-        return m_ice->GetContentWithoutChanges();
+        return _ice->GetContentWithoutChanges();
     }
 
     throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
@@ -80,30 +80,30 @@ double Glacier::GetContent(const string& type) {
 
 void Glacier::UpdateContent(double value, const string& type) {
     if (type == "water") {
-        m_water->UpdateContent(value);
+        _water->UpdateContent(value);
     } else if (type == "ice") {
-        m_ice->UpdateContent(value);
+        _ice->UpdateContent(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
     }
 }
 
 void Glacier::UpdateContentFromInputs() {
-    m_ice->AddAmountToDynamicContentChange(m_ice->SumIncomingFluxes());
-    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
+    _ice->AddAmountToDynamicContentChange(_ice->SumIncomingFluxes());
+    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
 }
 
 void Glacier::ApplyConstraints(double timeStep) {
-    m_ice->ApplyConstraints(timeStep);
-    m_water->ApplyConstraints(timeStep);
+    _ice->ApplyConstraints(timeStep);
+    _water->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Glacier::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_water->GetDynamicContentChanges()) {
+    for (auto const& var : _water->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
-    for (auto const& var : m_ice->GetDynamicContentChanges()) {
+    for (auto const& var : _ice->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
 
@@ -112,7 +112,7 @@ vecDoublePt Glacier::GetDynamicContentChanges() {
 
 double* Glacier::GetValuePointer(const string& name) {
     if (name == "ice" || name == "ice_content") {
-        return m_ice->GetContentPointer();
+        return _ice->GetContentPointer();
     }
 
     return nullptr;
@@ -121,6 +121,6 @@ double* Glacier::GetValuePointer(const string& name) {
 void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
     if (brick->IsSnowpack()) {
         auto snowpack = dynamic_cast<Snowpack*>(brick);
-        m_ice->SetRelatedSnowpack(snowpack);
+        _ice->SetRelatedSnowpack(snowpack);
     }
 }

@@ -11,5 +11,5 @@ void ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(SettingsModel
 }
 
 vecDouble ProcessOutflowRestDirect::GetRates() {
-    return {wxMax(m_container->GetContentWithChanges() - GetSumChangeRatesOtherProcesses(), 0)};
+    return {wxMax(_container->GetContentWithChanges() - GetSumChangeRatesOtherProcesses(), 0)};
 }

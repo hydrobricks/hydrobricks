@@ -3,46 +3,54 @@
 #include <utility>
 
 HydroUnitProperty::HydroUnitProperty()
-    : m_value(NAN_D) {}
+    : _value(NAN_D) {}
 
 HydroUnitProperty::HydroUnitProperty(string name, double value, string unit)
-    : m_name(std::move(name)),
-      m_unit(std::move(unit)),
-      m_value(value) {}
+    : _name(std::move(name)),
+      _unit(std::move(unit)),
+      _value(value) {}
 
 HydroUnitProperty::HydroUnitProperty(string name, string valueString, string unit)
-    : m_name(std::move(name)),
-      m_unit(std::move(unit)),
-      m_value(NAN_D),
-      m_valueString(std::move(valueString)) {}
+    : _name(std::move(name)),
+      _unit(std::move(unit)),
+      _value(NAN_D),
+      _valueString(std::move(valueString)) {}
 
 double HydroUnitProperty::GetValue(const string& unit) const {
-    if (m_unit == unit) {
-        return m_value;
-    } else if (m_unit == "degrees") {
-        if (unit == "radians") {
-            return m_value * M_PI / 180.0;
-        } else if (unit == "percent") {
-            return 100 * tan(m_value * M_PI / 180.0);
-        } else if (unit == "m/m") {
-            return tan(m_value * M_PI / 180.0);
+    if (_unit == unit) {
+        return _value;
+    }
+    if (_unit == "degrees" || _unit == "degree" || _unit == "deg" || _unit == "°") {
+        if (unit == "degrees" || _unit == "degree" || unit == "deg" || _unit == "°") {
+            return _value;
         }
-    } else if (m_unit == "m2" || m_unit == "m^2") {
-        if (unit == "ha") {
-            return m_value / 10000.0;
-        } else if (unit == "km2") {
-            return m_value / 1000000.0;
+        if (unit == "radians" || unit == "rad") {
+            return _value * M_PI / 180.0;
+        }
+        if (unit == "percent" || unit == "%") {
+            return 100 * tan(_value * M_PI / 180.0);
+        }
+        if (unit == "m/m" || unit == "m_per_m") {
+            return tan(_value * M_PI / 180.0);
         }
     }
-    wxLogError(_("The unit '%s' is not supported for the property '%s'."), unit, m_name);
+    if (_unit == "m2" || _unit == "m^2") {
+        if (unit == "ha") {
+            return _value / 10000.0;
+        }
+        if (unit == "km2" || unit == "km^2") {
+            return _value / 1000000.0;
+        }
+    }
+    wxLogError(_("The unit '%s' is not supported for the property '%s'."), unit, _name);
 
     return NAN_D;
 }
 
 string HydroUnitProperty::GetValueString() const {
-    if (m_valueString.empty()) {
-        wxLogError(_("The value (string) for the property '%s' is empty."), m_name);
+    if (_valueString.empty()) {
+        wxLogError(_("The value (string) for the property '%s' is empty."), _name);
     }
 
-    return m_valueString;
+    return _valueString;
 }

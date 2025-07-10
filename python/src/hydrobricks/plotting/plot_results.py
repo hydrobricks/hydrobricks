@@ -51,7 +51,9 @@ def plot_map_hydro_unit_value(
         date: str,
         dem_path: str | None = None,
         min_val: int = 0,
-        max_val: int | None = None
+        max_val: int | None = None,
+        figsize: tuple[int, int] = (6.4, 4.8),
+        title: str | None = None
 ):
     """
     Plot the values of a component at the hydro units on a map.
@@ -73,6 +75,8 @@ def plot_map_hydro_unit_value(
         The minimum value for the color scale (default: 0).
     max_val
         The maximum value for the color scale (default: None).
+    figsize
+        The size of the figure in inches (default: (6.4, 4.8)).
     """
     data = results.get_hydro_units_values(component, date)
     hydro_units_ids = results.hydro_units_ids
@@ -95,7 +99,7 @@ def plot_map_hydro_unit_value(
 
     # Plot
     cmap = _generate_cmap_blue()
-    plt.figure()
+    plt.figure(figsize=figsize)
     if dem_path is not None:
         plt.imshow(shaded_dem, cmap='gray')
         plt.imshow(val_raster, cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
@@ -104,7 +108,7 @@ def plot_map_hydro_unit_value(
     plt.colorbar(shrink=0.8)
     plt.contour(boundary, levels=[0.5], linewidths=1, colors='black', alpha=1.0)
     plt.axis('off')
-    plt.title(f"{date}")
+    plt.title(title if title else f"{date}")
     plt.tight_layout()
     plt.show()
 
@@ -119,7 +123,8 @@ def create_animated_map_hydro_unit_value(
         dem_path: str | None = None,
         min_val: int = 0,
         max_val: int | None = None,
-        fps: int = 5
+        fps: int = 5,
+        figsize: tuple[int, int] = (6.4, 4.8)
 ):
     """
     Create an animated map of the values of a component at the hydro units.
@@ -147,6 +152,8 @@ def create_animated_map_hydro_unit_value(
         The maximum value for the color scale (default: None).
     fps
         The number of frames per second for the animation (default: 5).
+    figsize
+        The size of the figure in inches (default: (6.4, 4.8)).
     """
     # Get the data
     data = results.get_hydro_units_values(component, start_date, end_date)
@@ -177,7 +184,7 @@ def create_animated_map_hydro_unit_value(
 
     # Create the animation
     cmap = _generate_cmap_blue()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     # Initialize the plot with the first frame of the data
     if dem_path is not None:

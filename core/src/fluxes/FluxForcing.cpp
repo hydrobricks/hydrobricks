@@ -2,17 +2,17 @@
 
 FluxForcing::FluxForcing()
     : Flux(),
-      m_forcing(nullptr) {}
+      _forcing(nullptr) {}
 
 bool FluxForcing::IsOk() {
     return true;
 }
 
 double FluxForcing::GetAmount() {
-    m_amount = m_forcing->GetValue();
-    return m_amount;
+    _amount = _forcing->GetValue();
+    return _amount;
 }
 
 void FluxForcing::AttachForcing(Forcing* forcing) {
-    m_forcing = forcing;
+    _forcing = forcing;
 }

@@ -37,7 +37,7 @@ glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
 # Compute the lookup table. In Seibert et al. (2018), the glacier width is not updated
 # during the iterations (update_width=False), but we would recommend to do so.
 glacier_evolution.compute_lookup_table(
-    GLACIER_PROFILE,
+    glacier_profile_csv=GLACIER_PROFILE,
     update_width=False
 )
 glacier_evolution.save_as_csv(working_dir)
@@ -46,9 +46,13 @@ print(f"Files saved to: {working_dir}")
 
 # Load the results from the CSV files
 areas_evol = pd.read_csv(
-    working_dir / "details_glacier_areas_evolution.csv", header=[0, 1, 2])
+    working_dir / "details_glacier_areas_evolution.csv",
+    header=[0, 1, 2]
+)
 we_evol = pd.read_csv(
-    working_dir / "details_glacier_we_evolution.csv", header=[0, 1, 2])
+    working_dir / "details_glacier_we_evolution.csv",
+    header=[0, 1, 2]
+)
 init_glacier_df = pd.read_csv(GLACIER_PROFILE, skiprows=[1])
 init_glacier_df = init_glacier_df.drop(
     init_glacier_df[init_glacier_df.glacier_area == 0].index

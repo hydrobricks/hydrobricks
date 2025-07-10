@@ -12,11 +12,11 @@ from hydrobricks.constants import ICE_WE
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', '..', 'tests', 'files', 'catchments', 'ch_rhone_gletsch'
 )
-CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
-CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'ice_thickness.tif'
+CATCHMENT_OUTLINE = TEST_FILES_DIR / 'outline.shp'
+CATCHMENT_DEM = TEST_FILES_DIR / 'dem.tif'
+GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'glaciers' / 'ice_thickness.tif'
 
 # Create temporary directory
 with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -38,12 +38,17 @@ if True:
     catchment.create_elevation_bands(method='equal_intervals', distance=100)
 else:
     catchment.calculate_daily_potential_radiation(TEST_FILES_DIR, resolution=None)
-    catchment.discretize_by(['elevation', 'radiation'],
-                             elevation_method='equal_intervals',
-                             elevation_distance=100,
-                             min_elevation=1600, max_elevation=3620,
-                             radiation_method='equal_intervals', radiation_distance=65,
-                             min_radiation=0, max_radiation=260)
+    catchment.discretize_by(
+        ['elevation', 'radiation'],
+        elevation_method='equal_intervals',
+        elevation_distance=100,
+        min_elevation=1600,
+        max_elevation=3620,
+        radiation_method='equal_intervals',
+        radiation_distance=65,
+        min_radiation=0,
+        max_radiation=260
+    )
 
 # Glacier evolution
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
@@ -66,9 +71,13 @@ print(f"Files saved to: {working_dir}")
 
 # Load the results from the CSV files
 areas_evol = pd.read_csv(
-    working_dir / "details_glacier_areas_evolution.csv", header=[0, 1, 2])
+    working_dir / "details_glacier_areas_evolution.csv",
+    header=[0, 1, 2]
+)
 we_raw = pd.read_csv(
-    working_dir / "details_glacier_we_evolution.csv", header=[0, 1, 2])
+    working_dir / "details_glacier_we_evolution.csv",
+    header=[0, 1, 2]
+)
 init_glacier_df = pd.read_csv(working_dir / "glacier_profile.csv")
 init_glacier_df = init_glacier_df.drop(
     init_glacier_df[init_glacier_df["('glacier_area', 'm2')"] == 0].index)
@@ -154,7 +163,8 @@ plt.show()
 
 plt.figure()
 for i in range(0, len(areas_evol), 1):  # Grey lines
-    volume = np.sum(areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values / (1000 * ICE_WE))
+    volume = np.sum(areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values /
+                    (1000 * ICE_WE))
     plt.plot(i, volume, color="black", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier volume (m³)')
@@ -172,6 +182,6 @@ for i in range(0, len(areas_evol), 1):  # Grey lines
     plt.plot(i, areas, color="lightgrey", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier area (scaled) (m²)')
-#plt.xlim(0, )
+# plt.xlim(0, )
 plt.tight_layout()
 plt.show()

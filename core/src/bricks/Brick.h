@@ -218,6 +218,26 @@ class Brick : public wxObject {
     }
 
     /**
+     * Get the hydro unit associated with the brick.
+     *
+     * @return pointer to the hydro unit.
+     */
+    HydroUnit* GetHydroUnit() {
+        wxASSERT(_hydroUnit);
+        return _hydroUnit;
+    }
+
+    /**
+     * Set the hydro unit associated with the brick.
+     *
+     * @param hydroUnit pointer to the hydro unit.
+     */
+    void SetHydroUnit(HydroUnit* hydroUnit) {
+        wxASSERT(hydroUnit);
+        _hydroUnit = hydroUnit;
+    }
+
+    /**
      * Get pointers to the state variables.
      *
      * @return vector of pointers to the state variables.
@@ -257,6 +277,7 @@ class Brick : public wxObject {
     bool _needsSolver;
     WaterContainer* _water;
     vector<Process*> _processes;
+    HydroUnit* _hydroUnit;
 };
 
 #endif  // HYDROBRICKS_BRICK_H

@@ -10,7 +10,8 @@
 
 Brick::Brick()
     : _needsSolver(true),
-      _water(nullptr) {
+      _water(nullptr),
+      _hydroUnit(nullptr) {
     _water = new WaterContainer(this);
 }
 
@@ -21,19 +22,23 @@ Brick::~Brick() {
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
     if (brickSettings.type == "storage") {
         return new Storage();
-    } else if (brickSettings.type == "generic_land_cover" || brickSettings.type == "ground") {
-        return new GenericLandCover();
-    } else if (brickSettings.type == "glacier") {
-        return new Glacier();
-    } else if (brickSettings.type == "urban") {
-        return new Urban();
-    } else if (brickSettings.type == "vegetation") {
-        return new Vegetation();
-    } else if (brickSettings.type == "snowpack") {
-        return new Snowpack();
-    } else {
-        wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
     }
+    if (brickSettings.type == "generic_land_cover" || brickSettings.type == "ground") {
+        return new GenericLandCover();
+    }
+    if (brickSettings.type == "glacier") {
+        return new Glacier();
+    }
+    if (brickSettings.type == "urban") {
+        return new Urban();
+    }
+    if (brickSettings.type == "vegetation") {
+        return new Vegetation();
+    }
+    if (brickSettings.type == "snowpack") {
+        return new Snowpack();
+    }
+    wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
 
     return nullptr;
 }

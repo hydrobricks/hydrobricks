@@ -74,8 +74,10 @@ class SnowRedistributionModel : public ::testing::Test {
     }
 };
 
-void logContent(const vecAxxd &unitContent, int entryId, int nbHydroUnits) {
+void logContent(const vecAxxd &unitContent, int entryId, int nbHydroUnits, const string &title) {
     if (!printContentValues) return;
+
+    std::cout << "\n" << title << "\n";
 
     for (int hu = 0; hu < nbHydroUnits; ++hu) {
         axxd arr = unitContent[entryId].col(hu);
@@ -142,7 +144,141 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
         }
     }
 
-    logContent(unitContent, 6, 5);
+    logContent(unitContent, 6, 5, "Simple, ground snowpack");
+    //logContent(unitContent, 10, 5, "Simple, glacier snowpack");
+
+    // Check the water balance
+    double totSwe = logger->GetTotalSnowStorageChanges();
+    double totSnowInput = 8 * 100.0; // 8 days of 100 mm precipitation
+
+    EXPECT_NEAR(totSnowInput, totSwe, 0.01);
+}
+
+TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100, 2400);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 80, "degree");
+    basinSettings.AddLandCover("ground", "", 0.2);
+    basinSettings.AddLandCover("glacier", "", 0.8);
+    basinSettings.AddHydroUnit(2, 100, 2300);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 60, "degree");
+    basinSettings.AddLandCover("ground", "", 0.0);
+    basinSettings.AddLandCover("glacier", "", 1.0);
+    basinSettings.AddHydroUnit(3, 100, 2200);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 40, "degree");
+    basinSettings.AddLandCover("ground", "", 0.0);
+    basinSettings.AddLandCover("glacier", "", 1.0);
+    basinSettings.AddHydroUnit(4, 100, 2100);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 20, "degree");
+    basinSettings.AddLandCover("ground", "", 0.9);
+    basinSettings.AddLandCover("glacier", "", 0.1);
+    basinSettings.AddHydroUnit(5, 100, 2000);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 0, "degree");
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    // Add lateral connections
+    basinSettings.AddLateralConnection(1, 2, 1.0);
+    basinSettings.AddLateralConnection(2, 3, 1.0);
+    basinSettings.AddLateralConnection(3, 4, 1.0);
+    basinSettings.AddLateralConnection(4, 5, 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check model values
+    Logger* logger = model.GetLogger();
+    vecAxxd unitContent = logger->GetHydroUnitValues();
+
+    // Items that should be zero
+    for (int j = 0; j < 10; ++j) {
+        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < indx.size(); ++i) {
+            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        }
+    }
+
+    logContent(unitContent, 6, 5, "Diff. landcover fractions, ground snowpack");
+    logContent(unitContent, 10, 5, "Diff. landcover fractions, glacier snowpack");
+
+    // Check the water balance
+    double totSwe = logger->GetTotalSnowStorageChanges();
+    double totSnowInput = 8 * 100.0; // 8 days of 100 mm precipitation
+
+    EXPECT_NEAR(totSnowInput, totSwe, 0.01);
+}
+
+TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100, 2400);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 80, "degree");
+    basinSettings.AddLandCover("ground", "", 0.2);
+    basinSettings.AddLandCover("glacier", "", 0.8);
+    basinSettings.AddHydroUnit(2, 200, 2300);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 60, "degree");
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+    basinSettings.AddHydroUnit(3, 50, 2200);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 40, "degree");
+    basinSettings.AddLandCover("ground", "", 1.0);
+    basinSettings.AddLandCover("glacier", "", 0.0);
+    basinSettings.AddHydroUnit(4, 150, 2100);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 20, "degree");
+    basinSettings.AddLandCover("ground", "", 0.0);
+    basinSettings.AddLandCover("glacier", "", 1.0);
+    basinSettings.AddHydroUnit(5, 100, 2000);
+    basinSettings.AddHydroUnitPropertyDouble("slope", 0, "degree");
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    // Add lateral connections
+    basinSettings.AddLateralConnection(1, 2, 0.6);
+    basinSettings.AddLateralConnection(1, 3, 0.4);
+    basinSettings.AddLateralConnection(2, 3, 0.4);
+    basinSettings.AddLateralConnection(2, 4, 0.3);
+    basinSettings.AddLateralConnection(2, 5, 0.3);
+    basinSettings.AddLateralConnection(3, 4, 0.8);
+    basinSettings.AddLateralConnection(3, 5, 0.2);
+    basinSettings.AddLateralConnection(4, 5, 1.0);
+    basinSettings.AddLateralConnection(5, 4, 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check model values
+    Logger* logger = model.GetLogger();
+    vecAxxd unitContent = logger->GetHydroUnitValues();
+
+    // Items that should be zero
+    for (int j = 0; j < 10; ++j) {
+        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < indx.size(); ++i) {
+            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        }
+    }
+
+    logContent(unitContent, 6, 5, "Diff. areas, ground snowpack");
+    logContent(unitContent, 10, 5, "Diff. areas, glacier snowpack");
 
     // Check the water balance
     double totSwe = logger->GetTotalSnowStorageChanges();

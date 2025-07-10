@@ -4,8 +4,7 @@
 #include "LandCover.h"
 
 SurfaceComponent::SurfaceComponent()
-    : Brick(),
-      _parent(nullptr),
+    : _parent(nullptr),
       _areaFraction(1.0) {
     _needsSolver = false;
 }

@@ -3,6 +3,7 @@
 #include "Brick.h"
 #include "FluxToBrick.h"
 #include "SurfaceComponent.h"
+#include "HydroUnit.h"
 
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
@@ -40,6 +41,15 @@ void ProcessLateral::AttachFluxOutWithWeight(Flux* flux, double weight) {
     _weights.push_back(weight);
 }
 
+double ProcessLateral::GetOriginLandCoverAreaFraction() {
+    Brick* brick = _container->GetParentBrick();
+    wxASSERT(brick);
+    auto surfaceComponent = dynamic_cast<SurfaceComponent*>(brick);
+    wxASSERT(surfaceComponent);
+
+    return surfaceComponent->GetParentAreaFraction();
+}
+
 double ProcessLateral::GetTargetLandCoverAreaFraction(Flux* flux) {
     FluxToBrick* fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
     wxASSERT(flux);
@@ -49,4 +59,15 @@ double ProcessLateral::GetTargetLandCoverAreaFraction(Flux* flux) {
     wxASSERT(surfaceComponent);
 
     return surfaceComponent->GetParentAreaFraction();
+}
+
+double ProcessLateral::ComputeFractionAreas(Flux* flux) {
+    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+    wxASSERT(fluxToBrick);
+
+    double destinationArea = fluxToBrick->GetTargetBrick()->GetHydroUnit()->GetArea();
+    double originArea = _container->GetParentBrick()->GetHydroUnit()->GetArea();
+
+    return (originArea * GetOriginLandCoverAreaFraction()) /
+        (destinationArea * GetTargetLandCoverAreaFraction(flux));
 }

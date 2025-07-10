@@ -69,6 +69,8 @@ void HydroUnit::AddBrick(Brick* brick) {
     wxASSERT(brick);
     _bricks.push_back(brick);
 
+    brick->SetHydroUnit(this);
+
     if (brick->IsLandCover()) {
         auto* landCover = dynamic_cast<LandCover*>(brick);
         _landCoverBricks.push_back(landCover);

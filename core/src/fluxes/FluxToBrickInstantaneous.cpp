@@ -20,7 +20,7 @@ double FluxToBrickInstantaneous::GetRealAmount() {
 
 void FluxToBrickInstantaneous::UpdateFlux(double amount) {
     wxASSERT(_toBrick);
-    if (_fractionTotal < 1.0) {
+    if (_fractionTotal != 1.0) {
         _amount = amount * _fractionTotal;  // Still need to keep it.
     } else {
         _amount = amount;

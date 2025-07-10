@@ -1,6 +1,7 @@
 #include "FluxToBrickInstantaneous.h"
 
 #include "Brick.h"
+#include "Snowpack.h"
 
 FluxToBrickInstantaneous::FluxToBrickInstantaneous(Brick* brick)
     : FluxToBrick(brick) {}
@@ -24,5 +25,14 @@ void FluxToBrickInstantaneous::UpdateFlux(double amount) {
     } else {
         _amount = amount;
     }
-    _toBrick->GetWaterContainer()->AddAmountToStaticContentChange(_amount);
+
+    if (_type == "water") {
+        _toBrick->GetWaterContainer()->AddAmountToStaticContentChange(_amount);
+    } else if (_type == "snow") {
+        auto snowBrick = dynamic_cast<Snowpack*>(_toBrick);
+        wxASSERT(snowBrick);
+        snowBrick->GetSnowContainer()->AddAmountToStaticContentChange(_amount);
+    } else {
+        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), _type));
+    }
 }

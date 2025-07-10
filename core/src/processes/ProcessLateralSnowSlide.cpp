@@ -83,17 +83,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
 
     for (size_t i = 0; i < _outputs.size(); ++i) {
         wxASSERT(_weights.size() > i);
-
-        // Get the area fraction for the target brick (to weight the redistribution)
-        FluxToBrick* fluxToBrick = dynamic_cast<FluxToBrick*>(_outputs[i]);
-        wxASSERT(fluxToBrick);
-        Brick* targetBrick = fluxToBrick->GetTargetBrick();
-        wxASSERT(targetBrick);
-        SurfaceComponent* surfaceComponent = dynamic_cast<SurfaceComponent*>(targetBrick);
-        wxASSERT(surfaceComponent);
-        double areaFraction = surfaceComponent->GetParentAreaFraction();
-
-        rates[i] = excessSwe * _weights[i] * areaFraction;  // [mm] Lateral snow redistribution rate.
+        rates[i] = excessSwe * _weights[i] * GetTargetLandCoverAreaFraction(_outputs[i]);  // [mm] Redistribution rate.
     }
 
     return rates;

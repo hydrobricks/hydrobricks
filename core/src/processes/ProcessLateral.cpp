@@ -1,7 +1,8 @@
 #include "ProcessLateral.h"
 
 #include "Brick.h"
-#include "WaterContainer.h"
+#include "FluxToBrick.h"
+#include "SurfaceComponent.h"
 
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
@@ -37,4 +38,15 @@ void ProcessLateral::AttachFluxOutWithWeight(Flux* flux, double weight) {
     wxASSERT(flux);
     _outputs.push_back(flux);
     _weights.push_back(weight);
+}
+
+double ProcessLateral::GetTargetLandCoverAreaFraction(Flux* flux) {
+    FluxToBrick* fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+    wxASSERT(flux);
+    Brick* targetBrick = fluxToBrick->GetTargetBrick();
+    wxASSERT(targetBrick);
+    auto surfaceComponent = dynamic_cast<SurfaceComponent*>(targetBrick);
+    wxASSERT(surfaceComponent);
+
+    return surfaceComponent->GetParentAreaFraction();
 }

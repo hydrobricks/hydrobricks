@@ -298,7 +298,8 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
         string componentName = _hydroUnitLabels[i];
         for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
             string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":")) {
+            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
+                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
                 fraction = _hydroUnitFractions[j](0, Eigen::all);
                 break;
             }
@@ -319,7 +320,8 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
         string componentName = _hydroUnitLabels[i];
         for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
             string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":")) {
+            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
+                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
                 fraction = _hydroUnitFractions[j](Eigen::last, Eigen::all);
                 break;
             }

@@ -35,6 +35,13 @@ class ProcessLateral : public Process {
     void AttachFluxOutWithWeight(Flux* flux, double weight = 1.0);
 
     /**
+     * Get the area fraction of the target land cover.
+     *
+     * @return The area fraction of the target land cover.
+     */
+    double GetTargetLandCoverAreaFraction(Flux* flux);
+
+    /**
      * Check if the process is a lateral process.
      *
      * @return true if the process is a lateral process.

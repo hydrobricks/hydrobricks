@@ -1,9 +1,10 @@
 import os.path
 import tempfile
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from pathlib import Path
 
 import hydrobricks as hb
 from hydrobricks.constants import ICE_WE
@@ -38,10 +39,10 @@ if True:
 else:
     catchment.calculate_daily_potential_radiation(TEST_FILES_DIR, resolution=None)
     catchment.discretize_by(['elevation', 'radiation'],
-                             elevation_method='equal_intervals', 
+                             elevation_method='equal_intervals',
                              elevation_distance=100,
-                             min_elevation=1600, max_elevation=3620, 
-                             radiation_method='equal_intervals', radiation_distance=65, 
+                             min_elevation=1600, max_elevation=3620,
+                             radiation_method='equal_intervals', radiation_distance=65,
                              min_radiation=0, max_radiation=260)
 
 # Glacier evolution

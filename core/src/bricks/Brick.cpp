@@ -77,13 +77,8 @@ void Brick::AttachFluxIn(Flux* flux) {
 }
 
 bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
-    for (auto parameter : brickSettings.parameters) {
-        if (parameter->GetName() == name) {
-            return true;
-        }
-    }
-
-    return false;
+    return std::any_of(brickSettings.parameters.begin(), brickSettings.parameters.end(),
+                       [&name](const Parameter* parameter) { return parameter->GetName() == name; });
 }
 
 float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {

@@ -121,6 +121,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
 }
 
 void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
+    // Create the hydro unit bricks and splitters
     for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
 
@@ -161,6 +162,11 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
         }
 
         LinkSurfaceComponentsParents(modelSettings, unit);
+    }
+
+    // Create fluxes for the hydro units
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);
         BuildHydroUnitSplittersFluxes(modelSettings, unit);
@@ -392,7 +398,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     flux->SetType(output.fluxType);
 
                     // From hydro unit to basin: weight by hydro unit area
-                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                    flux->SetWeight(unit->GetArea() / _subBasin->GetArea());
 
                     // Weight by surface area
                     if (brick->CanHaveAreaFraction()) {
@@ -400,6 +406,37 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
                     _subBasin->AttachOutletFlux(flux);
 
+                } else if (output.target == "lateral") {
+                    // Get target unit from lateral connections
+                    for (auto& lateralConnection : unit->GetLateralConnections()) {
+                        HydroUnit* receiver = lateralConnection->GetReceiver();
+
+                        if (output.fluxType == "snow") {
+                            // Look over the snowpack bricks of the receiver unit
+                            for (auto& targetBrick : receiver->GetSnowpacks()) {
+
+                                // Create the flux
+                                if (output.isInstantaneous) {
+                                    flux = new FluxToBrickInstantaneous(targetBrick);
+                                } else {
+                                    flux = new FluxToBrick(targetBrick);
+                                }
+
+                                flux->SetType(output.fluxType);
+
+                                // Weight by surface area
+                                flux->NeedsWeighting(true);
+
+                                // Weight by lateral connection fraction
+                                flux->SetWeight(lateralConnection->GetFraction());
+
+                                // Attach the flux to the target brick
+                                targetBrick->AttachFluxIn(flux);
+                            }
+                        } else {
+                            throw NotImplemented();
+                        }
+                    }
                 } else if (unit->HasBrick(output.target) || _subBasin->HasBrick(output.target)) {
                     bool toSubBasin = false;
                     Brick* targetBrick = nullptr;
@@ -428,7 +465,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                        flux->SetWeight(unit->GetArea() / _subBasin->GetArea());
                         flux->SetAsStatic();
                     }
 
@@ -458,7 +495,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                     // From hydro unit to basin: weight by hydro unit area
                     if (toSubBasin) {
-                        flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                        flux->SetWeight(unit->GetArea() / _subBasin->GetArea());
                     }
 
                     targetSplitter->AttachFluxIn(flux);
@@ -534,7 +571,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 flux->SetType(output.fluxType);
 
                 // From hydro unit to basin: weight by hydro unit area
-                flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                flux->SetWeight(unit->GetArea() / _subBasin->GetArea());
 
                 _subBasin->AttachOutletFlux(flux);
 
@@ -557,7 +594,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetWeight(unit->GetArea() / _subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetBrick->AttachFluxIn(flux);
@@ -581,7 +618,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 
                 // From hydro unit to basin: weight by hydro unit area
                 if (toSubBasin) {
-                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());  // From hydro unit to basin
+                    flux->SetWeight(unit->GetArea() / _subBasin->GetArea());  // From hydro unit to basin
                 }
 
                 targetSplitter->AttachFluxIn(flux);

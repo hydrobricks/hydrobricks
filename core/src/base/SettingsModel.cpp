@@ -487,6 +487,7 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
         }
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
         AddBrickProcess("snow_redistribution", redistributionProcess, "lateral:snow");
+        SetProcessOutputsAsInstantaneous();
     }
 }
 

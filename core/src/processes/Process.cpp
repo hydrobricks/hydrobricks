@@ -48,6 +48,14 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
     }
+    if (processType == "transport:snow_slide") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
+        }
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply transport processes to unsupported brick: %s"), brick->GetName()));
+    }
     if (processType == "runoff:socont") {
         return new ProcessRunoffSocont(brick->GetWaterContainer());
     }

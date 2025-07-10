@@ -7,7 +7,7 @@ Flux::Flux()
       _changeRate(nullptr),
       _static(false),
       _needsWeighting(false),
-      _fractionUnitArea(1.0),
+      _weight(1.0),
       _fractionLandCover(1.0),
       _fractionTotal(1.0),
       _modifier(nullptr),

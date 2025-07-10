@@ -151,6 +151,21 @@ class HydroUnit : public wxObject {
     Brick* GetBrick(const string& name);
 
     /**
+     * Get a vector of all snowpack bricks in the hydro unit.
+     *
+     * @return A vector of pointers to the snowpack bricks.
+     */
+    vector<Brick*> GetSnowpacks() const {
+        vector<Brick*> snowBricks;
+        for (auto& brick : _bricks) {
+            if (brick->IsSnowpack()) {
+                snowBricks.push_back(brick);
+            }
+        }
+        return snowBricks;
+    }
+
+    /**
      * Get a land cover by its name.
      *
      * @param name The name of the land cover to get.
@@ -239,6 +254,15 @@ class HydroUnit : public wxObject {
      */
     int GetId() const {
         return _id;
+    }
+
+    /**
+     * Get the lateral connections of the hydro unit.
+     *
+     * @return A vector of lateral connections associated with the hydro unit.
+     */
+    vector<HydroUnitLateralConnection*> GetLateralConnections() const {
+        return _lateralConnections;
     }
 
   protected:

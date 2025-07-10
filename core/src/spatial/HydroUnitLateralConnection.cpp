@@ -4,6 +4,6 @@
 #include <utility>
 
 HydroUnitLateralConnection::HydroUnitLateralConnection(HydroUnit* receiver, double fraction, string type)
-    : _receiver(std::move(receiver)),
+    : _receiver(receiver),
       _fraction(fraction),
       _type(std::move(type)) {}

@@ -77,8 +77,12 @@ class ActionGlacierEvolutionDeltaH(Action):
         lookup_table_area = pd.read_csv(full_path_area)
         lookup_table_volume = pd.read_csv(full_path_volume)
 
-        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
-                                        land_cover, update_month)
+        self._populate_bounded_instance(
+            lookup_table_area,
+            lookup_table_volume,
+            land_cover,
+            update_month
+        )
 
     def load_from(
             self,
@@ -107,8 +111,12 @@ class ActionGlacierEvolutionDeltaH(Action):
         lookup_table_area = obj.get_lookup_table_area()
         lookup_table_volume = obj.get_lookup_table_volume()
 
-        self._populate_bounded_instance(lookup_table_area, lookup_table_volume,
-                                        land_cover, update_month)
+        self._populate_bounded_instance(
+            lookup_table_area,
+            lookup_table_volume,
+            land_cover,
+            update_month
+        )
 
     def get_month(self) -> int:
         """
@@ -175,9 +183,18 @@ class ActionGlacierEvolutionDeltaH(Action):
             month_num = update_month
         elif isinstance(update_month, str):
             month_mapping = {
-                'January': 1, 'February': 2, 'March': 3, 'April': 4,
-                'May': 5, 'June': 6, 'July': 7, 'August': 8,
-                'September': 9, 'October': 10, 'November': 11, 'December': 12
+                'January': 1,
+                'February': 2,
+                'March': 3,
+                'April': 4,
+                'May': 5,
+                'June': 6,
+                'July': 7,
+                'August': 8,
+                'September': 9,
+                'October': 10,
+                'November': 11,
+                'December': 12
             }
             month_num = month_mapping.get(update_month, None)
             if month_num is None:

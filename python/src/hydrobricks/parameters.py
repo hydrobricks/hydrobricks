@@ -84,10 +84,18 @@ class ParameterSet:
         self._check_aliases_uniqueness(aliases)
         self._check_min_max_consistency(min_value, max_value)
 
-        new_row = pd.Series(
-            {'component': component, 'name': name, 'unit': unit, 'aliases': aliases,
-             'value': value, 'min': min_value, 'max': max_value,
-             'default_value': default_value, 'mandatory': mandatory, 'prior': None})
+        new_row = pd.Series({
+            'component': component,
+            'name': name,
+            'unit': unit,
+            'aliases': aliases,
+            'value': value,
+            'min': min_value,
+            'max': max_value,
+            'default_value': default_value,
+            'mandatory': mandatory,
+            'prior': None
+        })
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
@@ -386,10 +394,17 @@ class ParameterSet:
         self._check_aliases_uniqueness(aliases)
         self._check_min_max_consistency(min_value, max_value)
 
-        new_row = pd.Series(
-            {'component': 'data', 'name': name, 'unit': unit, 'aliases': aliases,
-             'value': value, 'min': min_value, 'max': max_value,
-             'default_value': value, 'mandatory': False})
+        new_row = pd.Series({
+            'component': 'data',
+            'name': name,
+            'unit': unit,
+            'aliases': aliases,
+            'value': value,
+            'min': min_value,
+            'max': max_value,
+            'default_value': value,
+            'mandatory': False
+        })
 
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
@@ -494,8 +509,11 @@ class ParameterSet:
                 )
             else:
                 spotpy_params.append(
-                    hb.spotpy.parameter.Uniform(param_name, low=param['min'],
-                                                high=param['max'])
+                    hb.spotpy.parameter.Uniform(
+                        param_name,
+                        low=param['min'],
+                        high=param['max']
+                    )
                 )
 
         return spotpy_params
@@ -549,11 +567,18 @@ class ParameterSet:
             The model structure.
         """
         # General parameters
-        self._generate_snow_parameters(options, land_cover_types, land_cover_names)
+        self._generate_snow_parameters(
+            options,
+            land_cover_types,
+            land_cover_names
+        )
 
         # Parameters for the glaciers
-        self._generate_glacier_parameters(land_cover_types, land_cover_names,
-                                          structure)
+        self._generate_glacier_parameters(
+            land_cover_types,
+            land_cover_names,
+            structure
+        )
 
         # Parameters for the different bricks
         for key, brick in structure.items():
@@ -566,10 +591,15 @@ class ParameterSet:
 
         skip_processes = [
             # No parameters
-            'infiltration:socont', 'outflow:rest_direct', 'outflow:direct', 'et:socont',
+            'infiltration:socont',
+            'outflow:rest_direct',
+            'outflow:direct',
+            'et:socont',
             'overflow',
             # Already defined for snowpacks + glaciers
-            'melt:degree_day', 'melt:degree_day_aspect', 'melt:temperature_index'
+            'melt:degree_day',
+            'melt:degree_day_aspect',
+            'melt:temperature_index'
         ]
 
         for _, process in brick['processes'].items():
@@ -577,16 +607,34 @@ class ParameterSet:
                 continue
             elif process['kind'] == 'outflow:linear':
                 self.define_parameter(
-                    component=key, name='response_factor', unit='1/d', aliases=[],
-                    min_value=0.001, max_value=1, mandatory=True)
+                    component=key,
+                    name='response_factor',
+                    unit='1/d',
+                    aliases=[],
+                    min_value=0.001,
+                    max_value=1,
+                    mandatory=True
+                )
             elif process['kind'] == 'runoff:socont':
                 self.define_parameter(
-                    component=key, name='beta', unit='m^(4/3)/s', aliases=['beta'],
-                    min_value=100, max_value=30000, mandatory=True)
+                    component=key,
+                    name='beta',
+                    unit='m^(4/3)/s',
+                    aliases=['beta'],
+                    min_value=100,
+                    max_value=30000,
+                    mandatory=True
+                )
             elif process['kind'] == 'outflow:percolation':
                 self.define_parameter(
-                    component=key, name='percolation_rate', unit='mm/d',
-                    aliases=['percol'], min_value=0, max_value=10, mandatory=True)
+                    component=key,
+                    name='percolation_rate',
+                    unit='mm/d',
+                    aliases=['percol'],
+                    min_value=0,
+                    max_value=10,
+                    mandatory=True
+                )
             else:
                 raise RuntimeError(f"The process {process['kind']} is not recognised "
                                    f"in parameters generation.")
@@ -600,8 +648,14 @@ class ParameterSet:
                 continue
             elif param_name == 'capacity':
                 self.define_parameter(
-                    component=key, name=param_name, unit='mm', aliases=[],
-                    min_value=0, max_value=3000, mandatory=True)
+                    component=key,
+                    name=param_name,
+                    unit='mm',
+                    aliases=[],
+                    min_value=0,
+                    max_value=3000,
+                    mandatory=True
+                )
             else:
                 raise RuntimeError(f"The parameter {param_name} is not recognised in "
                                    f"parameters generation.")
@@ -615,9 +669,11 @@ class ParameterSet:
         if 'glacier' not in land_cover_types:
             return
 
-        glacier_names = [cover_name for cover_type, cover_name in
-                         zip(land_cover_types, land_cover_names) if
-                         cover_type == 'glacier']
+        glacier_names = [
+            cover_name for cover_type, cover_name in
+            zip(land_cover_types, land_cover_names)
+            if cover_type == 'glacier'
+        ]
 
         for i, cover_name in enumerate(glacier_names):
             melt_method = structure[cover_name]['processes']['melt']['kind']
@@ -625,23 +681,38 @@ class ParameterSet:
             if len(glacier_names) == 1:
                 t_aliases = ['melt_t_ice']
             else:
-                t_aliases = [f'melt_t_ice_{cover_name.replace("-", "_")}',
-                             f'melt_t_ice_{i}']
+                t_aliases = [
+                    f'melt_t_ice_{cover_name.replace("-", "_")}',
+                    f'melt_t_ice_{i}'
+                ]
 
             if melt_method == 'melt:degree_day':
                 if len(glacier_names) == 1:
                     a_aliases = ['a_ice']
                 else:
-                    a_aliases = [f'a_ice_{cover_name.replace("-", "_")}',
-                                 f'a_ice_{i}']
+                    a_aliases = [
+                        f'a_ice_{cover_name.replace("-", "_")}',
+                        f'a_ice_{i}'
+                    ]
 
                 self.define_parameter(
-                    component=cover_name, name='degree_day_factor',
-                    unit='mm/d/°C', aliases=a_aliases, min_value=5, max_value=20)
+                    component=cover_name,
+                    name='degree_day_factor',
+                    unit='mm/d/°C',
+                    aliases=a_aliases,
+                    min_value=5,
+                    max_value=20
+                )
                 self.define_parameter(
-                    component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
-                    default_value=0, mandatory=False)
+                    component=cover_name,
+                    name='melting_temperature',
+                    unit='°C',
+                    aliases=t_aliases,
+                    min_value=0,
+                    max_value=5,
+                    default_value=0,
+                    mandatory=False
+                )
 
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
                     self.define_constraint('a_ice_glacier_debris', '<',
@@ -654,26 +725,53 @@ class ParameterSet:
                     a_s_aliases = ['a_ice_s']
                     a_ew_aliases = ['a_ice_ew']
                 else:
-                    a_n_aliases = [f'a_ice_n_{cover_name.replace("-", "_")}',
-                                   f'a_ice_n_{i}']
-                    a_s_aliases = [f'a_ice_s_{cover_name.replace("-", "_")}',
-                                   f'a_ice_s_{i}']
-                    a_ew_aliases = [f'a_ice_ew_{cover_name.replace("-", "_")}',
-                                    f'a_ice_ew_{i}']
+                    a_n_aliases = [
+                        f'a_ice_n_{cover_name.replace("-", "_")}',
+                        f'a_ice_n_{i}'
+                    ]
+                    a_s_aliases = [
+                        f'a_ice_s_{cover_name.replace("-", "_")}',
+                        f'a_ice_s_{i}'
+                    ]
+                    a_ew_aliases = [
+                        f'a_ice_ew_{cover_name.replace("-", "_")}',
+                        f'a_ice_ew_{i}'
+                    ]
 
                 self.define_parameter(
-                    component=cover_name, name='degree_day_factor_n',
-                    unit='mm/d/°C', aliases=a_n_aliases, min_value=1, max_value=20)
+                    component=cover_name,
+                    name='degree_day_factor_n',
+                    unit='mm/d/°C',
+                    aliases=a_n_aliases,
+                    min_value=1,
+                    max_value=20
+                )
                 self.define_parameter(
-                    component=cover_name, name='degree_day_factor_s',
-                    unit='mm/d/°C', aliases=a_s_aliases, min_value=5, max_value=20)
+                    component=cover_name,
+                    name='degree_day_factor_s',
+                    unit='mm/d/°C',
+                    aliases=a_s_aliases,
+                    min_value=5,
+                    max_value=20
+                )
                 self.define_parameter(
-                    component=cover_name, name='degree_day_factor_ew',
-                    unit='mm/d/°C', aliases=a_ew_aliases, min_value=5, max_value=20)
+                    component=cover_name,
+                    name='degree_day_factor_ew',
+                    unit='mm/d/°C',
+                    aliases=a_ew_aliases,
+                    min_value=5,
+                    max_value=20
+                )
                 self.define_parameter(
-                    component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
-                    default_value=0, mandatory=False)
+                    component=cover_name,
+                    name='melting_temperature',
+                    unit='°C',
+                    aliases=t_aliases,
+                    min_value=0,
+                    max_value=5,
+                    default_value=0,
+                    mandatory=False
+                )
 
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
                     self.define_constraint('a_ice_n_glacier_debris', '<',
@@ -693,16 +791,29 @@ class ParameterSet:
                 if len(glacier_names) == 1:
                     r_aliases = ['r_ice']
                 else:
-                    r_aliases = [f'r_ice_{cover_name.replace("-", "_")}',
-                                 f'r_ice_{i}']
+                    r_aliases = [
+                        f'r_ice_{cover_name.replace("-", "_")}',
+                        f'r_ice_{i}'
+                    ]
 
                 self.define_parameter(
-                    component=cover_name, name='radiation_coefficient',
-                    unit='m2/W*mm/d/°C', aliases=r_aliases, min_value=0, max_value=1)
+                    component=cover_name,
+                    name='radiation_coefficient',
+                    unit='m2/W*mm/d/°C',
+                    aliases=r_aliases,
+                    min_value=0,
+                    max_value=1
+                )
                 self.define_parameter(
-                    component=cover_name, name='melting_temperature',
-                    unit='°C', aliases=t_aliases, min_value=0, max_value=5,
-                    default_value=0, mandatory=False)
+                    component=cover_name,
+                    name='melting_temperature',
+                    unit='°C',
+                    aliases=t_aliases,
+                    min_value=0,
+                    max_value=5,
+                    default_value=0,
+                    mandatory=False
+                )
 
                 if len(glacier_names) > 1 and cover_name == 'glacier_debris':
                     self.define_constraint('r_ice_glacier_debris', '<',
@@ -721,56 +832,111 @@ class ParameterSet:
     ):
         if 'snow_melt_process' in options or 'with_snow' in options:
             self.define_parameter(
-                component='snow_rain_transition', name='transition_start', unit='°C',
-                aliases=['prec_t_start'], min_value=-2, max_value=2, default_value=0,
-                mandatory=False)
+                component='snow_rain_transition',
+                name='transition_start',
+                unit='°C',
+                aliases=['prec_t_start'],
+                min_value=-2,
+                max_value=2,
+                default_value=0,
+                mandatory=False
+            )
 
             self.define_parameter(
-                component='snow_rain_transition', name='transition_end', unit='°C',
-                aliases=['prec_t_end'], min_value=0, max_value=4, default_value=2,
-                mandatory=False)
+                component='snow_rain_transition',
+                name='transition_end',
+                unit='°C',
+                aliases=['prec_t_end'],
+                min_value=0,
+                max_value=4,
+                default_value=2,
+                mandatory=False
+            )
 
             if 'snow_melt_process' in options:
                 if options['snow_melt_process'] == 'melt:degree_day':
                     self.define_parameter(
-                        component='type:snowpack', name='degree_day_factor',
-                        unit='mm/d/°C', aliases=['a_snow'], min_value=2, max_value=12)
+                        component='type:snowpack',
+                        name='degree_day_factor',
+                        unit='mm/d/°C',
+                        aliases=['a_snow'],
+                        min_value=2,
+                        max_value=12
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='melting_temperature',
-                        unit='°C', aliases=['melt_t_snow'], min_value=0, max_value=5,
-                        default_value=0, mandatory=False)
+                        component='type:snowpack',
+                        name='melting_temperature',
+                        unit='°C',
+                        aliases=['melt_t_snow'],
+                        min_value=0,
+                        max_value=5,
+                        default_value=0,
+                        mandatory=False
+                    )
                 elif options['snow_melt_process'] == 'melt:degree_day_aspect':
                     self.define_parameter(
-                        component='type:snowpack', name='degree_day_factor_n',
-                        unit='mm/d/°C', aliases=['a_snow_n'],
-                        min_value=0, max_value=12)
+                        component='type:snowpack',
+                        name='degree_day_factor_n',
+                        unit='mm/d/°C',
+                        aliases=['a_snow_n'],
+                        min_value=0,
+                        max_value=12
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='degree_day_factor_s',
-                        unit='mm/d/°C', aliases=['a_snow_s'],
-                        min_value=2, max_value=12)
+                        component='type:snowpack',
+                        name='degree_day_factor_s',
+                        unit='mm/d/°C',
+                        aliases=['a_snow_s'],
+                        min_value=2,
+                        max_value=12
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='degree_day_factor_ew',
-                        unit='mm/d/°C', aliases=['a_snow_ew'],
-                        min_value=2, max_value=12)
+                        component='type:snowpack',
+                        name='degree_day_factor_ew',
+                        unit='mm/d/°C',
+                        aliases=['a_snow_ew'],
+                        min_value=2,
+                        max_value=12
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='melting_temperature',
-                        unit='°C', aliases=['melt_t_snow'], min_value=0,
-                        max_value=5, default_value=0, mandatory=False)
+                        component='type:snowpack',
+                        name='melting_temperature',
+                        unit='°C',
+                        aliases=['melt_t_snow'],
+                        min_value=0,
+                        max_value=5,
+                        default_value=0,
+                        mandatory=False
+                    )
                 elif options['snow_melt_process'] == 'melt:temperature_index':
                     # This melt factor parameter is initialized on the snow but applied
                     # to both snow and ice (debris-covered or clean).
                     self.define_parameter(
-                        component='type:snowpack,type:glacier', name='melt_factor',
-                        unit='mm/d/°C', aliases=['melt_factor', 'mf'],
-                        min_value=0, max_value=12)
+                        component='type:snowpack,type:glacier',
+                        name='melt_factor',
+                        unit='mm/d/°C',
+                        aliases=['melt_factor', 'mf'],
+                        min_value=0,
+                        max_value=12
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='radiation_coefficient',
-                        unit='m2/W*mm/d/°C', aliases=['r_snow'],
-                        min_value=0, max_value=1)
+                        component='type:snowpack',
+                        name='radiation_coefficient',
+                        unit='m2/W*mm/d/°C',
+                        aliases=['r_snow'],
+                        min_value=0,
+                        max_value=1
+                    )
                     self.define_parameter(
-                        component='type:snowpack', name='melting_temperature',
-                        unit='°C', aliases=['melt_t_snow'], min_value=0,
-                        max_value=5, default_value=0, mandatory=False)
+                        component='type:snowpack',
+                        name='melting_temperature',
+                        unit='°C',
+                        aliases=['melt_t_snow'],
+                        min_value=0,
+                        max_value=5,
+                        default_value=0,
+                        mandatory=False
+                    )
                 else:
                     raise RuntimeError(
                         f"The snow melt process option "
@@ -783,9 +949,14 @@ class ParameterSet:
                             continue
                         self.define_parameter(
                             component=f'{cover_name}_snowpack',
-                            name='snow_ice_transformation_rate', unit='mm/d',
-                            aliases=['snow_ice_rate'], min_value=0, max_value=0.005,
-                            default_value=0.002, mandatory=True)
+                            name='snow_ice_transformation_rate',
+                            unit='mm/d',
+                            aliases=['snow_ice_rate'],
+                            min_value=0,
+                            max_value=0.005,
+                            default_value=0.002,
+                            mandatory=True
+                        )
 
     @staticmethod
     def _check_min_max_consistency(min_value: float, max_value: float):

@@ -8,5 +8,5 @@ bool FluxToAtmosphere::IsOk() {
 }
 
 double FluxToAtmosphere::GetAmount() {
-    return m_amount;
+    return _amount;
 }

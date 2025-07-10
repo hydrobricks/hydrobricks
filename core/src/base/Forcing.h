@@ -23,7 +23,7 @@ class Forcing : public wxObject {
      * @return the type of the forcing.
      */
     VariableType GetType() {
-        return m_type;
+        return _type;
     }
 
     /**
@@ -34,8 +34,8 @@ class Forcing : public wxObject {
     double GetValue();
 
   protected:
-    VariableType m_type;
-    TimeSeriesData* m_timeSeriesData;
+    VariableType _type;
+    TimeSeriesData* _timeSeriesData;
 };
 
 #endif  // HYDROBRICKS_FORCING_H

@@ -54,8 +54,14 @@ class CatchmentDiscretization:
         max_elevation
             Maximum elevation of the elevation bands (to homogenize between runs).
         """
-        self.discretize_by('elevation', method, number, distance,
-                           min_elevation, max_elevation)
+        self.discretize_by(
+            'elevation',
+            method,
+            number,
+            distance,
+            min_elevation,
+            max_elevation
+        )
 
     def discretize_by(
             self,
@@ -319,31 +325,51 @@ class CatchmentDiscretization:
 
         if res_elevation:
             self.catchment.hydro_units.add_property(
-                ('elevation', 'm'), res_elevation)
+                ('elevation', 'm'),
+                res_elevation
+            )
             self.catchment.hydro_units.add_property(
-                ('elevation_min', 'm'), res_elevation_min)
+                ('elevation_min', 'm'),
+                res_elevation_min
+            )
             self.catchment.hydro_units.add_property(
-                ('elevation_max', 'm'), res_elevation_max)
+                ('elevation_max', 'm'),
+                res_elevation_max
+            )
 
         if res_slope:
             self.catchment.hydro_units.add_property(
-                ('slope', 'deg'), res_slope)
+                ('slope', 'deg'),
+                res_slope
+            )
             self.catchment.hydro_units.add_property(
-                ('slope_min', 'deg'), res_slope_min)
+                ('slope_min', 'deg'),
+                res_slope_min
+            )
             self.catchment.hydro_units.add_property(
-                ('slope_max', 'deg'), res_slope_max)
+                ('slope_max', 'deg'),
+                res_slope_max
+            )
 
         if res_aspect_class:
             self.catchment.hydro_units.add_property(
-                ('aspect_class', '-'), res_aspect_class)
+                ('aspect_class', '-'),
+                res_aspect_class
+            )
 
         if res_radiation:
             self.catchment.hydro_units.add_property(
-                ('radiation', 'W/m2'), res_radiation)
+                ('radiation', 'W/m2'),
+                res_radiation
+            )
             self.catchment.hydro_units.add_property(
-                ('radiation_min', 'W/m2'), res_radiation_min)
+                ('radiation_min', 'W/m2'),
+                res_radiation_min
+            )
             self.catchment.hydro_units.add_property(
-                ('radiation_max', 'W/m2'), res_radiation_max)
+                ('radiation_max', 'W/m2'),
+                res_radiation_max
+            )
 
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()

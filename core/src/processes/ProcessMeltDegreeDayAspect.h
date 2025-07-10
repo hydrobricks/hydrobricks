@@ -39,10 +39,10 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    string m_aspectClass;
-    Forcing* m_temperature;
-    float* m_degreeDayFactor;
-    float* m_meltingTemperature;
+    string _aspectClass;
+    Forcing* _temperature;
+    float* _degreeDayFactor;
+    float* _meltingTemperature;
 
     /**
      * @copydoc Process::GetRates()

@@ -77,7 +77,8 @@ class ModelSettings:
             land_cover_types: list[str],
             with_snow: bool = True,
             snow_melt_process: str = 'melt:degree_day',
-            snow_ice_transformation: bool = False
+            snow_ice_transformation: str = None,
+            snow_redistribution: str = None
     ):
         """
         Generate basic elements
@@ -93,7 +94,9 @@ class ModelSettings:
         snow_melt_process
             Snow melt process
         snow_ice_transformation
-            Account for snow-ice transformation
+            Snow and ice transformation method (optional)
+        snow_redistribution
+            Snow redistribution method (optional)
         """
         if len(land_cover_names) != len(land_cover_types):
             raise RuntimeError('The length of the land cover names '
@@ -112,18 +115,11 @@ class ModelSettings:
 
         # Snowpack
         if with_snow:
-            self.settings.generate_snowpacks(snow_melt_process, snow_ice_transformation)
-
-    def generate_snowpacks(self, snow_melt_process: str):
-        """
-        Generate snowpacks
-
-        Parameters
-        ----------
-        snow_melt_process
-            Snow melt process
-        """
-        self.settings.generate_snowpacks(snow_melt_process)
+            self.settings.generate_snowpacks(snow_melt_process)
+            if snow_ice_transformation:
+                self.settings.add_snow_ice_transformation(snow_ice_transformation)
+            if snow_redistribution:
+                self.settings.add_snow_redistribution(snow_redistribution)
 
     def add_land_cover_brick(self, name: str, kind: str):
         """

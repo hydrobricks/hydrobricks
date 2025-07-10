@@ -102,8 +102,9 @@ def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
     date = np.empty(len(mjd), dtype='datetime64[s]')
 
     for idx, _ in enumerate(year):
-        date[idx] = datetime.datetime(year[idx], month[idx], day[idx],
-                                      hour[idx], minute[idx], 0, 0)
+        date[idx] = datetime.datetime(
+            year[idx], month[idx], day[idx], hour[idx], minute[idx], 0, 0
+        )
 
     return date
 

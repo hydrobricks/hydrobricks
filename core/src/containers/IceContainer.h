@@ -24,7 +24,7 @@ class IceContainer : public WaterContainer {
      */
     void SetNoMeltWhenSnowCover(const float* value) {
         wxASSERT(value);
-        m_noMeltWhenSnowCover = *value > 0;
+        _noMeltWhenSnowCover = *value > 0;
     }
 
     /**
@@ -34,7 +34,7 @@ class IceContainer : public WaterContainer {
      */
     void SetRelatedSnowpack(Snowpack* snowpack) {
         wxASSERT(snowpack);
-        m_relatedSnowpack = snowpack;
+        _relatedSnowpack = snowpack;
     }
 
     /**
@@ -43,8 +43,8 @@ class IceContainer : public WaterContainer {
     bool ContentAccessible() const override;
 
   private:
-    bool m_noMeltWhenSnowCover;
-    Snowpack* m_relatedSnowpack;
+    bool _noMeltWhenSnowCover;
+    Snowpack* _relatedSnowpack;
 };
 
 #endif  // HYDROBRICKS_ICE_CONTAINER_H

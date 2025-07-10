@@ -6,8 +6,8 @@
 #include "SolverRK4.h"
 
 Solver::Solver()
-    : m_processor(nullptr),
-      m_nIterations(1) {}
+    : _processor(nullptr),
+      _nIterations(1) {}
 
 Solver* Solver::Factory(const SolverSettings& solverSettings) {
     if (solverSettings.name == "rk4" || solverSettings.name == "runge_kutta") {
@@ -21,38 +21,38 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
 }
 
 void Solver::InitializeContainers() {
-    wxASSERT(m_processor);
-    wxASSERT(m_nIterations > 0);
-    m_stateVariableChanges = axxd::Zero(m_processor->GetNbStateVariables(), m_nIterations);
-    m_changeRates = axxd::Zero(m_processor->GetNbSolvableConnections(), m_nIterations);
+    wxASSERT(_processor);
+    wxASSERT(_nIterations > 0);
+    _stateVariableChanges = axxd::Zero(_processor->GetNbStateVariables(), _nIterations);
+    _changeRates = axxd::Zero(_processor->GetNbSolvableConnections(), _nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int counter = 0;
-    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
-        m_stateVariableChanges(counter, col) = *value;
+    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+        _stateVariableChanges(counter, col) = *value;
         counter++;
     }
 }
 
 void Solver::ComputeChangeRates(int col, bool applyConstraints) {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int iRate = 0;
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+    for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         double sumRates = 0.0;
         for (auto process : brick->GetProcesses()) {
             // Get the change rates (per day) independently of the time step and constraints (null bricks handled)
             vecDouble rates = process->GetChangeRates();
 
             for (int i = 0; i < rates.size(); ++i) {
-                wxASSERT(m_changeRates.rows() > iRate);
-                m_changeRates(iRate, col) = rates[i];
+                wxASSERT(_changeRates.rows() > iRate);
+                _changeRates(iRate, col) = rates[i];
                 sumRates += rates[i];
 
                 // Link to fluxes to enforce subsequent constraints
                 if (applyConstraints) {
-                    process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
+                    process->StoreInOutgoingFlux(&_changeRates(iRate, col), i);
                 }
                 iRate++;
             }
@@ -60,64 +60,64 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         if (applyConstraints && sumRates > PRECISION) {
-            brick->ApplyConstraints(g_timeStepInDays);
+            brick->ApplyConstraints(config::timeStepInDays);
         }
     }
 }
 
 void Solver::ApplyConstraintsFor(int col) {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int iRate = 0;
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+    for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         for (auto process : brick->GetProcesses()) {
             for (int i = 0; i < process->GetConnectionsNb(); ++i) {
-                wxASSERT(m_changeRates.rows() > iRate);
+                wxASSERT(_changeRates.rows() > iRate);
                 // Link to fluxes to enforce subsequent constraints
-                process->StoreInOutgoingFlux(&m_changeRates(iRate, col), i);
+                process->StoreInOutgoingFlux(&_changeRates(iRate, col), i);
                 iRate++;
             }
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(g_timeStepInDays);
+        brick->ApplyConstraints(config::timeStepInDays);
     }
 }
 
 void Solver::ResetStateVariableChanges() {
-    wxASSERT(m_processor);
-    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
+    wxASSERT(_processor);
+    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
         *value = 0;
     }
 }
 
 void Solver::SetStateVariablesToIteration(int col) {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int counter = 0;
-    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
-        *value = m_stateVariableChanges(counter, col);
+    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+        *value = _stateVariableChanges(counter, col);
         counter++;
     }
 }
 
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int counter = 0;
-    for (auto value : *(m_processor->GetStateVariablesVectorPt())) {
-        *value = (m_stateVariableChanges(counter, col1) + m_stateVariableChanges(counter, col2)) / 2.0;
+    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+        *value = (_stateVariableChanges(counter, col1) + _stateVariableChanges(counter, col2)) / 2.0;
         counter++;
     }
 }
 
 void Solver::ApplyProcesses(int col) const {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int iRate = 0;
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+    for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
             continue;
         }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, m_changeRates(iRate, col), g_timeStepInDays);
+                process->ApplyChange(iConnect, _changeRates(iRate, col), config::timeStepInDays);
                 iRate++;
             }
         }
@@ -125,16 +125,16 @@ void Solver::ApplyProcesses(int col) const {
 }
 
 void Solver::ApplyProcesses(const axd& changeRates) const {
-    wxASSERT(m_processor);
+    wxASSERT(_processor);
     int iRate = 0;
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+    for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
             continue;
         }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
             for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, changeRates(iRate), g_timeStepInDays);
+                process->ApplyChange(iConnect, changeRates(iRate), config::timeStepInDays);
                 iRate++;
             }
         }
@@ -142,8 +142,8 @@ void Solver::ApplyProcesses(const axd& changeRates) const {
 }
 
 void Solver::Finalize() const {
-    wxASSERT(m_processor);
-    for (auto brick : *(m_processor->GetIterableBricksVectorPt())) {
+    wxASSERT(_processor);
+    for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         if (brick->IsNull()) {
             continue;
         }

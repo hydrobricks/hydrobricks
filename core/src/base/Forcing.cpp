@@ -1,15 +1,15 @@
 #include "Forcing.h"
 
 Forcing::Forcing(VariableType type)
-    : m_type(type),
-      m_timeSeriesData(nullptr) {}
+    : _type(type),
+      _timeSeriesData(nullptr) {}
 
 void Forcing::AttachTimeSeriesData(TimeSeriesData* timeSeriesData) {
     wxASSERT(timeSeriesData);
-    m_timeSeriesData = timeSeriesData;
+    _timeSeriesData = timeSeriesData;
 }
 
 double Forcing::GetValue() {
-    wxASSERT(m_timeSeriesData);
-    return m_timeSeriesData->GetCurrentValue();
+    wxASSERT(_timeSeriesData);
+    return _timeSeriesData->GetCurrentValue();
 }

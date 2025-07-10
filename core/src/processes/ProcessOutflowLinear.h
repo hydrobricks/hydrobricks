@@ -24,7 +24,7 @@ class ProcessOutflowLinear : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* m_responseFactor;  // [1/d]
+    float* _responseFactor;  // [1/d]
 
     /**
      * @copydoc Process::GetRates()

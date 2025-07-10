@@ -59,7 +59,7 @@ class TimeMachine : public wxObject {
      * @return current date
      */
     double GetDate() {
-        return m_date;
+        return _date;
     }
 
     /**
@@ -68,7 +68,7 @@ class TimeMachine : public wxObject {
      * @return start date
      */
     double GetStart() {
-        return m_start;
+        return _start;
     }
 
     /**
@@ -77,7 +77,7 @@ class TimeMachine : public wxObject {
      * @return end date
      */
     double GetEnd() {
-        return m_end;
+        return _end;
     }
 
     /**
@@ -86,7 +86,7 @@ class TimeMachine : public wxObject {
      * @return pointer to the time step in days
      */
     double* GetTimeStepPointer() {
-        return &m_timeStepInDays;
+        return &_timeStepInDays;
     }
 
     /**
@@ -95,7 +95,7 @@ class TimeMachine : public wxObject {
      * @param parametersUpdater pointer to the parameters updater
      */
     void SetParametersUpdater(ParametersUpdater* parametersUpdater) {
-        m_parametersUpdater = parametersUpdater;
+        _parametersUpdater = parametersUpdater;
     }
 
     /**
@@ -104,18 +104,18 @@ class TimeMachine : public wxObject {
      * @param actionsManager pointer to the actions manager
      */
     void SetActionsManager(ActionsManager* actionsManager) {
-        m_actionsManager = actionsManager;
+        _actionsManager = actionsManager;
     }
 
   private:
-    double m_date;
-    double m_start;
-    double m_end;
-    int m_timeStep;
-    TimeUnit m_timeStepUnit;
-    double m_timeStepInDays;
-    ParametersUpdater* m_parametersUpdater;
-    ActionsManager* m_actionsManager;
+    double _date;
+    double _start;
+    double _end;
+    int _timeStep;
+    TimeUnit _timeStepUnit;
+    double _timeStepInDays;
+    ParametersUpdater* _parametersUpdater;
+    ActionsManager* _actionsManager;
 
     /**
      * Update the time step in days.

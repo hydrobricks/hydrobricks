@@ -8,10 +8,10 @@ bool FluxSimple::IsOk() {
 }
 
 double FluxSimple::GetAmount() {
-    return m_amount;
+    return _amount;
 }
 
 void FluxSimple::UpdateFlux(double amount) {
-    wxASSERT(m_fractionTotal == 1.0);
-    m_amount = amount;
+    wxASSERT(_fractionTotal == 1.0);
+    _amount = amount;
 }

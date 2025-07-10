@@ -10,7 +10,7 @@ class ParameterVariable : public Parameter {
     ~ParameterVariable() override = default;
 
   protected:
-    vecFloat m_values;
+    vecFloat _values;
 };
 
 class ParameterVariableYearly : public ParameterVariable {
@@ -38,7 +38,7 @@ class ParameterVariableYearly : public ParameterVariable {
     bool UpdateParameter(int year);
 
   protected:
-    vecInt m_reference;
+    vecInt _reference;
 };
 
 class ParameterVariableMonthly : public ParameterVariable {
@@ -88,8 +88,8 @@ class ParameterVariableDates : public ParameterVariable {
     bool UpdateParameter(double timeReference);
 
   protected:
-    vecFloat m_values;
-    vecDouble m_reference;
+    vecFloat _values;
+    vecDouble _reference;
 };
 
 #endif  // HYDROBRICKS_PARAMETER_VARIABLE_H

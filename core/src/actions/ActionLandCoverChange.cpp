@@ -10,30 +10,30 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
 
     int index = GetIndexForInsertion(date);
 
-    m_sporadicDates.insert(m_sporadicDates.begin() + index, date);
-    m_hydroUnitIds.insert(m_hydroUnitIds.begin() + index, hydroUnitId);
-    m_landCoverIds.insert(m_landCoverIds.begin() + index, landCoverId);
-    m_areas.insert(m_areas.begin() + index, area);
+    _sporadicDates.insert(_sporadicDates.begin() + index, date);
+    _hydroUnitIds.insert(_hydroUnitIds.begin() + index, hydroUnitId);
+    _landCoverIds.insert(_landCoverIds.begin() + index, landCoverId);
+    _areas.insert(_areas.begin() + index, area);
 }
 
 bool ActionLandCoverChange::Apply(double) {
-    wxASSERT(m_sporadicDates.size() > m_cursor);
-    wxASSERT(m_hydroUnitIds.size() > m_cursor);
-    wxASSERT(m_areas.size() > m_cursor);
-    wxASSERT(m_landCoverIds.size() > m_cursor);
-    wxASSERT(m_landCoverNames.size() > m_landCoverIds[m_cursor]);
+    wxASSERT(_sporadicDates.size() > _cursor);
+    wxASSERT(_hydroUnitIds.size() > _cursor);
+    wxASSERT(_areas.size() > _cursor);
+    wxASSERT(_landCoverIds.size() > _cursor);
+    wxASSERT(_landCoverNames.size() > _landCoverIds[_cursor]);
 
-    HydroUnit* unit = m_manager->GetHydroUnitById(m_hydroUnitIds[m_cursor]);
-    string landCoverName = m_landCoverNames[m_landCoverIds[m_cursor]];
-    double areaFraction = m_areas[m_cursor] / unit->GetArea();
+    HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[_cursor]);
+    string landCoverName = _landCoverNames[_landCoverIds[_cursor]];
+    double areaFraction = _areas[_cursor] / unit->GetArea();
 
     return unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 }
 
 int ActionLandCoverChange::GetLandCoverId(const string& landCoverName) {
     int landCoverId = -1;
-    for (int i = 0; i < m_landCoverNames.size(); ++i) {
-        if (m_landCoverNames[i] == landCoverName) {
+    for (int i = 0; i < _landCoverNames.size(); ++i) {
+        if (_landCoverNames[i] == landCoverName) {
             landCoverId = i;
             break;
         }
@@ -41,8 +41,8 @@ int ActionLandCoverChange::GetLandCoverId(const string& landCoverName) {
 
     // Insert as a new land cover if not found.
     if (landCoverId == -1) {
-        m_landCoverNames.push_back(landCoverName);
-        landCoverId = static_cast<int>(m_landCoverNames.size()) - 1;
+        _landCoverNames.push_back(landCoverName);
+        landCoverId = static_cast<int>(_landCoverNames.size()) - 1;
     }
 
     return landCoverId;

@@ -7,8 +7,8 @@ ProcessMelt::ProcessMelt(WaterContainer* container)
     : Process(container) {}
 
 bool ProcessMelt::IsOk() {
-    if (m_outputs.size() != 1) {
-        wxLogError(_(" Melt processes should have a single output."));
+    if (_outputs.size() != 1) {
+        wxLogError(_("Melt processes should have a single output."));
         return false;
     }
 
@@ -21,7 +21,7 @@ int ProcessMelt::GetConnectionsNb() {
 
 double* ProcessMelt::GetValuePointer(const string& name) {
     if (name == "output") {
-        return m_outputs[0]->GetAmountPointer();
+        return _outputs[0]->GetAmountPointer();
     }
 
     return nullptr;

@@ -76,7 +76,7 @@ class WaterContainer : public wxObject {
      * @return true if the water container has a maximum capacity, false otherwise
      */
     bool HasMaximumCapacity() const {
-        return m_capacity != nullptr;
+        return _capacity != nullptr;
     }
 
     /**
@@ -85,8 +85,8 @@ class WaterContainer : public wxObject {
      * @return maximum capacity [mm]
      */
     double GetMaximumCapacity() {
-        wxASSERT(m_capacity);
-        return *m_capacity;
+        wxASSERT(_capacity);
+        return *_capacity;
     }
 
     /**
@@ -95,17 +95,17 @@ class WaterContainer : public wxObject {
      * @param value maximum capacity [mm]
      */
     void SetMaximumCapacity(float* value) {
-        if (m_infiniteStorage) {
+        if (_infiniteStorage) {
             throw ConceptionIssue(_("Trying to set the maximum capacity of an infinite storage."));
         }
-        m_capacity = value;
+        _capacity = value;
     }
 
     /**
      * Set the water container as an infinite storage.
      */
     void SetAsInfiniteStorage() {
-        m_infiniteStorage = true;
+        _infiniteStorage = true;
     }
 
     /**
@@ -114,11 +114,11 @@ class WaterContainer : public wxObject {
      * @return water content [mm]
      */
     double GetContentWithChanges() const {
-        if (m_infiniteStorage) {
+        if (_infiniteStorage) {
             return INFINITY;
         }
 
-        return m_content + m_contentChangeDynamic + m_contentChangeStatic;
+        return _content + _contentChangeDynamic + _contentChangeStatic;
     }
 
     /**
@@ -127,11 +127,11 @@ class WaterContainer : public wxObject {
      * @return water content [mm]
      */
     double GetContentWithDynamicChanges() const {
-        if (m_infiniteStorage) {
+        if (_infiniteStorage) {
             return INFINITY;
         }
 
-        return m_content + m_contentChangeDynamic;
+        return _content + _contentChangeDynamic;
     }
 
     /**
@@ -140,11 +140,11 @@ class WaterContainer : public wxObject {
      * @return water content [mm]
      */
     double GetContentWithoutChanges() const {
-        if (m_infiniteStorage) {
+        if (_infiniteStorage) {
             return INFINITY;
         }
 
-        return m_content;
+        return _content;
     }
 
     /**
@@ -153,7 +153,7 @@ class WaterContainer : public wxObject {
      * @return pointer to the water content value
      */
     double* GetContentPointer() {
-        return &m_content;
+        return &_content;
     }
 
     /**
@@ -162,7 +162,7 @@ class WaterContainer : public wxObject {
      * @param value initial state [mm]
      */
     void SetInitialState(double value) {
-        m_initialState = value;
+        _initialState = value;
     }
 
     /**
@@ -171,11 +171,11 @@ class WaterContainer : public wxObject {
      * @param value new content [mm]
      */
     void UpdateContent(double value) {
-        if (m_infiniteStorage) {
+        if (_infiniteStorage) {
             throw ConceptionIssue(_("Trying to set the content of an infinite storage."));
         }
 
-        m_content = value;
+        _content = value;
     }
 
     /**
@@ -201,7 +201,7 @@ class WaterContainer : public wxObject {
      * @return true if the water container has an overflow process, false otherwise
      */
     bool HasOverflow() {
-        return m_overflow != nullptr;
+        return _overflow != nullptr;
     }
 
     /**
@@ -210,7 +210,7 @@ class WaterContainer : public wxObject {
      * @param overflow pointer to the overflow process
      */
     void LinkOverflow(Process* overflow) {
-        m_overflow = overflow;
+        _overflow = overflow;
     }
 
     /**
@@ -220,7 +220,7 @@ class WaterContainer : public wxObject {
      */
     void AttachFluxIn(Flux* flux) {
         wxASSERT(flux);
-        m_inputs.push_back(flux);
+        _inputs.push_back(flux);
     }
 
     /**
@@ -241,19 +241,19 @@ class WaterContainer : public wxObject {
      * @return pointer to the parent brick
      */
     Brick* GetParentBrick() {
-        return m_parent;
+        return _parent;
     }
 
   private:
-    double m_content;               // [mm]
-    double m_contentChangeDynamic;  // [mm]
-    double m_contentChangeStatic;   // [mm]
-    double m_initialState;          // [mm]
-    float* m_capacity;
-    bool m_infiniteStorage;
-    Brick* m_parent;
-    Process* m_overflow;
-    vector<Flux*> m_inputs;
+    double _content;               // [mm]
+    double _contentChangeDynamic;  // [mm]
+    double _contentChangeStatic;   // [mm]
+    double _initialState;          // [mm]
+    float* _capacity;
+    bool _infiniteStorage;
+    Brick* _parent;
+    Process* _overflow;
+    vector<Flux*> _inputs;
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

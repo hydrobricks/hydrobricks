@@ -69,8 +69,8 @@ class TimeSeriesData : public wxObject {
     virtual double GetEnd() = 0;
 
   protected:
-    vecDouble m_values;
-    int m_cursor;
+    vecDouble _values;
+    int _cursor;
 };
 
 class TimeSeriesDataRegular : public TimeSeriesData {
@@ -120,10 +120,10 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     double GetEnd() override;
 
   protected:
-    double m_start;
-    double m_end;
-    int m_timeStep;
-    TimeUnit m_timeStepUnit;
+    double _start;
+    double _end;
+    int _timeStep;
+    TimeUnit _timeStepUnit;
 };
 
 class TimeSeriesDataIrregular : public TimeSeriesData {
@@ -173,7 +173,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     double GetEnd() override;
 
   protected:
-    vecDouble m_dates;
+    vecDouble _dates;
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_DATA_H

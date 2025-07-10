@@ -95,7 +95,7 @@ class Process : public wxObject {
      */
     void AttachFluxOut(Flux* flux) {
         wxASSERT(flux);
-        m_outputs.push_back(flux);
+        _outputs.push_back(flux);
     }
 
     /**
@@ -104,7 +104,7 @@ class Process : public wxObject {
      * @return vector of pointers to the outgoing fluxes.
      */
     vector<Flux*> GetOutputFluxes() {
-        return m_outputs;
+        return _outputs;
     }
 
     /**
@@ -113,7 +113,7 @@ class Process : public wxObject {
      * @return number of outgoing fluxes.
      */
     int GetOutputFluxesNb() {
-        return static_cast<int>(m_outputs.size());
+        return static_cast<int>(_outputs.size());
     }
 
     /**
@@ -195,7 +195,7 @@ class Process : public wxObject {
      * @return name of the process.
      */
     string GetName() {
-        return m_name;
+        return _name;
     }
 
     /**
@@ -204,7 +204,7 @@ class Process : public wxObject {
      * @param name name of the process.
      */
     void SetName(const string& name) {
-        m_name = name;
+        _name = name;
     }
 
     /**
@@ -213,7 +213,7 @@ class Process : public wxObject {
      * @return pointer to the water container.
      */
     WaterContainer* GetWaterContainer() {
-        return m_container;
+        return _container;
     }
 
     /**
@@ -225,10 +225,19 @@ class Process : public wxObject {
         throw ShouldNotHappen();
     }
 
+    /**
+     * Check if the process is a lateral process.
+     *
+     * @return true if the process is a lateral process.
+     */
+    virtual bool IsLateralProcess() const {
+        return false;
+    }
+
   protected:
-    string m_name;
-    WaterContainer* m_container;
-    vector<Flux*> m_outputs;
+    string _name;
+    WaterContainer* _container;
+    vector<Flux*> _outputs;
 
     /**
      * Get the sum of change rates from other processes.

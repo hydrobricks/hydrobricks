@@ -2,8 +2,8 @@
 
 #include "Brick.h"
 #include "FluxToBrick.h"
-#include "SurfaceComponent.h"
 #include "HydroUnit.h"
+#include "SurfaceComponent.h"
 
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
@@ -68,6 +68,5 @@ double ProcessLateral::ComputeFractionAreas(Flux* flux) {
     double destinationArea = fluxToBrick->GetTargetBrick()->GetHydroUnit()->GetArea();
     double originArea = _container->GetParentBrick()->GetHydroUnit()->GetArea();
 
-    return (originArea * GetOriginLandCoverAreaFraction()) /
-        (destinationArea * GetTargetLandCoverAreaFraction(flux));
+    return (originArea * GetOriginLandCoverAreaFraction()) / (destinationArea * GetTargetLandCoverAreaFraction(flux));
 }

@@ -1,8 +1,9 @@
 /**
  * \file
  * This class implements the SnowSlide method as described in the following paper.
- * Reference: Bernhardt, M., & Schulz, K. (2010). SnowSlide: A simple routine for calculating gravitational snow transport. Geophysical Research Letters, 37(11), 1–6. https://doi.org/10.1029/2010GL043086
- * Based on the following code:
+ * Reference: Bernhardt, M., & Schulz, K. (2010). SnowSlide: A simple routine for calculating gravitational snow
+ * transport. Geophysical Research Letters, 37(11), 1–6. https://doi.org/10.1029/2010GL043086 Based on the following
+ * code:
  * - https://github.com/Chrismarsh/CHM/blob/develop/src/modules/snow_slide.cpp
  * - https://github.com/bergjus94/RavenHydro/blob/Snow_redistribution/src/SnowRedistribution.cpp
  */

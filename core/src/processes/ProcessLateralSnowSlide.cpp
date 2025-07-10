@@ -51,11 +51,11 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
 
     // Current SWE value
     float swe = _container->GetContentWithChanges();  // [mm] Snow water equivalent
-    float snowDepth = swe * sweToDepthFactor;  // [mm] Snow depth
+    float snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth
 
     // Snow holding threshold
-    float slope = std::max(_slope_deg, *_minSlope);  // [degrees]
-    float snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);  // [m]
+    float slope = std::max(_slope_deg, *_minSlope);                    // [degrees]
+    float snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
     float snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
 
     // Set minimum snow holding depth if slope exceeds maximum slope
@@ -70,7 +70,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     double excessSwe = 0.0;
     if (snowDepth > snowHoldingThreshold) {
         double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth
-        excessSwe = excessSnowDepth / sweToDepthFactor;  // Convert to SWE [mm]
+        excessSwe = excessSnowDepth / sweToDepthFactor;             // Convert to SWE [mm]
     }
 
     // Iterate through each output and calculate the lateral rate

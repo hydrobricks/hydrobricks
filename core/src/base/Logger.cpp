@@ -27,9 +27,9 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     if (_recordFractions) {
         _hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
         _hydroUnitFractions = vecAxxd(_hydroUnitFractionLabels.size(),
-                                       axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
+                                      axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
         _hydroUnitFractionsPt = vector<vecDoublePt>(_hydroUnitFractionLabels.size(),
-                                                     vecDoublePt(hydroUnitIds.size(), nullptr));
+                                                    vecDoublePt(hydroUnitIds.size(), nullptr));
     }
 }
 

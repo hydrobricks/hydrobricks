@@ -1,5 +1,6 @@
-#include "Brick.h"
 #include "ProcessTransformSnowToIceConstant.h"
+
+#include "Brick.h"
 #include "WaterContainer.h"
 
 ProcessTransformSnowToIceConstant::ProcessTransformSnowToIceConstant(WaterContainer* container)

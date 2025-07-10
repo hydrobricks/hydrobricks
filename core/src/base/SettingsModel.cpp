@@ -486,7 +486,7 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         if (skipGlaciers && brickSettings.type == "glacier") {
-            continue; // Skip glaciers for redistribution
+            continue;  // Skip glaciers for redistribution
         }
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
         AddBrickProcess("snow_redistribution", redistributionProcess, "lateral:snow");

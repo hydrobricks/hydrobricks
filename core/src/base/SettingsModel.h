@@ -335,8 +335,7 @@ class SettingsModel : public wxObject {
      * @param redistributionProcess name of the redistribution process.
      * @param skipGlaciers if true, do not redistribute snow for snowpacks on glaciers.
      */
-    void AddSnowRedistribution(const string& redistributionProcess = "transport:snow_slide",
-                               bool skipGlaciers = false);
+    void AddSnowRedistribution(const string& redistributionProcess = "transport:snow_slide", bool skipGlaciers = false);
 
     /**
      * Generate snowpacks with water retention.

@@ -3,8 +3,8 @@
 
 #include "Brick.h"
 #include "Forcing.h"
-#include "HydroUnitProperty.h"
 #include "HydroUnitLateralConnection.h"
+#include "HydroUnitProperty.h"
 #include "Includes.h"
 #include "LandCover.h"
 #include "Splitter.h"

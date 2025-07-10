@@ -6,9 +6,9 @@
 #include "FluxToBrick.h"
 #include "FluxToBrickInstantaneous.h"
 #include "FluxToOutlet.h"
-#include "ProcessLateral.h"
 #include "Includes.h"
 #include "LandCover.h"
+#include "ProcessLateral.h"
 #include "SurfaceComponent.h"
 
 ModelHydro::ModelHydro(SubBasin* subBasin)
@@ -420,7 +420,6 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                         if (output.fluxType == "snow") {
                             // Look over the snowpack bricks of the receiver unit
                             for (auto& targetBrick : receiver->GetSnowpacks()) {
-
                                 // Create the flux
                                 if (output.isInstantaneous) {
                                     flux = new FluxToBrickInstantaneous(targetBrick);

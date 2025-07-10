@@ -74,7 +74,7 @@ class SnowRedistributionModel : public ::testing::Test {
     }
 };
 
-void logContent(const vecAxxd &unitContent, int entryId, int nbHydroUnits, const string &title) {
+void logContent(const vecAxxd& unitContent, int entryId, int nbHydroUnits, const string& title) {
     if (!printContentValues) return;
 
     std::cout << "\n" << title << "\n";
@@ -145,11 +145,11 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
     }
 
     logContent(unitContent, 6, 5, "Simple, ground snowpack");
-    //logContent(unitContent, 10, 5, "Simple, glacier snowpack");
+    // logContent(unitContent, 10, 5, "Simple, glacier snowpack");
 
     // Check the water balance
     double totSwe = logger->GetTotalSnowStorageChanges();
-    double totSnowInput = 8 * 100.0; // 8 days of 100 mm precipitation
+    double totSnowInput = 8 * 100.0;  // 8 days of 100 mm precipitation
 
     EXPECT_NEAR(totSnowInput, totSwe, 0.01);
 }
@@ -213,7 +213,7 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
 
     // Check the water balance
     double totSwe = logger->GetTotalSnowStorageChanges();
-    double totSnowInput = 8 * 100.0; // 8 days of 100 mm precipitation
+    double totSnowInput = 8 * 100.0;  // 8 days of 100 mm precipitation
 
     EXPECT_NEAR(totSnowInput, totSwe, 0.01);
 }
@@ -282,7 +282,7 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
 
     // Check the water balance
     double totSwe = logger->GetTotalSnowStorageChanges();
-    double totSnowInput = 8 * 100.0; // 8 days of 100 mm precipitation
+    double totSnowInput = 8 * 100.0;  // 8 days of 100 mm precipitation
 
     EXPECT_NEAR(totSnowInput, totSwe, 0.01);
 }

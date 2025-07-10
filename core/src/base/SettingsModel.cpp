@@ -193,7 +193,10 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
         }
     }
     if (log || _logAll) {
-        AddProcessLogging("output");
+        // Add output logging except for processes of type "transport:" (multiple fluxes attached)
+        if (type.find("transport:") == string::npos) {
+            AddProcessLogging("output");
+        }
     }
 
     // Register the related parameters

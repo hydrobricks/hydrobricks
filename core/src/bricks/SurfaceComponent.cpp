@@ -23,6 +23,11 @@ void SurfaceComponent::SetAreaFraction(double value) {
     }
 }
 
+double SurfaceComponent::GetParentAreaFraction() {
+    wxASSERT(_parent);
+    return _parent->GetAreaFraction();
+}
+
 bool SurfaceComponent::IsNull() {
     if (_areaFraction <= PRECISION) {
         return true;

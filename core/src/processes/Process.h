@@ -225,6 +225,15 @@ class Process : public wxObject {
         throw ShouldNotHappen();
     }
 
+    /**
+     * Check if the process is a lateral process.
+     *
+     * @return true if the process is a lateral process.
+     */
+    virtual bool IsLateralProcess() const {
+        return false;
+    }
+
   protected:
     string _name;
     WaterContainer* _container;

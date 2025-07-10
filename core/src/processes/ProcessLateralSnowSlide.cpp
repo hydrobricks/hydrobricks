@@ -1,7 +1,9 @@
 #include "ProcessLateralSnowSlide.h"
 
 #include "Brick.h"
+#include "FluxToBrick.h"
 #include "HydroUnit.h"
+#include "SurfaceComponent.h"
 #include "WaterContainer.h"
 
 ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
@@ -14,11 +16,6 @@ ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
       _minSnowHoldingDepth(nullptr) {}
 
 bool ProcessLateralSnowSlide::IsOk() {
-    if (_outputs.empty()) {
-        wxLogError(_("A SnowSlide process must have at least 1 output."));
-        return false;
-    }
-
     return true;
 }
 
@@ -30,7 +27,7 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
     modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
 }
 
-void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) {
+void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
     _slope_deg = unit->GetPropertyDouble("slope", "degrees");
 }
 
@@ -44,6 +41,11 @@ void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettin
 }
 
 vecDouble ProcessLateralSnowSlide::GetRates() {
+    // If no fluxes attached (no connection), return empty vector
+    if (_outputs.empty()) {
+        return vecDouble();
+    }
+
     // Snow density conversion factor
     const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
 
@@ -80,8 +82,18 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     }
 
     for (size_t i = 0; i < _outputs.size(); ++i) {
-        float weight = 1.0;  //TODO: Replace with actual weight calculation
-        rates[i] = excessSwe * weight;  // [mm] Lateral snow redistribution rate
+        wxASSERT(_weights.size() > i);
+
+        // Get the area fraction for the target brick (to weight the redistribution)
+        FluxToBrick* fluxToBrick = dynamic_cast<FluxToBrick*>(_outputs[i]);
+        wxASSERT(fluxToBrick);
+        Brick* targetBrick = fluxToBrick->GetTargetBrick();
+        wxASSERT(targetBrick);
+        SurfaceComponent* surfaceComponent = dynamic_cast<SurfaceComponent*>(targetBrick);
+        wxASSERT(surfaceComponent);
+        double areaFraction = surfaceComponent->GetParentAreaFraction();
+
+        rates[i] = excessSwe * _weights[i] * areaFraction;  // [mm] Lateral snow redistribution rate.
     }
 
     return rates;

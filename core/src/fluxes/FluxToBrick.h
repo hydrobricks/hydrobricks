@@ -25,6 +25,15 @@ class FluxToBrick : public Flux {
      */
     void UpdateFlux(double amount) override;
 
+    /**
+     * Get the target brick of the flux.
+     *
+     * @return pointer to the target brick.
+     */
+    Brick* GetTargetBrick() const {
+        return _toBrick;
+    }
+
   protected:
     Brick* _toBrick;
 };

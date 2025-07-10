@@ -115,13 +115,12 @@ class Flux : public wxObject {
     }
 
     /**
-     * Set a static weight to the flux. This can be a fraction of the unit area (not land cover) or a fraction of
-     * the redistributed snow, for example.
+     * Set the fraction of the unit area.
      *
-     * @param value the weight of the flux.
+     * @param value the fraction of the unit area.
      */
-    void SetWeight(double value) {
-        _weight = value;
+    void SetFractionUnitArea(double value) {
+        _fractionUnitArea = value;
         UpdateFractionTotal();
     }
 
@@ -139,7 +138,7 @@ class Flux : public wxObject {
      * Update the fraction total.
      */
     void UpdateFractionTotal() {
-        _fractionTotal = _weight * _fractionLandCover;
+        _fractionTotal = _fractionUnitArea * _fractionLandCover;
     }
 
     /**
@@ -165,7 +164,7 @@ class Flux : public wxObject {
     double* _changeRate;
     bool _static;
     bool _needsWeighting;
-    double _weight;
+    double _fractionUnitArea;
     double _fractionLandCover;
     double _fractionTotal;
     Modifier* _modifier;

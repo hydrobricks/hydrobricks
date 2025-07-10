@@ -35,6 +35,13 @@ class SurfaceComponent : public Brick {
     void SetAreaFraction(double value);
 
     /**
+     * Gets the area fraction of the parent land cover of this component.
+     *
+     * @return The area fraction of the parent land cover.
+     */
+    double GetParentAreaFraction();
+
+    /**
      * @copydoc Brick::IsNull()
      */
     bool IsNull() override;

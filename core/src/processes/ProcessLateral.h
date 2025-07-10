@@ -25,6 +25,26 @@ class ProcessLateral : public Process {
      * @copydoc Process::GetValuePointer()
      */
     double* GetValuePointer(const string& name) override;
+
+    /**
+     * Attach outgoing flux.
+     *
+     * @param flux outgoing flux
+     * @param weight weight of the flux
+     */
+    void AttachFluxOutWithWeight(Flux* flux, double weight = 1.0);
+
+    /**
+     * Check if the process is a lateral process.
+     *
+     * @return true if the process is a lateral process.
+     */
+    bool IsLateralProcess() const override {
+        return true;
+    }
+
+  protected:
+    vecDouble _weights;
 };
 
 #endif  // HYDROBRICKS_PROCESS_LATERAL_H

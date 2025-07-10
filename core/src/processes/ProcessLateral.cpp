@@ -32,3 +32,9 @@ double* ProcessLateral::GetValuePointer(const string& name) {
 
     return nullptr;
 }
+
+void ProcessLateral::AttachFluxOutWithWeight(Flux* flux, double weight) {
+    wxASSERT(flux);
+    _outputs.push_back(flux);
+    _weights.push_back(weight);
+}

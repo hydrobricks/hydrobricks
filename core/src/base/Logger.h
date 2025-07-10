@@ -194,7 +194,7 @@ class Logger : public wxObject {
      * @return vector of sub-basin values.
      */
     const vecAxd& GetSubBasinValues() {
-        return m_subBasinValues;
+        return _subBasinValues;
     }
 
     /**
@@ -203,33 +203,33 @@ class Logger : public wxObject {
      * @return vector of hydro unit values.
      */
     const vecAxxd& GetHydroUnitValues() {
-        return m_hydroUnitValues;
+        return _hydroUnitValues;
     }
 
     /**
      * Activate the recording of fractions.
      */
     void RecordFractions() {
-        m_recordFractions = true;
+        _recordFractions = true;
     }
 
   protected:
-    int m_cursor;
-    axd m_time;
-    bool m_recordFractions;
-    vecStr m_subBasinLabels;
-    axd m_subBasinInitialValues;
-    vecAxd m_subBasinValues;
-    vecDoublePt m_subBasinValuesPt;
-    vecInt m_hydroUnitIds;
-    axd m_hydroUnitAreas;
-    vecStr m_hydroUnitLabels;
-    vecAxd m_hydroUnitInitialValues;
-    vecAxxd m_hydroUnitValues;
-    vector<vecDoublePt> m_hydroUnitValuesPt;
-    vecStr m_hydroUnitFractionLabels;
-    vecAxxd m_hydroUnitFractions;
-    vector<vecDoublePt> m_hydroUnitFractionsPt;
+    int _cursor;
+    axd _time;
+    bool _recordFractions;
+    vecStr _subBasinLabels;
+    axd _subBasinInitialValues;
+    vecAxd _subBasinValues;
+    vecDoublePt _subBasinValuesPt;
+    vecInt _hydroUnitIds;
+    axd _hydroUnitAreas;
+    vecStr _hydroUnitLabels;
+    vecAxd _hydroUnitInitialValues;
+    vecAxxd _hydroUnitValues;
+    vector<vecDoublePt> _hydroUnitValuesPt;
+    vecStr _hydroUnitFractionLabels;
+    vecAxxd _hydroUnitFractions;
+    vector<vecDoublePt> _hydroUnitFractionsPt;
 };
 
 #endif  // HYDROBRICKS_LOGGER_H

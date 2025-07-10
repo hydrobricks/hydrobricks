@@ -29,8 +29,8 @@ class ProcessETSocont : public ProcessET {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* m_pet;
-    float m_exponent;
+    Forcing* _pet;
+    float _exponent;
 
     /**
      * @copydoc Process::GetRates()

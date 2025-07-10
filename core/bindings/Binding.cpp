@@ -53,8 +53,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "component"_a, "name"_a, "value"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true)
-        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a,
-             "snow_ice_transformation"_a = false)
+        .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
+        .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
+             "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_constant")
+        .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
+             "redistribution_process"_a = "transport:snow_slide", "skip_glaciers"_a = false)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
@@ -63,13 +66,18 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
-             "area"_a)
+             "area"_a, "elevation"_a = -9999)
         .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",
              "name"_a, "value"_a)
         .def("add_hydro_unit_property_double", &SettingsBasin::AddHydroUnitPropertyDouble, "Set a hydro unit property.",
              "name"_a, "value"_a, "unit"_a)
+        .def("add_lateral_connection", &SettingsBasin::AddLateralConnection,
+             "Add a lateral connection between two hydro units.", "giver_hydro_unit_id"_a, "receiver_hydro_unit_id"_a,
+             "fraction"_a, "type"_a = "")
+        .def("get_lateral_connections_nb", &SettingsBasin::GetLateralConnectionsNb,
+             "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
     py::class_<SubBasin>(m, "SubBasin")

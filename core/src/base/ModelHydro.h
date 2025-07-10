@@ -180,7 +180,7 @@ class ModelHydro : public wxObject {
      * @return pointer to the sub basin.
      */
     SubBasin* GetSubBasin() {
-        return m_subBasin;
+        return _subBasin;
     }
 
     /**
@@ -189,7 +189,7 @@ class ModelHydro : public wxObject {
      * @param subBasin pointer to the sub basin.
      */
     void SetSubBasin(SubBasin* subBasin) {
-        m_subBasin = subBasin;
+        _subBasin = subBasin;
     }
 
     /**
@@ -198,7 +198,7 @@ class ModelHydro : public wxObject {
      * @return pointer to the timer.
      */
     TimeMachine* GetTimeMachine() {
-        return &m_timer;
+        return &_timer;
     }
 
     /**
@@ -207,7 +207,7 @@ class ModelHydro : public wxObject {
      * @return pointer to the processor.
      */
     Processor* GetProcessor() {
-        return &m_processor;
+        return &_processor;
     }
 
     /**
@@ -216,7 +216,7 @@ class ModelHydro : public wxObject {
      * @return pointer to the logger.
      */
     Logger* GetLogger() {
-        return &m_logger;
+        return &_logger;
     }
 
     /**
@@ -225,17 +225,17 @@ class ModelHydro : public wxObject {
      * @return pointer to the actions manager.
      */
     ActionsManager* GetActionsManager() {
-        return &m_actionsManager;
+        return &_actionsManager;
     }
 
   protected:
-    Processor m_processor;
-    SubBasin* m_subBasin;
-    TimeMachine m_timer;
-    Logger m_logger;
-    ActionsManager m_actionsManager;
-    ParametersUpdater m_parametersUpdater;
-    vector<TimeSeries*> m_timeSeries;
+    Processor _processor;
+    SubBasin* _subBasin;
+    TimeMachine _timer;
+    Logger _logger;
+    ActionsManager _actionsManager;
+    ParametersUpdater _parametersUpdater;
+    vector<TimeSeries*> _timeSeries;
 
   private:
     void BuildModelStructure(SettingsModel& modelSettings);

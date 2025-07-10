@@ -25,8 +25,11 @@ os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 
 # Prepare catchment data
-catchment = hb.Catchment(CATCHMENT_OUTLINE, land_cover_types=['ground', 'glacier'],
-                         land_cover_names=['ground', 'glacier'])
+catchment = hb.Catchment(
+    CATCHMENT_OUTLINE,
+    land_cover_types=['ground', 'glacier'],
+    land_cover_names=['ground', 'glacier']
+)
 catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
@@ -44,10 +47,15 @@ else:
 # Glacier evolution
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
-    catchment, ice_thickness=GLACIER_ICE_THICKNESS)
+    catchment,
+    ice_thickness=GLACIER_ICE_THICKNESS
+)
 
 # It can then optionally be saved as a csv file
-glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
+glacier_df.to_csv(
+    working_dir / 'glacier_profile.csv',
+    index=False
+)
 
 # The lookup table can be computed and saved as a csv file
 glacier_evolution.compute_lookup_table(catchment, update_width=False)

@@ -115,7 +115,9 @@ class GlacierEvolutionDeltaH:
 
         # Discretize the DEM into elevation bands at the given distance
         elevations, map_bands_ids = self._discretize_elevation_bands(
-            catchment, elevation_bands_distance)
+            catchment,
+            elevation_bands_distance
+        )
 
         # Extract the ice thickness from a TIF file created either from geophysical
         # measurements or calculated based on an inversion of surface topography
@@ -126,8 +128,11 @@ class GlacierEvolutionDeltaH:
 
             # Extract the ice thickness and resample it to the DEM resolution
             catchment.extract_attribute_raster(
-                ice_thickness, 'ice_thickness', resample_to_dem_resolution=True,
-                resampling='average')
+                ice_thickness,
+                'ice_thickness',
+                resample_to_dem_resolution=True,
+                resampling='average'
+            )
             ice_thickness = catchment.attributes['ice_thickness']['data']
             ice_thickness[catchment.dem_data == 0] = 0.0
 
@@ -150,7 +155,8 @@ class GlacierEvolutionDeltaH:
                          ('elevation', 'm'),
                          ('glacier_area', 'm2'),
                          ('glacier_thickness', 'm'),
-                         ('hydro_unit_id', '-')])
+                         ('hydro_unit_id', '-')]
+            )
             if glacier_df is None:
                 glacier_df = new_row
             else:
@@ -284,8 +290,8 @@ class GlacierEvolutionDeltaH:
         # Extract the relevant columns
         elevation_bands = self.glacier_df[('elevation', 'm')].values
         initial_areas_m2 = self.glacier_df[('glacier_area', 'm2')].values
-        initial_we_mm = self.glacier_df[
-                            ('glacier_thickness', 'm')].values * ICE_WE * 1000
+        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values
+        initial_we_mm *= ICE_WE * 1000
         hydro_unit_ids = self.glacier_df[('hydro_unit_id', '-')].values
 
         nb_elevation_bands = len(elevation_bands)
@@ -341,7 +347,8 @@ class GlacierEvolutionDeltaH:
         return pd.DataFrame(
             self.lookup_table_area,
             index=range(self.lookup_table_area.shape[0]),
-            columns=np.unique(self.hydro_unit_ids))
+            columns=np.unique(self.hydro_unit_ids)
+        )
 
     def get_lookup_table_volume(self) -> pd.DataFrame:
         """
@@ -354,7 +361,8 @@ class GlacierEvolutionDeltaH:
         return pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
-            columns=np.unique(self.hydro_unit_ids))
+            columns=np.unique(self.hydro_unit_ids)
+        )
 
     def save_as_csv(self, output_dir: str | Path):
         """
@@ -371,16 +379,22 @@ class GlacierEvolutionDeltaH:
         lookup_table_area = pd.DataFrame(
             self.lookup_table_area,
             index=range(self.lookup_table_area.shape[0]),
-            columns=np.unique(self.hydro_unit_ids))
+            columns=np.unique(self.hydro_unit_ids)
+        )
         lookup_table_area.to_csv(
-            output_dir / "glacier_evolution_lookup_table_area.csv", index=False)
+            output_dir / "glacier_evolution_lookup_table_area.csv",
+            index=False
+        )
 
         lookup_table_volume = pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
-            columns=np.unique(self.hydro_unit_ids))
+            columns=np.unique(self.hydro_unit_ids)
+        )
         lookup_table_volume.to_csv(
-            output_dir / "glacier_evolution_lookup_table_volume.csv", index=False)
+            output_dir / "glacier_evolution_lookup_table_volume.csv",
+            index=False
+        )
 
         if self.areas_perc is not None:
             columns = pd.MultiIndex.from_arrays([range(len(self.areas_perc[0])),
@@ -394,7 +408,9 @@ class GlacierEvolutionDeltaH:
                 index=range(self.areas_perc.shape[0]),
                 columns=columns)
             details_glacier_areas.to_csv(
-                output_dir / "details_glacier_areas_evolution.csv", index=False)
+                output_dir / "details_glacier_areas_evolution.csv",
+                index=False
+            )
 
         if self.we is not None:
             columns = pd.MultiIndex.from_arrays([range(len(self.we[0])),
@@ -408,7 +424,9 @@ class GlacierEvolutionDeltaH:
                 index=range(self.we.shape[0]),
                 columns=columns)
             details_glacier_we.to_csv(
-                output_dir / "details_glacier_we_evolution.csv", index=False)
+                output_dir / "details_glacier_we_evolution.csv",
+                index=False
+            )
 
     def _initialization(self):
         """
@@ -706,15 +724,20 @@ class GlacierEvolutionDeltaH:
         # Discretize the DEM into elevation bands at the given distance
         min_elevation = hydro_units['elevation_min'].min().values[0]
         max_elevation = hydro_units['elevation_max'].max().values[0]
-        elevations = np.arange(min_elevation, max_elevation + elevation_bands_distance,
-                               elevation_bands_distance)
+        elevations = np.arange(
+            min_elevation,
+            max_elevation + elevation_bands_distance,
+            elevation_bands_distance
+        )
 
         map_bands_ids = np.zeros(catchment.dem_data.shape)
         for i in range(len(elevations) - 1):
             val_min = elevations[i]
             val_max = elevations[i + 1]
             mask_band = np.logical_and(
-                catchment.dem_data >= val_min, catchment.dem_data < val_max)
+                catchment.dem_data >= val_min,
+                catchment.dem_data < val_max
+            )
             map_bands_ids[mask_band] = i + 1
 
         map_bands_ids = map_bands_ids.astype(hb.rasterio.uint16)

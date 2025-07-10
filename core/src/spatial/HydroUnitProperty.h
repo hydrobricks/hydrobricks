@@ -34,14 +34,14 @@ class HydroUnitProperty : public wxObject {
      * @return The name of the property.
      */
     string GetName() {
-        return m_name;
+        return _name;
     }
 
   private:
-    string m_name;
-    string m_unit;
-    double m_value;
-    string m_valueString;
+    string _name;
+    string _unit;
+    double _value;
+    string _valueString;
 };
 
 #endif  // HYDROBRICKS_HYDRO_UNIT_PROPERTY_H

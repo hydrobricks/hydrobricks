@@ -35,10 +35,10 @@ class SplitterSnowRain : public Splitter {
     void Compute() override;
 
   protected:
-    Forcing* m_precipitation;
-    Forcing* m_temperature;
-    float* m_transitionStart;  // [°C]
-    float* m_transitionEnd;    // [°C]
+    Forcing* _precipitation;
+    Forcing* _temperature;
+    float* _transitionStart;  // [°C]
+    float* _transitionEnd;    // [°C]
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_H

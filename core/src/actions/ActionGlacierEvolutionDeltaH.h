@@ -42,7 +42,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @return land cover name (glacier name).
      */
     string GetLandCoverName() {
-        return m_landCoverName;
+        return _landCoverName;
     }
 
     /**
@@ -51,7 +51,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @return vector of hydro unit IDs.
      */
     axi GetHydroUnitIds() {
-        return m_hydroUnitIds;
+        return _hydroUnitIds;
     }
 
     /**
@@ -60,7 +60,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @return The lookup table for the glacier area.
      */
     axxd GetLookupTableArea() {
-        return m_tableArea;
+        return _tableArea;
     }
 
     /**
@@ -69,16 +69,16 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @return The lookup table for the glacier volume.
      */
     axxd GetLookupTableVolume() {
-        return m_tableVolume;
+        return _tableVolume;
     }
 
   protected:
-    int m_lastRow{0};
-    string m_landCoverName;
-    axi m_hydroUnitIds;
-    axxd m_tableArea;
-    axxd m_tableVolume;
-    double m_initialGlacierWE{0.0};
+    int _lastRow{0};
+    string _landCoverName;
+    axi _hydroUnitIds;
+    axxd _tableArea;
+    axxd _tableVolume;
+    double _initialGlacierWE{0.0};
 };
 
 #endif  // HYDROBRICKS_ACTION_GLACIER_EVOLUTION_DELTA_H_H

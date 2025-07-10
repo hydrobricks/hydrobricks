@@ -28,14 +28,19 @@ def test_glacier_evolution_delta_h_lookup_table():
         # Hydro units
         hydro_units = hb.HydroUnits()
         hydro_units.load_from_csv(
-            HYDRO_UNITS_SYNTH, column_elevation='elevation', column_area='area')
+            HYDRO_UNITS_SYNTH,
+            column_elevation='elevation',
+            column_area='area'
+        )
 
         # Glacier evolution
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
         # In Seibert et al. (2018), the glacier width is not updated during the
         # iterations (update_width=False), but we would recommend to do so.
-        glacier_evolution.compute_lookup_table(GLACIER_PROFILE_SYNTH,
-                                               update_width=False)
+        glacier_evolution.compute_lookup_table(
+            GLACIER_PROFILE_SYNTH,
+            update_width=False
+        )
         glacier_evolution.save_as_csv(working_dir)
         lookup_table = glacier_evolution.lookup_table_area
 
@@ -60,24 +65,32 @@ def test_glacier_initial_ice_thickness_computation():
         volume_tot = float(np.sum(thickness_data[thickness_data > 0])) * 100
 
         # Prepare catchment data
-        catchment = hb.Catchment(CATCHMENT_OUTLINE,
-                                 land_cover_types=['ground', 'glacier'],
-                                 land_cover_names=['ground', 'glacier'])
+        catchment = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
         catchment.extract_dem(CATCHMENT_DEM)
 
         # Create elevation bands
-        catchment.create_elevation_bands(method='equal_intervals', distance=100)
+        catchment.create_elevation_bands(
+            method='equal_intervals',
+            distance=100
+        )
 
         # Glacier evolution
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
         glacier_df = glacier_evolution.compute_initial_ice_thickness(
-            catchment, ice_thickness=GLACIER_ICE_THICKNESS)
+            catchment,
+            ice_thickness=GLACIER_ICE_THICKNESS
+        )
 
         assert glacier_df is not None
 
         # Check if the initial ice thickness is correct
         volume_df = float((
-            glacier_df[('glacier_thickness', 'm')] * glacier_df[('glacier_area', 'm2')]
+            glacier_df[('glacier_thickness', 'm')]
+            * glacier_df[('glacier_area', 'm2')]
         ).sum())
 
         assert volume_df == pytest.approx(volume_tot, rel=0.0005), \
@@ -89,12 +102,17 @@ def test_delta_h_action_lookup_table_binding():
     # Hydro units
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
-        HYDRO_UNITS_SYNTH, column_elevation='elevation', column_area='area')
+        HYDRO_UNITS_SYNTH,
+        column_elevation='elevation',
+        column_area='area'
+    )
 
     # Glacier evolution preprocessing
     glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
-    glacier_evolution.compute_lookup_table(GLACIER_PROFILE_SYNTH,
-                                           update_width=False)
+    glacier_evolution.compute_lookup_table(
+        GLACIER_PROFILE_SYNTH,
+        update_width=False
+    )
     lookup_table_area = glacier_evolution.get_lookup_table_area()
     lookup_table_volume = glacier_evolution.get_lookup_table_volume()
     hydro_unit_ids = lookup_table_area.columns
@@ -116,12 +134,17 @@ def test_delta_h_action_lookup_table_binding_from_file():
         # Hydro units
         hydro_units = hb.HydroUnits()
         hydro_units.load_from_csv(
-            HYDRO_UNITS_SYNTH, column_elevation='elevation', column_area='area')
+            HYDRO_UNITS_SYNTH,
+            column_elevation='elevation',
+            column_area='area'
+        )
 
         # Glacier evolution preprocessing
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
-        glacier_evolution.compute_lookup_table(GLACIER_PROFILE_SYNTH,
-                                               update_width=False)
+        glacier_evolution.compute_lookup_table(
+            GLACIER_PROFILE_SYNTH,
+            update_width=False
+        )
         glacier_evolution.save_as_csv(working_dir)
 
         lookup_table_area = glacier_evolution.get_lookup_table_area()

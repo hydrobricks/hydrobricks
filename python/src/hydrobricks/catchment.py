@@ -81,8 +81,11 @@ class Catchment:
         self.dem_data = None
         self.attributes = {}
         self.map_unit_ids = None
-        self.hydro_units = HydroUnits(land_cover_types, land_cover_names,
-                                      hydro_units_data)
+        self.hydro_units = HydroUnits(
+            land_cover_types,
+            land_cover_names,
+            hydro_units_data
+        )
 
         self._extract_outline(outline)
         self._extract_area(outline)
@@ -340,6 +343,13 @@ class Catchment:
 
         self.area = sum(res_area)
 
+        # Sort the hydro units by descending elevation
+        self.hydro_units.hydro_units.sort_values(
+            by=('elevation', 'm'),
+            ascending=False,
+            inplace=True
+        )
+
         return self.hydro_units
 
     def save_hydro_units_to_csv(self, path: str | Path):
@@ -355,6 +365,20 @@ class Catchment:
             raise ValueError("No hydro units to save.")
 
         self.hydro_units.save_to_csv(path)
+
+    def load_hydro_units_from_csv(self, path: str | Path):
+        """
+        Load hydro units from a csv file.
+
+        Parameters
+        ----------
+        path
+            Path to the csv file.
+        """
+        if not hb.has_geopandas:
+            raise ImportError("geopandas is required to do this.")
+
+        self.hydro_units.load_from_csv(path)
 
     def save_unit_ids_raster(
             self,
@@ -382,14 +406,15 @@ class Catchment:
             dtype=hb.rasterio.uint16,
             count=1,
             compress='lzw',
-            nodata=0)
+            nodata=0
+        )
 
         with hb.rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
     def load_unit_ids_from_raster(
             self,
-            dir_path: str,
+            path: str,
             filename: str = 'unit_ids.tif'
     ):
         """
@@ -397,15 +422,21 @@ class Catchment:
 
         Parameters
         ----------
-        dir_path
-            Path to the directory containing the raster file.
+        path
+            Path to the directory containing the raster file. If the path is a file,
+            it will be used as the full path.
         filename
             Name of the raster file. Default is 'unit_ids.tif'.
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required to do this.")
 
-        full_path = Path(dir_path) / filename
+        # If path is a file, use it directly
+        if Path(path).is_file():
+            full_path = Path(path)
+        else:
+            full_path = Path(path) / filename
+
         with hb.rasterio.open(full_path) as src:
             self._check_crs(src)
             if self.outline is not None:
@@ -550,7 +581,9 @@ class Catchment:
             raise ValueError("You should not initialize the 'ground' land cover type.")
 
         self.hydro_units.initialize_from_land_cover_change(
-            land_cover_name, land_cover_change)
+            land_cover_name,
+            land_cover_change
+        )
 
     def initialize_land_cover_fractions(self):
         self.hydro_units.initialize_land_cover_fractions()
@@ -626,7 +659,8 @@ class Catchment:
         PotentialSolarRadiation class.
         """
         self.solar_radiation.upscale_and_save_mean_annual_radiation_rasters(
-            *args, **kwargs)
+            *args, **kwargs
+        )
 
     @staticmethod
     def get_solar_declination_rad(*args, **kwargs) -> float:

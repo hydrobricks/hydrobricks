@@ -248,10 +248,12 @@ class TimeSeries2D(TimeSeries):
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 with ThreadPoolExecutor(max_workers=num_threads) as executor:
                     # Submit the tasks for each time step to the executor
-                    futures = [executor.submit(self._extract_time_step_data_reproject,
-                                               data_var, unit_id_masks, unit_ids,
-                                               unit_ids_nb, t)
-                               for t in range(time_len)]
+                    futures = [
+                        executor.submit(self._extract_time_step_data_reproject,
+                                        data_var, unit_id_masks, unit_ids,
+                                        unit_ids_nb, t)
+                        for t in range(time_len)
+                    ]
 
                     # Wait for all tasks to complete
                     concurrent.futures.wait(futures)
@@ -267,7 +269,9 @@ class TimeSeries2D(TimeSeries):
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
                 data_idx_reproj = data_idx.rio.reproject_match(
-                    unit_ids, Resampling=hb.rasterio.enums.Resampling.nearest)
+                    unit_ids,
+                    Resampling=hb.rasterio.enums.Resampling.nearest
+                )
 
             # Create the masks (with the original data shape) for each unit with the
             # weights to apply to the gridded data contributing to the unit
@@ -277,8 +281,10 @@ class TimeSeries2D(TimeSeries):
                 mask_unit_id = hb.xr.where(unit_id_masks[u], data_idx_reproj, -1)
                 mask_unit_id = mask_unit_id.to_numpy().astype(int)
                 # Get unique values and their counts
-                data_idx_values, counts = np.unique(mask_unit_id[mask_unit_id >= 0],
-                                                    return_counts=True)
+                data_idx_values, counts = np.unique(
+                    mask_unit_id[mask_unit_id >= 0],
+                    return_counts=True
+                )
                 # Create a mask of the weights
                 weights_mask = np.zeros(data_idx.shape)
                 data_idx_values = np.unravel_index(data_idx_values, data_idx.shape)
@@ -293,10 +299,12 @@ class TimeSeries2D(TimeSeries):
 
             with ThreadPoolExecutor(max_workers=num_threads) as executor:
                 # Submit the tasks for each time step to the executor
-                futures = [executor.submit(self._extract_time_step_data_weights,
-                                           data_var, unit_weights, t_block,
-                                           weights_block_size)
-                           for t_block in range(n_steps)]
+                futures = [
+                    executor.submit(self._extract_time_step_data_weights,
+                                    data_var, unit_weights, t_block,
+                                    weights_block_size)
+                    for t_block in range(n_steps)
+                ]
 
                 # Wait for all tasks to complete
                 concurrent.futures.wait(futures)

@@ -114,13 +114,25 @@ class Forcing:
             raise ValueError(f'Variable {variable} is not recognized.')
 
     def _can_be_negative(self, variable: Variable) -> bool:
-        if variable in [self.Variable.P, self.Variable.PET, self.Variable.RH,
-                        self.Variable.RH_MIN, self.Variable.RH_MAX, self.Variable.R_NET,
-                        self.Variable.R_SOLAR, self.Variable.SD, self.Variable.WIND,
-                        self.Variable.PRESSURE]:
+        if variable in [
+            self.Variable.P,
+            self.Variable.PET,
+            self.Variable.RH,
+            self.Variable.RH_MIN,
+            self.Variable.RH_MAX,
+            self.Variable.R_NET,
+            self.Variable.R_SOLAR,
+            self.Variable.SD,
+            self.Variable.WIND,
+            self.Variable.PRESSURE
+        ]:
             return False
-        elif variable in [self.Variable.T, self.Variable.T_MIN, self.Variable.T_MAX,
-                          self.Variable.T_DEW_POINT]:
+        elif variable in [
+            self.Variable.T,
+            self.Variable.T_MIN,
+            self.Variable.T_MAX,
+            self.Variable.T_DEW_POINT
+        ]:
             return True
         else:
             raise ValueError(f'Undefined if variable {variable} can be negative.')
@@ -299,8 +311,12 @@ class Forcing:
             been applied previously.
         """
         # The operations will be applied in the order defined in the list
-        operation_types = ['prior_correction', 'spatialize_from_station',
-                           'spatialize_from_grid', 'compute_pet']
+        operation_types = [
+            'prior_correction',
+            'spatialize_from_station',
+            'spatialize_from_grid',
+            'compute_pet'
+        ]
 
         for operation_type in operation_types:
             self._apply_operations_of_type(operation_type, parameters, apply_to_all)
@@ -605,9 +621,15 @@ class Forcing:
             dim_y = kwargs.get('dim_y', 'y')
             raster_hydro_units = kwargs.get('raster_hydro_units', '')
             self.data2D.regrid_from_netcdf(
-                path, file_pattern=file_pattern, data_crs=data_crs, var_name=var_name,
-                dim_time=dim_time, dim_x=dim_x, dim_y=dim_y,
-                raster_hydro_units=raster_hydro_units)
+                path,
+                file_pattern=file_pattern,
+                data_crs=data_crs,
+                var_name=var_name,
+                dim_time=dim_time,
+                dim_x=dim_x,
+                dim_y=dim_y,
+                raster_hydro_units=raster_hydro_units
+            )
             self.data2D.data_name.append(variable)
         else:
             raise ValueError(f'Unknown method: {method}')

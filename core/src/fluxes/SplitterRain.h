@@ -35,7 +35,7 @@ class SplitterRain : public Splitter {
     void Compute() override;
 
   protected:
-    Forcing* m_precipitation;
+    Forcing* _precipitation;
 };
 
 #endif  // HYDROBRICKS_SPLITTER_RAIN_H

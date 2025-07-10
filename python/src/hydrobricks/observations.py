@@ -126,8 +126,11 @@ class Observations(TimeSeries1D):
             metrics = np.empty(n_evals)
             i = 0
             while i < n_evals - 1:
-                sampled_years = np.random.choice(years, size=len(comparing_years),
-                                                 replace=True)
+                sampled_years = np.random.choice(
+                    years,
+                    size=len(comparing_years),
+                    replace=True
+                )
                 if with_exclusion:
                     diff = sampled_years - comparing_years
                     if not np.all(diff):  # Skip if exclusion condition isn't met

@@ -52,7 +52,7 @@ class Action : public wxObject {
      * @param manager the manager to set.
      */
     void SetManager(ActionsManager* manager) {
-        m_manager = manager;
+        _manager = manager;
     }
 
     /**
@@ -61,7 +61,7 @@ class Action : public wxObject {
      * @return the sporadic dates vector.
      */
     vecDouble GetSporadicDates() {
-        return m_sporadicDates;
+        return _sporadicDates;
     }
 
     /**
@@ -70,14 +70,14 @@ class Action : public wxObject {
      * @return the number of sporadic items.
      */
     int GetSporadicItemsNb() {
-        return (int)m_sporadicDates.size();
+        return (int)_sporadicDates.size();
     }
 
     /**
      * Increment the cursor.
      */
     void IncrementCursor() {
-        m_cursor++;
+        _cursor++;
     }
 
     /**
@@ -86,16 +86,16 @@ class Action : public wxObject {
      * @return true if the action is recursive.
      */
     bool IsRecursive() {
-        return m_recursive;
+        return _recursive;
     }
 
   protected:
-    ActionsManager* m_manager;
-    int m_cursor;
-    vecDouble m_sporadicDates;
-    bool m_recursive;
-    vecInt m_recursiveMonths;
-    vecInt m_recursiveDays;
+    ActionsManager* _manager;
+    int _cursor;
+    vecDouble _sporadicDates;
+    bool _recursive;
+    vecInt _recursiveMonths;
+    vecInt _recursiveDays;
 };
 
 #endif  // HYDROBRICKS_ACTION_H

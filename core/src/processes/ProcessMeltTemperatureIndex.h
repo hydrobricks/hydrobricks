@@ -34,11 +34,11 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* m_temperature;
-    Forcing* m_potentialClearSkyDirectSolarRadiation;
-    float* m_meltFactor;
-    float* m_meltingTemperature;
-    float* m_radiationCoefficient;
+    Forcing* _temperature;
+    Forcing* _potentialClearSkyDirectSolarRadiation;
+    float* _meltFactor;
+    float* _meltingTemperature;
+    float* _radiationCoefficient;
 
     /**
      * @copydoc Process::GetRates()

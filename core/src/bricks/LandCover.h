@@ -24,7 +24,7 @@ class LandCover : public Brick {
      * @return The area fraction of the land cover.
      */
     double GetAreaFraction() {
-        return m_areaFraction;
+        return _areaFraction;
     }
 
     /**
@@ -33,7 +33,7 @@ class LandCover : public Brick {
      * @return A pointer to the area fraction of the land cover.
      */
     double* GetAreaFractionPointer() {
-        return &m_areaFraction;
+        return &_areaFraction;
     }
 
     /**
@@ -54,7 +54,7 @@ class LandCover : public Brick {
      * @copydoc Brick::IsNull()
      */
     bool IsNull() override {
-        return m_areaFraction <= PRECISION;
+        return _areaFraction <= PRECISION;
     }
 
     /**
@@ -65,7 +65,7 @@ class LandCover : public Brick {
     virtual void SurfaceComponentAdded(SurfaceComponent* brick);
 
   protected:
-    double m_areaFraction;
+    double _areaFraction;
 };
 
 #endif  // HYDROBRICKS_BASE_LAND_COVER_H

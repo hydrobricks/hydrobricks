@@ -5,6 +5,7 @@
 #include "HydroUnit.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
 #include "ProcessMeltTemperatureIndex.h"
@@ -14,12 +15,12 @@
 #include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
 #include "ProcessRunoffSocont.h"
-#include "ProcessTransformSnowToIce.h"
+#include "ProcessTransformSnowToIceConstant.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
 Process::Process(WaterContainer* container)
-    : m_container(container) {}
+    : _container(container) {}
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     string processType = processSettings.type;
@@ -39,13 +40,21 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "outflow:overflow" || processType == "overflow") {
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     }
-    if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
+    if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessTransformSnowToIce(snowBrick->GetSnowContainer());
+            return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
         }
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
+    }
+    if (processType == "transport:snow_slide") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
+        }
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply transport processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "runoff:socont") {
         return new ProcessRunoffSocont(brick->GetWaterContainer());
@@ -107,8 +116,10 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "outflow:overflow" || processType == "overflow") {
         ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_ice" || processType == "transform:snow_ice") {
-        ProcessTransformSnowToIce::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
+        ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transport:snow_slide") {
+        ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {
         ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "infiltration:socont") {
@@ -130,7 +141,7 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
 }
 
 void Process::Reset() {
-    for (auto flux : m_outputs) {
+    for (auto flux : _outputs) {
         flux->Reset();
     }
 }
@@ -166,7 +177,7 @@ float* Process::GetParameterValuePointer(const ProcessSettings& processSettings,
 }
 
 vecDouble Process::GetChangeRates() {
-    if (m_container->GetContentWithChanges() <= PRECISION) {
+    if (_container->GetContentWithChanges() <= PRECISION) {
         vecDouble res(GetConnectionsNb());
         std::fill(res.begin(), res.end(), 0);
         return res;
@@ -176,19 +187,19 @@ vecDouble Process::GetChangeRates() {
 }
 
 void Process::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(m_outputs.size() > index);
+    wxASSERT(_outputs.size() > index);
     wxASSERT(rate);
-    m_outputs[index]->LinkChangeRate(rate);
+    _outputs[index]->LinkChangeRate(rate);
 }
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
-    wxASSERT(m_outputs.size() > connectionIndex);
+    wxASSERT(_outputs.size() > connectionIndex);
     wxASSERT(rate >= 0);
     if (rate > PRECISION) {
-        m_outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
-        m_container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
+        _outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
+        _container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
     } else {
-        m_outputs[connectionIndex]->UpdateFlux(0);
+        _outputs[connectionIndex]->UpdateFlux(0);
     }
 }
 
@@ -199,7 +210,7 @@ double* Process::GetValuePointer(const string&) {
 double Process::GetSumChangeRatesOtherProcesses() {
     double sumOtherProcesses = 0;
 
-    vector<Process*> otherProcesses = m_container->GetParentBrick()->GetProcesses();
+    vector<Process*> otherProcesses = _container->GetParentBrick()->GetProcesses();
     for (auto process : otherProcesses) {
         wxASSERT(process);
         if (process == this) {

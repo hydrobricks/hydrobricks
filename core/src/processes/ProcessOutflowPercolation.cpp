@@ -5,7 +5,7 @@
 
 ProcessOutflowPercolation::ProcessOutflowPercolation(WaterContainer* container)
     : ProcessOutflow(container),
-      m_rate(nullptr) {}
+      _rate(nullptr) {}
 
 void ProcessOutflowPercolation::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("percolation_rate", 0.1f);
@@ -14,12 +14,12 @@ void ProcessOutflowPercolation::RegisterProcessParametersAndForcing(SettingsMode
 void ProcessOutflowPercolation::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
     if (HasParameter(processSettings, "percolation_rate")) {
-        m_rate = GetParameterValuePointer(processSettings, "percolation_rate");
+        _rate = GetParameterValuePointer(processSettings, "percolation_rate");
     } else {
-        m_rate = GetParameterValuePointer(processSettings, "rate");
+        _rate = GetParameterValuePointer(processSettings, "rate");
     }
 }
 
 vecDouble ProcessOutflowPercolation::GetRates() {
-    return {*m_rate};
+    return {*_rate};
 }

@@ -8,50 +8,50 @@
 
 class ModelBasics : public ::testing::Test {
   protected:
-    SettingsModel m_model1;
-    SettingsModel m_model2;
-    TimeSeriesUniform* m_tsPrecip{};
+    SettingsModel _model1;
+    SettingsModel _model2;
+    TimeSeriesUniform* _tsPrecip{};
 
     void SetUp() override {
         // Model 1: simple linear storage
-        m_model1.SetLogAll(true);
-        m_model1.SetSolver("euler_explicit");
-        m_model1.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model1.AddHydroUnitBrick("storage", "storage");
-        m_model1.AddBrickForcing("precipitation");
-        m_model1.AddBrickLogging("water_content");
-        m_model1.AddBrickProcess("outflow", "outflow:linear");
-        m_model1.SetProcessParameterValue("response_factor", 0.3f);
-        m_model1.AddProcessLogging("output");
-        m_model1.AddProcessOutput("outlet");
-        m_model1.AddLoggingToItem("outlet");
+        _model1.SetLogAll(true);
+        _model1.SetSolver("euler_explicit");
+        _model1.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model1.AddHydroUnitBrick("storage", "storage");
+        _model1.AddBrickForcing("precipitation");
+        _model1.AddBrickLogging("water_content");
+        _model1.AddBrickProcess("outflow", "outflow:linear");
+        _model1.SetProcessParameterValue("response_factor", 0.3f);
+        _model1.AddProcessLogging("output");
+        _model1.AddProcessOutput("outlet");
+        _model1.AddLoggingToItem("outlet");
 
         // Model 2: 2 linear storages in cascade
-        m_model2.SetLogAll(true);
-        m_model2.SetSolver("euler_explicit");
-        m_model2.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model2.AddHydroUnitBrick("storage_1", "storage");
-        m_model2.AddBrickForcing("precipitation");
-        m_model2.AddBrickLogging("water_content");
-        m_model2.AddBrickProcess("outflow", "outflow:linear");
-        m_model2.SetProcessParameterValue("response_factor", 0.5f);
-        m_model2.AddProcessLogging("output");
-        m_model2.AddProcessOutput("storage_2");
-        m_model2.AddHydroUnitBrick("storage_2", "storage");
-        m_model2.AddBrickLogging("water_content");
-        m_model2.AddBrickProcess("outflow", "outflow:linear");
-        m_model2.SetProcessParameterValue("response_factor", 0.3f);
-        m_model2.AddProcessLogging("output");
-        m_model2.AddProcessOutput("outlet");
-        m_model2.AddLoggingToItem("outlet");
+        _model2.SetLogAll(true);
+        _model2.SetSolver("euler_explicit");
+        _model2.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model2.AddHydroUnitBrick("storage_1", "storage");
+        _model2.AddBrickForcing("precipitation");
+        _model2.AddBrickLogging("water_content");
+        _model2.AddBrickProcess("outflow", "outflow:linear");
+        _model2.SetProcessParameterValue("response_factor", 0.5f);
+        _model2.AddProcessLogging("output");
+        _model2.AddProcessOutput("storage_2");
+        _model2.AddHydroUnitBrick("storage_2", "storage");
+        _model2.AddBrickLogging("water_content");
+        _model2.AddBrickProcess("outflow", "outflow:linear");
+        _model2.SetProcessParameterValue("response_factor", 0.3f);
+        _model2.AddProcessLogging("output");
+        _model2.AddProcessOutput("outlet");
+        _model2.AddLoggingToItem("outlet");
 
         auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(data);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(data);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
+        wxDELETE(_tsPrecip);
     }
 };
 
@@ -63,7 +63,7 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1, basinSettings);
+    model.Initialize(_model1, basinSettings);
 
     EXPECT_TRUE(model.IsOk());
 }
@@ -76,9 +76,9 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1, basinSettings);
+    model.Initialize(_model1, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -92,7 +92,7 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinSettings);
+    model.Initialize(_model2, basinSettings);
 
     EXPECT_TRUE(model.IsOk());
 }
@@ -105,9 +105,9 @@ TEST_F(ModelBasics, Model2RunsCorrectly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinSettings);
+    model.Initialize(_model2, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -121,7 +121,7 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1, basinSettings);
+    model.Initialize(_model1, basinSettings);
 
     auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 9), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
@@ -140,7 +140,7 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model1, basinSettings);
+    model.Initialize(_model1, basinSettings);
 
     auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 2), GetMJD(2020, 1, 10), 1, Day);
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
@@ -159,9 +159,9 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinSettings);
+    model.Initialize(_model2, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -177,7 +177,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    SettingsModel settingsModel = m_model1;
+    SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("euler_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
     settingsModel.SelectProcess("outflow");
@@ -185,7 +185,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
 
     model.Initialize(settingsModel, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());
@@ -213,7 +213,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    SettingsModel settingsModel = m_model1;
+    SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("heun_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
     settingsModel.SelectProcess("outflow");
@@ -221,7 +221,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
 
     model.Initialize(settingsModel, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());
@@ -249,7 +249,7 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    SettingsModel settingsModel = m_model1;
+    SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("runge_kutta");
     settingsModel.SelectHydroUnitBrick("storage");
     settingsModel.SelectProcess("outflow");
@@ -257,7 +257,7 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
 
     model.Initialize(settingsModel, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());
@@ -285,11 +285,11 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    SettingsModel settingsModel = m_model1;
+    SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("euler_explicit");
     model.Initialize(settingsModel, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());
@@ -317,11 +317,11 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    SettingsModel settingsModel = m_model1;
+    SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("heun_explicit");
     model.Initialize(settingsModel, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());
@@ -349,9 +349,9 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    model.Initialize(m_model2, basinSettings);
+    model.Initialize(_model2, basinSettings);
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.IsOk());

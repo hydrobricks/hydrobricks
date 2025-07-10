@@ -2,18 +2,18 @@
 
 Snowpack::Snowpack()
     : SurfaceComponent(),
-      m_snow(nullptr) {
-    m_snow = new SnowContainer(this);
+      _snow(nullptr) {
+    _snow = new SnowContainer(this);
 }
 
 void Snowpack::Reset() {
-    m_water->Reset();
-    m_snow->Reset();
+    _water->Reset();
+    _snow->Reset();
 }
 
 void Snowpack::SaveAsInitialState() {
-    m_water->SaveAsInitialState();
-    m_snow->SaveAsInitialState();
+    _water->SaveAsInitialState();
+    _snow->SaveAsInitialState();
 }
 
 void Snowpack::SetParameters(const BrickSettings& brickSettings) {
@@ -23,35 +23,35 @@ void Snowpack::SetParameters(const BrickSettings& brickSettings) {
 void Snowpack::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
     if (flux->GetType() == "snow") {
-        m_snow->AttachFluxIn(flux);
+        _snow->AttachFluxIn(flux);
     } else if (flux->GetType() == "water") {
-        m_water->AttachFluxIn(flux);
+        _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
     }
 }
 
 bool Snowpack::IsOk() {
-    if (!m_snow->IsOk()) {
+    if (!_snow->IsOk()) {
         return false;
     }
     return Brick::IsOk();
 }
 
 WaterContainer* Snowpack::GetSnowContainer() {
-    return m_snow;
+    return _snow;
 }
 
 void Snowpack::Finalize() {
-    m_snow->Finalize();
-    m_water->Finalize();
+    _snow->Finalize();
+    _water->Finalize();
 }
 
 void Snowpack::SetInitialState(double value, const string& type) {
     if (type == "water") {
-        m_water->SetInitialState(value);
+        _water->SetInitialState(value);
     } else if (type == "snow") {
-        m_snow->SetInitialState(value);
+        _snow->SetInitialState(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
     }
@@ -59,10 +59,10 @@ void Snowpack::SetInitialState(double value, const string& type) {
 
 double Snowpack::GetContent(const string& type) {
     if (type == "water") {
-        return m_water->GetContentWithoutChanges();
+        return _water->GetContentWithoutChanges();
     }
     if (type == "snow") {
-        return m_snow->GetContentWithoutChanges();
+        return _snow->GetContentWithoutChanges();
     }
 
     throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
@@ -70,30 +70,30 @@ double Snowpack::GetContent(const string& type) {
 
 void Snowpack::UpdateContent(double value, const string& type) {
     if (type == "water") {
-        m_water->UpdateContent(value);
+        _water->UpdateContent(value);
     } else if (type == "snow") {
-        m_snow->UpdateContent(value);
+        _snow->UpdateContent(value);
     } else {
         throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
     }
 }
 
 void Snowpack::UpdateContentFromInputs() {
-    m_snow->AddAmountToStaticContentChange(m_snow->SumIncomingFluxes());
-    m_water->AddAmountToDynamicContentChange(m_water->SumIncomingFluxes());
+    _snow->AddAmountToStaticContentChange(_snow->SumIncomingFluxes());
+    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {
-    m_snow->ApplyConstraints(timeStep);
-    m_water->ApplyConstraints(timeStep);
+    _snow->ApplyConstraints(timeStep);
+    _water->ApplyConstraints(timeStep);
 }
 
 vecDoublePt Snowpack::GetDynamicContentChanges() {
     vecDoublePt vars;
-    for (auto const& var : m_water->GetDynamicContentChanges()) {
+    for (auto const& var : _water->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
-    for (auto const& var : m_snow->GetDynamicContentChanges()) {
+    for (auto const& var : _snow->GetDynamicContentChanges()) {
         vars.push_back(var);
     }
 
@@ -102,12 +102,12 @@ vecDoublePt Snowpack::GetDynamicContentChanges() {
 
 double* Snowpack::GetValuePointer(const string& name) {
     if (name == "snow" || name == "snow_content") {
-        return m_snow->GetContentPointer();
+        return _snow->GetContentPointer();
     }
 
     return nullptr;
 }
 
 bool Snowpack::HasSnow() {
-    return m_snow->IsNotEmpty();
+    return _snow->IsNotEmpty();
 }

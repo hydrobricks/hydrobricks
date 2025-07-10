@@ -56,8 +56,8 @@ class TimeSeriesDistributed : public TimeSeries {
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
-    vecInt m_unitIds;
-    vector<TimeSeriesData*> m_data;
+    vecInt _unitIds;
+    vector<TimeSeriesData*> _data;
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H

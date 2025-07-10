@@ -34,7 +34,7 @@ class FluxForcing : public Flux {
     }
 
   protected:
-    Forcing* m_forcing;
+    Forcing* _forcing;
 };
 
 #endif  // HYDROBRICKS_FLUX_FORCING_H

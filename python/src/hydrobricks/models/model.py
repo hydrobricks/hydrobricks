@@ -26,8 +26,12 @@ class Model(ABC):
         self.name = name
         self.model = ModelHydro()
         self.spatial_structure = None
-        self.allowed_kwargs = {'solver', 'record_all', 'land_cover_types',
-                               'land_cover_names'}
+        self.allowed_kwargs = {
+            'solver',
+            'record_all',
+            'land_cover_types',
+            'land_cover_names'
+        }
         self._is_initialized = False
 
         # Default options
@@ -48,7 +52,8 @@ class Model(ABC):
         # Setting base settings
         self.settings = ModelSettings(
             solver=self.solver,
-            record_all=self.record_all)
+            record_all=self.record_all
+        )
 
     def __del__(self):
         self.cleanup()
@@ -101,7 +106,8 @@ class Model(ABC):
             # Initialize the model (with sub basin creation)
             if not self.model.init_with_basin(
                     self.settings.settings,
-                    spatial_structure.settings):
+                    spatial_structure.settings
+            ):
                 raise RuntimeError('Basin creation failed.')
 
             self._is_initialized = True
@@ -342,14 +348,20 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        return evaluate(self.get_outlet_discharge()[warmup:],
-                        observations[warmup:],
-                        metric)
+        return evaluate(
+            self.get_outlet_discharge()[warmup:],
+            observations[warmup:],
+            metric
+        )
 
     def generate_parameters(self) -> ParameterSet:
         ps = ParameterSet()
-        ps.generate_parameters(self.land_cover_types, self.land_cover_names,
-                               self.options, self.structure)
+        ps.generate_parameters(
+            self.land_cover_types,
+            self.land_cover_names,
+            self.options,
+            self.structure
+        )
 
         for alias_key, alias_value in self.parameter_aliases.items():
             if ps.has(alias_key):
@@ -438,18 +450,27 @@ class Model(ABC):
     def _set_structure_basics(self):
         with_snow = True
         snow_melt_process = 'melt:degree_day'
-        snow_ice_transformation = False
+        snow_ice_transformation = None
+        snow_redistribution = None
+
         if 'with_snow' in self.options:
             with_snow = self.options['with_snow']
         if 'snow_melt_process' in self.options:
             with_snow = True
             snow_melt_process = self.options['snow_melt_process']
         if 'snow_ice_transformation' in self.options:
-            snow_ice_transformation = True
+            snow_ice_transformation = self.options['snow_ice_transformation']
+        if 'snow_redistribution' in self.options:
+            snow_redistribution = self.options['snow_redistribution']
+
         self.settings.generate_base_structure(
-            self.land_cover_names, self.land_cover_types, with_snow=with_snow,
+            self.land_cover_names,
+            self.land_cover_types,
+            with_snow=with_snow,
             snow_melt_process=snow_melt_process,
-            snow_ice_transformation=snow_ice_transformation)
+            snow_ice_transformation=snow_ice_transformation,
+            snow_redistribution=snow_redistribution
+        )
 
     def _set_structure_brick(self, brick: dict, key: str):
         if brick['kind'] == 'land_cover':
@@ -485,8 +506,12 @@ class Model(ABC):
                                    f'({process}) without a target.')
 
         self.settings.add_brick_process(
-            process, process_data['kind'], target,
-            log=log, instantaneous=instantaneous)
+            process,
+            process_data['kind'],
+            target,
+            log=log,
+            instantaneous=instantaneous
+        )
 
     def _set_parameter_values(self, parameters: ParameterSet):
         model_params = parameters.get_model_parameters()

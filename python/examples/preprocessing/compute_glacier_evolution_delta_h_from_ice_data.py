@@ -6,9 +6,9 @@ import tempfile
 import uuid
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 from hydrobricks.constants import ICE_WE

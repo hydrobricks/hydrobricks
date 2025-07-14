@@ -614,31 +614,35 @@ class GlacierEvolutionDeltaH:
             else:
                 we_reduction_parts = self.scaling_factor_mm * self.norm_delta_we_parts
                 new_we_parts = self.we_parts[increment - 1] - we_reduction_parts
+                new_we_parts[self.areas_pc_parts[increment - 1] == 0] = 0
                 self.we_parts[increment] = np.where(new_we_parts < 0, 0, new_we_parts)
 
                 for elev_idx in range(len(self.elev_bands)):
                     band_mask = self.elev_bands_indices == elev_idx
                     if self.we_bands[increment, elev_idx] > 0:
                         new_we_parts_band = new_we_parts[band_mask]
-                        if np.all(new_we_parts_band > 0):
+                        if np.all(new_we_parts_band >= 0):
                             continue
 
                         while not np.all(new_we_parts_band >= 0):
                             # In case of negative values, we redistribute on the band
-                            pos_parts = new_we_parts_band > 0
-                            neg_parts = new_we_parts_band < 0
                             areas_pc = self.areas_pc_parts[increment - 1, band_mask]
+                            pos_parts = (new_we_parts_band > 0) & (areas_pc > 0)
+                            neg_parts = (new_we_parts_band < 0) & (areas_pc > 0)
 
                             # Weighted average of the local melt deficit
                             tot_neg_band = np.sum(
                                 np.where(neg_parts, new_we_parts_band * areas_pc, 0)
                             )
 
-                            # Redistribute the melt deficit
+                            # Redistribute the melt deficit to the positive parts
                             diff = tot_neg_band / np.count_nonzero(pos_parts)
-                            new_we_parts_band = np.where(
-                                pos_parts, new_we_parts_band + diff / areas_pc, 0
+                            result = np.zeros_like(new_we_parts_band)
+                            result[pos_parts] = (
+                                new_we_parts_band[pos_parts] + diff /
+                                areas_pc[pos_parts]
                             )
+                            new_we_parts_band = result
 
                         self.we_parts[increment, band_mask]  = new_we_parts_band
                     else:

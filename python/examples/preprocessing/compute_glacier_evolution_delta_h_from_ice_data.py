@@ -13,7 +13,10 @@ import pandas as pd
 import hydrobricks as hb
 from hydrobricks.constants import ICE_WE
 
-DISCRETIZE_BY_RADIATION = False  # Set to True to use radiation discretization
+DISCRETIZE_BY_RADIATION = True  # Set to True to use radiation discretization
+COMPUTE_RADIATION = False  # True: compute radiation. False: use the precomputed data.
+GLACIER_EVOLUTION_FROM_TOPO = False  # Use topography to compute glacier area evolution
+UPDATE_WIDTH = False  # Update glacier width during iterations
 
 # Paths
 TEST_FILES_DIR = (
@@ -23,6 +26,8 @@ TEST_FILES_DIR = (
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'dem.tif'
 GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'glaciers' / 'ice_thickness.tif'
+CATCHMENT_BANDS = TEST_FILES_DIR / 'hydro_units_elevation_radiation.csv'
+HYDRO_UNITS_RADIATION = TEST_FILES_DIR / 'unit_ids_radiation.tif'
 
 # Create temporary directory
 working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
@@ -38,18 +43,26 @@ catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
 if DISCRETIZE_BY_RADIATION:
-    catchment.calculate_daily_potential_radiation(TEST_FILES_DIR, resolution=None)
-    catchment.discretize_by(
-        ['elevation', 'radiation'],
-        elevation_method='equal_intervals',
-        elevation_distance=100,
-        min_elevation=1600,
-        max_elevation=3620,
-        radiation_method='equal_intervals',
-        radiation_distance=65,
-        min_radiation=0,
-        max_radiation=260
-    )
+    if COMPUTE_RADIATION:
+        catchment.calculate_daily_potential_radiation(TEST_FILES_DIR, resolution=None)
+        catchment.discretize_by(
+            ['elevation', 'radiation'],
+            elevation_method='equal_intervals',
+            elevation_distance=100,
+            min_elevation=1600,
+            max_elevation=3620,
+            radiation_method='equal_intervals',
+            radiation_distance=65,
+            min_radiation=0,
+            max_radiation=260
+        )
+    else:
+        catchment.hydro_units.load_from_csv(
+            CATCHMENT_BANDS,
+            column_elevation='elevation',
+            column_area='area'
+        )
+        catchment.load_unit_ids_from_raster(HYDRO_UNITS_RADIATION)
 else:
     catchment.create_elevation_bands(method='equal_intervals', distance=100)
 
@@ -57,12 +70,17 @@ else:
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment,
-    ice_thickness=GLACIER_ICE_THICKNESS
+    ice_thickness=GLACIER_ICE_THICKNESS,
+    glacier_area_evolution_from_topo=GLACIER_EVOLUTION_FROM_TOPO
 )
 glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 
 # Compute and save lookup table as CSV
-glacier_evolution.compute_lookup_table(catchment, update_width=False)
+glacier_evolution.compute_lookup_table(
+    catchment,
+    update_width=UPDATE_WIDTH,
+    glacier_area_evolution_from_topo=GLACIER_EVOLUTION_FROM_TOPO
+)
 glacier_evolution.save_as_csv(working_dir)
 
 print(f"Files saved to: {working_dir}")

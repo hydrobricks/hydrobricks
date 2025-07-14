@@ -69,17 +69,16 @@ class GlacierEvolutionDeltaH:
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
 
-        # Areas based on topography
-        self.ice_thicknesses = None
+        # Pixel-wise ice water equivalent (we) for each elevation band
+        self.px_ice_we = None
 
     def compute_initial_ice_thickness(
             self,
             catchment: Catchment,
-            nb_increments: int = 100,
             glacier_outline: str | None = None,
             ice_thickness: str | None = None,
             elevation_bands_distance: int = 10,
-            area_from_topo: bool = True
+            glacier_area_evolution_from_topo: bool = True
     ) -> pd.DataFrame:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -100,6 +99,12 @@ class GlacierEvolutionDeltaH:
             Either this or glacier_outline should be provided.
         elevation_bands_distance
             Distance between elevation bands in meters. Default is 10 m.
+        glacier_area_evolution_from_topo
+            Whether to compute the glacier area evolution from the topography.
+            If True, the glacier area is computed from the topography and the
+            ice thicknesses are updated accordingly. Otherwise, the glacier area
+            is updated based on the Bahr et al. (1997) formula.
+            Default is True.
 
         Returns
         -------
@@ -166,14 +171,8 @@ class GlacierEvolutionDeltaH:
         # measurements or calculated based on an inversion of surface topography
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness is not None:
-            self.ice_thicknesses = np.empty(
-                (nb_increments + 1, len(glacier_df)),
-                dtype=object
-            )
-            # Fill each element with an empty list
-            for i in range(self.ice_thicknesses.shape[0]):
-                for j in range(self.ice_thicknesses.shape[1]):
-                    self.ice_thicknesses[i, j] = np.array([], dtype=np.float64)
+            if glacier_area_evolution_from_topo:
+                self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
             # Update the dataframe with the ice thickness
             for i, row in glacier_df.iterrows():
@@ -185,12 +184,14 @@ class GlacierEvolutionDeltaH:
                 mask_unit = catchment.map_unit_ids == unit_id
                 masked_thickness = ice_thickness[mask_band & mask_unit]
                 masked_thickness = masked_thickness[masked_thickness > 0]
-                if area_from_topo:
-                    self.ice_thicknesses[0, i] = masked_thickness * ICE_WE * 1000
+                masked_thickness = masked_thickness[~np.isnan(masked_thickness)]
+
+                if glacier_area_evolution_from_topo:
+                    self.px_ice_we[0, i] = masked_thickness * ICE_WE * 1000
 
                 # Compute the mean thickness
-                if masked_thickness.size > 0 and not np.isnan(masked_thickness).all():
-                    mean_thickness = round(float(np.nanmean(masked_thickness)), 3)
+                if masked_thickness.size > 0:
+                    mean_thickness = round(float(np.mean(masked_thickness)), 3)
                 else:
                     mean_thickness = 0.0
 
@@ -220,7 +221,7 @@ class GlacierEvolutionDeltaH:
             nb_increments: int = 100,
             update_width: bool = True,
             update_width_reference: str = 'initial',
-            area_from_topo: bool = True
+            glacier_area_evolution_from_topo: bool = True
     ):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
@@ -269,10 +270,12 @@ class GlacierEvolutionDeltaH:
             Default is 'initial'. Options are:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
-        area_from_topo
-            Whether to compute the glacier area from the topography.
+        glacier_area_evolution_from_topo
+            Whether to compute the glacier area evolution from the topography.
             If True, the glacier area is computed from the topography and the
-            ice thicknesses are updated accordingly. Default is True.
+            ice thicknesses are updated accordingly. Otherwise, the glacier area
+            is updated based on the Bahr et al. (1997) formula.
+            Default is True.
         """
         assert self.hydro_units is not None, \
             "Hydro units are not defined. Please load them first."
@@ -290,6 +293,12 @@ class GlacierEvolutionDeltaH:
             self.glacier_df = glacier_df
         assert self.glacier_df is not None, \
             "Glacier data is not defined. Please provide a CSV file or a DataFrame."
+
+        if glacier_area_evolution_from_topo:
+            # Add rows corresponding to the number of increments
+            cols = self.px_ice_we.shape[1]
+            new_rows = np.empty((nb_increments, cols), dtype=object)
+            self.px_ice_we = np.vstack([self.px_ice_we, new_rows])
 
         # We have to remove the bands with no glacier area
         # (otherwise the min and max elevations are wrong)
@@ -309,9 +318,9 @@ class GlacierEvolutionDeltaH:
         self.elevation_bands = elevation_bands
         self.hydro_unit_ids = hydro_unit_ids
         self.we = np.zeros((nb_increments + 1, nb_elevation_bands))
-        if area_from_topo:
+        if glacier_area_evolution_from_topo:
             for i in range(len(self.elevation_bands)):
-                self.we[0, i] = np.mean(self.ice_thicknesses[0, i])
+                self.we[0, i] = np.mean(self.px_ice_we[0, i])
         else:
             self.we[0] = initial_we_mm  # Initialization
         self.areas_perc = np.zeros((nb_increments + 1, nb_elevation_bands))
@@ -344,11 +353,11 @@ class GlacierEvolutionDeltaH:
 
         for increment in range(1, nb_increments):  # last row kept with zeros
             self._compute_delta_h(increment, nb_increments)
-            self._update_glacier_thickness(increment, area_from_topo)
-            self._width_scaling(catchment, increment, update_width, area_from_topo,
+            self._update_glacier_thickness(increment, glacier_area_evolution_from_topo)
+            self._width_scaling(catchment, increment, update_width, glacier_area_evolution_from_topo,
                                 update_width_reference)
 
-        if not update_width and not area_from_topo:
+        if not update_width and not glacier_area_evolution_from_topo:
             self._final_width_scaling(nb_increments)
 
         self._update_lookup_tables()
@@ -545,21 +554,21 @@ class GlacierEvolutionDeltaH:
 
                 if self.we[increment - 1, i] > we_reduction_mm[i]:
                     to_remove = we_reduction_mm[i]
-                    self.ice_thicknesses[increment, i] = self.ice_thicknesses[
+                    self.px_ice_we[increment, i] = self.px_ice_we[
                         increment - 1, i]
                     EPSILON = 1e-6  # avoid infinite loops due to floating point errors
                     while to_remove > 0:
-                        diff = self.ice_thicknesses[increment, i] - to_remove
+                        diff = self.px_ice_we[increment, i] - to_remove
                         diff = np.where(np.abs(diff) < EPSILON, 0, diff)
                         assert (not np.isinf(diff).any())
-                        self.ice_thicknesses[increment, i] = np.where(diff < 0, 0, diff)
+                        self.px_ice_we[increment, i] = np.where(diff < 0, 0, diff)
                         remain = np.where(diff < 0, diff, 0)
                         to_remove = - np.mean(remain)
 
                     # Update the mean thickness
-                    if self.ice_thicknesses[increment, i].size > 0:
+                    if self.px_ice_we[increment, i].size > 0:
                         self.we[increment, i] = np.mean(
-                            self.ice_thicknesses[increment, i])
+                            self.px_ice_we[increment, i])
                     else:
                         self.we[increment, i] = 0.0
                     over_melt = 0
@@ -661,16 +670,16 @@ class GlacierEvolutionDeltaH:
                 # Compute the melt
                 areas = np.zeros(len(self.elevation_bands))
                 for i in range(len(self.elevation_bands)):
-                    ice_thickness = self.ice_thicknesses[increment, i]
+                    ice_thickness = self.px_ice_we[increment, i]
                     areas[i] = np.count_nonzero(ice_thickness) * px_area
                     self.areas_perc[increment, i] = areas[i] / self.catchment_area
                     # Conservation of the w.e.
                     if self.we[increment, i] > 0:
-                        self.ice_thicknesses[increment, i] *= (
+                        self.px_ice_we[increment, i] *= (
                                     self.areas_perc[increment - 1, i] /
                                     self.areas_perc[increment, i])
                         self.we[increment, i] = np.mean(
-                            self.ice_thicknesses[increment, i])
+                            self.px_ice_we[increment, i])
 
                 # Updating the band areas and band thicknesses
                 for i, elev_idx in enumerate(
@@ -678,7 +687,7 @@ class GlacierEvolutionDeltaH:
                     band_mask = self.inverse_indices == elev_idx  # bands with this elevation
                     self.elev_band_areas_perc[increment, elev_idx] = self.areas_perc[
                         increment, band_mask].sum()
-                    band_we = np.concatenate(self.ice_thicknesses[increment, band_mask])
+                    band_we = np.concatenate(self.px_ice_we[increment, band_mask])
                     if band_we.size == 0:
                         self.elev_band_we[increment, elev_idx] = 0
                     else:

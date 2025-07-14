@@ -36,7 +36,8 @@ glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
 # during the iterations (update_width=False), but we would recommend to do so.
 glacier_evolution.compute_lookup_table(
     glacier_profile_csv=GLACIER_PROFILE,
-    update_width=False
+    update_width=False,
+    glacier_area_evolution_from_topo=False
 )
 glacier_evolution.save_as_csv(working_dir)
 

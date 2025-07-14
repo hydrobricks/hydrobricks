@@ -2,6 +2,7 @@ import math
 import os.path
 import shutil
 import tempfile
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -271,9 +272,8 @@ def test_radiation_calculation_with_cast_shadows():
 def test_radiation_calculation_resolution():
     dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
 
-    tmp_dir = tempfile.TemporaryDirectory().name
-    os.mkdir(tmp_dir)
-    working_dir = Path(tmp_dir)
+    working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+    working_dir.mkdir(parents=True, exist_ok=True)
 
     catchment = hb.Catchment()
     catchment.extract_dem(dem_path)

@@ -38,7 +38,8 @@ def test_glacier_evolution_delta_h_lookup_table():
         # In Seibert et al. (2018), the glacier width is not updated during the
         # iterations (update_width=False), but we would recommend to do so.
         glacier_evolution.compute_lookup_table(
-            GLACIER_PROFILE_SYNTH,
+            glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+            glacier_area_evolution_from_topo=False,
             update_width=False
         )
         glacier_evolution.save_as_csv(working_dir)
@@ -110,7 +111,8 @@ def test_delta_h_action_lookup_table_binding():
     # Glacier evolution preprocessing
     glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
     glacier_evolution.compute_lookup_table(
-        GLACIER_PROFILE_SYNTH,
+        glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+        glacier_area_evolution_from_topo=False,
         update_width=False
     )
     lookup_table_area = glacier_evolution.get_lookup_table_area()
@@ -142,7 +144,8 @@ def test_delta_h_action_lookup_table_binding_from_file():
         # Glacier evolution preprocessing
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
         glacier_evolution.compute_lookup_table(
-            GLACIER_PROFILE_SYNTH,
+            glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+            glacier_area_evolution_from_topo=False,
             update_width=False
         )
         glacier_evolution.save_as_csv(working_dir)

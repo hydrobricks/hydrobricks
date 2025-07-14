@@ -200,8 +200,8 @@ def test_solar_azimuth_aug():
 
 
 def test_radiation_calculation():
-    dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
-    ref_radiation_path = FILES_DIR / 'others' / 'radiation_annual_mean.tif'
+    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
+    ref_radiation_path = FILES_DIR / '..' / 'others' / 'radiation_annual_mean.tif'
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
@@ -235,8 +235,8 @@ def test_radiation_calculation():
 
 
 def test_radiation_calculation_with_cast_shadows():
-    dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
-    ref_radiation_path = FILES_DIR / 'others' / 'radiation_annual_mean.tif'
+    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
+    ref_radiation_path = FILES_DIR / '..' / 'others' / 'radiation_annual_mean.tif'
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
@@ -270,7 +270,7 @@ def test_radiation_calculation_with_cast_shadows():
 
 
 def test_radiation_calculation_resolution():
-    dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
+    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
 
     working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
     working_dir.mkdir(parents=True, exist_ok=True)

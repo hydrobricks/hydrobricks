@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from pathlib import Path
 
 import hydrobricks as hb
@@ -16,9 +17,8 @@ CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 CATCHMENT_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'unit_ids.tif'
 DEM_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
 
-tmp_dir = tempfile.TemporaryDirectory().name
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Model structure
 socont = models.Socont(

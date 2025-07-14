@@ -1,27 +1,32 @@
-import os.path
+"""
+Compute glacier evolution (delta h) from ice data.
+"""
+
 import tempfile
+import uuid
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 from hydrobricks.constants import ICE_WE
 
+DISCRETIZE_BY_RADIATION = False  # Set to True to use radiation discretization
+
 # Paths
-TEST_FILES_DIR = Path(
-    os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments', 'ch_rhone_gletsch'
+TEST_FILES_DIR = (
+    Path(__file__).resolve().parent.parent.parent.parent /
+    'tests' / 'files' / 'catchments' / 'ch_rhone_gletsch'
 )
 CATCHMENT_OUTLINE = TEST_FILES_DIR / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'dem.tif'
 GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'glaciers' / 'ice_thickness.tif'
 
 # Create temporary directory
-tmp_dir = tempfile.TemporaryDirectory().name
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Prepare catchment data
 catchment = hb.Catchment(
@@ -32,9 +37,7 @@ catchment = hb.Catchment(
 catchment.extract_dem(CATCHMENT_DEM)
 
 # Create elevation bands
-if True:
-    catchment.create_elevation_bands(method='equal_intervals', distance=100)
-else:
+if DISCRETIZE_BY_RADIATION:
     catchment.calculate_daily_potential_radiation(TEST_FILES_DIR, resolution=None)
     catchment.discretize_by(
         ['elevation', 'radiation'],
@@ -47,21 +50,18 @@ else:
         min_radiation=0,
         max_radiation=260
     )
+else:
+    catchment.create_elevation_bands(method='equal_intervals', distance=100)
 
-# Glacier evolution
+# Compute initial ice thickness and save as CSV
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment,
     ice_thickness=GLACIER_ICE_THICKNESS
 )
+glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 
-# It can then optionally be saved as a csv file
-glacier_df.to_csv(
-    working_dir / 'glacier_profile.csv',
-    index=False
-)
-
-# The lookup table can be computed and saved as a csv file
+# Compute and save lookup table as CSV
 glacier_evolution.compute_lookup_table(catchment, update_width=False)
 glacier_evolution.save_as_csv(working_dir)
 
@@ -83,14 +83,14 @@ init_glacier_df = init_glacier_df.drop(
 # Group by elevation in case we have radiation / aspect discretization
 init_glacier_df = init_glacier_df.groupby("('elevation', 'm')").sum().reset_index()
 # Sum of weights (total area per group)
-total_area = areas_evol.groupby(axis=1, level=2).sum()
-weighted_sum = (we_raw * areas_evol).groupby(axis=1, level=2).sum()
+total_area = areas_evol.T.groupby(level=2).sum().T
+weighted_sum = (we_raw * areas_evol).T.groupby(level=2).sum().T
 we_evol = (weighted_sum / total_area).fillna(0)
-areas_evol = areas_evol.groupby(axis=1, level=2).sum()
+areas_evol = areas_evol.T.groupby(level=2).sum().T
 
-# Reproduce the plots from Seibert et al. (2018)
 elevation_bands = np.unique(init_glacier_df["('elevation', 'm')"])
 
+# --- Plotting Section ---
 # Figure 2b - Absolute glacier volume per elevation band
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
@@ -107,7 +107,7 @@ plt.xlim(0, )
 plt.tight_layout()
 plt.show()
 
-# Figure 2b - Absolute glacier volume per elevation band
+# Figure 2b - Absolute glacier thickness per elevation band
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     thickness = we_evol.iloc[i, :].values / (1000 * ICE_WE)
@@ -123,7 +123,7 @@ plt.xlim(0, )
 plt.tight_layout()
 plt.show()
 
-# Similar to Figure 2b but with glacier area
+# Glacier area per elevation band
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     area = areas_evol.iloc[i, :].values
@@ -139,47 +139,47 @@ plt.xlim(0, )
 plt.tight_layout()
 plt.show()
 
-# Figure 2c - Relative glacier area per elevation band as relative fraction of the
-# initial glacier area of the elevation interval.
+# Figure 2c - Relative glacier area per elevation band as fraction of initial area
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     area = areas_evol.iloc[i, :].values
     ratio = area / init_glacier_df["('glacier_area', 'm2')"]
-    plt.plot(ratio, elevation_bands,
-             drawstyle="steps-post", color="lightgrey")
+    plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="lightgrey")
 for i in range(0, len(areas_evol), 20):  # Black lines
     area = areas_evol.iloc[i, :].values
     ratio = area / init_glacier_df["('glacier_area', 'm2')"]
     ratio[np.isnan(ratio) | np.isinf(ratio)] = 0
-    plt.plot(ratio, elevation_bands,
-             drawstyle="steps-post", color="black")
+    plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="black")
 plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
 plt.ylabel('Elevation (m a.s.l.)')
 plt.xlim(0, )
 plt.tight_layout()
 plt.show()
 
+# Glacier volume evolution over increments
 plt.figure()
-for i in range(0, len(areas_evol), 1):  # Grey lines
+for i in range(0, len(areas_evol), 1):
     volume = np.sum(areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values /
                     (1000 * ICE_WE))
     plt.plot(i, volume, color="black", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier volume (m³)')
 
+# Glacier thickness evolution over increments
 plt.figure()
-for i in range(0, len(areas_evol), 1):  # Grey lines
+for i in range(0, len(areas_evol), 1):
     thickness = np.mean(we_evol.iloc[i, :].values)
     plt.plot(i, thickness, color="lightgrey", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier thickness (m)')
 plt.figure()
 
-for i in range(0, len(areas_evol), 1):  # Grey lines
+# Glacier area evolution over increments
+for i in range(0, len(areas_evol), 1):
     areas = np.sum(areas_evol.iloc[i, :].values)
     plt.plot(i, areas, color="lightgrey", marker='o')
 plt.xlabel('Increment')
 plt.ylabel('Glacier area (scaled) (m²)')
-# plt.xlim(0, )
 plt.tight_layout()
 plt.show()
+

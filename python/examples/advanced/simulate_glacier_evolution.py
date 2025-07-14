@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -21,9 +22,8 @@ CATCHMENT_METEO = CATCHMENT_PATH / 'meteo.csv'
 CATCHMENT_DISCHARGE = CATCHMENT_PATH / 'discharge.csv'
 
 # Create temporary directory
-tmp_dir = tempfile.TemporaryDirectory().name
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Prepare catchment data
 catchment = hb.Catchment(

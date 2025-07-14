@@ -1,6 +1,7 @@
 import os.path
 import shutil
 import tempfile
+import uuid
 from pathlib import Path
 
 import hydrobricks as hb
@@ -196,6 +197,5 @@ class ModelSetupHelper:
         if self.working_dir is not None:
             return
 
-        tmp_dir = tempfile.TemporaryDirectory().name
-        os.mkdir(tmp_dir)
-        self.working_dir = Path(tmp_dir)
+        self.working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+        self.working_dir.mkdir(parents=True, exist_ok=True)

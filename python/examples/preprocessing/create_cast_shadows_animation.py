@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -20,9 +21,8 @@ TEST_FILES_DIR = Path(
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_stgallen' / 'dem.tif'
 
 # Create temporary directory
-tmp_dir = tempfile.TemporaryDirectory().name
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Options
 date_string = '2009-08-06'

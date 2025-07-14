@@ -16,9 +16,7 @@ CATCHMENT_DISCHARGE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'discharge.csv'
 CATCHMENT_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'unit_ids.tif'
 DEM_RASTER = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
 
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
+tmp_dir = tempfile.TemporaryDirectory().name
 os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 

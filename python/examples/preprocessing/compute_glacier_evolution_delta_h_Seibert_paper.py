@@ -18,9 +18,7 @@ HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units_50m.csv'
 GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile_id_50m.csv'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
+tmp_dir = tempfile.TemporaryDirectory().name
 os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 

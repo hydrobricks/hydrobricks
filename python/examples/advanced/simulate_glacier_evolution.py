@@ -21,9 +21,7 @@ CATCHMENT_METEO = CATCHMENT_PATH / 'meteo.csv'
 CATCHMENT_DISCHARGE = CATCHMENT_PATH / 'discharge.csv'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
+tmp_dir = tempfile.TemporaryDirectory().name
 os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 

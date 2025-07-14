@@ -271,8 +271,7 @@ def test_radiation_calculation_with_cast_shadows():
 def test_radiation_calculation_resolution():
     dem_path = FILES_DIR / 'others' / 'dem_small_tile.tif'
 
-    with tempfile.TemporaryDirectory() as tmp_dir_name:
-        tmp_dir = tmp_dir_name
+    tmp_dir = tempfile.TemporaryDirectory().name
     os.mkdir(tmp_dir)
     working_dir = Path(tmp_dir)
 

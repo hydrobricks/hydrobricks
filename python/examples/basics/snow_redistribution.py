@@ -20,9 +20,7 @@ CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / 'connectivity_elevation_radiation.csv'
 DEM_RASTER = CATCHMENT_DIR / 'dem.tif'
 
 for with_snow_redistribution in [True, False]:
-    with tempfile.TemporaryDirectory() as tmp_dir_name:
-        tmp_dir = tmp_dir_name
-
+    tmp_dir = tempfile.TemporaryDirectory().name
     os.mkdir(tmp_dir)
     working_dir = Path(tmp_dir)
 

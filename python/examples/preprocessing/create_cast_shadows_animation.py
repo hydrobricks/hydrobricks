@@ -20,9 +20,7 @@ TEST_FILES_DIR = Path(
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_stgallen' / 'dem.tif'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
+tmp_dir = tempfile.TemporaryDirectory().name
 os.mkdir(tmp_dir)
 working_dir = Path(tmp_dir)
 

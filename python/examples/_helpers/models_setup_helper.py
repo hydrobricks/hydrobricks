@@ -196,7 +196,6 @@ class ModelSetupHelper:
         if self.working_dir is not None:
             return
 
-        with tempfile.TemporaryDirectory() as tmp_dir_name:
-            tmp_dir = tmp_dir_name
+        tmp_dir = tempfile.TemporaryDirectory().name
         os.mkdir(tmp_dir)
         self.working_dir = Path(tmp_dir)

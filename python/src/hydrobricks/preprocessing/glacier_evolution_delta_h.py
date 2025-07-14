@@ -704,12 +704,12 @@ class GlacierEvolutionDeltaH:
                 for elev_idx in range(len(self.elev_bands)):
                     band_mask = self.elev_bands_indices == elev_idx
                     if self.areas_pc_parts[increment - 1, band_mask].sum() == 0:
-                        percentages = 0
+                        pc = 0
                     else:
-                        percentages = self.areas_pc_parts[increment - 1, band_mask] / \
-                                      self.areas_pc_parts[increment - 1, band_mask].sum()
+                        pc = self.areas_pc_parts[increment - 1, band_mask] / \
+                             self.areas_pc_parts[increment - 1, band_mask].sum()
                     self.we_bands[increment, elev_idx] = np.sum(
-                        self.we_parts[increment, band_mask] * percentages)
+                        self.we_parts[increment, band_mask] * pc)
                     # Nullify the areas of the elevation bands with no glacier water equivalent
                     if self.we_bands[increment, elev_idx] == 0:
                         self.areas_pc_parts[increment, band_mask] = 0

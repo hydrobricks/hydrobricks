@@ -73,7 +73,6 @@ glacier_df = glacier_evolution.compute_initial_ice_thickness(
     ice_thickness=GLACIER_ICE_THICKNESS,
     glacier_area_evolution_from_topo=GLACIER_EVOLUTION_FROM_TOPO
 )
-glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 
 # Compute and save lookup table as CSV
 glacier_evolution.compute_lookup_table(
@@ -93,19 +92,16 @@ we_raw = pd.read_csv(
     working_dir / "details_glacier_we_evolution.csv",
     header=[0, 1, 2]
 )
-init_glacier_df = pd.read_csv(working_dir / "glacier_profile.csv")
-init_glacier_df = init_glacier_df.drop(
-    init_glacier_df[init_glacier_df["('glacier_area', 'm2')"] == 0].index)
 
 # Group by elevation in case we have radiation / aspect discretization
-init_glacier_df = init_glacier_df.groupby("('elevation', 'm')").sum().reset_index()
+glacier_df = glacier_df.groupby(('elevation', 'm')).sum().reset_index()
 # Sum of weights (total area per group)
 total_area = areas_evol.T.groupby(level=2).sum().T
 weighted_sum = (we_raw * areas_evol).T.groupby(level=2).sum().T
 we_evol = (weighted_sum / total_area).fillna(0)
 areas_evol = areas_evol.T.groupby(level=2).sum().T
 
-elevation_bands = np.unique(init_glacier_df["('elevation', 'm')"])
+elevation_bands = np.unique(glacier_df[('elevation', 'm')])
 
 # --- Plotting Section ---
 # Figure 2b - Absolute glacier volume per elevation band
@@ -148,7 +144,7 @@ for i in range(0, len(areas_evol), 5):  # Grey lines
 for i in range(0, len(areas_evol), 20):  # Black lines
     area = areas_evol.iloc[i, :].values
     plt.plot(area, elevation_bands, drawstyle="steps-post", color="black")
-plt.plot(init_glacier_df["('glacier_area', 'm2')"], elevation_bands,
+plt.plot(glacier_df[('glacier_area', 'm2')], elevation_bands,
          drawstyle="steps-post", color='red')
 plt.xlabel('Glacier area (scaled) (m²)')
 plt.ylabel('Elevation (m a.s.l.)')
@@ -160,11 +156,11 @@ plt.show()
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     area = areas_evol.iloc[i, :].values
-    ratio = area / init_glacier_df["('glacier_area', 'm2')"]
+    ratio = area / glacier_df[('glacier_area', 'm2')]
     plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="lightgrey")
 for i in range(0, len(areas_evol), 20):  # Black lines
     area = areas_evol.iloc[i, :].values
-    ratio = area / init_glacier_df["('glacier_area', 'm2')"]
+    ratio = area / glacier_df[('glacier_area', 'm2')]
     ratio[np.isnan(ratio) | np.isinf(ratio)] = 0
     plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="black")
 plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')

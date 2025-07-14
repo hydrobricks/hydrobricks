@@ -78,8 +78,7 @@ glacier_df.to_csv(working_dir / 'glacier_profile.csv', index=False)
 # Compute and save lookup table as CSV
 glacier_evolution.compute_lookup_table(
     catchment,
-    update_width=UPDATE_WIDTH,
-    glacier_area_evolution_from_topo=GLACIER_EVOLUTION_FROM_TOPO
+    update_width=UPDATE_WIDTH
 )
 glacier_evolution.save_as_csv(working_dir)
 

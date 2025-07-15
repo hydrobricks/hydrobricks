@@ -58,7 +58,7 @@ class GlacierEvolutionDeltaH:
         self.lookup_table_area = None
         self.lookup_table_volume = None
         self.we_parts = None  # Glacier water equivalent (we) per part.
-        self.we_bands = None # Glacier water equivalent (we) per elevation band.
+        self.we_bands = None  # Glacier water equivalent (we) per elevation band.
         self.areas_pc_parts = None  # Glacier areas as a percentage of the catch. area.
         self.areas_pc_bands = None  # Same per elevation band.
 
@@ -323,9 +323,9 @@ class GlacierEvolutionDeltaH:
         self.elev_bands_parts = elev_bands_parts
         self.hydro_unit_ids = hydro_unit_ids
         self.we_parts = np.zeros((nb_increments + 1, len(elev_bands_parts)))
-        self.we_parts[0] = initial_we_mm  # Initialization
+        self.we_parts[0] = initial_we_mm
         self.areas_pc_parts = np.zeros((nb_increments + 1, len(elev_bands_parts)))
-        self.areas_pc_parts[0] = initial_areas_m2 / self.catchment_area  # Initialization
+        self.areas_pc_parts[0] = initial_areas_m2 / self.catchment_area
         self.lookup_table_area = np.zeros(
             (nb_increments + 1, len(np.unique(hydro_unit_ids)))
         )
@@ -344,21 +344,7 @@ class GlacierEvolutionDeltaH:
         else:
             self.sub_elevation_parts = True
 
-        if not self.sub_elevation_parts:
-            self.areas_pc_bands = self.areas_pc_parts
-            self.we_bands = self.we_parts
-            self.elev_bands_indices = np.arange(len(self.elev_bands))
-        else:
-            # Loop over elevation groups and sum relevant columns
-            self.areas_pc_bands = np.zeros((nb_increments + 1, len(self.elev_bands)))
-            self.we_bands = np.zeros((nb_increments + 1, len(self.elev_bands)))
-            for i, elev_idx in enumerate(np.arange(len(self.elev_bands))):
-                mask = self.elev_bands_indices == elev_idx
-                self.areas_pc_bands[0, elev_idx] = self.areas_pc_parts[0, mask].sum()
-                pc = (self.areas_pc_parts[0, mask] /
-                      self.areas_pc_bands[0, elev_idx])
-                self.we_bands[0, elev_idx] = np.sum(self.we_parts[0, mask] * pc)
-
+        self._init_parts_containers(nb_increments)
         self._initialization()
 
         for increment in range(1, nb_increments):  # last row kept with zeros
@@ -374,6 +360,7 @@ class GlacierEvolutionDeltaH:
         if not update_width and not self.glacier_area_evolution_from_topo:
             self._final_width_scaling()
 
+        self._compute_sub_band_parts()
         self._update_lookup_tables()
 
     def get_lookup_table_area(self) -> pd.DataFrame:
@@ -471,6 +458,25 @@ class GlacierEvolutionDeltaH:
                 index=False
             )
 
+    def _init_parts_containers(self, nb_increments: int):
+        """
+        Initialize the containers for sub-elevation parts.
+        """
+        if not self.sub_elevation_parts:
+            self.areas_pc_bands = self.areas_pc_parts
+            self.we_bands = self.we_parts
+            self.elev_bands_indices = np.arange(len(self.elev_bands))
+        else:
+            # Loop over elevation groups and sum relevant columns
+            self.areas_pc_bands = np.zeros((nb_increments + 1, len(self.elev_bands)))
+            self.we_bands = np.zeros((nb_increments + 1, len(self.elev_bands)))
+            for _, elev_idx in enumerate(np.arange(len(self.elev_bands))):
+                mask = self.elev_bands_indices == elev_idx
+                self.areas_pc_bands[0, elev_idx] = self.areas_pc_parts[0, mask].sum()
+                pc = (self.areas_pc_parts[0, mask] /
+                      self.areas_pc_bands[0, elev_idx])
+                self.we_bands[0, elev_idx] = np.sum(self.we_parts[0, mask] * pc)
+
     def _initialization(self):
         """
         Step 1 of Seibert et al. (2018): Calculation of the initial total glacier mass
@@ -480,7 +486,8 @@ class GlacierEvolutionDeltaH:
         # Calculate total glacier mass (Eq. 2)
         # areas: area (expressed as a proportion of the catchment area) for each
         # elevation band i
-        self.initial_total_glacier_we = np.sum(self.areas_pc_parts[0] * self.we_parts[0, :])
+        self.initial_total_glacier_we = np.sum(self.areas_pc_parts[0] *
+                                               self.we_parts[0, :])
 
         # Normalize glacier elevations (Eq. 3)
         # elevations: absolute elevation for each elevation band i
@@ -608,23 +615,6 @@ class GlacierEvolutionDeltaH:
             new_we_bands = self.we_bands[increment - 1] - we_reduction_bands
             self.we_bands[increment] = np.where(new_we_bands < 0, 0, new_we_bands)
 
-            # Update the w.e. per elevation band parts
-            if not self.sub_elevation_parts:
-                self.we_parts = self.we_bands
-            else:
-                # Decreasing glacier w.e. per elevation band parts proportionally
-                # to the glacier area per elevation band parts
-                self.we_parts[increment] = self.we_parts[0]
-                for elev_idx in range(len(self.elev_bands)):
-                    band_mask = self.elev_bands_indices == elev_idx
-                    if self.we_bands[increment, elev_idx] == 0:
-                        self.we_parts[increment, band_mask] = 0
-                        continue
-                    self.we_parts[increment, band_mask] *= (
-                        self.we_bands[increment, elev_idx] /
-                        self.we_bands[0, elev_idx]
-                    )
-
             # This excess melt is taken into account in Step 2.
             self.excess_melt_we = - np.sum(np.where(new_we_bands < 0, new_we_bands, 0) *
                                            self.areas_pc_bands[increment - 1])
@@ -673,29 +663,14 @@ class GlacierEvolutionDeltaH:
             # Nullify the areas of the elevation bands with no glacier water equivalent
             self.areas_pc_bands[increment, self.we_bands[increment] == 0] = 0
 
-            # Redistribution following the sub-elevation discretization.
-            self._adjust_areas_parts(increment)
-
         else:
             # If the glacier width is not updated, keep the previous glacier area.
             self.areas_pc_bands[increment] = self.areas_pc_bands[increment - 1]
-            self.areas_pc_parts[increment] = self.areas_pc_parts[increment - 1]
+
             if not self.glacier_area_evolution_from_topo:
-                # Update ice thickness per band
-                for elev_idx in range(len(self.elev_bands)):
-                    band_mask = self.elev_bands_indices == elev_idx
-                    if self.areas_pc_parts[increment - 1, band_mask].sum() == 0:
-                        pc = 0
-                    else:
-                        pc = self.areas_pc_parts[increment - 1, band_mask] / \
-                             self.areas_pc_parts[increment - 1, band_mask].sum()
-                    self.we_bands[increment, elev_idx] = np.sum(
-                        self.we_parts[increment, band_mask] * pc)
-                    # Nullify the areas of the elevation bands with no glacier water equivalent
-                    if self.we_bands[increment, elev_idx] == 0:
-                        self.areas_pc_parts[increment, band_mask] = 0
                 # Nullify the areas of the elevation bands with no glacier water equiv.
                 self.areas_pc_bands[increment, self.we_bands[increment] == 0] = 0
+
             else:
                 px_area = catchment.get_dem_pixel_area()
 
@@ -714,9 +689,9 @@ class GlacierEvolutionDeltaH:
                             self.px_ice_we[increment, i])
 
                 # Updating the band areas and band thicknesses
-                for i, elev_idx in enumerate(
+                for _, elev_idx in enumerate(
                         np.arange(len(self.elev_bands))):
-                    band_mask = self.elev_bands_indices == elev_idx  # bands with this elevation
+                    band_mask = self.elev_bands_indices == elev_idx
                     self.areas_pc_bands[increment, elev_idx] = self.areas_pc_parts[
                         increment, band_mask].sum()
                     band_we = np.concatenate(self.px_ice_we[increment, band_mask])
@@ -730,14 +705,15 @@ class GlacierEvolutionDeltaH:
         Similar to _width_scaling, but for the case when the glacier area is not
         updated during the loop.
         """
-        n_rows = len(self.we_bands)
-
         # Width scaling (Eq. 7)
-        for i in range(1, n_rows):
+        for i in range(1, len(self.we_bands)):
             pos_we = self.we_bands[0] > 0
             self.areas_pc_bands[i, pos_we] = (
-                    self.areas_pc_bands[0, pos_we] * np.power(
-                self.we_bands[i, pos_we] / self.we_bands[0, pos_we], 0.5))
+                    self.areas_pc_bands[0, pos_we] *
+                    np.power(self.we_bands[i, pos_we] /
+                             self.we_bands[0, pos_we],
+                             0.5)
+            )
 
             # Conservation of the water equivalent
             pos_we = self.we_bands[i] > 0
@@ -745,25 +721,16 @@ class GlacierEvolutionDeltaH:
                     self.areas_pc_bands[0, pos_we] /
                     self.areas_pc_bands[i, pos_we])
 
-        # Redistribution following the sub-elevation discretization.
-        for i in range(1, n_rows):
-            self._adjust_areas_parts(i)
-
     def _adjust_areas_parts(self, increment):
         """
         Adjust the areas of the sub-band part.
         """
-        if not self.sub_elevation_parts:
-            self.areas_pc_parts = self.areas_pc_bands
-            self.we_parts = self.we_bands
-            return
-
         self.areas_pc_parts[increment] = self.areas_pc_parts[0]
 
         # Nullify the areas of the elevation bands with no glacier water equivalent
         self.areas_pc_parts[increment, self.we_parts[increment] == 0] = 0
 
-        for i_band, elev_idx in enumerate(np.arange(len(self.elev_bands))):
+        for _, elev_idx in enumerate(np.arange(len(self.elev_bands))):
             band_mask = ((self.elev_bands_indices == elev_idx) &
                          (self.we_parts[increment] > 0))
 
@@ -777,6 +744,43 @@ class GlacierEvolutionDeltaH:
 
             # No need to adjust the glacier thicknesses here, as they are already
             # accounted for by the scaled band w.e.
+
+    def _adjust_we_parts(self, increment):
+        """
+        Adjust the volume of the sub-band part.
+        """
+        # Decreasing glacier w.e. per elevation band parts proportionally
+        # to the glacier area per elevation band parts
+        self.we_parts[increment] = self.we_parts[0]
+        for elev_idx in range(len(self.elev_bands)):
+            band_mask = self.elev_bands_indices == elev_idx
+            if self.we_bands[increment, elev_idx] == 0:
+                self.we_parts[increment, band_mask] = 0
+                continue
+            self.we_parts[increment, band_mask] *= (
+                    self.we_bands[increment, elev_idx] /
+                    self.we_bands[0, elev_idx]
+            )
+
+    def _compute_sub_band_parts(self):
+        """
+        For discretization of hydro units into smaller units than elevation bands,
+        we need to compute the glacier areas and water equivalent for each part.
+        """
+        if self.glacier_area_evolution_from_topo:
+            return
+
+        if not self.sub_elevation_parts:
+            self.areas_pc_parts = self.areas_pc_bands
+            self.we_parts = self.we_bands
+            return
+
+        for i in range(1, len(self.we_bands)):
+            # Update the w.e. per elevation band parts
+            self._adjust_we_parts(i)
+
+            # Redistribution following the sub-elevation discretization.
+            self._adjust_areas_parts(i)
 
     def _update_lookup_tables(self):
         """

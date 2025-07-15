@@ -612,41 +612,18 @@ class GlacierEvolutionDeltaH:
             if not self.sub_elevation_parts:
                 self.we_parts = self.we_bands
             else:
-                we_reduction_parts = self.scaling_factor_mm * self.norm_delta_we_parts
-                new_we_parts = self.we_parts[increment - 1] - we_reduction_parts
-                new_we_parts[self.areas_pc_parts[increment - 1] == 0] = 0
-                self.we_parts[increment] = np.where(new_we_parts < 0, 0, new_we_parts)
-
+                # Decreasing glacier w.e. per elevation band parts proportionally
+                # to the glacier area per elevation band parts
+                self.we_parts[increment] = self.we_parts[0]
                 for elev_idx in range(len(self.elev_bands)):
                     band_mask = self.elev_bands_indices == elev_idx
-                    if self.we_bands[increment, elev_idx] > 0:
-                        new_we_parts_band = new_we_parts[band_mask]
-                        if np.all(new_we_parts_band >= 0):
-                            continue
-
-                        while not np.all(new_we_parts_band >= 0):
-                            # In case of negative values, we redistribute on the band
-                            areas_pc = self.areas_pc_parts[increment - 1, band_mask]
-                            pos_parts = (new_we_parts_band > 0) & (areas_pc > 0)
-                            neg_parts = (new_we_parts_band < 0) & (areas_pc > 0)
-
-                            # Weighted average of the local melt deficit
-                            tot_neg_band = np.sum(
-                                np.where(neg_parts, new_we_parts_band * areas_pc, 0)
-                            )
-
-                            # Redistribute the melt deficit to the positive parts
-                            diff = tot_neg_band / np.count_nonzero(pos_parts)
-                            result = np.zeros_like(new_we_parts_band)
-                            result[pos_parts] = (
-                                new_we_parts_band[pos_parts] + diff /
-                                areas_pc[pos_parts]
-                            )
-                            new_we_parts_band = result
-
-                        self.we_parts[increment, band_mask]  = new_we_parts_band
-                    else:
+                    if self.we_bands[increment, elev_idx] == 0:
                         self.we_parts[increment, band_mask] = 0
+                        continue
+                    self.we_parts[increment, band_mask] *= (
+                        self.we_bands[increment, elev_idx] /
+                        self.we_bands[0, elev_idx]
+                    )
 
             # This excess melt is taken into account in Step 2.
             self.excess_melt_we = - np.sum(np.where(new_we_bands < 0, new_we_bands, 0) *
@@ -781,22 +758,25 @@ class GlacierEvolutionDeltaH:
             self.we_parts = self.we_bands
             return
 
-        if np.all(self.areas_pc_parts[increment] == 0):
-            self.areas_pc_parts[increment] = self.areas_pc_parts[increment - 1]
+        self.areas_pc_parts[increment] = self.areas_pc_parts[0]
+
+        # Nullify the areas of the elevation bands with no glacier water equivalent
+        self.areas_pc_parts[increment, self.we_parts[increment] == 0] = 0
 
         for i_band, elev_idx in enumerate(np.arange(len(self.elev_bands))):
-            band_mask = self.elev_bands_indices == elev_idx
+            band_mask = ((self.elev_bands_indices == elev_idx) &
+                         (self.we_parts[increment] > 0))
+
+            if not np.any(band_mask):
+                continue
 
             # Scaling each part of the total band proportionally
             self.areas_pc_parts[increment, band_mask] *= (
                     self.areas_pc_bands[increment, elev_idx] /
                     self.areas_pc_bands[0, elev_idx])
 
-            # Adjusting the thickness so that the water equivalent remains constant
-            if self.areas_pc_bands[increment, elev_idx] > 0:
-                self.we_parts[increment, band_mask] *= (
-                        self.areas_pc_bands[0, elev_idx] /
-                        self.areas_pc_bands[increment, elev_idx])
+            # No need to adjust the glacier thicknesses here, as they are already
+            # accounted for by the scaled band w.e.
 
     def _update_lookup_tables(self):
         """

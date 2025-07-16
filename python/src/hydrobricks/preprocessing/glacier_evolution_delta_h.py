@@ -273,12 +273,13 @@ class GlacierEvolutionDeltaH:
             Number of increments for glacier mass balance calculation. Default is 100.
         update_width
             Whether to update the glacier width at each iteration (Eq. 7 Seibert et al.,
-            2018). Default is True.
+            2018). Default is True. Ignored if glacier_area_evolution_from_topo is True.
         update_width_reference
             Reference for updating the glacier width (Eq. 7 Seibert et al., 2018).
             Default is 'initial'. Options are:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
+            Ignored if glacier_area_evolution_from_topo is True.
         """
         assert self.hydro_units is not None, \
             "Hydro units are not defined. Please load them first."
@@ -567,47 +568,7 @@ class GlacierEvolutionDeltaH:
         thickness is included in the next iteration step (i.e. the next 1% melt)."
         """
         # Update glacier thicknesses (Eq. 6)
-        if self.glacier_area_evolution_from_topo:
-            # Glacier water equivalent reduction
-            we_reduction_mm = self.scaling_factor_mm * self.norm_delta_we_parts
-
-            # Compute the melt
-            excess_melt = np.zeros(len(self.elev_bands_parts))
-            for i in range(len(self.elev_bands_parts)):
-
-                if self.we_parts[increment - 1, i] > we_reduction_mm[i]:
-                    to_remove = we_reduction_mm[i]
-                    self.px_ice_we[increment, i] = self.px_ice_we[
-                        increment - 1, i]
-                    EPSILON = 1e-6  # avoid infinite loops due to floating point errors
-                    while to_remove > 0:
-                        diff = self.px_ice_we[increment, i] - to_remove
-                        diff = np.where(np.abs(diff) < EPSILON, 0, diff)
-                        assert (not np.isinf(diff).any())
-                        self.px_ice_we[increment, i] = np.where(diff < 0, 0, diff)
-                        remain = np.where(diff < 0, diff, 0)
-                        to_remove = - np.mean(remain)
-
-                    # Update the mean thickness
-                    if self.px_ice_we[increment, i].size > 0:
-                        self.we_parts[increment, i] = np.mean(
-                            self.px_ice_we[increment, i])
-                    else:
-                        self.we_parts[increment, i] = 0.0
-                    over_melt = 0
-
-                else:
-                    self.we_parts[increment, i] = 0
-                    over_melt = self.we_parts[increment - 1, i] - we_reduction_mm[i]
-
-                excess_melt[i] = over_melt
-
-            # This excess melt is taken into account in Step 2.
-            self.excess_melt_we = - np.sum(self.areas_pc_parts[increment - 1]
-                                           * excess_melt)
-            assert (not np.isnan(self.excess_melt_we))
-
-        else:
+        if not self.glacier_area_evolution_from_topo:
             # Glacier water equivalent reduction computed per elevation band
             we_reduction_bands = self.scaling_factor_mm * self.norm_delta_we_bands
 
@@ -618,6 +579,85 @@ class GlacierEvolutionDeltaH:
             # This excess melt is taken into account in Step 2.
             self.excess_melt_we = - np.sum(np.where(new_we_bands < 0, new_we_bands, 0) *
                                            self.areas_pc_bands[increment - 1])
+            return
+
+        # If the glacier area evolution is based on the topography
+        # Glacier water equivalent reduction
+        we_reduction_mm = self.scaling_factor_mm * self.norm_delta_we_bands
+
+        # Copy the previous increment values as starting point
+        self.we_bands[increment, :] = self.we_bands[increment - 1, :]
+        self.we_parts[increment, :] = self.we_parts[increment - 1, :]
+        self.px_ice_we[increment, :] = self.px_ice_we[increment - 1, :].copy()
+
+        # Compute the melt
+        excess_melt = np.zeros(len(self.elev_bands))
+        for i_band in np.arange(len(self.elev_bands)):
+            band_mask = self.elev_bands_indices == i_band
+            melt = we_reduction_mm[i_band]
+
+            # If the whole band melts, store the excess melt
+            if self.we_bands[increment, i_band] < melt:
+                excess_melt[i_band] = (self.we_bands[increment, i_band] - melt)
+                self.we_bands[increment, i_band] = 0
+                self.we_parts[increment, band_mask] = 0
+                for idx in np.where(band_mask)[0]:
+                    self.px_ice_we[increment, idx] = np.array([])
+                continue
+
+            # Otherwise, update the glacier water equivalent of the parts
+            band_mask_idx = np.where(band_mask)[0]
+
+            while melt > 0:
+                excess_melt_parts = np.zeros(len(band_mask_idx))
+                for i_part, idx in enumerate(band_mask_idx):
+                    # Skip parts with no glacier w.e. (happens during iterations)
+                    if self.we_parts[increment, idx] <= 0:
+                        continue
+
+                    # If the whole part melts, store the excess melt locally
+                    if self.we_parts[increment, idx] < melt:
+                        excess_melt_parts[i_part] = (
+                                self.we_parts[increment, idx] - melt
+                        )
+                        self.we_parts[increment, idx] = 0
+                        self.px_ice_we[increment, idx] = np.array([])
+                        continue
+
+                    # Otherwise, update the glacier water equivalent of the pixels
+                    px_values = self.px_ice_we[increment, idx]
+                    px_values -= melt
+
+                    # Ensure that the pixel-wise ice water equivalent is not negative
+                    while np.any(px_values < 0):
+                        px_melt_deficit = - np.sum(px_values[px_values < 0])
+                        px_melt = px_melt_deficit / len(px_values[px_values > 0])
+                        px_values = np.where(px_values <= 0, 0, px_values - px_melt)
+
+                    self.px_ice_we[increment, idx] = px_values
+
+                    # Update the glacier water equivalent for the part
+                    new_we = np.mean(px_values)
+                    ref_we = self.we_parts[increment, idx]
+                    assert np.isclose(new_we, ref_we - melt, atol=1e-02), \
+                        (f"Mismatch in glacier w.e. for part {idx} "
+                         f"({ref_we - melt} != {new_we})")
+                    assert new_we >= 0, f"Negative glacier w.e. for part {idx}"
+                    self.we_parts[increment, idx] = new_we
+
+                # Compute the excess melt for the band
+                excess_melt_parts_tot = - np.sum(
+                    excess_melt_parts *
+                    self.areas_pc_parts[increment - 1, band_mask]
+                )
+
+                # Scale the excess melt to area of the positive parts
+                pos_areas = self.areas_pc_parts[increment - 1, band_mask]
+                pos_areas = pos_areas[self.we_parts[increment, band_mask] > 0]
+                melt = excess_melt_parts_tot / np.sum(pos_areas)
+
+        # This excess melt is taken into account in Step 2.
+        self.excess_melt_we = - np.sum(excess_melt * self.areas_pc_bands[increment - 1])
 
     def _width_scaling(
             self,
@@ -633,72 +673,73 @@ class GlacierEvolutionDeltaH:
         for glacier area shrinkage at higher elevations, which mimics the typical
         spatial effect of the downwasting of glaciers. Relation from Bahr et al. (1997)"
         """
-        # Width scaling (Eq. 7)
-        if update_width:
-            if update_width_reference == 'previous':
-                pos_we = self.we_bands[increment - 1] > 0
-                self.areas_pc_bands[increment, pos_we] = (
-                        self.areas_pc_bands[increment - 1, pos_we]
-                        * np.power(self.we_bands[increment, pos_we] /
-                                   self.we_bands[increment - 1, pos_we], 0.5))
+        if not self.glacier_area_evolution_from_topo:
+            if update_width:
+                if update_width_reference == 'previous':
+                    pos_we = self.we_bands[increment - 1] > 0
+                    self.areas_pc_bands[increment, pos_we] = (
+                            self.areas_pc_bands[increment - 1, pos_we]
+                            * np.power(self.we_bands[increment, pos_we] /
+                                       self.we_bands[increment - 1, pos_we], 0.5))
 
-            elif update_width_reference == 'initial':
-                pos_we = self.we_bands[0] > 0
-                self.areas_pc_bands[increment, pos_we] = (
-                        self.areas_pc_bands[0, pos_we]
-                        * np.power(self.we_bands[increment, pos_we] /
-                                   self.we_bands[0, pos_we], 0.5))
+                elif update_width_reference == 'initial':
+                    pos_we = self.we_bands[0] > 0
+                    self.areas_pc_bands[increment, pos_we] = (
+                            self.areas_pc_bands[0, pos_we]
+                            * np.power(self.we_bands[increment, pos_we] /
+                                       self.we_bands[0, pos_we], 0.5))
 
-            else:
-                raise ValueError("update_width_reference should be either 'previous' "
-                                 "or 'initial'.")
+                else:
+                    raise ValueError("update_width_reference should be either "
+                                     "'previous' or 'initial'.")
 
-            # Conservation of the water equivalent
-            pos_we = self.we_bands[increment] > 0
-            self.we_bands[increment, pos_we] *= (
-                    self.areas_pc_bands[increment - 1, pos_we] /
-                    self.areas_pc_bands[increment, pos_we]
-            )
+                # Conservation of the water equivalent
+                pos_we = self.we_bands[increment] > 0
+                self.we_bands[increment, pos_we] *= (
+                        self.areas_pc_bands[increment - 1, pos_we] /
+                        self.areas_pc_bands[increment, pos_we]
+                )
 
-            # Nullify the areas of the elevation bands with no glacier water equivalent
-            self.areas_pc_bands[increment, self.we_bands[increment] == 0] = 0
-
-        else:
-            # If the glacier width is not updated, keep the previous glacier area.
-            self.areas_pc_bands[increment] = self.areas_pc_bands[increment - 1]
-
-            if not self.glacier_area_evolution_from_topo:
-                # Nullify the areas of the elevation bands with no glacier water equiv.
+                # Nullify the areas of the elevation bands with no glacier w.e.
                 self.areas_pc_bands[increment, self.we_bands[increment] == 0] = 0
 
             else:
-                px_area = catchment.get_dem_pixel_area()
+                # If the glacier width is not updated, keep the previous glacier area.
+                self.areas_pc_bands[increment] = self.areas_pc_bands[increment - 1]
 
-                # Compute the melt
-                areas = np.zeros(len(self.elev_bands_parts))
-                for i in range(len(self.elev_bands_parts)):
-                    ice_thickness = self.px_ice_we[increment, i]
-                    areas[i] = np.count_nonzero(ice_thickness) * px_area
-                    self.areas_pc_parts[increment, i] = areas[i] / self.catchment_area
-                    # Conservation of the w.e.
-                    if self.we_parts[increment, i] > 0:
-                        self.px_ice_we[increment, i] *= (
-                                self.areas_pc_parts[increment - 1, i] /
-                                self.areas_pc_parts[increment, i])
-                        self.we_parts[increment, i] = np.mean(
-                            self.px_ice_we[increment, i])
+                # Nullify the areas of the elevation bands with no glacier water equiv.
+                self.areas_pc_bands[increment, self.we_bands[increment] == 0] = 0
 
-                # Updating the band areas and band thicknesses
-                for _, elev_idx in enumerate(
-                        np.arange(len(self.elev_bands))):
-                    band_mask = self.elev_bands_indices == elev_idx
-                    self.areas_pc_bands[increment, elev_idx] = self.areas_pc_parts[
-                        increment, band_mask].sum()
-                    band_we = np.concatenate(self.px_ice_we[increment, band_mask])
-                    if band_we.size == 0:
-                        self.we_bands[increment, elev_idx] = 0
-                    else:
-                        self.we_bands[increment, elev_idx] = np.mean(band_we)
+        else:
+            self.areas_pc_bands[increment] = self.areas_pc_bands[increment - 1]
+            px_area = catchment.get_dem_pixel_area()
+
+            # Update the glacier area based on the pixel-wise ice water equivalent
+            areas = np.zeros(len(self.elev_bands_parts))
+            for i in range(len(self.elev_bands_parts)):
+                ice_we = self.px_ice_we[increment, i]
+                areas[i] = np.count_nonzero(ice_we) * px_area
+                # Drop pixels with no ice water equivalent
+                self.px_ice_we[increment, i] = ice_we[ice_we > 0]
+
+            self.areas_pc_parts[increment, :] = areas / self.catchment_area
+
+            # Adjust the glacier ice w.e. per part (px with 0 ice w.e. were dropped)
+            self.we_parts[increment] = np.array([
+                np.mean(arr) if arr.size > 0 else 0
+                for arr in self.px_ice_we[increment]
+            ])
+
+            # Updating the band areas and band thicknesses
+            for elev_idx in np.arange(len(self.elev_bands)):
+                band_mask = self.elev_bands_indices == elev_idx
+                self.areas_pc_bands[increment, elev_idx] = self.areas_pc_parts[
+                    increment, band_mask].sum()
+                band_we = np.concatenate(self.px_ice_we[increment, band_mask])
+                if band_we.size == 0:
+                    self.we_bands[increment, elev_idx] = 0
+                else:
+                    self.we_bands[increment, elev_idx] = np.mean(band_we)
 
     def _final_width_scaling(self):
         """

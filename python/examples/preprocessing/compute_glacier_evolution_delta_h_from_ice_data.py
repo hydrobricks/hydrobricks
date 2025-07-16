@@ -15,7 +15,7 @@ from hydrobricks.constants import ICE_WE
 
 DISCRETIZE_BY_RADIATION = True  # Set to True to use radiation discretization
 COMPUTE_RADIATION = False  # True: compute radiation. False: use the precomputed data.
-GLACIER_EVOLUTION_FROM_TOPO = False  # Use topography to compute glacier area evolution
+GLACIER_EVOLUTION_FROM_TOPO = True  # Use topography to compute glacier area evolution
 UPDATE_WIDTH = False  # Update glacier width during iterations
 
 # Paths

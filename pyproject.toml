@@ -57,7 +57,8 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = [
     "error",  # Treat all warnings as errors
-    "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning"
+    "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
+    "ignore:The distutils package is deprecated:DeprecationWarning"
 ]
 testpaths = ["python/tests"]
 

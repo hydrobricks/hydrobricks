@@ -4,19 +4,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
-## 0.8.0 - NEXT RELEASE
+## 0.8.0 - 2025-07-16
+
+### Breaking changes
+
+- The minimum Python version is now 3.10.
+- Behaviours were renamed as Actions.
+- Changing logging labels for content to type-specific labels ("content" becomes "water_content", "ice" becomes "ice_content", "snow" becomes "snow_content").
 
 ### Added
 
+- Adding the delta-h glacier evolution method (Huss et al., 2010) following Seibert et al. (2018) implementation of a look-up table.
+- Adding a simple glacier evolution method based on the glacier area and volume changes.
+- Adding lateral connections to hydro units in the C++ core.
+- Adding the SnowSlide method (Bernhardt & Schulz, 2010) for snow redistribution.
+- Adding a snow to ice transformation process (constant rate).
 - Adding an option to force the connectivity to neighbors when there is no downstream unit.
+- Adding setting an initial state to bricks.
+- Allow for sporadic and recursive actions (e.g. glacier area update).
+- Adding an option to load the hydro units from the catchment object.
 
 ### Fixed
 
 - Fixing an issue with the dlls when installing the module in editable mode.
+- Completing documentation of the C++ code.
+- Adding type hints to Python function arguments.
+- Improving Python code readability.
 
 ### Changed
 
 - Updating some example scripts.
+- Refactoring the catchment class to extract specific functionalities (no impact for the users).
+- Changing raster extraction for a more flexible approach.
+- Removing lateral connectivity with weight under 1%.
+- Rounding the lateral connectivity weight values.
+- Sorting hydro units by elevation to ensure a consistent order for snow redistribution.
+- Changing convention for member variables naming in C++.
+- Namespacing the global variables.
 
 
 ## 0.7.6 - 2025-01-23

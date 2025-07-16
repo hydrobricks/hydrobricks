@@ -54,7 +54,7 @@ glacier_df.to_csv(
 )
 
 # The lookup table can be computed and saved as a csv file
-glacier_evolution.compute_lookup_table()
+glacier_evolution.compute_lookup_table(catchment)
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object

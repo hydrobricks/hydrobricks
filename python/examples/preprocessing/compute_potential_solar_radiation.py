@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from pathlib import Path
 
 import hydrobricks as hb
@@ -14,11 +15,8 @@ CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
 CATCHMENT_METEO = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'meteo.csv'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Prepare catchment data
 catchment = hb.Catchment(CATCHMENT_OUTLINE)

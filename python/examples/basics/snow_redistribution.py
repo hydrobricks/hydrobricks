@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from pathlib import Path
 
 import hydrobricks as hb
@@ -20,11 +21,8 @@ CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / 'connectivity_elevation_radiation.csv'
 DEM_RASTER = CATCHMENT_DIR / 'dem.tif'
 
 for with_snow_redistribution in [True, False]:
-    with tempfile.TemporaryDirectory() as tmp_dir_name:
-        tmp_dir = tmp_dir_name
-
-    os.mkdir(tmp_dir)
-    working_dir = Path(tmp_dir)
+    working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+    working_dir.mkdir(parents=True, exist_ok=True)
 
     if with_snow_redistribution:
         print("Running model with snow redistribution")

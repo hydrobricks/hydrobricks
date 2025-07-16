@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -18,11 +19,8 @@ HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units_50m.csv'
 GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile_id_50m.csv'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Hydro units
 hydro_units = hb.HydroUnits()
@@ -37,16 +35,23 @@ glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
 # Compute the lookup table. In Seibert et al. (2018), the glacier width is not updated
 # during the iterations (update_width=False), but we would recommend to do so.
 glacier_evolution.compute_lookup_table(
-    GLACIER_PROFILE,
-    update_width=False
+    glacier_profile_csv=GLACIER_PROFILE,
+    update_width=False,
+    glacier_area_evolution_from_topo=False
 )
 glacier_evolution.save_as_csv(working_dir)
 
 print(f"Files saved to: {working_dir}")
 
 # Load the results from the CSV files
-areas_evol = pd.read_csv(working_dir / "details_glacier_areas_evolution.csv")
-we_evol = pd.read_csv(working_dir / "details_glacier_we_evolution.csv")
+areas_evol = pd.read_csv(
+    working_dir / "details_glacier_areas_evolution.csv",
+    header=[0, 1, 2]
+)
+we_evol = pd.read_csv(
+    working_dir / "details_glacier_we_evolution.csv",
+    header=[0, 1, 2]
+)
 init_glacier_df = pd.read_csv(GLACIER_PROFILE, skiprows=[1])
 init_glacier_df = init_glacier_df.drop(
     init_glacier_df[init_glacier_df.glacier_area == 0].index

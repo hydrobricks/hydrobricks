@@ -51,7 +51,7 @@ class GlacierEvolutionDeltaH:
         self.elev_bands = None  # Pure elevation bands for glacier discretization.
         self.elev_bands_parts = None  # Elevation bands subdivided by hydro units.
         self.elev_bands_indices = None  # Indices for the elevation bands parts.
-        self.glacier_area_evolution_from_topo = False
+        self.pixel_based_approach = False
         self.sub_elevation_parts = False
 
         # Tables
@@ -86,7 +86,7 @@ class GlacierEvolutionDeltaH:
             glacier_outline: str | None = None,
             ice_thickness: str | None = None,
             elevation_bands_distance: int = 10,
-            glacier_area_evolution_from_topo: bool = True
+            pixel_based_approach: bool = True
     ) -> pd.DataFrame:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -107,7 +107,7 @@ class GlacierEvolutionDeltaH:
             Either this or glacier_outline should be provided.
         elevation_bands_distance
             Distance between elevation bands in meters. Default is 10 m.
-        glacier_area_evolution_from_topo
+        pixel_based_approach
             Whether to compute the glacier area evolution from the topography.
             If True, the glacier area is computed from the topography and the
             ice thicknesses are updated accordingly. Otherwise, the glacier area
@@ -126,7 +126,7 @@ class GlacierEvolutionDeltaH:
             raise ValueError("Either glacier_outline or ice_thickness "
                              "should be provided, not both.")
 
-        self.glacier_area_evolution_from_topo = glacier_area_evolution_from_topo
+        self.pixel_based_approach = pixel_based_approach
 
         # Discretize the DEM into elevation bands at the given distance
         elevations, map_bands_ids = self._discretize_elevation_bands(
@@ -181,7 +181,7 @@ class GlacierEvolutionDeltaH:
         # measurements or calculated based on an inversion of surface topography
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness is not None:
-            if self.glacier_area_evolution_from_topo:
+            if self.pixel_based_approach:
                 self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
             # Update the dataframe with the ice thickness
@@ -196,7 +196,7 @@ class GlacierEvolutionDeltaH:
                 masked_thickness = masked_thickness[masked_thickness > 0]
                 masked_thickness = masked_thickness[~np.isnan(masked_thickness)]
 
-                if self.glacier_area_evolution_from_topo:
+                if self.pixel_based_approach:
                     self.px_ice_we[0, i] = masked_thickness * ICE_WE * 1000
 
                 # Compute the mean thickness
@@ -242,7 +242,7 @@ class GlacierEvolutionDeltaH:
         Parameters
         ----------
         catchment
-            The catchment object. Needed when glacier_area_evolution_from_topo is True.
+            The catchment object. Needed when pixel_based_approach is True.
         glacier_profile_csv
             Path to the CSV file containing glacier data. An elevation band is smaller
             than a hydro unit, usually around 10 m high. It should contain the
@@ -273,13 +273,13 @@ class GlacierEvolutionDeltaH:
             Number of increments for glacier mass balance calculation. Default is 100.
         update_width
             Whether to update the glacier width at each iteration (Eq. 7 Seibert et al.,
-            2018). Default is True. Ignored if glacier_area_evolution_from_topo is True.
+            2018). Default is True. Ignored if pixel_based_approach is True.
         update_width_reference
             Reference for updating the glacier width (Eq. 7 Seibert et al., 2018).
             Default is 'initial'. Options are:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
-            Ignored if glacier_area_evolution_from_topo is True.
+            Ignored if pixel_based_approach is True.
         """
         assert self.hydro_units is not None, \
             "Hydro units are not defined. Please load them first."
@@ -298,11 +298,11 @@ class GlacierEvolutionDeltaH:
         assert self.glacier_df is not None, \
             "Glacier data is not defined. Please provide a CSV file or a DataFrame."
 
-        if self.glacier_area_evolution_from_topo and catchment is None:
-            raise ValueError("When glacier_area_evolution_from_topo is True, "
+        if self.pixel_based_approach and catchment is None:
+            raise ValueError("When pixel_based_approach is True, "
                              "the catchment object must be provided.")
 
-        if self.glacier_area_evolution_from_topo:
+        if self.pixel_based_approach:
             # Add rows corresponding to the number of increments
             cols = self.px_ice_we.shape[1]
             new_rows = np.empty((nb_increments, cols), dtype=object)
@@ -358,7 +358,7 @@ class GlacierEvolutionDeltaH:
                 catchment=catchment
             )
 
-        if not update_width and not self.glacier_area_evolution_from_topo:
+        if not update_width and not self.pixel_based_approach:
             self._final_width_scaling()
 
         self._compute_sub_band_parts()
@@ -568,7 +568,7 @@ class GlacierEvolutionDeltaH:
         thickness is included in the next iteration step (i.e. the next 1% melt)."
         """
         # Update glacier thicknesses (Eq. 6)
-        if not self.glacier_area_evolution_from_topo:
+        if not self.pixel_based_approach:
             # Glacier water equivalent reduction computed per elevation band
             we_reduction_bands = self.scaling_factor_mm * self.norm_delta_we_bands
 
@@ -673,7 +673,7 @@ class GlacierEvolutionDeltaH:
         for glacier area shrinkage at higher elevations, which mimics the typical
         spatial effect of the downwasting of glaciers. Relation from Bahr et al. (1997)"
         """
-        if not self.glacier_area_evolution_from_topo:
+        if not self.pixel_based_approach:
             if update_width:
                 if update_width_reference == 'previous':
                     pos_we = self.we_bands[increment - 1] > 0
@@ -808,7 +808,7 @@ class GlacierEvolutionDeltaH:
         For discretization of hydro units into smaller units than elevation bands,
         we need to compute the glacier areas and water equivalent for each part.
         """
-        if self.glacier_area_evolution_from_topo:
+        if self.pixel_based_approach:
             return
 
         if not self.sub_elevation_parts:

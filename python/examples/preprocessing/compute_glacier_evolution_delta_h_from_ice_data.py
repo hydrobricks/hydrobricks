@@ -15,7 +15,7 @@ from hydrobricks.constants import ICE_WE
 
 DISCRETIZE_BY_RADIATION = True  # Set to True to use radiation discretization
 COMPUTE_RADIATION = False  # True: compute radiation. False: use the precomputed data.
-GLACIER_EVOLUTION_FROM_TOPO = True  # Use topography to compute glacier area evolution
+PIXEL_BASED_APPROACH = True  # Use topography to compute glacier area evolution
 UPDATE_WIDTH = False  # Update glacier width during iterations
 
 # Paths
@@ -71,7 +71,7 @@ glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment,
     ice_thickness=GLACIER_ICE_THICKNESS,
-    glacier_area_evolution_from_topo=GLACIER_EVOLUTION_FROM_TOPO
+    pixel_based_approach=PIXEL_BASED_APPROACH
 )
 
 # Compute and save lookup table as CSV

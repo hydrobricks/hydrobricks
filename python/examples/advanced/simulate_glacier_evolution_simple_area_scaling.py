@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.actions import ActionGlacierEvolutionDeltaH
+from hydrobricks.actions import ActionGlacierEvolutionAreaScaling
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -41,24 +41,17 @@ catchment.create_elevation_bands(
 
 # Glacier evolution. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
-glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
-glacier_df = glacier_evolution.compute_initial_ice_thickness(
+glacier_evolution = hb.preprocessing.GlacierEvolutionAreaScaling()
+glacier_df = glacier_evolution.compute_lookup_table(
     catchment,
     ice_thickness=GLACIER_ICE_THICKNESS
 )
 
-# It can then optionally be saved as a csv file
-glacier_df.to_csv(
-    working_dir / 'glacier_profile.csv',
-    index=False
-)
-
-# The lookup table can be computed and saved as a csv file
-glacier_evolution.compute_lookup_table()
+# The lookup table can be saved as a csv file
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object
-changes = ActionGlacierEvolutionDeltaH()
+changes = ActionGlacierEvolutionAreaScaling()
 changes.load_from(
     glacier_evolution,
     land_cover='glacier',
@@ -117,15 +110,6 @@ forcing.compute_pet(
     lat=47.3
 )
 
-# Obs data
-obs = hb.Observations()
-obs.load_from_csv(
-    CATCHMENT_DISCHARGE,
-    column_time='Date',
-    time_format='%d/%m/%Y',
-    content={'discharge': 'Discharge (mm/d)'}
-)
-
 # Model setup
 socont.setup(
     spatial_structure=catchment.hydro_units,
@@ -142,9 +126,6 @@ socont.run(
     parameters=parameters,
     forcing=forcing
 )
-
-# Get outlet discharge time series
-sim_ts = socont.get_outlet_discharge()
 
 # Dump all outputs
 socont.dump_outputs(str(working_dir))

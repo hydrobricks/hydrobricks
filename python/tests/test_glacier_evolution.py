@@ -139,13 +139,13 @@ def test_glacier_evolution_different_discretizations():
         glacier_evolution_elev.compute_initial_ice_thickness(
             catchment_elev_bands,
             ice_thickness=GLACIER_ICE_THICKNESS,
-            glacier_area_evolution_from_topo=False
+            pixel_based_approach=False
         )
         glacier_evolution_rad = hb.preprocessing.GlacierEvolutionDeltaH()
         glacier_evolution_rad.compute_initial_ice_thickness(
             catchment_radiation,
             ice_thickness=GLACIER_ICE_THICKNESS,
-            glacier_area_evolution_from_topo=False
+            pixel_based_approach=False
         )
 
         # Compute lookup tables
@@ -207,13 +207,13 @@ def test_glacier_evolution_different_discretizations_width_update():
         glacier_evolution_elev.compute_initial_ice_thickness(
             catchment_elev_bands,
             ice_thickness=GLACIER_ICE_THICKNESS,
-            glacier_area_evolution_from_topo=False
+            pixel_based_approach=False
         )
         glacier_evolution_rad = hb.preprocessing.GlacierEvolutionDeltaH()
         glacier_evolution_rad.compute_initial_ice_thickness(
             catchment_radiation,
             ice_thickness=GLACIER_ICE_THICKNESS,
-            glacier_area_evolution_from_topo=False
+            pixel_based_approach=False
         )
 
         # Compute lookup tables
@@ -300,3 +300,43 @@ def test_delta_h_action_lookup_table_binding_from_file():
         assert np.allclose(action.get_lookup_table_area(), lookup_table_area.values)
         assert action.get_lookup_table_volume().shape == lookup_table_volume.values.shape
         assert np.allclose(action.get_lookup_table_volume(), lookup_table_volume.values)
+
+
+def test_glacier_evolution_area_scaling():
+    if not hb.has_rasterio:
+        return
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Prepare catchment data
+        catchment = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
+
+        catchment.extract_dem(CATCHMENT_DEM)
+        catchment.hydro_units.load_from_csv(
+            HUS_RADIATION,
+            column_elevation='elevation',
+            column_area='area'
+        )
+        catchment.load_unit_ids_from_raster(MAP_HUS_RADIATION)
+
+        # Compute lookup tables
+        glacier_evolution = hb.preprocessing.GlacierEvolutionAreaScaling()
+        glacier_evolution.compute_lookup_table(
+            catchment,
+            ice_thickness=GLACIER_ICE_THICKNESS
+        )
+
+        glacier_evolution.save_as_csv(tmp_dir)
+
+        assert glacier_evolution.lookup_table_area is not None
+        assert glacier_evolution.lookup_table_volume is not None
+
+        lookup_table_volume = glacier_evolution.lookup_table_volume
+        volume_diff = lookup_table_volume[0: -1, :] - lookup_table_volume[1:, :]
+
+        # Assert that the volume difference is constant across the rows
+        assert np.allclose(volume_diff, volume_diff[0, :], rtol=1e-3), \
+            "Volume difference is not constant across the rows."

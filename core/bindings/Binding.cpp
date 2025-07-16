@@ -5,6 +5,7 @@
 
 #include "Action.h"
 #include "ActionGlacierEvolutionDeltaH.h"
+#include "ActionGlacierEvolutionAreaScaling.h"
 #include "ActionLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
@@ -149,6 +150,19 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the hydro unit ids of the glacier.")
         .def("get_lookup_table_area", &ActionGlacierEvolutionDeltaH::GetLookupTableArea, "Get the area lookup table.")
         .def("get_lookup_table_volume", &ActionGlacierEvolutionDeltaH::GetLookupTableVolume,
+             "Get the volumes lookup table.");
+
+    py::class_<ActionGlacierEvolutionAreaScaling, Action>(m, "ActionGlacierEvolutionAreaScaling")
+        .def(py::init<>())
+        .def("add_lookup_tables", &ActionGlacierEvolutionAreaScaling::AddLookupTables, "month_num"_a,
+            "land_cover"_a, "hu_ids"_a, "areas"_a, "volumes"_a)
+        .def("get_land_cover_name", &ActionGlacierEvolutionAreaScaling::GetLandCoverName,
+             "Get the land cover name (glacier name).")
+        .def("get_hydro_unit_ids", &ActionGlacierEvolutionAreaScaling::GetHydroUnitIds,
+             "Get the hydro unit ids of the glacier.")
+        .def("get_lookup_table_area", &ActionGlacierEvolutionAreaScaling::GetLookupTableArea,
+            "Get the area lookup table.")
+        .def("get_lookup_table_volume", &ActionGlacierEvolutionAreaScaling::GetLookupTableVolume,
              "Get the volumes lookup table.");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());

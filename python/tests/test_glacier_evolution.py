@@ -19,6 +19,8 @@ CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
 GLACIER_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'sgi_2016.shp'
 GLACIER_ICE_THICKNESS = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'glaciers' / 'ice_thickness.tif'
+HUS_RADIATION = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.csv'
+MAP_HUS_RADIATION = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'unit_ids_radiation.tif'
 
 
 def test_glacier_evolution_delta_h_lookup_table():
@@ -38,7 +40,7 @@ def test_glacier_evolution_delta_h_lookup_table():
         # In Seibert et al. (2018), the glacier width is not updated during the
         # iterations (update_width=False), but we would recommend to do so.
         glacier_evolution.compute_lookup_table(
-            GLACIER_PROFILE_SYNTH,
+            glacier_profile_csv=GLACIER_PROFILE_SYNTH,
             update_width=False
         )
         glacier_evolution.save_as_csv(working_dir)
@@ -98,6 +100,142 @@ def test_glacier_initial_ice_thickness_computation():
              f"got: {volume_df}")
 
 
+def test_glacier_evolution_different_discretizations():
+    if not hb.has_rasterio:
+        return
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Prepare catchment data
+        catchment_elev_bands = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
+        catchment_radiation = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
+
+        catchment_elev_bands.extract_dem(CATCHMENT_DEM)
+        catchment_radiation.extract_dem(CATCHMENT_DEM)
+
+        # Create elevation bands
+        catchment_elev_bands.create_elevation_bands(
+            method='equal_intervals',
+            distance=100
+        )
+
+        # Discretize by radiation and elevation
+        catchment_radiation.hydro_units.load_from_csv(
+            HUS_RADIATION,
+            column_elevation='elevation',
+            column_area='area'
+        )
+        catchment_radiation.load_unit_ids_from_raster(MAP_HUS_RADIATION)
+
+        # Glacier evolution initialization
+        glacier_evolution_elev = hb.preprocessing.GlacierEvolutionDeltaH()
+        glacier_evolution_elev.compute_initial_ice_thickness(
+            catchment_elev_bands,
+            ice_thickness=GLACIER_ICE_THICKNESS,
+            glacier_area_evolution_from_topo=False
+        )
+        glacier_evolution_rad = hb.preprocessing.GlacierEvolutionDeltaH()
+        glacier_evolution_rad.compute_initial_ice_thickness(
+            catchment_radiation,
+            ice_thickness=GLACIER_ICE_THICKNESS,
+            glacier_area_evolution_from_topo=False
+        )
+
+        # Compute lookup tables
+        glacier_evolution_elev.compute_lookup_table(
+            update_width=False
+        )
+        glacier_evolution_rad.compute_lookup_table(
+            update_width=False
+        )
+
+        assert np.allclose(glacier_evolution_elev.elev_bands,
+                           glacier_evolution_rad.elev_bands)
+        assert np.allclose(glacier_evolution_elev.norm_delta_we_bands,
+                           glacier_evolution_rad.norm_delta_we_bands)
+        assert np.allclose(glacier_evolution_elev.norm_elevations_bands,
+                           glacier_evolution_rad.norm_elevations_bands)
+        assert np.allclose(glacier_evolution_elev.we_bands,
+                           glacier_evolution_rad.we_bands, atol=0.3)
+        assert np.allclose(glacier_evolution_elev.areas_pc_bands,
+                           glacier_evolution_rad.areas_pc_bands)
+
+
+def test_glacier_evolution_different_discretizations_width_update():
+    if not hb.has_rasterio:
+        return
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Prepare catchment data
+        catchment_elev_bands = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
+        catchment_radiation = hb.Catchment(
+            CATCHMENT_OUTLINE,
+            land_cover_types=['ground', 'glacier'],
+            land_cover_names=['ground', 'glacier']
+        )
+
+        catchment_elev_bands.extract_dem(CATCHMENT_DEM)
+        catchment_radiation.extract_dem(CATCHMENT_DEM)
+
+        # Create elevation bands
+        catchment_elev_bands.create_elevation_bands(
+            method='equal_intervals',
+            distance=100
+        )
+
+        # Discretize by radiation and elevation
+        catchment_radiation.hydro_units.load_from_csv(
+            HUS_RADIATION,
+            column_elevation='elevation',
+            column_area='area'
+        )
+        catchment_radiation.load_unit_ids_from_raster(MAP_HUS_RADIATION)
+
+        # Glacier evolution initialization
+        glacier_evolution_elev = hb.preprocessing.GlacierEvolutionDeltaH()
+        glacier_evolution_elev.compute_initial_ice_thickness(
+            catchment_elev_bands,
+            ice_thickness=GLACIER_ICE_THICKNESS,
+            glacier_area_evolution_from_topo=False
+        )
+        glacier_evolution_rad = hb.preprocessing.GlacierEvolutionDeltaH()
+        glacier_evolution_rad.compute_initial_ice_thickness(
+            catchment_radiation,
+            ice_thickness=GLACIER_ICE_THICKNESS,
+            glacier_area_evolution_from_topo=False
+        )
+
+        # Compute lookup tables
+        glacier_evolution_elev.compute_lookup_table(
+            update_width=True
+        )
+        glacier_evolution_rad.compute_lookup_table(
+            update_width=True
+        )
+
+        assert np.allclose(glacier_evolution_elev.elev_bands,
+                           glacier_evolution_rad.elev_bands)
+        assert np.allclose(glacier_evolution_elev.norm_delta_we_bands,
+                           glacier_evolution_rad.norm_delta_we_bands)
+        assert np.allclose(glacier_evolution_elev.norm_elevations_bands,
+                           glacier_evolution_rad.norm_elevations_bands)
+        assert np.allclose(glacier_evolution_elev.we_bands,
+                           glacier_evolution_rad.we_bands, atol=0.3)
+        assert np.allclose(glacier_evolution_elev.areas_pc_bands,
+                           glacier_evolution_rad.areas_pc_bands, atol=2e-8)
+
+
 def test_delta_h_action_lookup_table_binding():
     # Hydro units
     hydro_units = hb.HydroUnits()
@@ -110,7 +248,7 @@ def test_delta_h_action_lookup_table_binding():
     # Glacier evolution preprocessing
     glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
     glacier_evolution.compute_lookup_table(
-        GLACIER_PROFILE_SYNTH,
+        glacier_profile_csv=GLACIER_PROFILE_SYNTH,
         update_width=False
     )
     lookup_table_area = glacier_evolution.get_lookup_table_area()
@@ -142,7 +280,7 @@ def test_delta_h_action_lookup_table_binding_from_file():
         # Glacier evolution preprocessing
         glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
         glacier_evolution.compute_lookup_table(
-            GLACIER_PROFILE_SYNTH,
+            glacier_profile_csv=GLACIER_PROFILE_SYNTH,
             update_width=False
         )
         glacier_evolution.save_as_csv(working_dir)

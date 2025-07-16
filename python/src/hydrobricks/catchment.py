@@ -734,7 +734,7 @@ class Catchment:
     def _extract_raster(
             self,
             raster_path: str | Path
-    ) -> [hb.rasterio.DatasetReader, np.ndarray] | None:
+    ) -> (hb.rasterio.DatasetReader, np.ndarray):
         """
         Extract raster data for the catchment. Does not handle change in coordinates.
 
@@ -758,28 +758,20 @@ class Catchment:
         if not hb.has_shapely:
             raise ImportError("shapely is required to do this.")
 
-        try:
-            src = hb.rasterio.open(raster_path)
-            self._check_crs(src)
+        src = hb.rasterio.open(raster_path)
+        self._check_crs(src)
 
-            if self.outline is not None:
-                geoms = [mapping(polygon) for polygon in self.outline]
-                masked_data, _ = mask(src, geoms, crop=False)
-            else:
-                masked_data = src.read(1)
+        if self.outline is not None:
+            geoms = [mapping(polygon) for polygon in self.outline]
+            masked_data, _ = mask(src, geoms, crop=False)
+        else:
+            masked_data = src.read(1)
 
-            masked_data[masked_data == src.nodata] = np.nan
-            if len(masked_data.shape) == 3:
-                masked_data = masked_data[0]
+        masked_data[masked_data == src.nodata] = np.nan
+        if len(masked_data.shape) == 3:
+            masked_data = masked_data[0]
 
-            return src, masked_data
-
-        except ValueError as e:
-            print(e)
-            return None
-        except Exception as e:
-            print(e)
-            return None
+        return src, masked_data
 
     def _check_crs(self, data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
         data_crs = self._get_crs_from_file(data)

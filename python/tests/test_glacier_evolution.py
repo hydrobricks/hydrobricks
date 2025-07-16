@@ -323,9 +323,20 @@ def test_glacier_evolution_area_scaling():
         catchment.load_unit_ids_from_raster(MAP_HUS_RADIATION)
 
         # Compute lookup tables
-        glacier_evolution_rad = hb.preprocessing.GlacierEvolutionAreaScaling()
-        glacier_evolution_rad.compute_lookup_table(
+        glacier_evolution = hb.preprocessing.GlacierEvolutionAreaScaling()
+        glacier_evolution.compute_lookup_table(
             catchment,
             ice_thickness=GLACIER_ICE_THICKNESS
         )
 
+        glacier_evolution.save_as_csv(tmp_dir)
+
+        assert glacier_evolution.lookup_table_area is not None
+        assert glacier_evolution.lookup_table_volume is not None
+
+        lookup_table_volume = glacier_evolution.lookup_table_volume
+        volume_diff = lookup_table_volume[0: -1, :] - lookup_table_volume[1:, :]
+
+        # Assert that the volume difference is constant across the rows
+        assert np.allclose(volume_diff, volume_diff[0, :], rtol=1e-3), \
+            "Volume difference is not constant across the rows."

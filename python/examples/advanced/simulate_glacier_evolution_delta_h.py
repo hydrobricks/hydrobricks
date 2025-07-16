@@ -117,15 +117,6 @@ forcing.compute_pet(
     lat=47.3
 )
 
-# Obs data
-obs = hb.Observations()
-obs.load_from_csv(
-    CATCHMENT_DISCHARGE,
-    column_time='Date',
-    time_format='%d/%m/%Y',
-    content={'discharge': 'Discharge (mm/d)'}
-)
-
 # Model setup
 socont.setup(
     spatial_structure=catchment.hydro_units,
@@ -142,9 +133,6 @@ socont.run(
     parameters=parameters,
     forcing=forcing
 )
-
-# Get outlet discharge time series
-sim_ts = socont.get_outlet_discharge()
 
 # Dump all outputs
 socont.dump_outputs(str(working_dir))

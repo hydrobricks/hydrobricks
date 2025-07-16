@@ -70,9 +70,7 @@ class GlacierEvolutionDeltaH:
 
         # Method-related attributes
         self.initial_total_glacier_we = np.nan
-        self.norm_elevations_parts = np.nan
         self.norm_elevations_bands = np.nan
-        self.norm_delta_we_parts = np.nan
         self.norm_delta_we_bands = np.nan
         self.scaling_factor_mm = np.nan
         self.excess_melt_we = 0
@@ -496,8 +494,6 @@ class GlacierEvolutionDeltaH:
         min_elevation_m = np.min(self.elev_bands_parts)
         self.norm_elevations_bands = ((max_elevation_m - self.elev_bands) /
                                       (max_elevation_m - min_elevation_m))
-        self.norm_elevations_parts = ((max_elevation_m - self.elev_bands_parts) /
-                                      (max_elevation_m - min_elevation_m))
 
         # Choose the glacial parametrization (Huss et al., 2010, Fig. 2a)
         glacier_area_km2 = (np.sum(self.areas_pc_parts[0]) *
@@ -532,10 +528,6 @@ class GlacierEvolutionDeltaH:
         # Apply ∆h-parameterization (Eq. 4)
         # Gives the normalized (dimensionless) ice thickness change for each
         # elevation band i
-        self.norm_delta_we_parts = (
-                np.power(self.norm_elevations_parts + self.a_coeff, self.gamma_coeff) +
-                self.b_coeff * (self.norm_elevations_parts + self.a_coeff) +
-                self.c_coeff)
         self.norm_delta_we_bands = (
                 np.power(self.norm_elevations_bands + self.a_coeff, self.gamma_coeff) +
                 self.b_coeff * (self.norm_elevations_bands + self.a_coeff) +

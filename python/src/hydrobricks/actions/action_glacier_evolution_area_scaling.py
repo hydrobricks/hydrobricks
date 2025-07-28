@@ -8,8 +8,9 @@ import pandas as pd
 import _hydrobricks as _hb
 import hydrobricks as hb
 from hydrobricks.actions.action import Action
-from hydrobricks.preprocessing.glacier_evolution_area_scaling import \
-    GlacierEvolutionAreaScaling
+from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
+    GlacierEvolutionAreaScaling,
+)
 
 
 class ActionGlacierEvolutionAreaScaling(Action):

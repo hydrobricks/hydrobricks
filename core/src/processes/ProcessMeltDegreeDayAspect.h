@@ -11,6 +11,11 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
 
     ~ProcessMeltDegreeDayAspect() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,21 +23,31 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::SetHydroUnitProperties()
+     */
     void SetHydroUnitProperties(HydroUnit* unit, Brick* brick) override;
 
+    /**
+     * @copydoc Process::SetParameters()
+     */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    string m_aspectClass;
-    Forcing* m_temperature;
-    float* m_degreeDayFactor;
-    float* m_meltingTemperature;
+    string _aspectClass;
+    Forcing* _temperature;
+    float* _degreeDayFactor;
+    float* _meltingTemperature;
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_ASPECT_H

@@ -32,7 +32,7 @@ bool Hydrobricks::OnInit() {
     // Init
     InitHydrobricks();
 
-    // Call default behaviour
+    // Call default action
     if (!wxApp::OnInit()) {
         CleanUp();
         return false;
@@ -75,49 +75,49 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
     wxString input = wxEmptyString;
 
     if (parser.Found("model-file", &input)) {
-        m_modelFile = input;
+        _modelFile = input;
     } else {
         wxLogError("The argument 'model-file' is missing.");
         return false;
     }
 
     if (parser.Found("parameters-file", &input)) {
-        m_parametersFile = input;
+        _parametersFile = input;
     } else {
         wxLogError("The argument 'parameters-file' is missing.");
         return false;
     }
 
     if (parser.Found("basin-file", &input)) {
-        m_basinFile = input;
+        _basinFile = input;
     } else {
         wxLogError("The argument 'basin-file' is missing.");
         return false;
     }
 
     if (parser.Found("data-file", &input)) {
-        m_dataFile = input;
+        _dataFile = input;
     } else {
         wxLogError("The argument 'data-file' is missing.");
         return false;
     }
 
     if (parser.Found("output-path", &input)) {
-        m_outputPath = input;
+        _outputPath = input;
     } else {
         wxLogError("The argument 'output-path' is missing.");
         return false;
     }
 
     if (parser.Found("start-date", &input)) {
-        m_startDate = input;
+        _startDate = input;
     } else {
         wxLogError("The argument 'start-date' is missing.");
         return false;
     }
 
     if (parser.Found("end-date", &input)) {
-        m_endDate = input;
+        _endDate = input;
     } else {
         wxLogError("The argument 'end-date' is missing.");
         return false;
@@ -127,100 +127,6 @@ bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
 }
 
 int Hydrobricks::OnRun() {
-    try {
-        // Create the output path if needed
-        if (!CheckOutputDirectory(m_outputPath)) {
-            return 1;
-        }
-
-        // Initialize log
-        InitLog(m_outputPath);
-
-        // Model settings
-        SettingsModel modelSettings;
-        if (!modelSettings.ParseStructure(m_modelFile)) {
-            return 1;
-        }
-
-        // Modelling period
-        modelSettings.SetTimer(m_startDate, m_endDate, 1, "day");
-
-        // Parameters
-        if (!modelSettings.ParseParameters(m_parametersFile)) {
-            return 1;
-        }
-
-        // Basin settings
-        SettingsBasin basinSettings;
-        if (!basinSettings.Parse(m_basinFile)) {
-            return 1;
-        }
-
-        // Data
-        vector<TimeSeries*> vecTimeSeries;
-        if (!TimeSeries::Parse(m_dataFile, vecTimeSeries)) {
-            return 1;
-        }
-
-        // Watch
-        wxStopWatch sw;
-
-        // Create the basin
-        SubBasin subBasin;
-        if (!subBasin.Initialize(basinSettings)) {
-            return 1;
-        }
-
-        // Create the model
-        ModelHydro model(&subBasin);
-        if (!model.Initialize(modelSettings, basinSettings)) {
-            return 1;
-        }
-
-        // Add data
-        for (auto timeSeries : vecTimeSeries) {
-            if (!model.AddTimeSeries(timeSeries)) {
-                return 1;
-            }
-        }
-        if (!model.AttachTimeSeriesToHydroUnits()) {
-            return 1;
-        }
-
-        // Check
-        if (!model.IsOk()) {
-            return 1;
-        }
-
-        // Do the work
-        if (!model.Run()) {
-            return 1;
-        }
-
-        // Save outputs
-        if (!model.DumpOutputs(m_outputPath)) {
-            return 1;
-        }
-
-        // Processing time and sources number
-        DisplayProcessingTime(sw);
-        wxLogMessage(_("Calculation over."));
-
-        return 0;
-
-    } catch (std::bad_alloc& ba) {
-        wxString msg(ba.what(), wxConvUTF8);
-        wxLogError(_("Bad allocation caught: %s"), msg);
-        CleanUp();
-        return 1;
-    } catch (std::exception& e) {
-        wxString fullMessage(e.what());
-        wxLogError(fullMessage);
-        wxLogError(_("Exception caught."));
-        CleanUp();
-        return 1;
-    }
-
     return wxApp::OnRun();
 }
 

@@ -4,7 +4,7 @@
 
 SolverHeunExplicit::SolverHeunExplicit()
     : Solver() {
-    m_nIterations = 3;
+    _nIterations = 3;
 }
 
 bool SolverHeunExplicit::Solve() {
@@ -21,11 +21,11 @@ bool SolverHeunExplicit::Solve() {
     ResetStateVariableChanges();
 
     // Final change rates
-    m_changeRates.col(2) = (m_changeRates.col(0) + m_changeRates.col(1)) / 2;
+    _changeRates.col(2) = (_changeRates.col(0) + _changeRates.col(1)) / 2;
 
     // Apply the changes
     ApplyConstraintsFor(2);
-    ApplyProcesses(m_changeRates.col(2));
+    ApplyProcesses(_changeRates.col(2));
     Finalize();
 
     return true;

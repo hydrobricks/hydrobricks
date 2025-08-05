@@ -19,8 +19,8 @@ vecDouble ProcessOutflowOverflow::GetRates() {
 }
 
 void ProcessOutflowOverflow::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(m_outputs.size() > index);
+    wxASSERT(_outputs.size() > index);
     // Null the rate value as overflow will be handled at a later stage
     *rate = 0;
-    m_outputs[index]->LinkChangeRate(rate);
+    _outputs[index]->LinkChangeRate(rate);
 }

@@ -11,30 +11,54 @@ class SurfaceComponent : public Brick {
   public:
     SurfaceComponent();
 
+    /**
+     * @copydoc Brick::CanHaveAreaFraction()
+     */
     bool CanHaveAreaFraction() override {
         return true;
     }
 
-    double GetAreaFraction() {
-        return m_areaFraction;
+    /**
+     * Gets the area fraction of this component.
+     *
+     * @return The area fraction of this component.
+     */
+    double GetAreaFraction() const {
+        return _areaFraction;
     }
 
+    /**
+     * Sets the area fraction of this component.
+     *
+     * @param value The area fraction of this component.
+     */
     void SetAreaFraction(double value);
 
-    bool IsNull() override {
-        return m_areaFraction <= PRECISION;
-    }
+    /**
+     * Gets the area fraction of the parent land cover of this component.
+     *
+     * @return The area fraction of the parent land cover.
+     */
+    double GetParentAreaFraction();
 
+    /**
+     * @copydoc Brick::IsNull()
+     */
+    bool IsNull() override;
+
+    /**
+     * Sets the parent land cover of this component.
+     *
+     * @param parent The parent land cover of this component.
+     */
     virtual void SetParent(LandCover* parent) {
-        m_parent = parent;
-        m_parent->SurfaceComponentAdded(this);
+        _parent = parent;
+        _parent->SurfaceComponentAdded(this);
     }
 
   protected:
-    LandCover* m_parent;
-    double m_areaFraction;
-
-  private:
+    LandCover* _parent;
+    double _areaFraction;
 };
 
 #endif  // HYDROBRICKS_SURFACE_COMPONENT_H

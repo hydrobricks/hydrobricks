@@ -4,54 +4,67 @@
 #include "Parameter.h"
 
 SettingsBasin::SettingsBasin()
-    : m_selectedHydroUnit(nullptr) {}
+    : _selectedHydroUnit(nullptr) {}
 
 SettingsBasin::~SettingsBasin() = default;
 
-void SettingsBasin::AddHydroUnit(int id, double area) {
+void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
     HydroUnitSettings unit;
     unit.id = id;
     unit.area = area;
-    m_hydroUnits.push_back(unit);
-    m_selectedHydroUnit = &m_hydroUnits[m_hydroUnits.size() - 1];
+    unit.elevation = elevation;
+    _hydroUnits.push_back(unit);
+    _selectedHydroUnit = &_hydroUnits[_hydroUnits.size() - 1];
 }
 
 void SettingsBasin::AddLandCover(const string& name, const string& type, double fraction) {
-    wxASSERT(m_selectedHydroUnit);
+    wxASSERT(_selectedHydroUnit);
+
     LandCoverSettings element;
     element.name = name;
     element.type = type;
     element.fraction = fraction;
-    m_selectedHydroUnit->landCovers.push_back(element);
+    _selectedHydroUnit->landCovers.push_back(element);
 }
 
 void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value, const string& unit) {
-    wxASSERT(m_selectedHydroUnit);
+    wxASSERT(_selectedHydroUnit);
 
     HydroUnitPropertyDouble property;
     property.name = name;
     property.value = value;
     property.unit = unit;
-    m_selectedHydroUnit->propertiesDouble.push_back(property);
+    _selectedHydroUnit->propertiesDouble.push_back(property);
 }
 
 void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string& value) {
-    wxASSERT(m_selectedHydroUnit);
+    wxASSERT(_selectedHydroUnit);
 
     HydroUnitPropertyString property;
     property.name = name;
     property.value = value;
-    m_selectedHydroUnit->propertiesString.push_back(property);
+    _selectedHydroUnit->propertiesString.push_back(property);
+}
+
+void SettingsBasin::AddLateralConnection(int giverHydroUnitId, int receiverHydroUnitId, double fraction,
+                                         const string& type) {
+    LateralConnectionSettings connection;
+    connection.type = type;
+    connection.giverHydroUnitId = giverHydroUnitId;
+    connection.receiverHydroUnitId = receiverHydroUnitId;
+    connection.fraction = fraction;
+
+    _lateralConnections.push_back(connection);
 }
 
 void SettingsBasin::Clear() {
-    m_hydroUnits.clear();
-    m_selectedHydroUnit = nullptr;
+    _hydroUnits.clear();
+    _selectedHydroUnit = nullptr;
 }
 
 void SettingsBasin::SelectUnit(int index) {
-    wxASSERT(m_hydroUnits.size() > index);
-    m_selectedHydroUnit = &m_hydroUnits[index];
+    wxASSERT(_hydroUnits.size() > index);
+    _selectedHydroUnit = &_hydroUnits[index];
 }
 
 bool SettingsBasin::Parse(const string& path) {
@@ -84,7 +97,7 @@ bool SettingsBasin::Parse(const string& path) {
             HydroUnitSettings unit;
             unit.id = ids[iUnit];
             unit.area = areas[iUnit];
-            m_hydroUnits.push_back(unit);
+            _hydroUnits.push_back(unit);
         }
 
         // Get land cover data
@@ -99,7 +112,7 @@ bool SettingsBasin::Parse(const string& path) {
                 element.name = cover;
                 element.type = type;
                 element.fraction = fractions[iUnit];
-                m_hydroUnits[iUnit].landCovers.push_back(element);
+                _hydroUnits[iUnit].landCovers.push_back(element);
             }
         }
 
@@ -127,7 +140,7 @@ bool SettingsBasin::Parse(const string& path) {
                 prop.name = varName;
                 prop.value = values[iUnit];
                 prop.unit = "";
-                m_hydroUnits[iUnit].propertiesDouble.push_back(prop);
+                _hydroUnits[iUnit].propertiesDouble.push_back(prop);
             }
         }
 
@@ -141,7 +154,7 @@ bool SettingsBasin::Parse(const string& path) {
 
 double SettingsBasin::GetTotalArea() const {
     double sum = 0;
-    for (const auto& unit : m_hydroUnits) {
+    for (const auto& unit : _hydroUnits) {
         sum += unit.area;
     }
 

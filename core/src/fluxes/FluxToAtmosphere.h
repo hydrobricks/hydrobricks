@@ -17,9 +17,6 @@ class FluxToAtmosphere : public Flux {
      * @copydoc Flux::GetAmount()
      */
     double GetAmount() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_ATMOSPHERE_H

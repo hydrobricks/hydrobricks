@@ -11,6 +11,11 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
 
     ~ProcessMeltTemperatureIndex() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,20 +23,27 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::SetParameters()
+     */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* m_temperature;
-    Forcing* m_potentialClearSkyDirectSolarRadiation;
-    float* m_meltFactor;
-    float* m_meltingTemperature;
-    float* m_radiationCoefficient;
+    Forcing* _temperature;
+    Forcing* _potentialClearSkyDirectSolarRadiation;
+    float* _meltFactor;
+    float* _meltingTemperature;
+    float* _radiationCoefficient;
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_TEMPERATURE_INDEX_H

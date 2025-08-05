@@ -5,11 +5,11 @@
 
 ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* container)
     : ProcessMelt(container),
-      m_temperature(nullptr),
-      m_potentialClearSkyDirectSolarRadiation(nullptr),
-      m_meltFactor(nullptr),
-      m_meltingTemperature(nullptr),
-      m_radiationCoefficient(nullptr) {}
+      _temperature(nullptr),
+      _potentialClearSkyDirectSolarRadiation(nullptr),
+      _meltFactor(nullptr),
+      _meltingTemperature(nullptr),
+      _radiationCoefficient(nullptr) {}
 
 void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("melt_factor", 3.0f);
@@ -23,19 +23,19 @@ bool ProcessMeltTemperatureIndex::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;
     }
-    if (m_temperature == nullptr) {
+    if (_temperature == nullptr) {
         return false;
     }
-    if (m_meltFactor == nullptr) {
+    if (_meltFactor == nullptr) {
         return false;
     }
-    if (m_meltingTemperature == nullptr) {
+    if (_meltingTemperature == nullptr) {
         return false;
     }
-    if (m_radiationCoefficient == nullptr) {
+    if (_radiationCoefficient == nullptr) {
         return false;
     }
-    if (m_potentialClearSkyDirectSolarRadiation == nullptr) {
+    if (_potentialClearSkyDirectSolarRadiation == nullptr) {
         return false;
     }
 
@@ -44,30 +44,30 @@ bool ProcessMeltTemperatureIndex::IsOk() {
 
 void ProcessMeltTemperatureIndex::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
-    m_meltFactor = GetParameterValuePointer(processSettings, "melt_factor");
-    m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
-    m_radiationCoefficient = GetParameterValuePointer(processSettings, "radiation_coefficient");
+    _meltFactor = GetParameterValuePointer(processSettings, "melt_factor");
+    _meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
+    _radiationCoefficient = GetParameterValuePointer(processSettings, "radiation_coefficient");
 }
 
 void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
-        m_temperature = forcing;
+        _temperature = forcing;
     } else if (forcing->GetType() == Radiation) {
-        m_potentialClearSkyDirectSolarRadiation = forcing;
+        _potentialClearSkyDirectSolarRadiation = forcing;
     } else {
         throw InvalidArgument("Forcing must be of type Temperature or Radiation");
     }
 }
 
 vecDouble ProcessMeltTemperatureIndex::GetRates() {
-    if (!m_container->ContentAccessible()) {
+    if (!_container->ContentAccessible()) {
         return {0};
     }
 
     double melt = 0;
-    if (m_temperature->GetValue() >= *m_meltingTemperature) {
-        melt = (m_temperature->GetValue() - *m_meltingTemperature) *
-               (*m_meltFactor + *m_radiationCoefficient * m_potentialClearSkyDirectSolarRadiation->GetValue());
+    if (_temperature->GetValue() >= *_meltingTemperature) {
+        melt = (_temperature->GetValue() - *_meltingTemperature) *
+               (*_meltFactor + *_radiationCoefficient * _potentialClearSkyDirectSolarRadiation->GetValue());
     }
 
     return {melt};

@@ -11,6 +11,11 @@ class ProcessOutflowOverflow : public ProcessOutflow {
 
     ~ProcessOutflowOverflow() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,12 +23,16 @@ class ProcessOutflowOverflow : public ProcessOutflow {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::StoreInOutgoingFlux()
+     */
     void StoreInOutgoingFlux(double* rate, int index) override;
 
   protected:
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_OVERFLOW_H

@@ -4,15 +4,15 @@
 
 IceContainer::IceContainer(Brick* brick)
     : WaterContainer(brick),
-      m_noMeltWhenSnowCover(false),
-      m_relatedSnowpack(nullptr) {}
+      _noMeltWhenSnowCover(false),
+      _relatedSnowpack(nullptr) {}
 
 void IceContainer::ApplyConstraints(double timeStep) {
-    if (m_noMeltWhenSnowCover) {
-        if (m_relatedSnowpack == nullptr) {
+    if (_noMeltWhenSnowCover) {
+        if (_relatedSnowpack == nullptr) {
             throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
         }
-        if (m_relatedSnowpack->HasSnow()) {
+        if (_relatedSnowpack->HasSnow()) {
             SetOutgoingRatesToZero();
         }
     }
@@ -20,11 +20,11 @@ void IceContainer::ApplyConstraints(double timeStep) {
 }
 
 bool IceContainer::ContentAccessible() const {
-    if (m_noMeltWhenSnowCover) {
-        if (m_relatedSnowpack == nullptr) {
+    if (_noMeltWhenSnowCover) {
+        if (_relatedSnowpack == nullptr) {
             throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
         }
-        if (m_relatedSnowpack->HasSnow()) {
+        if (_relatedSnowpack->HasSnow()) {
             return false;
         }
     }

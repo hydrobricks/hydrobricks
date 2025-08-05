@@ -55,6 +55,13 @@ class Process : public wxObject {
      */
     static bool HasParameter(const ProcessSettings& processSettings, const string& name);
 
+    /**
+     * Get the value pointer of a parameter.
+     *
+     * @param processSettings settings of the process containing the parameters.
+     * @param name name of the parameter to get.
+     * @return pointer to the value of the parameter.
+     */
     static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
 
     /**
@@ -72,6 +79,11 @@ class Process : public wxObject {
      */
     virtual void SetParameters(const ProcessSettings& processSettings);
 
+    /**
+     * Attach forcing to the process.
+     *
+     * @param forcing forcing to attach.
+     */
     virtual void AttachForcing(Forcing*) {
         throw ShouldNotHappen();
     }
@@ -83,33 +95,79 @@ class Process : public wxObject {
      */
     void AttachFluxOut(Flux* flux) {
         wxASSERT(flux);
-        m_outputs.push_back(flux);
+        _outputs.push_back(flux);
     }
 
+    /**
+     * Get the outgoing fluxes.
+     *
+     * @return vector of pointers to the outgoing fluxes.
+     */
     vector<Flux*> GetOutputFluxes() {
-        return m_outputs;
+        return _outputs;
     }
 
+    /**
+     * Get the number of outgoing fluxes.
+     *
+     * @return number of outgoing fluxes.
+     */
     int GetOutputFluxesNb() {
-        return int(m_outputs.size());
+        return static_cast<int>(_outputs.size());
     }
 
+    /**
+     * Check if the process sends water to the atmosphere.
+     *
+     * @return true if the process sends water to the atmosphere.
+     */
     virtual bool ToAtmosphere() {
         return false;
     }
 
+    /**
+     * Check if the process needs to link the target brick.
+     *
+     * @return true if the process needs to link the target brick.
+     */
     virtual bool NeedsTargetBrickLinking() {
         return false;
     }
 
+    /**
+     * Get the number of connections to the process.
+     *
+     * @return number of connections to the process.
+     */
     virtual int GetConnectionsNb() = 0;
 
+    /**
+     * Get the change rates of the process.
+     *
+     * @return vector of change rates.
+     */
     virtual vecDouble GetChangeRates();
 
+    /**
+     * Store the water corresponding to the change rates in the outgoing fluxes.
+     *
+     * @param rate change rates.
+     * @param index index of the flux.
+     */
     virtual void StoreInOutgoingFlux(double* rate, int index);
 
+    /**
+     * Apply the change rates to the process.
+     *
+     * @param connectionIndex index of the connection.
+     * @param rate change rates.
+     * @param timeStepInDays time step in days.
+     */
     void ApplyChange(int connectionIndex, double rate, double timeStepInDays);
 
+    /**
+     * Finalize the process.
+     */
     virtual void Finalize() {
         // Nothing to do here.
     }
@@ -123,34 +181,77 @@ class Process : public wxObject {
         return vecDoublePt{};
     }
 
+    /**
+     * Get the value pointer for a given element.
+     *
+     * @param name name of the element to get.
+     * @return pointer to the value of the given element.
+     */
     virtual double* GetValuePointer(const string& name);
 
+    /**
+     * Get the name of the process.
+     *
+     * @return name of the process.
+     */
     string GetName() {
-        return m_name;
+        return _name;
     }
 
+    /**
+     * Set the name of the process.
+     *
+     * @param name name of the process.
+     */
     void SetName(const string& name) {
-        m_name = name;
+        _name = name;
     }
 
+    /**
+     * Get the water container associated with the process.
+     *
+     * @return pointer to the water container.
+     */
     WaterContainer* GetWaterContainer() {
-        return m_container;
+        return _container;
     }
 
+    /**
+     * Set the target brick for the process.
+     *
+     * @param brick target brick.
+     */
     virtual void SetTargetBrick(Brick*) {
         throw ShouldNotHappen();
     }
 
-  protected:
-    string m_name;
-    WaterContainer* m_container;
-    vector<Flux*> m_outputs;
+    /**
+     * Check if the process is a lateral process.
+     *
+     * @return true if the process is a lateral process.
+     */
+    virtual bool IsLateralProcess() const {
+        return false;
+    }
 
+  protected:
+    string _name;
+    WaterContainer* _container;
+    vector<Flux*> _outputs;
+
+    /**
+     * Get the sum of change rates from other processes.
+     *
+     * @return sum of change rates from other processes.
+     */
     double GetSumChangeRatesOtherProcesses();
 
+    /**
+     * Get the rates of the process.
+     *
+     * @return vector of rates.
+     */
     virtual vecDouble GetRates() = 0;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_H

@@ -1,7 +1,5 @@
 # hydrobricks
 
-> :warning: **hydrobricks is still in its very early stages and options are limited at this point...**
-
 A modular hydrological modelling framework.
 
 [![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
@@ -24,10 +22,13 @@ Wheels are available to install from PyPI (https://pypi.org/project/hydrobricks/
 
 Install: ```pip install hydrobricks```
 
-## Resources
+## Main resources
 *   **Documentation**: https://hydrobricks.readthedocs.io/en/latest/
 *   How to build: https://github.com/hydrobricks/hydrobricks/wiki
 *   Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
+
+## Additional resources
+*   Code for downscaling hydrobricks outputs to sub-daily timescales (daily flow duration curves) in alpine glacierized catchments: https://github.com/ALArgentin/glacial-discharge-downscaling
 
 ## Contribute
 

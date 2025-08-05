@@ -11,6 +11,11 @@ class ProcessMeltDegreeDay : public ProcessMelt {
 
     ~ProcessMeltDegreeDay() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
@@ -18,18 +23,25 @@ class ProcessMeltDegreeDay : public ProcessMelt {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Process::SetParameters()
+     */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::AttachForcing()
+     */
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* m_temperature;
-    float* m_degreeDayFactor;
-    float* m_meltingTemperature;
+    Forcing* _temperature;
+    float* _degreeDayFactor;
+    float* _meltingTemperature;
 
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_H

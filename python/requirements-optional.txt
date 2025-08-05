@@ -1,6 +1,6 @@
 dask
 dask-expr
-datashader==0.17.0
+datashader==0.18.1
 geopandas
 matplotlib
 netCDF4

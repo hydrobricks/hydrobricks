@@ -1,6 +1,6 @@
 #include "Parameter.h"
 
 Parameter::Parameter(const string& name, float val)
-    : m_linked(false),
-      m_name(name),
-      m_value(val) {}
+    : _linked(false),
+      _name(name),
+      _value(val) {}

@@ -1,5 +1,7 @@
 import sys
 
+import pandas as pd
+
 if sys.version_info < (3, 11):
     try:
         from strenum import LowercaseStrEnum, StrEnum
@@ -43,19 +45,18 @@ class Unit(StrEnumClass):
     KPA = auto()  # [kPa]
 
 
-def get_unit_enum(unit):
+def get_unit_enum(unit: str) -> Unit:
     """
     Convert a string to a Unit.
 
     Parameters
     ----------
-    unit : str
+    unit
         The string to convert.
 
     Returns
     -------
-    Unit
-        The corresponding Unit.
+    The corresponding Unit.
     """
     if unit in Unit.__members__:
         return Unit[unit]
@@ -112,19 +113,18 @@ def get_unit_enum(unit):
         raise ValueError(f"Unknown unit: {unit}")
 
 
-def get_unit_from_df_column(df):
+def get_unit_from_df_column(df: pd.DataFrame) -> Unit:
     """
     Get the unit of a dataframe column.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df
         The dataframe to get the unit from.
 
     Returns
     -------
-    Unit
-        The unit of the dataframe.
+    The unit of the dataframe.
     """
     if len(df.columns) != 1:
         raise ValueError("Only single column dataframes are supported.")
@@ -132,22 +132,21 @@ def get_unit_from_df_column(df):
     return get_unit_enum(df.columns[0])
 
 
-def convert_unit_df(df, new_unit):
+def convert_unit_df(df: pd.DataFrame, new_unit: Unit | str) -> pd.DataFrame:
     """
     Convert a dataframe (single column) to a new unit. The unit of the dataframe
     must be specified in the name of the column (using tuples).
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df
         The dataframe to convert.
-    new_unit : Unit|str
+    new_unit
         The unit to convert to.
 
     Returns
     -------
-    pd.DataFrame
-        The converted dataframe.
+    The converted dataframe.
     """
     unit_from = get_unit_from_df_column(df)
     unit_to = get_unit_enum(new_unit)
@@ -157,23 +156,26 @@ def convert_unit_df(df, new_unit):
     return convert_unit(df, unit_from, unit_to)
 
 
-def convert_unit(value, unit_from, unit_to):
+def convert_unit(
+        value: float,
+        unit_from: Unit | str,
+        unit_to: Unit | str
+) -> float | pd.DataFrame:
     """
     Convert a value from one unit to another.
 
     Parameters
     ----------
-    value : float|floating
+    value
         The value to convert.
-    unit_from : Unit|str
+    unit_from
         The unit of the value.
-    unit_to : Unit|str
+    unit_to
         The unit to convert to.
 
     Returns
     -------
-    float|pd.DataFrame
-        The converted value.
+    The converted value.
     """
     if isinstance(unit_from, str):
         unit_from = get_unit_enum(unit_from)
@@ -225,21 +227,20 @@ def convert_unit(value, unit_from, unit_to):
     raise ValueError(f"Conversion from {unit_from} to {unit_to} not implemented.")
 
 
-def remove_chars(input_string, chars_to_remove):
+def remove_chars(input_string: str, chars_to_remove: str) -> str:
     """
     Remove characters from a string.
 
     Parameters
     ----------
-    input_string : str
+    input_string
         The string to remove characters from.
-    chars_to_remove : str
+    chars_to_remove
         The characters to remove.
 
     Returns
     -------
-    str
-        The string with the characters removed.
+    The string with the characters removed.
     """
     result = ""
 

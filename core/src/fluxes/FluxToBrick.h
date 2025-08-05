@@ -20,12 +20,22 @@ class FluxToBrick : public Flux {
      */
     double GetAmount() override;
 
+    /**
+     * @copydoc Flux::UpdateFlux()
+     */
     void UpdateFlux(double amount) override;
 
-  protected:
-    Brick* m_toBrick;
+    /**
+     * Get the target brick of the flux.
+     *
+     * @return pointer to the target brick.
+     */
+    Brick* GetTargetBrick() const {
+        return _toBrick;
+    }
 
-  private:
+  protected:
+    Brick* _toBrick;
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_H

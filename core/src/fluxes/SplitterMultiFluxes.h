@@ -15,14 +15,20 @@ class SplitterMultiFluxes : public Splitter {
      */
     bool IsOk() override;
 
+    /**
+     * @copydoc Splitter::SetParameters()
+     */
     void SetParameters(const SplitterSettings& splitterSettings) override;
 
+    /**
+     * @copydoc Splitter::GetValuePointer()
+     */
     double* GetValuePointer(const string& name) override;
 
+    /**
+     * @copydoc Splitter::Compute()
+     */
     void Compute() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_SPLITTER_MULTI_FLUXES_H

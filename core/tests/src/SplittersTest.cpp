@@ -10,27 +10,27 @@
 
 class Splitters : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
-    TimeSeriesUniform* m_tsTemp{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
 
     void SetUp() override {
-        m_model.SetSolver("heun_explicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
 
         auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0});
-        m_tsTemp = new TimeSeriesUniform(Temperature);
-        m_tsTemp->SetData(temperature);
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
-        wxDELETE(m_tsTemp);
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
     }
 };
 
@@ -41,23 +41,23 @@ TEST_F(Splitters, SnowRain) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    m_model.AddHydroUnitSplitter("snow_rain", "snow_rain");
-    m_model.AddSplitterForcing("precipitation");
-    m_model.AddSplitterForcing("temperature");
-    m_model.AddSplitterOutput("outlet");  // rain
-    m_model.AddSplitterOutput("outlet");  // snow
-    m_model.AddSplitterLogging("rain");
-    m_model.AddSplitterLogging("snow");
-    m_model.AddSplitterParameter("transition_start", 0.0f);
-    m_model.AddSplitterParameter("transition_end", 2.0f);
-    m_model.AddLoggingToItem("outlet");
+    _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+    _model.AddSplitterForcing("precipitation");
+    _model.AddSplitterForcing("temperature");
+    _model.AddSplitterOutput("outlet");  // rain
+    _model.AddSplitterOutput("outlet");  // snow
+    _model.AddSplitterLogging("rain");
+    _model.AddSplitterLogging("snow");
+    _model.AddSplitterParameter("transition_start", 0.0f);
+    _model.AddSplitterParameter("transition_end", 2.0f);
+    _model.AddLoggingToItem("outlet");
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(m_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

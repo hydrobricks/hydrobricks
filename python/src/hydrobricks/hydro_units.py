@@ -1,10 +1,17 @@
+import ast
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
 from _hydrobricks import SettingsBasin
-
-from .units import Unit, convert_unit_df, get_unit_enum, get_unit_from_df_column
+from hydrobricks.units import (
+    Unit,
+    convert_unit_df,
+    get_unit_enum,
+    get_unit_from_df_column,
+)
 
 
 class HydroUnits:
@@ -13,11 +20,11 @@ class HydroUnits:
 
     Parameters
     ----------
-    land_cover_types : list, optional
+    land_cover_types
         List of land cover types. Default: ['ground']
-    land_cover_names : list, optional
+    land_cover_names
         List of land cover names. Default: ['ground']
-    data : pd.DataFrame, optional
+    data
         Dataframe containing the hydro units data.
 
     Attributes
@@ -30,7 +37,12 @@ class HydroUnits:
         Dataframe containing the hydro units data.
     """
 
-    def __init__(self, land_cover_types=None, land_cover_names=None, data=None):
+    def __init__(
+            self,
+            land_cover_types: list[str] | None = None,
+            land_cover_names: list[str] | None = None,
+            data: pd.DataFrame | None = None
+    ):
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
@@ -48,8 +60,15 @@ class HydroUnits:
         else:
             self.hydro_units = pd.DataFrame(columns=land_cover_cols)
 
-    def load_from_csv(self, path, column_elevation=None, column_area=None,
-                      column_fractions=None, columns_areas=None, other_columns=None):
+    def load_from_csv(
+            self,
+            path: str | Path,
+            column_elevation: str | None = None,
+            column_area: str | None = None,
+            column_fractions: dict | None = None,
+            columns_areas: dict | None = None,
+            other_columns: dict | None = None
+    ):
         """
         Read hydro units properties from csv file. The file must contain two header
         rows. The first row contains the column names and the second row contains the
@@ -57,19 +76,19 @@ class HydroUnits:
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the csv file containing hydro units data.
-        column_elevation : str, optional
+        column_elevation
             Column name containing the elevation values.
             Default: elevation
-        column_area : str, optional
+        column_area
             Column name containing the area values.
             Default: area
-        column_fractions : dict, optional
+        column_fractions
             Column name containing the area fraction values for each land cover.
-        columns_areas : dict, optional
+        columns_areas
             Column name containing the area values for each land cover.
-        other_columns: dict, optional
+        other_columns
             Column name containing other values to import. The key is the property name
             and the value is the name of the column in the csv file.
             Example: {'slope': 'Slope', 'aspect': 'Aspect'}
@@ -85,6 +104,8 @@ class HydroUnits:
         elif 'elevation' in file_content.columns:
             vals, unit = self._get_column_values_unit('elevation', file_content)
             self.add_property(('elevation', unit), vals)
+        else:
+            raise ValueError('The "elevation" column is required in the file.')
 
         if column_area is not None and columns_areas is not None:
             raise ValueError('The "column_area" and "columns_areas" cannot be '
@@ -123,19 +144,22 @@ class HydroUnits:
         if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
             area_idx = self.hydro_units.columns.get_loc('area')
-            self.hydro_units.drop(self.hydro_units.columns[area_idx], axis=1,
-                                  inplace=True)
+            self.hydro_units.drop(
+                self.hydro_units.columns[area_idx],
+                axis=1,
+                inplace=True
+            )
             self.hydro_units[('area', 'm2')] = new_area
 
         self.populate_bounded_instance()
 
-    def save_to_csv(self, path):
+    def save_to_csv(self, path: str | Path):
         """
         Save the hydro units to a csv file.
 
         Parameters
         ----------
-        path : str|Path
+        path
             Path to the output file.
         """
         if self.hydro_units is None:
@@ -144,14 +168,14 @@ class HydroUnits:
         # Save to csv file with units in the header
         self.hydro_units.to_csv(path, header=True, index=False)
 
-    def save_as(self, path):
+    def save_as(self, path: str):
         """
         Create a file containing the hydro unit properties. Such a file can be used in
         the command-line version of hydrobricks.
 
         Parameters
         ----------
-        path : str
+        path
             Path of the file to create.
         """
         if not hb.has_netcdf:
@@ -187,29 +211,33 @@ class HydroUnits:
 
         nc.close()
 
-    def has(self, prop):
+    def has(self, prop: str) -> bool:
         """
         Check if the hydro units have a given property.
 
         Parameters
         ----------
-        prop : str
+        prop
             The property to check.
 
         Returns
         -------
-        bool
-            True if the property is present, False otherwise.
+        True if the property is present, False otherwise.
         """
         return prop in self.hydro_units.columns
 
-    def get_ids(self):
+    def get_ids(self) -> pd.Series:
         """
         Get the hydro unit ids.
         """
         return self.hydro_units['id']
 
-    def add_property(self, column_tuple, values, set_first=False):
+    def add_property(
+            self,
+            column_tuple: tuple[str, str],
+            values: np.ndarray,
+            set_first: bool = False
+    ):
         df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples(
             [column_tuple], names=['Property', 'Unit']))
 
@@ -242,16 +270,20 @@ class HydroUnits:
             self.hydro_units[(field_name, 'fraction')] = 0
         self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1
 
-    def initialize_from_land_cover_change(self, land_cover_name, land_cover_change):
+    def initialize_from_land_cover_change(
+            self,
+            land_cover_name: str,
+            land_cover_change: pd.DataFrame
+    ):
         """
         Initialize the hydro units from the first values of a land cover change
         dataframe.
 
         Parameters
         ----------
-        land_cover_name : str
+        land_cover_name
             The name of the land cover to initialize.
-        land_cover_change : pd.DataFrame
+        land_cover_change
             The land cover change dataframe.
         """
         # Land cover fraction column name
@@ -271,29 +303,107 @@ class HydroUnits:
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():
-            if prop[0] in ['id', 'area']:
+            if prop[0] in ['id', 'area', 'elevation']:
                 continue
             if 'fraction-' in prop[0]:
                 continue
             properties.append(prop[0])
 
+        # Sort the hydro units by decreasing elevation
+        self.hydro_units.sort_values(
+            by=('elevation', 'm'),
+            ascending=False,
+            inplace=True
+        )
+
         for _, row in self.hydro_units.iterrows():
-            self.settings.add_hydro_unit(int(row['id'].values[0]),
-                                         float(row['area'].values[0]))
+            self.settings.add_hydro_unit(
+                int(row['id'].values[0]),
+                float(row['area'].values[0]),
+                float(row['elevation'].values[0])
+            )
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
-                    self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
+                    self.settings.add_hydro_unit_property_str(
+                        prop,
+                        row[prop].values[0]
+                    )
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop, float(row[prop].values[0]), unit)
+                        prop,
+                        float(row[prop].values[0]),
+                        unit
+                    )
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = float(row[self.prefix_fraction + cover_name].values[0])
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
+    def set_connectivity(self, connectivity: pd.DataFrame | Path | str):
+        """
+        Set the connectivity of the hydro units.
+
+        Parameters
+        ----------
+        connectivity
+            File or Dataframe containing the connectivity information as generated by
+            catchment.calculate_connectivity().
+        """
+        if isinstance(connectivity, (str, Path)):
+            connectivity = pd.read_csv(connectivity, header=0, skiprows=[1])
+
+        if not isinstance(connectivity, pd.DataFrame):
+            raise TypeError('The connectivity must be a pandas DataFrame.')
+
+        if not all(col in connectivity.columns for col in ['id', 'connectivity']):
+            raise ValueError('The connectivity DataFrame must contain "id" and '
+                             '"connectivity" columns.')
+
+        # Loop through the rows and set the connectivity to the basin settings
+        for _, row in connectivity.iterrows():
+            hydro_unit_id = int(row['id'])
+            connectivity_dict = ast.literal_eval(row['connectivity'])
+
+            if not connectivity_dict:
+                continue
+
+            # Extract connected unit IDs and their ratios
+            connected_units = {int(k): float(v) for k, v in connectivity_dict.items()}
+
+            # Check that the sum of ratios is 1
+            total_ratio = sum(connected_units.values())
+            if not np.isclose(total_ratio, 1.0):
+                raise ValueError(f'The sum of connectivity ratios for hydro unit '
+                                 f'{hydro_unit_id} is {total_ratio}, '
+                                 'which is not equal to 1.')
+
+            for connected_unit_id, ratio in connected_units.items():
+                if connected_unit_id == hydro_unit_id:
+                    raise ValueError(f'Hydro unit {hydro_unit_id} cannot '
+                                     f'be connected to itself.')
+                if ratio < 0:
+                    raise ValueError(f'Negative connectivity ratio {ratio} for '
+                                     f'hydro unit {hydro_unit_id} '
+                                     f'and connected unit {connected_unit_id}.')
+                elif ratio > 1:
+                    raise ValueError(f'Connectivity ratio {ratio} for hydro unit '
+                                     f'{hydro_unit_id} and connected unit '
+                                     f'{connected_unit_id} cannot be greater than 1.')
+
+                if hydro_unit_id not in self.hydro_units[('id', '-')].values:
+                    raise ValueError(f'Hydro unit {hydro_unit_id} not '
+                                     f'found in hydro units.')
+                if connected_unit_id not in self.hydro_units[('id', '-')].values:
+                    raise ValueError(f'Connected hydro unit {connected_unit_id} '
+                                     f'not found in hydro units.')
+
+                # Add the connectivity to the settings
+                self.settings.add_lateral_connection(
+                    hydro_unit_id, connected_unit_id, ratio)
+
     @staticmethod
-    def _check_column_names(file_content):
+    def _check_column_names(file_content: pd.DataFrame):
         # Rename unnamed columns to 'No Unit'
         new_column_names = []
         for i, col in enumerate(file_content.columns):
@@ -306,16 +416,19 @@ class HydroUnits:
         file_content.columns = pd.MultiIndex.from_tuples(new_column_names)
 
     @staticmethod
-    def _get_column_values_unit(column_name, df):
+    def _get_column_values_unit(
+            column_name: str,
+            df: pd.DataFrame
+    ) -> tuple[np.ndarray, str]:
         col = df.loc[:, column_name]
         unit = col.columns.values[0]
         return col.values.flatten(), unit
 
     @staticmethod
-    def _get_unit(prop):
+    def _get_unit(prop: pd.Series) -> str:
         return str(prop.index[0])
 
-    def _check_land_cover_areas_match(self, columns_areas):
+    def _check_land_cover_areas_match(self, columns_areas: list[str]):
         if len(columns_areas) != len(self.land_cover_names):
             raise ValueError('The length of the provided "columns_areas" do not match '
                              'the size ot the land cover names.')
@@ -324,7 +437,11 @@ class HydroUnits:
                 raise ValueError(f'The land cover "{col}" was not found in the '
                                  f'defined land covers.')
 
-    def _compute_area_portions(self, area_values, area_unit):
+    def _compute_area_portions(
+            self,
+            area_values: np.ndarray,
+            area_unit: str
+    ):
         # Compute total area
         area = np.sum(area_values, axis=1)
 
@@ -337,7 +454,7 @@ class HydroUnits:
             field_name = self.prefix_fraction + cover_name
             self.hydro_units[(field_name, 'fraction')] = fractions[:, idx]
 
-    def _set_units_data(self, data):
+    def _set_units_data(self, data: pd.DataFrame):
         assert isinstance(data, pd.DataFrame)
         assert 'area' in data.columns
         assert 'elevation' in data.columns
@@ -351,7 +468,10 @@ class HydroUnits:
         self.populate_bounded_instance()
 
     @staticmethod
-    def _check_land_cover_definitions(land_cover_types, land_cover_names):
+    def _check_land_cover_definitions(
+            land_cover_types: list[str],
+            land_cover_names: list[str]
+    ):
         if land_cover_types is None and land_cover_names is None:
             return
 

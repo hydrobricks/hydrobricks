@@ -11,33 +11,33 @@
 
 class FluxWeightedModel : public ::testing::Test {
   protected:
-    SettingsModel m_model;
-    TimeSeriesUniform* m_tsPrecip{};
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
 
     void SetUp() override {
-        m_model.SetSolver("heun_explicit");
-        m_model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
-        m_model.SetLogAll(true);
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
 
         // Precipitation
-        m_model.GeneratePrecipitationSplitters(false);
+        _model.GeneratePrecipitationSplitters(false);
 
         // Land cover elements and processes
-        m_model.AddLandCoverBrick("item_1", "generic_land_cover");
-        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        m_model.AddLandCoverBrick("item_2", "generic_land_cover");
-        m_model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        _model.AddLandCoverBrick("item_1", "generic_land_cover");
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+        _model.AddLandCoverBrick("item_2", "generic_land_cover");
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         // Outlet
-        m_model.AddLoggingToItem("outlet");
+        _model.AddLoggingToItem("outlet");
 
         auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0});
-        m_tsPrecip = new TimeSeriesUniform(Precipitation);
-        m_tsPrecip->SetData(precip);
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
     }
     void TearDown() override {
-        wxDELETE(m_tsPrecip);
+        wxDELETE(_tsPrecip);
     }
 };
 
@@ -51,10 +51,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -107,10 +107,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -167,10 +167,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -226,10 +226,10 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -293,10 +293,10 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     EXPECT_TRUE(subBasin.Initialize(basinProp));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(m_model, basinProp));
+    EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(m_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

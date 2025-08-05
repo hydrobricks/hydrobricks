@@ -5,10 +5,10 @@
  */
 
 TimeSeriesData::TimeSeriesData()
-    : m_cursor(0) {}
+    : _cursor(0) {}
 
 bool TimeSeriesData::SetValues(const vecDouble& values) {
-    m_values = values;
+    _values = values;
     return true;
 }
 
@@ -30,61 +30,61 @@ double TimeSeriesData::GetSum() {
 
 TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeStep, TimeUnit timeStepUnit)
     : TimeSeriesData(),
-      m_start(start),
-      m_end(end),
-      m_timeStep(timeStep),
-      m_timeStepUnit(timeStepUnit) {}
+      _start(start),
+      _end(end),
+      _timeStep(timeStep),
+      _timeStepUnit(timeStepUnit) {}
 
 bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
-    double calcEnd = IncrementDateBy(m_start, m_timeStep * int(values.size() - 1), m_timeStepUnit);
-    if (calcEnd != m_end) {
+    double calcEnd = IncrementDateBy(_start, _timeStep * static_cast<int>(values.size() - 1), _timeStepUnit);
+    if (calcEnd != _end) {
         wxLogError(_("The size of the time series data does not match the time properties."));
-        wxLogError(_("End of the data (%d) != end of the dates (%d)."), calcEnd, m_end);
+        wxLogError(_("End of the data (%d) != end of the dates (%d)."), calcEnd, _end);
         return false;
     }
 
-    m_values = values;
+    _values = values;
     return true;
 }
 
 double TimeSeriesDataRegular::GetValueFor(double date) {
     SetCursorToDate(date);
-    return m_values[m_cursor];
+    return _values[_cursor];
 }
 
 double TimeSeriesDataRegular::GetCurrentValue() {
-    wxASSERT(m_values.size() > m_cursor);
-    return m_values[m_cursor];
+    wxASSERT(_values.size() > _cursor);
+    return _values[_cursor];
 }
 
 double TimeSeriesDataRegular::GetSum() {
     double sum = 0;
-    for (const auto& value : m_values) sum += value;
+    for (const auto& value : _values) sum += value;
 
     return sum;
 }
 
 bool TimeSeriesDataRegular::SetCursorToDate(double date) {
-    if (date < m_start) {
+    if (date < _start) {
         wxLogError(_("The desired date is before the data starting date."));
         return false;
     }
-    if (date > m_end) {
+    if (date > _end) {
         wxLogError(_("The desired date is after the data ending date."));
         return false;
     }
 
-    double dt = date - m_start;
+    double dt = date - _start;
 
-    switch (m_timeStepUnit) {
+    switch (_timeStepUnit) {
         case Day:
-            m_cursor = int(dt);
+            _cursor = static_cast<int>(dt);
             break;
         case Hour:
-            m_cursor = int(dt) * 24;
+            _cursor = static_cast<int>(dt) * 24;
             break;
         case Minute:
-            m_cursor = int(dt) * 1440;
+            _cursor = static_cast<int>(dt) * 1440;
             break;
         default:
             throw NotImplemented();
@@ -94,21 +94,21 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
-    if (m_cursor >= m_values.size()) {
+    if (_cursor >= _values.size()) {
         wxLogError(_("The desired date is after the data ending date."));
         return false;
     }
-    m_cursor++;
+    _cursor++;
 
     return true;
 }
 
 double TimeSeriesDataRegular::GetStart() {
-    return m_start;
+    return _start;
 }
 
 double TimeSeriesDataRegular::GetEnd() {
-    return m_end;
+    return _end;
 }
 
 /*
@@ -117,15 +117,15 @@ double TimeSeriesDataRegular::GetEnd() {
 
 TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble& dates)
     : TimeSeriesData(),
-      m_dates(dates) {}
+      _dates(dates) {}
 
 bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
-    if (m_dates.size() != values.size()) {
+    if (_dates.size() != values.size()) {
         wxLogError(_("The size of the time series data does not match the dates array."));
         return false;
     }
 
-    m_values = values;
+    _values = values;
     return true;
 }
 
@@ -134,8 +134,8 @@ double TimeSeriesDataIrregular::GetValueFor(double) {
 }
 
 double TimeSeriesDataIrregular::GetCurrentValue() {
-    wxASSERT(m_values.size() > m_cursor);
-    return m_values[m_cursor];
+    wxASSERT(_values.size() > _cursor);
+    return _values[_cursor];
 }
 
 double TimeSeriesDataIrregular::GetSum() {
@@ -151,11 +151,11 @@ bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
 }
 
 double TimeSeriesDataIrregular::GetStart() {
-    wxASSERT(!m_dates.empty());
-    return m_dates[0];
+    wxASSERT(!_dates.empty());
+    return _dates[0];
 }
 
 double TimeSeriesDataIrregular::GetEnd() {
-    wxASSERT(!m_dates.empty());
-    return m_dates[m_dates.size() - 1];
+    wxASSERT(!_dates.empty());
+    return _dates[_dates.size() - 1];
 }

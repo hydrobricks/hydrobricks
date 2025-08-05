@@ -7,6 +7,7 @@
 TimeMachine GenerateTimeMachineDaily();
 
 bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, vecStr& landCoverNames,
-                             int soilStorageNb = 1, const string& surfaceRunoff = "socont_runoff");
+                             int soilStorageNb = 1, const string& surfaceRunoff = "socont_runoff",
+                             bool infiniteGlacierStorage = true);
 
 #endif  // HYDROBRICKS_HELPERS_H

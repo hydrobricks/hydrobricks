@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import uuid
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -20,11 +21,8 @@ TEST_FILES_DIR = Path(
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_stgallen' / 'dem.tif'
 
 # Create temporary directory
-with tempfile.TemporaryDirectory() as tmp_dir_name:
-    tmp_dir = tmp_dir_name
-
-os.mkdir(tmp_dir)
-working_dir = Path(tmp_dir)
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
 
 # Options
 date_string = '2009-08-06'
@@ -38,7 +36,10 @@ hillshade = catchment.get_hillshade()
 
 dem, masked_dem_data, slope, aspect = (
     catchment.resample_dem_and_calculate_slope_aspect(
-        resolution, working_dir))
+        resolution,
+        working_dir
+    )
+)
 
 lat, _ = catchment.get_dem_mean_lat_lon()
 lat_rad = lat * TO_RAD
@@ -67,7 +68,11 @@ frames = []
 # Loop over the time steps
 for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
     shadows = catchment.calculate_cast_shadows(
-        dem, masked_dem_data, zenith, azimuth)
+        dem,
+        masked_dem_data,
+        zenith,
+        azimuth
+    )
 
     # Create a new figure and plot the data
     plt.figure()
@@ -87,4 +92,10 @@ for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
     plt.close()
 
 # Save frames as an animated GIF
-imageio.mimsave('animated_shadows.gif', frames, 'GIF', duration=500, loop=0)
+imageio.mimsave(
+    'animated_shadows.gif',
+    frames,
+    'GIF',
+    duration=500,
+    loop=0
+)

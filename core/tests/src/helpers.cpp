@@ -7,7 +7,7 @@ TimeMachine GenerateTimeMachineDaily() {
 }
 
 bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb,
-                             const string& surfaceRunoff) {
+                             const string& surfaceRunoff, bool infiniteGlacierStorage) {
     if (landCoverNames.size() != landCoverTypes.size()) {
         wxLogError(_("The length of the land cover names and types do not match."));
         return false;
@@ -47,7 +47,9 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
 
             // Glacier melt process
             settings.AddBrickParameter("no_melt_when_snow_cover", 1.0);
-            settings.AddBrickParameter("infinite_storage", 1.0);
+            if (infiniteGlacierStorage) {
+                settings.AddBrickParameter("infinite_storage", 1.0);
+            }
             settings.AddBrickProcess("melt", "melt:degree_day", "glacier_area_icemelt_storage");
             settings.SetProcessOutputsAsInstantaneous();
         }

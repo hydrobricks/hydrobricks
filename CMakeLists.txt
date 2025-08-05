@@ -29,8 +29,8 @@ project(hydrobricks)
 
 # Version number
 set(VERSION_MAJOR "0")
-set(VERSION_MINOR "7")
-set(VERSION_PATCH "6")
+set(VERSION_MINOR "8")
+set(VERSION_PATCH "0")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -48,6 +48,10 @@ endif (WIN32)
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" ON)
+
+# Disable testing tree
+set(BUILD_TESTING OFF)
+mark_as_advanced(BUILD_TESTING)
 
 # Pre-set wxWidgets options
 set(wxUSE_GUI OFF)
@@ -106,10 +110,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 else (CMAKE_COMPILER_IS_GNUCXX)
     set(USE_CODECOV OFF)
 endif ()
-
-# Disable testing tree
-set(BUILD_TESTING OFF)
-mark_as_advanced(BUILD_TESTING)
 
 # Installer
 if (WIN32)

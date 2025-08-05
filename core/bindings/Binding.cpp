@@ -3,8 +3,10 @@
 #include <pybind11/stl.h>
 #include <wx/log.h>
 
-#include "Behaviour.h"
-#include "BehaviourLandCoverChange.h"
+#include "Action.h"
+#include "ActionGlacierEvolutionAreaScaling.h"
+#include "ActionGlacierEvolutionDeltaH.h"
+#include "ActionLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
@@ -53,6 +55,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true)
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
+        .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
+             "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_constant")
+        .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
+             "redistribution_process"_a = "transport:snow_slide", "skip_glaciers"_a = false)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
@@ -61,13 +67,18 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
-             "area"_a)
+             "area"_a, "elevation"_a = -9999)
         .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",
              "name"_a, "value"_a)
         .def("add_hydro_unit_property_double", &SettingsBasin::AddHydroUnitPropertyDouble, "Set a hydro unit property.",
              "name"_a, "value"_a, "unit"_a)
+        .def("add_lateral_connection", &SettingsBasin::AddLateralConnection,
+             "Add a lateral connection between two hydro units.", "giver_hydro_unit_id"_a, "receiver_hydro_unit_id"_a,
+             "fraction"_a, "type"_a = "")
+        .def("get_lateral_connections_nb", &SettingsBasin::GetLateralConnectionsNb,
+             "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
     py::class_<SubBasin>(m, "SubBasin")
@@ -96,9 +107,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin.",
              "model_settings"_a, "basin_settings"_a)
-        .def("add_behaviour", &ModelHydro::AddBehaviour, "Adding a behaviour to the model.", "behaviour"_a)
-        .def("get_behaviours_nb", &ModelHydro::GetBehavioursNb, "Get the number of behaviours.")
-        .def("get_behaviour_items_nb", &ModelHydro::GetBehaviourItemsNb, "Get the number of behaviour items.")
+        .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
+        .def("get_actions_nb", &ModelHydro::GetActionsNb, "Get the number of actions.")
+        .def("get_sporadic_action_items_nb", &ModelHydro::GetSporadicActionItemsNb, "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -121,13 +132,38 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the total change in snow storage.")
         .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
 
-    py::class_<Behaviour>(m, "Behaviour").def(py::init<>());
+    py::class_<Action>(m, "Action").def(py::init<>());
 
-    py::class_<BehaviourLandCoverChange, Behaviour>(m, "BehaviourLandCoverChange")
+    py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
-        .def("add_change", &BehaviourLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_changes_nb", &BehaviourLandCoverChange::GetChangesNb)
-        .def("get_land_covers_nb", &BehaviourLandCoverChange::GetLandCoversNb);
+        .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
+        .def("get_changes_nb", &ActionLandCoverChange::GetChangesNb)
+        .def("get_land_covers_nb", &ActionLandCoverChange::GetLandCoversNb);
+
+    py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")
+        .def(py::init<>())
+        .def("add_lookup_tables", &ActionGlacierEvolutionDeltaH::AddLookupTables, "month_num"_a, "land_cover"_a,
+             "hu_ids"_a, "areas"_a, "volumes"_a)
+        .def("get_land_cover_name", &ActionGlacierEvolutionDeltaH::GetLandCoverName,
+             "Get the land cover name (glacier name).")
+        .def("get_hydro_unit_ids", &ActionGlacierEvolutionDeltaH::GetHydroUnitIds,
+             "Get the hydro unit ids of the glacier.")
+        .def("get_lookup_table_area", &ActionGlacierEvolutionDeltaH::GetLookupTableArea, "Get the area lookup table.")
+        .def("get_lookup_table_volume", &ActionGlacierEvolutionDeltaH::GetLookupTableVolume,
+             "Get the volumes lookup table.");
+
+    py::class_<ActionGlacierEvolutionAreaScaling, Action>(m, "ActionGlacierEvolutionAreaScaling")
+        .def(py::init<>())
+        .def("add_lookup_tables", &ActionGlacierEvolutionAreaScaling::AddLookupTables, "month_num"_a, "land_cover"_a,
+             "hu_ids"_a, "areas"_a, "volumes"_a)
+        .def("get_land_cover_name", &ActionGlacierEvolutionAreaScaling::GetLandCoverName,
+             "Get the land cover name (glacier name).")
+        .def("get_hydro_unit_ids", &ActionGlacierEvolutionAreaScaling::GetHydroUnitIds,
+             "Get the hydro unit ids of the glacier.")
+        .def("get_lookup_table_area", &ActionGlacierEvolutionAreaScaling::GetLookupTableArea,
+             "Get the area lookup table.")
+        .def("get_lookup_table_volume", &ActionGlacierEvolutionAreaScaling::GetLookupTableVolume,
+             "Get the volumes lookup table.");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

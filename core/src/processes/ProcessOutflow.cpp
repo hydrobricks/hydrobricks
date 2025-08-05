@@ -11,7 +11,7 @@ void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
 }
 
 bool ProcessOutflow::IsOk() {
-    if (m_outputs.size() != 1) {
+    if (_outputs.size() != 1) {
         wxLogError(_("An outflow should have a single output."));
         return false;
     }
@@ -25,7 +25,7 @@ int ProcessOutflow::GetConnectionsNb() {
 
 double* ProcessOutflow::GetValuePointer(const string& name) {
     if (name == "output") {
-        return m_outputs[0]->GetAmountPointer();
+        return _outputs[0]->GetAmountPointer();
     }
 
     return nullptr;

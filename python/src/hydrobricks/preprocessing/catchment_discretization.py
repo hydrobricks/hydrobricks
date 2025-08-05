@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 import itertools
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 
 class CatchmentDiscretization:
@@ -10,96 +16,120 @@ class CatchmentDiscretization:
     Class to handle the discretization of catchments.
     """
 
-    def __init__(self, catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the Discretization class.
 
         Parameters
         ----------
-        catchment : hb.Catchment
+        catchment
             The catchment object.
         """
         self.catchment = catchment
 
-    def create_elevation_bands(self, method='equal_intervals', number=100, distance=50,
-                               min_elevation=None, max_elevation=None):
+    def create_elevation_bands(
+            self,
+            method: str = 'equal_intervals',
+            number: int = 100,
+            distance: int = 50,
+            min_elevation: int | None = None,
+            max_elevation: int | None = None
+    ):
         """
         Construction of the elevation bands based on the chosen method.
 
         Parameters
         ----------
-        method : str
+        method
             The method to build the elevation bands:
             'equal_intervals' = fixed contour intervals (provide the 'distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'number' parameter)
-        number : int, optional
+        number
             Number of bands to create when using the 'quantiles' method.
-        distance : int, optional
+        distance
             Distance (m) between the contour lines when using the 'equal_intervals' method.
-        min_elevation : int, optional
+        min_elevation
             Minimum elevation of the elevation bands (to homogenize between runs).
-        max_elevation : int, optional
+        max_elevation
             Maximum elevation of the elevation bands (to homogenize between runs).
         """
-        self.discretize_by('elevation', method, number, distance,
-                           min_elevation, max_elevation)
+        self.discretize_by(
+            'elevation',
+            method,
+            number,
+            distance,
+            min_elevation,
+            max_elevation
+        )
 
-    def discretize_by(self, criteria, elevation_method='equal_intervals',
-                      elevation_number=100, elevation_distance=100, min_elevation=None,
-                      max_elevation=None, slope_method='equal_intervals',
-                      slope_number=6, slope_distance=15, min_slope=0, max_slope=90,
-                      radiation_method='equal_intervals', radiation_number=5,
-                      radiation_distance=50, min_radiation=None, max_radiation=None):
+    def discretize_by(
+            self,
+            criteria: str,
+            elevation_method: str = 'equal_intervals',
+            elevation_number: int = 100,
+            elevation_distance: int = 100,
+            min_elevation: int | None = None,
+            max_elevation: int | None = None,
+            slope_method: str = 'equal_intervals',
+            slope_number: int = 6,
+            slope_distance: int = 15,
+            min_slope: int = 0,
+            max_slope: int = 90,
+            radiation_method: str = 'equal_intervals',
+            radiation_number: int = 5,
+            radiation_distance: int = 50,
+            min_radiation: int | None = None,
+            max_radiation: int | None = None):
         """
         Construction of the elevation bands based on the chosen method.
 
         Parameters
         ----------
-        criteria : str|list
+        criteria
             The criteria to use to discretize the catchment (can be combined):
             'elevation' = elevation bands
             'aspect' = aspect according to the cardinal directions (4 classes)
             'radiation' = potential radiation (Hock, 1999)
             'slope' = slope in degrees
-        elevation_method : str
+        elevation_method
             The method to build the elevation bands:
             'equal_intervals' = fixed contour intervals (provide the 'elevation_distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'elevation_number' parameter)
-        elevation_number : int, optional
+        elevation_number
             Number of elevation bands to create when using the 'quantiles' method.
-        elevation_distance : int, optional
+        elevation_distance
             Distance (m) between the contour lines when using the 'equal_intervals' method.
-        min_elevation : int, optional
+        min_elevation
             Minimum elevation of the elevation bands (to homogenize between runs).
-        max_elevation : int, optional
+        max_elevation
             Maximum elevation of the elevation bands (to homogenize between runs).
-        slope_method : str
+        slope_method
             The method to build the slope categories:
             'equal_intervals' = fixed slope intervals (provide the 'slope_distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'slope_number' parameter)
-        slope_number : int, optional
+        slope_number
             Number of slope bands to create when using the 'quantiles' method.
-        slope_distance : int, optional
+        slope_distance
             Distance (degrees) between the slope lines when using the 'equal_intervals' method.
-        min_slope : int, optional
+        min_slope
             Minimum slope of the slope bands (to homogenize between runs).
-        max_slope : int, optional
+        max_slope
             Maximum slope of the slope bands (to homogenize between runs).
-        radiation_method : str
+        radiation_method
             The method to build the radiation categories:
             'equal_intervals' = fixed radiation intervals (provide the 'radiation_distance' parameter)
             'quantiles' = quantiles of the catchment area (same surface;
             provide the 'radiation_number' parameter)
-        radiation_number : int, optional
+        radiation_number
             Number of radiation bands to create when using the 'quantiles' method.
-        radiation_distance : int, optional
+        radiation_distance
             Distance (W/m2) between the radiation lines for the 'equal_intervals' method.
-        min_radiation : int, optional
+        min_radiation
             Minimum radiation of the radiation bands (to homogenize between runs).
-        max_radiation : int, optional
+        max_radiation
             Maximum radiation of the radiation bands (to homogenize between runs).
         """
         if not hb.has_pyproj:
@@ -247,7 +277,7 @@ class CatchmentDiscretization:
                 elif criterion_name == 'radiation':
                     radiation = self.catchment.solar_radiation.mean_annual_radiation
                     mask_radiation = np.logical_and(radiation >= criterion[0],
-                                               radiation < criterion[1])
+                                                    radiation < criterion[1])
                     mask_unit = np.logical_and(mask_unit, mask_radiation)
 
             # If the unit is empty, skip it
@@ -295,31 +325,51 @@ class CatchmentDiscretization:
 
         if res_elevation:
             self.catchment.hydro_units.add_property(
-                ('elevation', 'm'), res_elevation)
+                ('elevation', 'm'),
+                res_elevation
+            )
             self.catchment.hydro_units.add_property(
-                ('elevation_min', 'm'), res_elevation_min)
+                ('elevation_min', 'm'),
+                res_elevation_min
+            )
             self.catchment.hydro_units.add_property(
-                ('elevation_max', 'm'), res_elevation_max)
+                ('elevation_max', 'm'),
+                res_elevation_max
+            )
 
         if res_slope:
             self.catchment.hydro_units.add_property(
-                ('slope', 'deg'), res_slope)
+                ('slope', 'deg'),
+                res_slope
+            )
             self.catchment.hydro_units.add_property(
-                ('slope_min', 'deg'), res_slope_min)
+                ('slope_min', 'deg'),
+                res_slope_min
+            )
             self.catchment.hydro_units.add_property(
-                ('slope_max', 'deg'), res_slope_max)
+                ('slope_max', 'deg'),
+                res_slope_max
+            )
 
         if res_aspect_class:
             self.catchment.hydro_units.add_property(
-                ('aspect_class', '-'), res_aspect_class)
+                ('aspect_class', '-'),
+                res_aspect_class
+            )
 
         if res_radiation:
             self.catchment.hydro_units.add_property(
-                ('radiation', 'W/m2'), res_radiation)
+                ('radiation', 'W/m2'),
+                res_radiation
+            )
             self.catchment.hydro_units.add_property(
-                ('radiation_min', 'W/m2'), res_radiation_min)
+                ('radiation_min', 'W/m2'),
+                res_radiation_min
+            )
             self.catchment.hydro_units.add_property(
-                ('radiation_max', 'W/m2'), res_radiation_max)
+                ('radiation_max', 'W/m2'),
+                res_radiation_max
+            )
 
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()

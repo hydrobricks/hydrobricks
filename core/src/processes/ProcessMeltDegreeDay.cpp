@@ -5,9 +5,9 @@
 
 ProcessMeltDegreeDay::ProcessMeltDegreeDay(WaterContainer* container)
     : ProcessMelt(container),
-      m_temperature(nullptr),
-      m_degreeDayFactor(nullptr),
-      m_meltingTemperature(nullptr) {}
+      _temperature(nullptr),
+      _degreeDayFactor(nullptr),
+      _meltingTemperature(nullptr) {}
 
 void ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor", 3.0f);
@@ -19,13 +19,13 @@ bool ProcessMeltDegreeDay::IsOk() {
     if (!ProcessMelt::IsOk()) {
         return false;
     }
-    if (m_temperature == nullptr) {
+    if (_temperature == nullptr) {
         return false;
     }
-    if (m_degreeDayFactor == nullptr) {
+    if (_degreeDayFactor == nullptr) {
         return false;
     }
-    if (m_meltingTemperature == nullptr) {
+    if (_meltingTemperature == nullptr) {
         return false;
     }
 
@@ -34,26 +34,26 @@ bool ProcessMeltDegreeDay::IsOk() {
 
 void ProcessMeltDegreeDay::SetParameters(const ProcessSettings& processSettings) {
     Process::SetParameters(processSettings);
-    m_degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor");
-    m_meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
+    _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor");
+    _meltingTemperature = GetParameterValuePointer(processSettings, "melting_temperature");
 }
 
 void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
-        m_temperature = forcing;
+        _temperature = forcing;
     } else {
         throw InvalidArgument("Forcing must be of type Temperature");
     }
 }
 
 vecDouble ProcessMeltDegreeDay::GetRates() {
-    if (!m_container->ContentAccessible()) {
+    if (!_container->ContentAccessible()) {
         return {0};
     }
 
     double melt = 0;
-    if (m_temperature->GetValue() >= *m_meltingTemperature) {
-        melt = (m_temperature->GetValue() - *m_meltingTemperature) * *m_degreeDayFactor;
+    if (_temperature->GetValue() >= *_meltingTemperature) {
+        melt = (_temperature->GetValue() - *_meltingTemperature) * *_degreeDayFactor;
     }
 
     return {melt};

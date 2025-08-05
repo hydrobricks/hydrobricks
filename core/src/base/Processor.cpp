@@ -4,29 +4,29 @@
 #include "SubBasin.h"
 
 Processor::Processor()
-    : m_solver(nullptr),
-      m_model(nullptr),
-      m_solvableConnectionsNb(0),
-      m_directConnectionsNb(0) {}
+    : _solver(nullptr),
+      _model(nullptr),
+      _solvableConnectionsNb(0),
+      _directConnectionsNb(0) {}
 
 Processor::~Processor() {
-    wxDELETE(m_solver);
+    wxDELETE(_solver);
 }
 
 void Processor::Initialize(const SolverSettings& solverSettings) {
-    m_solver = Solver::Factory(solverSettings);
-    m_solver->Connect(this);
+    _solver = Solver::Factory(solverSettings);
+    _solver->Connect(this);
     ConnectToElementsToSolve();
-    m_solver->InitializeContainers();
-    m_changeRatesNoSolver = axd::Zero(m_directConnectionsNb);
+    _solver->InitializeContainers();
+    _changeRatesNoSolver = axd::Zero(_directConnectionsNb);
 }
 
 void Processor::SetModel(ModelHydro* model) {
-    m_model = model;
+    _model = model;
 }
 
 void Processor::ConnectToElementsToSolve() {
-    SubBasin* basin = m_model->GetSubBasin();
+    SubBasin* basin = _model->GetSubBasin();
 
     for (int iUnit = 0; iUnit < basin->GetHydroUnitsNb(); ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
@@ -36,7 +36,7 @@ void Processor::ConnectToElementsToSolve() {
 
             // Add the bricks that need a solver and all their children
             if (brick->NeedsSolver() || solverRequired) {
-                m_iterableBricks.push_back(brick);
+                _iterableBricks.push_back(brick);
                 solverRequired = true;
 
                 // Get state variables from bricks
@@ -48,10 +48,10 @@ void Processor::ConnectToElementsToSolve() {
                 StoreStateVariableChanges(processValues);
 
                 // Count connections
-                m_solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+                _solvableConnectionsNb += brick->GetProcessesConnectionsNb();
             } else {
                 // Count connections
-                m_directConnectionsNb += brick->GetProcessesConnectionsNb();
+                _directConnectionsNb += brick->GetProcessesConnectionsNb();
             }
         }
     }
@@ -60,7 +60,7 @@ void Processor::ConnectToElementsToSolve() {
         Brick* brick = basin->GetBrick(iBrick);
 
         // Add the bricks need a solver here
-        m_iterableBricks.push_back(brick);
+        _iterableBricks.push_back(brick);
 
         // Get state variables from bricks
         vecDoublePt bricksValues = brick->GetDynamicContentChanges();
@@ -71,26 +71,26 @@ void Processor::ConnectToElementsToSolve() {
         StoreStateVariableChanges(processValues);
 
         // Count connections
-        m_solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+        _solvableConnectionsNb += brick->GetProcessesConnectionsNb();
     }
 }
 
 void Processor::StoreStateVariableChanges(vecDoublePt& values) {
     if (!values.empty()) {
         for (auto const& value : values) {
-            m_stateVariableChanges.push_back(value);
+            _stateVariableChanges.push_back(value);
         }
     }
 }
 
 int Processor::GetNbStateVariables() {
-    return int(m_stateVariableChanges.size());
+    return static_cast<int>(_stateVariableChanges.size());
 }
 
 bool Processor::ProcessTimeStep() {
-    wxASSERT(m_model);
+    wxASSERT(_model);
 
-    SubBasin* basin = m_model->GetSubBasin();
+    SubBasin* basin = _model->GetSubBasin();
 
     // Process the bricks that do not need a solver.
     int ptIndex = 0;
@@ -114,7 +114,7 @@ bool Processor::ProcessTimeStep() {
     }
 
     // Process the bricks that need a solver
-    if (!m_solver->Solve()) {
+    if (!_solver->Solve()) {
         return false;
     }
 
@@ -132,11 +132,11 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
     int iRate = ptIndex;
     for (auto process : brick->GetProcesses()) {
         for (int i = 0; i < process->GetOutputFluxesNb(); ++i) {
-            wxASSERT(m_changeRatesNoSolver.rows() > iRate);
-            m_changeRatesNoSolver(iRate) = 0;
+            wxASSERT(_changeRatesNoSolver.rows() > iRate);
+            _changeRatesNoSolver(iRate) = 0;
 
             // Link to fluxes to enforce subsequent constraints
-            process->StoreInOutgoingFlux(&m_changeRatesNoSolver(iRate), i);
+            process->StoreInOutgoingFlux(&_changeRatesNoSolver(iRate), i);
             iRate++;
         }
     }
@@ -148,18 +148,18 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
 
         int iRateCopy = iRate;
         for (double rate : rates) {
-            wxASSERT(m_changeRatesNoSolver.rows() > iRateCopy);
-            m_changeRatesNoSolver(iRateCopy) = rate;
+            wxASSERT(_changeRatesNoSolver.rows() > iRateCopy);
+            _changeRatesNoSolver(iRateCopy) = rate;
             iRateCopy++;
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        process->GetWaterContainer()->ApplyConstraints(g_timeStepInDays);
+        process->GetWaterContainer()->ApplyConstraints(config::timeStepInDays);
 
         // Apply changes
         for (int i = 0; i < rates.size(); ++i) {
-            process->ApplyChange(i, m_changeRatesNoSolver(iRate), g_timeStepInDays);
-            m_changeRatesNoSolver(iRate) = 0;
+            process->ApplyChange(i, _changeRatesNoSolver(iRate), config::timeStepInDays);
+            _changeRatesNoSolver(iRate) = 0;
             iRate++;
             ptIndex++;
         }

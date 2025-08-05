@@ -18,10 +18,10 @@ class FluxSimple : public Flux {
      */
     double GetAmount() override;
 
+    /**
+     * @copydoc Flux::UpdateFlux()
+     */
     void UpdateFlux(double amount) override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_FLUX_SIMPLE_H

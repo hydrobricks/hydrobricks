@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 import hydrobricks as hb
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
 
 if hb.has_rasterio:
     from rasterio.enums import Resampling
@@ -29,22 +35,26 @@ class PotentialSolarRadiation:
     A class to handle solar radiation data for a catchment area.
     """
 
-    def __init__(self, catchment):
+    def __init__(self, catchment: Catchment):
         """
         Initialize the SolarRadiation class.
 
         Parameters
         ----------
-        catchment : hb.Catchment
+        catchment
             The catchment object.
         """
         self.catchment = catchment
         self.mean_annual_radiation = None
 
-    def calculate_daily_potential_radiation(self, output_path, resolution=None,
-                                            atmos_transmissivity=0.75,
-                                            steps_per_hour=4,
-                                            with_cast_shadows=True):
+    def calculate_daily_potential_radiation(
+            self,
+            output_path: str,
+            resolution: float | None = None,
+            atmos_transmissivity: float = 0.75,
+            steps_per_hour: int = 4,
+            with_cast_shadows: bool = True
+    ):
         """
         Compute the daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²] using Hock (1999)'s equation.
@@ -52,23 +62,18 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        output_path : string
+        output_path
             Path to for created daily and annual mean potential clear-sky direct solar
             radiation files.
-        resolution : float, optional
+        resolution
             Desired pixel resolution, default is the DEM resolution.
-        atmos_transmissivity : float, optional
+        atmos_transmissivity
             Mean clear-sky atmospheric transmissivity, default is 0.75
             (value taken in Hock 1999)
-        steps_per_hour : int, optional
+        steps_per_hour
             Number of steps per hour to compute the potential radiation, default is 4.
-        with_cast_shadows : bool, optional
+        with_cast_shadows
             If True, the cast shadows are taken into account. Default is True.
-
-        Returns
-        -------
-        The daily mean potential clear-sky direct solar radiation
-        at the DEM surface [W/m²]
 
         Notes
         -----
@@ -113,12 +118,23 @@ class PotentialSolarRadiation:
                 print('Computing radiation for day', day_of_year[i])
 
             # List of hour angles throughout the day.
-            ha_list = np.arange(-ha_limit[i], ha_limit[i] + time_interval,
-                                time_interval)
+            ha_list = np.arange(
+                -ha_limit[i],
+                ha_limit[i] + time_interval,
+                time_interval
+            )
 
             # Compute the zenith and azimuth
-            zenith = self.get_solar_zenith(ha_list, lat_rad, solar_declin[i])
-            azimuth = self.get_solar_azimuth_to_south(ha_list, lat_rad, solar_declin[i])
+            zenith = self.get_solar_zenith(
+                ha_list,
+                lat_rad,
+                solar_declin[i]
+            )
+            azimuth = self.get_solar_azimuth_to_south(
+                ha_list,
+                lat_rad,
+                solar_declin[i]
+            )
 
             # Potential radiation over the time intervals
             inter_pot_radiation = np.full((len(ha_list), n_rows, n_cols), np.nan)
@@ -129,15 +145,27 @@ class PotentialSolarRadiation:
                     continue
 
                 incidence_angle = self._calculate_angle_of_incidence(
-                    zenith[j], slope, azimuth[j], aspect)
+                    zenith[j],
+                    slope,
+                    azimuth[j],
+                    aspect
+                )
                 potential_radiation = self._calculate_radiation_hock_equation(
-                    mean_elevation, atmos_transmissivity, day_of_year[i],
-                    zenith[j], incidence_angle)
+                    mean_elevation,
+                    atmos_transmissivity,
+                    day_of_year[i],
+                    zenith[j],
+                    incidence_angle
+                )
 
                 # Account for cast shadows
                 if with_cast_shadows:
                     cast_shadows = self.calculate_cast_shadows(
-                        dem, masked_dem_data, zenith[j], azimuth[j])
+                        dem,
+                        masked_dem_data,
+                        zenith[j],
+                        azimuth[j]
+                    )
                     potential_radiation = potential_radiation * (1 - cast_shadows)
 
                 inter_pot_radiation[j, :, :] = potential_radiation.copy()
@@ -154,7 +182,10 @@ class PotentialSolarRadiation:
         mean_annual_radiation = np.full((n_rows, n_cols), np.nan)
         mean_annual_radiation[:, :] = np.nanmean(daily_radiation, axis=0)
         self.upscale_and_save_mean_annual_radiation_rasters(
-            mean_annual_radiation, dem, output_path)
+            mean_annual_radiation,
+            dem,
+            output_path
+        )
 
         # Put the mask back on (we need the surrounding topography in the steps before)
         # And make sure the padding lines are also set to nans and not 0
@@ -166,43 +197,55 @@ class PotentialSolarRadiation:
 
         # Save the daily potential radiation to a netcdf file
         self._save_potential_radiation_netcdf(
-            daily_radiation, dem, masked_dem_data, day_of_year, output_path)
+            daily_radiation,
+            dem,
+            masked_dem_data,
+            day_of_year,
+            output_path
+        )
 
         # If DEM is the downsampled one, close it
         if dem.res[0] != self.catchment.get_dem_x_resolution():
             dem.close()
 
-    def load_mean_annual_radiation_raster(self, dir_path,
-                                          filename='annual_potential_radiation.tif'):
+    def load_mean_annual_radiation_raster(
+            self,
+            dir_path: str,
+            filename: str = 'annual_potential_radiation.tif'
+    ):
         """
         Load the mean annual radiation raster.
 
         Parameters
         ----------
-        dir_path : str
+        dir_path
             Path to the input file directory.
-        filename : str, optional
+        filename
             Name of the input file. Default is 'annual_potential_radiation.tif'.
         """
         self.mean_annual_radiation = hb.rxr.open_rasterio(
-            Path(dir_path) / 'annual_potential_radiation.tif').drop_vars('band')[0]
+            Path(dir_path) / filename).drop_vars('band')[0]
 
     def upscale_and_save_mean_annual_radiation_rasters(
-            self, mean_annual_radiation, dem, output_path,
-            output_filename='annual_potential_radiation.tif'):
+            self,
+            mean_annual_radiation: np.ndarray,
+            dem: hb.rasterio.Dataset,
+            output_path: str,
+            output_filename: str = 'annual_potential_radiation.tif'
+    ):
         """
         Save the mean annual radiation rasters (downsampled and at DEM resolution)
         to a file.
 
         Parameters
         ----------
-        mean_annual_radiation : np.ndarray
+        mean_annual_radiation
             Downsampled mean annual radiation.
-        dem : rasterio.Dataset
+        dem
             The DEM at the resolution of the radiation.
-        output_path : str
+        output_path
             Path to the output directory.
-        output_filename : str, optional
+        output_filename
             Name of the output file. Default is 'annual_potential_radiation.tif'.
         """
         # Create the profile
@@ -238,7 +281,12 @@ class PotentialSolarRadiation:
         xr_dem_upscaled.close()
 
     @staticmethod
-    def calculate_cast_shadows(dem_dataset, masked_dem, zenith, azimuth):
+    def calculate_cast_shadows(
+            dem_dataset: hb.rasterio.Dataset,
+            masked_dem: np.ndarray,
+            zenith: float,
+            azimuth: float
+    ) -> np.ndarray:
         """
         Calculate the cast shadows.
 
@@ -248,13 +296,13 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        dem_dataset :
+        dem_dataset
             DEM as read by rasterio, containing the DEM topography
-        masked_dem : float
+        masked_dem
             DEM topography, masked with np.nan for the areas outside the study catchment
-        zenith : float
+        zenith
             Solar zenith (IQBAL 2012), in degrees
-        azimuth : float
+        azimuth
             Azimuth relative to the south for ZSLOPE CALC, in degrees
 
         Returns
@@ -344,7 +392,7 @@ class PotentialSolarRadiation:
         return cast_shadows
 
     @staticmethod
-    def get_solar_declination_rad(day_of_year):
+    def get_solar_declination_rad(day_of_year: int | np.ndarray) -> float:
         """
         Compute the solar declination.
 
@@ -356,7 +404,7 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        day_of_year : int|np.array
+        day_of_year
             Day of the year (1-366).
 
         Returns
@@ -382,7 +430,10 @@ class PotentialSolarRadiation:
         return solar_declin
 
     @staticmethod
-    def get_solar_hour_angle_limit(solar_declination, lat_rad):
+    def get_solar_hour_angle_limit(
+            solar_declination: float | np.ndarray,
+            lat_rad: float,
+    ) -> float | np.ndarray:
         """
         Compute the hour angle limit value (min/max).
 
@@ -395,9 +446,9 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        solar_declination : float|np.array
+        solar_declination
             Solar declination in radians.
-        lat_rad : float
+        lat_rad
             Latitude in radians.
 
         Returns
@@ -412,7 +463,11 @@ class PotentialSolarRadiation:
         return hour_angle
 
     @staticmethod
-    def get_solar_zenith(hour_angles, lat_rad, solar_declination):
+    def get_solar_zenith(
+            hour_angles: float | np.ndarray,
+            lat_rad: float,
+            solar_declination: float
+    ) -> float | np.ndarray:
         """
         Compute the solar zenith.
 
@@ -424,11 +479,11 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        hour_angles : float|np.ndarray
+        hour_angles
             Hour angle(s).
-        lat_rad : float
+        lat_rad
             Latitude in radians.
-        solar_declination : float
+        solar_declination
             Solar declination in radians.
 
         Returns
@@ -441,7 +496,11 @@ class PotentialSolarRadiation:
         return zenith
 
     @staticmethod
-    def get_solar_azimuth_to_south(hour_angles, lat_rad, solar_declination):
+    def get_solar_azimuth_to_south(
+            hour_angles: float | np.ndarray,
+            lat_rad: float,
+            solar_declination: float
+    ) -> np.ndarray:
         """
         Compute the solar azimuth relative to the south.
 
@@ -454,11 +513,11 @@ class PotentialSolarRadiation:
 
         Parameters
         ----------
-        hour_angles : float|np.ndarray
+        hour_angles
             Array with the hour angles.
-        lat_rad : float
+        lat_rad
             Latitude in radians.
-        solar_declination : float
+        solar_declination
             Solar declination.
 
         Returns
@@ -482,7 +541,11 @@ class PotentialSolarRadiation:
         return azimuth
 
     @staticmethod
-    def get_solar_azimuth_to_north(hour_angles, lat_rad, solar_declination):
+    def get_solar_azimuth_to_north(
+            hour_angles: float | np.ndarray,
+            lat_rad: float,
+            solar_declination: float
+    ) -> float | np.ndarray:
         """
         Compute the solar azimuth relative to the north.
         See get_solar_azimuth_to_south() for more details.
@@ -494,23 +557,28 @@ class PotentialSolarRadiation:
         return azimuth
 
     @staticmethod
-    def _calculate_radiation_hock_equation(elevation, atmos_transmissivity, day_of_year,
-                                           zenith, incidence_angle):
+    def _calculate_radiation_hock_equation(
+            elevation: float,
+            atmos_transmissivity: float,
+            day_of_year: int | float,
+            zenith: float,
+            incidence_angle: np.array
+    ) -> np.array:
         """
         Hock (2005) equation to compute the potential clear-sky direct solar
         radiation at the ice or snow surface [W/m²].
 
         Parameters
         ----------
-        elevation : float
+        elevation
             Height above sea level [m]
-        atmos_transmissivity : float
+        atmos_transmissivity
             Mean clear-sky atmospheric transmissivity
-        day_of_year : float
+        day_of_year
             Day of the year (Julian Day)
-        zenith : float
+        zenith
             Solar zenith for one moment during the day (IQBAL 2012)
-        incidence_angle : np.array
+        incidence_angle
             Angle of incidence between the normal to the grid slope and the
             solar beam
 
@@ -557,31 +625,38 @@ class PotentialSolarRadiation:
 
             return empty_matrix
 
-        solar_radiation = (SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
-                           atmos_transmissivity **
-                           (local_pressure / (SEA_ATM_PRESSURE *
-                                              np.cos(zenith * TO_RAD))) *
-                           np.cos(incidence_angle))
+        solar_radiation = (
+                SOLAR_CST * ((ES_SM_AXIS / current_se_dist) ** 2) *
+                atmos_transmissivity ** (
+                        local_pressure / (SEA_ATM_PRESSURE * np.cos(zenith * TO_RAD))
+                ) *
+                np.cos(incidence_angle)
+        )
 
         return solar_radiation
 
     @staticmethod
-    def _calculate_angle_of_incidence(zenith, slope, azimuth, aspect,
-                                      tolerance=10 ** (-6)):
+    def _calculate_angle_of_incidence(
+            zenith: float,
+            slope: float,
+            azimuth: float,
+            aspect: float,
+            tolerance: float = 10 ** (-6)
+    ) -> float:
         """
         Calculate the angle of incidence.
 
         Parameters
         ----------
-        zenith : float
+        zenith
             Solar zenith (IQBAL 2012), in degrees
-        slope : float
+        slope
             Slope of the DEM, in degrees
-        azimuth : float
+        azimuth
             Azimuth for ZSLOPE CALC, in degrees
-        aspect : float
+        aspect
             Aspect of the DEM, in degrees
-        tolerance : float
+        tolerance
             Error tolerance in the trigonometric computations.
 
         Returns
@@ -618,24 +693,29 @@ class PotentialSolarRadiation:
         return incidence_angle
 
     def _save_potential_radiation_netcdf(
-            self, radiation, dem, masked_dem_data, day_of_year, output_path,
-            output_filename='daily_potential_radiation.nc'):
+            self,
+            radiation: np.ndarray,
+            dem: hb.rasterio.Dataset,
+            masked_dem_data: np.ndarray,
+            day_of_year: np.ndarray,
+            output_path: str | None,
+            output_filename: str = 'daily_potential_radiation.nc'):
         """
         Save the potential radiation to a netcdf file.
 
         Parameters
         ----------
-        radiation : np.ndarray
+        radiation
             The potential radiation.
-        dem : rasterio.Dataset
+        dem
             The DEM.
-        masked_dem_data : np.ndarray
+        masked_dem_data
             The masked DEM data.
-        day_of_year : np.ndarray
+        day_of_year
             The array with the days of the year.
-        output_path : str
+        output_path
             Path to the directory to save the netcdf file to.
-        output_filename : str, optional
+        output_filename
             Name of the output file. Default is 'daily_potential_radiation.nc'.
         """
         full_path = Path(output_path) / output_filename
@@ -649,13 +729,16 @@ class PotentialSolarRadiation:
         xs = np.array(xs).reshape(masked_dem_data.shape)[0, :]
         ys = np.array(ys).reshape(masked_dem_data.shape)[:, 0]
 
-        ds = hb.xr.DataArray(radiation,
-                             name='radiation',
-                             dims=['day_of_year', 'y', 'x'],
-                             coords={
-                                 "x": xs,
-                                 "y": ys,
-                                 "day_of_year": day_of_year})
+        ds = hb.xr.DataArray(
+            radiation,
+            name='radiation',
+            dims=['day_of_year', 'y', 'x'],
+            coords={
+                "x": xs,
+                "y": ys,
+                "day_of_year": day_of_year
+            }
+        )
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj

@@ -261,9 +261,14 @@ class FileNetcdf : public wxObject {
     void PutAttText(const string& attName, const string& value, int varId = NC_GLOBAL);
 
   protected:
-    int m_ncId;
+    int _ncId;
 
   private:
+    /**
+     * Check the NetCDF status and throw an exception if an error occurred.
+     *
+     * @param status The NetCDF status to check.
+     */
     void CheckNcStatus(int status);
 };
 

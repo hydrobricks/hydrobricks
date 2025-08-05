@@ -4,7 +4,7 @@
 
 SolverEulerExplicit::SolverEulerExplicit()
     : Solver() {
-    m_nIterations = 1;
+    _nIterations = 1;
 }
 
 bool SolverEulerExplicit::Solve() {

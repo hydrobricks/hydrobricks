@@ -8,5 +8,5 @@ bool FluxToOutlet::IsOk() {
 }
 
 double FluxToOutlet::GetAmount() {
-    return m_amount;
+    return _amount;
 }

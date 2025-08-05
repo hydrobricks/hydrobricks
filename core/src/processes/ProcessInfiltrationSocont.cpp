@@ -19,5 +19,5 @@ vecDouble ProcessInfiltrationSocont::GetRates() {
         return {0};
     }
 
-    return {m_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))};
+    return {_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))};
 }

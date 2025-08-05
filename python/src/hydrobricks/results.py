@@ -1,4 +1,6 @@
-import xarray as xr
+import numpy as np
+
+import hydrobricks as hb
 
 
 class Results:
@@ -8,8 +10,10 @@ class Results:
     and to provide methods to extract the results.
     """
 
-    def __init__(self, filename):
-        self.results = xr.open_dataset(filename)
+    def __init__(self, filename: str):
+        if not hb.has_xarray:
+            raise ImportError("xarray is required to do this.")
+        self.results = hb.xr.open_dataset(filename)
         self.labels_distributed = self.results.attrs.get('labels_distributed')
         self.labels_aggregated = self.results.attrs.get('labels_aggregated')
         self.labels_land_cover = self.results.attrs.get('labels_land_covers')
@@ -38,17 +42,22 @@ class Results:
             for label in self.labels_aggregated:
                 print('- ' + label)
 
-    def get_hydro_units_values(self, component, start_date, end_date=None):
+    def get_hydro_units_values(
+            self,
+            component: str,
+            start_date: str,
+            end_date: str = None
+    ) -> np.ndarray:
         """
         Get the values of a component at the hydro units.
 
         Parameters
         ----------
-        component : str
+        component
             The name of the component.
-        start_date : str
+        start_date
             The start date of the period to extract.
-        end_date : str (optional)
+        end_date
             The end date of the period to extract (default: None).
 
         Returns
@@ -64,15 +73,15 @@ class Results:
         return self.results.hydro_units_values[i_component].sel(
             time=slice(start_date, end_date)).to_numpy()
 
-    def get_time_array(self, start_date, end_date):
+    def get_time_array(self, start_date: str, end_date: str) -> np.ndarray:
         """
         Get the time array.
 
         Parameters
         ----------
-        start_date : str
+        start_date
             The start date of the period to extract.
-        end_date : str
+        end_date
             The end date of the period to extract.
 
         Returns

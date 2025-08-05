@@ -9,9 +9,6 @@ class Brick;
 class SnowContainer : public WaterContainer {
   public:
     SnowContainer(Brick* brick);
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_SNOW_CONTAINER_H

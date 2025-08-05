@@ -6,21 +6,27 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.colors import LightSource, ListedColormap
 
 import hydrobricks as hb
+from hydrobricks.results import Results
 
 
-def plot_hydrograph(obs, sim, time, year=None):
+def plot_hydrograph(
+        obs: np.ndarray,
+        sim: np.ndarray,
+        time: np.ndarray,
+        year: int | None = None
+):
     """
     Plot the hydrograph of observed and simulated data.
 
     Parameters
     ----------
-    obs : array-like
+    obs
         The observed data.
-    sim : array-like
+    sim
         The simulated data.
-    time : array-like
+    time
         The time array.
-    year : int (optional)
+    year
         The year to plot (default: None).
     """
     plt.figure()
@@ -38,28 +44,39 @@ def plot_hydrograph(obs, sim, time, year=None):
     plt.show()
 
 
-def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
-                              dem_path=None, min_val=0, max_val=None):
+def plot_map_hydro_unit_value(
+        results: Results,
+        unit_ids_raster_path: str,
+        component: str,
+        date: str,
+        dem_path: str | None = None,
+        min_val: int = 0,
+        max_val: int | None = None,
+        figsize: tuple[int, int] = (6.4, 4.8),
+        title: str | None = None
+):
     """
     Plot the values of a component at the hydro units on a map.
 
     Parameters
     ----------
-    results : Results
+    results
         The results of the model run.
-    unit_ids_raster_path : str
+    unit_ids_raster_path
         The path to the raster file with the hydro units ids.
-    component : str
+    component
         The name of the component.
-    date : str
+    date
         The date of the values to plot (format: 'YYYY-MM-DD').
-    dem_path : str (optional)
+    dem_path
         The path to the digital elevation model (default: None). If provided,
         the DEM will be used to create a shaded relief map.
-    min_val : float (optional)
+    min_val
         The minimum value for the color scale (default: 0).
-    max_val : float (optional)
+    max_val
         The maximum value for the color scale (default: None).
+    figsize
+        The size of the figure in inches (default: (6.4, 4.8)).
     """
     data = results.get_hydro_units_values(component, date)
     hydro_units_ids = results.hydro_units_ids
@@ -82,7 +99,7 @@ def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
 
     # Plot
     cmap = _generate_cmap_blue()
-    plt.figure()
+    plt.figure(figsize=figsize)
     if dem_path is not None:
         plt.imshow(shaded_dem, cmap='gray')
         plt.imshow(val_raster, cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
@@ -91,40 +108,52 @@ def plot_map_hydro_unit_value(results, unit_ids_raster_path, component, date,
     plt.colorbar(shrink=0.8)
     plt.contour(boundary, levels=[0.5], linewidths=1, colors='black', alpha=1.0)
     plt.axis('off')
-    plt.title(f"{date}")
+    plt.title(title if title else f"{date}")
     plt.tight_layout()
     plt.show()
 
 
-def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, component,
-                                         start_date, end_date, save_path, dem_path=None,
-                                         min_val=0, max_val=None, fps=5):
+def create_animated_map_hydro_unit_value(
+        results: Results,
+        unit_ids_raster_path: str,
+        component: str,
+        start_date: str,
+        end_date: str,
+        save_path: str,
+        dem_path: str | None = None,
+        min_val: int = 0,
+        max_val: int | None = None,
+        fps: int = 5,
+        figsize: tuple[int, int] = (6.4, 4.8)
+):
     """
     Create an animated map of the values of a component at the hydro units.
 
     Parameters
     ----------
-    results : Results
+    results
         The results of the model run.
-    unit_ids_raster_path : str
+    unit_ids_raster_path
         The path to the raster file with the hydro units ids.
-    component : str
+    component
         The name of the component.
-    start_date : str
+    start_date
         The start date of the period to plot (format: 'YYYY-MM-DD').
-    end_date : str
+    end_date
         The end date of the period to plot (format: 'YYYY-MM-DD').
-    save_path : str
+    save_path
         The path where to save the animation.
-    dem_path : str (optional)
+    dem_path
         The path to the digital elevation model (default: None). If provided,
         the DEM will be used to create a shaded relief map.
-    min_val : float (optional)
+    min_val
         The minimum value for the color scale (default: 0).
-    max_val : float (optional)
+    max_val
         The maximum value for the color scale (default: None).
-    fps : int (optional)
+    fps
         The number of frames per second for the animation (default: 5).
+    figsize
+        The size of the figure in inches (default: (6.4, 4.8)).
     """
     # Get the data
     data = results.get_hydro_units_values(component, start_date, end_date)
@@ -155,7 +184,7 @@ def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, componen
 
     # Create the animation
     cmap = _generate_cmap_blue()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
     # Initialize the plot with the first frame of the data
     if dem_path is not None:
@@ -193,7 +222,7 @@ def create_animated_map_hydro_unit_value(results, unit_ids_raster_path, componen
     print(f"Animation saved at {output_path}")
 
 
-def _generate_cmap_blue():
+def _generate_cmap_blue() -> ListedColormap:
     # Use the blue colormap
     cmap = plt.get_cmap('YlGnBu')
 
@@ -205,7 +234,7 @@ def _generate_cmap_blue():
     return new_cmap
 
 
-def _load_units_ids_raster(unit_ids_raster_path):
+def _load_units_ids_raster(unit_ids_raster_path: str) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
         unit_ids_raster = hb.rxr.open_rasterio(unit_ids_raster_path)
@@ -214,7 +243,7 @@ def _load_units_ids_raster(unit_ids_raster_path):
     return unit_ids_raster.to_numpy()
 
 
-def _load_dem(dem_path):
+def _load_dem(dem_path: str) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
         dem = hb.rxr.open_rasterio(dem_path)
@@ -223,7 +252,7 @@ def _load_dem(dem_path):
     return dem
 
 
-def _create_catchment_boundary(unit_ids_raster):
+def _create_catchment_boundary(unit_ids_raster: np.ndarray) -> np.ndarray:
     boundary = np.zeros_like(unit_ids_raster)
     catchment_extent = np.zeros_like(unit_ids_raster)
     catchment_extent[unit_ids_raster != 0] = 1

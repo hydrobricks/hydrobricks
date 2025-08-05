@@ -3,24 +3,24 @@
 #include "Modifier.h"
 
 Flux::Flux()
-    : m_amount(0),
-      m_changeRate(nullptr),
-      m_static(false),
-      m_needsWeighting(false),
-      m_fractionUnitArea(1.0),
-      m_fractionLandCover(1.0),
-      m_fractionTotal(1.0),
-      m_modifier(nullptr),
-      m_type("water") {}
+    : _amount(0),
+      _changeRate(nullptr),
+      _static(false),
+      _needsWeighting(false),
+      _fractionUnitArea(1.0),
+      _fractionLandCover(1.0),
+      _fractionTotal(1.0),
+      _modifier(nullptr),
+      _type("water") {}
 
 void Flux::Reset() {
-    m_amount = 0;
+    _amount = 0;
 }
 
 void Flux::UpdateFlux(double amount) {
-    if (m_fractionTotal < 1.0) {
-        m_amount = amount * m_fractionTotal;
+    if (_fractionTotal < 1.0) {
+        _amount = amount * _fractionTotal;
     } else {
-        m_amount = amount;
+        _amount = amount;
     }
 }

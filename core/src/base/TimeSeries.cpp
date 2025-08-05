@@ -5,7 +5,7 @@
 #include "TimeSeriesUniform.h"
 
 TimeSeries::TimeSeries(VariableType type)
-    : m_type(type) {}
+    : _type(type) {}
 
 bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
     try {
@@ -110,7 +110,8 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         wxLogError(_("Dimension mismatch in the forcing data."));
         throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
-                                               int(data.rows()), int(time.size()), int(data.cols()), int(ids.size())));
+                                               static_cast<int>(data.rows()), static_cast<int>(time.size()),
+                                               static_cast<int>(data.cols()), static_cast<int>(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
@@ -154,10 +155,10 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
     if (timeStepData == 1.0) {
         timeStep = 1;
     } else if (timeStepData > 1.0) {
-        timeStep = int(round(timeStepData));
+        timeStep = static_cast<int>(round(timeStepData));
     } else if (timeStepData < 1.0) {
         timeUnit = Hour;
-        timeStep = int(round(timeStepData * 24));
+        timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
         throw ShouldNotHappen();
     }

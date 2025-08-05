@@ -11,12 +11,18 @@ class ProcessOutflowDirect : public ProcessOutflow {
 
     ~ProcessOutflowDirect() override = default;
 
+    /**
+     * Register the process parameters and forcing in the settings model.
+     *
+     * @param modelSettings The settings model to register the parameters in.
+     */
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
   protected:
+    /**
+     * @copydoc Process::GetRates()
+     */
     vecDouble GetRates() override;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_PROCESS_OUTFLOW_DIRECT_H

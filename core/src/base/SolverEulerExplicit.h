@@ -13,9 +13,6 @@ class SolverEulerExplicit : public Solver {
      * @copydoc Solver::Solve()
      */
     bool Solve() override;
-
-  protected:
-  private:
 };
 
 #endif  // HYDROBRICKS_SOLVER_EULER_EXPLICIT_H

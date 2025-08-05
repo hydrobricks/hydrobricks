@@ -7,7 +7,7 @@ ProcessET::ProcessET(WaterContainer* container)
     : Process(container) {}
 
 bool ProcessET::IsOk() {
-    if (m_outputs.size() != 1) {
+    if (_outputs.size() != 1) {
         wxLogError(_("ET should have a single output."));
         return false;
     }
@@ -21,7 +21,7 @@ int ProcessET::GetConnectionsNb() {
 
 double* ProcessET::GetValuePointer(const string& name) {
     if (name == "output") {
-        return m_outputs[0]->GetAmountPointer();
+        return _outputs[0]->GetAmountPointer();
     }
 
     return nullptr;

@@ -238,6 +238,17 @@ class TimeSeries2D(TimeSeries):
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 data_var.rio.write_crs(f'epsg:{data_crs}', inplace=True)
 
+        # Open the DEM if needed
+        dem = None
+        if apply_data_gradient:
+            dem = hb.rxr.open_rasterio(dem_path)
+            dem = dem.squeeze().drop_vars("band")
+
+        # Get the spatial extent of interest
+        ref_data = dem if apply_data_gradient else unit_ids
+        data_var = self._select_relevant_extent(
+            data_var, data_crs, dim_x, dim_y, ref_data)
+
         # Rename spatial dimensions
         if dim_x != 'x':
             data_var = data_var.rename({dim_x: 'x'})
@@ -383,10 +394,45 @@ class TimeSeries2D(TimeSeries):
                 data_var[i_start:i_end].to_numpy() * unit_weight,
                 axis=(1, 2))
 
+    def _select_relevant_extent(self, data_var, data_crs, dim_x, dim_y, ref_data):
+        x_ref_min, x_ref_max, y_ref_min, y_ref_max = self._get_spatial_bounds(ref_data)
+
+        # Convert the spatial extent to the data CRS
+        src_crs = self._parse_crs(ref_data)
+        if src_crs != data_crs:
+            transformer = hb.pyproj.Transformer.from_crs(
+                src_crs, data_crs, always_xy=True)
+            x_min_dat, y_min_dat = transformer.transform(x_ref_min, y_ref_min)
+            x_max_dat, y_max_dat = transformer.transform(x_ref_max, y_ref_max)
+        else:
+            x_min_dat, y_min_dat = x_ref_min, y_ref_min
+            x_max_dat, y_max_dat = x_ref_max, y_ref_max
+
+        # Find the coordinates that cover the extent
+        x_coords = data_var[dim_x].values
+        y_coords = data_var[dim_y].values
+
+        x_start_idx = np.searchsorted(x_coords, x_min_dat, side='right') - 1
+        x_end_idx = np.searchsorted(x_coords, x_max_dat, side='left')
+        y_start_idx = np.searchsorted(y_coords, y_min_dat, side='right') - 1
+        y_end_idx = np.searchsorted(y_coords, y_max_dat, side='left')
+
+        x_start = x_coords[max(x_start_idx, 0)]
+        x_end = x_coords[min(x_end_idx, len(x_coords) - 1)]
+        y_start = y_coords[max(y_start_idx, 0)]
+        y_end = y_coords[min(y_end_idx, len(y_coords) - 1)]
+
+        x_sel = slice(min(x_start, x_end), max(x_start, x_end))
+        y_sel = slice(min(y_start, y_end), max(y_start, y_end))
+
+        data_var = data_var.sel({dim_x: x_sel, dim_y: y_sel})
+
+        return data_var
+
     @staticmethod
     def _parse_crs(
             data: hb.xr.DataArray | hb.xr.Dataset,
-            file_crs: int
+            file_crs: int | None = None
     ) -> int:
         if file_crs is None:
             if 'crs' in data.attrs:
@@ -399,3 +445,23 @@ class TimeSeries2D(TimeSeries):
                 raise ValueError("No CRS found in the netcdf file."
                                  "Please provide a CRS (option 'file_crs').")
         return file_crs
+
+    @staticmethod
+    def _get_spatial_bounds(ref_data: hb.xr.DataArray | hb.xr.Dataset) -> tuple:
+        # Possible names for spatial dimensions
+        x_names = ['x', 'lon', 'longitude']
+        y_names = ['y', 'lat', 'latitude']
+
+        # Find the actual dimension names
+        x_dim = next((name for name in x_names if name in ref_data.dims), None)
+        y_dim = next((name for name in y_names if name in ref_data.dims), None)
+
+        if x_dim is None or y_dim is None:
+            raise ValueError("Could not find spatial dimensions in the reference data.")
+
+        x_ref_min = ref_data[x_dim].min().item()
+        x_ref_max = ref_data[x_dim].max().item()
+        y_ref_min = ref_data[y_dim].min().item()
+        y_ref_max = ref_data[y_dim].max().item()
+
+        return x_ref_min, x_ref_max, y_ref_min, y_ref_max

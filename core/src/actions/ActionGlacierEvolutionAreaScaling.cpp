@@ -35,9 +35,9 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
             double fraction = areaRef / unit->GetArea();
             assert(fraction >= 0 && fraction <= 1);
             unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
-        } else if (areaInModel != areaRef) {
-            wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table initial area."),
-                       id);
+        } else if (std::abs(areaInModel - areaRef) > PRECISION) {
+            wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
+                         "initial area (%g vs %g)."), id, areaInModel, areaRef);
             return false;
         }
 

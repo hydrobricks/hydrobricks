@@ -37,7 +37,8 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
             unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
         } else if (std::abs(areaInModel - areaRef) > PRECISION) {
             wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
-                         "initial area (%g vs %g)."), id, areaInModel, areaRef);
+                         "initial area (%g vs %g)."),
+                       id, areaInModel, areaRef);
             return false;
         }
 

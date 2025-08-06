@@ -93,7 +93,6 @@ class TimeSeries2D(TimeSeries):
             dim_y: str = 'y',
             hydro_units: HydroUnits | None = None,
             raster_hydro_units: str | Path | None = None,
-            method: str = 'weights',
             weights_block_size: int = 100,
             apply_data_gradient: bool = True,
             dem_path: str | Path | None = None
@@ -127,9 +126,6 @@ class TimeSeries2D(TimeSeries):
         raster_hydro_units
             Path to a raster containing the hydro unit ids to use for the
             spatialization.
-        method
-            Method to use for the spatialization. Can be 'reproject' or 'weights'.
-            It does not change the result but the 'weights' method is faster.
         weights_block_size
             Size of the block of time steps to use for the 'weights' method.
             Default: 100.
@@ -266,75 +262,55 @@ class TimeSeries2D(TimeSeries):
                 raise ValueError("The time series based on 'day_of_year' must have "
                                  "a length of 366.")
 
-        if method == 'reproject':
-            # Create a ThreadPoolExecutor with a specified number of threads
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-                with ThreadPoolExecutor(max_workers=num_threads) as executor:
-                    # Submit the tasks for each time step to the executor
-                    futures = [
-                        executor.submit(self._extract_time_step_data_reproject,
-                                        data_var, unit_id_masks, unit_ids,
-                                        unit_ids_nb, t)
-                        for t in range(time_len)
-                    ]
+        # Create a xarray variable containing the data cell indices
+        data_idx = data_var[0].copy()
+        data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)
+        data_idx = data_idx.astype(float)
 
-                    # Wait for all tasks to complete
-                    concurrent.futures.wait(futures)
+        # Reproject the data cell indices to the hydro unit raster
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
+            data_idx_reproj = data_idx.rio.reproject_match(
+                unit_ids,
+                Resampling=hb.rasterio.enums.Resampling.nearest
+            )
 
-        elif method == 'weights':
-            # Create a xarray variable containing the data cell indices
-            data_idx = data_var[0].copy()
-            data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)
-            data_idx = data_idx.astype(float)
+        # Create the masks (with the original data shape) for each unit with the
+        # weights to apply to the gridded data contributing to the unit
+        unit_weights = []
+        for u in range(unit_ids_nb):
+            # Get the data indices contributing to the unit
+            mask_unit_id = hb.xr.where(unit_id_masks[u], data_idx_reproj, -1)
+            mask_unit_id = mask_unit_id.to_numpy().astype(int)
+            # Get unique values and their counts
+            data_idx_values, counts = np.unique(
+                mask_unit_id[mask_unit_id >= 0],
+                return_counts=True
+            )
+            # Create a mask of the weights
+            weights_mask = np.zeros(data_idx.shape)
+            data_idx_values = np.unravel_index(data_idx_values, data_idx.shape)
+            weights_mask[data_idx_values] = counts / np.sum(counts)
 
-            # Reproject the data cell indices to the hydro unit raster
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-                data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
-                data_idx_reproj = data_idx.rio.reproject_match(
-                    unit_ids,
-                    Resampling=hb.rasterio.enums.Resampling.nearest
-                )
+            assert np.isclose(np.sum(weights_mask), 1)
 
-            # Create the masks (with the original data shape) for each unit with the
-            # weights to apply to the gridded data contributing to the unit
-            unit_weights = []
-            for u in range(unit_ids_nb):
-                # Get the data indices contributing to the unit
-                mask_unit_id = hb.xr.where(unit_id_masks[u], data_idx_reproj, -1)
-                mask_unit_id = mask_unit_id.to_numpy().astype(int)
-                # Get unique values and their counts
-                data_idx_values, counts = np.unique(
-                    mask_unit_id[mask_unit_id >= 0],
-                    return_counts=True
-                )
-                # Create a mask of the weights
-                weights_mask = np.zeros(data_idx.shape)
-                data_idx_values = np.unravel_index(data_idx_values, data_idx.shape)
-                weights_mask[data_idx_values] = counts / np.sum(counts)
+            # Add the mask to the list
+            unit_weights.append(weights_mask)
 
-                assert np.isclose(np.sum(weights_mask), 1)
+        n_steps = 1 + np.ceil(time_len / weights_block_size).astype(int)
 
-                # Add the mask to the list
-                unit_weights.append(weights_mask)
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            # Submit the tasks for each time step to the executor
+            futures = [
+                executor.submit(self._extract_time_step_data_weights,
+                                data_var, unit_weights, t_block,
+                                weights_block_size)
+                for t_block in range(n_steps)
+            ]
 
-            n_steps = 1 + np.ceil(time_len / weights_block_size).astype(int)
-
-            with ThreadPoolExecutor(max_workers=num_threads) as executor:
-                # Submit the tasks for each time step to the executor
-                futures = [
-                    executor.submit(self._extract_time_step_data_weights,
-                                    data_var, unit_weights, t_block,
-                                    weights_block_size)
-                    for t_block in range(n_steps)
-                ]
-
-                # Wait for all tasks to complete
-                concurrent.futures.wait(futures)
-
-        else:
-            raise ValueError(f"Unknown method '{method}'.")
+            # Wait for all tasks to complete
+            concurrent.futures.wait(futures)
 
         # If the time method is 'day_of_year', convert to the full time series
         if time_method == 'day_of_year':
@@ -348,29 +324,6 @@ class TimeSeries2D(TimeSeries):
         # Print elapsed time
         elapsed_time = time.time() - start_time
         print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
-
-    def _extract_time_step_data_reproject(
-            self,
-            data_var: hb.xr.DataArray,
-            unit_id_masks: list,
-            unit_ids: hb.xr.DataArray,
-            unit_ids_nb: int,
-            t: int
-    ):
-        # Print message very 20 time steps
-        if t % 20 == 0:
-            print(f"Extracting {self.time[t]}")
-
-        # Reproject
-        data_var_t = data_var[t].rio.reproject_match(
-            unit_ids, Resampling=hb.rasterio.enums.Resampling.average)
-
-        # Extract data for each unit
-        for u in range(unit_ids_nb):
-            # Mask the meteorological data with the hydro unit.
-            val = hb.xr.where(unit_id_masks[u], data_var_t, np.nan).to_numpy()
-            # Average the meteorological data in the unit.
-            self.data[-1][t, u] = np.nanmean(val)
 
     def _extract_time_step_data_weights(
             self,

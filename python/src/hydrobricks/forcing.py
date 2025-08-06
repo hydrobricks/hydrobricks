@@ -20,6 +20,7 @@ from cftime import num2date
 
 import hydrobricks as hb
 from hydrobricks.constants import TO_RAD
+from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
@@ -49,11 +50,21 @@ class Forcing:
         WIND = auto()  # Wind speed [m s-1]
         PRESSURE = auto()  # Atmospheric pressure [kPa]
 
-    def __init__(self, hydro_units: HydroUnits):
+    def __init__(
+            self,
+            spatial_entity: HydroUnits | Catchment
+    ):
+        if isinstance(spatial_entity, HydroUnits):
+            hydro_units = spatial_entity
+            catchment = None
+        elif isinstance(spatial_entity, Catchment):
+            hydro_units = spatial_entity.hydro_units
+            catchment = spatial_entity
+        else:
+            raise TypeError('The spatial_entity argument must be a HydroUnits or '
+                            'Catchment object, not {type(spatial_entity)}.')
+
         # Check hydro units
-        if not isinstance(hydro_units, HydroUnits):
-            raise TypeError('The hydro_units argument must be a HydroUnits '
-                            f'object, not {type(hydro_units)}.')
         if len(hydro_units.hydro_units) == 0:
             raise ValueError('The hydro_units argument must contain at least '
                              'one hydrological unit.')
@@ -61,6 +72,7 @@ class Forcing:
         super().__init__()
         self.data1D = TimeSeries1D()
         self.data2D = TimeSeries2D()
+        self.catchment = catchment
         self.hydro_units = hydro_units.hydro_units
         self._operations = []
         self._is_initialized = False
@@ -256,6 +268,12 @@ class Forcing:
         raster_hydro_units : str|Path
             Path to a raster containing the hydro unit ids to use for the
             spatialization.
+        apply_data_gradient : bool, optional
+            If True, elevation-based gradients will be retrieved from the data and
+            applied to the hydro units (e.g., for temperature and precipitation).
+            If False, the data will be regridded without applying any gradient.
+            Default is True for temperature and precipitation variables, and False
+            for other variables.
         """
         kwargs['type'] = 'spatialize_from_grid'
         self._operations.append(kwargs)
@@ -620,6 +638,31 @@ class Forcing:
             dim_x = kwargs.get('dim_x', 'x')
             dim_y = kwargs.get('dim_y', 'y')
             raster_hydro_units = kwargs.get('raster_hydro_units', '')
+            if variable in {self.Variable.P, self.Variable.T}:
+                apply_data_gradient = kwargs.get('apply_data_gradient', True)
+            else:
+                apply_data_gradient = kwargs.get('apply_data_gradient', False)
+
+            dem_path = None
+            if apply_data_gradient:
+                if self.catchment is None:
+                    raise ValueError("apply_data_gradient is True, but no catchment "
+                                     "is defined. The catchment is required to "
+                                     "retrieve the elevation-based gradients.")
+                if self.catchment.dem is None:
+                    raise ValueError("apply_data_gradient is True, but no DEM is "
+                                     "defined in the catchment. The DEM is required "
+                                     "to retrieve the elevation-based gradients.")
+
+                dem_path = self.catchment.dem.files
+                # Drop items with .aux.xml extension
+                dem_path = [p for p in dem_path if not p.endswith('.aux.xml')]
+                if len(dem_path) > 1:
+                    raise ValueError("apply_data_gradient is True, but the catchment "
+                                     "contains multiple DEM files. Only one DEM file "
+                                     "is supported for the elevation-based gradients.")
+                dem_path = dem_path[0]
+
             self.data2D.regrid_from_netcdf(
                 path,
                 file_pattern=file_pattern,
@@ -628,7 +671,10 @@ class Forcing:
                 dim_time=dim_time,
                 dim_x=dim_x,
                 dim_y=dim_y,
-                raster_hydro_units=raster_hydro_units
+                hydro_units=self.hydro_units,
+                raster_hydro_units=raster_hydro_units,
+                apply_data_gradient=apply_data_gradient,
+                dem_path=dem_path
             )
             self.data2D.data_name.append(variable)
         else:

@@ -91,9 +91,12 @@ class TimeSeries2D(TimeSeries):
             dim_time: str = 'time',
             dim_x: str = 'x',
             dim_y: str = 'y',
+            hydro_units: HydroUnits | None = None,
             raster_hydro_units: str | Path | None = None,
             method: str = 'weights',
-            weights_block_size: int = 100
+            weights_block_size: int = 100,
+            apply_data_gradient: bool = True,
+            dem_path: str | Path | None = None
     ):
         """
         Regrid time series data from netcdf files. The spatialization is done using a
@@ -118,6 +121,9 @@ class TimeSeries2D(TimeSeries):
             Name of the x dimension.
         dim_y
             Name of the y dimension.
+        hydro_units
+            HydroUnits object containing the hydro units to use for the spatialization.
+            Needed if `apply_data_gradient` is True.
         raster_hydro_units
             Path to a raster containing the hydro unit ids to use for the
             spatialization.
@@ -127,6 +133,13 @@ class TimeSeries2D(TimeSeries):
         weights_block_size
             Size of the block of time steps to use for the 'weights' method.
             Default: 100.
+        apply_data_gradient
+            If True, elevation-based gradients will be retrieved from the data and
+            applied to the hydro units (e.g., for temperature and precipitation).
+            If False, the data will be regridded without applying any gradient.
+        dem_path
+            DEM to use for the spatialization (computation of the gradients).
+            Needed if `apply_data_gradient` is True.
         """
         if not hb.has_rasterio:
             raise ImportError("rasterio is required for 'regrid_from_netcdf'.")
@@ -147,10 +160,10 @@ class TimeSeries2D(TimeSeries):
         # Get netCDF dataset
         print(f"Reading netcdf file(s) from {path}...")
         if file_pattern is None:
-            nc_data = hb.xr.open_dataset(path)
+            nc_data = hb.xr.open_dataset(path, chunks={})
         else:
             files = sorted(Path(path).glob(file_pattern))
-            nc_data = hb.xr.open_mfdataset(files)
+            nc_data = hb.xr.open_mfdataset(files, chunks={})
 
         # Get CRS of the netcdf file
         data_crs = self._parse_crs(nc_data, data_crs)

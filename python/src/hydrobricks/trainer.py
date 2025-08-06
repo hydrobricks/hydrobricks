@@ -79,13 +79,13 @@ class SpotpySetup:
 
         return x
 
-    def simulation(self, x: hb.spotpy.parameter) -> list[np.ndarray]:
+    def simulation(self, x: hb.spotpy.parameter) -> list[np.ndarray] | None:
         params = self.params
         param_values = dict(zip(x.name, x.random))
         params.set_values(param_values)
 
         if not params.constraints_satisfied() or not params.range_satisfied():
-            return [np.random.rand(len(self.obs[self.warmup:]))]
+            return None
 
         all_sim = []
         for model, forcing, i in zip(self.model, self.forcing, range(len(self.model))):
@@ -96,6 +96,9 @@ class SpotpySetup:
                 model.run(parameters=params)
 
             sim = model.get_outlet_discharge()
+            if sim.size == 0:
+                return None
+
             all_sim.append(sim[self.warmup:])
 
             if self.dump_outputs or self.dump_forcing:
@@ -123,14 +126,28 @@ class SpotpySetup:
             evaluation: list[np.ndarray],
             params: hb.spotpy.parameter | None = None
     ) -> float:
+        if simulation is None:
+            print(f'Simulation results empty (params: {params}).')
+            if self.invert_obj_func:
+                return np.inf
+            return -np.inf
+
         all_like = []
         for sim, obs in zip(simulation, evaluation):
-            if not self.obj_func:
-                like = hb.spotpy.objectivefunctions.kge_non_parametric(obs, sim)
-            elif isinstance(self.obj_func, str):
-                like = evaluate(sim, obs, self.obj_func)
+            if sim is None or sim.size == 0:
+                print(f'Simulation results empty (params: {params}).')
+                like = -np.inf
+            elif len(sim) != len(obs):
+                print(f'Length of simulation and observation do not match '
+                      f'(params: {params}).')
+                like = -np.inf
             else:
-                like = self.obj_func(obs, sim)
+                if not self.obj_func:
+                    like = hb.spotpy.objectivefunctions.kge_non_parametric(obs, sim)
+                elif isinstance(self.obj_func, str):
+                    like = evaluate(sim, obs, self.obj_func)
+                else:
+                    like = self.obj_func(obs, sim)
 
             if self.invert_obj_func:
                 like = -like

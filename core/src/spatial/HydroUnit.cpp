@@ -203,10 +203,23 @@ bool HydroUnit::IsOk() {
             sumLandCoverArea += brick->GetAreaFraction();
         }
         if (std::fabs(sumLandCoverArea - 1.0) > EPSILON_D) {
-            wxLogError(
-                _("The sum of the land cover fractions is not equal to 1, but equal to %f, with %f error margin."),
-                sumLandCoverArea, EPSILON_D);
-            return false;
+            if (std::fabs(sumLandCoverArea - 1.0) > 0.0001) {
+                wxLogError(_("The sum of the land cover fractions is not equal to 1, "
+                             "but equal to %f, with %f error margin."),
+                           sumLandCoverArea, 0.0001);
+                return false;
+            }
+
+            // If the error is small, we can fix it (e.g., due to rounding errors).
+            double diff = sumLandCoverArea - 1.0;
+
+            // Assign the difference to the first land cover brick with a positive area fraction.
+            for (auto brick : _landCoverBricks) {
+                if (brick->GetAreaFraction() > diff) {
+                    brick->SetAreaFraction(brick->GetAreaFraction() - diff);
+                    break;
+                }
+            }
         }
     }
 

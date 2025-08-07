@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 - Adding trainer support for failing simulations.
 - Fixing precision issue in land cover fraction check.
+- Allow for floating-point imprecision in initial glacier extent.
 
 
 ## 0.8.0 - 2025-07-16

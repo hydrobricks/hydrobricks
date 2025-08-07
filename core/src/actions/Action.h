@@ -11,16 +11,21 @@ class Action : public wxObject {
     ~Action() override = default;
 
     /**
-     * Reset the action to its initial state.
-     */
-    void Reset();
-
-    /**
      * Initialize the action.
      *
      * @return true if the initialization was successful.
      */
-    bool virtual Init();
+    virtual bool Init();
+
+    /**
+     * Reset the action to its initial state.
+     */
+    virtual void Reset();
+
+    /**
+     * Reset the action cursor.
+     */
+    void ResetCursor();
 
     /**
      * Apply the action for a specific date.
@@ -28,7 +33,7 @@ class Action : public wxObject {
      * @param date the date of the action.
      * @return true if the action was applied successfully.
      */
-    bool virtual Apply(double date = 0);
+    virtual bool Apply(double date = 0);
 
     /**
      * Apply the recursive action, for a specific date.
@@ -36,7 +41,7 @@ class Action : public wxObject {
      * @param date the date of the action.
      * @return true if the action was applied successfully.
      */
-    bool virtual ApplyIfRecursive(const Time date);
+    virtual bool ApplyIfRecursive(const Time date);
 
     /**
      * Get the index for insertion in the sporadic dates vector.

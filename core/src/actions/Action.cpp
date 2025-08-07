@@ -7,12 +7,16 @@ Action::Action()
       _cursor(0),
       _recursive(false) {}
 
-void Action::Reset() {
+bool Action::Init() {
+    return true;
+}
+
+void Action::ResetCursor() {
     _cursor = 0;
 }
 
-bool Action::Init() {
-    return true;
+void Action::Reset() {
+    throw ConceptionIssue(_("Reset action not implemented for child action class."));
 }
 
 bool Action::Apply(double) {

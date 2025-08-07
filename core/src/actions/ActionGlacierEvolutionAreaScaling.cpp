@@ -56,6 +56,17 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
     return true;
 }
 
+void ActionGlacierEvolutionAreaScaling::Reset() {
+    // Set the land cover area fraction to 0 for all hydro units.
+    for (int id : _hydroUnitIds) {
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
+        unit->ChangeLandCoverAreaFraction(_landCoverName, 0);
+    }
+
+    // Re-initialize.
+    Init();
+}
+
 bool ActionGlacierEvolutionAreaScaling::Apply(double) {
     // Get the list of hydro units.
     auto subBasin = _manager->GetModel()->GetSubBasin();

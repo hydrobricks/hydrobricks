@@ -16,6 +16,17 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
     _areas.insert(_areas.begin() + index, area);
 }
 
+void ActionLandCoverChange::Reset() {
+    // Roll back all changes.
+    int nbChanges = static_cast<int>(_hydroUnitIds.size());
+    for (int i = nbChanges - 1; i >= 0; --i) {
+        HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[i]);
+        string landCoverName = _landCoverNames[_landCoverIds[i]];
+        double areaFraction = _areas[i] / unit->GetArea();
+        unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
+    }
+}
+
 bool ActionLandCoverChange::Apply(double) {
     wxASSERT(_sporadicDates.size() > _cursor);
     wxASSERT(_hydroUnitIds.size() > _cursor);

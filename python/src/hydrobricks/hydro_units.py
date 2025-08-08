@@ -328,14 +328,14 @@ class HydroUnits:
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
-        self.hydro_units.sort_values(
+        hydro_units = self.hydro_units.copy()
+        hydro_units.sort_values(
             by=('elevation', 'm'),
             ascending=False,
-            inplace=True,
-            ignore_index=True
+            inplace=True
         )
 
-        for _, row in self.hydro_units.iterrows():
+        for _, row in hydro_units.iterrows():
             self.settings.add_hydro_unit(
                 int(row['id'].values[0]),
                 float(row['area'].values[0]),

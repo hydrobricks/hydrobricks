@@ -13,7 +13,8 @@ ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
       _exp(nullptr),
       _minSlope(nullptr),
       _maxSlope(nullptr),
-      _minSnowHoldingDepth(nullptr) {}
+      _minSnowHoldingDepth(nullptr),
+      _maxSnowDepth(nullptr) {}
 
 bool ProcessLateralSnowSlide::IsOk() {
     return true;
@@ -25,6 +26,7 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
     modelSettings->AddProcessParameter("min_slope", 10.0f);
     modelSettings->AddProcessParameter("max_slope", 75.0f);
     modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
+    modelSettings->AddProcessParameter("max_snow_depth", -1.0f); // -1 means no limit
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
@@ -38,6 +40,7 @@ void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettin
     _minSlope = GetParameterValuePointer(processSettings, "min_slope");
     _maxSlope = GetParameterValuePointer(processSettings, "max_slope");
     _minSnowHoldingDepth = GetParameterValuePointer(processSettings, "min_snow_holding_depth");
+    _maxSnowDepth = GetParameterValuePointer(processSettings, "max_snow_depth");
 }
 
 vecDouble ProcessLateralSnowSlide::GetRates() {
@@ -65,6 +68,11 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
 
     // Ensure snow holding threshold is not less than the minimum defined
     snowHoldingThreshold = std::max(snowHoldingThreshold, *_minSnowHoldingDepth);
+
+    // If a maximum snow depth is defined, ensure it does not exceed it
+    if (*_maxSnowDepth > 0.0f) {
+        snowHoldingThreshold = std::min(snowHoldingThreshold, *_maxSnowDepth);
+    }
 
     // Calculate excess snow to be redistributed
     double excessSwe = 0.0;

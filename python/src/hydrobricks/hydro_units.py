@@ -294,10 +294,24 @@ class HydroUnits:
         field_name = self.prefix_fraction + land_cover_name
         ground_name = self.prefix_fraction + 'ground'
 
-        land_cover_area = land_cover_change.iloc[:, 1].values
-        land_cover_fraction = land_cover_area / self.hydro_units[('area', 'm2')]
-        self.hydro_units[(field_name, 'fraction')] = land_cover_fraction
-        self.hydro_units[(ground_name, 'fraction')] -= land_cover_fraction
+        # Apply land cover fractions one hydro unit at a time (order might differ)
+        for idx, row in land_cover_change.iterrows():
+            id = row['hydro_unit']
+            land_cover_area = row.iloc[1]
+
+            # Get the hydro unit row
+            hu_idx = self.hydro_units[self.hydro_units[('id', '-')] == id].index[0]
+            hu_area = self.hydro_units.loc[hu_idx, ('area', 'm2')]
+
+            # Compute the land cover fraction
+            fraction = land_cover_area / hu_area
+            if not (0 <= fraction <= 1):
+                raise ValueError(f'Land cover fraction {fraction} for '
+                                 f'hydro unit {id} is not in the range [0, 1].')
+
+            # Set the land cover fraction
+            self.hydro_units.loc[hu_idx, (field_name, 'fraction')] = fraction
+            self.hydro_units.loc[hu_idx, (ground_name, 'fraction')] -= fraction
 
         self.populate_bounded_instance()
 
@@ -317,7 +331,8 @@ class HydroUnits:
         self.hydro_units.sort_values(
             by=('elevation', 'm'),
             ascending=False,
-            inplace=True
+            inplace=True,
+            ignore_index=True
         )
 
         for _, row in self.hydro_units.iterrows():

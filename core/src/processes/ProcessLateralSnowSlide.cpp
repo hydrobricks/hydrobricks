@@ -89,6 +89,12 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
         return rates;
     }
 
+    // Cap the excess SWE to a maximum of 1000 mm to prevent unrealistic redistribution rates
+    if (excessSwe > 1000.0) {
+        wxLogDebug(_("Snow redistribution: excess SWE (%f mm) is too high, capping to 1000 mm."), excessSwe);
+        excessSwe = 1000.0;
+    }
+
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
         wxASSERT(_weights.size() > i);

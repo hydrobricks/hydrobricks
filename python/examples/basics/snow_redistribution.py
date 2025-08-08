@@ -61,7 +61,8 @@ for with_snow_redistribution in [True, False]:
             'snow_slide_min_slope': 10,
             'snow_slide_max_slope': 75,
             'snow_slide_min_snow_depth': 50,
-            'snow_slide_max_snow_depth': -1.0  # Not in the original method, but added for convenience. -1.0 means no limit.
+            'snow_slide_max_snow_depth': -1  # Not in the original method, but added
+                                             # for convenience. -1 means no limit.
         }
     else:
         params = {

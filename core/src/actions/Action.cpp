@@ -51,3 +51,25 @@ int Action::GetIndexForInsertion(double date) {
 
     return index;
 }
+
+double Action::CheckLandCoverAreaFraction(const string& name, int id, double fraction, double unitArea, double lcArea) {
+    // If close to 0, set to 0.
+    if (std::abs(fraction) < PRECISION) {
+        return 0.0;
+    }
+
+    // If close to 1, set to 1.
+    if (std::abs(1 - fraction) < PRECISION) {
+        return 1.0;
+    }
+
+    // If the fraction is not in the range [0, 1], raise an error.
+    if ((fraction < 0) || (fraction > 1)) {
+        wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
+        wxLogError(_("The unit area is %g, and the land cover area to assign is %g."), unitArea, lcArea);
+        wxLogError(_("Failed to set the '%s' area fraction for hydro unit %d."), name, id);
+        throw ConceptionIssue(wxString::Format(_("The fraction (%f) is not in the range [0 .. 1]"), fraction));
+    }
+
+    return fraction;
+}

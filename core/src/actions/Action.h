@@ -52,6 +52,18 @@ class Action : public wxObject {
     int GetIndexForInsertion(double date);
 
     /**
+     * Check if the land cover area fraction is valid.
+     *
+     * @param name the name of the land cover.
+     * @param id the ID of the hydro unit.
+     * @param fraction the area fraction to check.
+     * @param unitArea the area of the hydro unit.
+     * @param lcArea the area of the land cover.
+     * @return the corrected area fraction if it was invalid, or the original fraction if it was valid.
+     */
+    double CheckLandCoverAreaFraction(const string &name, int id, double fraction, double unitArea, double lcArea);
+
+    /**
      * Set the manager of the action.
      *
      * @param manager the manager to set.

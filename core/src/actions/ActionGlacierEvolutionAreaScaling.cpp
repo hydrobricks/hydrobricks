@@ -33,8 +33,11 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
         if (areaInModel == 0) {
             // If the glacier area is zero, initialize the fraction.
             double fraction = areaRef / unit->GetArea();
+            fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), areaRef);
             assert(fraction >= 0 && fraction <= 1);
-            unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
+            if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
+                return false;
+            }
         } else if (std::abs(areaInModel - areaRef) > PRECISION) {
             wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
                          "initial area (%g vs %g)."),
@@ -100,12 +103,15 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
         int row = static_cast<int>(glacierRetreatPc / rowPcIncrement);
 
         // Update the glacier area.
-        double newFraction = _tableArea(row, i) / unit->GetArea();
+        double newArea = _tableArea(row, i);
+        double newFraction = newArea / unit->GetArea();
+        newFraction = CheckLandCoverAreaFraction(_landCoverName, id, newFraction, unit->GetArea(), newArea);
         assert(newFraction >= 0 && newFraction <= 1);
-        unit->ChangeLandCoverAreaFraction(_landCoverName, newFraction);
+        if (!unit->ChangeLandCoverAreaFraction(_landCoverName, newFraction)) {
+            return false;
+        }
 
         // Update the glacier water equivalent to match the new area.
-        double newArea = _tableArea(row, i);
         double iceWE = iceVolume / newArea;  // Convert glacier water equivalent to mm w.e.
         brick->UpdateContent(iceWE, "ice");
     }

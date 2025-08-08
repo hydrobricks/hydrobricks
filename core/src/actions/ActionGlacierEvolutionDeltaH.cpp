@@ -35,8 +35,11 @@ bool ActionGlacierEvolutionDeltaH::Init() {
         if (areaInModel == 0) {
             // If the glacier area is zero, initialize the fraction.
             double fraction = areaRef / unit->GetArea();
+            fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), areaRef);
             assert(fraction >= 0 && fraction <= 1);
-            unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
+            if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
+                return false;
+            }
         } else if (std::abs(areaInModel - areaRef) > PRECISION) {
             wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
                          "initial area (%g vs %g)."),
@@ -104,8 +107,11 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
             int id = _hydroUnitIds[i];
             HydroUnit* unit = subBasin->GetHydroUnitById(id);
             double fraction = _tableArea(row, i) / unit->GetArea();
+            fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), _tableArea(row, i));
             assert(fraction >= 0 && fraction <= 1);
-            unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
+            if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
+                return false;
+            }
         }
         _lastRow = row;
     }

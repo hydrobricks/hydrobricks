@@ -23,6 +23,8 @@ void ActionLandCoverChange::Reset() {
         HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[i]);
         string landCoverName = _landCoverNames[_landCoverIds[i]];
         double areaFraction = _areas[i] / unit->GetArea();
+        areaFraction = CheckLandCoverAreaFraction(landCoverName, _hydroUnitIds[i], areaFraction, unit->GetArea(),
+                                                  _areas[i]);
         unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
     }
 }
@@ -37,6 +39,8 @@ bool ActionLandCoverChange::Apply(double) {
     HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[_cursor]);
     string landCoverName = _landCoverNames[_landCoverIds[_cursor]];
     double areaFraction = _areas[_cursor] / unit->GetArea();
+    areaFraction = CheckLandCoverAreaFraction(landCoverName, _hydroUnitIds[_cursor], areaFraction, unit->GetArea(),
+                                              _areas[_cursor]);
 
     return unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 }

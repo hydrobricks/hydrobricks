@@ -390,8 +390,7 @@ class ActionLandCoverChange(Action):
                 all_touched=all_touched
             )
 
-        unit_ids = np.unique(catchment.map_unit_ids)
-        unit_ids = unit_ids[unit_ids != 0]
+        unit_ids = catchment.hydro_units.hydro_units[('id', '-')].values
 
         glacier_area = np.zeros(len(unit_ids))
         bare_ice_area = np.zeros(len(unit_ids))

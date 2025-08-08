@@ -96,7 +96,11 @@ class HydroUnits:
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
 
-        self.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
+        # Check that the id column is present
+        if 'id' not in file_content.columns:
+            raise ValueError('The "id" column is required in the file.')
+        vals, _ = self._get_column_values_unit('id', file_content)
+        self.add_property(('id', '-'), vals, set_first=True)
 
         if column_elevation is not None:
             vals, unit = self._get_column_values_unit(column_elevation, file_content)
@@ -131,7 +135,7 @@ class HydroUnits:
                 vals, unit = self._get_column_values_unit('area', file_content)
                 self.add_property(('area', unit), vals)
             idx = self.prefix_fraction + 'ground'
-            self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
+            self.hydro_units[idx] = np.ones(len(self.hydro_units[('area', unit)]))
 
         if other_columns is not None:
             for prop, col in other_columns.items():
@@ -338,6 +342,9 @@ class HydroUnits:
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = float(row[self.prefix_fraction + cover_name].values[0])
+                if np.isnan(fraction):
+                    fraction = 0.0
+                assert 0 <= fraction <= 1
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str):
@@ -411,6 +418,8 @@ class HydroUnits:
             if name is None or name in ['-', '', ' '] or 'Unnamed' in name:
                 name = f'{i}'
             unit = str(get_unit_enum(col[1]))
+            if unit == 'no_unit':
+                unit = '-'
             new_column_names.append((name, unit))
 
         file_content.columns = pd.MultiIndex.from_tuples(new_column_names)

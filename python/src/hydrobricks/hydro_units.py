@@ -259,7 +259,7 @@ class HydroUnits:
         (e.g. ground), set them to 1.
         """
         if len(self.land_cover_names) == 1:
-            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1
+            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1.0
             return
 
         for cover_name in self.land_cover_names:
@@ -271,8 +271,8 @@ class HydroUnits:
         # Set the land cover fractions of 'ground' to 1 and the rest to 0
         for cover_name in self.land_cover_names:
             field_name = self.prefix_fraction + cover_name
-            self.hydro_units[(field_name, 'fraction')] = 0
-        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1
+            self.hydro_units[(field_name, 'fraction')] = 0.0
+        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1.0
 
     def initialize_from_land_cover_change(
             self,
@@ -328,14 +328,14 @@ class HydroUnits:
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
-        self.hydro_units.sort_values(
+        hydro_units = self.hydro_units.copy()
+        hydro_units.sort_values(
             by=('elevation', 'm'),
             ascending=False,
-            inplace=True,
-            ignore_index=True
+            inplace=True
         )
 
-        for _, row in self.hydro_units.iterrows():
+        for _, row in hydro_units.iterrows():
             self.settings.add_hydro_unit(
                 int(row['id'].values[0]),
                 float(row['area'].values[0]),

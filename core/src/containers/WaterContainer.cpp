@@ -63,6 +63,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             wxASSERT(*changeRate < 1000);
             if (*changeRate < 0) {
                 *changeRate = 0;
+            } else if (*changeRate > 1000) {
+                throw ConceptionIssue(
+                    wxString::Format(_("Change rate %f in process %s is too high."), *changeRate, process->GetName()));
             }
             wxASSERT(*changeRate > -EPSILON_D);
             outgoingRates.push_back(changeRate);
@@ -175,6 +178,10 @@ void WaterContainer::Finalize() {
     _contentChangeDynamic = 0;
     _contentChangeStatic = 0;
     wxASSERT(_content >= -PRECISION);
+    if (_content < -PRECISION) {
+        wxLogError(_("Water container %s has negative content (%f)."), GetParentBrick()->GetName(), _content);
+        _content = 0;
+    }
 }
 
 void WaterContainer::Reset() {

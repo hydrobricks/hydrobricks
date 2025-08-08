@@ -29,6 +29,11 @@ class ActionGlacierEvolutionAreaScaling : public Action {
     bool Init() override;
 
     /**
+     * Reset the action to its initial state.
+     */
+    void Reset() override;
+
+    /**
      * Apply the action.
      *
      * @param date date of the action.

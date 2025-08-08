@@ -15,6 +15,7 @@ void ActionsManager::SetModel(ModelHydro* model) {
 void ActionsManager::Reset() {
     _cursorManager = 0;
     for (auto action : _actions) {
+        action->ResetCursor();
         action->Reset();
     }
 }

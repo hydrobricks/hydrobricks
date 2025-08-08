@@ -21,6 +21,11 @@ class ActionLandCoverChange : public Action {
     void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
 
     /**
+     * Reset the action to its initial state.
+     */
+    void Reset() override;
+
+    /**
      * Apply the action to the model.
      *
      * @param date date of the action.

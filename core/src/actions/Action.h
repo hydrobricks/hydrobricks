@@ -11,16 +11,21 @@ class Action : public wxObject {
     ~Action() override = default;
 
     /**
-     * Reset the action to its initial state.
-     */
-    void Reset();
-
-    /**
      * Initialize the action.
      *
      * @return true if the initialization was successful.
      */
-    bool virtual Init();
+    virtual bool Init();
+
+    /**
+     * Reset the action to its initial state.
+     */
+    virtual void Reset();
+
+    /**
+     * Reset the action cursor.
+     */
+    void ResetCursor();
 
     /**
      * Apply the action for a specific date.
@@ -28,7 +33,7 @@ class Action : public wxObject {
      * @param date the date of the action.
      * @return true if the action was applied successfully.
      */
-    bool virtual Apply(double date = 0);
+    virtual bool Apply(double date = 0);
 
     /**
      * Apply the recursive action, for a specific date.
@@ -36,7 +41,7 @@ class Action : public wxObject {
      * @param date the date of the action.
      * @return true if the action was applied successfully.
      */
-    bool virtual ApplyIfRecursive(const Time date);
+    virtual bool ApplyIfRecursive(const Time date);
 
     /**
      * Get the index for insertion in the sporadic dates vector.
@@ -45,6 +50,18 @@ class Action : public wxObject {
      * @return the index for insertion.
      */
     int GetIndexForInsertion(double date);
+
+    /**
+     * Check if the land cover area fraction is valid.
+     *
+     * @param name the name of the land cover.
+     * @param id the ID of the hydro unit.
+     * @param fraction the area fraction to check.
+     * @param unitArea the area of the hydro unit.
+     * @param lcArea the area of the land cover.
+     * @return the corrected area fraction if it was invalid, or the original fraction if it was valid.
+     */
+    double CheckLandCoverAreaFraction(const string& name, int id, double fraction, double unitArea, double lcArea);
 
     /**
      * Set the manager of the action.

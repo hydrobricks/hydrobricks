@@ -35,11 +35,15 @@ bool ActionGlacierEvolutionDeltaH::Init() {
         if (areaInModel == 0) {
             // If the glacier area is zero, initialize the fraction.
             double fraction = areaRef / unit->GetArea();
+            fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), areaRef);
             assert(fraction >= 0 && fraction <= 1);
-            unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
-        } else if (areaInModel != areaRef) {
-            wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table initial area."),
-                       id);
+            if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
+                return false;
+            }
+        } else if (std::abs(areaInModel - areaRef) > PRECISION) {
+            wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
+                         "initial area (%g vs %g)."),
+                       id, areaInModel, areaRef);
             return false;
         }
 
@@ -55,6 +59,17 @@ bool ActionGlacierEvolutionDeltaH::Init() {
     }
 
     return true;
+}
+
+void ActionGlacierEvolutionDeltaH::Reset() {
+    // Set the land cover area fraction to 0 for all hydro units.
+    for (int id : _hydroUnitIds) {
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
+        unit->ChangeLandCoverAreaFraction(_landCoverName, 0);
+    }
+
+    // Re-initialize.
+    Init();
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {
@@ -92,8 +107,11 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
             int id = _hydroUnitIds[i];
             HydroUnit* unit = subBasin->GetHydroUnitById(id);
             double fraction = _tableArea(row, i) / unit->GetArea();
+            fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), _tableArea(row, i));
             assert(fraction >= 0 && fraction <= 1);
-            unit->ChangeLandCoverAreaFraction(_landCoverName, fraction);
+            if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
+                return false;
+            }
         }
         _lastRow = row;
     }

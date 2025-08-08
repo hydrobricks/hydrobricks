@@ -195,6 +195,10 @@ void Process::StoreInOutgoingFlux(double* rate, int index) {
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
     wxASSERT(_outputs.size() > connectionIndex);
     wxASSERT(rate >= 0);
+    if (rate < 0) {
+        wxLogError(_("Negative rate (%f) in process %s, connection %d."), rate, GetName(), connectionIndex);
+        rate = 0;
+    }
     if (rate > PRECISION) {
         _outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
         _container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);

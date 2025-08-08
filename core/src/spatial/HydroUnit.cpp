@@ -228,7 +228,7 @@ bool HydroUnit::IsOk() {
 
 bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
     if ((fraction < 0) || (fraction > 1)) {
-        wxLogError(_("The given fraction (%f) is not in the allowed range [0 .. 1]"), fraction);
+        wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
         return false;
     }
     for (auto brick : _landCoverBricks) {

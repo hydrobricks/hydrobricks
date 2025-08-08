@@ -61,7 +61,7 @@ class Action : public wxObject {
      * @param lcArea the area of the land cover.
      * @return the corrected area fraction if it was invalid, or the original fraction if it was valid.
      */
-    double CheckLandCoverAreaFraction(const string &name, int id, double fraction, double unitArea, double lcArea);
+    double CheckLandCoverAreaFraction(const string& name, int id, double fraction, double unitArea, double lcArea);
 
     /**
      * Set the manager of the action.

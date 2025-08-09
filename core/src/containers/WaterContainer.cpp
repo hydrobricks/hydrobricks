@@ -60,10 +60,10 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                 continue;
             }
             wxASSERT(changeRate);
-            wxASSERT(*changeRate < 1000);
+            wxASSERT(*changeRate < 10000);
             if (*changeRate < 0) {
                 *changeRate = 0;
-            } else if (*changeRate > 1000) {
+            } else if (*changeRate > 10000) {
                 throw ConceptionIssue(
                     wxString::Format(_("Change rate %f in process %s is too high."), *changeRate, process->GetName()));
             }

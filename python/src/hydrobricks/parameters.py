@@ -958,6 +958,69 @@ class ParameterSet:
                             mandatory=True
                         )
 
+            if 'snow_redistribution' in options:
+                if options['snow_redistribution'] == 'transport:snow_slide':
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='coeff',
+                        unit='-',
+                        aliases=['snow_slide_coeff'],
+                        min_value=0,
+                        max_value=10000,
+                        default_value=3178.4,
+                        mandatory=False
+                    )
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='exp',
+                        unit='-',
+                        aliases=['snow_slide_exp'],
+                        min_value=-5,
+                        max_value=0,
+                        default_value=-1.998,
+                        mandatory=False
+                    )
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='min_slope',
+                        unit='°',
+                        aliases=['snow_slide_min_slope'],
+                        min_value=0,
+                        max_value=45,
+                        default_value=10,
+                        mandatory=False
+                    )
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='max_slope',
+                        unit='°',
+                        aliases=['snow_slide_max_slope'],
+                        min_value=45,
+                        max_value=90,
+                        default_value=75,
+                        mandatory=False
+                    )
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='min_snow_holding_depth',
+                        unit='mm',
+                        aliases=['snow_slide_min_snow_depth'],
+                        min_value=0,
+                        max_value=1000,
+                        default_value=50,
+                        mandatory=False
+                    )
+                    self.define_parameter(
+                        component='type:snowpack',
+                        name='max_snow_depth',
+                        unit='mm',
+                        aliases=['snow_slide_max_snow_depth'],
+                        min_value=-1,
+                        max_value=50000,
+                        default_value=-1,
+                        mandatory=False
+                    )
+
     @staticmethod
     def _check_min_max_consistency(min_value: float, max_value: float):
         if min_value is None or max_value is None:

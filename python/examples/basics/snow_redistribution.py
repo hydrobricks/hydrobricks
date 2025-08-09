@@ -48,14 +48,33 @@ for with_snow_redistribution in [True, False]:
 
     # Parameters
     parameters = socont.generate_parameters()
-    parameters.set_values({
-        'A': 300,
-        'a_snow': 4,
-        'k_slow_1': 0.9,
-        'k_slow_2': 0.8,
-        'k_quick': 1,
-        'percol': 9.8
-    })
+    if with_snow_redistribution:
+        params = {
+            'A': 300,
+            'a_snow': 4,
+            'k_slow_1': 0.9,
+            'k_slow_2': 0.8,
+            'k_quick': 1,
+            'percol': 9.8,
+            'snow_slide_coeff': 3178.4,
+            'snow_slide_exp': -1.998,
+            'snow_slide_min_slope': 10,
+            'snow_slide_max_slope': 75,
+            'snow_slide_min_snow_depth': 50,
+            'snow_slide_max_snow_depth': -1  # Not in the original method, but added
+                                             # for convenience. -1 means no limit.
+        }
+    else:
+        params = {
+            'A': 300,
+            'a_snow': 4,
+            'k_slow_1': 0.9,
+            'k_slow_2': 0.8,
+            'k_quick': 1,
+            'percol': 9.8
+        }
+
+    parameters.set_values(params)
 
     # Hydro units
     hydro_units = hb.HydroUnits()

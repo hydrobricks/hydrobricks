@@ -262,6 +262,21 @@ class TimeSeries2D(TimeSeries):
                 raise ValueError("The time series based on 'day_of_year' must have "
                                  "a length of 366.")
 
+        # If we are using the 'apply_data_gradient' option, we need to first compute
+        # the reference elevation for each data grid cell.
+        dem_dx, dem_dy = None, None
+        if apply_data_gradient:
+            data_grid = data_var[0].copy()
+            dem_reproj = dem.rio.reproject_match(
+                data_grid,
+                Resampling=hb.rasterio.enums.Resampling.average,
+                nodata=np.nan,
+            )
+
+            # Compute the gradient of the DEM along the x and y axes
+            dem_dx = dem_reproj.diff('x')
+            dem_dy = dem_reproj.diff('y')
+
         # Create a xarray variable containing the data cell indices
         data_idx = data_var[0].copy()
         data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)

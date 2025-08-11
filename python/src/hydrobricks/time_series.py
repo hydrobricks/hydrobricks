@@ -278,8 +278,8 @@ class TimeSeries2D(TimeSeries):
             dem_dy = dem_reproj.diff('y')
 
             # Replace small values (<50m) with NaN to avoid irrelevant gradients
-            dem_dx = hb.xr.where(np.abs(dem_dx) < 50, np.nan, dem_dx)
-            dem_dy = hb.xr.where(np.abs(dem_dy) < 50, np.nan, dem_dy)
+            dem_dx = hb.xr.where(np.abs(dem_dx) < 50, np.nan, dem_dx).compute()
+            dem_dy = hb.xr.where(np.abs(dem_dy) < 50, np.nan, dem_dy).compute()
 
             # If both gradients contain more than 60% NaN values, raise a warning
             if (dem_dx.isnull().sum() / dem_dx.size > 0.6 and
@@ -328,12 +328,20 @@ class TimeSeries2D(TimeSeries):
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             # Submit the tasks for each time step to the executor
-            futures = [
-                executor.submit(self._extract_time_step_data_weights,
-                                data_var, unit_weights, t_block,
-                                weights_block_size)
-                for t_block in range(n_steps)
-            ]
+            if apply_data_gradient:
+                futures = [
+                    executor.submit(self._extract_time_step_data_weights_with_gradient,
+                                    data_var, unit_weights, t_block,
+                                    weights_block_size, dem_dx, dem_dy)
+                    for t_block in range(n_steps)
+                ]
+            else:
+                futures = [
+                    executor.submit(self._extract_time_step_data_weights,
+                                    data_var, unit_weights, t_block,
+                                    weights_block_size)
+                    for t_block in range(n_steps)
+                ]
 
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
@@ -444,3 +452,32 @@ class TimeSeries2D(TimeSeries):
         y_ref_max = ref_data[y_dim].max().item()
 
         return x_ref_min, x_ref_max, y_ref_min, y_ref_max
+
+    @staticmethod
+    def _fill_nan_gradients(dat: hb.xr.DataArray) -> hb.xr.DataArray:
+
+        while np.isnan(dat).any():
+            # Interpolate NaN values in the gradients
+            dat = dat.interpolate_na(dim="x").interpolate_na(dim="y")
+
+            # Replace NaN values at the edges
+            arr = dat.values
+            x_ax = dat.get_axis_num('x')
+            y_ax = dat.get_axis_num('y')
+
+            def _replace_edge(axis, idx, neighbor_idx):
+                target = [slice(None)] * arr.ndim
+                neighbor = [slice(None)] * arr.ndim
+                target[axis] = idx
+                neighbor[axis] = neighbor_idx
+                m = np.isnan(arr[tuple(target)])
+                arr[tuple(target)][m] = arr[tuple(neighbor)][m]
+
+            _replace_edge(x_ax, 0, 1)  # left
+            _replace_edge(x_ax, -1, -2)  # right
+            _replace_edge(y_ax, 0, 1)  # bottom
+            _replace_edge(y_ax, -1, -2)  # top
+
+            dat.data = arr
+
+        return dat

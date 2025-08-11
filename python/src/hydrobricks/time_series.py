@@ -277,6 +277,17 @@ class TimeSeries2D(TimeSeries):
             dem_dx = dem_reproj.diff('x')
             dem_dy = dem_reproj.diff('y')
 
+            # Replace small values (<50m) with NaN to avoid irrelevant gradients
+            dem_dx = hb.xr.where(np.abs(dem_dx) < 50, np.nan, dem_dx)
+            dem_dy = hb.xr.where(np.abs(dem_dy) < 50, np.nan, dem_dy)
+
+            # If both gradients contain more than 60% NaN values, raise a warning
+            if (dem_dx.isnull().sum() / dem_dx.size > 0.6 and
+                    dem_dy.isnull().sum() / dem_dy.size > 0.6):
+                print("More than 60% of the DEM gradients are too small. "
+                      "Defaulting to apply_data_gradient=False.")
+                apply_data_gradient = False
+
         # Create a xarray variable containing the data cell indices
         data_idx = data_var[0].copy()
         data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)

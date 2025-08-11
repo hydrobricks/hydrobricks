@@ -546,7 +546,7 @@ class Forcing:
                                  f'Here: {len(gradient)}')
 
         # Apply methods
-        for i_unit, unit in hydro_units.iterrows():
+        for i_unit, (_, unit) in enumerate(hydro_units.iterrows()):
 
             elevation = unit['elevation'].values
 
@@ -705,7 +705,7 @@ class Forcing:
         # Loop over the hydro units to compute the PET (pyet xarray implementation is
         # not working as expected in multiplicative operations)
         pet = np.zeros((len(self.data2D.time), len(self.hydro_units)))
-        for i_unit, unit in self.hydro_units.iterrows():
+        for i_unit, (_, unit) in enumerate(self.hydro_units.iterrows()):
             if use_unit_elevation:
                 pyet_args['elevation'] = unit['elevation'].values
             if use_unit_latitude:

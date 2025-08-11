@@ -295,7 +295,7 @@ class HydroUnits:
         ground_name = self.prefix_fraction + 'ground'
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
-        for idx, row in land_cover_change.iterrows():
+        for _, row in land_cover_change.iterrows():
             id = row['hydro_unit']
             land_cover_area = row.iloc[1]
 

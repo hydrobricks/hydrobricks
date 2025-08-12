@@ -284,11 +284,12 @@ class Catchment:
         if self.topography.slope is None or self.topography.aspect is None:
             self.topography.calculate_slope_aspect()
 
-        unit_ids = np.unique(self.map_unit_ids)
-        unit_ids = unit_ids[unit_ids != 0]
-
         if 'id' not in self.hydro_units.hydro_units.columns:
+            unit_ids = np.unique(self.map_unit_ids)
+            unit_ids = unit_ids[unit_ids != 0]
             self.hydro_units.add_property(('id', '-'), unit_ids, set_first=True)
+        else:
+            unit_ids = self.hydro_units.hydro_units['id'].values.tolist()
 
         res_area = []
         res_elevation = []

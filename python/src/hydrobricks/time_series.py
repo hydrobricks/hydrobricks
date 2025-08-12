@@ -91,10 +91,11 @@ class TimeSeries2D(TimeSeries):
             dim_time: str = 'time',
             dim_x: str = 'x',
             dim_y: str = 'y',
-            hydro_units: HydroUnits | None = None,
+            hydro_units: object | None = None,
             raster_hydro_units: str | Path | None = None,
             weights_block_size: int = 100,
             apply_data_gradient: bool = True,
+            gradient_type: str = 'additive',
             dem_path: str | Path | None = None
     ):
         """
@@ -133,6 +134,9 @@ class TimeSeries2D(TimeSeries):
             If True, elevation-based gradients will be retrieved from the data and
             applied to the hydro units (e.g., for temperature and precipitation).
             If False, the data will be regridded without applying any gradient.
+        gradient_type
+            Type of gradient to apply. Can be 'additive' or 'multiplicative'.
+            Default: 'additive'.
         dem_path
             DEM to use for the spatialization (computation of the gradients).
             Needed if `apply_data_gradient` is True.
@@ -176,8 +180,7 @@ class TimeSeries2D(TimeSeries):
                 unit_ids = unit_ids.rio.reproject(f'epsg:{data_crs}')
 
         # Get list of hydro unit ids
-        unit_ids_list = np.unique(unit_ids)
-        unit_ids_list = unit_ids_list[unit_ids_list != 0]
+        unit_ids_list = hydro_units['id'].values.squeeze()
         unit_ids_nb = len(unit_ids_list)
 
         # Check if the file has the dimension 'day_of_year'
@@ -264,7 +267,7 @@ class TimeSeries2D(TimeSeries):
 
         # If we are using the 'apply_data_gradient' option, we need to first compute
         # the reference elevation for each data grid cell.
-        dem_dx, dem_dy = None, None
+        dem_data, dem_dx, dem_dy, hu_elevation = None, None, None, None
         if apply_data_gradient:
             data_grid = data_var[0].copy()
             dem_reproj = dem.rio.reproject_match(
@@ -272,6 +275,7 @@ class TimeSeries2D(TimeSeries):
                 Resampling=hb.rasterio.enums.Resampling.average,
                 nodata=np.nan,
             )
+            dem_data = dem_reproj.values
 
             # Compute the gradient of the DEM along the x and y axes
             dem_dx = dem_reproj.diff('x')
@@ -287,6 +291,9 @@ class TimeSeries2D(TimeSeries):
                 print("More than 60% of the DEM gradients are too small. "
                       "Defaulting to apply_data_gradient=False.")
                 apply_data_gradient = False
+
+            # Extract the elevation for each hydro unit
+            hu_elevation = hydro_units['elevation'].to_numpy().squeeze()
 
         # Create a xarray variable containing the data cell indices
         data_idx = data_var[0].copy()
@@ -332,7 +339,8 @@ class TimeSeries2D(TimeSeries):
                 futures = [
                     executor.submit(self._extract_time_step_data_weights_with_gradient,
                                     data_var, unit_weights, t_block,
-                                    weights_block_size, dem_dx, dem_dy)
+                                    weights_block_size, gradient_type,
+                                    dem_data, dem_dx, dem_dy, hu_elevation)
                     for t_block in range(n_steps)
                 ]
             else:
@@ -358,6 +366,97 @@ class TimeSeries2D(TimeSeries):
         # Print elapsed time
         elapsed_time = time.time() - start_time
         print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
+
+    def _extract_time_step_data_weights_with_gradient(
+            self,
+            data_var: hb.xr.DataArray,
+            unit_weights: list,
+            i_block: int,
+            block_size: int,
+            gradient_type: str,
+            dem: np.ndarray,
+            dem_dx: hb.xr.DataArray,
+            dem_dy: hb.xr.DataArray,
+            hu_elevation: np.ndarray
+    ):
+        i_start = i_block * block_size
+        i_end = min((i_block + 1) * block_size, len(self.time))
+        i_end = min(i_end, data_var.shape[0])
+        if i_start >= len(self.time):
+            return
+
+        print(f"Extracting {self.time[i_start]}")
+
+        if gradient_type == 'additive':
+            dat_dx = data_var[i_start:i_end].diff('x')
+            dat_dy = data_var[i_start:i_end].diff('y')
+        elif gradient_type == 'multiplicative':
+            data_xr = data_var[i_start:i_end]
+            dat_dx = data_xr.diff('x')
+            dat_dy = data_xr.diff('y')
+            zero_mask = np.abs(data_xr) < 1e-10
+            with np.errstate(invalid='ignore', divide='ignore'):
+                dat_dx_np = np.where(
+                    zero_mask.isel(x=slice(1, None)).values,
+                    0,
+                    dat_dx.values / data_xr.isel(x=slice(1, None)).values
+                )
+                dat_dy_np = np.where(
+                    zero_mask.isel(y=slice(1, None)).values,
+                    0,
+                    dat_dy.values / data_xr.isel(y=slice(1, None)).values
+                )
+
+            dat_dx.data = dat_dx_np
+            dat_dy.data = dat_dy_np
+
+        else:
+            raise ValueError(f"Unknown gradient type: {gradient_type}. "
+                             "Use 'additive' or 'multiplicative'.")
+
+        # Compute the gradient of the data along the x and y axes
+        dat_dx = dat_dx / dem_dx
+        dat_dy = dat_dy / dem_dy
+
+        # Fill NaN values
+        dat_dx = self._fill_nan_gradients(dat_dx)
+        dat_dy = self._fill_nan_gradients(dat_dy)
+
+        # Compute the rolling mean of the gradients
+        dat_dx = dat_dx.rolling(x=3, y=3, center=True, min_periods=1).mean()
+        dat_dy = dat_dy.rolling(x=3, y=3, center=True, min_periods=1).mean()
+
+        # Combine the gradients into a single gradient
+        dat_dxy = self._mean_xy_gradient(dat_dx, dat_dy).to_numpy()
+
+        if dat_dxy.shape[1:] != data_var.shape[1:]:
+            raise ValueError("The shape of the data gradient does not match the "
+                             "shape of the data variable. "
+                             f"Data shape: {data_var.shape}, "
+                             f"Gradient shape: {dat_dxy.shape}")
+
+        if dem.shape != data_var.shape[1:]:
+            raise ValueError("The shape of the DEM does not match the "
+                             "shape of the data variable. "
+                             f"Data shape: {data_var.shape}, "
+                             f"DEM shape: {dem.shape}")
+
+        # Extract data for each unit
+        data_array = data_var[i_start:i_end].to_numpy()
+        for u, unit_weight in enumerate(unit_weights):
+            data = data_array[:, unit_weight > 0]
+            weights = unit_weight[unit_weight > 0]
+            dh = dem[unit_weight > 0] - hu_elevation[u]
+            dh[np.isnan(dh)] = 0
+            grads = dat_dxy[:, unit_weight > 0]
+            if gradient_type == 'additive':
+                data = data + grads * dh
+            elif gradient_type == 'multiplicative':
+                grads_dh = grads * dh
+                grads_dh[grads_dh < -1] = -1
+                data = data * (1 + grads_dh)
+
+            self.data[-1][i_start:i_end, u] = np.nansum(data * weights)
 
     def _extract_time_step_data_weights(
             self,
@@ -481,3 +580,42 @@ class TimeSeries2D(TimeSeries):
             dat.data = arr
 
         return dat
+
+    @staticmethod
+    def _mean_xy_gradient(
+            dat_dx: hb.xr.DataArray,
+            dat_dy: hb.xr.DataArray
+    ) -> hb.xr.DataArray:
+        """
+        Create a new grid whose 'x' coordinate comes from dat_dy and 'y' coordinate
+        comes from dat_dx. Reindex both arrays to this grid using nearest neighbour
+        for missing edges. Return the mean.
+        """
+        # Ensure both have x and y dims
+        if "x" not in dat_dx.dims or "y" not in dat_dx.dims:
+            raise ValueError("dat_dx must have 'x' and 'y' dimensions")
+        if "x" not in dat_dy.dims or "y" not in dat_dy.dims:
+            raise ValueError("dat_dy must have 'x' and 'y' dimensions")
+
+        # Target coordinates
+        coords = {}
+        for dim in dat_dx.dims:
+            if dim == "x":
+                coords["x"] = dat_dy["x"]
+            elif dim == "y":
+                coords["y"] = dat_dx["y"]
+            else:
+                coords[dim] = dat_dx[dim] if dim in dat_dx.coords else dat_dy[dim]
+
+        # Create target grid
+        dat_dxy = hb.xr.DataArray(
+            dims=dat_dx.dims,
+            coords=coords
+        )
+
+        # Reindex both arrays to this grid
+        dat_dx_expanded = dat_dx.reindex_like(dat_dxy, method="nearest")
+        dat_dy_expanded = dat_dy.reindex_like(dat_dxy, method="nearest")
+
+        # Compute mean
+        return (dat_dx_expanded + dat_dy_expanded) / 2

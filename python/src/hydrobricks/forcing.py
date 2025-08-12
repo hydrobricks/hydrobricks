@@ -640,8 +640,15 @@ class Forcing:
             raster_hydro_units = kwargs.get('raster_hydro_units', '')
             if variable in {self.Variable.P, self.Variable.T}:
                 apply_data_gradient = kwargs.get('apply_data_gradient', True)
+                if variable == self.Variable.P:
+                    gradient_type = kwargs.get('gradient_type', 'multiplicative')
+                elif variable == self.Variable.T:
+                    gradient_type = kwargs.get('gradient_type', 'additive')
+                else:
+                    gradient_type = kwargs.get('gradient_type', 'additive')
             else:
                 apply_data_gradient = kwargs.get('apply_data_gradient', False)
+                gradient_type = kwargs.get('gradient_type', 'additive')
 
             dem_path = None
             if apply_data_gradient:
@@ -674,6 +681,7 @@ class Forcing:
                 hydro_units=self.hydro_units,
                 raster_hydro_units=raster_hydro_units,
                 apply_data_gradient=apply_data_gradient,
+                gradient_type=gradient_type,
                 dem_path=dem_path
             )
             self.data2D.data_name.append(variable)

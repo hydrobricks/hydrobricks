@@ -1,3 +1,5 @@
+# pytest: filterwarnings = ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning
+
 import os
 import tempfile
 from pathlib import Path
@@ -330,7 +332,7 @@ def test_load_file(forcing: hb.Forcing, parameters: hb.ParameterSet,
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         forcing.save_as(tmp_dir + '/test.nc')
-        forcing2 = hb.Forcing(hydro_units=hydro_units)
+        forcing2 = hb.Forcing(hydro_units)
         forcing2.load_from(tmp_dir + '/test.nc')
         assert forcing2.data2D.data_name == forcing.data2D.data_name
         assert len(forcing2.data2D.time) == len(forcing.data2D.time)
@@ -351,13 +353,14 @@ def test_regrid_from_netcdf_single_file(hydro_units: hb.HydroUnits):
         var_name='RhiresD',
         dim_x='E',
         dim_y='N',
-        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif'
+        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif',
+        apply_data_gradient=False
     )
     forcing.apply_operations()
 
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape[0] == 3
-    assert forcing.data2D.data[0].shape[1] == 36
+    assert forcing.data2D.data[0].shape[1] == 35
 
 
 def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
@@ -373,10 +376,44 @@ def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
         var_name='RhiresD',
         dim_x='E',
         dim_y='N',
-        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif'
+        raster_hydro_units=CATCHMENT_DIR / 'unit_ids.tif',
+        apply_data_gradient=False
     )
     forcing.apply_operations()
 
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape[0] == 3
-    assert forcing.data2D.data[0].shape[1] == 36
+    assert forcing.data2D.data[0].shape[1] == 35
+
+
+def test_regrid_from_netcdf_with_data_gradient():
+    if not has_gridded_data_packages():
+        return
+
+    catchment = hb.Catchment(CATCHMENT_DIR / 'outline.shp')
+    catchment.extract_dem(CATCHMENT_DIR / 'dem.tif')
+    catchment.create_elevation_bands(
+        method='equal_intervals',
+        distance=50
+    )
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment.save_unit_ids_raster(Path(tmp_dir))
+        assert (Path(tmp_dir) / 'unit_ids.tif').exists()
+
+        forcing = hb.Forcing(catchment)
+        forcing.spatialize_from_gridded_data(
+            variable='precipitation',
+            path=CATCHMENT_DIR / 'gridded_precip.nc',
+            data_crs=2056,
+            var_name='RhiresD',
+            dim_x='E',
+            dim_y='N',
+            raster_hydro_units=Path(tmp_dir) / 'unit_ids.tif',
+            apply_data_gradient=True
+        )
+        forcing.apply_operations()
+
+        assert len(forcing.data2D.data) == 1
+        assert forcing.data2D.data[0].shape[0] == 3
+        assert forcing.data2D.data[0].shape[1] == 36

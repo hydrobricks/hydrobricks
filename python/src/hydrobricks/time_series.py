@@ -557,29 +557,31 @@ class TimeSeries2D(TimeSeries):
     @staticmethod
     def _fill_nan_gradients(dat: hb.xr.DataArray) -> hb.xr.DataArray:
 
-        while np.isnan(dat).any():
-            # Interpolate NaN values in the gradients
-            dat = dat.interpolate_na(dim="x").interpolate_na(dim="y")
+        # Fill NaN values in the gradients (loop twice)
+        for _ in range(2):
+            if np.isnan(dat).any():
+                # Interpolate NaN values in the gradients
+                dat = dat.interpolate_na(dim="x").interpolate_na(dim="y")
 
-            # Replace NaN values at the edges
-            arr = dat.values
-            x_ax = dat.get_axis_num('x')
-            y_ax = dat.get_axis_num('y')
+                # Replace NaN values at the edges
+                arr = dat.values
+                x_ax = dat.get_axis_num('x')
+                y_ax = dat.get_axis_num('y')
 
-            def _replace_edge(axis, idx, neighbor_idx):
-                target = [slice(None)] * arr.ndim
-                neighbor = [slice(None)] * arr.ndim
-                target[axis] = idx
-                neighbor[axis] = neighbor_idx
-                m = np.isnan(arr[tuple(target)])
-                arr[tuple(target)][m] = arr[tuple(neighbor)][m]
+                def _replace_edge(axis, idx, neighbor_idx):
+                    target = [slice(None)] * arr.ndim
+                    neighbor = [slice(None)] * arr.ndim
+                    target[axis] = idx
+                    neighbor[axis] = neighbor_idx
+                    m = np.isnan(arr[tuple(target)])
+                    arr[tuple(target)][m] = arr[tuple(neighbor)][m]
 
-            _replace_edge(x_ax, 0, 1)  # left
-            _replace_edge(x_ax, -1, -2)  # right
-            _replace_edge(y_ax, 0, 1)  # bottom
-            _replace_edge(y_ax, -1, -2)  # top
+                _replace_edge(x_ax, 0, 1)  # left
+                _replace_edge(x_ax, -1, -2)  # right
+                _replace_edge(y_ax, 0, 1)  # bottom
+                _replace_edge(y_ax, -1, -2)  # top
 
-            dat.data = arr
+                dat.data = arr
 
         return dat
 

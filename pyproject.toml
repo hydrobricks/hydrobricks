@@ -4,7 +4,7 @@ version = "0.8.2"
 author = "Pascal Horton"
 author_email = "pascal.horton@unibe.ch"
 maintainers = [
-    { name = "Pascal Horton" }
+    { name = "Pascal Horton" },
     { name = "Anne-Laure Argentin" }
 ]
 description = "A modular hydrological modelling framework"

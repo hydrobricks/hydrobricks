@@ -48,6 +48,7 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     float* _minSlope;             // Minimum slope for snow holding [°]
     float* _maxSlope;             // Maximum slope for snow holding [°]
     float* _minSnowHoldingDepth;  // Minimum snow holding depth (when slope > maxSlope) [mm]
+    float* _maxSnowDepth;         // Maximum snow depth (not in the original method) [mm]
 
     /**
      * @copydoc Process::GetRates()

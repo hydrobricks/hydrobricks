@@ -207,7 +207,7 @@ class GlacierEvolutionAreaScaling:
         self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
         # Update the dataframe with the ice thickness
-        for i, row in glacier_df.iterrows():
+        for i_row, (idx, row) in enumerate(glacier_df.iterrows()):
             unit_id = row[('hydro_unit_id', '-')]
 
             # Get the ice thickness for the corresponding band and unit
@@ -216,7 +216,7 @@ class GlacierEvolutionAreaScaling:
             masked_thickness = masked_thickness[masked_thickness > 0]
             masked_thickness = masked_thickness[~np.isnan(masked_thickness)]
 
-            self.px_ice_we[0, i] = masked_thickness * ICE_WE * 1000
+            self.px_ice_we[0, i_row] = masked_thickness * ICE_WE * 1000
 
             # Compute the mean thickness
             if masked_thickness.size > 0:
@@ -224,7 +224,7 @@ class GlacierEvolutionAreaScaling:
             else:
                 mean_thickness = 0.0
 
-            glacier_df.at[i, ('glacier_thickness', 'm')] = mean_thickness
+            glacier_df.at[idx, ('glacier_thickness', 'm')] = mean_thickness
 
         self.glacier_df = glacier_df
 

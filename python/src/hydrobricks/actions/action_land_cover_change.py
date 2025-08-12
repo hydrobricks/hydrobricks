@@ -390,8 +390,7 @@ class ActionLandCoverChange(Action):
                 all_touched=all_touched
             )
 
-        unit_ids = np.unique(catchment.map_unit_ids)
-        unit_ids = unit_ids[unit_ids != 0]
+        unit_ids = catchment.hydro_units.hydro_units[('id', '-')].values
 
         glacier_area = np.zeros(len(unit_ids))
         bare_ice_area = np.zeros(len(unit_ids))
@@ -559,12 +558,12 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _remove_rows_with_no_changes(file_content: pd.DataFrame):
-        for row, change in file_content.iterrows():
+        for idx, (row, change) in enumerate(file_content.iterrows()):
             diff = change.to_numpy(dtype=float)[1:]
             diff = diff[0:-1] - diff[1:]
             for i_diff, v_diff in enumerate(diff):
                 if v_diff == 0:
-                    file_content.iloc[row, i_diff + 2] = np.nan
+                    file_content.iloc[idx, i_diff + 2] = np.nan
 
     def _populate_bounded_instance(
             self,

@@ -183,7 +183,7 @@ class GlacierEvolutionDeltaH:
                 self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
             # Update the dataframe with the ice thickness
-            for i, row in glacier_df.iterrows():
+            for i_row, (idx, row) in enumerate(glacier_df.iterrows()):
                 band_id = row[('band_id', '-')]
                 unit_id = row[('hydro_unit_id', '-')]
 
@@ -195,7 +195,7 @@ class GlacierEvolutionDeltaH:
                 masked_thickness = masked_thickness[~np.isnan(masked_thickness)]
 
                 if self.pixel_based_approach:
-                    self.px_ice_we[0, i] = masked_thickness * ICE_WE * 1000
+                    self.px_ice_we[0, i_row] = masked_thickness * ICE_WE * 1000
 
                 # Compute the mean thickness
                 if masked_thickness.size > 0:
@@ -203,7 +203,7 @@ class GlacierEvolutionDeltaH:
                 else:
                     mean_thickness = 0.0
 
-                glacier_df.at[i, ('glacier_thickness', 'm')] = mean_thickness
+                glacier_df.at[idx, ('glacier_thickness', 'm')] = mean_thickness
 
         else:
             # Estimation of the overall ice volume using the Bahr et al. (1997)

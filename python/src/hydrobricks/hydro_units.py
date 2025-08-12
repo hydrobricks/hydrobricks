@@ -96,7 +96,11 @@ class HydroUnits:
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
 
-        self.add_property(('id', '-'), range(1, 1 + len(file_content)), set_first=True)
+        # Check that the id column is present
+        if 'id' not in file_content.columns:
+            raise ValueError('The "id" column is required in the file.')
+        vals, _ = self._get_column_values_unit('id', file_content)
+        self.add_property(('id', '-'), vals, set_first=True)
 
         if column_elevation is not None:
             vals, unit = self._get_column_values_unit(column_elevation, file_content)
@@ -131,7 +135,7 @@ class HydroUnits:
                 vals, unit = self._get_column_values_unit('area', file_content)
                 self.add_property(('area', unit), vals)
             idx = self.prefix_fraction + 'ground'
-            self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
+            self.hydro_units[idx] = np.ones(len(self.hydro_units[('area', unit)]))
 
         if other_columns is not None:
             for prop, col in other_columns.items():
@@ -255,7 +259,7 @@ class HydroUnits:
         (e.g. ground), set them to 1.
         """
         if len(self.land_cover_names) == 1:
-            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1
+            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1.0
             return
 
         for cover_name in self.land_cover_names:
@@ -267,8 +271,8 @@ class HydroUnits:
         # Set the land cover fractions of 'ground' to 1 and the rest to 0
         for cover_name in self.land_cover_names:
             field_name = self.prefix_fraction + cover_name
-            self.hydro_units[(field_name, 'fraction')] = 0
-        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1
+            self.hydro_units[(field_name, 'fraction')] = 0.0
+        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1.0
 
     def initialize_from_land_cover_change(
             self,
@@ -290,10 +294,24 @@ class HydroUnits:
         field_name = self.prefix_fraction + land_cover_name
         ground_name = self.prefix_fraction + 'ground'
 
-        land_cover_area = land_cover_change.iloc[:, 1].values
-        land_cover_fraction = land_cover_area / self.hydro_units[('area', 'm2')]
-        self.hydro_units[(field_name, 'fraction')] = land_cover_fraction
-        self.hydro_units[(ground_name, 'fraction')] -= land_cover_fraction
+        # Apply land cover fractions one hydro unit at a time (order might differ)
+        for _, row in land_cover_change.iterrows():
+            id = row['hydro_unit']
+            land_cover_area = row.iloc[1]
+
+            # Get the hydro unit row
+            hu_idx = self.hydro_units[self.hydro_units[('id', '-')] == id].index[0]
+            hu_area = self.hydro_units.loc[hu_idx, ('area', 'm2')]
+
+            # Compute the land cover fraction
+            fraction = land_cover_area / hu_area
+            if not (0 <= fraction <= 1):
+                raise ValueError(f'Land cover fraction {fraction} for '
+                                 f'hydro unit {id} is not in the range [0, 1].')
+
+            # Set the land cover fraction
+            self.hydro_units.loc[hu_idx, (field_name, 'fraction')] = fraction
+            self.hydro_units.loc[hu_idx, (ground_name, 'fraction')] -= fraction
 
         self.populate_bounded_instance()
 
@@ -310,13 +328,14 @@ class HydroUnits:
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
-        self.hydro_units.sort_values(
+        hydro_units = self.hydro_units.copy()
+        hydro_units.sort_values(
             by=('elevation', 'm'),
             ascending=False,
             inplace=True
         )
 
-        for _, row in self.hydro_units.iterrows():
+        for _, row in hydro_units.iterrows():
             self.settings.add_hydro_unit(
                 int(row['id'].values[0]),
                 float(row['area'].values[0]),
@@ -338,6 +357,9 @@ class HydroUnits:
             for cover_type, cover_name in zip(self.land_cover_types,
                                               self.land_cover_names):
                 fraction = float(row[self.prefix_fraction + cover_name].values[0])
+                if np.isnan(fraction):
+                    fraction = 0.0
+                assert 0 <= fraction <= 1
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str):
@@ -411,6 +433,8 @@ class HydroUnits:
             if name is None or name in ['-', '', ' '] or 'Unnamed' in name:
                 name = f'{i}'
             unit = str(get_unit_enum(col[1]))
+            if unit == 'no_unit':
+                unit = '-'
             new_column_names.append((name, unit))
 
         file_content.columns = pd.MultiIndex.from_tuples(new_column_names)

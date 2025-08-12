@@ -11,8 +11,8 @@ TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
     '..', '..', '..', 'tests', 'files', 'catchments'
 )
-CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'outline.shp'
-CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
+CATCHMENT_OUTLINE = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
+CATCHMENT_DEM = TEST_FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
 FORCING_DIR = 'path/to/MeteoSwiss_gridded_products'
 
 # Create temporary directory
@@ -30,23 +30,23 @@ catchment.create_elevation_bands(method='equal_intervals', distance=50)
 catchment.save_unit_ids_raster(working_dir)
 
 # Create forcing object and spatialize from gridded data
-forcing = hb.Forcing(catchment.hydro_units)
-forcing.spatialize_from_gridded_data(
-    variable='precipitation',
-    path=(Path(FORCING_DIR) / 'RhiresD_v2.0_swiss.lv95'),
-    file_pattern='RhiresD_ch01h.swiss.lv95_*.nc',
-    data_crs=2056,
-    var_name='RhiresD',
-    dim_x='E',
-    dim_y='N',
-    raster_hydro_units=working_dir / 'unit_ids.tif'
-)
+forcing = hb.Forcing(catchment)
 forcing.spatialize_from_gridded_data(
     variable='temperature',
     path=(Path(FORCING_DIR) / 'TabsD_v2.0_swiss.lv95'),
     file_pattern='TabsD_ch01r.swiss.lv95_*.nc',
     data_crs=2056,
     var_name='TabsD',
+    dim_x='E',
+    dim_y='N',
+    raster_hydro_units=working_dir / 'unit_ids.tif'
+)
+forcing.spatialize_from_gridded_data(
+    variable='precipitation',
+    path=(Path(FORCING_DIR) / 'RhiresD_v2.0_swiss.lv95'),
+    file_pattern='RhiresD_ch01h.swiss.lv95_*.nc',
+    data_crs=2056,
+    var_name='RhiresD',
     dim_x='E',
     dim_y='N',
     raster_hydro_units=working_dir / 'unit_ids.tif'

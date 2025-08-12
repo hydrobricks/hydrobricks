@@ -1,9 +1,11 @@
 [project]
 name = "hydrobricks"
 version = "0.8.2"
-authors = [
-    { name = "Pascal Horton", email = "pascal.horton@unibe.ch" },
-    { name = "Anne-Laure Argentin" },
+author = "Pascal Horton"
+author_email = "pascal.horton@unibe.ch"
+maintainers = [
+    { name = "Pascal Horton" }
+    { name = "Anne-Laure Argentin" }
 ]
 description = "A modular hydrological modelling framework"
 readme = "python/README.md"

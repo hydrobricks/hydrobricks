@@ -455,8 +455,10 @@ class TimeSeries2D(TimeSeries):
                 grads_dh = grads * dh
                 grads_dh[grads_dh < -1] = -1
                 data = data * (1 + grads_dh)
+            else:
+                raise NotImplementedError
 
-            self.data[-1][i_start:i_end, u] = np.nansum(data * weights)
+            self.data[-1][i_start:i_end, u] = np.nansum(data * weights, axis=1)
 
     def _extract_time_step_data_weights(
             self,

@@ -446,7 +446,7 @@ class TimeSeries2D(TimeSeries):
         for u, unit_weight in enumerate(unit_weights):
             data = data_array[:, unit_weight > 0]
             weights = unit_weight[unit_weight > 0]
-            dh = dem[unit_weight > 0] - hu_elevation[u]
+            dh = hu_elevation[u] - dem[unit_weight > 0]
             dh[np.isnan(dh)] = 0
             grads = dat_dxy[:, unit_weight > 0]
             if gradient_type == 'additive':

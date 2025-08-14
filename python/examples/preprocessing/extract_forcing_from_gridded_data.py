@@ -1,6 +1,7 @@
 import os.path
 import tempfile
 import uuid
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 import hydrobricks as hb
@@ -56,6 +57,18 @@ forcing.compute_pet(method='Hamon', use=['t', 'lat'])
 # Save forcing to a netcdf file
 forcing.save_as(working_dir / 'forcing.nc')
 print(f"File saved to: {working_dir / 'forcing.nc'}")
+
+# Plot the temperature as a function of elevation
+t = forcing.data2D.data[0][0, :]
+
+plt.figure(figsize=(10, 6))
+plt.scatter(catchment.hydro_units.hydro_units[('elevation', 'm')], t, c='blue', label='Temperature')
+plt.xlabel('Elevation (m)')
+plt.ylabel('Temperature (°C)')
+plt.title('Temperature as a function of elevation')
+plt.grid()
+plt.legend()
+plt.show()
 
 # The forcing object can also be directly used to run a model:
 socont = models.Socont(

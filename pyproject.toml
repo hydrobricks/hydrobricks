@@ -1,8 +1,10 @@
 [project]
 name = "hydrobricks"
 version = "0.8.3"
-author = "Pascal Horton"
-author_email = "pascal.horton@unibe.ch"
+authors = [
+    { name = "Pascal Horton", email = "pascal.horton@unibe.ch" },
+    { name = "Anne-Laure Argentin" },
+]
 maintainers = [
     { name = "Pascal Horton" },
     { name = "Anne-Laure Argentin" }

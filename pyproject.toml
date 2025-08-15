@@ -2,8 +2,7 @@
 name = "hydrobricks"
 version = "0.8.3"
 authors = [
-    { name = "Pascal Horton", email = "pascal.horton@unibe.ch" },
-    { name = "Anne-Laure Argentin" },
+    { name = "Pascal Horton et al.", email = "pascal.horton@unibe.ch" }
 ]
 maintainers = [
     { name = "Pascal Horton" },

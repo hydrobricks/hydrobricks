@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "ActionGlacierEvolutionDeltaH.h"
+#include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
 #include "ModelHydro.h"
 #include "SettingsModel.h"
@@ -298,4 +299,52 @@ TEST_F(ActionsInModel2LandCovers, DatesGetSortedCorrectly) {
     }
 
     EXPECT_TRUE(model.Run());
+}
+
+TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    _model.SetTimer("2020-09-25", "2020-10-04", 1, "day");
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    auto precip = new TimeSeriesDataRegular(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    precip->SetValues({0.0, 50.0, 50.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    auto tsPrecip = new TimeSeriesUniform(Precipitation);
+    tsPrecip->SetData(precip);
+
+    auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    temperature->SetValues({-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0});
+    auto tsTemp = new TimeSeriesUniform(Temperature);
+    tsTemp->SetData(temperature);
+
+    auto pet = new TimeSeriesDataRegular(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    auto tsPet = new TimeSeriesUniform(PET);
+    tsPet->SetData(pet);
+
+    subBasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, "ice");
+
+    ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(tsPet));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    ActionGlacierSnowToIceTransformation action(9, 30, "glacier");
+    EXPECT_TRUE(model.AddAction(&action));
+
+    EXPECT_EQ(model.GetActionsNb(), 1);
+
+    EXPECT_TRUE(model.Run());
+
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent("snow"), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent("ice"), 10100.0f);
 }

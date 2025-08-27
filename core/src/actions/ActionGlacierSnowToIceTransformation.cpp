@@ -1,8 +1,8 @@
 #include "ActionGlacierSnowToIceTransformation.h"
 
-#include "GlobVars.h"
 #include "HydroUnit.h"
 #include "ModelHydro.h"
+#include "Glacier.h"
 
 ActionGlacierSnowToIceTransformation::ActionGlacierSnowToIceTransformation(int month, int day,
                                                                            const string& landCoverName)
@@ -35,10 +35,11 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
 
         // Get the glacier brick.
-        LandCover* glacier = unit->GetLandCover(_landCoverName);
-        if (glacier == nullptr || glacier->GetAreaFraction() == 0) {
+        LandCover* glacierLandCover = unit->GetLandCover(_landCoverName);
+        if (glacierLandCover == nullptr || glacierLandCover->GetAreaFraction() == 0) {
             continue;
         }
+        Glacier* glacier = dynamic_cast<Glacier*>(glacierLandCover);
 
         // Get the associated snowpack.
         Brick* snowpack = unit->GetBrick(_landCoverName + "_snowpack");

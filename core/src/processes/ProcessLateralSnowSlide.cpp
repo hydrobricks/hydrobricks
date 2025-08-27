@@ -26,7 +26,8 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
     modelSettings->AddProcessParameter("min_slope", 10.0f);
     modelSettings->AddProcessParameter("max_slope", 75.0f);
     modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
-    modelSettings->AddProcessParameter("max_snow_depth", 5000.0f);  // -1 means no limit
+    const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
+    modelSettings->AddProcessParameter("max_snow_depth", 5000.0f * sweToDepthFactor);  // -1 means no limit
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {

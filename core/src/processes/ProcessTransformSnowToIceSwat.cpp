@@ -2,6 +2,8 @@
 
 #include "Brick.h"
 #include "WaterContainer.h"
+#include "TimeMachine.h"
+#include "Utils.h"
 
 ProcessTransformSnowToIceSwat::ProcessTransformSnowToIceSwat(WaterContainer* container)
     : ProcessTransform(container),
@@ -27,9 +29,10 @@ void ProcessTransformSnowToIceSwat::SetParameters(const ProcessSettings& process
 }
 
 vecDouble ProcessTransformSnowToIceSwat::GetRates() {
+    int doy = TimeMachine::GetCurrentDayOfYear();
     bool northHemisphere = !(*_northHemisphere == 0);
     int daysRef = (northHemisphere) ? 81 : 264;  // 81 = March 22, 264 = September 21
-    float coeff = *_basalAccCoeff * (1 + std::sin(2.0f * constants::pi * (_currentDayOfYear - daysRef) / 365.0f));
+    float coeff = *_basalAccCoeff * (1 + std::sin(2.0f * constants::pi * (doy - daysRef) / 365.0f));
 
     return {coeff * _container->GetContentWithChanges()};  // [mm/day]
 }

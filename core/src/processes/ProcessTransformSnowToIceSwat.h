@@ -32,7 +32,6 @@ class ProcessTransformSnowToIceSwat : public ProcessTransform {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    int _currentDayOfYear = 1;  // Current day of the year [1-366]
     float* _basalAccCoeff;      // Basal accumulation coefficient [-]
     float* _northHemisphere;    // If 1, northern hemisphere (0 for southern hemisphere)
 

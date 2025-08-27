@@ -25,13 +25,13 @@ double HydroUnitProperty::GetValue(const string& unit) const {
             return _value;
         }
         if (unit == "radians" || unit == "rad") {
-            return _value * M_PI / 180.0;
+            return _value * constants::pi / 180.0;
         }
         if (unit == "percent" || unit == "%") {
-            return 100 * tan(_value * M_PI / 180.0);
+            return 100 * tan(_value * constants::pi / 180.0);
         }
         if (unit == "m/m" || unit == "m_per_m") {
-            return tan(_value * M_PI / 180.0);
+            return tan(_value * constants::pi / 180.0);
         }
     }
     if (_unit == "m2" || _unit == "m^2") {

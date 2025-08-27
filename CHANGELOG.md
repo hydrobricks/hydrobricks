@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
+## 0.8.4 - 2025-08-27
+
+### Added
+
+- Adding a snow to ice transformation process for glaciers following the SWAT model approach (Luo et al., 2013).
+- Adding a snow to ice transformation action that transforms all snow to ice at a given date (e.g., end of the melt season).
+
+### Changed
+
+- In the connectivity calculation, the 'force_connectivity' option was changed to False by default due to potential issues in some cases (e.g., exchange back and forth).
+
+
 ## 0.8.3 - 2025-08-14
 
 ### Fixed

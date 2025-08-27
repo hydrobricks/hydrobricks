@@ -64,7 +64,7 @@ socont = models.Socont(
     surface_runoff="linear_storage",
     record_all=True,
     glacier_infinite_storage=0,
-    snow_ice_transformation="transform:snow_ice_constant",
+    snow_ice_transformation="transform:snow_ice_swat",
     land_cover_types=['ground', 'glacier'],
     land_cover_names=['ground', 'glacier']
 )

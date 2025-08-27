@@ -56,13 +56,13 @@ for with_snow_redistribution in [True, False]:
             'k_slow_2': 0.8,
             'k_quick': 1,
             'percol': 9.8,
-            'snow_slide_coeff': 6178,
-            'snow_slide_exp': -2.498,
+            'snow_slide_coeff': 3178.4,
+            'snow_slide_exp': -1.998,
             'snow_slide_min_slope': 10,
             'snow_slide_max_slope': 75,
             'snow_slide_min_snow_depth': 50,
-            'snow_slide_max_snow_depth': 5000  # Not in the original method, but added
-                                               # for convenience. -1 means no limit.
+            'snow_slide_max_snow_depth': 20000  # Not in the original method, but added
+                                                # for convenience. -1 means no limit.
         }
     else:
         params = {

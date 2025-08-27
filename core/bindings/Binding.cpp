@@ -172,7 +172,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("reset", &ActionGlacierSnowToIceTransformation::Reset, "Reset the action.")
         .def("apply", &ActionGlacierSnowToIceTransformation::Apply, "date"_a, "Apply the action.")
         .def("get_land_cover_name", &ActionGlacierSnowToIceTransformation::GetLandCoverName,
-            "Get the land cover name (glacier name).");
+             "Get the land cover name (glacier name).");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

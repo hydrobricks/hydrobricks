@@ -1,8 +1,8 @@
 #include "ActionGlacierSnowToIceTransformation.h"
 
+#include "Glacier.h"
 #include "HydroUnit.h"
 #include "ModelHydro.h"
-#include "Glacier.h"
 
 ActionGlacierSnowToIceTransformation::ActionGlacierSnowToIceTransformation(int month, int day,
                                                                            const string& landCoverName)

@@ -11,8 +11,8 @@ class ActionGlacierSnowToIceTransformation : public Action {
      *
      * @param month month of the year (1-12).
      * @param day day of the month (1-31).
-     * @param landCoverName name of the land cover associated with the action. It is used to identify the specific glacier
-     * 'name' as we can have multiple glacier land covers in the model.
+     * @param landCoverName name of the land cover associated with the action. It is used to identify the specific
+     * glacier 'name' as we can have multiple glacier land covers in the model.
      */
     ActionGlacierSnowToIceTransformation(int month, int day, const string& landCoverName);
 

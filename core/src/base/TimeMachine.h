@@ -112,7 +112,9 @@ class TimeMachine : public wxObject {
      *
      * @return current date as MJD.
      */
-    static double GetCurrentDate() { return _currentDateStatic; }
+    static double GetCurrentDate() {
+        return _currentDateStatic;
+    }
 
     /**
      * Get the current day of the year (1-366) from the static current date.

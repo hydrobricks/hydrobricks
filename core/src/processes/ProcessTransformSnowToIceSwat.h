@@ -32,8 +32,8 @@ class ProcessTransformSnowToIceSwat : public ProcessTransform {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* _basalAccCoeff;      // Basal accumulation coefficient [-]
-    float* _northHemisphere;    // If 1, northern hemisphere (0 for southern hemisphere)
+    float* _basalAccCoeff;    // Basal accumulation coefficient [-]
+    float* _northHemisphere;  // If 1, northern hemisphere (0 for southern hemisphere)
 
     /**
      * @copydoc Process::GetRates()

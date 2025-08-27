@@ -72,7 +72,7 @@ void ActionGlacierEvolutionDeltaH::Reset() {
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {
     // Get the list of hydro units.
-    auto subBasin = _manager->GetModel()->GetSubBasin();
+    auto subBasin = _manager->GetSubBasin();
 
     // Compute the total glacier (_landCoverName) water equivalent (w.e.).
     double glacierWE = 0.0;

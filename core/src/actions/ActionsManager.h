@@ -1,10 +1,10 @@
 #ifndef HYDROBRICKS_ACTION_UPDATER_H
 #define HYDROBRICKS_ACTION_UPDATER_H
 
-#include "SubBasin.h"
 #include "HydroUnit.h"
 #include "Includes.h"
 
+class SubBasin;
 class ModelHydro;
 class Action;
 

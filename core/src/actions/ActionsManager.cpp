@@ -2,6 +2,7 @@
 
 #include "Action.h"
 #include "ModelHydro.h"
+#include "SubBasin.h"
 #include "Utils.h"
 
 ActionsManager::ActionsManager()

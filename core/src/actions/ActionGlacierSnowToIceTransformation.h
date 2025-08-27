@@ -50,13 +50,13 @@ class ActionGlacierSnowToIceTransformation : public Action {
      *
      * @return vector of hydro unit IDs.
      */
-    axi GetHydroUnitIds() {
+    vecInt GetHydroUnitIds() {
         return _hydroUnitIds;
     }
 
   protected:
     string _landCoverName;
-    axi _hydroUnitIds;
+    vecInt _hydroUnitIds;
 };
 
 #endif  // HYDROBRICKS_ACTION_GLACIER_SNOW_TO_ICE_TRANSFORMATION_H

@@ -65,6 +65,9 @@ changes.load_from(
     update_month='October'
 )
 
+# Create the snow to ice transformation action (transform all remaining snow to ice)
+snow_to_ice = hb.actions.ActionGlacierSnowToIceTransformation('September', 30, 'glacier')
+
 # Model structure with specific options
 socont = models.Socont(
     soil_storage_nb=2,
@@ -125,8 +128,9 @@ socont.setup(
     end_date='2020-12-31'
 )
 
-# Add the glacier evolution action to the model
+# Add the actions to the model
 socont.add_action(changes)
+socont.add_action(snow_to_ice)
 
 # Initialize and run the model
 socont.run(

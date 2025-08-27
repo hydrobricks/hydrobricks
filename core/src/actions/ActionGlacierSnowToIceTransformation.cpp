@@ -28,21 +28,22 @@ void ActionGlacierSnowToIceTransformation::Reset() {
 }
 
 bool ActionGlacierSnowToIceTransformation::Apply(double) {
+    auto subBasin = _manager->GetSubBasin();
+
     // Transform snow to ice for each hydro unit.
-    for (int i = 0; i < _hydroUnitIds.size(); ++i) {
-        int id = _hydroUnitIds[i];
+    for (int id : _hydroUnitIds) {
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
 
         // Get the glacier brick.
-        LandCover* brick = unit->GetLandCover(_landCoverName);
-        if (brick == nullptr || brick->GetAreaFraction() == 0) {
+        LandCover* glacier = unit->GetLandCover(_landCoverName);
+        if (glacier == nullptr || glacier->GetAreaFraction() == 0) {
             continue;
         }
 
         // Get the associated snowpack.
-        LandCover* snowpack = unit->GetLandCover(_landCoverName + "_snowpack");
+        Brick* snowpack = unit->GetBrick(_landCoverName + "_snowpack");
         if (snowpack == nullptr) {
-            wxLogError(_("The snowpack land cover %s was not found in hydro unit %d"), (_landCoverName + "_snowpack"), id);
+            wxLogError(_("The brick %s was not found in hydro unit %d"), (_landCoverName + "_snowpack"), id);
             continue;
         }
 
@@ -53,7 +54,7 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         }
 
         // Transfer to the glacier ice.
-        brick->UpdateContent(brick->GetContent("ice") + snowWE, "ice");
+        glacier->UpdateContent(glacier->GetContent("ice") + snowWE, "ice");
         snowpack->UpdateContent(0, "snow");
     }
 

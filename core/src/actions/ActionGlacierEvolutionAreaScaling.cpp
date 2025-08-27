@@ -8,9 +8,7 @@ ActionGlacierEvolutionAreaScaling::ActionGlacierEvolutionAreaScaling() = default
 
 void ActionGlacierEvolutionAreaScaling::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
                                                         const axxd& areas, const axxd& volumes) {
-    _recursive = true;
-    _recursiveMonths.push_back(month);
-    _recursiveDays.push_back(1);
+    AddRecursiveDate(month, 1);
     _landCoverName = landCoverName;
     _hydroUnitIds = hydroUnitIds;
     _tableArea = areas;

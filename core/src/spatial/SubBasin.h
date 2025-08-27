@@ -90,6 +90,15 @@ class SubBasin : public wxObject {
     HydroUnit* GetHydroUnit(int index);
 
     /**
+     * Get all hydro units in the sub-basin.
+     *
+     * @return A vector of pointers to all hydro units.
+     */
+    vector<HydroUnit*> GetHydroUnits() {
+        return _hydroUnits;
+    }
+
+    /**
      * Get a hydro unit by its ID.
      *
      * @param id The ID of the hydro unit to get.

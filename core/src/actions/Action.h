@@ -28,6 +28,14 @@ class Action : public wxObject {
     void ResetCursor();
 
     /**
+     * Add a recursive date for the action.
+     *
+     * @param month the month of the year (1-12).
+     * @param day the day of the month (1-31).
+     */
+    void AddRecursiveDate(int month, int day);
+
+    /**
      * Apply the action for a specific date.
      *
      * @param date the date of the action.

@@ -6,6 +6,7 @@
 #include "Action.h"
 #include "ActionGlacierEvolutionAreaScaling.h"
 #include "ActionGlacierEvolutionDeltaH.h"
+#include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
@@ -164,6 +165,14 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the area lookup table.")
         .def("get_lookup_table_volume", &ActionGlacierEvolutionAreaScaling::GetLookupTableVolume,
              "Get the volumes lookup table.");
+
+    py::class_<ActionGlacierSnowToIceTransformation, Action>(m, "ActionGlacierSnowToIceTransformation")
+        .def(py::init<int, int, const std::string&, const axi&>(), "month"_a, "day"_a, "land_cover"_a, "hu_ids"_a)
+        .def("init", &ActionGlacierSnowToIceTransformation::Init, "Initialize the action.")
+        .def("reset", &ActionGlacierSnowToIceTransformation::Reset, "Reset the action.")
+        .def("apply", &ActionGlacierSnowToIceTransformation::Apply, "date"_a, "Apply the action.")
+        .def("get_land_cover_name", &ActionGlacierSnowToIceTransformation::GetLandCoverName, "Get the land cover name (glacier name).")
+        .def("get_hydro_unit_ids", &ActionGlacierSnowToIceTransformation::GetHydroUnitIds, "Get the hydro unit ids of the glacier.");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

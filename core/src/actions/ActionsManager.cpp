@@ -97,6 +97,10 @@ void ActionsManager::DateUpdate(double date) {
     }
 }
 
-HydroUnit* ActionsManager::GetHydroUnitById(int id) {
+SubBasin* ActionsManager::GetSubBasin() const {
+    return _model->GetSubBasin();
+}
+
+HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
     return _model->GetSubBasin()->GetHydroUnitById(id);
 }

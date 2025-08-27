@@ -45,7 +45,7 @@ class Results:
     def get_hydro_units_values(
             self,
             component: str,
-            start_date: str,
+            start_date: str = None,
             end_date: str = None
     ) -> np.ndarray:
         """
@@ -65,6 +65,9 @@ class Results:
         The values of the component at the hydro units.
         """
         i_component = self.labels_distributed.index(component)
+
+        if start_date is None:
+            return self.results.hydro_units_values[i_component].to_numpy()
 
         if end_date is None:
             return self.results.hydro_units_values[i_component].sel(

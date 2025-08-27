@@ -91,6 +91,7 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
 
     // Get the percentage of glacier retreat.
     double glacierRetreatPc = (_initialGlacierWE - glacierWE) / _initialGlacierWE;
+    glacierRetreatPc = std::max(0.0, glacierRetreatPc);
 
     // Get the percentage of glacier retreat for each row of the table.
     int nRows = _tableArea.rows();

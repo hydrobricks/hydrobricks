@@ -96,6 +96,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
 
         // Get the percentage of glacier retreat for the current hydro unit.
         double glacierRetreatPc = (_initialGlacierWE[i] - iceVolume) / _initialGlacierWE[i];
+        glacierRetreatPc = std::max(0.0, glacierRetreatPc);
 
         // Get corresponding row in the lookup table.
         int row = static_cast<int>(glacierRetreatPc / rowPcIncrement);

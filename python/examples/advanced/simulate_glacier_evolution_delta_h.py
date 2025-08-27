@@ -88,7 +88,7 @@ parameters.set_values({
     'k_slow_2': 0.8,
     'k_quick': 1,
     'percol': 9.8,
-    'snow_ice_rate': 0.002,
+    'snow_ice_basal_acc_coeff': 0.0027,
     'a_ice': 6,
     'k_ice': 0.5,
     'k_snow': 0.1
@@ -147,11 +147,11 @@ results = hb.Results(str(working_dir) + '/results.nc')
 glacier_fractions = results.results.land_cover_fractions[1, :, :]
 hydro_units_areas = results.results.hydro_units_areas
 glacier_areas = hydro_units_areas * glacier_fractions
-glacier_areas = glacier_areas.sum(axis=0)
+glacier_area = glacier_areas.sum(axis=0)
 
 # Plot glacier area. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
-plt.plot(results.results.time, glacier_areas)
+plt.plot(results.results.time, glacier_area)
 plt.title('Glacier area evolution')
 plt.tight_layout()
 plt.show()

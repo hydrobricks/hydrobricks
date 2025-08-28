@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import hydrobricks as hb
-
+from hydrobricks.parameters import ParamSpec, validate_process_param_specs
 
 def test_parameter_creation():
     hb.ParameterSet()
@@ -543,3 +543,20 @@ def test_define_constraints_removed(parameter_set_constraints: hb.ParameterSet):
     assert len(parameter_set_constraints.constraints) == 2
     parameter_set_constraints.remove_constraint('k1', '<', 'k2')
     assert len(parameter_set_constraints.constraints) == 1
+
+
+def test_validate_process_param_specs():
+    # Ensure current PROCESS_PARAM_SPECS structure is valid
+    validate_process_param_specs()
+
+
+def test_validate_process_param_specs_duplicate_detection():
+    # Ensure duplicate parameter names within same process raise an error
+    bad_specs = {
+        'test:proc': [
+            ParamSpec(name='dup'),
+            ParamSpec(name='dup')  # duplicate name
+        ]
+    }
+    with pytest.raises(ValueError):
+        validate_process_param_specs(bad_specs)

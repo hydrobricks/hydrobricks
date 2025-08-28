@@ -5,12 +5,16 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
-## 0.8.4 - 2025-08-27
+## 0.8.4 - 2025-08-28
 
 ### Added
 
 - Adding a snow to ice transformation process for glaciers following the SWAT model approach (Luo et al., 2013).
 - Adding a snow to ice transformation action that transforms all snow to ice at a given date (e.g., end of the melt season).
+
+### Fixed
+
+- Fixing an issue when glacier volume is increasing further than the initial volume in the glacier evolution methods.
 
 ### Changed
 

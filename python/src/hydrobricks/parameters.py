@@ -954,8 +954,8 @@ class ParameterSet:
                             unit='mm/d',
                             aliases=['snow_ice_rate'],
                             min_value=0,
-                            max_value=0.005,
-                            default_value=0.002,
+                            max_value=10,
+                            default_value=0.5,
                             mandatory=True
                         )
                     elif algo == 'transform:snow_ice_swat':
@@ -966,7 +966,7 @@ class ParameterSet:
                             aliases=['snow_ice_basal_acc_coeff'],
                             min_value=0.001,
                             max_value=0.006,
-                            default_value=0.0027,
+                            default_value=0.0014,
                             mandatory=False
                         )
                         self.define_parameter(
@@ -1039,7 +1039,7 @@ class ParameterSet:
                         aliases=['snow_slide_max_snow_depth'],
                         min_value=-1,
                         max_value=50000,
-                        default_value=-1,
+                        default_value=20000,
                         mandatory=False
                     )
 

@@ -1,8 +1,9 @@
 import os.path
 import tempfile
 import uuid
-import matplotlib.pyplot as plt
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models

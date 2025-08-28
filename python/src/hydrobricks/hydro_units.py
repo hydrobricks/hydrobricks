@@ -391,6 +391,9 @@ class HydroUnits:
 
             if isinstance(row['connectivity'], pd.Series):
                 connectivity_val = row[('connectivity', '-')]
+            else:
+                connectivity_val = row['connectivity']
+
             if isinstance(connectivity_val, str):
                 connectivity_val = ast.literal_eval(connectivity_val)
 

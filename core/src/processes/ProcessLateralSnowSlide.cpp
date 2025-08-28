@@ -3,6 +3,7 @@
 #include "Brick.h"
 #include "FluxToBrick.h"
 #include "HydroUnit.h"
+#include "Snowpack.h"
 #include "SurfaceComponent.h"
 #include "WaterContainer.h"
 
@@ -26,8 +27,7 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
     modelSettings->AddProcessParameter("min_slope", 10.0f);
     modelSettings->AddProcessParameter("max_slope", 75.0f);
     modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
-    const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
-    modelSettings->AddProcessParameter("max_snow_depth", 5000.0f * sweToDepthFactor);  // -1 means no limit
+    modelSettings->AddProcessParameter("max_snow_depth", 20000.0f);  // 20 m of snow depth = 5 m of SWE
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
@@ -106,6 +106,8 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
         }
         rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate.
 
+        rates[i] = AvoidUnrealisticAccumulation(rates[i], _outputs[i]);
+
         // The weight of the flux is adjusted to account for the area ratio between the source and target land cover.
         // As it can change (e.g., due to land cover changes), we compute it dynamically.
         double fractionAreas = ComputeFractionAreas(_outputs[i]);
@@ -113,4 +115,20 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     }
 
     return rates;
+}
+
+double ProcessLateralSnowSlide::AvoidUnrealisticAccumulation(double rate, Flux* flux) {
+    // Do not redistribute snow if the target snowpack has more than 1.5 times the overall maximum snow depth.
+    // This avoids unrealistic accumulation in the target snowpack.
+    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+    wxASSERT(fluxToBrick);
+    Brick* targetBrick = fluxToBrick->GetTargetBrick();
+    wxASSERT(targetBrick);
+    auto targetSnowpack = dynamic_cast<Snowpack*>(targetBrick);
+    double targetSwe = targetSnowpack->GetContent("snow");
+    const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
+    if (*_maxSnowDepth > 0.0f && targetSwe > 1.5 * (*_maxSnowDepth) / sweToDepthFactor) {
+        return 0;
+    }
+    return rate;
 }

@@ -1,6 +1,6 @@
 {
   "name": "hydrobricks",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
   "dependencies": [
     "vcpkg-tool-ninja",

@@ -8,7 +8,7 @@
  * Model: simple snow and ice model
  */
 
-class SnowIceModel : public ::testing::Test {
+class SnowIceConstantModel : public ::testing::Test {
   protected:
     SettingsModel _model;
     TimeSeriesUniform* _tsPrecip{};
@@ -77,7 +77,7 @@ class SnowIceModel : public ::testing::Test {
     }
 };
 
-TEST_F(SnowIceModel, SnowIceTransformation) {
+TEST_F(SnowIceConstantModel, SnowIceTransformation) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 0.5);
@@ -132,7 +132,142 @@ TEST_F(SnowIceModel, SnowIceTransformation) {
     }
 }
 
-TEST_F(SnowIceModel, SnowIceTransformationWithNullFraction) {
+TEST_F(SnowIceConstantModel, SnowIceTransformationWithNullFraction) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+    basinSettings.AddLandCover("glacier", "", 0.0);
+    basinSettings.AddHydroUnit(2, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+    basinSettings.AddLandCover("glacier", "", 0.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    // Set initial glacier content
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+
+    EXPECT_TRUE(model.Run());
+}
+
+class SnowIceSwatModel : public ::testing::Test {
+  protected:
+    SettingsModel _model;
+    TimeSeriesUniform* _tsPrecip{};
+    TimeSeriesUniform* _tsTemp{};
+
+    void SetUp() override {
+        _model.SetSolver("heun_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetLogAll(true);
+
+        // Precipitation
+        _model.GeneratePrecipitationSplitters(true);
+
+        // Add default ground land cover
+        _model.AddLandCoverBrick("ground", "ground");
+        _model.AddLandCoverBrick("glacier", "glacier");
+
+        // Snowpacks
+        _model.GenerateSnowpacks("melt:degree_day");
+        _model.AddSnowIceTransformation("transform:snow_ice_swat");
+        _model.SetParameterValue("glacier_snowpack", "snow_ice_transformation_basal_acc_coeff", 0.003f);
+        _model.SelectHydroUnitBrick("glacier_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
+
+        // Ice melt
+        _model.SelectHydroUnitBrick("glacier");
+        _model.AddBrickProcess("melt", "melt:degree_day", "glacier:water");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
+
+        // Add process to direct meltwater to the outlet
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.AddBrickProcess("meltwater", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("glacier_snowpack");
+        _model.AddBrickProcess("meltwater", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+
+        // Add process to direct water to the outlet
+        _model.SelectHydroUnitBrick("ground");
+        _model.AddBrickProcess("outflow", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+        _model.SelectHydroUnitBrick("glacier");
+        _model.AddBrickProcess("outflow", "outflow:direct");
+        _model.AddProcessOutput("outlet");
+
+        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
+        _tsPrecip = new TimeSeriesUniform(Precipitation);
+        _tsPrecip->SetData(precip);
+
+        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
+        _tsTemp = new TimeSeriesUniform(Temperature);
+        _tsTemp->SetData(temperature);
+    }
+    void TearDown() override {
+        wxDELETE(_tsPrecip);
+        wxDELETE(_tsTemp);
+    }
+};
+
+TEST_F(SnowIceSwatModel, SnowIceTransformation) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsOk());
+
+    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    // Set initial glacier content
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+
+    EXPECT_TRUE(model.Run());
+
+    // Check model values
+    Logger* logger = model.GetLogger();
+    vecAxxd unitContent = logger->GetHydroUnitValues();
+
+    vecDouble glacierContent = {100.0, 100.0006645497548, 100 + 0.0006645497548 + 0.0015539210550};
+    vecDouble expectedSWEGlacier = {0.0, 10.0 - 0.0006645497548, 20.0 - 0.0006645497548 - 0.0015539210550};
+    vecDouble snowIceTransfo = {0.0, 0.0006645497548, 0.0015539210550};
+
+    for (int j = 0; j < snowIceTransfo.size(); ++j) {
+        // Ice content
+        EXPECT_NEAR(unitContent[3](j, 0), glacierContent[j], 0.000001);
+        // Glacier snowpack
+        EXPECT_NEAR(unitContent[11](j, 0), expectedSWEGlacier[j], 0.000001);
+        // Snow to ice transformation
+        EXPECT_NEAR(unitContent[13](j, 0), snowIceTransfo[j], 0.000001);
+    }
+}
+
+TEST_F(SnowIceSwatModel, SnowIceTransformationWithNullFraction) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);

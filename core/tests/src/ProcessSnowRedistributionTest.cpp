@@ -250,7 +250,6 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
     basinSettings.AddLateralConnection(3, 4, 0.8);
     basinSettings.AddLateralConnection(3, 5, 0.2);
     basinSettings.AddLateralConnection(4, 5, 1.0);
-    basinSettings.AddLateralConnection(5, 4, 1.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));

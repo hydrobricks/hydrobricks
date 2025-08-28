@@ -6,6 +6,7 @@
 #include "Action.h"
 #include "ActionGlacierEvolutionAreaScaling.h"
 #include "ActionGlacierEvolutionDeltaH.h"
+#include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
 #include "Includes.h"
 #include "ModelHydro.h"
@@ -56,7 +57,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Generate the precipitation splitters.", "with_snow"_a = true)
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
         .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
-             "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_constant")
+             "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
              "redistribution_process"_a = "transport:snow_slide", "skip_glaciers"_a = false)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
@@ -164,6 +165,14 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the area lookup table.")
         .def("get_lookup_table_volume", &ActionGlacierEvolutionAreaScaling::GetLookupTableVolume,
              "Get the volumes lookup table.");
+
+    py::class_<ActionGlacierSnowToIceTransformation, Action>(m, "ActionGlacierSnowToIceTransformation")
+        .def(py::init<int, int, const std::string&>(), "month"_a, "day"_a, "land_cover"_a)
+        .def("init", &ActionGlacierSnowToIceTransformation::Init, "Initialize the action.")
+        .def("reset", &ActionGlacierSnowToIceTransformation::Reset, "Reset the action.")
+        .def("apply", &ActionGlacierSnowToIceTransformation::Apply, "date"_a, "Apply the action.")
+        .def("get_land_cover_name", &ActionGlacierSnowToIceTransformation::GetLandCoverName,
+             "Get the land cover name (glacier name).");
 
     py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
 }

@@ -16,6 +16,7 @@
 #include "ProcessOutflowRestDirect.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
+#include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
@@ -44,6 +45,14 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         if (brick->IsSnowpack()) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
+        }
+        throw ConceptionIssue(
+            wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
+    }
+    if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
+        if (brick->IsSnowpack()) {
+            auto snowBrick = dynamic_cast<Snowpack*>(brick);
+            return new ProcessTransformSnowToIceSwat(snowBrick->GetSnowContainer());
         }
         throw ConceptionIssue(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
@@ -118,6 +127,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
         ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
+    } else if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
+        ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "transport:snow_slide") {
         ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(modelSettings);
     } else if (processType == "runoff:socont") {

@@ -4,6 +4,7 @@
 #include "HydroUnit.h"
 #include "Includes.h"
 
+class SubBasin;
 class ModelHydro;
 class Action;
 
@@ -64,12 +65,19 @@ class ActionsManager : public wxObject {
     void DateUpdate(double date);
 
     /**
+     * Get the sub basin associated with the model.
+     *
+     * @return pointer to the sub basin.
+     */
+    SubBasin* GetSubBasin() const;
+
+    /**
      * Get hydro unit by ID.
      *
      * @param id ID of the hydro unit.
      * @return pointer to the hydro unit.
      */
-    HydroUnit* GetHydroUnitById(int id);
+    HydroUnit* GetHydroUnitById(int id) const;
 
     /**
      * Get the list of sporadic action dates (i.e., actions that are not recursive).

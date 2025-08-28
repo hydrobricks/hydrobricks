@@ -384,14 +384,24 @@ class HydroUnits:
 
         # Loop through the rows and set the connectivity to the basin settings
         for _, row in connectivity.iterrows():
-            hydro_unit_id = int(row['id'])
-            connectivity_dict = ast.literal_eval(row['connectivity'])
+            if isinstance(row['id'], pd.Series):
+                hydro_unit_id = int(row['id'].iloc[0])
+            else:
+                hydro_unit_id = int(row['id'])
 
-            if not connectivity_dict:
+            if isinstance(row['connectivity'], pd.Series):
+                connectivity_val = row[('connectivity', '-')]
+            else:
+                connectivity_val = row['connectivity']
+
+            if isinstance(connectivity_val, str):
+                connectivity_val = ast.literal_eval(connectivity_val)
+
+            if not connectivity_val:
                 continue
 
             # Extract connected unit IDs and their ratios
-            connected_units = {int(k): float(v) for k, v in connectivity_dict.items()}
+            connected_units = {int(k): float(v) for k, v in connectivity_val.items()}
 
             # Check that the sum of ratios is 1
             total_ratio = sum(connected_units.values())

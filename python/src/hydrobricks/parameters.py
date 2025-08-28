@@ -943,19 +943,41 @@ class ParameterSet:
                         f"{options['snow_melt_process']} is not recognised.")
 
             if 'snow_ice_transformation' in options:
-                if options['snow_ice_transformation']:
-                    for i, cover_name in enumerate(land_cover_names):
-                        if land_cover_types[i] != 'glacier':
-                            continue
+                algo = options['snow_ice_transformation']
+                for i, cover_name in enumerate(land_cover_names):
+                    if land_cover_types[i] != 'glacier':
+                        continue
+                    if algo == 'transform:snow_ice_constant':
                         self.define_parameter(
                             component=f'{cover_name}_snowpack',
                             name='snow_ice_transformation_rate',
                             unit='mm/d',
                             aliases=['snow_ice_rate'],
                             min_value=0,
-                            max_value=0.005,
-                            default_value=0.002,
+                            max_value=10,
+                            default_value=0.5,
                             mandatory=True
+                        )
+                    elif algo == 'transform:snow_ice_swat':
+                        self.define_parameter(
+                            component=f'{cover_name}_snowpack',
+                            name='snow_ice_transformation_basal_acc_coeff',
+                            unit='-',
+                            aliases=['snow_ice_basal_acc_coeff'],
+                            min_value=0.001,
+                            max_value=0.006,
+                            default_value=0.0014,
+                            mandatory=False
+                        )
+                        self.define_parameter(
+                            component=f'{cover_name}_snowpack',
+                            name='north_hemisphere',
+                            unit='-',
+                            aliases=['north_hemisphere'],
+                            min_value=0,
+                            max_value=1,
+                            default_value=1,
+                            mandatory=False
                         )
 
             if 'snow_redistribution' in options:
@@ -1017,7 +1039,7 @@ class ParameterSet:
                         aliases=['snow_slide_max_snow_depth'],
                         min_value=-1,
                         max_value=50000,
-                        default_value=-1,
+                        default_value=20000,
                         mandatory=False
                     )
 

@@ -31,7 +31,7 @@ class CatchmentConnectivity:
     def calculate(
             self,
             mode: str = 'multiple',
-            force_connectivity: bool = True,
+            force_connectivity: bool = False,
             precision: int = 3
     ) -> pd.DataFrame:
         """
@@ -51,6 +51,7 @@ class CatchmentConnectivity:
             hydro units, proportionally to the length of the common border.
             If False, and if a hydro unit contributes mostly to surfaces out of the catchment,
             the connectivity will be nulled.
+            Default is False (recommended).
         precision
             The precision of the connectivity values. Default is 3.
             This is used to round the connectivity values to a given number of decimal places.

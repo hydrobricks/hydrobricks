@@ -39,6 +39,10 @@ catchment.create_elevation_bands(
     distance=100
 )
 
+# Connectivity for snow redistribution
+connectivity = catchment.calculate_connectivity(mode='multiple')
+catchment.hydro_units.set_connectivity(connectivity)
+
 # Glacier evolution. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
@@ -65,13 +69,17 @@ changes.load_from(
     update_month='October'
 )
 
+# Create the snow to ice transformation action (transform all remaining snow to ice)
+snow_to_ice = hb.actions.ActionGlacierSnowToIceTransformation('September', 30, 'glacier')
+
 # Model structure with specific options
 socont = models.Socont(
     soil_storage_nb=2,
     surface_runoff="linear_storage",
     record_all=True,
     glacier_infinite_storage=0,
-    snow_ice_transformation="transform:snow_ice_constant",
+    snow_ice_transformation="transform:snow_ice_swat",
+    snow_redistribution='transport:snow_slide',
     land_cover_types=['ground', 'glacier'],
     land_cover_names=['ground', 'glacier']
 )
@@ -80,15 +88,15 @@ socont = models.Socont(
 parameters = socont.generate_parameters()
 parameters.set_values({
     'A': 458,
-    'a_snow': 3,
+    'a_snow': 6,
     'k_slow_1': 0.9,
     'k_slow_2': 0.8,
     'k_quick': 1,
     'percol': 9.8,
-    'snow_ice_rate': 0.002,
-    'a_ice': 6,
+    'a_ice': 8,
     'k_ice': 0.5,
-    'k_snow': 0.1
+    'k_snow': 0.1,
+    'snow_ice_basal_acc_coeff': 0.0014
 })
 
 # Meteo data
@@ -125,8 +133,9 @@ socont.setup(
     end_date='2020-12-31'
 )
 
-# Add the glacier evolution action to the model
+# Add the actions to the model
 socont.add_action(changes)
+socont.add_action(snow_to_ice)
 
 # Initialize and run the model
 socont.run(
@@ -143,11 +152,43 @@ results = hb.Results(str(working_dir) + '/results.nc')
 glacier_fractions = results.results.land_cover_fractions[1, :, :]
 hydro_units_areas = results.results.hydro_units_areas
 glacier_areas = hydro_units_areas * glacier_fractions
-glacier_areas = glacier_areas.sum(axis=0)
+glacier_area = glacier_areas.sum(axis=0)
 
 # Plot glacier area. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
-plt.plot(results.results.time, glacier_areas)
+plt.plot(results.results.time, glacier_area)
 plt.title('Glacier area evolution')
+plt.ylim(bottom=0)
+plt.tight_layout()
+plt.show()
+
+# Plot glacier ice content
+ice_we = results.get_hydro_units_values(
+    component='glacier:ice_content'
+)
+ice_volume = glacier_areas * ice_we / 1000
+for i in range(ice_volume.shape[0]):
+    plt.plot(results.results.time, ice_volume[i, :], alpha=0.6)
+plt.title('Glacier ice volume evolution per hydro unit')
+plt.tight_layout()
+plt.show()
+
+# Plot the SWE on the glacier parts
+swe = results.get_hydro_units_values(
+    component='glacier_snowpack:snow_content'
+)
+for i in range(swe.shape[0]):
+    plt.plot(results.results.time, swe[i, :], alpha=0.6)
+plt.title('Glacier SWE evolution per hydro unit')
+plt.tight_layout()
+plt.show()
+
+# Plot the SWE on the non glacier parts
+swe = results.get_hydro_units_values(
+    component='ground_snowpack:snow_content'
+)
+for i in range(swe.shape[0]):
+    plt.plot(results.results.time, swe[i, :], alpha=0.6)
+plt.title('Non glacier SWE evolution per hydro unit')
 plt.tight_layout()
 plt.show()

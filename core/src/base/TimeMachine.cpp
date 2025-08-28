@@ -10,12 +10,15 @@ TimeMachine::TimeMachine()
       _parametersUpdater(nullptr),
       _actionsManager(nullptr) {}
 
+double TimeMachine::_currentDateStatic = 0.0;
+
 void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit) {
     _date = start;
     _start = start;
     _end = end;
     _timeStep = timeStep;
     _timeStepUnit = timeStepUnit;
+    _currentDateStatic = _date;  // Sync static date
     UpdateTimeStepInDays();
 }
 
@@ -36,10 +39,12 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     }
 
     UpdateTimeStepInDays();
+    _currentDateStatic = _date;  // Sync static date
 }
 
 void TimeMachine::Reset() {
     _date = _start;
+    _currentDateStatic = _date;  // Sync static date
 }
 
 bool TimeMachine::IsOver() {
@@ -49,6 +54,7 @@ bool TimeMachine::IsOver() {
 void TimeMachine::IncrementTime() {
     wxASSERT(_timeStepInDays > 0);
     _date += _timeStepInDays;
+    _currentDateStatic = _date;  // Sync static date
 
     if (_parametersUpdater) {
         _parametersUpdater->DateUpdate(_date);
@@ -82,4 +88,17 @@ void TimeMachine::UpdateTimeStepInDays() {
         default:
             wxLogError(_("The provided time step unit is not allowed."));
     }
+}
+
+int TimeMachine::GetCurrentDayOfYear() {
+    if (_currentDateStatic <= 0) return 1;
+    Time ts = GetTimeStructFromMJD(_currentDateStatic);
+    static const int cumMonthDays[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+    int monthIndex = ts.month - 1;  // 0-based
+    if (monthIndex < 0 || monthIndex > 11) return 1;
+    bool leap = (ts.year % 4 == 0 && (ts.year % 100 != 0 || ts.year % 400 == 0));
+    int doy = cumMonthDays[monthIndex] + ts.day;
+    if (leap && monthIndex > 1) doy += 1;
+
+    return doy;
 }

@@ -8,9 +8,7 @@ ActionGlacierEvolutionDeltaH::ActionGlacierEvolutionDeltaH() = default;
 
 void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
                                                    const axxd& areas, const axxd& volumes) {
-    _recursive = true;
-    _recursiveMonths.push_back(month);
-    _recursiveDays.push_back(1);
+    AddRecursiveDate(month, 1);
     _landCoverName = landCoverName;
     _hydroUnitIds = hydroUnitIds;
     _tableArea = areas;
@@ -74,7 +72,7 @@ void ActionGlacierEvolutionDeltaH::Reset() {
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {
     // Get the list of hydro units.
-    auto subBasin = _manager->GetModel()->GetSubBasin();
+    auto subBasin = _manager->GetSubBasin();
 
     // Compute the total glacier (_landCoverName) water equivalent (w.e.).
     double glacierWE = 0.0;
@@ -93,6 +91,7 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
 
     // Get the percentage of glacier retreat.
     double glacierRetreatPc = (_initialGlacierWE - glacierWE) / _initialGlacierWE;
+    glacierRetreatPc = std::max(0.0, glacierRetreatPc);
 
     // Get the percentage of glacier retreat for each row of the table.
     int nRows = _tableArea.rows();

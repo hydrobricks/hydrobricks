@@ -3,6 +3,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 import hydrobricks as hb
 import hydrobricks.models as models
 import hydrobricks.plotting.plot_results as plotting
@@ -51,7 +53,7 @@ for with_snow_redistribution in [True, False]:
     if with_snow_redistribution:
         params = {
             'A': 300,
-            'a_snow': 4,
+            'a_snow': 6,
             'k_slow_1': 0.9,
             'k_slow_2': 0.8,
             'k_quick': 1,
@@ -61,8 +63,7 @@ for with_snow_redistribution in [True, False]:
             'snow_slide_min_slope': 10,
             'snow_slide_max_slope': 75,
             'snow_slide_min_snow_depth': 50,
-            'snow_slide_max_snow_depth': -1  # Not in the original method, but added
-                                             # for convenience. -1 means no limit.
+            'snow_slide_max_snow_depth': -1  # Not in original method. -1 = no limit.
         }
     else:
         params = {
@@ -147,6 +148,16 @@ for with_snow_redistribution in [True, False]:
     # List the hydro units components available
     results.list_hydro_units_components()
 
+    # Plot the SWE
+    swe = results.get_hydro_units_values(
+        component='ground_snowpack:snow_content'
+    )
+    for i in range(swe.shape[0]):
+        plt.plot(results.results.time, swe[i, :], alpha=0.6)
+    plt.title('Non glacier SWE evolution per hydro unit')
+    plt.tight_layout()
+    plt.show()
+
     # Plot the snow water equivalent on a map
     plotting.plot_map_hydro_unit_value(
         results,
@@ -157,6 +168,7 @@ for with_snow_redistribution in [True, False]:
         figsize=(5, 6),
         title=title,
     )
+    plt.close()
 
     # Create an animated map of the snow water equivalent
     plotting.create_animated_map_hydro_unit_value(
@@ -168,4 +180,4 @@ for with_snow_redistribution in [True, False]:
         dem_path=DEM_RASTER,
         figsize=(5, 6),
     )
-
+    plt.close()

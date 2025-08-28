@@ -8,9 +8,7 @@ ActionGlacierEvolutionAreaScaling::ActionGlacierEvolutionAreaScaling() = default
 
 void ActionGlacierEvolutionAreaScaling::AddLookupTables(int month, const string& landCoverName, const axi& hydroUnitIds,
                                                         const axxd& areas, const axxd& volumes) {
-    _recursive = true;
-    _recursiveMonths.push_back(month);
-    _recursiveDays.push_back(1);
+    AddRecursiveDate(month, 1);
     _landCoverName = landCoverName;
     _hydroUnitIds = hydroUnitIds;
     _tableArea = areas;
@@ -98,6 +96,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
 
         // Get the percentage of glacier retreat for the current hydro unit.
         double glacierRetreatPc = (_initialGlacierWE[i] - iceVolume) / _initialGlacierWE[i];
+        glacierRetreatPc = std::max(0.0, glacierRetreatPc);
 
         // Get corresponding row in the lookup table.
         int row = static_cast<int>(glacierRetreatPc / rowPcIncrement);

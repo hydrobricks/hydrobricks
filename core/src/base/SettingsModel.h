@@ -327,7 +327,7 @@ class SettingsModel : public wxObject {
      *
      * @param transformationProcess name of the transformation process.
      */
-    void AddSnowIceTransformation(const string& transformationProcess = "transform:snow_ice_constant");
+    void AddSnowIceTransformation(const string& transformationProcess = "transform:snow_ice_swat");
 
     /**
      * Add a snow redistribution process to the model.

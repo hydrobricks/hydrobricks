@@ -88,7 +88,7 @@ socont = models.Socont(
 parameters = socont.generate_parameters()
 parameters.set_values({
     'A': 458,
-    'a_snow': 6,
+    'a_snow': 4,
     'k_slow_1': 0.9,
     'k_slow_2': 0.8,
     'k_quick': 1,

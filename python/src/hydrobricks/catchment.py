@@ -4,6 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
 import hydrobricks as hb
 from hydrobricks.hydro_units import HydroUnits

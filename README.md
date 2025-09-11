@@ -24,7 +24,7 @@ Install: ```pip install hydrobricks```
 
 ## Main resources
 *   **Documentation**: https://hydrobricks.readthedocs.io/en/latest/
-*   **Examples**: https://github.com/hydrobricks/hydrobricks/tree/main/python/examples
+*   **Examples**: https://github.com/hydrobricks/hydrobricks/tree/main/examples
 *   How to build: https://github.com/hydrobricks/hydrobricks/wiki
 *   Code documentation of the core: https://hydrobricks.github.io/hydrobricks-doc-core/
 

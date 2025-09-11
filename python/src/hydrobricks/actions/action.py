@@ -9,10 +9,6 @@ class Action(ABC):
         self.is_initialized = False
         self.name = "BaseAction"
 
-    def is_initialized(self) -> bool:
-        """Check if the action is initialized."""
-        return self.is_initialized
-
     @staticmethod
     def _convert_month_to_number(update_month: str | int) -> int:
         """

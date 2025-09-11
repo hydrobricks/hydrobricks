@@ -12,7 +12,7 @@ import hydrobricks.plotting.plot_results as plotting
 # Paths
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments', 'ch_rhone_gletsch'
+    '..', '..', 'tests', 'files', 'catchments', 'ch_rhone_gletsch'
 )
 CATCHMENT_DIR = CATCHMENT_DIR
 CATCHMENT_BANDS = CATCHMENT_DIR / 'hydro_units_elevation_radiation.csv'

@@ -16,7 +16,7 @@ from hydrobricks.constants import TO_RAD
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_stgallen' / 'dem.tif'
 

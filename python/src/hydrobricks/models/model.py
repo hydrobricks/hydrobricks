@@ -228,7 +228,7 @@ class Model(ABC):
         action
             The action object. The dates must be sorted.
         """
-        if not action.is_initialized():
+        if not action.is_initialized:
             raise RuntimeError(f'The action {action.name} has not been initialized.')
 
         return self.model.add_action(action.action)

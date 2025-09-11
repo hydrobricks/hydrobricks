@@ -13,7 +13,7 @@ from hydrobricks.constants import ICE_WE
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units_50m.csv'
 GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile_id_50m.csv'

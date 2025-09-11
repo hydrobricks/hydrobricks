@@ -11,7 +11,7 @@ import hydrobricks.models as models
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 CATCHMENT_PATH = TEST_FILES_DIR / 'ch_rhone_gletsch'
 CATCHMENT_OUTLINE = CATCHMENT_PATH / 'outline.shp'

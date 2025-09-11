@@ -25,6 +25,7 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
     def __init__(self):
         super().__init__()
+        self.name = "ActionGlacierEvolutionAreaScaling"
         self.action = _hb.ActionGlacierEvolutionAreaScaling()
 
     def load_from_csv(
@@ -196,3 +197,5 @@ class ActionGlacierEvolutionAreaScaling(Action):
             "The areas and volumes tables do not have the same shape."
 
         self.action.add_lookup_tables(month_num, land_cover, hu_ids, areas, volumes)
+
+        self.is_initialized = True

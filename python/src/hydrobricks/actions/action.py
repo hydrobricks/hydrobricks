@@ -6,7 +6,8 @@ class Action(ABC):
 
     @abstractmethod
     def __init__(self):
-        pass
+        self.is_initialized = False
+        self.name = "BaseAction"
 
     @staticmethod
     def _convert_month_to_number(update_month: str | int) -> int:

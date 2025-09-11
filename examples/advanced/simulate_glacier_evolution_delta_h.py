@@ -7,12 +7,11 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.actions import ActionGlacierEvolutionAreaScaling
 
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 CATCHMENT_PATH = TEST_FILES_DIR / 'ch_rhone_gletsch'
 CATCHMENT_OUTLINE = CATCHMENT_PATH / 'outline.shp'
@@ -45,17 +44,24 @@ catchment.hydro_units.set_connectivity(connectivity)
 
 # Glacier evolution. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
-glacier_evolution = hb.preprocessing.GlacierEvolutionAreaScaling()
-glacier_df = glacier_evolution.compute_lookup_table(
+glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
+glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment,
     ice_thickness=GLACIER_ICE_THICKNESS
 )
 
-# The lookup table can be saved as a csv file
+# It can then optionally be saved as a csv file
+glacier_df.to_csv(
+    working_dir / 'glacier_profile.csv',
+    index=False
+)
+
+# The lookup table can be computed and saved as a csv file
+glacier_evolution.compute_lookup_table(catchment)
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object
-changes = ActionGlacierEvolutionAreaScaling()
+changes = hb.actions.ActionGlacierEvolutionDeltaH()
 changes.load_from(
     glacier_evolution,
     land_cover='glacier',
@@ -81,7 +87,7 @@ socont = models.Socont(
 parameters = socont.generate_parameters()
 parameters.set_values({
     'A': 458,
-    'a_snow': 6,
+    'a_snow': 4,
     'k_slow_1': 0.9,
     'k_slow_2': 0.8,
     'k_quick': 1,

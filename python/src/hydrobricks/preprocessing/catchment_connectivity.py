@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from scipy import ndimage
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
 import hydrobricks as hb
 

@@ -30,6 +30,7 @@ class ActionLandCoverChange(Action):
 
     def __init__(self):
         super().__init__()
+        self.name = "ActionLandCoverChange"
         self.action = _hb.ActionLandCoverChange()
 
     def load_from_csv(
@@ -583,3 +584,5 @@ class ActionLandCoverChange(Action):
                 if not np.isnan(area):
                     area = convert_unit(area, area_unit, Unit.M2)
                     self.action.add_change(mjd, hu_id, land_cover, area)
+
+        self.is_initialized = True

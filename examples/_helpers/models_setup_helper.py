@@ -10,7 +10,7 @@ import hydrobricks.models as models
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', '..', 'tests', 'files', 'catchments'
+    '..', '..', 'tests', 'files', 'catchments'
 )
 
 

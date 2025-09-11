@@ -22,6 +22,7 @@ class ActionGlacierEvolutionDeltaH(Action):
 
     def __init__(self):
         super().__init__()
+        self.name = "ActionGlacierEvolutionDeltaH"
         self.action = _hb.ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(
@@ -193,3 +194,5 @@ class ActionGlacierEvolutionDeltaH(Action):
             "The areas and volumes tables do not have the same shape."
 
         self.action.add_lookup_tables(month_num, land_cover, hu_ids, areas, volumes)
+
+        self.is_initialized = True

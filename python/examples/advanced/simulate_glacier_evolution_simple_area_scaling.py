@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.actions import ActionGlacierEvolutionAreaScaling
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -55,7 +54,7 @@ glacier_df = glacier_evolution.compute_lookup_table(
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object
-changes = ActionGlacierEvolutionAreaScaling()
+changes = hb.actions.ActionGlacierEvolutionAreaScaling()
 changes.load_from(
     glacier_evolution,
     land_cover='glacier',

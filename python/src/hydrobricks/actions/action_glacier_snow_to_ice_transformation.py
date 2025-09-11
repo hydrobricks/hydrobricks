@@ -33,6 +33,7 @@ class ActionGlacierSnowToIceTransformation(Action):
             The land cover name to apply the changes. Default is 'glacier'.
         """
         super().__init__()
+        self.name = "ActionGlacierSnowToIceTransformation"
         self._create_bounded_instance(
             update_month,
             update_day,
@@ -78,3 +79,5 @@ class ActionGlacierSnowToIceTransformation(Action):
         month_num = self._convert_month_to_number(update_month)
         self.action = _hb.ActionGlacierSnowToIceTransformation(
             month_num, update_day, land_cover)
+
+        self.is_initialized = True

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.actions import ActionGlacierEvolutionDeltaH
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -62,7 +61,7 @@ glacier_evolution.compute_lookup_table(catchment)
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object
-changes = ActionGlacierEvolutionDeltaH()
+changes = hb.actions.ActionGlacierEvolutionDeltaH()
 changes.load_from(
     glacier_evolution,
     land_cover='glacier',

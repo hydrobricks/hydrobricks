@@ -19,6 +19,15 @@ void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& land
 }
 
 bool ActionGlacierEvolutionDeltaH::Init() {
+    if (_manager->GetSubBasin() == nullptr) {
+        wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
+        return false;
+    }
+    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+        wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
+        return false;
+    }
+
     for (int i = 0; i < _hydroUnitIds.size(); i++) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = _manager->GetHydroUnitById(id);

@@ -7,6 +7,7 @@ import pytest
 import hydrobricks as hb
 from hydrobricks.parameters import ParamSpec, validate_process_param_specs
 
+
 def test_parameter_creation():
     hb.ParameterSet()
 

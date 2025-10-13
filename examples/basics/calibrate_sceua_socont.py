@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import spotpy
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 import hydrobricks as hb
 import hydrobricks.trainer as trainer
+from examples._helpers.models_setup_helper import ModelSetupHelper
 
 # Set up the model
 helper = ModelSetupHelper(

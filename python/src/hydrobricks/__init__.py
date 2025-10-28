@@ -27,6 +27,21 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
+# Provide default placeholders so attributes are always present on the package
+Dataset = None
+rasterio = None
+gpd = None
+shapely = None
+spotpy = None
+pyet = None
+pyproj = None
+pysheds = None
+pyshedsGrid = None
+xr = None
+rxr = None
+pyarrow = None
+xrs = None
+
 has_netcdf = is_module_available("netCDF4")
 if has_netcdf:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")

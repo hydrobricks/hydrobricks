@@ -86,7 +86,7 @@ class Brick : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk();
+    [[nodiscard]] virtual bool IsOk();
 
     /**
      * Define if the brick needs to be handled by the solver.
@@ -102,7 +102,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick can have an area fraction.
      */
-    virtual bool CanHaveAreaFraction() {
+    [[nodiscard]] virtual bool CanHaveAreaFraction() {
         return false;
     }
 
@@ -111,7 +111,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is a snowpack.
      */
-    virtual bool IsSnowpack() {
+    [[nodiscard]] virtual bool IsSnowpack() {
         return false;
     }
 
@@ -120,7 +120,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is a glacier.
      */
-    virtual bool IsGlacier() {
+    [[nodiscard]] virtual bool IsGlacier() {
         return false;
     }
 
@@ -129,7 +129,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is a land cover.
      */
-    virtual bool IsLandCover() {
+    [[nodiscard]] virtual bool IsLandCover() {
         return false;
     }
 
@@ -138,7 +138,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is null.
      */
-    virtual bool IsNull() {
+    [[nodiscard]] virtual bool IsNull() {
         return false;
     }
 
@@ -212,7 +212,7 @@ class Brick : public wxObject {
      *
      * @return name of the brick.
      */
-    [[nodiscard]] string GetName() const {
+    string GetName() const {
         return _name;
     }
 
@@ -230,7 +230,7 @@ class Brick : public wxObject {
      *
      * @return pointer to the hydro unit.
      */
-    [[nodiscard]] HydroUnit* GetHydroUnit() const {
+    HydroUnit* GetHydroUnit() const {
         wxASSERT(_hydroUnit);
         return _hydroUnit;
     }

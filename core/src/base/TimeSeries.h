@@ -17,7 +17,7 @@ class TimeSeries : public wxObject {
      * @param path path to the netCDF file.
      * @param vecTimeSeries vector to store the parsed time series.
      */
-    static bool Parse(const string& path, vector<TimeSeries*>& vecTimeSeries);
+    [[nodiscard]] static bool Parse(const string& path, vector<TimeSeries*>& vecTimeSeries);
 
     /**
      * Create a time series from the provided data.
@@ -36,21 +36,21 @@ class TimeSeries : public wxObject {
      * @param date date to set the cursor to.
      * @return true if the cursor was successfully set to the provided date.
      */
-    virtual bool SetCursorToDate(double date) = 0;
+    [[nodiscard]] virtual bool SetCursorToDate(double date) = 0;
 
     /**
      * Advance the internal cursor to the next time step.
      *
      * @return true if the cursor was successfully advanced to the next time step.
      */
-    virtual bool AdvanceOneTimeStep() = 0;
+    [[nodiscard]] virtual bool AdvanceOneTimeStep() = 0;
 
     /**
      * Check if the time series is distributed.
      *
      * @return true if the time series is distributed.
      */
-    virtual bool IsDistributed() = 0;
+    [[nodiscard]] virtual bool IsDistributed() = 0;
 
     /**
      * Get the time start of the time series.

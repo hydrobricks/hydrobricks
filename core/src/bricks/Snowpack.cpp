@@ -56,7 +56,8 @@ void Snowpack::SetInitialState(double value, ContentType type) {
             _snow->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 
@@ -67,7 +68,8 @@ double Snowpack::GetContent(ContentType type) {
         case ContentType::Snow:
             return _snow->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 
@@ -80,7 +82,8 @@ void Snowpack::UpdateContent(double value, ContentType type) {
             _snow->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 

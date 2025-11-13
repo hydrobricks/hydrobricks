@@ -12,7 +12,7 @@ class SplitterSnowRain : public Splitter {
     /**
      * @copydoc Splitter::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Splitter::SetParameters()

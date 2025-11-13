@@ -14,7 +14,7 @@ class ProcessLateral : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Process::GetConnectionsNb()
@@ -61,7 +61,7 @@ class ProcessLateral : public Process {
      *
      * @return true if the process is a lateral process.
      */
-    bool IsLateralProcess() const override {
+    [[nodiscard]] bool IsLateralProcess() const override {
         return true;
     }
 

@@ -45,21 +45,21 @@ class ModelHydro : public wxObject {
      *
      * @return true if the model is well-defined.
      */
-    bool IsOk();
+    [[nodiscard]] bool IsOk();
 
     /**
      * Check if the forcing data were loaded.
      *
      * @return true if the forcing data were loaded.
      */
-    bool ForcingLoaded();
+    [[nodiscard]] bool ForcingLoaded();
 
     /**
      * Run the model.
      *
      * @return true if the model run was successful.
      */
-    bool Run();
+    [[nodiscard]] bool Run();
 
     /**
      * Reset the model.

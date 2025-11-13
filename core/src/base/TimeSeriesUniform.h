@@ -23,12 +23,12 @@ class TimeSeriesUniform : public TimeSeries {
     /**
      * @copydoc TimeSeries::SetCursorToDate()
      */
-    bool SetCursorToDate(double date) override;
+    [[nodiscard]] bool SetCursorToDate(double date) override;
 
     /**
      * @copydoc TimeSeries::AdvanceOneTimeStep()
      */
-    bool AdvanceOneTimeStep() override;
+    [[nodiscard]] bool AdvanceOneTimeStep() override;
 
     /**
      * @copydoc TimeSeries::IsDistributed()

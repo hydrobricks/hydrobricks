@@ -31,7 +31,7 @@ class ActionLandCoverChange : public Action {
      * @param date date of the action.
      * @return true if the action was applied successfully.
      */
-    bool Apply(double date) override;
+    [[nodiscard]] bool Apply(double date) override;
 
     /**
      * Get the number of changes in the action.

@@ -24,7 +24,7 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * Register the process parameters and forcing in the settings model.
@@ -42,6 +42,13 @@ class ProcessLateralSnowSlide : public ProcessLateral {
      * @copydoc Process::SetParameters()
      */
     void SetParameters(const ProcessSettings& processSettings) override;
+
+    /**
+     * @copydoc Process::IsLateralProcess()
+     */
+    [[nodiscard]] bool IsLateralProcess() const override {
+        return true;
+    }
 
   protected:
     float _slope_deg;             // Slope of the hydro unit [°]

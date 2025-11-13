@@ -26,7 +26,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
     /**
      * Initialize the action.
      */
-    bool Init() override;
+    [[nodiscard]] bool Init() override;
 
     /**
      * Reset the action to its initial state.
@@ -39,7 +39,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @param date date of the action.
      * @return true if the action was applied successfully.
      */
-    bool Apply(double date) override;
+    [[nodiscard]] bool Apply(double date) override;
 
     /**
      * Get the land cover name (glacier name) associated with the action.

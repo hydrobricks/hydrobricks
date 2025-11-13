@@ -15,7 +15,7 @@ class Flux : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsOk() = 0;
 
     /**
      * Reset the flux to its initial state.
@@ -147,7 +147,7 @@ class Flux : public wxObject {
      *
      * @return the flux type.
      */
-    [[nodiscard]] ContentType GetType() const {
+    ContentType GetType() const {
         return _type;
     }
 

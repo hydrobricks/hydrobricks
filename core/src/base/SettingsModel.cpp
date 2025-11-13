@@ -1,8 +1,8 @@
 #include "SettingsModel.h"
 
+#include "ContentTypes.h"
 #include "Parameter.h"
 #include "Process.h"
-#include "ContentTypes.h"
 
 SettingsModel::SettingsModel()
     : _logAll(false),

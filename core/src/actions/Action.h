@@ -110,7 +110,7 @@ class Action : public wxObject {
      *
      * @return true if the action is recursive.
      */
-    bool IsRecursive() {
+    [[nodiscard]] bool IsRecursive() const {
         return _recursive;
     }
 

@@ -57,7 +57,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth
 
     // Snow holding threshold
-    float slope = std::max(_slope_deg, *_minSlope);                    // [degrees]
+    float slope = std::max(_slope_deg, *_minSlope);                     // [degrees]
     double snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
     double snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
 

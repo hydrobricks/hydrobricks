@@ -1,7 +1,7 @@
 #include "Brick.h"
 
-#include "ContentTypes.h"
 #include "BrickTypes.h"
+#include "ContentTypes.h"
 #include "GenericLandCover.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
@@ -80,7 +80,8 @@ void Brick::SetParameters(const BrickSettings& brickSettings) {
 void Brick::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
     if (flux->GetType() != ContentType::Water) {
-        throw InvalidArgument(wxString::Format(_("The flux type '%s' should be water."), ContentTypeToString(flux->GetType())));
+        throw InvalidArgument(
+            wxString::Format(_("The flux type '%s' should be water."), ContentTypeToString(flux->GetType())));
     }
     _water->AttachFluxIn(flux);
 }
@@ -119,7 +120,8 @@ void Brick::SetInitialState(double value, ContentType type) {
             _water->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
 
@@ -128,7 +130,8 @@ double Brick::GetContent(ContentType type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
 
@@ -138,7 +141,8 @@ void Brick::UpdateContent(double value, ContentType type) {
             _water->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw InvalidArgument(
+                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
 

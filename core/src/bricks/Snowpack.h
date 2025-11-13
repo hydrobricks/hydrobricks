@@ -32,7 +32,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * Get the snow container.
@@ -44,7 +44,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::IsSnowpack()
      */
-    bool IsSnowpack() override {
+    [[nodiscard]] bool IsSnowpack() override {
         return true;
     }
 
@@ -93,7 +93,7 @@ class Snowpack : public SurfaceComponent {
      *
      * @return True if the snowpack has snow, false otherwise.
      */
-    bool HasSnow();
+    [[nodiscard]] bool HasSnow();
 
   protected:
     SnowContainer* _snow;

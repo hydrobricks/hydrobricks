@@ -39,7 +39,7 @@ class TimeMachine : public wxObject {
      *
      * @return true if the timer is over
      */
-    bool IsOver();
+    [[nodiscard]] bool IsOver();
 
     /**
      * Increment the timer.

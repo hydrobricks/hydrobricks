@@ -6,12 +6,12 @@
 /**
  * Initialization of the user directory and the config file.
  */
-bool InitHydrobricks();
+[[nodiscard]] bool InitHydrobricks();
 
 /**
  * Initialization of hydrobricks for Python.
  */
-bool InitHydrobricksForPython();
+[[nodiscard]] bool InitHydrobricksForPython();
 
 /**
  * Get the user directory path.
@@ -25,7 +25,7 @@ wxString GetUserDirPath();
  *
  * @return True on success.
  */
-bool CheckOutputDirectory(const string& path);
+[[nodiscard]] bool CheckOutputDirectory(const string& path);
 
 /**
  * Display the processing time.

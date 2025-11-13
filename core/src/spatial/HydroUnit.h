@@ -20,7 +20,7 @@ class HydroUnit : public wxObject {
         Undefined
     };
 
-    HydroUnit(double area = UNDEFINED, Types type = Undefined);
+    explicit HydroUnit(double area = UNDEFINED, Types type = Undefined);
 
     ~HydroUnit() override;
 
@@ -85,7 +85,7 @@ class HydroUnit : public wxObject {
      * @param type The type of forcing to check for.
      * @return True if the hydro unit has the forcing, false otherwise.
      */
-    bool HasForcing(VariableType type);
+    [[nodiscard]] bool HasForcing(VariableType type);
 
     /**
      * Attach a forcing to the hydro unit.
@@ -140,7 +140,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the brick to check for.
      * @return True if the hydro unit has the brick, false otherwise.
      */
-    bool HasBrick(const string& name);
+    [[nodiscard]] bool HasBrick(const string& name);
 
     /**
      * Get a brick by its name.
@@ -187,7 +187,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the splitter to check for.
      * @return True if the hydro unit has the splitter, false otherwise.
      */
-    bool HasSplitter(const string& name);
+    [[nodiscard]] bool HasSplitter(const string& name);
 
     /**
      * Get a splitter by its name.
@@ -202,7 +202,7 @@ class HydroUnit : public wxObject {
      *
      * @return True if everything is ok, false otherwise.
      */
-    bool IsOk();
+    [[nodiscard]] bool IsOk();
 
     /**
      * Change the area fraction of a land cover in the hydro unit.

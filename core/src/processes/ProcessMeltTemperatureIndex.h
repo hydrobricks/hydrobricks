@@ -21,7 +21,7 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Process::SetParameters()

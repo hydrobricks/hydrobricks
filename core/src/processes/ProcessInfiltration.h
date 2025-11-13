@@ -14,12 +14,12 @@ class ProcessInfiltration : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Process::NeedsTargetBrickLinking()
      */
-    bool NeedsTargetBrickLinking() override {
+    [[nodiscard]] bool NeedsTargetBrickLinking() override {
         return true;
     }
 

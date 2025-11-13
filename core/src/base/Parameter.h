@@ -14,7 +14,7 @@ class Parameter : public wxObject {
      *
      * @return true if the parameter is linked to a process.
      */
-    bool IsLinked() const {
+    [[nodiscard]] bool IsLinked() const {
         return _linked;
     }
 

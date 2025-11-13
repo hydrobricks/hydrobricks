@@ -14,7 +14,7 @@ class ProcessMelt : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Process::GetConnectionsNb()

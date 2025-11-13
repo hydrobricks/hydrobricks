@@ -13,7 +13,7 @@ class FluxToBrickInstantaneous : public FluxToBrick {
     /**
      * @copydoc Flux::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Flux::IsInstantaneous()

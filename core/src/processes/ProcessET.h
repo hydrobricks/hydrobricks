@@ -14,7 +14,7 @@ class ProcessET : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsOk() override;
 
     /**
      * @copydoc Process::GetConnectionsNb()
@@ -29,7 +29,7 @@ class ProcessET : public Process {
     /**
      * @copydoc Process::ToAtmosphere()
      */
-    bool ToAtmosphere() override {
+    [[nodiscard]] bool ToAtmosphere() override {
         return true;
     }
 };

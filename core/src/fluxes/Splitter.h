@@ -25,7 +25,7 @@ class Splitter : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsOk() = 0;
 
     /**
      * Assign the parameters to the splitter.

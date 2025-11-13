@@ -32,7 +32,7 @@ class Process : public wxObject {
      * @param processType type of process.
      * @return true if everything is correctly defined.
      */
-    static bool RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType);
+    [[nodiscard]] static bool RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType);
 
     /**
      * Reset all the fluxes connected to the process.
@@ -44,7 +44,7 @@ class Process : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsOk() = 0;
 
     /**
      * Check if the process has a parameter with the provided name.
@@ -53,7 +53,7 @@ class Process : public wxObject {
      * @param name name of the parameter to check.
      * @return true if the process has a parameter with the provided name.
      */
-    static bool HasParameter(const ProcessSettings& processSettings, const string& name);
+    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, const string& name);
 
     /**
      * Get the value pointer of a parameter.
@@ -121,7 +121,7 @@ class Process : public wxObject {
      *
      * @return true if the process sends water to the atmosphere.
      */
-    virtual bool ToAtmosphere() {
+    [[nodiscard]] virtual bool ToAtmosphere() {
         return false;
     }
 
@@ -130,7 +130,7 @@ class Process : public wxObject {
      *
      * @return true if the process needs to link the target brick.
      */
-    virtual bool NeedsTargetBrickLinking() {
+    [[nodiscard]] virtual bool NeedsTargetBrickLinking() {
         return false;
     }
 
@@ -230,7 +230,7 @@ class Process : public wxObject {
      *
      * @return true if the process is a lateral process.
      */
-    virtual bool IsLateralProcess() const {
+    [[nodiscard]] virtual bool IsLateralProcess() const {
         return false;
     }
 

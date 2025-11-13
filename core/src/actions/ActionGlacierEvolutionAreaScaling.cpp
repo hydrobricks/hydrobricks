@@ -59,8 +59,8 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
             return false;
         }
         double iceWE = _tableVolume(0, i) * constants::iceDensity / areaRef;
-        brick->UpdateContent(iceWE, "ice");
-        brick->SetInitialState(iceWE, "ice");
+        brick->UpdateContent(iceWE, ContentType::Ice);
+        brick->SetInitialState(iceWE, ContentType::Ice);
     }
 
     return true;
@@ -82,7 +82,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
     auto subBasin = _manager->GetModel()->GetSubBasin();
 
     // Get the percentage of glacier retreat for each row of the table.
-    int nRows = _tableArea.rows();
+    int nRows = static_cast<int>(_tableArea.rows());
     double rowPcIncrement = 1.0 / (nRows - 1);
 
     // Change the glacier area for each hydro unit based on the lookup table.
@@ -94,7 +94,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
             continue;
         }
         double area = brick->GetAreaFraction() * unit->GetArea();
-        double brickIceWE = brick->GetContent("ice");
+        double brickIceWE = brick->GetContent(ContentType::Ice);
         double iceVolume = area * brickIceWE;
 
         if (iceVolume == 0) {
@@ -121,7 +121,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
 
         // Update the glacier water equivalent to match the new area.
         double iceWE = iceVolume / newArea;  // Convert glacier water equivalent to mm w.e.
-        brick->UpdateContent(iceWE, "ice");
+        brick->UpdateContent(iceWE, ContentType::Ice);
     }
 
     return true;

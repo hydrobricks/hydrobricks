@@ -2,6 +2,7 @@
 
 #include "Parameter.h"
 #include "Process.h"
+#include "ContentTypes.h"
 
 SettingsModel::SettingsModel()
     : _logAll(false),
@@ -187,7 +188,7 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
         if (pos != string::npos) {
             string fluxType = target.substr(pos + 1);
             string targetSub = target.substr(0, pos);
-            AddProcessOutput(targetSub, fluxType);
+            AddProcessOutput(targetSub, ContentTypeFromString(fluxType));
         } else {
             AddProcessOutput(target);
         }
@@ -259,7 +260,7 @@ void SettingsModel::AddProcessForcing(const string& name) {
     }
 }
 
-void SettingsModel::AddProcessOutput(const string& target, const string& fluxType) {
+void SettingsModel::AddProcessOutput(const string& target, ContentType fluxType) {
     wxASSERT(_selectedProcess);
 
     OutputSettings outputSettings;
@@ -359,7 +360,7 @@ void SettingsModel::AddSplitterForcing(const string& name) {
     }
 }
 
-void SettingsModel::AddSplitterOutput(const string& target, const string& fluxType) {
+void SettingsModel::AddSplitterOutput(const string& target, const ContentType fluxType) {
     wxASSERT(_selectedSplitter);
 
     OutputSettings outputSettings;
@@ -435,7 +436,7 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
         AddSplitterForcing("precipitation");
         AddSplitterForcing("temperature");
         AddSplitterOutput("rain_splitter");
-        AddSplitterOutput("snow_splitter", "snow");
+        AddSplitterOutput("snow_splitter", ContentType::Snow);
         AddSplitterParameter("transition_start", 0.0f);
         AddSplitterParameter("transition_end", 2.0f);
 
@@ -459,7 +460,7 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
+        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 
@@ -500,7 +501,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
         BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", "snow");
+        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
         SetSurfaceComponentParent(brickSettings.name);
 

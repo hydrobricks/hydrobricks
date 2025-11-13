@@ -53,4 +53,27 @@ enum TimeFormat {
     guess
 };
 
+/**
+ * Strongly-typed brick categories used by factories and type dispatch.
+ */
+enum class BrickType {
+    Storage,
+    GenericLandCover,
+    Glacier,
+    Urban,
+    Vegetation,
+    Snowpack,
+    Unknown
+};
+
+/**
+ * Content type for storages and fluxes.
+ */
+enum class ContentType {
+    Water,
+    Snow,
+    Ice,
+    Unknown
+};
+
 #endif  // HYDROBRICKS_ENUMS_H

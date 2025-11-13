@@ -11,7 +11,7 @@ class Brick : public wxObject {
   public:
     explicit Brick();
 
-    ~Brick() override;
+    ~Brick() override = default;
 
     /**
      * Factory method to create a brick.
@@ -20,6 +20,14 @@ class Brick : public wxObject {
      * @return the created brick.
      */
     static Brick* Factory(const BrickSettings& brickSettings);
+
+    /**
+     * Factory method to create a brick.
+     *
+     * @param type type of the brick.
+     * @return the created brick.
+     */
+    static Brick* Factory(BrickType type);
 
     /**
      * Check if the brick has a parameter with the provided name.
@@ -85,7 +93,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick needs to be handled by the solver.
      */
-    bool NeedsSolver() const {
+    [[nodiscard]] bool NeedsSolver() const {
         return _needsSolver;
     }
 
@@ -143,25 +151,25 @@ class Brick : public wxObject {
      * Set the initial state of the water container.
      *
      * @param value initial state value.
-     * @param type type of the content (e.g., "water", "ice", or "snow").
+     * @param type type of the content.
      */
-    virtual void SetInitialState(double value, const string& type = "water");
+    virtual void SetInitialState(double value, ContentType type);
 
     /**
      * Get the content of the water container.
      *
-     * @param type type of the content (e.g., "water", "ice", or "snow").
+     * @param type type of the content.
      * @return content of the water container.
      */
-    virtual double GetContent(const string& type = "water");
+    virtual double GetContent(ContentType type);
 
     /**
      * Update the content of the water container.
      *
      * @param value new content value.
-     * @param type type of the content (e.g., "water", "ice", or "snow").
+     * @param type type of the content
      */
-    virtual void UpdateContent(double value, const string& type = "water");
+    virtual void UpdateContent(double value, ContentType type);
 
     /**
      * Update the content of the water container from the inputs.
@@ -204,7 +212,7 @@ class Brick : public wxObject {
      *
      * @return name of the brick.
      */
-    string GetName() {
+    [[nodiscard]] string GetName() const {
         return _name;
     }
 
@@ -222,7 +230,7 @@ class Brick : public wxObject {
      *
      * @return pointer to the hydro unit.
      */
-    HydroUnit* GetHydroUnit() {
+    [[nodiscard]] HydroUnit* GetHydroUnit() const {
         wxASSERT(_hydroUnit);
         return _hydroUnit;
     }
@@ -275,7 +283,7 @@ class Brick : public wxObject {
   protected:
     string _name;
     bool _needsSolver;
-    WaterContainer* _water;
+    std::unique_ptr<WaterContainer> _water;
     vector<Process*> _processes;
     HydroUnit* _hydroUnit;
 };

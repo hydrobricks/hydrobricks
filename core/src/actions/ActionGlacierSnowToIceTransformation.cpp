@@ -59,14 +59,14 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         }
 
         // Get snow content.
-        double snowWE = snowpack->GetContent("snow");
+        double snowWE = snowpack->GetContent(ContentType::Snow);
         if (snowWE <= 0) {
             continue;
         }
 
         // Transfer to the glacier ice.
-        glacier->UpdateContent(glacier->GetContent("ice") + snowWE, "ice");
-        snowpack->UpdateContent(0, "snow");
+        glacier->UpdateContent(glacier->GetContent(ContentType::Ice) + snowWE, ContentType::Ice);
+        snowpack->UpdateContent(0, ContentType::Snow);
     }
 
     return true;

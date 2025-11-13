@@ -1,5 +1,7 @@
 #include "Brick.h"
 
+#include "ContentTypes.h"
+#include "BrickTypes.h"
 #include "GenericLandCover.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
@@ -12,35 +14,37 @@ Brick::Brick()
     : _needsSolver(true),
       _water(nullptr),
       _hydroUnit(nullptr) {
-    _water = new WaterContainer(this);
-}
-
-Brick::~Brick() {
-    wxDELETE(_water);
+    _water = std::make_unique<WaterContainer>(this);
 }
 
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
-    if (brickSettings.type == "storage") {
-        return new Storage();
+    BrickType type = BrickTypeFromString(brickSettings.type);
+    if (type == BrickType::Unknown) {
+        wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
+        return nullptr;
     }
-    if (brickSettings.type == "generic_land_cover" || brickSettings.type == "ground") {
-        return new GenericLandCover();
-    }
-    if (brickSettings.type == "glacier") {
-        return new Glacier();
-    }
-    if (brickSettings.type == "urban") {
-        return new Urban();
-    }
-    if (brickSettings.type == "vegetation") {
-        return new Vegetation();
-    }
-    if (brickSettings.type == "snowpack") {
-        return new Snowpack();
-    }
-    wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
+    Brick* brick = Factory(type);
+    return brick;  // Already logged on failure inside enum factory if any
+}
 
-    return nullptr;
+Brick* Brick::Factory(BrickType type) {
+    switch (type) {
+        case BrickType::Storage:
+            return new Storage();
+        case BrickType::GenericLandCover:
+            return new GenericLandCover();
+        case BrickType::Glacier:
+            return new Glacier();
+        case BrickType::Urban:
+            return new Urban();
+        case BrickType::Vegetation:
+            return new Vegetation();
+        case BrickType::Snowpack:
+            return new Snowpack();
+        default:
+            wxLogError(_("Brick type enum not recognized."));
+            return nullptr;
+    }
 }
 
 void Brick::Reset() {
@@ -75,8 +79,8 @@ void Brick::SetParameters(const BrickSettings& brickSettings) {
 
 void Brick::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    if (flux->GetType() != "water") {
-        throw InvalidArgument(wxString::Format(_("The flux type '%s' should be water."), flux->GetType()));
+    if (flux->GetType() != ContentType::Water) {
+        throw InvalidArgument(wxString::Format(_("The flux type '%s' should be water."), ContentTypeToString(flux->GetType())));
     }
     _water->AttachFluxIn(flux);
 }
@@ -99,7 +103,7 @@ float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const
 }
 
 Process* Brick::GetProcess(int index) {
-    wxASSERT(_processes.size() > index);
+    wxASSERT(_processes.size() > static_cast<size_t>(index));
     wxASSERT(_processes[index]);
 
     return _processes[index];
@@ -109,27 +113,32 @@ void Brick::Finalize() {
     _water->Finalize();
 }
 
-void Brick::SetInitialState(double value, const string& type) {
-    if (type == "water") {
-        _water->SetInitialState(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
+void Brick::SetInitialState(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->SetInitialState(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
 
-double Brick::GetContent(const string& type) {
-    if (type == "water") {
-        return _water->GetContentWithoutChanges();
+double Brick::GetContent(ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            return _water->GetContentWithoutChanges();
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
-
-    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
 }
 
-void Brick::UpdateContent(double value, const string& type) {
-    if (type == "water") {
-        _water->UpdateContent(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), type));
+void Brick::UpdateContent(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->UpdateContent(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
 
@@ -142,7 +151,7 @@ void Brick::ApplyConstraints(double timeStep) {
 }
 
 WaterContainer* Brick::GetWaterContainer() {
-    return _water;
+    return _water.get();
 }
 
 vecDoublePt Brick::GetDynamicContentChanges() {

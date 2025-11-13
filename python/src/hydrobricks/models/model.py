@@ -231,6 +231,10 @@ class Model(ABC):
         if not action.is_initialized:
             raise RuntimeError(f'The action {action.name} has not been initialized.')
 
+        if not self._is_initialized:
+            raise RuntimeError('The model has not been initialized. '
+                               'Please run setup() before adding actions.')
+
         return self.model.add_action(action.action)
 
     def get_actions_nb(self) -> int:

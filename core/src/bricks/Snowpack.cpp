@@ -22,9 +22,9 @@ void Snowpack::SetParameters(const BrickSettings& brickSettings) {
 
 void Snowpack::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    if (flux->GetType() == "snow") {
+    if (flux->GetType() == ContentType::Snow) {
         _snow->AttachFluxIn(flux);
-    } else if (flux->GetType() == "water") {
+    } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
@@ -47,34 +47,40 @@ void Snowpack::Finalize() {
     _water->Finalize();
 }
 
-void Snowpack::SetInitialState(double value, const string& type) {
-    if (type == "water") {
-        _water->SetInitialState(value);
-    } else if (type == "snow") {
-        _snow->SetInitialState(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+void Snowpack::SetInitialState(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->SetInitialState(value);
+            break;
+        case ContentType::Snow:
+            _snow->SetInitialState(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 
-double Snowpack::GetContent(const string& type) {
-    if (type == "water") {
-        return _water->GetContentWithoutChanges();
+double Snowpack::GetContent(ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            return _water->GetContentWithoutChanges();
+        case ContentType::Snow:
+            return _snow->GetContentWithoutChanges();
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
-    if (type == "snow") {
-        return _snow->GetContentWithoutChanges();
-    }
-
-    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
 }
 
-void Snowpack::UpdateContent(double value, const string& type) {
-    if (type == "water") {
-        _water->UpdateContent(value);
-    } else if (type == "snow") {
-        _snow->UpdateContent(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+void Snowpack::UpdateContent(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->UpdateContent(value);
+            break;
+        case ContentType::Snow:
+            _snow->UpdateContent(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 

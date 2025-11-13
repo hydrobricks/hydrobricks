@@ -19,7 +19,8 @@ void Glacier::SaveAsInitialState() {
 void Glacier::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
-        if (*GetParameterValuePointer(brickSettings, "infinite_storage")) {
+        float* valPtr = GetParameterValuePointer(brickSettings, "infinite_storage");
+        if (valPtr && *valPtr != 0.0f) {
             _ice->SetAsInfiniteStorage();
         }
     }
@@ -31,9 +32,9 @@ void Glacier::SetParameters(const BrickSettings& brickSettings) {
 
 void Glacier::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
-    if (flux->GetType() == "ice") {
+    if (flux->GetType() == ContentType::Ice) {
         _ice->AttachFluxIn(flux);
-    } else if (flux->GetType() == "water") {
+    } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen();
@@ -57,34 +58,40 @@ void Glacier::Finalize() {
     _water->Finalize();
 }
 
-void Glacier::SetInitialState(double value, const string& type) {
-    if (type == "water") {
-        _water->SetInitialState(value);
-    } else if (type == "ice") {
-        _ice->SetInitialState(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+void Glacier::SetInitialState(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->SetInitialState(value);
+            break;
+        case ContentType::Ice:
+            _ice->SetInitialState(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
 
-double Glacier::GetContent(const string& type) {
-    if (type == "water") {
-        return _water->GetContentWithoutChanges();
+double Glacier::GetContent(ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            return _water->GetContentWithoutChanges();
+        case ContentType::Ice:
+            return _ice->GetContentWithoutChanges();
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
-    if (type == "ice") {
-        return _ice->GetContentWithoutChanges();
-    }
-
-    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
 }
 
-void Glacier::UpdateContent(double value, const string& type) {
-    if (type == "water") {
-        _water->UpdateContent(value);
-    } else if (type == "ice") {
-        _ice->UpdateContent(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+void Glacier::UpdateContent(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->UpdateContent(value);
+            break;
+        case ContentType::Ice:
+            _ice->UpdateContent(value);
+            break;
+        default:
+            throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
 

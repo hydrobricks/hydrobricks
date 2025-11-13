@@ -56,17 +56,17 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::SetInitialState()
      */
-    void SetInitialState(double value, const string& type) override;
+    void SetInitialState(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(const string& type) override;
+    double GetContent(ContentType type) override;
 
     /**
      * @copydoc Brick::UpdateContent()
      */
-    void UpdateContent(double value, const string& type) override;
+    void UpdateContent(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::UpdateContentFromInputs()

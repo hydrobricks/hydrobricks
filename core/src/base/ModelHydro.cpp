@@ -417,7 +417,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     for (auto& lateralConnection : unit->GetLateralConnections()) {
                         HydroUnit* receiver = lateralConnection->GetReceiver();
 
-                        if (output.fluxType == "snow") {
+                        if (output.fluxType == ContentType::Snow) {
                             // Look over the snowpack bricks of the receiver unit
                             for (auto& targetBrick : receiver->GetSnowpacks()) {
                                 // Create the flux

@@ -19,7 +19,7 @@ struct TimerSettings {
 
 struct OutputSettings {
     string target;
-    string fluxType = "water";
+    ContentType fluxType = ContentType::Water;
     bool isInstantaneous = false;
     bool isStatic = false;
 };
@@ -199,7 +199,7 @@ class SettingsModel : public wxObject {
      * @param target target of the output.
      * @param fluxType type of the flux.
      */
-    void AddProcessOutput(const string& target, const string& fluxType = "water");
+    void AddProcessOutput(const string& target, ContentType fluxType = ContentType::Water);
 
     /**
      * Set the outputs of the selected process as instantaneous.
@@ -263,7 +263,7 @@ class SettingsModel : public wxObject {
      * @param target target of the output.
      * @param fluxType type of the flux.
      */
-    void AddSplitterOutput(const string& target, const string& fluxType = "water");
+    void AddSplitterOutput(const string& target, const ContentType fluxType = ContentType::Water);
 
     /**
      * Add logging to a given item.

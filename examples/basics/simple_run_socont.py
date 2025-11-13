@@ -119,10 +119,6 @@ ref_kge = obs.compute_reference_metric('kge_2012')
 
 print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
 
-if not hb.has_matplotlib:
-    print("Matplotlib is not installed, the plotting functions will not work.")
-    exit()
-
 # Plot
 hb.plotting.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
 

@@ -26,9 +26,9 @@ void FluxToBrickInstantaneous::UpdateFlux(double amount) {
         _amount = amount;
     }
 
-    if (_type == "water") {
+    if (_type == ContentType::Water) {
         _toBrick->GetWaterContainer()->AddAmountToStaticContentChange(_amount);
-    } else if (_type == "snow") {
+    } else if (_type == ContentType::Snow) {
         auto snowBrick = dynamic_cast<Snowpack*>(_toBrick);
         wxASSERT(snowBrick);
         snowBrick->GetSnowContainer()->AddAmountToStaticContentChange(_amount);

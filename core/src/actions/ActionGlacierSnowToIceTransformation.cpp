@@ -14,6 +14,16 @@ ActionGlacierSnowToIceTransformation::ActionGlacierSnowToIceTransformation(int m
 bool ActionGlacierSnowToIceTransformation::Init() {
     // Loop over all hydro units in the sub-basin and register those with the specified land cover.
     _hydroUnitIds.clear();
+
+    if (_manager->GetSubBasin() == nullptr) {
+        wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
+        return false;
+    }
+    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+        wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
+        return false;
+    }
+
     for (auto unit : _manager->GetSubBasin()->GetHydroUnits()) {
         if (unit->GetLandCover(_landCoverName) != nullptr) {
             _hydroUnitIds.push_back(unit->GetId());
@@ -49,14 +59,14 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         }
 
         // Get snow content.
-        double snowWE = snowpack->GetContent("snow");
+        double snowWE = snowpack->GetContent(ContentType::Snow);
         if (snowWE <= 0) {
             continue;
         }
 
         // Transfer to the glacier ice.
-        glacier->UpdateContent(glacier->GetContent("ice") + snowWE, "ice");
-        snowpack->UpdateContent(0, "snow");
+        glacier->UpdateContent(glacier->GetContent(ContentType::Ice) + snowWE, ContentType::Ice);
+        snowpack->UpdateContent(0, ContentType::Snow);
     }
 
     return true;

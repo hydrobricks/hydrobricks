@@ -19,6 +19,15 @@ void ActionGlacierEvolutionDeltaH::AddLookupTables(int month, const string& land
 }
 
 bool ActionGlacierEvolutionDeltaH::Init() {
+    if (_manager->GetSubBasin() == nullptr) {
+        wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
+        return false;
+    }
+    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+        wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
+        return false;
+    }
+
     for (int i = 0; i < _hydroUnitIds.size(); i++) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = _manager->GetHydroUnitById(id);
@@ -52,8 +61,8 @@ bool ActionGlacierEvolutionDeltaH::Init() {
             return false;
         }
         double iceWE = _tableVolume(0, i) * constants::iceDensity / areaRef;
-        brick->UpdateContent(iceWE, "ice");
-        brick->SetInitialState(iceWE, "ice");
+        brick->UpdateContent(iceWE, ContentType::Ice);
+        brick->SetInitialState(iceWE, ContentType::Ice);
     }
 
     return true;
@@ -84,7 +93,7 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
             continue;
         }
         double area = brick->GetAreaFraction() * unit->GetArea();
-        double brickGlacierWE = brick->GetContent("ice");
+        double brickGlacierWE = brick->GetContent(ContentType::Ice);
 
         glacierWE += area * brickGlacierWE;
     }
@@ -117,18 +126,18 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
 
     // Update the glacier water equivalent for each hydro unit to spread the glacier ice accordingly.
     double rowVolumeSum = _tableVolume.row(row).sum();
-    for (int i = 0; i < _hydroUnitIds.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(_hydroUnitIds.size()); ++i) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
         LandCover* brick = unit->GetLandCover(_landCoverName);
         double areaGlacier = _tableArea(row, i);
         if (areaGlacier == 0) {
-            brick->UpdateContent(0, "ice");
+            brick->UpdateContent(0, ContentType::Ice);
             assert(_tableVolume(row, i) == 0);
         } else {
             double volumeRatio = _tableVolume(row, i) / rowVolumeSum;
             double iceWE = glacierWE * volumeRatio / areaGlacier;
-            brick->UpdateContent(iceWE, "ice");
+            brick->UpdateContent(iceWE, ContentType::Ice);
         }
     }
 

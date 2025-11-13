@@ -11,7 +11,7 @@ Flux::Flux()
       _fractionLandCover(1.0),
       _fractionTotal(1.0),
       _modifier(nullptr),
-      _type("water") {}
+      _type(ContentType::Water) {}
 
 void Flux::Reset() {
     _amount = 0;

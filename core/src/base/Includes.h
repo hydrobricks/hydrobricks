@@ -48,6 +48,7 @@
 #include <exception>
 #include <numeric>
 #include <vector>
+#include <memory>
 
 //---------------------------------
 // Automatic leak detection with Microsoft VisualC++

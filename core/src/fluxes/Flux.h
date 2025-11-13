@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_FLUX_H
 #define HYDROBRICKS_FLUX_H
 
+#include "../base/ContentTypes.h"
 #include "Includes.h"
 
 class Modifier;
@@ -92,7 +93,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux is static.
      */
-    bool IsStatic() {
+    [[nodiscard]] bool IsStatic() const {
         return _static;
     }
 
@@ -101,7 +102,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux needs weighting.
      */
-    bool NeedsWeighting() {
+    [[nodiscard]] bool NeedsWeighting() const {
         return _needsWeighting;
     }
 
@@ -146,7 +147,7 @@ class Flux : public wxObject {
      *
      * @return the flux type.
      */
-    string GetType() {
+    [[nodiscard]] ContentType GetType() const {
         return _type;
     }
 
@@ -155,20 +156,20 @@ class Flux : public wxObject {
      *
      * @param type the flux type.
      */
-    void SetType(const string& type) {
+    void SetType(const ContentType type) {
         _type = type;
     }
 
   protected:
-    double _amount;
-    double* _changeRate;
-    bool _static;
-    bool _needsWeighting;
-    double _fractionUnitArea;
-    double _fractionLandCover;
-    double _fractionTotal;
-    Modifier* _modifier;
-    string _type;
+    double _amount{};
+    double* _changeRate{};
+    bool _static{};
+    bool _needsWeighting{};
+    double _fractionUnitArea{1.0};
+    double _fractionLandCover{1.0};
+    double _fractionTotal{1.0};
+    Modifier* _modifier{};
+    ContentType _type{ContentType::Water};
 };
 
 #endif  // HYDROBRICKS_FLUX_H

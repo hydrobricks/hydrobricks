@@ -30,7 +30,7 @@ repos:
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.21.1
+  rev: v3.21.2
   hooks:
   - id: pyupgrade
     args: ["--py38-plus"]
@@ -78,7 +78,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v21.1.5
+  rev: v21.1.6
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

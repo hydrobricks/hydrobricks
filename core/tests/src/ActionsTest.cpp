@@ -331,7 +331,7 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
     auto tsPet = new TimeSeriesUniform(PET);
     tsPet->SetData(pet);
 
-    subBasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, "ice");
+    subBasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, ContentType::Ice);
 
     ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
     ASSERT_TRUE(model.AddTimeSeries(tsTemp));
@@ -345,6 +345,6 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent("snow"), 0.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent("ice"), 10100.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent(ContentType::Snow), 0.0f);
+    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent(ContentType::Ice), 10100.0f);
 }

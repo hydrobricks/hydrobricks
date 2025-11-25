@@ -95,7 +95,7 @@ TEST_F(SnowIceConstantModel, SnowIceTransformation) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content
-    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, ContentType::Ice);
 
     EXPECT_TRUE(model.Run());
 
@@ -153,7 +153,7 @@ TEST_F(SnowIceConstantModel, SnowIceTransformationWithNullFraction) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content
-    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, ContentType::Ice);
 
     EXPECT_TRUE(model.Run());
 }
@@ -245,7 +245,7 @@ TEST_F(SnowIceSwatModel, SnowIceTransformation) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content
-    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, ContentType::Ice);
 
     EXPECT_TRUE(model.Run());
 
@@ -288,7 +288,7 @@ TEST_F(SnowIceSwatModel, SnowIceTransformationWithNullFraction) {
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     // Set initial glacier content
-    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, "ice");
+    model.GetSubBasin()->GetHydroUnit(0)->GetBrick("glacier")->UpdateContent(100, ContentType::Ice);
 
     EXPECT_TRUE(model.Run());
 }

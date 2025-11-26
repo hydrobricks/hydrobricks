@@ -155,6 +155,11 @@ def test_add_action_to_model(hydro_units_csv: hb.HydroUnits):
 
     assert model.add_action(changes)
 
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        pass
+
 
 def test_action_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     tmp_dir = tempfile.TemporaryDirectory()
@@ -186,6 +191,11 @@ def test_action_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
     assert model.get_sporadic_action_items_nb() == 232
+
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        pass
 
 
 def test_action_2_files_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
@@ -225,6 +235,11 @@ def test_action_2_files_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     assert model.add_action(changes)
     assert model.get_actions_nb() == 1
     assert model.get_sporadic_action_items_nb() == 444
+
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        pass
 
 
 def test_extract_glacier_cover_evolution_raster(

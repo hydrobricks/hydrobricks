@@ -38,7 +38,7 @@ class SnowpackModel : public ::testing::Test {
         _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
-        _model.AddSplitterOutput("outlet");            // rain
+        _model.AddSplitterOutput("outlet");                       // rain
         _model.AddSplitterOutput("snowpack", ContentType::Snow);  // snow
         _model.AddSplitterParameter("transition_start", 0.0f);
         _model.AddSplitterParameter("transition_end", 2.0f);
@@ -167,7 +167,7 @@ class SnowpackModelWithAspect : public ::testing::Test {
         _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
-        _model.AddSplitterOutput("outlet");            // rain
+        _model.AddSplitterOutput("outlet");                       // rain
         _model.AddSplitterOutput("snowpack", ContentType::Snow);  // snow
         _model.AddSplitterParameter("transition_start", 0.0f);
         _model.AddSplitterParameter("transition_end", 2.0f);

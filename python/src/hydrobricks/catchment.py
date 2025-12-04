@@ -99,8 +99,21 @@ class Catchment:
         self._solar_radiation = None
 
     def __del__(self):
+        # Close main DEM dataset
         if self.dem is not None:
-            self.dem.close()
+            try:
+                self.dem.close()
+            except Exception:
+                pass
+
+        # Close any MemoryFiles kept with attributes to avoid resource leaks
+        if isinstance(self.attributes, dict):
+            for entry in self.attributes.values():
+                try:
+                    if isinstance(entry, dict) and 'memfile' in entry and entry['memfile'] is not None:
+                        entry['memfile'].close()
+                except Exception:
+                    pass
 
     @property
     def topography(self) -> CatchmentTopography:
@@ -183,6 +196,7 @@ class Catchment:
             data[np.isnan(data)] = 0
 
         if resample_to_dem_resolution:
+            memfile = None
             if resampling == 'nearest':
                 resampling_id = 0
             elif resampling == 'bilinear':
@@ -217,33 +231,57 @@ class Catchment:
                 raise ValueError(f"Unknown resampling method: {resampling}")
 
             # Resample the attribute to the DEM resolution
-            data = hb.rasterio.warp.reproject(
-                data,
-                destination=self.dem_data,
+            # Ensure a DEM has been loaded to resample to
+            if self.dem is None or self.dem_data is None:
+                raise ValueError("DEM must be loaded before resampling an attribute raster.")
+
+            # Allocate a fresh destination buffer so we don't overwrite self.dem_data
+            dest = np.empty_like(self.dem_data, dtype=data.dtype)
+            hb.rasterio.warp.reproject(
+                source=data,
+                destination=dest,
                 src_transform=src.transform,
                 dst_transform=self.dem.transform,
                 src_crs=src.crs,
                 dst_crs=self.dem.crs,
                 resampling=resampling_id
-            )[0]
+            )
+            data = dest
 
-            # Create a MemoryFile to store the reprojected data
-            with hb.rasterio.io.MemoryFile() as memfile:
-                with memfile.open(
-                        driver='GTiff',
-                        height=data.shape[0],
-                        width=data.shape[1],
-                        count=1,
-                        dtype=data.dtype,
-                        crs=self.dem.crs,
-                        transform=self.dem.transform
-                ) as dataset:
-                    dataset.write(data, 1)
-
-                # Open the dataset as a rasterio object
+            # Create a MemoryFile to store the reprojected data and keep it open
+            memfile = hb.rasterio.io.MemoryFile()
+            dataset = memfile.open(
+                driver='GTiff',
+                height=data.shape[0],
+                width=data.shape[1],
+                count=1,
+                dtype=data.dtype,
+                crs=self.dem.crs,
+                transform=self.dem.transform
+            )
+            try:
+                dataset.write(data, 1)
+                dataset.close()
+                # Open the dataset as a rasterio object for reading
                 src = memfile.open()
+            except Exception:
+                # Clean up on error
+                try:
+                    dataset.close()
+                except Exception:
+                    pass
+                try:
+                    memfile.close()
+                except Exception:
+                    pass
+                raise
 
-        self.attributes[attr_name] = {"src": src, "data": data}
+        # Store the MemoryFile with the attribute so it stays alive (if created)
+        entry = {"src": src, "data": data}
+        if memfile is not None:
+            entry['memfile'] = memfile
+
+        self.attributes[attr_name] = entry
 
         return True
 

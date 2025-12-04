@@ -42,6 +42,7 @@ class GlacierEvolutionDeltaH:
             The hydro unit object.
         """
         self.glacier_df = None
+        self.glacier_change_df = None
         self.hydro_units = None
         self.catchment_area = None
         if hydro_units is not None:
@@ -77,6 +78,127 @@ class GlacierEvolutionDeltaH:
 
         # Pixel-wise ice water equivalent (we) for each elevation band
         self.px_ice_we = None
+
+    def compute_ice_thickness_change(
+            self,
+            catchment: Catchment,
+            ice_thickness_old: str,
+            ice_thickness_new: str,
+            elevation_bands_distance: int = 10
+    ) -> pd.DataFrame:
+        """
+        Compute the normalized ice thickness change between two glacier ice thickness
+        rasters for the delta-h method.
+
+        Parameters
+        ----------
+        catchment
+            The catchment object.
+        ice_thickness_old
+            Path to the TIF file containing the old glacier thickness in meters.
+        ice_thickness_new
+            Path to the TIF file containing the new glacier thickness in meters.
+        elevation_bands_distance
+            Distance between elevation bands in meters. Default is 10 m.
+
+        Returns
+        -------
+        The glacier_change_df DataFrame containing the normalized ice thickness change
+        data.
+        """
+        if not hb.has_pyproj:
+            raise ImportError("pyproj is required to do this.")
+
+        # Discretize the DEM into elevation bands at the given distance
+        elevations, map_bands_ids = self._discretize_elevation_bands(
+            catchment,
+            elevation_bands_distance,
+            hydro_units_needed=False
+        )
+
+        # Extract the ice thickness and resample it to the DEM resolution
+        catchment.extract_attribute_raster(
+            ice_thickness_old,
+            'ice_thickness_old',
+            resample_to_dem_resolution=True,
+            resampling='average'
+        )
+        catchment.extract_attribute_raster(
+            ice_thickness_new,
+            'ice_thickness_new',
+            resample_to_dem_resolution=True,
+            resampling='average'
+        )
+
+        # Get the ice thickness data
+        ice_thickness_old = catchment.attributes['ice_thickness_old']['data']
+        ice_thickness_old[catchment.dem_data == 0] = 0.0
+        ice_thickness_old[ice_thickness_old < 0] = 0.0
+        ice_thickness_new = catchment.attributes['ice_thickness_new']['data']
+        ice_thickness_new[catchment.dem_data == 0] = 0.0
+        ice_thickness_new[ice_thickness_new < 0] = 0.0
+
+        map_bands_ids[(ice_thickness_old == 0) & (ice_thickness_new == 0)] = 0
+        band_ids = np.unique(map_bands_ids)
+        band_ids = band_ids[band_ids != 0]
+
+        ice_thickness_diff = ice_thickness_new - ice_thickness_old
+
+        # Create the dataframe for the glacier change data
+        change_df = None
+        for band_id in band_ids:
+            new_row = pd.DataFrame(
+                [[band_id, elevations[band_id - 1], 0.0, 0.0, 0.0]],
+                columns=[('band_id', '-'),
+                         ('elevation', 'm'),
+                         ('glacier_thickness_old', 'm'),
+                         ('glacier_thickness_new', 'm'),
+                         ('glacier_thickness_diff', 'm')]
+            )
+            if change_df is None:
+                change_df = new_row
+            else:
+                change_df = pd.concat([change_df, new_row], ignore_index=True)
+
+        # Update the dataframe with the ice thickness
+        for i_row, (idx, row) in enumerate(change_df.iterrows()):
+            band_id = row[('band_id', '-')]
+            mask_band = map_bands_ids == band_id
+            mask_nan = np.isnan(ice_thickness_old) | np.isnan(ice_thickness_new)
+
+            # Get the ice thickness for the corresponding band and unit
+            masked_thick_old = ice_thickness_old[mask_band]
+            masked_thick_old = masked_thick_old[~mask_nan[mask_band]]
+            masked_thick_new = ice_thickness_new[mask_band]
+            masked_thick_new = masked_thick_new[~mask_nan[mask_band]]
+            masked_thick_diff = ice_thickness_diff[mask_band]
+            masked_thick_diff = masked_thick_diff[~mask_nan[mask_band]]
+
+            # Compute the mean thickness
+            if masked_thick_old.size > 0:
+                mean_thickness_old = float(np.mean(masked_thick_old))
+            else:
+                mean_thickness_old = 0.0
+
+            if masked_thick_new.size > 0:
+                mean_thickness_new = float(np.mean(masked_thick_new))
+            else:
+                mean_thickness_new = 0.0
+
+            if masked_thick_diff.size > 0:
+                mean_thickness_diff = float(np.mean(masked_thick_diff))
+            else:
+                mean_thickness_diff = 0.0
+
+            change_df.at[idx, ('glacier_thickness_old', 'm')] = mean_thickness_old
+            change_df.at[idx, ('glacier_thickness_new', 'm')] = mean_thickness_new
+            change_df.at[idx, ('glacier_thickness_diff', 'm')] = mean_thickness_diff
+
+        self.glacier_change_df = change_df
+        self.hydro_units = catchment.hydro_units.hydro_units
+        self.catchment_area = np.sum(self.hydro_units.area.values)
+
+        return self.glacier_change_df
 
     def compute_initial_ice_thickness(
             self,
@@ -836,30 +958,40 @@ class GlacierEvolutionDeltaH:
     @staticmethod
     def _discretize_elevation_bands(
             catchment: Catchment,
-            elevation_bands_distance: int = 10
+            elevation_bands_distance: int = 10,
+            hydro_units_needed: bool = True
     ) -> tuple[np.ndarray, np.ndarray]:
         """ Discretize the DEM into elevation bands at the given distance."""
         # Check that the catchment has been discretized
-        if catchment.map_unit_ids is None:
+        if hydro_units_needed and catchment.map_unit_ids is None:
             raise ValueError("Catchment has not been discretized. "
                              "Please run create_elevation_bands() first.")
 
-        hydro_units = catchment.hydro_units.hydro_units
+        if catchment.hydro_units is not None and 'elevation' in catchment.hydro_units.hydro_units.columns:
+            hydro_units = catchment.hydro_units.hydro_units
 
-        # Check that the catchment hydro units are consistent with the desired
-        # elevation_bands_distance parameter
-        elevations = np.unique(np.sort(hydro_units['elevation'].values.ravel()))
-        steps = np.diff(elevations)
-        hu_steps = np.min(steps)
-        if hu_steps % elevation_bands_distance != 0:
-            raise ValueError(f"Hydro unit elevation range ({hu_steps}) must be a "
-                             f"multiple of the elevation bands distance "
-                             f"({elevation_bands_distance}). Please adjust the "
-                             f"elevation_bands_distance parameter.")
+            # Check that the catchment hydro units are consistent with the desired
+            # elevation_bands_distance parameter
+            elevations = np.unique(np.sort(hydro_units['elevation'].values.ravel()))
+            steps = np.diff(elevations)
+            hu_steps = np.min(steps)
+            if hu_steps % elevation_bands_distance != 0:
+                raise ValueError(f"Hydro unit elevation range ({hu_steps}) must be a "
+                                 f"multiple of the elevation bands distance "
+                                 f"({elevation_bands_distance}). Please adjust the "
+                                 f"elevation_bands_distance parameter.")
 
-        # Discretize the DEM into elevation bands at the given distance
-        min_elevation = hydro_units['elevation'].min().values[0] - hu_steps / 2
-        max_elevation = hydro_units['elevation'].max().values[0] + hu_steps / 2
+            # Discretize the DEM into elevation bands at the given distance
+            min_elevation = hydro_units['elevation'].min().values[0] - hu_steps / 2
+            max_elevation = hydro_units['elevation'].max().values[0] + hu_steps / 2
+
+        else:
+            dist = elevation_bands_distance
+            min_elevation = np.nanmin(catchment.dem_data)
+            min_elevation = min_elevation - (min_elevation % dist)
+            max_elevation = np.nanmax(catchment.dem_data)
+            max_elevation = max_elevation + (dist - max_elevation % dist)
+
         elevations = np.arange(
             min_elevation,
             max_elevation + elevation_bands_distance,

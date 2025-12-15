@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .models.model import Model
+from .model import Model
 
 
 class Socont(Model):

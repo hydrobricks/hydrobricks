@@ -7,19 +7,18 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-import hydrobricks as hb
+from .. import rxr, xrs, rasterio
+from .._optional import HAS_RASTERIO, HAS_SHAPELY, HAS_PYARROW, HAS_XRSPATIAL
 
 if TYPE_CHECKING:
-    from .catchment import Catchment
+    from ..catchment import Catchment
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.enums import Resampling
-
-if hb.has_shapely:
-    from shapely.geometry import mapping
-
-if hb.has_rasterio:
     from rasterio.mask import mask
+
+if HAS_SHAPELY:
+    from shapely.geometry import mapping
 
 
 class CatchmentTopography:
@@ -69,11 +68,11 @@ class CatchmentTopography:
         -------
         The downsampled DEM, the masked downsampled DEM data, the slope and the aspect.
         """
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
-        if not hb.has_pyarrow:
+        if not HAS_PYARROW:
             raise ImportError("pyarrow is required to do this.")
-        if not hb.has_xrspatial:
+        if not HAS_XRSPATIAL:
             raise ImportError("xarray-spatial is required to do this.")
 
         # Only resample the DEM if the resolution is different from the original
@@ -85,7 +84,7 @@ class CatchmentTopography:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
+            xr_dem = rxr.open_rasterio(dem_file).drop_vars('band')[0]
 
         x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
         y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
@@ -108,7 +107,7 @@ class CatchmentTopography:
         xr_dem_downsampled.rio.to_raster(filepath)
 
         # Reopen the downsampled DEM as a rasterio dataset
-        new_dem = hb.rasterio.open(filepath)
+        new_dem = rasterio.open(filepath)
         if self.catchment.outline is not None:
             geoms = [mapping(polygon) for polygon in self.catchment.outline]
             new_dem_data, _ = mask(new_dem, geoms, crop=False)
@@ -117,8 +116,8 @@ class CatchmentTopography:
         new_dem_data[new_dem_data == new_dem.nodata] = np.nan
         if len(new_dem_data.shape) == 3:
             new_dem_data = new_dem_data[0]
-        new_slope = hb.xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
-        new_aspect = hb.xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
+        new_slope = xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
+        new_aspect = xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
         xr_dem_downsampled.close()
 
         return new_dem, new_dem_data, new_slope, new_aspect
@@ -127,17 +126,17 @@ class CatchmentTopography:
         """
         Calculate the slope and aspect of the whole DEM.
         """
-        if not hb.has_pyarrow:
+        if not HAS_PYARROW:
             raise ImportError("pyarrow is required to do this.")
-        if not hb.has_xrspatial:
+        if not HAS_XRSPATIAL:
             raise ImportError("xarray-spatial is required to do this.")
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = hb.rxr.open_rasterio(dem_file).drop_vars('band')[0]
-            self.slope = hb.xrs.slope(xr_dem, name='slope').to_numpy()
-            self.aspect = hb.xrs.aspect(xr_dem, name='aspect').to_numpy()
+            xr_dem = rxr.open_rasterio(dem_file).drop_vars('band')[0]
+            self.slope = xrs.slope(xr_dem, name='slope').to_numpy()
+            self.aspect = xrs.aspect(xr_dem, name='aspect').to_numpy()
 
     def get_hillshade(
             self,

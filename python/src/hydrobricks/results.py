@@ -1,6 +1,7 @@
 import numpy as np
 
-import hydrobricks as hb
+from . import xr
+from ._optional import HAS_XARRAY
 
 
 class Results:
@@ -11,9 +12,9 @@ class Results:
     """
 
     def __init__(self, filename: str):
-        if not hb.has_xarray:
+        if not HAS_XARRAY:
             raise ImportError("xarray is required to do this.")
-        self.results = hb.xr.open_dataset(filename)
+        self.results = xr.open_dataset(filename)
         self.labels_distributed = self.results.attrs.get('labels_distributed')
         self.labels_aggregated = self.results.attrs.get('labels_aggregated')
         self.labels_land_cover = self.results.attrs.get('labels_land_covers')

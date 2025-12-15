@@ -9,7 +9,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
+from . import rxr, xr, rasterio, pyproj
+from ._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
+from .utils import date_as_mjd
 
 
 class TimeSeries:
@@ -21,7 +23,7 @@ class TimeSeries:
         self.data_name = []
 
     def get_dates_as_mjd(self):
-        return hb.utils.date_as_mjd(self.time)
+        return date_as_mjd(self.time)
 
 
 class TimeSeries1D(TimeSeries):
@@ -141,11 +143,11 @@ class TimeSeries2D(TimeSeries):
             DEM to use for the spatialization (computation of the gradients).
             Needed if `apply_data_gradient` is True.
         """
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required for 'regrid_from_netcdf'.")
-        if not hb.has_rioxarray:
+        if not HAS_RIOXARRAY:
             raise ImportError("rioxarray is required for 'regrid_from_netcdf'.")
-        if not hb.has_netcdf:
+        if not HAS_NETCDF:
             raise ImportError("netCDF4 is required for 'regrid_from_netcdf'.")
 
         if raster_hydro_units is None:
@@ -154,16 +156,16 @@ class TimeSeries2D(TimeSeries):
         # Get unit ids
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            unit_ids = hb.rxr.open_rasterio(raster_hydro_units)
+            unit_ids = rxr.open_rasterio(raster_hydro_units)
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
         # Get netCDF dataset
         print(f"Reading netcdf file(s) from {path}...")
         if file_pattern is None:
-            nc_data = hb.xr.open_dataset(path, chunks={})
+            nc_data = xr.open_dataset(path, chunks={})
         else:
             files = sorted(Path(path).glob(file_pattern))
-            nc_data = hb.xr.open_mfdataset(files, chunks={})
+            nc_data = xr.open_mfdataset(files, chunks={})
 
         # Get CRS of the netcdf file
         data_crs = self._parse_crs(nc_data, data_crs)
@@ -216,7 +218,7 @@ class TimeSeries2D(TimeSeries):
         # Extract the unit id masks
         unit_id_masks = []
         for unit_id in unit_ids_list:
-            unit_id_mask = hb.xr.where(unit_ids == unit_id, 1, 0)
+            unit_id_mask = xr.where(unit_ids == unit_id, 1, 0)
             unit_id_masks.append(unit_id_mask)
 
         # Initialize data array
@@ -240,7 +242,7 @@ class TimeSeries2D(TimeSeries):
         # Open the DEM if needed
         dem = None
         if apply_data_gradient:
-            dem = hb.rxr.open_rasterio(dem_path)
+            dem = rxr.open_rasterio(dem_path)
             dem = dem.squeeze().drop_vars("band")
 
         # Get the spatial extent of interest
@@ -272,7 +274,7 @@ class TimeSeries2D(TimeSeries):
             data_grid = data_var[0].copy()
             dem_reproj = dem.rio.reproject_match(
                 data_grid,
-                Resampling=hb.rasterio.enums.Resampling.average,
+                Resampling=rasterio.enums.Resampling.average,
                 nodata=np.nan,
             )
             dem_data = dem_reproj.values
@@ -282,8 +284,8 @@ class TimeSeries2D(TimeSeries):
             dem_dy = dem_reproj.diff('y')
 
             # Replace small values (<50m) with NaN to avoid irrelevant gradients
-            dem_dx = hb.xr.where(np.abs(dem_dx) < 50, np.nan, dem_dx).compute()
-            dem_dy = hb.xr.where(np.abs(dem_dy) < 50, np.nan, dem_dy).compute()
+            dem_dx = xr.where(np.abs(dem_dx) < 50, np.nan, dem_dx).compute()
+            dem_dy = xr.where(np.abs(dem_dy) < 50, np.nan, dem_dy).compute()
 
             # If both gradients contain more than 60% NaN values, raise a warning
             if (dem_dx.isnull().sum() / dem_dx.size > 0.6 and
@@ -306,7 +308,7 @@ class TimeSeries2D(TimeSeries):
             data_idx.rio.write_crs(f'epsg:{data_crs}', inplace=True)
             data_idx_reproj = data_idx.rio.reproject_match(
                 unit_ids,
-                Resampling=hb.rasterio.enums.Resampling.nearest
+                Resampling=rasterio.enums.Resampling.nearest
             )
 
         # Create the masks (with the original data shape) for each unit with the
@@ -314,7 +316,7 @@ class TimeSeries2D(TimeSeries):
         unit_weights = []
         for u in range(unit_ids_nb):
             # Get the data indices contributing to the unit
-            mask_unit_id = hb.xr.where(unit_id_masks[u], data_idx_reproj, -1)
+            mask_unit_id = xr.where(unit_id_masks[u], data_idx_reproj, -1)
             mask_unit_id = mask_unit_id.to_numpy().astype(int)
             # Get unique values and their counts
             data_idx_values, counts = np.unique(
@@ -369,14 +371,14 @@ class TimeSeries2D(TimeSeries):
 
     def _extract_time_step_data_weights_with_gradient(
             self,
-            data_var: hb.xr.DataArray,
+            data_var: xr.DataArray,
             unit_weights: list,
             i_block: int,
             block_size: int,
             gradient_type: str,
             dem: np.ndarray,
-            dem_dx: hb.xr.DataArray,
-            dem_dy: hb.xr.DataArray,
+            dem_dx: xr.DataArray,
+            dem_dy: xr.DataArray,
             hu_elevation: np.ndarray
     ):
         i_start = i_block * block_size
@@ -462,7 +464,7 @@ class TimeSeries2D(TimeSeries):
 
     def _extract_time_step_data_weights(
             self,
-            data_var: hb.xr.DataArray,
+            data_var: xr.DataArray,
             unit_weights: list,
             i_block: int,
             block_size: int
@@ -488,7 +490,7 @@ class TimeSeries2D(TimeSeries):
         # Convert the spatial extent to the data CRS
         src_crs = self._parse_crs(ref_data)
         if src_crs != data_crs:
-            transformer = hb.pyproj.Transformer.from_crs(
+            transformer = pyproj.Transformer.from_crs(
                 src_crs, data_crs, always_xy=True)
             x_min_dat, y_min_dat = transformer.transform(x_ref_min, y_ref_min)
             x_max_dat, y_max_dat = transformer.transform(x_ref_max, y_ref_max)
@@ -519,7 +521,7 @@ class TimeSeries2D(TimeSeries):
 
     @staticmethod
     def _parse_crs(
-            data: hb.xr.DataArray | hb.xr.Dataset,
+            data: xr.DataArray | xr.Dataset,
             file_crs: int | None = None
     ) -> int:
         if file_crs is None:
@@ -535,7 +537,7 @@ class TimeSeries2D(TimeSeries):
         return file_crs
 
     @staticmethod
-    def _get_spatial_bounds(ref_data: hb.xr.DataArray | hb.xr.Dataset) -> tuple:
+    def _get_spatial_bounds(ref_data: xr.DataArray | xr.Dataset) -> tuple:
         # Possible names for spatial dimensions
         x_names = ['x', 'lon', 'longitude']
         y_names = ['y', 'lat', 'latitude']
@@ -555,7 +557,7 @@ class TimeSeries2D(TimeSeries):
         return x_ref_min, x_ref_max, y_ref_min, y_ref_max
 
     @staticmethod
-    def _fill_nan_gradients(dat: hb.xr.DataArray) -> hb.xr.DataArray:
+    def _fill_nan_gradients(dat: xr.DataArray) -> xr.DataArray:
 
         # Fill NaN values in the gradients (loop twice)
         for _ in range(2):
@@ -587,9 +589,9 @@ class TimeSeries2D(TimeSeries):
 
     @staticmethod
     def _mean_xy_gradient(
-            dat_dx: hb.xr.DataArray,
-            dat_dy: hb.xr.DataArray
-    ) -> hb.xr.DataArray:
+            dat_dx: xr.DataArray,
+            dat_dy: xr.DataArray
+    ) -> xr.DataArray:
         """
         Create a new grid whose 'x' coordinate comes from dat_dy and 'y' coordinate
         comes from dat_dx. Reindex both arrays to this grid using nearest neighbour
@@ -612,7 +614,7 @@ class TimeSeries2D(TimeSeries):
                 coords[dim] = dat_dx[dim] if dim in dat_dx.coords else dat_dy[dim]
 
         # Create target grid
-        dat_dxy = hb.xr.DataArray(
+        dat_dxy = xr.DataArray(
             dims=dat_dx.dims,
             coords=coords
         )

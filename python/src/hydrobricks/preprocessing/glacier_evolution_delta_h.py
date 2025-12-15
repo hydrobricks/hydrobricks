@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
-from .constants import ICE_WE
+from .. import rasterio, gpd
+from .._constants import ICE_WE
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment

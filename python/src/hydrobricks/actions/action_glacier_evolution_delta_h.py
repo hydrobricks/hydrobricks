@@ -5,10 +5,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import _hydrobricks as _hb
-import hydrobricks as hb
-from .actions.action import Action
-from .preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
+from .._hydrobricks import ActionGlacierEvolutionDeltaH as _ActionGlacierEvolutionDeltaH
+from ..preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
+from .action import Action
 
 
 class ActionGlacierEvolutionDeltaH(Action):
@@ -23,7 +22,7 @@ class ActionGlacierEvolutionDeltaH(Action):
     def __init__(self):
         super().__init__()
         self.name = "ActionGlacierEvolutionDeltaH"
-        self.action = _hb.ActionGlacierEvolutionDeltaH()
+        self.action = _ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(
             self,

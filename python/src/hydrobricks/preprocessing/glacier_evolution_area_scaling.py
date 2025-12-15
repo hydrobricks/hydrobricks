@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
-from .constants import ICE_WE
+from .._optional import HAS_PYPROJ
+from .._constants import ICE_WE
 
 if TYPE_CHECKING:
-    from .catchment import Catchment
-    from .hydro_units import HydroUnits
+    from ..catchment import Catchment
+    from ..hydro_units import HydroUnits
 
 
 class GlacierEvolutionAreaScaling:
@@ -66,7 +66,7 @@ class GlacierEvolutionAreaScaling:
                              "Please run create_elevation_bands() first.")
 
         # Extract the ice thickness from a TIF file.
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         self.hydro_units = catchment.hydro_units.hydro_units

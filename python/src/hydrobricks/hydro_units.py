@@ -4,8 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
+from . import Dataset
 from ._hydrobricks import SettingsBasin
+from ._optional import HAS_NETCDF
 from .units import (
     Unit,
     convert_unit_df,
@@ -182,11 +183,11 @@ class HydroUnits:
         path
             Path of the file to create.
         """
-        if not hb.has_netcdf:
+        if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
 
         # Create netCDF file
-        nc = hb.Dataset(path, 'w', 'NETCDF4')
+        nc = Dataset(path, 'w', 'NETCDF4')
 
         # Global attributes
         nc.version = 1.0

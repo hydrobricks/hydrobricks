@@ -5,7 +5,6 @@ import itertools
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
 from .time_series import TimeSeries1D
 from .trainer import evaluate
 

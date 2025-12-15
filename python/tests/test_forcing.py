@@ -15,7 +15,7 @@ CATCHMENT_DIR = Path(
 
 
 def has_gridded_data_packages() -> bool:
-    return hb.has_rasterio and hb.has_netcdf and hb.has_rioxarray and hb.has_xarray
+    return hb.HAS_RASTERIO and hb.HAS_NETCDF and hb.HAS_RIOXARRAY and hb.HAS_XARRAY
 
 
 @pytest.fixture
@@ -217,7 +217,7 @@ def test_apply_spatialization_from_station_data_precipitation(
 
 
 def test_apply_pet_computation_wrong_variable_name(forcing: hb.Forcing):
-    if not hb.has_pyet:
+    if not hb.HAS_PYET:
         return
     forcing.compute_pet(
         method='Priestley-Taylor',
@@ -228,7 +228,7 @@ def test_apply_pet_computation_wrong_variable_name(forcing: hb.Forcing):
 
 
 def test_apply_pet_computation_variables_not_available(forcing: hb.Forcing):
-    if not hb.has_pyet:
+    if not hb.HAS_PYET:
         return
     forcing.compute_pet(
         method='Priestley-Taylor',
@@ -240,7 +240,7 @@ def test_apply_pet_computation_variables_not_available(forcing: hb.Forcing):
 
 
 def test_apply_pet_computation_hamon(forcing: hb.Forcing):
-    if not hb.has_pyet:
+    if not hb.HAS_PYET:
         return
     forcing.spatialize_from_station_data(
         variable='temperature',
@@ -259,7 +259,7 @@ def test_apply_pet_computation_hamon(forcing: hb.Forcing):
 
 
 def test_apply_pet_computation_linacre(forcing: hb.Forcing):
-    if not hb.has_pyet:
+    if not hb.HAS_PYET:
         return
     # Faking tmin and tmax
     forcing.data1D.data_name.append(forcing.Variable.T_MIN)
@@ -295,7 +295,7 @@ def test_apply_pet_computation_linacre(forcing: hb.Forcing):
 
 
 def test_create_file(forcing: hb.Forcing):
-    if not hb.has_netcdf:
+    if not hb.HAS_NETCDF:
         return
 
     forcing.spatialize_from_station_data(
@@ -316,7 +316,7 @@ def test_create_file(forcing: hb.Forcing):
 
 def test_load_file(forcing: hb.Forcing, parameters: hb.ParameterSet,
                    hydro_units: hb.HydroUnits):
-    if not hb.has_netcdf:
+    if not hb.HAS_NETCDF:
         return
 
     forcing.spatialize_from_station_data(

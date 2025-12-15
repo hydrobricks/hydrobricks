@@ -6,19 +6,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import _hydrobricks as _hb
-import hydrobricks as hb
-import hydrobricks.utils as utils
-from .actions.action import Action
-from .catchment import Catchment
-from .hydro_units import HydroUnits
-from .units import Unit, convert_unit
+from .. import gpd
+from .._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
+from .._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
+from ..catchment import Catchment
+from ..hydro_units import HydroUnits
+from ..units import Unit, convert_unit
+from ..utils import compute_area, date_as_mjd
+from .action import Action
 
-if hb.has_shapely:
+if HAS_SHAPELY:
     from shapely.geometry import MultiPolygon, mapping
     from shapely.ops import unary_union
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.mask import mask
 
 m2 = Unit.M2
@@ -31,7 +32,7 @@ class ActionLandCoverChange(Action):
     def __init__(self):
         super().__init__()
         self.name = "ActionLandCoverChange"
-        self.action = _hb.ActionLandCoverChange()
+        self.action = _ActionLandCoverChange()
 
     def load_from_csv(
             self,
@@ -162,7 +163,7 @@ class ActionLandCoverChange(Action):
             contains 2 dataframes: [glacier, ground].
         """
 
-        if not hb.has_geopandas:
+        if not HAS_GEOPANDAS:
             raise ImportError("geopandas is required to do this.")
 
         if catchment.map_unit_ids is None:
@@ -320,26 +321,26 @@ class ActionLandCoverChange(Action):
             raise ValueError("Unknown method.")
 
         # Clip the glaciers to the catchment extent
-        all_glaciers = hb.gpd.read_file(glaciers_shapefile)
+        all_glaciers = gpd.read_file(glaciers_shapefile)
         all_glaciers.to_crs(catchment.crs, inplace=True)
         if catchment.outline[0].geom_type == 'MultiPolygon':
-            glaciers = hb.gpd.clip(all_glaciers, catchment.outline[0])
+            glaciers = gpd.clip(all_glaciers, catchment.outline[0])
         elif catchment.outline[0].geom_type == 'Polygon':
-            glaciers = hb.gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
+            glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         else:
             raise ValueError("The catchment outline must be a (multi)polygon.")
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
-        glaciated_area = utils.compute_area(glaciers)
+        glaciated_area = compute_area(glaciers)
         non_glaciated_area = catchment.area - glaciated_area
 
         # Compute the debris-covered area of the glacier
         glaciers_debris = None
         if debris_shapefile is not None:
-            all_debris_glaciers = hb.gpd.read_file(debris_shapefile)
+            all_debris_glaciers = gpd.read_file(debris_shapefile)
             all_debris_glaciers.to_crs(catchment.crs, inplace=True)
-            glaciers_debris = hb.gpd.clip(all_debris_glaciers, glaciers)
+            glaciers_debris = gpd.clip(all_debris_glaciers, glaciers)
             glaciers_debris = self._simplify_df_geometries(glaciers_debris)
 
         # Display some glacier statistics
@@ -353,7 +354,7 @@ class ActionLandCoverChange(Action):
               f"glaciated.")
 
         if debris_shapefile is not None:
-            debris_glaciated_area = utils.compute_area(glaciers_debris)
+            debris_glaciated_area = compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
             print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
@@ -506,7 +507,7 @@ class ActionLandCoverChange(Action):
     @staticmethod
     def _get_intersections(
             pixel_geo: MultiPolygon,
-            objects: hb.gpd.GeoDataFrame,
+            objects: gpd.GeoDataFrame,
             intersecting_geoms: list[MultiPolygon]
     ):
         for _, obj in objects.iterrows():
@@ -515,7 +516,7 @@ class ActionLandCoverChange(Action):
                 intersecting_geoms.append(intersection)
 
     @staticmethod
-    def _simplify_df_geometries(df: hb.gpd.GeoDataFrame) -> hb.gpd.GeoDataFrame:
+    def _simplify_df_geometries(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         # Merge the polygons
         df['new_col'] = 0
         df = df.dissolve(by='new_col', as_index=False)
@@ -527,7 +528,7 @@ class ActionLandCoverChange(Action):
     @staticmethod
     def _mask_dem(
             catchment: Catchment,
-            shapefile: hb.gpd.GeoDataFrame,
+            shapefile: gpd.GeoDataFrame,
             nodata: float,
             all_touched: bool = False
     ) -> np.ndarray:
@@ -576,7 +577,7 @@ class ActionLandCoverChange(Action):
             if col == 'hydro_unit' or col == 0:
                 continue
             # Extract date from column name
-            mjd = utils.date_as_mjd(col)
+            mjd = date_as_mjd(col)
 
             for row in range(len(file_content[col])):
                 hu_id = file_content.loc[row, 'hydro_unit']

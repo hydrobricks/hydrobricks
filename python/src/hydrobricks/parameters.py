@@ -7,8 +7,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
-import hydrobricks.utils as utils
+from . import spotpy
+from .utils import dump_config_file
+from ._optional import HAS_SPOTPY
 
 
 @dataclass(frozen=True)
@@ -326,7 +327,7 @@ class ParameterSet:
         self.parameters.loc[index, 'min'] = min_value
         self.parameters.loc[index, 'max'] = max_value
 
-    def set_prior(self, parameter: str, prior: hb.spotpy.parameter):
+    def set_prior(self, parameter: str, prior: spotpy.parameter):
         """
         Change the value range of a parameter.
 
@@ -337,7 +338,7 @@ class ParameterSet:
         prior
             The prior distribution (instance of spotpy.parameter)
         """
-        if not hb.has_spotpy:
+        if not HAS_SPOTPY:
             raise ImportError("spotpy is required to do this.")
 
         index = self._get_parameter_index(parameter)
@@ -679,7 +680,7 @@ class ParameterSet:
                 return True
         return False
 
-    def get_for_spotpy(self) -> list[hb.spotpy.parameter]:
+    def get_for_spotpy(self) -> list[spotpy.parameter]:
         """
         Get the parameters to assess ready to be used in spotpy.
 
@@ -687,7 +688,7 @@ class ParameterSet:
         -------
         A list of the parameters as spotpy objects.
         """
-        if not hb.has_spotpy:
+        if not HAS_SPOTPY:
             raise ImportError("spotpy is required to do this.")
 
         spotpy_params = []
@@ -700,7 +701,7 @@ class ParameterSet:
                 )
             else:
                 spotpy_params.append(
-                    hb.spotpy.parameter.Uniform(
+                    spotpy.parameter.Uniform(
                         param_name,
                         low=param['min'],
                         high=param['max']
@@ -734,7 +735,7 @@ class ParameterSet:
                 group_content.update({row['name']: row['value']})
             file_content.update({group_name: group_content})
 
-        utils.dump_config_file(file_content, directory, name, file_type)
+        dump_config_file(file_content, directory, name, file_type)
 
     def generate_parameters(
             self,

@@ -23,7 +23,7 @@ RHONE_HUS = FILES_DIR / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.cs
 
 
 def has_required_packages() -> bool:
-    return hb.has_rasterio and hb.has_geopandas and hb.has_shapely
+    return hb.HAS_RASTERIO and hb.HAS_GEOPANDAS and hb.HAS_SHAPELY
 
 
 def test_shapefile_parsing():

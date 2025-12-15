@@ -6,15 +6,16 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-import hydrobricks as hb
+from .. import rxr, xr, rasterio
+from .._optional import HAS_RASTERIO, HAS_XARRAY
 
 if TYPE_CHECKING:
-    from .catchment import Catchment
+    from ..catchment import Catchment
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.enums import Resampling
 
-from .constants import (
+from .._constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,
     ES_SM_AXIS,
@@ -223,13 +224,13 @@ class PotentialSolarRadiation:
         filename
             Name of the input file. Default is 'annual_potential_radiation.tif'.
         """
-        self.mean_annual_radiation = hb.rxr.open_rasterio(
+        self.mean_annual_radiation = rxr.open_rasterio(
             Path(dir_path) / filename).drop_vars('band')[0]
 
     def upscale_and_save_mean_annual_radiation_rasters(
             self,
             mean_annual_radiation: np.ndarray,
-            dem: hb.rasterio.Dataset,
+            dem: rasterio.Dataset,
             output_path: str,
             output_filename: str = 'annual_potential_radiation.tif'
     ):
@@ -257,19 +258,19 @@ class PotentialSolarRadiation:
 
         # If both resolutions are the same, just save the mean annual radiation
         if dem.res[0] == self.catchment.get_dem_x_resolution():
-            with hb.rasterio.open(res_path, 'w', **profile) as dst:
+            with rasterio.open(res_path, 'w', **profile) as dst:
                 dst.write(mean_annual_radiation, 1)
             self.mean_annual_radiation = mean_annual_radiation
             return
 
         # Save a temporary file to upscale the mean annual radiation
-        with hb.rasterio.open(temp_path, 'w', **profile) as dst:
+        with rasterio.open(temp_path, 'w', **profile) as dst:
             dst.write(mean_annual_radiation, 1)
 
         # Upscale the mean annual radiation to the DEM resolution
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            with hb.rxr.open_rasterio(temp_path).drop_vars('band')[0] as xr_dem:
+            with rxr.open_rasterio(temp_path).drop_vars('band')[0] as xr_dem:
                 xr_dem_upscaled = xr_dem.rio.reproject(
                     xr_dem.rio.crs,
                     shape=self.catchment.dem.shape,
@@ -282,7 +283,7 @@ class PotentialSolarRadiation:
 
     @staticmethod
     def calculate_cast_shadows(
-            dem_dataset: hb.rasterio.Dataset,
+            dem_dataset: rasterio.Dataset,
             masked_dem: np.ndarray,
             zenith: float,
             azimuth: float
@@ -695,7 +696,7 @@ class PotentialSolarRadiation:
     def _save_potential_radiation_netcdf(
             self,
             radiation: np.ndarray,
-            dem: hb.rasterio.Dataset,
+            dem: rasterio.Dataset,
             masked_dem_data: np.ndarray,
             day_of_year: np.ndarray,
             output_path: str | None,
@@ -721,15 +722,15 @@ class PotentialSolarRadiation:
         full_path = Path(output_path) / output_filename
         print('Saving to', str(full_path), self.catchment.dem.crs)
 
-        if not hb.has_xarray:
+        if not HAS_XARRAY:
             raise ImportError("xarray is required to do this.")
 
         rows, cols = np.where(masked_dem_data)
-        xs, ys = hb.rasterio.transform.xy(dem.transform, list(rows), list(cols))
+        xs, ys = rasterio.transform.xy(dem.transform, list(rows), list(cols))
         xs = np.array(xs).reshape(masked_dem_data.shape)[0, :]
         ys = np.array(ys).reshape(masked_dem_data.shape)[:, 0]
 
-        ds = hb.xr.DataArray(
+        ds = xr.DataArray(
             radiation,
             name='radiation',
             dims=['day_of_year', 'y', 'x'],

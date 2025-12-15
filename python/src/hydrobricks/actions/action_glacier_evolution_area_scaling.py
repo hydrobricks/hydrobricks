@@ -5,12 +5,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import _hydrobricks as _hb
-import hydrobricks as hb
-from .actions.action import Action
-from .preprocessing.glacier_evolution_area_scaling import (
+from .._hydrobricks import ActionGlacierEvolutionAreaScaling as _ActionGlacierEAS
+from ..preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
 )
+from .action import Action
 
 
 class ActionGlacierEvolutionAreaScaling(Action):
@@ -26,7 +25,7 @@ class ActionGlacierEvolutionAreaScaling(Action):
     def __init__(self):
         super().__init__()
         self.name = "ActionGlacierEvolutionAreaScaling"
-        self.action = _hb.ActionGlacierEvolutionAreaScaling()
+        self.action = _ActionGlacierEAS()
 
     def load_from_csv(
             self,

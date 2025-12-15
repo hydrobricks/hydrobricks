@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.time_series import TimeSeries1D
-from hydrobricks.trainer import evaluate
+from .time_series import TimeSeries1D
+from .trainer import evaluate
 
 
 class Observations(TimeSeries1D):

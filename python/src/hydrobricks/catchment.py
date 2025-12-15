@@ -9,11 +9,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.g
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
 import hydrobricks as hb
-from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
-from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
-from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
-from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
+from .hydro_units import HydroUnits
+from .preprocessing.catchment_connectivity import CatchmentConnectivity
+from .preprocessing.catchment_discretization import CatchmentDiscretization
+from .preprocessing.catchment_topography import CatchmentTopography
+from .preprocessing.potential_solar_radiation import PotentialSolarRadiation
 
 if hb.has_shapely:
     from shapely.geometry import mapping

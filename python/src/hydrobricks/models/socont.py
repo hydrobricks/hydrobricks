@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from hydrobricks.models.model import Model
+from .models.model import Model
 
 
 class Socont(Model):

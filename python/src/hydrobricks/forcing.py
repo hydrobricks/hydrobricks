@@ -19,11 +19,11 @@ import pandas as pd
 from cftime import num2date
 
 import hydrobricks as hb
-from hydrobricks.catchment import Catchment
-from hydrobricks.constants import TO_RAD
-from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.parameters import ParameterSet
-from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
+from .catchment import Catchment
+from .constants import TO_RAD
+from .hydro_units import HydroUnits
+from .parameters import ParameterSet
+from .time_series import TimeSeries1D, TimeSeries2D
 
 
 class Forcing:

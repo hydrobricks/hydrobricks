@@ -10,10 +10,10 @@ import numpy as np
 import hydrobricks as hb
 
 if TYPE_CHECKING:
-    from hydrobricks.forcing import Forcing
-    from hydrobricks.models.model import Model
-    from hydrobricks.observations import Observations
-    from hydrobricks.parameters import ParameterSet
+    from .forcing import Forcing
+    from .models.model import Model
+    from .observations import Observations
+    from .parameters import ParameterSet
 
 
 class SpotpySetup:

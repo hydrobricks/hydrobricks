@@ -9,10 +9,10 @@ import pandas as pd
 import _hydrobricks as _hb
 import hydrobricks as hb
 import hydrobricks.utils as utils
-from hydrobricks.actions.action import Action
-from hydrobricks.catchment import Catchment
-from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.units import Unit, convert_unit
+from .actions.action import Action
+from .catchment import Catchment
+from .hydro_units import HydroUnits
+from .units import Unit, convert_unit
 
 if hb.has_shapely:
     from shapely.geometry import MultiPolygon, mapping

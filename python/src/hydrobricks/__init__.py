@@ -18,7 +18,7 @@ def is_module_available(module_name):
     return importlib.util.find_spec(module_name) is not None
 
 
-from _hydrobricks import (
+from ._hydrobricks import (
     close_log,
     init,
     init_log,

@@ -6,5 +6,10 @@ from .action_glacier_snow_to_ice_transformation import (
 )
 from .action_land_cover_change import ActionLandCoverChange
 
-__all__ = ('Action', 'ActionLandCoverChange', 'ActionGlacierEvolutionDeltaH',
-           'ActionGlacierEvolutionAreaScaling', 'ActionGlacierSnowToIceTransformation')
+__all__ = (
+    'Action',
+    'ActionLandCoverChange',
+    'ActionGlacierEvolutionDeltaH',
+    'ActionGlacierEvolutionAreaScaling',
+    'ActionGlacierSnowToIceTransformation'
+)

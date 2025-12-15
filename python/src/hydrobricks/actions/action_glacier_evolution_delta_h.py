@@ -7,8 +7,8 @@ import pandas as pd
 
 import _hydrobricks as _hb
 import hydrobricks as hb
-from hydrobricks.actions.action import Action
-from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
+from .actions.action import Action
+from .preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
 
 
 class ActionGlacierEvolutionDeltaH(Action):

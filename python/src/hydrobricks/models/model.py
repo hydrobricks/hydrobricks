@@ -9,13 +9,13 @@ import numpy as np
 import _hydrobricks as _hb
 import hydrobricks as hb
 import hydrobricks.utils as utils
-from _hydrobricks import ModelHydro
-from hydrobricks.actions.action import Action
-from hydrobricks.forcing import Forcing
-from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.models.model_settings import ModelSettings
-from hydrobricks.parameters import ParameterSet
-from hydrobricks.trainer import evaluate
+from ._hydrobricks import ModelHydro
+from .actions.action import Action
+from .forcing import Forcing
+from .hydro_units import HydroUnits
+from .models.model_settings import ModelSettings
+from .parameters import ParameterSet
+from .trainer import evaluate
 
 
 class Model(ABC):

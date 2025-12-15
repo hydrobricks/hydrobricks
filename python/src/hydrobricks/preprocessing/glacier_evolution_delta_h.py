@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.constants import ICE_WE
+from .constants import ICE_WE
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment

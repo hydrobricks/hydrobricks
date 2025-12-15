@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from _hydrobricks import SettingsBasin
-from hydrobricks.units import (
+from ._hydrobricks import SettingsBasin
+from .units import (
     Unit,
     convert_unit_df,
     get_unit_enum,

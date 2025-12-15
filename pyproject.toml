@@ -52,7 +52,7 @@ line-length = 88
 
 [tool.isort]
 profile = "black"
-known_first_party = ["_hydrobricks", "hydrobricks", "hydrobricks.*"]
+known_first_party = ["hydrobricks", "hydrobricks.*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

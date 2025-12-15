@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.constants import ICE_WE
+from .constants import ICE_WE
 
 if TYPE_CHECKING:
-    from hydrobricks.catchment import Catchment
-    from hydrobricks.hydro_units import HydroUnits
+    from .catchment import Catchment
+    from .hydro_units import HydroUnits
 
 
 class GlacierEvolutionAreaScaling:

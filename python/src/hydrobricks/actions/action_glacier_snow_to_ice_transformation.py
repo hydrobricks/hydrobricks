@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import _hydrobricks as _hb
 import hydrobricks as hb
-from hydrobricks.actions.action import Action
+from .actions.action import Action
 
 
 class ActionGlacierSnowToIceTransformation(Action):

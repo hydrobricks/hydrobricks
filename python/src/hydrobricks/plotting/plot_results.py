@@ -6,7 +6,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.colors import LightSource, ListedColormap
 
 import hydrobricks as hb
-from hydrobricks.results import Results
+from .results import Results
 
 
 def plot_hydrograph(

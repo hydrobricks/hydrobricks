@@ -8,7 +8,7 @@ import numpy as np
 import hydrobricks as hb
 
 if TYPE_CHECKING:
-    from hydrobricks.catchment import Catchment
+    from .catchment import Catchment
 
 
 class CatchmentDiscretization:

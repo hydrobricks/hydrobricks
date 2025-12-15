@@ -9,12 +9,12 @@ import numpy as np
 import hydrobricks as hb
 
 if TYPE_CHECKING:
-    from hydrobricks.catchment import Catchment
+    from .catchment import Catchment
 
 if hb.has_rasterio:
     from rasterio.enums import Resampling
 
-from hydrobricks.constants import (
+from .constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,
     ES_SM_AXIS,

@@ -71,19 +71,19 @@ jobs:
 
     steps:
       - name: Download wheels artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-ubuntu-latest
           path: dist/
 
       - name: Download windows wheels
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: wheels-windows-latest
           path: dist/
 
       - name: Download sdist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: sdist
           path: dist/

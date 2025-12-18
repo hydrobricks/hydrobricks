@@ -235,6 +235,15 @@ class GlacierEvolutionDeltaH:
             ser_dh = ser_dh / max_dh
         change_df['dh', '-'] = ser_dh
 
+        # Normalize the elevation
+        max_elevation_m = np.max(change_df['elevation', 'm'].values)
+        min_elevation_m = np.min(change_df['elevation', 'm'].values)
+        norm_elevations = (
+                (max_elevation_m - change_df['elevation', 'm'].values) /
+                (max_elevation_m - min_elevation_m)
+        )
+        change_df['normalized_elevation', '-'] = norm_elevations
+
         self.glacier_change_df = change_df
 
         return self.glacier_change_df

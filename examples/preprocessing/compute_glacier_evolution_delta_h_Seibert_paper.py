@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.constants import ICE_WE
+from hydrobricks._constants import ICE_WE
 
 # Paths
 TEST_FILES_DIR = Path(

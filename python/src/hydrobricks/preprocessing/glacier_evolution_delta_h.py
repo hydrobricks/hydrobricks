@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
@@ -84,7 +84,9 @@ class GlacierEvolutionDeltaH:
             catchment: Catchment,
             ice_thickness_old: str,
             ice_thickness_new: str,
-            elevation_bands_distance: int = 10
+            elevation_bands_distance: int = 10,
+            smooth_window: int|None = 5,
+            nodata: Optional[float] = None
     ) -> pd.DataFrame:
         """
         Compute the normalized ice thickness change between two glacier ice thickness
@@ -100,6 +102,11 @@ class GlacierEvolutionDeltaH:
             Path to the TIF file containing the new glacier thickness in meters.
         elevation_bands_distance
             Distance between elevation bands in meters. Default is 10 m.
+        smooth_window
+            Optional integer window for 1D smoothing (pandas rolling) applied to
+            the aggregated curve.
+        nodata
+            Value to treat as nodata in inputs (replaced with np.nan).
 
         Returns
         -------
@@ -137,6 +144,16 @@ class GlacierEvolutionDeltaH:
         ice_thickness_new = catchment.attributes['ice_thickness_new']['data']
         ice_thickness_new[catchment.dem_data == 0] = 0.0
         ice_thickness_new[ice_thickness_new < 0] = 0.0
+
+        # Handle nodata
+        if nodata is not None:
+            ice_thickness_old[ice_thickness_old == nodata] = np.nan
+            ice_thickness_new[ice_thickness_new == nodata] = np.nan
+
+        # Check shape consistency
+        if ice_thickness_old.shape != ice_thickness_new.shape:
+            raise ValueError("The old and new ice thickness rasters must have the "
+                             "same shape.")
 
         map_bands_ids[(ice_thickness_old == 0) & (ice_thickness_new == 0)] = 0
         band_ids = np.unique(map_bands_ids)
@@ -194,9 +211,31 @@ class GlacierEvolutionDeltaH:
             change_df.at[idx, ('glacier_thickness_new', 'm')] = mean_thickness_new
             change_df.at[idx, ('glacier_thickness_diff', 'm')] = mean_thickness_diff
 
+        # Remove rows where the new thickness is zero (no glacier)
+        change_df = change_df[change_df['glacier_thickness_new', 'm'] > 0].reset_index(
+            drop=True)
+
+        # Smooth the thickness change curve
+        ser_dh = -change_df['glacier_thickness_diff', 'm']
+        ser_dh[ser_dh<0] = 0
+        if smooth_window is not None and smooth_window:
+            if np.isfinite(ser_dh).any():
+                ser_dh = ser_dh.rolling(
+                    window=smooth_window,
+                    center=True,
+                    min_periods=1
+                ).mean().to_numpy()
+
+        # Normalize the thickness change
+        min_dh = np.nanmin(ser_dh)
+        if min_dh > 0:
+            ser_dh = ser_dh - min_dh
+        max_dh = np.nanmax(ser_dh)
+        if max_dh > 0:
+            ser_dh = ser_dh / max_dh
+        change_df['dh', '-'] = ser_dh
+
         self.glacier_change_df = change_df
-        self.hydro_units = catchment.hydro_units.hydro_units
-        self.catchment_area = np.sum(self.hydro_units.area.values)
 
         return self.glacier_change_df
 

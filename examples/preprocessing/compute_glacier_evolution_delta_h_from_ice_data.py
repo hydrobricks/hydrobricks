@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-from hydrobricks.constants import ICE_WE
+from hydrobricks._constants import ICE_WE
 
 DISCRETIZE_BY_RADIATION = True  # Set to True to use radiation discretization
 COMPUTE_RADIATION = False  # True: compute radiation. False: use the precomputed data.

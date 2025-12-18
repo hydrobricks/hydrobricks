@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import Dataset
-from ._hydrobricks import SettingsBasin
-from ._optional import HAS_NETCDF
-from .units import (
+from hydrobricks import Dataset
+from hydrobricks._hydrobricks import SettingsBasin
+from hydrobricks._optional import HAS_NETCDF
+from hydrobricks.units import (
     Unit,
     convert_unit_df,
     get_unit_enum,

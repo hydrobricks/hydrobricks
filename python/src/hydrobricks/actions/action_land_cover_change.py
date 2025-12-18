@@ -6,14 +6,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .. import gpd
-from .._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
-from .._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
-from ..catchment import Catchment
-from ..hydro_units import HydroUnits
-from ..units import Unit, convert_unit
-from ..utils import compute_area, date_as_mjd
-from .action import Action
+from hydrobricks import gpd
+from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
+from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
+from hydrobricks.actions import Action
+from hydrobricks.catchment import Catchment
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.units import Unit, convert_unit
+from hydrobricks.utils import compute_area, date_as_mjd
 
 if HAS_SHAPELY:
     from shapely.geometry import MultiPolygon, mapping

@@ -1,4 +1,4 @@
-from ._hydrobricks import (
+from hydrobricks._hydrobricks import (
     close_log,
     init,
     init_log,
@@ -8,7 +8,7 @@ from ._hydrobricks import (
 )
 
 # Import optional dependency management
-from ._optional import (
+from hydrobricks._optional import (
     # Availability flags
     HAS_NETCDF,
     HAS_RASTERIO,
@@ -38,15 +38,15 @@ from ._optional import (
     xrs,
 )
 
-from .catchment import Catchment
-from .forcing import Forcing
-from .hydro_units import HydroUnits
-from .models.model import Model
-from .observations import Observations
-from .parameters import ParameterSet
-from .results import Results
-from .time_series import TimeSeries
-from .trainer import evaluate
+from hydrobricks.catchment import Catchment
+from hydrobricks.forcing import Forcing
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.models.model import Model
+from hydrobricks.observations import Observations
+from hydrobricks.parameters import ParameterSet
+from hydrobricks.results import Results
+from hydrobricks.time_series import TimeSeries
+from hydrobricks.trainer import evaluate
 
 init()
 __all__ = (

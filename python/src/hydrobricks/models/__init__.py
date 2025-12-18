@@ -1,8 +1,8 @@
-from ._hydrobricks import init
+from hydrobricks._hydrobricks import init
 
-from .model import Model
-from .model_settings import ModelSettings
-from .socont import Socont
+from hydrobricks.models.model import Model
+from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.models.socont import Socont
 
 init()
 __all__ = (

@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import math
 import warnings
 from pathlib import Path
@@ -7,11 +6,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .. import rxr, xrs, rasterio
-from .._optional import HAS_RASTERIO, HAS_SHAPELY, HAS_PYARROW, HAS_XRSPATIAL
+from hydrobricks import rxr, xrs, rasterio
+from hydrobricks._optional import HAS_RASTERIO, HAS_SHAPELY, HAS_PYARROW, HAS_XRSPATIAL
 
 if TYPE_CHECKING:
-    from ..catchment import Catchment
+    from hydrobricks.catchment import Catchment
 
 if HAS_RASTERIO:
     from rasterio.enums import Resampling

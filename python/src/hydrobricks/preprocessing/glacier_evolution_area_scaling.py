@@ -1,17 +1,16 @@
 from __future__ import annotations
-
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-from .._optional import HAS_PYPROJ
-from .._constants import ICE_WE
+from hydrobricks._constants import ICE_WE
+from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
-    from ..catchment import Catchment
-    from ..hydro_units import HydroUnits
+    from hydrobricks.catchment import Catchment
+    from hydrobricks.hydro_units import HydroUnits
 
 
 class GlacierEvolutionAreaScaling:

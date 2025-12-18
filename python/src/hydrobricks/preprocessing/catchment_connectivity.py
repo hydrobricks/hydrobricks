@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -8,11 +7,11 @@ from scipy import ndimage
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
-from .. import pyshedsGrid
-from .._optional import HAS_PYSHEDS
+from hydrobricks import pyshedsGrid
+from hydrobricks._optional import HAS_PYSHEDS
 
 if TYPE_CHECKING:
-    from ..catchment import Catchment
+    from hydrobricks.catchment import Catchment
 
 
 class CatchmentConnectivity:

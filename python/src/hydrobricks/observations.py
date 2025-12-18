@@ -1,12 +1,11 @@
 from __future__ import annotations
-
 import itertools
 
 import numpy as np
 import pandas as pd
 
-from .time_series import TimeSeries1D
-from .trainer import evaluate
+from hydrobricks.time_series import TimeSeries1D
+from hydrobricks.trainer import evaluate
 
 
 class Observations(TimeSeries1D):

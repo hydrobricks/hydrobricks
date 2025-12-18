@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import sys
 
 if sys.version_info < (3, 11):
@@ -18,13 +17,13 @@ import numpy as np
 import pandas as pd
 from cftime import num2date
 
-from . import Dataset, pyet
-from ._optional import HAS_PYET, HAS_NETCDF
-from .catchment import Catchment
-from ._constants import TO_RAD
-from .hydro_units import HydroUnits
-from .parameters import ParameterSet
-from .time_series import TimeSeries1D, TimeSeries2D
+from hydrobricks import Dataset, pyet
+from hydrobricks._constants import TO_RAD
+from hydrobricks._optional import HAS_PYET, HAS_NETCDF
+from hydrobricks.catchment import Catchment
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.parameters import ParameterSet
+from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
 
 class Forcing:

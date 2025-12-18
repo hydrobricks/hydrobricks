@@ -5,14 +5,14 @@ It provides availability flags (HAS_*) and lazy-loaded module proxies for
 optional dependencies that may not be installed in all environments.
 
 Usage from other hydrobricks modules (recommended):
-    from ._optional import HAS_SHAPELY
+    from hydrobricks._optional import HAS_SHAPELY
 
     if HAS_SHAPELY:
         from shapely.geometry import mapping
         # Use shapely functionality
 
     # Or use the lazy-loaded proxy:
-    from ._optional import HAS_RASTERIO, rasterio
+    from hydrobricks._optional import HAS_RASTERIO, rasterio
 
     if HAS_RASTERIO:
         with rasterio.open(path) as dataset:

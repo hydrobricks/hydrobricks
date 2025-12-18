@@ -5,8 +5,8 @@ import numpy as np
 from matplotlib.animation import FuncAnimation
 from matplotlib.colors import LightSource, ListedColormap
 
-from .. import rxr
-from ..results import Results
+from hydrobricks import rxr
+from hydrobricks.results import Results
 
 
 def plot_hydrograph(

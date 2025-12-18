@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import random
 from typing import Hashable
 from dataclasses import dataclass
@@ -7,9 +6,9 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from . import spotpy
-from .utils import dump_config_file
-from ._optional import HAS_SPOTPY
+from hydrobricks import spotpy
+from hydrobricks._optional import HAS_SPOTPY
+from hydrobricks.utils import dump_config_file
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,7 @@
 import numpy as np
 
-from . import xr
-from ._optional import HAS_XARRAY
+from hydrobricks import xr
+from hydrobricks._optional import HAS_XARRAY
 
 
 class Results:

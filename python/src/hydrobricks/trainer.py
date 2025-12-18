@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import importlib
 import os
 from datetime import datetime
@@ -7,13 +6,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from . import spotpy
+from hydrobricks import spotpy
 
 if TYPE_CHECKING:
-    from .forcing import Forcing
-    from .models.model import Model
-    from .observations import Observations
-    from .parameters import ParameterSet
+    from hydrobricks.forcing import Forcing
+    from hydrobricks.models.model import Model
+    from hydrobricks.observations import Observations
+    from hydrobricks.parameters import ParameterSet
 
 
 class SpotpySetup:

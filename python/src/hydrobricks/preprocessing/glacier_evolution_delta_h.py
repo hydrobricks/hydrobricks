@@ -1,22 +1,22 @@
 from __future__ import annotations
-
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-from .. import rasterio, gpd
-from .._constants import ICE_WE
+from hydrobricks import rasterio, gpd
+from hydrobricks._constants import ICE_WE
+from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
     from hydrobricks.hydro_units import HydroUnits
 
-if hb.has_shapely:
+if HAS_SHAPELY:
     from shapely.geometry import MultiPolygon, mapping
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.mask import mask
 
 
@@ -106,7 +106,7 @@ class GlacierEvolutionDeltaH:
         The glacier_change_df DataFrame containing the normalized ice thickness change
         data.
         """
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         # Discretize the DEM into elevation bands at the given distance
@@ -258,7 +258,7 @@ class GlacierEvolutionDeltaH:
         # measurements or calculated based on an inversion of surface topography
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness is not None:
-            if not hb.has_pyproj:
+            if not HAS_PYPROJ:
                 raise ImportError("pyproj is required to do this.")
 
             # Extract the ice thickness and resample it to the DEM resolution
@@ -1008,7 +1008,7 @@ class GlacierEvolutionDeltaH:
             )
             map_bands_ids[mask_band] = i + 1
 
-        map_bands_ids = map_bands_ids.astype(hb.rasterio.uint16)
+        map_bands_ids = map_bands_ids.astype(rasterio.uint16)
 
         # Set the elevation band values to the middle of the band
         elevations = elevations + elevation_bands_distance / 2
@@ -1022,12 +1022,12 @@ class GlacierEvolutionDeltaH:
     ) -> np.ndarray:
         """ Extract the glacier cover from shapefiles."""
         # Clip the glaciers to the catchment extent
-        all_glaciers = hb.gpd.read_file(glacier_outline)
+        all_glaciers = gpd.read_file(glacier_outline)
         all_glaciers.to_crs(catchment.crs, inplace=True)
         if catchment.outline[0].geom_type == 'MultiPolygon':
-            glaciers = hb.gpd.clip(all_glaciers, catchment.outline[0])
+            glaciers = gpd.clip(all_glaciers, catchment.outline[0])
         elif catchment.outline[0].geom_type == 'Polygon':
-            glaciers = hb.gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
+            glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         else:
             raise ValueError("The catchment outline must be a (multi)polygon.")
         glaciers = self._simplify_df_geometries(glaciers)
@@ -1069,7 +1069,7 @@ class GlacierEvolutionDeltaH:
     @staticmethod
     def _mask_dem(
             catchment: Catchment,
-            shapefile: hb.gpd.GeoDataFrame,
+            shapefile: gpd.GeoDataFrame,
             nodata: int = -9999
     ) -> np.ndarray:
         geoms = []
@@ -1083,7 +1083,7 @@ class GlacierEvolutionDeltaH:
         return dem_masked
 
     @staticmethod
-    def _simplify_df_geometries(df: hb.gpd.GeoDataFrame) -> hb.gpd.GeoDataFrame:
+    def _simplify_df_geometries(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         # Merge the polygons
         df['new_col'] = 0
         df = df.dissolve(by='new_col', as_index=False)

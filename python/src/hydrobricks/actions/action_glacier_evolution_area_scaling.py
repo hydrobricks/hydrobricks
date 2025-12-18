@@ -1,15 +1,16 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from .._hydrobricks import ActionGlacierEvolutionAreaScaling as _ActionGlacierEAS
-from ..preprocessing.glacier_evolution_area_scaling import (
+from hydrobricks._hydrobricks import (
+    ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling
+)
+from hydrobricks.actions import Action
+from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
 )
-from .action import Action
 
 
 class ActionGlacierEvolutionAreaScaling(Action):
@@ -25,7 +26,7 @@ class ActionGlacierEvolutionAreaScaling(Action):
     def __init__(self):
         super().__init__()
         self.name = "ActionGlacierEvolutionAreaScaling"
-        self.action = _ActionGlacierEAS()
+        self.action = _ActionGlacierEvolutionAreaScaling()
 
     def load_from_csv(
             self,

@@ -9,9 +9,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import rxr, xr, rasterio, pyproj
-from ._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
-from .utils import date_as_mjd
+from hydrobricks import rxr, xr, rasterio, pyproj
+from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
+from hydrobricks.utils import date_as_mjd
 
 
 class TimeSeries:

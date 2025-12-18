@@ -1,21 +1,12 @@
 from __future__ import annotations
-
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .. import rxr, xr, rasterio
-from .._optional import HAS_RASTERIO, HAS_XARRAY
-
-if TYPE_CHECKING:
-    from ..catchment import Catchment
-
-if HAS_RASTERIO:
-    from rasterio.enums import Resampling
-
-from .._constants import (
+from hydrobricks import rxr, xr, rasterio
+from hydrobricks._constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,
     ES_SM_AXIS,
@@ -29,6 +20,13 @@ from .._constants import (
     TO_DEG,
     TO_RAD,
 )
+from hydrobricks._optional import HAS_RASTERIO, HAS_XARRAY
+
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
+
+if HAS_RASTERIO:
+    from rasterio.enums import Resampling
 
 
 class PotentialSolarRadiation:

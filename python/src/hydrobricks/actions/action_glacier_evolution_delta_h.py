@@ -1,13 +1,14 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from .._hydrobricks import ActionGlacierEvolutionDeltaH as _ActionGlacierEvolutionDeltaH
-from ..preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
-from .action import Action
+from hydrobricks._hydrobricks import (
+    ActionGlacierEvolutionDeltaH as _ActionGlacierEvolutionDeltaH
+)
+from hydrobricks.actions import Action
+from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
 
 
 class ActionGlacierEvolutionDeltaH(Action):

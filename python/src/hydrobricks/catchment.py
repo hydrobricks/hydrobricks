@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -8,13 +7,14 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
-from . import rasterio, pyproj, shapely, gpd
-from ._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
-from .hydro_units import HydroUnits
-from .preprocessing import CatchmentConnectivity
-from .preprocessing import CatchmentDiscretization
-from .preprocessing import CatchmentTopography
-from .preprocessing import PotentialSolarRadiation
+from hydrobricks import rasterio, pyproj, shapely, gpd
+from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.preprocessing import CatchmentConnectivity
+from hydrobricks.preprocessing import CatchmentDiscretization
+from hydrobricks.preprocessing import CatchmentTopography
+from hydrobricks.preprocessing import PotentialSolarRadiation
+from hydrobricks.utils import compute_area
 
 if HAS_SHAPELY:
     from shapely.geometry import mapping
@@ -756,7 +756,7 @@ class Catchment:
             return
         shapefile = gpd.read_file(outline)
         self._check_crs(shapefile)
-        area = utils.compute_area(shapefile)
+        area = compute_area(shapefile)
         self.area = area
 
     def _extract_outline(self, outline: shapely.geometry.Polygon):

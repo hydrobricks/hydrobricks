@@ -1,15 +1,14 @@
 from __future__ import annotations
-
 import itertools
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .. import rasterio
-from .._optional import HAS_PYPROJ
+from hydrobricks import rasterio
+from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
-    from ..catchment import Catchment
+    from hydrobricks.catchment import Catchment
 
 
 class CatchmentDiscretization:

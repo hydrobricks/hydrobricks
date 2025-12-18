@@ -43,7 +43,7 @@ class GlacierEvolutionAreaScaling:
             self,
             catchment: Catchment,
             ice_thickness: str | Path,
-            nb_increments: int = 100
+            nb_increments: int = 200
     ):
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -56,7 +56,7 @@ class GlacierEvolutionAreaScaling:
         ice_thickness
             Path to the TIF file containing the glacier thickness in meters.
         nb_increments
-            Number of increments for glacier mass balance calculation. Default is 100.
+            Number of increments for glacier mass balance calculation. Default is 200.
         """
 
         # Check that the catchment has been discretized

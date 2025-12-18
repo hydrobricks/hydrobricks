@@ -42,7 +42,6 @@ class GlacierEvolutionDeltaH:
             The hydro unit object.
         """
         self.glacier_df = None
-        self.glacier_change_df = None
         self.hydro_units = None
         self.catchment_area = None
         if hydro_units is not None:
@@ -244,9 +243,7 @@ class GlacierEvolutionDeltaH:
         )
         change_df['normalized_elevation', '-'] = norm_elevations
 
-        self.glacier_change_df = change_df
-
-        return self.glacier_change_df
+        return change_df
 
     def compute_initial_ice_thickness(
             self,
@@ -396,7 +393,8 @@ class GlacierEvolutionDeltaH:
             catchment: Catchment | None = None,
             glacier_profile_csv: str | None = None,
             glacier_df: pd.DataFrame | None = None,
-            nb_increments: int = 100,
+            observed_dh: pd.DataFrame | None = None,
+            nb_increments: int = 200,
             update_width: bool = True,
             update_width_reference: str = 'initial'
     ):
@@ -437,8 +435,10 @@ class GlacierEvolutionDeltaH:
 
         glacier_df
             DataFrame containing glacier data. Alternative to glacier_profile_csv.
+        observed_dh
+            Optional dataframe containing observed delta-h values.
         nb_increments
-            Number of increments for glacier mass balance calculation. Default is 100.
+            Number of increments for glacier mass balance calculation. Default is 200.
         update_width
             Whether to update the glacier width at each iteration (Eq. 7 Seibert et al.,
             2018). Default is True. Ignored if pixel_based_approach is True.
@@ -517,7 +517,7 @@ class GlacierEvolutionDeltaH:
         self._initialization()
 
         for increment in range(1, nb_increments):  # last row kept with zeros
-            self._compute_delta_h(increment, nb_increments)
+            self._compute_delta_h(increment, nb_increments, observed_dh)
             self._update_glacier_thickness(increment)
             self._width_scaling(
                 increment,
@@ -690,18 +690,34 @@ class GlacierEvolutionDeltaH:
             self.c_coeff = 0.09
             self.gamma_coeff = 2
 
-    def _compute_delta_h(self, increment: int, nb_increments: int):
+    def _compute_delta_h(self, increment: int, nb_increments: int, observed_dh: None):
         """
         Step 2 of Seibert et al. (2018): Apply the delta-h method to calculate the
         change in glacier mass balance.
         """
         # Apply ∆h-parameterization (Eq. 4)
-        # Gives the normalized (dimensionless) ice thickness change for each
-        # elevation band i
-        self.norm_delta_we_bands = (
-                np.power(self.norm_elevations_bands + self.a_coeff, self.gamma_coeff) +
-                self.b_coeff * (self.norm_elevations_bands + self.a_coeff) +
-                self.c_coeff)
+        if observed_dh is not None:
+            # Use observed delta-h values
+            obs_norm_dh = observed_dh['dh', '-'].values
+            obs_norm_elev = observed_dh['normalized_elevation', '-'].values
+
+            # Interpolate to the model elevation bands
+            interp_norm_dh = np.interp(
+                self.norm_elevations_bands,
+                obs_norm_elev[::-1],
+                obs_norm_dh[::-1]
+            )
+
+            self.norm_delta_we_bands = interp_norm_dh
+
+        else:
+            # Gives the normalized (dimensionless) ice thickness change for each
+            # elevation band i
+            self.norm_delta_we_bands = (
+                    np.power(self.norm_elevations_bands + self.a_coeff,
+                             self.gamma_coeff) +
+                    self.b_coeff * (self.norm_elevations_bands + self.a_coeff) +
+                    self.c_coeff)
 
         # Calculate the scaling factor fs (Eq. 5)
         # The glacier volume change increment, added with the excess melt that could

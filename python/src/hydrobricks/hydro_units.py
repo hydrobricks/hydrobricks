@@ -254,6 +254,16 @@ class HydroUnits:
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
+    def get_nb_hydro_units(self) -> int:
+        """
+        Get the number of hydro units.
+
+        Returns
+        -------
+        Number of hydro units.
+        """
+        return len(self.hydro_units)
+
     def check_land_cover_fractions_not_empty(self):
         """
         Check that the land cover fractions are not empty. If there is a single one

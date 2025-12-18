@@ -41,7 +41,8 @@ def test_glacier_evolution_delta_h_lookup_table():
         # iterations (update_width=False), but we would recommend to do so.
         glacier_evolution.compute_lookup_table(
             glacier_profile_csv=GLACIER_PROFILE_SYNTH,
-            update_width=False
+            update_width=False,
+            nb_increments=100
         )
         glacier_evolution.save_as_csv(working_dir)
         lookup_table = glacier_evolution.lookup_table_area
@@ -218,10 +219,12 @@ def test_glacier_evolution_different_discretizations_width_update():
 
         # Compute lookup tables
         glacier_evolution_elev.compute_lookup_table(
-            update_width=True
+            update_width=True,
+            nb_increments=100
         )
         glacier_evolution_rad.compute_lookup_table(
-            update_width=True
+            update_width=True,
+            nb_increments=100
         )
 
         assert np.allclose(glacier_evolution_elev.elev_bands,

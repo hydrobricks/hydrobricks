@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import _hydrobricks as _hb
-import hydrobricks as hb
-from hydrobricks.actions.action import Action
+from hydrobricks._hydrobricks import (
+    ActionGlacierSnowToIceTransformation as _ActionGlacierSnowToIceTransformation
+)
+from hydrobricks.actions import Action
 
 
 class ActionGlacierSnowToIceTransformation(Action):
@@ -77,7 +78,7 @@ class ActionGlacierSnowToIceTransformation(Action):
             land_cover: str,
     ):
         month_num = self._convert_month_to_number(update_month)
-        self.action = _hb.ActionGlacierSnowToIceTransformation(
+        self.action = _ActionGlacierSnowToIceTransformation(
             month_num, update_day, land_cover)
 
         self.is_initialized = True

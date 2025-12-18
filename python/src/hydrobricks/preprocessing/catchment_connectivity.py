@@ -9,7 +9,8 @@ from scipy import ndimage
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
-import hydrobricks as hb
+from hydrobricks import pyshedsGrid
+from hydrobricks._optional import HAS_PYSHEDS
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -63,7 +64,7 @@ class CatchmentConnectivity:
         -------
         The hydro units connectivity.
         """
-        if not hb.has_pysheds:
+        if not HAS_PYSHEDS:
             raise ImportError("pysheds is required to do this.")
 
         if self.catchment.dem is None:
@@ -74,7 +75,7 @@ class CatchmentConnectivity:
 
         # Create a pysheds instance
         dem_path = self.catchment.dem.files[0]
-        grid = hb.pyshedsGrid.from_raster(dem_path)
+        grid = pyshedsGrid.from_raster(dem_path)
         dem = grid.read_raster(dem_path)
 
         # Fill pits and depressions in DEM and resolve flats

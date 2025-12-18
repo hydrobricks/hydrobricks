@@ -1,11 +1,11 @@
 from __future__ import annotations
-
 import itertools
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-import hydrobricks as hb
+from hydrobricks import rasterio
+from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -132,7 +132,7 @@ class CatchmentDiscretization:
         max_radiation
             Maximum radiation of the radiation bands (to homogenize between runs).
         """
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         if isinstance(criteria, str):
@@ -321,7 +321,7 @@ class CatchmentDiscretization:
 
             unit_id += 1
 
-        self.catchment.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
+        self.catchment.map_unit_ids = self.map_unit_ids.astype(rasterio.uint16)
 
         if res_elevation:
             self.catchment.hydro_units.add_property(

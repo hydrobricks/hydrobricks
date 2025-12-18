@@ -93,7 +93,7 @@ def test_load_from_csv(hydro_units_csv: hb.HydroUnits):
 
 
 def test_create_file(hydro_units_csv: hb.HydroUnits):
-    if not hb.has_netcdf:
+    if not hb.HAS_NETCDF:
         return
 
     with tempfile.TemporaryDirectory() as tmp_dir:

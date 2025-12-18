@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib.animation import FuncAnimation
 from matplotlib.colors import LightSource, ListedColormap
 
-import hydrobricks as hb
+from hydrobricks import rxr
 from hydrobricks.results import Results
 
 
@@ -237,7 +237,7 @@ def _generate_cmap_blue() -> ListedColormap:
 def _load_units_ids_raster(unit_ids_raster_path: str) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-        unit_ids_raster = hb.rxr.open_rasterio(unit_ids_raster_path)
+        unit_ids_raster = rxr.open_rasterio(unit_ids_raster_path)
         unit_ids_raster = unit_ids_raster.squeeze().drop_vars("band")
 
     return unit_ids_raster.to_numpy()
@@ -246,7 +246,7 @@ def _load_units_ids_raster(unit_ids_raster_path: str) -> np.ndarray:
 def _load_dem(dem_path: str) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-        dem = hb.rxr.open_rasterio(dem_path)
+        dem = rxr.open_rasterio(dem_path)
         dem = dem.squeeze().drop_vars("band")
 
     return dem

@@ -1,13 +1,13 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-import _hydrobricks as _hb
-import hydrobricks as hb
-from hydrobricks.actions.action import Action
+from hydrobricks._hydrobricks import (
+    ActionGlacierEvolutionDeltaH as _ActionGlacierEvolutionDeltaH
+)
+from hydrobricks.actions import Action
 from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
 
 
@@ -23,7 +23,7 @@ class ActionGlacierEvolutionDeltaH(Action):
     def __init__(self):
         super().__init__()
         self.name = "ActionGlacierEvolutionDeltaH"
-        self.action = _hb.ActionGlacierEvolutionDeltaH()
+        self.action = _ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(
             self,

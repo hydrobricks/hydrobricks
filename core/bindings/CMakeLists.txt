@@ -38,6 +38,9 @@ list(APPEND src_bind ${src_core})
 pybind11_add_module(_hydrobricks MODULE ${src_bind})
 target_link_libraries(_hydrobricks PUBLIC wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)
 
+# Install the module into the hydrobricks package directory
+install(TARGETS _hydrobricks LIBRARY DESTINATION hydrobricks)
+
 # COPY BINARY FILES
 
 if (WIN32)

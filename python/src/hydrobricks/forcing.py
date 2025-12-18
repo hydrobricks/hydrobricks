@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import sys
 
 if sys.version_info < (3, 11):
@@ -18,9 +17,10 @@ import numpy as np
 import pandas as pd
 from cftime import num2date
 
-import hydrobricks as hb
+from hydrobricks import Dataset, pyet
+from hydrobricks._constants import TO_RAD
+from hydrobricks._optional import HAS_PYET, HAS_NETCDF
 from hydrobricks.catchment import Catchment
-from hydrobricks.constants import TO_RAD
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
@@ -302,7 +302,7 @@ class Forcing:
         other options : see pyet documentation for function-specific options. These
             options will be passed to the pyet function.
         """
-        if not hb.has_pyet:
+        if not HAS_PYET:
             raise ImportError("pyet is required to do this.")
 
         kwargs['type'] = 'compute_pet'
@@ -352,7 +352,7 @@ class Forcing:
         max_compression
             Option to allow maximum compression for data in file.
         """
-        if not hb.has_netcdf:
+        if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
 
         if not self.is_initialized():
@@ -363,7 +363,7 @@ class Forcing:
         time = self.data2D.get_dates_as_mjd()
 
         # Create netCDF file
-        nc = hb.Dataset(path, 'w', 'NETCDF4')
+        nc = Dataset(path, 'w', 'NETCDF4')
 
         # Dimensions
         nc.createDimension('hydro_units', len(self.hydro_units))
@@ -399,11 +399,11 @@ class Forcing:
         path
             Path of the file to read.
         """
-        if not hb.has_netcdf:
+        if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
 
         # Open netCDF file
-        nc = hb.Dataset(path, 'r', 'NETCDF4')
+        nc = Dataset(path, 'r', 'NETCDF4')
 
         # Check that hydro units are the same
         hydro_units_nc = nc.variables['id'][:]
@@ -689,7 +689,7 @@ class Forcing:
             raise ValueError(f'Unknown method: {method}')
 
     def _apply_pet_computation(self, method: str, use: list[str], **kwargs):
-        if not hb.has_pyet:
+        if not HAS_PYET:
             raise ImportError("pyet is required to do this.")
 
         pyet_args = {}
@@ -732,45 +732,45 @@ class Forcing:
     @staticmethod
     def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:
         if method in ['Penman', 'penman']:
-            return hb.pyet.penman(**pyet_args)
+            return pyet.penman(**pyet_args)
         elif method in ['Penman-Monteith', 'pm']:
-            return hb.pyet.pm(**pyet_args)
+            return pyet.pm(**pyet_args)
         elif method in ['ASCE-PM', 'pm_asce']:
-            return hb.pyet.pm_asce(**pyet_args)
+            return pyet.pm_asce(**pyet_args)
         elif method in ['FAO-56', 'pm_fao56']:
-            return hb.pyet.pm_fao56(**pyet_args)
+            return pyet.pm_fao56(**pyet_args)
         elif method in ['Priestley-Taylor', 'priestley_taylor']:
-            return hb.pyet.priestley_taylor(**pyet_args)
+            return pyet.priestley_taylor(**pyet_args)
         elif method in ['Kimberly-Penman', 'kimberly_penman']:
-            return hb.pyet.kimberly_penman(**pyet_args)
+            return pyet.kimberly_penman(**pyet_args)
         elif method in ['Thom-Oliver', 'thom_oliver']:
-            return hb.pyet.thom_oliver(**pyet_args)
+            return pyet.thom_oliver(**pyet_args)
         elif method in ['Blaney-Criddle', 'blaney_criddle']:
-            return hb.pyet.blaney_criddle(**pyet_args)
+            return pyet.blaney_criddle(**pyet_args)
         elif method in ['Hamon', 'hamon']:
-            return hb.pyet.hamon(**pyet_args)
+            return pyet.hamon(**pyet_args)
         elif method in ['Romanenko', 'romanenko']:
-            return hb.pyet.romanenko(**pyet_args)
+            return pyet.romanenko(**pyet_args)
         elif method in ['Linacre', 'linacre']:
-            return hb.pyet.linacre(**pyet_args)
+            return pyet.linacre(**pyet_args)
         elif method in ['Haude', 'haude']:
-            return hb.pyet.haude(**pyet_args)
+            return pyet.haude(**pyet_args)
         elif method in ['Turc', 'turc']:
-            return hb.pyet.turc(**pyet_args)
+            return pyet.turc(**pyet_args)
         elif method in ['Jensen-Haise', 'jensen_haise']:
-            return hb.pyet.jensen_haise(**pyet_args)
+            return pyet.jensen_haise(**pyet_args)
         elif method in ['McGuinness-Bordne', 'mcguinness_bordne']:
-            return hb.pyet.mcguinness_bordne(**pyet_args)
+            return pyet.mcguinness_bordne(**pyet_args)
         elif method in ['Hargreaves', 'hargreaves']:
-            return hb.pyet.hargreaves(**pyet_args)
+            return pyet.hargreaves(**pyet_args)
         elif method in ['FAO-24 radiation', 'fao_24']:
-            return hb.pyet.fao_24(**pyet_args)
+            return pyet.fao_24(**pyet_args)
         elif method in ['Abtew', 'abtew']:
-            return hb.pyet.abtew(**pyet_args)
+            return pyet.abtew(**pyet_args)
         elif method in ['Makkink', 'makkink']:
-            return hb.pyet.makkink(**pyet_args)
+            return pyet.makkink(**pyet_args)
         elif method in ['Oudin', 'oudin']:
-            return hb.pyet.oudin(**pyet_args)
+            return pyet.oudin(**pyet_args)
         else:
             raise ValueError(f'Unknown PET method: {method}')
 

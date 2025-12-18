@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import itertools
 
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
 from hydrobricks.time_series import TimeSeries1D
 from hydrobricks.trainer import evaluate
 

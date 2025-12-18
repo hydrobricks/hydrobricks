@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import importlib
 import os
 from datetime import datetime
@@ -7,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-import hydrobricks as hb
+from hydrobricks import spotpy
 
 if TYPE_CHECKING:
     from hydrobricks.forcing import Forcing
@@ -61,10 +60,10 @@ class SpotpySetup:
         if not obj_func:
             print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
-    def parameters(self) -> hb.spotpy.parameter:
+    def parameters(self) -> spotpy.parameter:
         x = None
         for i in range(1000):
-            x = hb.spotpy.parameter.generate(self.params_spotpy)
+            x = spotpy.parameter.generate(self.params_spotpy)
             names = [row[1] for row in x]
             values = [row[0] for row in x]
             params = self.params
@@ -79,7 +78,7 @@ class SpotpySetup:
 
         return x
 
-    def simulation(self, x: hb.spotpy.parameter) -> list[np.ndarray] | None:
+    def simulation(self, x: spotpy.parameter) -> list[np.ndarray] | None:
         params = self.params
         param_values = dict(zip(x.name, x.random))
         params.set_values(param_values)
@@ -124,7 +123,7 @@ class SpotpySetup:
             self,
             simulation: list[np.ndarray],
             evaluation: list[np.ndarray],
-            params: hb.spotpy.parameter | None = None
+            params: spotpy.parameter | None = None
     ) -> float:
         if simulation is None:
             print(f'Simulation results empty (params: {params}).')
@@ -143,7 +142,7 @@ class SpotpySetup:
                 like = -np.inf
             else:
                 if not self.obj_func:
-                    like = hb.spotpy.objectivefunctions.kge_non_parametric(obs, sim)
+                    like = spotpy.objectivefunctions.kge_non_parametric(obs, sim)
                 elif isinstance(self.obj_func, str):
                     like = evaluate(sim, obs, self.obj_func)
                 else:

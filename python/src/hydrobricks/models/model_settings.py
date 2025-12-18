@@ -1,4 +1,4 @@
-from _hydrobricks import SettingsModel
+from hydrobricks._hydrobricks import SettingsModel
 
 
 class ModelSettings:

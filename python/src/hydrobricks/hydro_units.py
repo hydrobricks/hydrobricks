@@ -4,8 +4,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
-from _hydrobricks import SettingsBasin
+from hydrobricks import Dataset
+from hydrobricks._hydrobricks import SettingsBasin
+from hydrobricks._optional import HAS_NETCDF
 from hydrobricks.units import (
     Unit,
     convert_unit_df,
@@ -182,11 +183,11 @@ class HydroUnits:
         path
             Path of the file to create.
         """
-        if not hb.has_netcdf:
+        if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
 
         # Create netCDF file
-        nc = hb.Dataset(path, 'w', 'NETCDF4')
+        nc = Dataset(path, 'w', 'NETCDF4')
 
         # Global attributes
         nc.version = 1.0
@@ -252,6 +253,16 @@ class HydroUnits:
                 self.hydro_units = pd.concat([df, self.hydro_units], axis=1)
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
+
+    def get_nb_hydro_units(self) -> int:
+        """
+        Get the number of hydro units.
+
+        Returns
+        -------
+        Number of hydro units.
+        """
+        return len(self.hydro_units)
 
     def check_land_cover_fractions_not_empty(self):
         """

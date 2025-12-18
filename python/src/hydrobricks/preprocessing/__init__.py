@@ -1,10 +1,15 @@
-from .catchment_connectivity import CatchmentConnectivity
-from .catchment_discretization import CatchmentDiscretization
-from .catchment_topography import CatchmentTopography
-from .glacier_evolution_area_scaling import GlacierEvolutionAreaScaling
-from .glacier_evolution_delta_h import GlacierEvolutionDeltaH
-from .potential_solar_radiation import PotentialSolarRadiation
+from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
+from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
+from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
+from hydrobricks.preprocessing.glacier_evolution_area_scaling import GlacierEvolutionAreaScaling
+from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolutionDeltaH
+from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
 
-__all__ = ('CatchmentConnectivity', 'CatchmentDiscretization', 'CatchmentTopography',
-           'GlacierEvolutionDeltaH', 'GlacierEvolutionAreaScaling',
-           'PotentialSolarRadiation')
+__all__ = (
+    'CatchmentConnectivity',
+    'CatchmentDiscretization',
+    'CatchmentTopography',
+    'GlacierEvolutionDeltaH',
+    'GlacierEvolutionAreaScaling',
+    'PotentialSolarRadiation'
+)

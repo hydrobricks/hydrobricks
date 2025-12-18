@@ -9,17 +9,19 @@ import pandas as pd
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
-import hydrobricks as hb
+from hydrobricks import rasterio, pyproj, shapely, gpd
+from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
-from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
-from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
-from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
+from hydrobricks.preprocessing import CatchmentConnectivity
+from hydrobricks.preprocessing import CatchmentDiscretization
+from hydrobricks.preprocessing import CatchmentTopography
+from hydrobricks.preprocessing import PotentialSolarRadiation
+from hydrobricks.utils import compute_area
 
-if hb.has_shapely:
+if HAS_SHAPELY:
     from shapely.geometry import mapping
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.mask import mask
 
 
@@ -67,11 +69,11 @@ class Catchment:
             land_cover_names: list[str] | None = None,
             hydro_units_data: pd.DataFrame | None = None):
         # Check that the required packages are installed
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
-        if not hb.has_geopandas:
+        if not HAS_GEOPANDAS:
             raise ImportError("geopandas is required to do this.")
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
         # Check that the outline file exists if provided
@@ -100,8 +102,21 @@ class Catchment:
         self._solar_radiation = None
 
     def __del__(self):
+        # Close main DEM dataset
         if self.dem is not None:
-            self.dem.close()
+            try:
+                self.dem.close()
+            except Exception:
+                pass
+
+        # Close any MemoryFiles kept with attributes to avoid resource leaks
+        if isinstance(self.attributes, dict):
+            for entry in self.attributes.values():
+                try:
+                    if isinstance(entry, dict) and 'memfile' in entry and entry['memfile'] is not None:
+                        entry['memfile'].close()
+                except Exception:
+                    pass
 
     @property
     def topography(self) -> CatchmentTopography:
@@ -184,6 +199,7 @@ class Catchment:
             data[np.isnan(data)] = 0
 
         if resample_to_dem_resolution:
+            memfile = None
             if resampling == 'nearest':
                 resampling_id = 0
             elif resampling == 'bilinear':
@@ -218,33 +234,57 @@ class Catchment:
                 raise ValueError(f"Unknown resampling method: {resampling}")
 
             # Resample the attribute to the DEM resolution
-            data = hb.rasterio.warp.reproject(
-                data,
-                destination=self.dem_data,
+            # Ensure a DEM has been loaded to resample to
+            if self.dem is None or self.dem_data is None:
+                raise ValueError("DEM must be loaded before resampling an attribute raster.")
+
+            # Allocate a fresh destination buffer so we don't overwrite self.dem_data
+            dest = np.empty_like(self.dem_data, dtype=data.dtype)
+            rasterio.warp.reproject(
+                source=data,
+                destination=dest,
                 src_transform=src.transform,
                 dst_transform=self.dem.transform,
                 src_crs=src.crs,
                 dst_crs=self.dem.crs,
                 resampling=resampling_id
-            )[0]
+            )
+            data = dest
 
-            # Create a MemoryFile to store the reprojected data
-            with hb.rasterio.io.MemoryFile() as memfile:
-                with memfile.open(
-                        driver='GTiff',
-                        height=data.shape[0],
-                        width=data.shape[1],
-                        count=1,
-                        dtype=data.dtype,
-                        crs=self.dem.crs,
-                        transform=self.dem.transform
-                ) as dataset:
-                    dataset.write(data, 1)
-
-                # Open the dataset as a rasterio object
+            # Create a MemoryFile to store the reprojected data and keep it open
+            memfile = rasterio.io.MemoryFile()
+            dataset = memfile.open(
+                driver='GTiff',
+                height=data.shape[0],
+                width=data.shape[1],
+                count=1,
+                dtype=data.dtype,
+                crs=self.dem.crs,
+                transform=self.dem.transform
+            )
+            try:
+                dataset.write(data, 1)
+                dataset.close()
+                # Open the dataset as a rasterio object for reading
                 src = memfile.open()
+            except Exception:
+                # Clean up on error
+                try:
+                    dataset.close()
+                except Exception:
+                    pass
+                try:
+                    memfile.close()
+                except Exception:
+                    pass
+                raise
 
-        self.attributes[attr_name] = {"src": src, "data": data}
+        # Store the MemoryFile with the attribute so it stays alive (if created)
+        entry = {"src": src, "data": data}
+        if memfile is not None:
+            entry['memfile'] = memfile
+
+        self.attributes[attr_name] = entry
 
         return True
 
@@ -282,7 +322,7 @@ class Catchment:
         -------
         The hydro units attributes.
         """
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         if self.topography.slope is None or self.topography.aspect is None:
@@ -373,7 +413,7 @@ class Catchment:
         path
             Path to the csv file.
         """
-        if not hb.has_geopandas:
+        if not HAS_GEOPANDAS:
             raise ImportError("geopandas is required to do this.")
 
         self.hydro_units.load_from_csv(path)
@@ -401,13 +441,13 @@ class Catchment:
         # Create the profile
         profile = self.dem.profile
         profile.update(
-            dtype=hb.rasterio.uint16,
+            dtype=rasterio.uint16,
             count=1,
             compress='lzw',
             nodata=0
         )
 
-        with hb.rasterio.open(full_path, 'w', **profile) as dst:
+        with rasterio.open(full_path, 'w', **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
     def load_unit_ids_from_raster(
@@ -426,7 +466,7 @@ class Catchment:
         filename
             Name of the raster file. Default is 'unit_ids.tif'.
         """
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
 
         # If path is a file, use it directly
@@ -435,7 +475,7 @@ class Catchment:
         else:
             full_path = Path(path) / filename
 
-        with hb.rasterio.open(full_path) as src:
+        with rasterio.open(full_path) as src:
             self._check_crs(src)
             if self.outline is not None:
                 geoms = [mapping(polygon) for polygon in self.outline]
@@ -447,7 +487,7 @@ class Catchment:
             if len(self.map_unit_ids.shape) == 3:
                 self.map_unit_ids = self.map_unit_ids[0]
 
-            self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
+            self.map_unit_ids = self.map_unit_ids.astype(rasterio.uint16)
 
     def get_dem_x_resolution(self) -> float:
         """
@@ -524,12 +564,12 @@ class Catchment:
             mean_y = self.dem.bounds[3] + (self.dem.bounds[1] - self.dem.bounds[3]) / 2
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        transformer = pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
 
-    def create_dem_pixel_geometry(self, i: int, j: int) -> hb.shapely.geometry.Polygon:
+    def create_dem_pixel_geometry(self, i: int, j: int) -> shapely.geometry.Polygon:
         """
         Create a shapely geometry of the DEM pixel.
 
@@ -544,7 +584,7 @@ class Catchment:
         -------
         The shapely geometry of the pixel.
         """
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
         xy = self.dem.xy(i, j)
@@ -555,7 +595,7 @@ class Catchment:
         x_max = xy[0] + x_size / 2
         y_max = xy[1] + y_size / 2
 
-        return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
+        return shapely.geometry.box(x_min, y_min, x_max, y_max)
 
     def initialize_area_from_land_cover_change(
             self,
@@ -700,31 +740,31 @@ class Catchment:
         rows, cols = np.where(mask_unit)
 
         # Get coordinates of the unit
-        xs, ys = hb.rasterio.transform.xy(self.dem.transform, list(rows), list(cols))
+        xs, ys = rasterio.transform.xy(self.dem.transform, list(rows), list(cols))
 
         # Get the mean coordinates of the unit
         mean_x = np.nanmean(xs)
         mean_y = np.nanmean(ys)
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        transformer = pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
 
-    def _extract_area(self, outline: hb.shapely.geometry.Polygon):
+    def _extract_area(self, outline: shapely.geometry.Polygon):
         # The outline has to be given in meters.
         if not outline:
             return
-        shapefile = hb.gpd.read_file(outline)
+        shapefile = gpd.read_file(outline)
         self._check_crs(shapefile)
-        area = hb.utils.compute_area(shapefile)
+        area = compute_area(shapefile)
         self.area = area
 
-    def _extract_outline(self, outline: hb.shapely.geometry.Polygon):
+    def _extract_outline(self, outline: shapely.geometry.Polygon):
         if not outline:
             return
-        shapefile = hb.gpd.read_file(outline)
+        shapefile = gpd.read_file(outline)
         self._check_crs(shapefile)
         geoms = shapefile.geometry.values
         self.outline = geoms
@@ -732,7 +772,7 @@ class Catchment:
     def _extract_raster(
             self,
             raster_path: str | Path
-    ) -> (hb.rasterio.DatasetReader, np.ndarray):
+    ) -> (rasterio.DatasetReader, np.ndarray):
         """
         Extract raster data for the catchment. Does not handle change in coordinates.
 
@@ -751,12 +791,12 @@ class Catchment:
         if not Path(raster_path).is_file():
             raise FileNotFoundError(f"File {raster_path} does not exist.")
 
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
-        src = hb.rasterio.open(raster_path)
+        src = rasterio.open(raster_path)
         self._check_crs(src)
 
         if self.outline is not None:
@@ -771,7 +811,7 @@ class Catchment:
 
         return src, masked_data
 
-    def _check_crs(self, data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
+    def _check_crs(self, data: rasterio.DatasetReader | gpd.GeoDataFrame):
         data_crs = self._get_crs_from_file(data)
         if self.crs is None:
             self.crs = data_crs
@@ -781,10 +821,10 @@ class Catchment:
                                  "catchment.")
 
     @staticmethod
-    def _get_crs_from_file(data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
-        if isinstance(data, hb.rasterio.DatasetReader):
+    def _get_crs_from_file(data: rasterio.DatasetReader | gpd.GeoDataFrame):
+        if isinstance(data, rasterio.DatasetReader):
             return data.crs
-        elif isinstance(data, hb.gpd.GeoDataFrame):
+        elif isinstance(data, gpd.GeoDataFrame):
             return data.crs
         else:
             raise ValueError("Unknown data format.")

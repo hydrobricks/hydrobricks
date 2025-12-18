@@ -1,13 +1,12 @@
 from __future__ import annotations
-
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
-from hydrobricks.constants import ICE_WE
+from hydrobricks._constants import ICE_WE
+from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -44,7 +43,7 @@ class GlacierEvolutionAreaScaling:
             self,
             catchment: Catchment,
             ice_thickness: str | Path,
-            nb_increments: int = 100
+            nb_increments: int = 200
     ):
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -57,7 +56,7 @@ class GlacierEvolutionAreaScaling:
         ice_thickness
             Path to the TIF file containing the glacier thickness in meters.
         nb_increments
-            Number of increments for glacier mass balance calculation. Default is 100.
+            Number of increments for glacier mass balance calculation. Default is 200.
         """
 
         # Check that the catchment has been discretized
@@ -66,7 +65,7 @@ class GlacierEvolutionAreaScaling:
                              "Please run create_elevation_bands() first.")
 
         # Extract the ice thickness from a TIF file.
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         self.hydro_units = catchment.hydro_units.hydro_units

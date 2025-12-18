@@ -136,6 +136,6 @@ long_description = readme_file.read_text() if readme_file.exists() else \
 setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
-    ext_modules=[CMakeExtension("_hydrobricks")],
+    ext_modules=[CMakeExtension("hydrobricks._hydrobricks")],
     cmdclass={"build_ext": CMakeBuild},
 )

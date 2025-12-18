@@ -1,4 +1,5 @@
-from hydrobricks._hydrobricks import (
+from . import _hydrobricks
+from ._hydrobricks import (
     close_log,
     init,
     init_log,

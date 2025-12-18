@@ -17,7 +17,7 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Build SDist
         run: pipx run build --sdist
@@ -25,7 +25,7 @@ jobs:
       - name: Check metadata
         run: pipx run twine check dist/*
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           path: dist/*.tar.gz
           name: sdist
@@ -44,10 +44,10 @@ jobs:
       VCPKG_LIBRARY_LINKAGE: static
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.1.4
+        uses: pypa/cibuildwheel@v3.3.0
         env:
           CIBW_ARCHS: auto64
 
@@ -56,7 +56,7 @@ jobs:
         shell: bash
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           path: wheelhouse/*.whl
           name: wheels-${{ matrix.os }}
@@ -71,23 +71,23 @@ jobs:
 
     steps:
       - name: Download wheels artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-ubuntu-latest
           path: dist/
 
       - name: Download windows wheels
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: wheels-windows-latest
           path: dist/
 
       - name: Download sdist
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: sdist
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@v1.12.4
+      - uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

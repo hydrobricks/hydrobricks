@@ -1,9 +1,11 @@
 from __future__ import annotations
+
+import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 

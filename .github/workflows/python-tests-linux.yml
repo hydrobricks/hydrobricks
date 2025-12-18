@@ -18,13 +18,13 @@ jobs:
       VCPKG_LIBRARY_LINKAGE: static
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install system libraries
       run: sudo apt-get install tree
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -44,7 +44,7 @@ jobs:
 
     - name: Upload Build Logs
       if: failure() # Only upload logs if the workflow fails
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: build-logs-${{ matrix.python-version }}
         path: /home/runner/work/hydrobricks/hydrobricks/vcpkg/buildtrees/**/*.log
@@ -60,7 +60,7 @@ jobs:
       VCPKG_LIBRARY_LINKAGE: static
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install system libraries
         run: sudo apt-get install tree lcov python3

@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from hydrobricks._hydrobricks import (
-    ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling
+    ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling,
 )
 from hydrobricks.actions import Action
 from hydrobricks.preprocessing.glacier_evolution_area_scaling import (

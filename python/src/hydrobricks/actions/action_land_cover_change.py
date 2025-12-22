@@ -8,7 +8,7 @@ import pandas as pd
 
 from hydrobricks import gpd
 from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
-from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_RASTERIO, HAS_SHAPELY
 from hydrobricks.actions import Action
 from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits

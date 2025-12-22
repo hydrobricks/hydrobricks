@@ -9,13 +9,15 @@ import pandas as pd
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
-from hydrobricks import rasterio, pyproj, shapely, gpd
-from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
+from hydrobricks import gpd, pyproj, rasterio, shapely
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.preprocessing import CatchmentConnectivity
-from hydrobricks.preprocessing import CatchmentDiscretization
-from hydrobricks.preprocessing import CatchmentTopography
-from hydrobricks.preprocessing import PotentialSolarRadiation
+from hydrobricks.preprocessing import (
+    CatchmentConnectivity,
+    CatchmentDiscretization,
+    CatchmentTopography,
+    PotentialSolarRadiation,
+)
 from hydrobricks.utils import compute_area
 
 if HAS_SHAPELY:

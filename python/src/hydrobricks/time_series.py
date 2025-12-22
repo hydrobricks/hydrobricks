@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from hydrobricks import rxr, xr, rasterio, pyproj
-from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
+from hydrobricks import pyproj, rasterio, rxr, xr
+from hydrobricks._optional import HAS_NETCDF, HAS_RASTERIO, HAS_RIOXARRAY
 from hydrobricks.utils import date_as_mjd
 
 

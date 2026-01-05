@@ -8,11 +8,12 @@ if (MINGW
     OR MSYS
     OR UNIX
     AND NOT APPLE)
-    if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-strict-aliasing -Wno-sign-compare -Wno-attributes")
-    else (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-strict-aliasing -Wno-sign-compare -Wno-attributes -msse2")
-    endif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    # Add comprehensive warning flags
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -Wconversion")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing -Wno-sign-compare -Wno-attributes")
+    if (NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2")
+    endif ()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer ")
 elseif (WIN32)
@@ -24,12 +25,10 @@ elseif (WIN32)
         else ()
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
         endif ()
+        # Add strict standards compliance
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
     endif ()
 endif ()
-
-# Global definitions
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)

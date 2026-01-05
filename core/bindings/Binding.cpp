@@ -78,7 +78,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_lateral_connection", &SettingsBasin::AddLateralConnection,
              "Add a lateral connection between two hydro units.", "giver_hydro_unit_id"_a, "receiver_hydro_unit_id"_a,
              "fraction"_a, "type"_a = "")
-        .def("get_lateral_connections_nb", &SettingsBasin::GetLateralConnectionsNb,
+        .def("get_lateral_connection_count", &SettingsBasin::GetLateralConnectionCount,
              "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
@@ -109,8 +109,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin.",
              "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
-        .def("get_actions_nb", &ModelHydro::GetActionsNb, "Get the number of actions.")
-        .def("get_sporadic_action_items_nb", &ModelHydro::GetSporadicActionItemsNb, "Get the number of action items.")
+        .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
+        .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount, "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -138,8 +138,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
         .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_changes_nb", &ActionLandCoverChange::GetChangesNb)
-        .def("get_land_covers_nb", &ActionLandCoverChange::GetLandCoversNb);
+        .def("get_change_count", &ActionLandCoverChange::GetChangeCount)
+        .def("get_land_cover_count", &ActionLandCoverChange::GetLandCoverCount);
 
     py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")
         .def(py::init<>())

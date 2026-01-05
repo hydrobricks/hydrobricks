@@ -123,7 +123,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
 
 void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     // Create the hydro unit bricks and splitters
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
 
         vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
@@ -166,7 +166,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     }
 
     // Create fluxes for the hydro units
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);
@@ -231,7 +231,7 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
 }
 
 void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
 
         // Update the bricks for the hydro unit
@@ -748,7 +748,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
 
         for (const auto& logItem : brickSettings.logItems) {
-            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
                 auto unit = _subBasin->GetHydroUnit(iUnit);
                 auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
                 valPt = brick->GetBaseValuePointer(logItem);
@@ -769,7 +769,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& logItem : processSettings.logItems) {
-                for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+                for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
                     auto unit = _subBasin->GetHydroUnit(iUnit);
                     auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
                     auto process = brick->GetProcess(iProcess);
@@ -791,7 +791,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
         for (const auto& logItem : splitterSettings.logItems) {
-            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
                 HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
                 valPt = unit->GetSplitter(iSplitter)->GetValuePointer(logItem);
                 if (valPt == nullptr) {
@@ -810,7 +810,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         modelSettings.SelectHydroUnitBrick(iBrickType);
         BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
 
-        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
             HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
             LandCover* brick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.name));
             valPt = brick->GetAreaFractionPointer();
@@ -929,12 +929,12 @@ bool ModelHydro::AddAction(Action* action) {
     return _actionsManager.AddAction(action);
 }
 
-int ModelHydro::GetActionsNb() {
-    return _actionsManager.GetActionsNb();
+int ModelHydro::GetActionCount() {
+    return _actionsManager.GetActionCount();
 }
 
-int ModelHydro::GetSporadicActionItemsNb() {
-    return _actionsManager.GetSporadicActionItemsNb();
+int ModelHydro::GetSporadicActionItemCount() {
+    return _actionsManager.GetSporadicActionItemCount();
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
@@ -964,7 +964,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
     for (auto timeSeries : _timeSeries) {
         VariableType type = timeSeries->GetVariableType();
 
-        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitsNb(); ++iUnit) {
+        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
             HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
             if (unit->HasForcing(type)) {
                 Forcing* forcing = unit->GetForcing(type);

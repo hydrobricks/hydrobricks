@@ -15,7 +15,7 @@ bool ProcessET::IsOk() {
     return true;
 }
 
-int ProcessET::GetConnectionsNb() {
+int ProcessET::GetConnectionCount() {
     return 1;
 }
 

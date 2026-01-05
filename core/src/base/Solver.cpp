@@ -70,7 +70,7 @@ void Solver::ApplyConstraintsFor(int col) {
     int iRate = 0;
     for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         for (auto process : brick->GetProcesses()) {
-            for (int i = 0; i < process->GetConnectionsNb(); ++i) {
+            for (int i = 0; i < process->GetConnectionCount(); ++i) {
                 wxASSERT(_changeRates.rows() > iRate);
                 // Link to fluxes to enforce subsequent constraints
                 process->StoreInOutgoingFlux(&_changeRates(iRate, col), i);
@@ -116,7 +116,7 @@ void Solver::ApplyProcesses(int col) const {
         }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
-            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
                 process->ApplyChange(iConnect, _changeRates(iRate, col), config::timeStepInDays);
                 iRate++;
             }
@@ -133,7 +133,7 @@ void Solver::ApplyProcesses(const axd& changeRates) const {
         }
         brick->UpdateContentFromInputs();
         for (auto process : brick->GetProcesses()) {
-            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
                 process->ApplyChange(iConnect, changeRates(iRate), config::timeStepInDays);
                 iRate++;
             }

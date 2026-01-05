@@ -45,7 +45,7 @@ void FileNetcdf::Close() {
     _ncId = -1;
 }
 
-int FileNetcdf::GetVarsNb() {
+int FileNetcdf::GetVariableCount() {
     int varsNb, gattNb;
     CheckNcStatus(nc_inq(_ncId, nullptr, &varsNb, &gattNb, nullptr));
 

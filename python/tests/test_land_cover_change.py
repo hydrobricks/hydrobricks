@@ -87,8 +87,8 @@ def test_load_from_csv(hydro_units_csv: hb.HydroUnits):
         match_with='elevation'
     )
 
-    assert changes.get_land_covers_nb() == 1
-    assert changes.get_changes_nb() == 232
+    assert changes.get_land_cover_count() == 1
+    assert changes.get_change_count() == 232
 
 
 def test_load_from_csv_by_id(hydro_units_csv: hb.HydroUnits):
@@ -101,8 +101,8 @@ def test_load_from_csv_by_id(hydro_units_csv: hb.HydroUnits):
         match_with='id'
     )
 
-    assert changes.get_land_covers_nb() == 1
-    assert changes.get_changes_nb() == 232
+    assert changes.get_land_cover_count() == 1
+    assert changes.get_change_count() == 232
 
 
 def test_load_from_two_files(hydro_units_csv: hb.HydroUnits):
@@ -122,8 +122,8 @@ def test_load_from_two_files(hydro_units_csv: hb.HydroUnits):
         match_with='elevation'
     )
 
-    assert changes.get_land_covers_nb() == 2
-    assert changes.get_changes_nb() == 444
+    assert changes.get_land_cover_count() == 2
+    assert changes.get_change_count() == 444
 
 
 def test_add_action_to_model(hydro_units_csv: hb.HydroUnits):
@@ -189,8 +189,8 @@ def test_action_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     )
 
     assert model.add_action(changes)
-    assert model.get_actions_nb() == 1
-    assert model.get_sporadic_action_items_nb() == 232
+    assert model.get_action_count() == 1
+    assert model.get_sporadic_action_item_count() == 232
 
     try:
         tmp_dir.cleanup()
@@ -233,8 +233,8 @@ def test_action_2_files_correctly_set_in_model(hydro_units_csv: hb.HydroUnits):
     )
 
     assert model.add_action(changes)
-    assert model.get_actions_nb() == 1
-    assert model.get_sporadic_action_items_nb() == 444
+    assert model.get_action_count() == 1
+    assert model.get_sporadic_action_item_count() == 444
 
     try:
         tmp_dir.cleanup()
@@ -257,9 +257,9 @@ def test_extract_glacier_cover_evolution_raster(
         interpolate_yearly=False
     )
 
-    assert changes.get_land_covers_nb() == 1
+    assert changes.get_land_cover_count() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
-    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+    assert changes.get_change_count() == np.count_nonzero(~np.isnan(df_values))
 
     assert len(df) == 2
     assert df[0].shape == (38, 6)
@@ -292,9 +292,9 @@ def test_extract_glacier_cover_evolution_vector(
         interpolate_yearly=False
     )
 
-    assert changes.get_land_covers_nb() == 1
+    assert changes.get_land_cover_count() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
-    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+    assert changes.get_change_count() == np.count_nonzero(~np.isnan(df_values))
 
     assert len(df) == 2
     assert df[0].shape == (38, 6)
@@ -327,9 +327,9 @@ def test_extract_glacier_cover_evolution_interpolate(
         interpolate_yearly=True
     )
 
-    assert changes.get_land_covers_nb() == 1
+    assert changes.get_land_cover_count() == 1
     df_values = df[0].to_numpy()[:, 1:].astype(np.float32)
-    assert changes.get_changes_nb() == np.count_nonzero(~np.isnan(df_values))
+    assert changes.get_change_count() == np.count_nonzero(~np.isnan(df_values))
 
     assert len(df) == 2
     assert df[0].shape == (38, 168)

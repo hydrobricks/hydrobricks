@@ -178,11 +178,11 @@ vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     return values;
 }
 
-int Brick::GetProcessesConnectionsNb() {
+int Brick::GetProcessConnectionCount() {
     int counter = 0;
 
     for (auto const& process : _processes) {
-        counter += process->GetConnectionsNb();
+        counter += process->GetConnectionCount();
     }
 
     return counter;

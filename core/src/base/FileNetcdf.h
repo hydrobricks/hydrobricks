@@ -37,7 +37,7 @@ class FileNetcdf : public wxObject {
      *
      * @return The number of variables in the file.
      */
-    int GetVarsNb();
+    int GetVariableCount();
 
     /**
      * Get the variable id corresponding to the provided name.

@@ -19,7 +19,7 @@ TEST(SubBasin, GetHydroUnitsCount1) {
     HydroUnit unit(100);
     subBasin.AddHydroUnit(&unit);
 
-    EXPECT_EQ(subBasin.GetHydroUnitsNb(), 1);
+    EXPECT_EQ(subBasin.GetHydroUnitCount(), 1);
 }
 
 TEST(SubBasin, GetHydroUnitsCount3) {
@@ -31,7 +31,7 @@ TEST(SubBasin, GetHydroUnitsCount3) {
     HydroUnit unit3(100);
     subBasin.AddHydroUnit(&unit3);
 
-    EXPECT_EQ(subBasin.GetHydroUnitsNb(), 3);
+    EXPECT_EQ(subBasin.GetHydroUnitCount(), 3);
 }
 
 TEST(SubBasin, EmptySubBasinIsNotOk) {

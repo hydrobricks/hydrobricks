@@ -94,7 +94,7 @@ class Action : public wxObject {
      *
      * @return the number of sporadic items.
      */
-    int GetSporadicItemsNb() {
+    int GetSporadicItemCount() {
         return (int)_sporadicDates.size();
     }
 

@@ -70,7 +70,7 @@ class Processor : public wxObject {
      * @return the number of solvable connections.
      */
     int GetNbSolvableConnections() const {
-        return _solvableConnectionsNb;
+        return _solvableConnectionCount;
     }
 
     /**
@@ -79,14 +79,14 @@ class Processor : public wxObject {
      * @return the number of direct connections.
      */
     int GetNbDirectConnections() const {
-        return _directConnectionsNb;
+        return _directConnectionCount;
     }
 
   protected:
     Solver* _solver;
     ModelHydro* _model;
-    int _solvableConnectionsNb;
-    int _directConnectionsNb;
+    int _solvableConnectionCount;
+    int _directConnectionCount;
     vecDoublePt _stateVariableChanges;
     vector<Brick*> _iterableBricks;
     axd _changeRatesNoSolver;

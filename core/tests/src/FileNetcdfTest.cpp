@@ -25,7 +25,7 @@ TEST(FileNetcdf, VarsNumberIsRead) {
 
     ASSERT_TRUE(file.OpenReadOnly("files/time-series-data.nc"));
 
-    EXPECT_EQ(file.GetVarsNb(), 5);
+    EXPECT_EQ(file.GetVariableCount(), 5);
 }
 
 TEST(FileNetcdf, VarIdIsRead) {

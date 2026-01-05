@@ -264,7 +264,7 @@ class Brick : public wxObject {
      *
      * @return number of connections of the processes.
      */
-    int GetProcessesConnectionsNb();
+    int GetProcessConnectionCount();
 
     /**
      * Get the pointer to the water container content.

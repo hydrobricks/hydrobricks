@@ -31,7 +31,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     _needsCleanup = true;
 
     // Create the hydro units
-    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
         basinSettings.SelectUnit(iUnit);
 
         HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
@@ -55,10 +55,10 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
 
 bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     try {
-        for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitsNb(); ++iUnit) {
+        for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
-            for (int iElement = 0; iElement < basinSettings.GetLandCoversNb(); ++iElement) {
+            for (int iElement = 0; iElement < basinSettings.GetLandCoverCount(); ++iElement) {
                 LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
 
                 auto brick = dynamic_cast<LandCover*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
@@ -66,7 +66,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 brick->SetAreaFraction(elementSettings.fraction);
             }
 
-            for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentsNb(); ++iElement) {
+            for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentCount(); ++iElement) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
@@ -136,7 +136,7 @@ void SubBasin::AddHydroUnit(HydroUnit* unit) {
     _area += unit->GetArea();
 }
 
-int SubBasin::GetHydroUnitsNb() {
+int SubBasin::GetHydroUnitCount() {
     return static_cast<int>(_hydroUnits.size());
 }
 

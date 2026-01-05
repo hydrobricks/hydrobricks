@@ -189,7 +189,7 @@ float* Process::GetParameterValuePointer(const ProcessSettings& processSettings,
 
 vecDouble Process::GetChangeRates() {
     if (_container->GetContentWithChanges() <= PRECISION) {
-        vecDouble res(GetConnectionsNb());
+        vecDouble res(GetConnectionCount());
         std::fill(res.begin(), res.end(), 0);
         return res;
     }

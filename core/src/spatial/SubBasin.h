@@ -79,7 +79,7 @@ class SubBasin : public wxObject {
      *
      * @return The number of hydro units.
      */
-    int GetHydroUnitsNb();
+    int GetHydroUnitCount();
 
     /**
      * Get a hydro unit by its index.

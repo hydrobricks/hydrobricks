@@ -17,7 +17,7 @@ bool ProcessLateral::IsOk() {
     return true;
 }
 
-int ProcessLateral::GetConnectionsNb() {
+int ProcessLateral::GetConnectionCount() {
     return _outputs.size();
 }
 

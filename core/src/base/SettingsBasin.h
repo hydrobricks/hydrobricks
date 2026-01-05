@@ -162,7 +162,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of hydro units.
      */
-    int GetHydroUnitsNb() const {
+    int GetHydroUnitCount() const {
         return static_cast<int>(_hydroUnits.size());
     }
 
@@ -171,7 +171,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of land covers.
      */
-    int GetLandCoversNb() const {
+    int GetLandCoverCount() const {
         wxASSERT(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->landCovers.size());
     }
@@ -181,7 +181,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of surface components.
      */
-    int GetSurfaceComponentsNb() const {
+    int GetSurfaceComponentCount() const {
         wxASSERT(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->surfaceComponents.size());
     }
@@ -191,7 +191,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of lateral connections.
      */
-    int GetLateralConnectionsNb() const {
+    int GetLateralConnectionCount() const {
         return static_cast<int>(_lateralConnections.size());
     }
 

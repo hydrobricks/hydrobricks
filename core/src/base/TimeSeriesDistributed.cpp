@@ -48,7 +48,7 @@ double TimeSeriesDistributed::GetEnd() {
 double TimeSeriesDistributed::GetTotal(const SettingsBasin* basinSettings) {
     double total = 0;
     double areaTotal = basinSettings->GetTotalArea();
-    for (int i = 0; i < basinSettings->GetHydroUnitsNb(); ++i) {
+    for (int i = 0; i < basinSettings->GetHydroUnitCount(); ++i) {
         double area = basinSettings->GetHydroUnitSettings(i).area;
         int id = basinSettings->GetHydroUnitSettings(i).id;
         double sumUnit = GetDataPointer(id)->GetSum();

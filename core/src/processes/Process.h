@@ -112,7 +112,7 @@ class Process : public wxObject {
      *
      * @return number of outgoing fluxes.
      */
-    int GetOutputFluxesNb() {
+    int GetOutputFluxCount() {
         return static_cast<int>(_outputs.size());
     }
 
@@ -139,7 +139,7 @@ class Process : public wxObject {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionsNb() = 0;
+    virtual int GetConnectionCount() = 0;
 
     /**
      * Get the change rates of the process.

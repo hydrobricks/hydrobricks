@@ -105,4 +105,4 @@ def test_set_connectivity():
     hydro_units.load_from_csv(RHONE_HUS)
     hydro_units.set_connectivity(RHONE_CONNECT)
 
-    assert hydro_units.settings.get_lateral_connections_nb() == 359
+    assert hydro_units.settings.get_lateral_connection_count() == 359

@@ -16,7 +16,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         }
 
         // Get number of units
-        int unitsNb = file.GetDimLen("hydro_units");
+        int unitCount = file.GetDimLen("hydro_units");
 
         // Get time length
         int timeLength = file.GetDimLen("time");
@@ -35,14 +35,14 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         ExtractTimeStep(timeStepData, timeStep, timeUnit);
 
         // Get ids
-        vecInt ids = file.GetVarInt1D("id", unitsNb);
+        vecInt ids = file.GetVarInt1D("id", unitCount);
 
         // Extract variables
-        int varsNb = file.GetVarsNb();
+        int varCount = file.GetVariableCount();
 
         int dimIdTime = file.GetDimId("time");
 
-        for (int iVar = 0; iVar < varsNb; ++iVar) {
+        for (int iVar = 0; iVar < varCount; ++iVar) {
             // Get variable name
             string varName = file.GetVarName(iVar);
 
@@ -60,7 +60,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
             vecInt dimIds = file.GetVarDimIds(iVar, 2);
 
             if (dimIds[0] == dimIdTime) {
-                axxd values = file.GetVarDouble2D(iVar, unitsNb, timeLength);
+                axxd values = file.GetVarDouble2D(iVar, unitCount, timeLength);
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
@@ -68,7 +68,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
                     timeSeries->AddData(forcingData, ids[i]);
                 }
             } else {
-                axxd values = file.GetVarDouble2D(iVar, timeLength, unitsNb);
+                axxd values = file.GetVarDouble2D(iVar, timeLength, unitCount);
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
                     auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);

@@ -59,16 +59,15 @@ bool ActionsManager::AddAction(Action* action) {
     return true;
 }
 
-int ActionsManager::GetActionsNb() {
+int ActionsManager::GetActionCount() {
     return static_cast<int>(_actions.size());
 }
 
-int ActionsManager::GetSporadicActionItemsNb() {
+int ActionsManager::GetSporadicActionItemCount() {
     int items = 0;
-    for (auto action : _actions) {
-        items += action->GetSporadicItemsNb();
+    for (auto& action : _actions) {
+        items += action->GetSporadicItemCount();
     }
-
     return items;
 }
 

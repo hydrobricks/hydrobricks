@@ -142,14 +142,14 @@ class ModelHydro : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionsNb();
+    int GetActionCount();
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemsNb();
+    int GetSporadicActionItemCount();
 
     /**
      * Create a time series and add it to the model.

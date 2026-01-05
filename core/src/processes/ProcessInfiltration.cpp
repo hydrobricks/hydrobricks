@@ -20,7 +20,7 @@ bool ProcessInfiltration::IsOk() {
     return true;
 }
 
-int ProcessInfiltration::GetConnectionsNb() {
+int ProcessInfiltration::GetConnectionCount() {
     return 1;
 }
 

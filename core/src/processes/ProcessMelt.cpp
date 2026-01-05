@@ -15,7 +15,7 @@ bool ProcessMelt::IsOk() {
     return true;
 }
 
-int ProcessMelt::GetConnectionsNb() {
+int ProcessMelt::GetConnectionCount() {
     return 1;
 }
 

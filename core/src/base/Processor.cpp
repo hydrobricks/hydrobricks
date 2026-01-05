@@ -6,8 +6,8 @@
 Processor::Processor()
     : _solver(nullptr),
       _model(nullptr),
-      _solvableConnectionsNb(0),
-      _directConnectionsNb(0) {}
+      _solvableConnectionCount(0),
+      _directConnectionCount(0) {}
 
 Processor::~Processor() {
     wxDELETE(_solver);
@@ -18,7 +18,7 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver->Connect(this);
     ConnectToElementsToSolve();
     _solver->InitializeContainers();
-    _changeRatesNoSolver = axd::Zero(_directConnectionsNb);
+    _changeRatesNoSolver = axd::Zero(_directConnectionCount);
 }
 
 void Processor::SetModel(ModelHydro* model) {
@@ -28,7 +28,7 @@ void Processor::SetModel(ModelHydro* model) {
 void Processor::ConnectToElementsToSolve() {
     SubBasin* basin = _model->GetSubBasin();
 
-    for (int iUnit = 0; iUnit < basin->GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < basin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         bool solverRequired = false;
         for (int iBrick = 0; iBrick < unit->GetBricksCount(); ++iBrick) {
@@ -48,10 +48,10 @@ void Processor::ConnectToElementsToSolve() {
                 StoreStateVariableChanges(processValues);
 
                 // Count connections
-                _solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+                _solvableConnectionCount += brick->GetProcessConnectionCount();
             } else {
                 // Count connections
-                _directConnectionsNb += brick->GetProcessesConnectionsNb();
+                _directConnectionCount += brick->GetProcessConnectionCount();
             }
         }
     }
@@ -71,7 +71,7 @@ void Processor::ConnectToElementsToSolve() {
         StoreStateVariableChanges(processValues);
 
         // Count connections
-        _solvableConnectionsNb += brick->GetProcessesConnectionsNb();
+        _solvableConnectionCount += brick->GetProcessConnectionCount();
     }
 }
 
@@ -94,7 +94,7 @@ bool Processor::ProcessTimeStep() {
 
     // Process the bricks that do not need a solver.
     int ptIndex = 0;
-    for (int iUnit = 0; iUnit < basin->GetHydroUnitsNb(); ++iUnit) {
+    for (int iUnit = 0; iUnit < basin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
             Splitter* splitter = unit->GetSplitter(iSplitter);
@@ -131,7 +131,7 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
     // Initialize the change rates to 0 and link to fluxes
     int iRate = ptIndex;
     for (auto process : brick->GetProcesses()) {
-        for (int i = 0; i < process->GetOutputFluxesNb(); ++i) {
+        for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
             wxASSERT(_changeRatesNoSolver.rows() > iRate);
             _changeRatesNoSolver(iRate) = 0;
 

@@ -19,7 +19,7 @@ bool ProcessTransform::IsOk() {
     return true;
 }
 
-int ProcessTransform::GetConnectionsNb() {
+int ProcessTransform::GetConnectionCount() {
     return 1;
 }
 

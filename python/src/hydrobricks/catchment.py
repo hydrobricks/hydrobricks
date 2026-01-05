@@ -288,7 +288,7 @@ class Catchment:
 
         return True
 
-    def get_hydro_units_nb(self) -> int:
+    def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
 

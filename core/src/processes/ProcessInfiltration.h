@@ -24,9 +24,9 @@ class ProcessInfiltration : public Process {
     }
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    int GetConnectionCount() override;
 
     /**
      * @copydoc Process::GetValuePointer()

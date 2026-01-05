@@ -78,8 +78,8 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     action.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
     EXPECT_TRUE(model.AddAction(&action));
 
-    EXPECT_EQ(model.GetActionsNb(), 1);
-    EXPECT_EQ(model.GetSporadicActionItemsNb(), 4);
+    EXPECT_EQ(model.GetActionCount(), 1);
+    EXPECT_EQ(model.GetSporadicActionItemCount(), 4);
 
     EXPECT_TRUE(model.Run());
 
@@ -143,7 +143,7 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
 
     EXPECT_TRUE(model.AddAction(&action));
 
-    EXPECT_EQ(model.GetActionsNb(), 1);
+    EXPECT_EQ(model.GetActionCount(), 1);
 
     EXPECT_TRUE(model.Run());
 
@@ -341,7 +341,7 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
     ActionGlacierSnowToIceTransformation action(9, 30, "glacier");
     EXPECT_TRUE(model.AddAction(&action));
 
-    EXPECT_EQ(model.GetActionsNb(), 1);
+    EXPECT_EQ(model.GetActionCount(), 1);
 
     EXPECT_TRUE(model.Run());
 

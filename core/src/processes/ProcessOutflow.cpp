@@ -19,7 +19,7 @@ bool ProcessOutflow::IsOk() {
     return true;
 }
 
-int ProcessOutflow::GetConnectionsNb() {
+int ProcessOutflow::GetConnectionCount() {
     return 1;
 }
 

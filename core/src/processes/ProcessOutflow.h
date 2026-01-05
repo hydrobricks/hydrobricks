@@ -24,9 +24,9 @@ class ProcessOutflow : public Process {
     [[nodiscard]] bool IsOk() override;
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    int GetConnectionCount() override;
 
     /**
      * @copydoc Process::GetValuePointer()

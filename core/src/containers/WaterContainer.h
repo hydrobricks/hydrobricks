@@ -16,6 +16,14 @@ class WaterContainer : public wxObject {
     virtual bool IsOk();
 
     /**
+     * Validate water container invariants.
+     * Checks that content does not exceed capacity (if capacity is set).
+     *
+     * @return true if all invariants are satisfied, false otherwise.
+     */
+    virtual bool Validate() const;
+
+    /**
      * Subtract the amount of water from the dynamic content change.
      *
      * @param change amount to subtract [mm]

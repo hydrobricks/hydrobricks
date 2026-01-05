@@ -226,6 +226,30 @@ bool HydroUnit::IsOk() {
     return true;
 }
 
+bool HydroUnit::Validate() const {
+    // Check land cover fractions sum to 1.0 (within EPSILON_D)
+    if (!_landCoverBricks.empty()) {
+        double total = 0;
+        for (auto brick : _landCoverBricks) {
+            double fraction = brick->GetAreaFraction();
+            // Check individual fractions are in valid range
+            if (fraction < 0 || fraction > 1) {
+                wxLogError(_("Land cover '%s' has invalid fraction: %f (must be in [0,1])"), brick->GetName(), fraction);
+                return false;
+            }
+            total += fraction;
+        }
+        
+        // Check total equals 1.0 within tolerance
+        if (std::fabs(total - 1.0) > EPSILON_D) {
+            wxLogError(_("Land cover fractions sum to %f (expected 1.0, tolerance %g)"), total, EPSILON_D);
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
     if ((fraction < 0) || (fraction > 1)) {
         wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);

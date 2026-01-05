@@ -28,6 +28,35 @@ bool WaterContainer::IsOk() {
     return false;
 }
 
+bool WaterContainer::Validate() const {
+    if (_infiniteStorage) {
+        return true;  // Infinite storage has no capacity constraints
+    }
+    
+    // Check content doesn't exceed capacity (if capacity is set)
+    if (_capacity != nullptr) {
+        double totalContent = _content + _contentChangeDynamic + _contentChangeStatic;
+        double capacity = *_capacity;
+        
+        // Allow a small tolerance for numerical errors
+        if (totalContent > capacity + PRECISION) {
+            wxLogError(_("Water container content (%f mm) exceeds capacity (%f mm) in brick %s"),
+                      totalContent, capacity, _parent->GetName());
+            return false;
+        }
+    }
+    
+    // Check content is not negative
+    double totalContent = _content + _contentChangeDynamic + _contentChangeStatic;
+    if (totalContent < -PRECISION) {
+        wxLogError(_("Water container content (%f mm) is negative in brick %s"),
+                  totalContent, _parent->GetName());
+        return false;
+    }
+    
+    return true;
+}
+
 void WaterContainer::SubtractAmountFromDynamicContentChange(double change) {
     if (_infiniteStorage) return;
     _contentChangeDynamic -= change;

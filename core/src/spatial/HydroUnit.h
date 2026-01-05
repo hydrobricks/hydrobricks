@@ -205,6 +205,14 @@ class HydroUnit : public wxObject {
     [[nodiscard]] bool IsOk();
 
     /**
+     * Validate the hydro unit invariants.
+     * This includes checking that land cover fractions sum to 1.0 (within EPSILON_D).
+     *
+     * @return True if all invariants are satisfied, false otherwise.
+     */
+    [[nodiscard]] bool Validate() const;
+
+    /**
      * Change the area fraction of a land cover in the hydro unit.
      * Ensure that the sum of all land cover fractions is equal to 1.
      *

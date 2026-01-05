@@ -17,6 +17,7 @@ include(${CMAKE_SOURCE_DIR}/core/build/cmake/hydrobricks_core_source.cmake)
 
 # Own libraries
 add_library(core STATIC ${src_core})
+target_compile_features(core PUBLIC cxx_std_20)
 
 # DECLARE EXECUTABLE
 

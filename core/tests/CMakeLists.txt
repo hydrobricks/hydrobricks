@@ -55,6 +55,7 @@ endif (WIN32)
 # LINKING
 
 add_dependencies(hydrobricks-tests core)
+target_compile_features(hydrobricks-tests PUBLIC cxx_std_20)
 target_link_libraries(hydrobricks-tests core)
 target_link_libraries(hydrobricks-tests GTest::gtest)
 

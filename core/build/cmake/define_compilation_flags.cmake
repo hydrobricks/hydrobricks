@@ -16,6 +16,14 @@ if (MINGW
     endif ()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer ")
+
+    # Enable sanitizers for debug builds
+    if (USE_SANITIZERS AND CMAKE_BUILD_TYPE MATCHES Debug)
+        message(STATUS "Enabling AddressSanitizer and UndefinedBehaviorSanitizer for debug build")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined -fno-omit-frame-pointer")
+        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined")
+        set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -fsanitize=address,undefined")
+    endif ()
 elseif (WIN32)
     if (MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /EHsc")
@@ -27,6 +35,15 @@ elseif (WIN32)
         endif ()
         # Add strict standards compliance
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
+        # Enable AddressSanitizer for debug builds (requires VS 2019 16.9+)
+        if (USE_SANITIZERS AND CMAKE_BUILD_TYPE MATCHES Debug)
+            message(STATUS "Enabling AddressSanitizer for MSVC debug build")
+            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address")
+            # Disable incremental linking with ASan
+            set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
+            set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
+        endif ()
     endif ()
 endif ()
 

@@ -53,6 +53,7 @@ endif (WIN32)
 option(BUILD_TESTS "Do you want to build the tests (recommended) ?" ON)
 option(BUILD_CLI "Do you want to build the command-line version ?" ON)
 option(BUILD_PYBINDINGS "Do you want to build the Python bindings ?" ON)
+option(USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer in debug builds ?" ON)
 
 # Disable testing tree
 set(BUILD_TESTING OFF)

@@ -64,7 +64,7 @@ void TimeMachine::IncrementTime() {
     }
 }
 
-int TimeMachine::GetTimeStepsNb() {
+int TimeMachine::GetTimeStepCount() {
     wxASSERT(_timeStepInDays > 0);
     return static_cast<int>(1 + (_end - _start) / _timeStepInDays);
 }

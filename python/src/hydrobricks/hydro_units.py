@@ -254,7 +254,7 @@ class HydroUnits:
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
-    def get_nb_hydro_units(self) -> int:
+    def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
 

@@ -92,20 +92,20 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
 TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     // Change the model settings to cover a larger time period
     _model.SetTimer("2000-01-01", "2020-12-31", 1, "day");
-    int nbTimeSteps = GetMJD(2020, 12, 31) - GetMJD(2000, 1, 1) + 1;
+    int timeStepCount = GetMJD(2020, 12, 31) - GetMJD(2000, 1, 1) + 1;
 
     auto precip = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
-    vecDouble valuesPrecip(nbTimeSteps, 0.0);
+    vecDouble valuesPrecip(timeStepCount, 0.0);
     precip->SetValues(valuesPrecip);
     _tsPrecip->SetData(precip);
 
     auto temperature = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
-    vecDouble valuesTemp(nbTimeSteps, 2.0);
+    vecDouble valuesTemp(timeStepCount, 2.0);
     temperature->SetValues(valuesTemp);
     _tsTemp->SetData(temperature);
 
     auto pet = new TimeSeriesDataRegular(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
-    vecDouble valuesPet(nbTimeSteps, 0.0);
+    vecDouble valuesPet(timeStepCount, 0.0);
     pet->SetValues(valuesPet);
     _tsPet->SetData(pet);
 

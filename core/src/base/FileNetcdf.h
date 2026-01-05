@@ -59,10 +59,10 @@ class FileNetcdf : public wxObject {
      * Get the dimension ids of the provided variable.
      *
      * @param varId The id of the variable of interest.
-     * @param dimNb The number of dimensions of the variable.
+     * @param dimCount The number of dimensions of the variable.
      * @return A vector of the dimension ids.
      */
-    vecInt GetVarDimIds(int varId, int dimNb);
+    vecInt GetVarDimIds(int varId, int dimCount);
 
     /**
      * Define a new dimension.
@@ -94,33 +94,33 @@ class FileNetcdf : public wxObject {
      *
      * @param varName Name of the new variable.
      * @param dimIds The corresponding dimension ids.
-     * @param dimsNb The number of corresponding dimensions.
+     * @param dimCount The number of corresponding dimensions.
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarInt(const string& varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarInt(const string& varName, vecInt dimIds, int dimCount = 1, bool compress = false);
 
     /**
      * Define a new float variable.
      *
      * @param varName Name of the new variable.
      * @param dimIds The corresponding dimension ids.
-     * @param dimsNb The number of corresponding dimensions.
+     * @param dimCount The number of corresponding dimensions.
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarFloat(const string& varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarFloat(const string& varName, vecInt dimIds, int dimCount = 1, bool compress = false);
 
     /**
      * Define a new double variable.
      *
      * @param varName Name of the new variable.
      * @param dimIds The corresponding dimension ids.
-     * @param dimsNb The number of corresponding dimensions.
+     * @param dimCount The number of corresponding dimensions.
      * @param compress Option to compress the variable values (default: false).
      * @return The new variable id.
      */
-    int DefVarDouble(const string& varName, vecInt dimIds, int dimsNb = 1, bool compress = false);
+    int DefVarDouble(const string& varName, vecInt dimIds, int dimCount = 1, bool compress = false);
 
     /**
      * Get the values of a 1D integer variable. The whole vector retrieved at once.

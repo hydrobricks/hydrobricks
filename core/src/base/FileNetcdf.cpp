@@ -46,10 +46,10 @@ void FileNetcdf::Close() {
 }
 
 int FileNetcdf::GetVariableCount() {
-    int varsNb, gattNb;
-    CheckNcStatus(nc_inq(_ncId, nullptr, &varsNb, &gattNb, nullptr));
+    int varCount, gattCount;
+    CheckNcStatus(nc_inq(_ncId, nullptr, &varCount, &gattCount, nullptr));
 
-    return varsNb;
+    return varCount;
 }
 
 int FileNetcdf::GetVarId(const string& varName) {
@@ -66,8 +66,8 @@ string FileNetcdf::GetVarName(int varId) {
     return {varNameChar};
 }
 
-vecInt FileNetcdf::GetVarDimIds(int varId, int dimNb) {
-    vecInt dimIds(dimNb);
+vecInt FileNetcdf::GetVarDimIds(int varId, int dimCount) {
+    vecInt dimIds(dimCount);
     CheckNcStatus(nc_inq_vardimid(_ncId, varId, &dimIds[0]));
 
     return dimIds;
@@ -96,9 +96,9 @@ int FileNetcdf::GetDimLen(const string& dimName) {
     return dimLen;
 }
 
-int FileNetcdf::DefVarInt(const string& varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarInt(const string& varName, vecInt dimIds, int dimCount, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_INT, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_INT, dimCount, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(_ncId, varId, NC_SHUFFLE, true, 7));
@@ -107,9 +107,9 @@ int FileNetcdf::DefVarInt(const string& varName, vecInt dimIds, int dimsNb, bool
     return varId;
 }
 
-int FileNetcdf::DefVarFloat(const string& varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarFloat(const string& varName, vecInt dimIds, int dimCount, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_FLOAT, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_FLOAT, dimCount, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(_ncId, varId, NC_SHUFFLE, true, 7));
@@ -118,9 +118,9 @@ int FileNetcdf::DefVarFloat(const string& varName, vecInt dimIds, int dimsNb, bo
     return varId;
 }
 
-int FileNetcdf::DefVarDouble(const string& varName, vecInt dimIds, int dimsNb, bool compress) {
+int FileNetcdf::DefVarDouble(const string& varName, vecInt dimIds, int dimCount, bool compress) {
     int varId;
-    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_DOUBLE, dimsNb, &dimIds[0], &varId));
+    CheckNcStatus(nc_def_var(_ncId, varName.c_str(), NC_DOUBLE, dimCount, &dimIds[0], &varId));
 
     if (compress) {
         CheckNcStatus(nc_def_var_deflate(_ncId, varId, NC_SHUFFLE, true, 7));
@@ -219,19 +219,19 @@ vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) 
         CheckNcStatus(nc_inq_varid(_ncId, varName.c_str(), &varId));
     }
 
-    size_t itemsNb;
-    CheckNcStatus(nc_inq_attlen(_ncId, varId, attName.c_str(), &itemsNb));
+    size_t itemCount;
+    CheckNcStatus(nc_inq_attlen(_ncId, varId, attName.c_str(), &itemCount));
 
-    char** stringAtt = static_cast<char**>(malloc(itemsNb * sizeof(char*)));
-    memset(stringAtt, 0, itemsNb * sizeof(char*));
+    char** stringAtt = static_cast<char**>(malloc(itemCount * sizeof(char*)));
+    memset(stringAtt, 0, itemCount * sizeof(char*));
     CheckNcStatus(nc_get_att_string(_ncId, varId, attName.c_str(), stringAtt));
 
     vecStr items;
-    for (int i = 0; i < itemsNb; ++i) {
+    for (int i = 0; i < itemCount; ++i) {
         string attValue = string(stringAtt[i]);
         items.push_back(attValue);
     }
-    nc_free_string(itemsNb, stringAtt);
+    nc_free_string(itemCount, stringAtt);
 
     return items;
 }

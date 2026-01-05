@@ -211,7 +211,7 @@ class ActionLandCoverChange(Action):
             debris_glaciers = [None] * len(times)
 
         # Get the hydro units
-        n_unit_ids = catchment.get_hydro_units_nb()
+        n_unit_ids = catchment.get_hydro_unit_count()
         hydro_units = catchment.hydro_units
 
         # Create the dataframes

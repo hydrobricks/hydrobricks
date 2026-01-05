@@ -183,7 +183,7 @@ class TimeSeries2D(TimeSeries):
 
         # Get list of hydro unit ids
         unit_ids_list = hydro_units['id'].values.squeeze()
-        unit_ids_nb = len(unit_ids_list)
+        unit_id_count = len(unit_ids_list)
 
         # Check if the file has the dimension 'day_of_year'
         time_method = None
@@ -222,7 +222,7 @@ class TimeSeries2D(TimeSeries):
             unit_id_masks.append(unit_id_mask)
 
         # Initialize data array
-        data = np.zeros((len(self.time), unit_ids_nb))
+        data = np.zeros((len(self.time), unit_id_count))
         self.data.append(data)
 
         # Drop other variables
@@ -314,7 +314,7 @@ class TimeSeries2D(TimeSeries):
         # Create the masks (with the original data shape) for each unit with the
         # weights to apply to the gridded data contributing to the unit
         unit_weights = []
-        for u in range(unit_ids_nb):
+        for u in range(unit_id_count):
             # Get the data indices contributing to the unit
             mask_unit_id = xr.where(unit_id_masks[u], data_idx_reproj, -1)
             mask_unit_id = mask_unit_id.to_numpy().astype(int)

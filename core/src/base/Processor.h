@@ -37,7 +37,7 @@ class Processor : public wxObject {
      *
      * @return the number of state variables.
      */
-    int GetNbStateVariables();
+    int GetStateVariableCount();
 
     /**
      * Process the time step.
@@ -69,7 +69,7 @@ class Processor : public wxObject {
      *
      * @return the number of solvable connections.
      */
-    int GetNbSolvableConnections() const {
+    int GetSolvableConnectionCount() const {
         return _solvableConnectionCount;
     }
 
@@ -78,7 +78,7 @@ class Processor : public wxObject {
      *
      * @return the number of direct connections.
      */
-    int GetNbDirectConnections() const {
+    int GetDirectConnectionCount() const {
         return _directConnectionCount;
     }
 

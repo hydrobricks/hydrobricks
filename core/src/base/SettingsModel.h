@@ -485,7 +485,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of structures.
      */
-    int GetStructuresNb() const {
+    int GetStructureCount() const {
         return static_cast<int>(_modelStructures.size());
     }
 
@@ -494,7 +494,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of hydro unit bricks.
      */
-    int GetHydroUnitBricksNb() const {
+    int GetHydroUnitBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitBricks.size());
     }
@@ -504,7 +504,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of sub-basin bricks.
      */
-    int GetSubBasinBricksNb() const {
+    int GetSubBasinBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinBricks.size());
     }
@@ -514,7 +514,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of surface component bricks.
      */
-    int GetSurfaceComponentBricksNb() const {
+    int GetSurfaceComponentBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->surfaceComponentBricks.size());
     }
@@ -524,7 +524,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of processes.
      */
-    int GetProcessesNb() const {
+    int GetProcesseCount() const {
         wxASSERT(_selectedBrick);
         return static_cast<int>(_selectedBrick->processes.size());
     }
@@ -534,7 +534,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of hydro unit splitters.
      */
-    int GetHydroUnitSplittersNb() const {
+    int GetHydroUnitSplitterCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitSplitters.size());
     }
@@ -544,7 +544,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of sub-basin splitters.
      */
-    int GetSubBasinSplittersNb() const {
+    int GetSubBasinSplitterCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinSplitters.size());
     }

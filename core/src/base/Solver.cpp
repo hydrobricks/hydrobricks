@@ -23,8 +23,8 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
 void Solver::InitializeContainers() {
     wxASSERT(_processor);
     wxASSERT(_nIterations > 0);
-    _stateVariableChanges = axxd::Zero(_processor->GetNbStateVariables(), _nIterations);
-    _changeRates = axxd::Zero(_processor->GetNbSolvableConnections(), _nIterations);
+    _stateVariableChanges = axxd::Zero(_processor->GetStateVariableCount(), _nIterations);
+    _changeRates = axxd::Zero(_processor->GetSolvableConnectionCount(), _nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {

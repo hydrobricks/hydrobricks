@@ -51,7 +51,7 @@ class TimeMachine : public wxObject {
      *
      * @return number of time steps
      */
-    int GetTimeStepsNb();
+    int GetTimeStepCount();
 
     /**
      * Get the current date as a MJD.

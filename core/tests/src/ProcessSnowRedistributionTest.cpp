@@ -74,12 +74,12 @@ class SnowRedistributionModel : public ::testing::Test {
     }
 };
 
-void logContent(const vecAxxd& unitContent, int entryId, int nbHydroUnits, const string& title) {
+void logContent(const vecAxxd& unitContent, int entryId, int hydroUnitCount, const string& title) {
     if (!printContentValues) return;
 
     std::cout << "\n" << title << "\n";
 
-    for (int hu = 0; hu < nbHydroUnits; ++hu) {
+    for (int hu = 0; hu < hydroUnitCount; ++hu) {
         axxd arr = unitContent[entryId].col(hu);
         std::cout << "SWE hydro unit " << hu << ": [";
         for (int i = 0; i < arr.size(); ++i) {

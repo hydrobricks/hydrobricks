@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 11):
@@ -19,7 +20,7 @@ from cftime import num2date
 
 from hydrobricks import Dataset, pyet
 from hydrobricks._constants import TO_RAD
-from hydrobricks._optional import HAS_PYET, HAS_NETCDF
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET
 from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet

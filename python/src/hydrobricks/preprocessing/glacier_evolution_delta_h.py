@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
 
-from hydrobricks import rasterio, gpd
+from hydrobricks import gpd, rasterio
 from hydrobricks._constants import ICE_WE
 from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
 
@@ -85,7 +86,7 @@ class GlacierEvolutionDeltaH:
             ice_thickness_new: str,
             elevation_bands_distance: int = 10,
             smooth_window: int|None = 5,
-            nodata: Optional[float] = None
+            nodata: float | None = None
     ) -> pd.DataFrame:
         """
         Compute the normalized ice thickness change between two glacier ice thickness

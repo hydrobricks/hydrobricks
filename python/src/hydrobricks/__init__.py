@@ -1,44 +1,31 @@
-from . import _hydrobricks
-from ._hydrobricks import (
-    close_log,
-    init,
-    init_log,
-    set_debug_log_level,
-    set_max_log_level,
-    set_message_log_level,
-)
-
 # Import optional dependency management
-from hydrobricks._optional import (
-    # Availability flags
-    HAS_NETCDF,
-    HAS_RASTERIO,
+from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_GEOPANDAS,
-    HAS_SHAPELY,
-    HAS_SPOTPY,
+    HAS_NETCDF,
+    HAS_PYARROW,
     HAS_PYET,
     HAS_PYPROJ,
     HAS_PYSHEDS,
-    HAS_XARRAY,
+    HAS_RASTERIO,
     HAS_RIOXARRAY,
-    HAS_PYARROW,
+    HAS_SHAPELY,
+    HAS_SPOTPY,
+    HAS_XARRAY,
     HAS_XRSPATIAL,
-    # Lazy-loaded modules
     Dataset,
-    rasterio,
     gpd,
-    shapely,
-    spotpy,
+    pyarrow,
     pyet,
     pyproj,
     pysheds,
     pyshedsGrid,
-    xr,
+    rasterio,
     rxr,
-    pyarrow,
+    shapely,
+    spotpy,
+    xr,
     xrs,
 )
-
 from hydrobricks.catchment import Catchment
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
@@ -48,6 +35,16 @@ from hydrobricks.parameters import ParameterSet
 from hydrobricks.results import Results
 from hydrobricks.time_series import TimeSeries
 from hydrobricks.trainer import evaluate
+
+from . import _hydrobricks
+from ._hydrobricks import (
+    close_log,
+    init,
+    init_log,
+    set_debug_log_level,
+    set_max_log_level,
+    set_message_log_level,
+)
 
 init()
 __all__ = (

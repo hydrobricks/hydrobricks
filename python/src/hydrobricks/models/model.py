@@ -1,18 +1,19 @@
 from __future__ import annotations
+
 import os
 from abc import ABC, abstractmethod
 
 import HydroErr
 import numpy as np
 
-from hydrobricks._hydrobricks import init_log, close_log, ModelHydro
+from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
 from hydrobricks.actions.action import Action
-from hydrobricks.utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.trainer import evaluate
-from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
 
 
 class Model(ABC):

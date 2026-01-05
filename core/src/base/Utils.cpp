@@ -501,7 +501,7 @@ double GetMJD(int year, int month, int day, int hour, int minute, int second) {
     double mjd = 0;
 
     if (year < 0) year++;
-    double year_corr = (year > 0 ? 0.0 : 0.75);
+    double yearCorr = (year > 0 ? 0.0 : 0.75);
     if (month <= 2) {
         year--;
         month += 12;
@@ -511,7 +511,7 @@ double GetMJD(int year, int month, int day, int hour, int minute, int second) {
         int a = year / 100;
         b = 2 - a + a / 4;
     }
-    mjd = (long)(365.25 * year - year_corr) + (long)(30.6001 * (month + 1)) + day + 1720995L + b;
+    mjd = (long)(365.25 * year - yearCorr) + (long)(30.6001 * (month + 1)) + day + 1720995L + b;
 
     // The hour part
     mjd += (double)hour / 24 + (double)minute / 1440 + (double)second / 86400;

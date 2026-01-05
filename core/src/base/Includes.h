@@ -143,6 +143,12 @@ class NotFound : public std::logic_error {
         : std::logic_error(msg) {};
 };
 
+class RuntimeError : public std::runtime_error {
+  public:
+    explicit RuntimeError(const wxString& msg)
+        : std::runtime_error(msg) {};
+};
+
 //---------------------------------
 // Own classes
 //---------------------------------

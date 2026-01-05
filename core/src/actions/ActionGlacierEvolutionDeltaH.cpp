@@ -76,7 +76,9 @@ void ActionGlacierEvolutionDeltaH::Reset() {
     }
 
     // Re-initialize.
-    Init();
+    if (!Init()) {
+        throw RuntimeError(_("Failed to re-initialize the glacier evolution action during reset."));
+    }
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {

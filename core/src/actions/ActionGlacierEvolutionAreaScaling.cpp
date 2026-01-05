@@ -74,7 +74,9 @@ void ActionGlacierEvolutionAreaScaling::Reset() {
     }
 
     // Re-initialize.
-    Init();
+    if (!Init()) {
+        throw RuntimeError(_("Failed to re-initialize the glacier evolution area scaling action during reset."));
+    }
 }
 
 bool ActionGlacierEvolutionAreaScaling::Apply(double) {

@@ -153,7 +153,7 @@ TEST(HydroUnit, ValidateInvalidSumExceedsOne) {
     EXPECT_FALSE(unit.Validate());
 }
 
-TEST(HydroUnit, ChangeLandCoverAreaFractionCallsValidate) {
+TEST(HydroUnit, ChangeLandCoverAreaFractionValidatesInvariants) {
     HydroUnit unit(100, HydroUnit::Lumped);
     
     // Add land covers
@@ -167,10 +167,10 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionCallsValidate) {
     glacier->SetAreaFraction(0.3);
     unit.AddBrick(glacier);
     
-    // Change a land cover fraction
+    // Change a land cover fraction - should auto-adjust ground to maintain sum = 1.0
     EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.4));
     
-    // Validate should pass after the fix
+    // Validate should pass after automatic adjustment
     EXPECT_TRUE(unit.Validate());
 }
 

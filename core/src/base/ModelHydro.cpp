@@ -123,11 +123,12 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
 
 void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     // Create the hydro unit bricks and splitters
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+    vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
+    vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
+    int hydroUnitCount = _subBasin->GetHydroUnitCount();
 
-        vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
-        vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
 
         // Create the surface component bricks
         for (int iBrick : surfaceCompIndices) {
@@ -166,7 +167,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
     }
 
     // Create fluxes for the hydro units
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);

@@ -32,10 +32,11 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     _needsCleanup = true;
 
     // Pre-reserve containers when counts are known.
-    ReserveHydroUnits(basinSettings.GetHydroUnitCount());
+    int hydroUnitCount = basinSettings.GetHydroUnitCount();
+    ReserveHydroUnits(hydroUnitCount);
 
     // Create the hydro units
-    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         basinSettings.SelectUnit(iUnit);
 
         HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
@@ -60,10 +61,14 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
 
 bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     try {
-        for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
+        int hydroUnitCount = basinSettings.GetHydroUnitCount();
+        int landCoverCount = basinSettings.GetLandCoverCount();
+        int surfaceComponentCount = basinSettings.GetSurfaceComponentCount();
+
+        for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
-            for (int iElement = 0; iElement < basinSettings.GetLandCoverCount(); ++iElement) {
+            for (int iElement = 0; iElement < landCoverCount; ++iElement) {
                 LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
 
                 auto brick = dynamic_cast<LandCover*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
@@ -71,7 +76,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 brick->SetAreaFraction(elementSettings.fraction);
             }
 
-            for (int iElement = 0; iElement < basinSettings.GetSurfaceComponentCount(); ++iElement) {
+            for (int iElement = 0; iElement < surfaceComponentCount; ++iElement) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));

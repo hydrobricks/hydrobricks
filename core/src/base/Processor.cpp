@@ -28,10 +28,12 @@ void Processor::SetModel(ModelHydro* model) {
 void Processor::ConnectToElementsToSolve() {
     SubBasin* basin = _model->GetSubBasin();
 
-    for (int iUnit = 0; iUnit < basin->GetHydroUnitCount(); ++iUnit) {
+    int hydroUnitCount = basin->GetHydroUnitCount();
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         bool solverRequired = false;
-        for (int iBrick = 0; iBrick < unit->GetBricksCount(); ++iBrick) {
+        int bricksCount = unit->GetBricksCount();
+        for (int iBrick = 0; iBrick < bricksCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
 
             // Add the bricks that need a solver and all their children
@@ -56,7 +58,8 @@ void Processor::ConnectToElementsToSolve() {
         }
     }
 
-    for (int iBrick = 0; iBrick < basin->GetBricksCount(); ++iBrick) {
+    int basinBricksCount = basin->GetBricksCount();
+    for (int iBrick = 0; iBrick < basinBricksCount; ++iBrick) {
         Brick* brick = basin->GetBrick(iBrick);
 
         // Add the bricks need a solver here
@@ -94,13 +97,16 @@ bool Processor::ProcessTimeStep() {
 
     // Process the bricks that do not need a solver.
     int ptIndex = 0;
-    for (int iUnit = 0; iUnit < basin->GetHydroUnitCount(); ++iUnit) {
+    int hydroUnitCount = basin->GetHydroUnitCount();
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
-        for (int iSplitter = 0; iSplitter < unit->GetSplittersCount(); ++iSplitter) {
+        int splittersCount = unit->GetSplittersCount();
+        for (int iSplitter = 0; iSplitter < splittersCount; ++iSplitter) {
             Splitter* splitter = unit->GetSplitter(iSplitter);
             splitter->Compute();
         }
-        for (int iBrick = 0; iBrick < unit->GetBricksCount(); ++iBrick) {
+        int bricksCount = unit->GetBricksCount();
+        for (int iBrick = 0; iBrick < bricksCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
             if (brick->NeedsSolver()) {
                 continue;

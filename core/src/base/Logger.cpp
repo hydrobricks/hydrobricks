@@ -230,6 +230,10 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
     size_t found = item.find(":content");
     if (found != std::string::npos) {
         // Storage content: fraction must be accounted for.
+        // Precompute areas matrix once (assuming all values have the same number of rows)
+        axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+        double areasSum = _hydroUnitAreas.sum();
+
         for (int i : indices) {
             axxd fraction = axxd::Ones(_hydroUnitValues[i].rows(), _hydroUnitValues[i].cols());
             string componentName = _hydroUnitLabels[i];
@@ -241,16 +245,18 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
                 }
             }
             axxd values = fraction * _hydroUnitValues[i];
-            axxd areas = _hydroUnitAreas.transpose().replicate(values.rows(), 1);
-            sum += (values * areas).sum() / _hydroUnitAreas.sum();
+            sum += (values * areas).sum() / areasSum;
         }
     } else {
         // Not a storage content: fraction is already accounted for.
         if (needsAreaWeighting) {
+            // Precompute areas matrix once (assuming all values have the same number of rows)
+            axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+            double areasSum = _hydroUnitAreas.sum();
+
             for (int i : indices) {
                 axxd values = _hydroUnitValues[i];
-                axxd areas = _hydroUnitAreas.transpose().replicate(values.rows(), 1);
-                sum += (values * areas).sum() / _hydroUnitAreas.sum();
+                sum += (values * areas).sum() / areasSum;
             }
         } else {
             for (int i : indices) {

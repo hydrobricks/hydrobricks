@@ -31,6 +31,10 @@ void HydroUnit::SaveAsInitialState() {
 void HydroUnit::SetProperties(HydroUnitSettings& unitSettings) {
     _id = unitSettings.id;
 
+    // Reserve once to avoid reallocations when adding known properties.
+    size_t propertiesCount = unitSettings.propertiesDouble.size() + unitSettings.propertiesString.size();
+    _properties.reserve(_properties.size() + propertiesCount);
+
     for (const auto& unitProperty : unitSettings.propertiesDouble) {
         AddProperty(new HydroUnitProperty(unitProperty.name, unitProperty.value, unitProperty.unit));
     }

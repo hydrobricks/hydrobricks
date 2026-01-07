@@ -7,6 +7,26 @@ HydroUnit::HydroUnit(double area, Types type)
       _id(UNDEFINED),
       _area(area) {}
 
+void HydroUnit::ReserveBricks(size_t count) {
+    _bricks.reserve(_bricks.size() + count);
+}
+
+void HydroUnit::ReserveLandCoverBricks(size_t count) {
+    _landCoverBricks.reserve(_landCoverBricks.size() + count);
+}
+
+void HydroUnit::ReserveSplitters(size_t count) {
+    _splitters.reserve(_splitters.size() + count);
+}
+
+void HydroUnit::ReserveLateralConnections(size_t count) {
+    _lateralConnections.reserve(_lateralConnections.size() + count);
+}
+
+void HydroUnit::ReserveForcings(size_t count) {
+    _forcing.reserve(_forcing.size() + count);
+}
+
 HydroUnit::~HydroUnit() {
     for (auto forcing : _forcing) {
         wxDELETE(forcing);

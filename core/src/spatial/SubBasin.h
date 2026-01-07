@@ -5,6 +5,7 @@
 #include "HydroUnit.h"
 #include "Includes.h"
 #include "SettingsBasin.h"
+#include <unordered_map>
 #include "TimeMachine.h"
 
 class SubBasin : public wxObject {
@@ -27,6 +28,67 @@ class SubBasin : public wxObject {
      * @param basinSettings The settings to build the basin with.
      */
     void BuildBasin(SettingsBasin& basinSettings);
+
+    /**
+     * Reserve space for a number of hydro units in the sub-basin.
+     *
+     * @param count The number of hydro units to reserve space for.
+     */
+    void ReserveHydroUnits(size_t count) {
+        _hydroUnits.reserve(_hydroUnits.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of bricks in the sub-basin.
+     *
+     * @param count The number of bricks to reserve space for.
+     */
+    void ReserveBricks(size_t count) {
+        _bricks.reserve(_bricks.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of splitters in the sub-basin.
+     *
+     * @param count The number of splitters to reserve space for.
+     */
+    void ReserveSplitters(size_t count) {
+        _splitters.reserve(_splitters.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of input connectors in the sub-basin.
+     *
+     * @param count The number of input connectors to reserve space for.
+     */
+    void ReserveInputConnectors(size_t count) {
+        _inConnectors.reserve(_inConnectors.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of output connectors in the sub-basin.
+     *
+     * @param count The number of output connectors to reserve space for.
+     */
+    void ReserveOutputConnectors(size_t count) {
+        _outConnectors.reserve(_outConnectors.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of outlet fluxes in the sub-basin.
+     *
+     * @param count The number of outlet fluxes to reserve space for.
+     */
+    void ReserveOutletFluxes(size_t count) {
+        _outletFluxes.reserve(_outletFluxes.size() + count);
+    }
+
+    /**
+     * Reserve space for a number of lateral connections for hydro units in the sub-basin.
+     *
+     * @param basinSettings The settings to reserve the lateral connections with.
+     */
+    void ReserveLateralConnectionsForUnits(SettingsBasin& basinSettings);
 
     /**
      * Assign the fractions of the basin.
@@ -230,7 +292,7 @@ class SubBasin : public wxObject {
      *
      * @return The area of the sub-basin in square meters.
      */
-    double GetArea() const {
+    [[nodiscard]] double GetArea() const {
         return _area;
     }
 

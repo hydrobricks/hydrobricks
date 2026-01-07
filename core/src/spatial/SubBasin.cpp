@@ -1,6 +1,7 @@
 #include "SubBasin.h"
 
 #include "LandCover.h"
+#include "SettingsBasin.h"
 #include "SurfaceComponent.h"
 
 SubBasin::SubBasin()
@@ -30,6 +31,9 @@ bool SubBasin::Initialize(SettingsBasin& basinSettings) {
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     _needsCleanup = true;
 
+    // Pre-reserve containers when counts are known.
+    ReserveHydroUnits(basinSettings.GetHydroUnitCount());
+
     // Create the hydro units
     for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
         basinSettings.SelectUnit(iUnit);
@@ -41,7 +45,8 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     }
 
     // Create the lateral connections
-    for (auto connection : basinSettings.GetLateralConnections()) {
+    ReserveLateralConnectionsForUnits(basinSettings);
+    for (const auto& connection : basinSettings.GetLateralConnections()) {
         HydroUnit* giver = GetHydroUnitById(connection.giverHydroUnitId);
         HydroUnit* receiver = GetHydroUnitById(connection.receiverHydroUnitId);
 
@@ -235,6 +240,19 @@ Splitter* SubBasin::GetSplitter(const string& name) {
     }
 
     throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
+}
+
+void SubBasin::ReserveLateralConnectionsForUnits(SettingsBasin& basinSettings) {
+    // Pre-count connections per giver to reserve in each hydro unit.
+    std::unordered_map<int, size_t> counts;
+    for (const auto& connection : basinSettings.GetLateralConnections()) {
+        counts[connection.giverHydroUnitId]++;
+    }
+    for (const auto& [giverId, cnt] : counts) {
+        if (auto* giver = GetHydroUnitById(giverId)) {
+            giver->ReserveLateralConnections(cnt);
+        }
+    }
 }
 
 bool SubBasin::HasIncomingFlow() {

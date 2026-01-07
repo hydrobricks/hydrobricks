@@ -113,6 +113,41 @@ class HydroUnit : public wxObject {
     void AddLateralConnection(HydroUnit* receiver, double fraction, const string& type = "");
 
     /**
+     * Reserve space for a number of bricks in the hydro unit.
+     *
+     * @param count The number of bricks to reserve space for.
+     */
+    void ReserveBricks(size_t count);
+
+    /**
+     * Reserve space for a number of land cover bricks in the hydro unit.
+     *
+     * @param count The number of land cover bricks to reserve space for.
+     */
+    void ReserveLandCoverBricks(size_t count);
+
+    /**
+     * Reserve space for a number of splitters in the hydro unit.
+     *
+     * @param count The number of splitters to reserve space for.
+     */
+    void ReserveSplitters(size_t count);
+
+    /**
+     * Reserve space for a number of lateral connections in the hydro unit.
+     *
+     * @param count The number of lateral connections to reserve space for.
+     */
+    void ReserveLateralConnections(size_t count);
+
+    /**
+     * Reserve space for a number of forcings in the hydro unit.
+     *
+     * @param count The number of forcings to reserve space for.
+     */
+    void ReserveForcings(size_t count);
+
+    /**
      * Get the number of bricks in the hydro unit.
      *
      * @return The number of bricks.
@@ -155,8 +190,9 @@ class HydroUnit : public wxObject {
      *
      * @return A vector of pointers to the snowpack bricks.
      */
-    vector<Brick*> GetSnowpacks() const {
+    [[nodiscard]] vector<Brick*> GetSnowpacks() const {
         vector<Brick*> snowBricks;
+        snowBricks.reserve(_bricks.size());
         for (auto& brick : _bricks) {
             if (brick->IsSnowpack()) {
                 snowBricks.push_back(brick);
@@ -243,7 +279,7 @@ class HydroUnit : public wxObject {
      *
      * @return The area of the hydro unit [m²]
      */
-    double GetArea() const {
+    [[nodiscard]] double GetArea() const {
         return _area;
     }
 
@@ -252,7 +288,7 @@ class HydroUnit : public wxObject {
      *
      * @return The ID of the hydro unit.
      */
-    int GetId() const {
+    [[nodiscard]] int GetId() const {
         return _id;
     }
 
@@ -261,7 +297,7 @@ class HydroUnit : public wxObject {
      *
      * @return A vector of lateral connections associated with the hydro unit.
      */
-    vector<HydroUnitLateralConnection*> GetLateralConnections() const {
+    [[nodiscard]] vector<HydroUnitLateralConnection*> GetLateralConnections() const {
         return _lateralConnections;
     }
 

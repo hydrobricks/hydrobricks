@@ -39,9 +39,9 @@ class WaterContainer : public wxObject {
     /**
      * Apply the constraints to the water container.
      *
-     * @param timeSte time step [s]
+     * @param timeStep time step [s]
      */
-    virtual void ApplyConstraints(double timeSte);
+    virtual void ApplyConstraints(double timeStep);
 
     /**
      * Set the outgoing rates to zero.

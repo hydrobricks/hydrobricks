@@ -34,7 +34,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     float _slope;           // [m/m]
     float* _beta;           // []
     double* _areaFraction;  // []
-    double _areaUnit;       // [m^2]
+    double _areaUnit;       // [m²]
     double _exponent;
 
     /**
@@ -45,7 +45,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     /**
      * Get the area of the hydro unit.
      *
-     * @return The area of the hydro unit in square meters.
+     * @return The area of the hydro unit [m²]
      */
     double GetArea();
 };

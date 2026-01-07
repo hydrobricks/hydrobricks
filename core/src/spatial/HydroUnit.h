@@ -241,7 +241,7 @@ class HydroUnit : public wxObject {
     /**
      * Get the area of the hydro unit.
      *
-     * @return The area of the hydro unit in square meters.
+     * @return The area of the hydro unit [m²]
      */
     double GetArea() const {
         return _area;
@@ -268,7 +268,7 @@ class HydroUnit : public wxObject {
   protected:
     Types _type;
     int _id;
-    double _area;  // m2
+    double _area;  // [m²]
     vector<HydroUnitProperty*> _properties;
     vector<HydroUnitLateralConnection*> _lateralConnections;
     vector<Brick*> _bricks;

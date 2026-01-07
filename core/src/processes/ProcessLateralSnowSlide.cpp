@@ -53,8 +53,8 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
 
     // Current SWE value
-    double swe = _container->GetContentWithChanges();  // [mm] Snow water equivalent
-    double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth
+    double swe = _container->GetContentWithChanges();  // [mm] Snow Water Equivalent
+    double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth calculated from SWE
 
     // Snow holding threshold
     float slope = std::max(_slope_deg, *_minSlope);                     // [degrees]
@@ -77,8 +77,8 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     // Calculate excess snow to be redistributed
     double excessSwe = 0.0;
     if (snowDepth > snowHoldingThreshold) {
-        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth
-        excessSwe = excessSnowDepth / sweToDepthFactor;             // Convert to SWE [mm]
+        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth beyond threshold
+        excessSwe = excessSnowDepth / sweToDepthFactor;             // [mm] Convert excess depth to SWE
     }
 
     // Iterate through each output and calculate the lateral rate
@@ -103,7 +103,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
             rates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }
-        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate.
+        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
 
         rates[i] = AvoidUnrealisticAccumulation(rates[i], _outputs[i]);
 

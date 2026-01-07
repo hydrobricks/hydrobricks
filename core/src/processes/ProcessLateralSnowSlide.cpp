@@ -99,7 +99,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
         wxASSERT(_weights.size() > i);
         double targetFraction = GetTargetLandCoverAreaFraction(_outputs[i]);
-        if (targetFraction <= PRECISION) {
+        if (NearlyZero(targetFraction, PRECISION)) {
             rates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }

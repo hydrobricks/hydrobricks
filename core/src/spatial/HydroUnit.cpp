@@ -226,11 +226,11 @@ bool HydroUnit::IsOk() {
         for (auto brick : _landCoverBricks) {
             sumLandCoverArea += brick->GetAreaFraction();
         }
-        if (std::fabs(sumLandCoverArea - 1.0) > EPSILON_D) {
-            if (std::fabs(sumLandCoverArea - 1.0) > 0.0001) {
+        if (!NearlyEqual(sumLandCoverArea, 1.0, EPSILON_D)) {
+            if (!NearlyEqual(sumLandCoverArea, 1.0, TOLERANCE_LOOSE)) {
                 wxLogError(_("The sum of the land cover fractions is not equal to 1, "
                              "but equal to %f, with %f error margin."),
-                           sumLandCoverArea, 0.0001);
+                           sumLandCoverArea, TOLERANCE_LOOSE);
                 return false;
             }
 
@@ -275,13 +275,13 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
         total += brick->GetAreaFraction();
     }
 
-    if (std::fabs(total - 1.0) > EPSILON_D) {
+    if (!NearlyEqual(total, 1.0, EPSILON_D)) {
         double diff = total - 1.0;
         if (ground == nullptr) {
             wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));
             return false;
         }
-        if (ground->GetAreaFraction() - diff < -EPSILON_D) {
+        if (LessThan(ground->GetAreaFraction(), diff, EPSILON_D)) {
             wxLogError(_("The ground (generic) land cover (%.20g) is not large enough to compensate "
                          "the area fractions (%.20g) with error margin (%.20g)."
                          "(i.e. the sum of the other land cover fractions is too large)."),

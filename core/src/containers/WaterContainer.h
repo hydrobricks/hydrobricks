@@ -192,7 +192,7 @@ class WaterContainer : public wxObject {
      */
     bool IsNotEmpty() {
         double content = GetContentWithChanges();
-        return content > EPSILON_F && content > PRECISION;
+        return GreaterThan(content, 0, EPSILON_F) && GreaterThan(content, 0, PRECISION);
     }
 
     /**

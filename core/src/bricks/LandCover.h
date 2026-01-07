@@ -54,7 +54,7 @@ class LandCover : public Brick {
      * @copydoc Brick::IsNull()
      */
     [[nodiscard]] bool IsNull() override {
-        return _areaFraction <= PRECISION;
+        return NearlyZero(_areaFraction, PRECISION);
     }
 
     /**

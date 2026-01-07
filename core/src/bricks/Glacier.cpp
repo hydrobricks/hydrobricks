@@ -20,7 +20,7 @@ void Glacier::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
         float* valPtr = GetParameterValuePointer(brickSettings, "infinite_storage");
-        if (valPtr && *valPtr != 0.0f) {
+        if (valPtr && !NearlyZero(*valPtr, EPSILON_F)) {
             _ice->SetAsInfiniteStorage();
         }
     }

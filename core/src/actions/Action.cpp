@@ -70,12 +70,12 @@ int Action::GetIndexForInsertion(double date) {
 
 double Action::CheckLandCoverAreaFraction(const string& name, int id, double fraction, double unitArea, double lcArea) {
     // If close to 0, set to 0.
-    if (std::abs(fraction) < PRECISION) {
+    if (NearlyZero(fraction, PRECISION)) {
         return 0.0;
     }
 
     // If close to 1, set to 1.
-    if (std::abs(1 - fraction) < PRECISION) {
+    if (NearlyEqual(1, fraction, PRECISION)) {
         return 1.0;
     }
 

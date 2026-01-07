@@ -169,7 +169,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
         // If the value was not found, return closest value inside tolerance
         if (std::abs(value - *last) <= std::abs(value - *(last + 1))) {
-            if (std::abs(value - *last) <= tolerance) {
+            if (NearlyEqual(value, *last, tolerance)) {
                 return static_cast<int>(last - start);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance
@@ -185,7 +185,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
                 return NOT_FOUND;
             }
         } else {
-            if (std::abs(value - *(last + 1)) <= tolerance) {
+            if (NearlyEqual(value, *(last + 1), tolerance)) {
                 return static_cast<int>(last - start + 1);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance
@@ -227,7 +227,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
         // If the value was not found, return closest value inside tolerance
         if (std::abs(value - *first) <= std::abs(value - *(first - 1))) {
-            if (std::abs(value - *first) <= tolerance) {
+            if (NearlyEqual(value, *first, tolerance)) {
                 return static_cast<int>(first - start);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance.
@@ -243,7 +243,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
                 return NOT_FOUND;
             }
         } else {
-            if (std::abs(value - *(first - 1)) <= tolerance) {
+            if (NearlyEqual(value, *(first - 1), tolerance)) {
                 return static_cast<int>(first - start - 1);
             } else {
                 // Check that the value is within the array. Do it here to allow a margin for the tolerance.

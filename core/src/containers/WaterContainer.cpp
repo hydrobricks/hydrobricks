@@ -67,7 +67,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                 throw ConceptionIssue(
                     wxString::Format(_("Change rate %f in process %s is too high."), *changeRate, process->GetName()));
             }
-            wxASSERT(*changeRate > -EPSILON_D);
+            wxASSERT(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
             outgoingRates.push_back(changeRate);
             outputs += *changeRate;
         }
@@ -96,7 +96,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         if (*changeRate < 0) {
             *changeRate = 0;
         }
-        wxASSERT(*changeRate > -EPSILON_D);
+        wxASSERT(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
         incomingRates.push_back(changeRate);
         inputs += *changeRate;
     }
@@ -111,12 +111,12 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         for (auto rate : outgoingRates) {
             wxASSERT(rate != nullptr);
             wxASSERT(*rate < 1000);
-            wxASSERT(*rate > -EPSILON_D);
+            wxASSERT(GreaterThanOrEqual(*rate, 0, EPSILON_D));
             wxASSERT(*rate >= 0);
-            if (*rate <= EPSILON_D) {
+            if (NearlyZero(*rate, EPSILON_D)) {
                 continue;
             }
-            if (std::abs(diff - change) < PRECISION) {
+            if (NearlyEqual(diff, change, PRECISION)) {
                 *rate = 0;
                 continue;
             }
@@ -145,8 +145,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             for (auto rate : incomingRates) {
                 wxASSERT(rate != nullptr);
                 wxASSERT(*rate < 1000);
-                wxASSERT(*rate > -EPSILON_D);
-                if (*rate == 0.0) {
+                wxASSERT(GreaterThanOrEqual(*rate, 0, EPSILON_D));
+                if (NearlyZero(*rate, EPSILON_D)) {
                     continue;
                 }
                 *rate -= diff * std::abs((*rate) / inputs);
@@ -177,8 +177,8 @@ void WaterContainer::Finalize() {
     _content += _contentChangeDynamic + _contentChangeStatic;
     _contentChangeDynamic = 0;
     _contentChangeStatic = 0;
-    wxASSERT(_content >= -PRECISION);
-    if (_content < -PRECISION) {
+    wxASSERT(GreaterThanOrEqual(_content, 0, PRECISION));
+    if (LessThan(_content, 0, PRECISION)) {
         wxLogError(_("Water container %s has negative content (%f)."), GetParentBrick()->GetName(), _content);
         _content = 0;
     }

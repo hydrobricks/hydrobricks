@@ -188,7 +188,7 @@ float* Process::GetParameterValuePointer(const ProcessSettings& processSettings,
 }
 
 vecDouble Process::GetChangeRates() {
-    if (_container->GetContentWithChanges() <= PRECISION) {
+    if (LessThanOrEqual(_container->GetContentWithChanges(), 0, PRECISION)) {
         vecDouble res(GetConnectionCount());
         std::fill(res.begin(), res.end(), 0);
         return res;
@@ -210,7 +210,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
         wxLogError(_("Negative rate (%f) in process %s, connection %d."), rate, GetName(), connectionIndex);
         rate = 0;
     }
-    if (rate > PRECISION) {
+    if (GreaterThan(rate, 0, PRECISION)) {
         _outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
         _container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
     } else {

@@ -46,7 +46,7 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
 
         // Get the glacier brick.
         LandCover* glacierLandCover = unit->GetLandCover(_landCoverName);
-        if (glacierLandCover == nullptr || glacierLandCover->GetAreaFraction() == 0) {
+        if (glacierLandCover == nullptr || NearlyZero(glacierLandCover->GetAreaFraction(), PRECISION)) {
             continue;
         }
         Glacier* glacier = dynamic_cast<Glacier*>(glacierLandCover);

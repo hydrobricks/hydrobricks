@@ -37,7 +37,7 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
         // Check that the glacier area corresponds to the lookup table initial area.
         double areaRef = _tableArea(0, i);
         double areaInModel = unit->GetLandCover(_landCoverName)->GetAreaFraction() * unit->GetArea();
-        if (areaInModel == 0) {
+        if (NearlyZero(areaInModel, PRECISION)) {
             // If the glacier area is zero, initialize the fraction.
             double fraction = areaRef / unit->GetArea();
             fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), areaRef);
@@ -45,7 +45,7 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
             if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
                 return false;
             }
-        } else if (std::abs(areaInModel - areaRef) > PRECISION) {
+        } else if (!NearlyEqual(areaInModel, areaRef, PRECISION)) {
             wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
                          "initial area (%g vs %g)."),
                        id, areaInModel, areaRef);
@@ -92,14 +92,14 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
         LandCover* brick = unit->GetLandCover(_landCoverName);
-        if (brick == nullptr || brick->GetAreaFraction() == 0) {
+        if (brick == nullptr || NearlyZero(brick->GetAreaFraction(), PRECISION)) {
             continue;
         }
         double area = brick->GetAreaFraction() * unit->GetArea();
         double brickIceWE = brick->GetContent(ContentType::Ice);
         double iceVolume = area * brickIceWE;
 
-        if (iceVolume == 0) {
+        if (NearlyZero(iceVolume, PRECISION)) {
             // If the glacier water equivalent is zero, set the area to zero.
             unit->ChangeLandCoverAreaFraction(_landCoverName, 0);
             continue;

@@ -59,7 +59,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        if (applyConstraints && sumRates > PRECISION) {
+        if (applyConstraints && GreaterThan(sumRates, 0, PRECISION)) {
             brick->ApplyConstraints(config::timeStepInDays);
         }
     }

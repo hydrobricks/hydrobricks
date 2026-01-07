@@ -28,7 +28,7 @@ double SurfaceComponent::GetParentAreaFraction() {
 }
 
 bool SurfaceComponent::IsNull() {
-    if (_areaFraction <= PRECISION) {
+    if (NearlyZero(_areaFraction, PRECISION)) {
         return true;
     }
     if (_parent && _parent->IsNull()) {

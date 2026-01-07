@@ -3,6 +3,7 @@
 #include <wx/filename.h>
 
 #include "FileNetcdf.h"
+#include "ResultWriter.h"
 
 Logger::Logger()
     : _cursor(0),
@@ -105,80 +106,11 @@ void Logger::Increment() {
 }
 
 bool Logger::DumpOutputs(const string& path) {
-    if (!wxDirExists(path)) {
-        wxLogError(_("The directory %s could not be found."), path);
-        return false;
-    }
+    // Delegate output writing to ResultWriter
+    ResultWriter writer;
 
-    wxLogMessage(_("Writing output file."));
-
-    try {
-        string filePath = path;
-        filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
-        filePath.append("/results.nc");
-
-        FileNetcdf file;
-
-        if (!file.Create(filePath)) {
-            return false;
-        }
-
-        // Create dimensions
-        int dimIdTime = file.DefDim("time", (int)_time.size());
-        int dimIdUnit = file.DefDim("hydro_units", (int)_hydroUnitIds.size());
-        int dimIdItemsAgg = file.DefDim("aggregated_values", (int)_subBasinLabels.size());
-        int dimIdItemsDist = file.DefDim("distributed_values", (int)_hydroUnitLabels.size());
-        int dimIdFractions = 0;
-        if (_recordFractions) {
-            dimIdFractions = file.DefDim("land_covers", (int)_hydroUnitFractionLabels.size());
-        }
-
-        // Create variables and put data
-        int varId = file.DefVarDouble("time", {dimIdTime});
-        file.PutVar(varId, _time);
-        file.PutAttText("long_name", "time", varId);
-        file.PutAttText("units", "days since 1858-11-17 00:00:00.0", varId);
-
-        varId = file.DefVarInt("hydro_units_ids", {dimIdUnit});
-        file.PutVar(varId, _hydroUnitIds);
-        file.PutAttText("long_name", "hydrological units ids", varId);
-
-        varId = file.DefVarDouble("hydro_units_areas", {dimIdUnit});
-        file.PutVar(varId, _hydroUnitAreas);
-        file.PutAttText("long_name", "hydrological units areas", varId);
-
-        varId = file.DefVarDouble("sub_basin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
-        file.PutVar(varId, _subBasinValues);
-        file.PutAttText("long_name", "aggregated values over the sub basin", varId);
-        file.PutAttText("units", "mm", varId);
-
-        varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);
-        file.PutVar(varId, _hydroUnitValues);
-        file.PutAttText("long_name", "values for each hydrological units", varId);
-        file.PutAttText("units", "mm", varId);
-
-        if (_recordFractions) {
-            varId = file.DefVarDouble("land_cover_fractions", {dimIdFractions, dimIdUnit, dimIdTime}, 3, true);
-            file.PutVar(varId, _hydroUnitFractions);
-            file.PutAttText("long_name", "land cover fractions for each hydrological units", varId);
-            file.PutAttText("units", "percent", varId);
-        }
-
-        // Global attributes
-        file.PutAttString("labels_aggregated", _subBasinLabels);
-        file.PutAttString("labels_distributed", _hydroUnitLabels);
-        if (_recordFractions && !_hydroUnitFractionLabels.empty()) {
-            file.PutAttString("labels_land_covers", _hydroUnitFractionLabels);
-        }
-
-    } catch (std::exception& e) {
-        wxLogError(e.what());
-        return false;
-    }
-
-    wxLogMessage(_("Output file written."));
-
-    return true;
+    return writer.WriteNetCDF(path, _time, _hydroUnitIds, _hydroUnitAreas, _subBasinLabels, _subBasinValues,
+                              _hydroUnitLabels, _hydroUnitValues, _hydroUnitFractionLabels, _hydroUnitFractions);
 }
 
 axd Logger::GetOutletDischarge() {

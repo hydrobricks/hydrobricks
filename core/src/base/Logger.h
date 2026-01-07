@@ -207,6 +207,69 @@ class Logger : public wxObject {
     }
 
     /**
+     * Get the time series.
+     *
+     * @return time series vector.
+     */
+    const axd& GetTime() const {
+        return _time;
+    }
+
+    /**
+     * Get the hydro unit IDs.
+     *
+     * @return vector of hydro unit IDs.
+     */
+    const vecInt& GetHydroUnitIds() const {
+        return _hydroUnitIds;
+    }
+
+    /**
+     * Get the hydro unit areas.
+     *
+     * @return vector of hydro unit areas.
+     */
+    const axd& GetHydroUnitAreas() const {
+        return _hydroUnitAreas;
+    }
+
+    /**
+     * Get the sub-basin labels.
+     *
+     * @return vector of sub-basin labels.
+     */
+    const vecStr& GetSubBasinLabels() const {
+        return _subBasinLabels;
+    }
+
+    /**
+     * Get the hydro unit labels.
+     *
+     * @return vector of hydro unit labels.
+     */
+    const vecStr& GetHydroUnitLabels() const {
+        return _hydroUnitLabels;
+    }
+
+    /**
+     * Get the hydro unit fraction labels.
+     *
+     * @return vector of fraction labels.
+     */
+    const vecStr& GetHydroUnitFractionLabels() const {
+        return _hydroUnitFractionLabels;
+    }
+
+    /**
+     * Get the hydro unit fractions.
+     *
+     * @return vector of fraction arrays.
+     */
+    const vecAxxd& GetHydroUnitFractions() const {
+        return _hydroUnitFractions;
+    }
+
+    /**
      * Activate the recording of fractions.
      */
     void RecordFractions() {

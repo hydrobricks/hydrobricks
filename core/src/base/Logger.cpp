@@ -2,7 +2,6 @@
 
 #include <wx/filename.h>
 
-#include "FileNetcdf.h"
 #include "ResultWriter.h"
 
 Logger::Logger()

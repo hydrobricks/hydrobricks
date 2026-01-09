@@ -62,10 +62,13 @@ void SetDebugLogLevel();
 void SetMessageLogLevel();
 
 /**
- * Check if the given integer value is a NaN.
+ * Check if the given integer value is a NaN (not-a-number).
+ *
+ * Uses a sentinel value (INT_NAN_SENTINEL) since int type cannot represent NaN naturally.
+ * This checks if the value equals INT_NAN_SENTINEL (std::numeric_limits<int>::max()).
  *
  * @param value The value to check.
- * @return True if the value is a NaN, false otherwise.
+ * @return True if the value equals INT_NAN_SENTINEL, false otherwise.
  */
 bool IsNaN(int value);
 

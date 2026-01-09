@@ -97,7 +97,7 @@ void DisplayProcessingTime(const wxStopWatch& sw) {
 }
 
 bool IsNaN(const int value) {
-    return value == NAN_I;
+    return value == INT_NAN_SENTINEL;
 }
 
 bool IsNaN(const float value) {

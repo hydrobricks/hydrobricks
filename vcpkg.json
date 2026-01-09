@@ -1,15 +1,20 @@
 {
   "name": "hydrobricks",
   "version": "0.8.6",
-  "builtin-baseline": "a74164519874e4671e9e496444148df1d7f5006c",
+  "builtin-baseline": "67e2629463db1f39b684e21cd1eab23909c1e56c",
   "dependencies": [
     "vcpkg-tool-ninja",
     "eigen3",
-    "gtest",
+    {
+      "name": "gtest",
+      "version>=": "1.17.0"
+    },
     {
       "name": "netcdf-c",
       "features": [
-        "hdf5"
+        "netcdf-4",
+        "szip",
+        "zstd"
       ]
     },
     {

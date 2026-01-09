@@ -172,7 +172,7 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
         case YYYY_MM_DD_hh_mm_ss: {
             if (TryReturnSeconds({"%FT%T", "%F %T", "%F %H:%M", "%F %H:%M:%S", "%Y.%m.%d %H:%M",
                                     "%Y.%m.%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y/%m/%d %H:%M:%S",
-                                    "%Y%m%d%H%M%S", "%Y%m%d %H:%M", "%Y%m%d %H%M%S", "%Y%m%dT%H%M%S"})) {
+                                    "%Y%m%d%H%M%S", "%Y%m%d %H:%M", "%Y%m%d %H%M", "%Y%m%d %H%M%S", "%Y%m%dT%H%M%S"})) {
                 year_month_day ymd{floor<days>(tp)};
                 if (IsValidDate(ymd)) {
                     return SysTimeToMjd(tp);

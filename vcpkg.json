@@ -4,13 +4,17 @@
   "builtin-baseline": "67e2629463db1f39b684e21cd1eab23909c1e56c",
   "dependencies": [
     "vcpkg-tool-ninja",
-    "eigen3",
+    {
+      "name": "eigen3",
+      "version>=": "5.0.1"
+    },
     {
       "name": "gtest",
       "version>=": "1.17.0"
     },
     {
       "name": "netcdf-c",
+      "version>=": "4.9.3",
       "features": [
         "netcdf-4",
         "szip",

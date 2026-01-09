@@ -237,7 +237,7 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
             string fractionLabel = _hydroUnitFractionLabels[j];
             if (wxString(componentName).StartsWith(fractionLabel + ":") ||
                 wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](0, Eigen::all);
+                fraction = _hydroUnitFractions[j](0, Eigen::placeholders::all);
                 break;
             }
         }
@@ -259,11 +259,11 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
             string fractionLabel = _hydroUnitFractionLabels[j];
             if (wxString(componentName).StartsWith(fractionLabel + ":") ||
                 wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](Eigen::last, Eigen::all);
+                fraction = _hydroUnitFractions[j](Eigen::placeholders::last, Eigen::placeholders::all);
                 break;
             }
         }
-        axd values = _hydroUnitValues[i](Eigen::last, Eigen::all);
+        axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all);
         values *= fraction;
         sum += (values * _hydroUnitAreas).sum() / _hydroUnitAreas.sum();
     }

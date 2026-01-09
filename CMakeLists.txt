@@ -70,7 +70,7 @@ set(wxBUILD_SHARED OFF)
 FetchContent_Declare(
     wxWidgets
     GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-    GIT_TAG v3.2.7)
+    GIT_TAG v3.2.9)
 FetchContent_MakeAvailable(wxWidgets)
 
 include_directories(${wxWidgets_SOURCE_DIR}/include)

@@ -96,12 +96,15 @@ bool IsNaN(double value);
 const char* GetPathSeparator();
 
 /**
- * Compare two strings in an case insensitive way.
+ * Compare two strings in a case insensitive way.
+ *
+ * Uses locale-aware case comparison via std::toupper with the default locale.
  *
  * @param str1 First string
  * @param str2 Second string
- * @return True if strings match.
+ * @return True if strings match (case insensitive).
  * @note From https://thispointer.com/c-case-insensitive-string-comparison-using-stl-c11-boost-library/
+ * @note Properly handles signed char to unsigned char conversion for std::toupper.
  */
 bool StringsMatch(const string& str1, const string& str2);
 

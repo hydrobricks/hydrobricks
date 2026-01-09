@@ -113,10 +113,14 @@ const char* GetPathSeparator() {
 }
 
 bool StringsMatch(const string& str1, const string& str2) {
-    return ((str1.size() == str2.size()) &&
-            std::equal(str1.begin(), str1.end(), str2.begin(), [](const char& c1, const char& c2) {
-                return (c1 == c2 || std::toupper(c1) == std::toupper(c2));
-            }));
+    if (str1.size() != str2.size()) {
+        return false;
+    }
+
+    return std::equal(str1.begin(), str1.end(), str2.begin(), [](const char& c1, const char& c2) {
+        return (c1 == c2 ||
+                std::toupper(static_cast<unsigned char>(c1)) == std::toupper(static_cast<unsigned char>(c2)));
+    });
 }
 
 int Find(const int* start, const int* end, int value, int tolerance, bool showWarning) {

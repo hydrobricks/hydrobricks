@@ -75,7 +75,7 @@ class WaterContainer : public wxObject {
      *
      * @return true if the water container has a maximum capacity, false otherwise
      */
-    bool HasMaximumCapacity() const {
+    [[nodiscard]] bool HasMaximumCapacity() const {
         return _capacity != nullptr;
     }
 

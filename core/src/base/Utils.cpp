@@ -1,5 +1,6 @@
 #include "Utils.h"
 
+#include <algorithm>
 #include <wx/ffile.h>
 #include <wx/fileconf.h>
 #include <wx/stdpaths.h>
@@ -134,146 +135,61 @@ template <class T>
 int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) {
     wxASSERT(start);
     wxASSERT(end);
+    wxASSERT(start <= end);
 
-    T *first = nullptr, *mid = nullptr, *last = nullptr;
-    int length;
-
-    // Initialize first and last variables.
-    first = const_cast<T*>(start);
-    last = const_cast<T*>(end);
-
-    // Check array order
-    if (*last > *first) {
-        // Binary search
-        while (first <= last) {
-            length = (int)(last - first);
-            mid = first + length / 2;
-            if (value - tolerance > *mid) {
-                first = mid + 1;
-            } else if (value + tolerance < *mid) {
-                last = mid - 1;
-            } else {
-                // Return found index
-                return static_cast<int>(mid - start);
-            }
+    if (start == end) {
+        if (showWarning) {
+            wxLogWarning(_("The value was not found in the array."));
         }
+        return NOT_FOUND;
+    }
 
-        // Check the pointers
-        if (last - start < 0) {
-            last = const_cast<T*>(start);
-        } else if (last - end > 0) {
-            last = const_cast<T*>(end) - 1;
-        } else if (last - end == 0) {
-            last -= 1;
-        }
+    // Determine if array is sorted ascending or descending
+    bool ascending = *(end - 1) > *start;
 
-        // If the value was not found, return closest value inside tolerance
-        if (std::abs(value - *last) <= std::abs(value - *(last + 1))) {
-            if (NearlyEqual(value, *last, tolerance)) {
-                return static_cast<int>(last - start);
-            } else {
-                // Check that the value is within the array. Do it here to allow a margin for the tolerance
-                if (value > *end || value < *start) {
-                    if (showWarning) {
-                        wxLogWarning(_("The value (%f) is out of the array range."), float(value));
-                    }
-                    return OUT_OF_RANGE;
-                }
-                if (showWarning) {
-                    wxLogWarning(_("The value was not found in the array."));
-                }
-                return NOT_FOUND;
-            }
-        } else {
-            if (NearlyEqual(value, *(last + 1), tolerance)) {
-                return static_cast<int>(last - start + 1);
-            } else {
-                // Check that the value is within the array. Do it here to allow a margin for the tolerance
-                if (value > *end || value < *start) {
-                    if (showWarning) {
-                        wxLogWarning(_("The value (%f) is out of the array range."), float(value));
-                    }
-                    return OUT_OF_RANGE;
-                }
-                if (showWarning) {
-                    wxLogWarning(_("The value was not found in the array."));
-                }
-                return NOT_FOUND;
-            }
-        }
-    } else if (*last < *first) {
-        // Binary search
-        while (first <= last) {
-            length = static_cast<int>(last - first);
-            mid = first + length / 2;
-            if (value - tolerance > *mid) {
-                last = mid - 1;
-            } else if (value + tolerance < *mid) {
-                first = mid + 1;
-            } else {
-                // Return found index
-                return static_cast<int>(mid - start);
-            }
-        }
+    // Use std::lower_bound for binary search
+    const T* it;
+    if (ascending) {
+        it = std::lower_bound(start, end, value);
+    } else {
+        // For descending order, use reverse comparator
+        it = std::lower_bound(start, end, value, [](const T& a, const T& b) { return a > b; });
+    }
 
-        // Check the pointers
-        if (first - start < 0) {
-            first = const_cast<T*>(start) + 1;
-        } else if (first - end > 0) {
-            first = const_cast<T*>(end);
-        } else if (first - start == 0) {
-            first += 1;
-        }
+    // Check if exact match or within tolerance at current position
+    if (it != end && NearlyEqual(value, *it, tolerance)) {
+        return static_cast<int>(it - start);
+    }
 
-        // If the value was not found, return closest value inside tolerance
-        if (std::abs(value - *first) <= std::abs(value - *(first - 1))) {
-            if (NearlyEqual(value, *first, tolerance)) {
-                return static_cast<int>(first - start);
-            } else {
-                // Check that the value is within the array. Do it here to allow a margin for the tolerance.
-                if (value < *end || value > *start) {
-                    if (showWarning) {
-                        wxLogWarning(_("The value (%f) is out of the array range."), float(value));
-                    }
-                    return OUT_OF_RANGE;
-                }
-                if (showWarning) {
-                    wxLogWarning(_("The value was not found in the array."));
-                }
-                return NOT_FOUND;
+    // Check previous element if available
+    if (it != start) {
+        const T* prev = it - 1;
+        if (NearlyEqual(value, *prev, tolerance)) {
+            return static_cast<int>(prev - start);
+        }
+    }
+
+    // Check if value is within array bounds
+    if (ascending) {
+        if (value < *start || value > *(end - 1)) {
+            if (showWarning) {
+                wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
             }
-        } else {
-            if (NearlyEqual(value, *(first - 1), tolerance)) {
-                return static_cast<int>(first - start - 1);
-            } else {
-                // Check that the value is within the array. Do it here to allow a margin for the tolerance.
-                if (value < *end || value > *start) {
-                    if (showWarning) {
-                        wxLogWarning(_("The value (%f) is out of the array range."), float(value));
-                    }
-                    return OUT_OF_RANGE;
-                }
-                if (showWarning) {
-                    wxLogWarning(_("The value was not found in the array."));
-                }
-                return NOT_FOUND;
-            }
+            return OUT_OF_RANGE;
         }
     } else {
-        if (last - first == 0) {
-            if (*first >= value - tolerance && *first <= value + tolerance) {
-                return 0;  // Value corresponds
-            } else {
-                return OUT_OF_RANGE;
+        if (value > *start || value < *(end - 1)) {
+            if (showWarning) {
+                wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
             }
-        }
-
-        if (*first >= value - tolerance && *first <= value + tolerance) {
-            return 0;  // Value corresponds
-        } else {
             return OUT_OF_RANGE;
         }
     }
+
+    if (showWarning) {
+        wxLogWarning(_("The value was not found in the array."));
+    }
+    return NOT_FOUND;
 }
 
 double IncrementDateBy(double date, int amount, TimeUnit unit) {

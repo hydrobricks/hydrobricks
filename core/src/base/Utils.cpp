@@ -228,28 +228,28 @@ Time GetTimeStructFromMJD(double mjd) {
     // Remaining seconds
     double rest = jd - floor(jd);
     double sec = round(rest * 86400);
-    date.hour = (int)floor((float)(sec / 3600));
+    date.hour = static_cast<int>(floor(sec / 3600));
     sec -= date.hour * 3600;
-    date.min = (int)floor((float)(sec / 60));
+    date.min = static_cast<int>(floor(sec / 60));
     sec -= date.min * 60;
-    date.sec = (int)sec;
+    date.sec = static_cast<int>(sec);
 
     long a, b, c, d, e, z;
 
-    z = (long)jd;
+    z = static_cast<long>(jd);
     if (z < 2299161L)
         a = z;
     else {
-        auto alpha = (long)((z - 1867216.25) / 36524.25);
+        auto alpha = static_cast<long>((z - 1867216.25) / 36524.25);
         a = z + 1 + alpha - alpha / 4;
     }
     b = a + 1524;
-    c = (long)((b - 122.1) / 365.25);
-    d = (long)(365.25 * c);
-    e = (long)((b - d) / 30.6001);
-    date.day = (int)b - d - (long)(30.6001 * e);
-    date.month = (int)(e < 13.5) ? e - 1 : e - 13;
-    date.year = (int)(date.month > 2.5) ? (c - 4716) : c - 4715;
+    c = static_cast<long>((b - 122.1) / 365.25);
+    d = static_cast<long>(365.25 * c);
+    e = static_cast<long>((b - d) / 30.6001);
+    date.day = static_cast<int>(b) - d - static_cast<long>(30.6001 * e);
+    date.month = static_cast<int>(e < 13.5) ? e - 1 : e - 13;
+    date.year = static_cast<int>(date.month > 2.5) ? (c - 4716) : c - 4715;
     if (date.year <= 0) date.year -= 1;
 
     return date;

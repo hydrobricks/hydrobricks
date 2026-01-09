@@ -1,5 +1,6 @@
 #include "UtilsDateTime.h"
 
+#include <cctype>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
@@ -10,13 +11,13 @@
 using namespace std::chrono;
 
 std::chrono::sys_days UtilsDateTime::ToSysDays(int year, int month, int day) {
-    using year_t = std::chrono::year;
-    using month_t = std::chrono::month;
-    using day_t = std::chrono::day;
+    using yearT = std::chrono::year;
+    using monthT = std::chrono::month;
+    using dayT = std::chrono::day;
 
-    auto y = year_t{year};
-    auto m = month_t{static_cast<unsigned>(month)};
-    auto d = day_t{static_cast<unsigned>(day)};
+    auto y = yearT{year};
+    auto m = monthT{static_cast<unsigned>(month)};
+    auto d = dayT{static_cast<unsigned>(day)};
     if (!y.ok() || !m.ok() || !d.ok()) {
         throw InvalidArgument("Invalid Y-M-D provided to ToSysDays");
     }
@@ -36,15 +37,15 @@ void UtilsDateTime::ValidateHMS(int hour, int minute, int second) {
 
 static double SysTimeToMjd(sys_time<seconds> tp) {
     auto secs = tp.time_since_epoch().count();
-    double days_since_unix = static_cast<double>(secs) / SECONDS_PER_DAY_D;
-    return MJD_UNIX_EPOCH + days_since_unix;
+    double daysSinceUnix = static_cast<double>(secs) / SECONDS_PER_DAY_D;
+    return MJD_UNIX_EPOCH + daysSinceUnix;
 }
 
 static sys_time<seconds> MjdToSysTime(double mjd) {
-    long double delta_days = static_cast<long double>(mjd) - static_cast<long double>(MJD_UNIX_EPOCH);
-    long double delta_secs_ld = delta_days * static_cast<long double>(SECONDS_PER_DAY_D);
-    auto delta_secs = static_cast<long long>(std::llround(delta_secs_ld));
-    return sys_time<seconds>{seconds{delta_secs}};
+    long double deltaDays = static_cast<long double>(mjd) - static_cast<long double>(MJD_UNIX_EPOCH);
+    long double deltaSecsLd = deltaDays * static_cast<long double>(SECONDS_PER_DAY_D);
+    auto deltaSecs = static_cast<long long>(std::llround(deltaSecsLd));
+    return sys_time<seconds>{seconds{deltaSecs}};
 }
 
 double UtilsDateTime::ToMJD(int year, int month, int day, int hour, int minute, int second) {
@@ -107,24 +108,24 @@ static bool ParseDateOnly(const std::string& s, const char* fmt, std::chrono::sy
 }
 
 double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) {
-    using seconds_tp = std::chrono::sys_time<std::chrono::seconds>;
-    using days_tp = std::chrono::sys_days;
+    using secondsTp = std::chrono::sys_time<std::chrono::seconds>;
+    using daysTp = std::chrono::sys_days;
 
     const std::string s = dateStr;
 
-    seconds_tp tp{};
-    days_tp d{};
+    secondsTp tp{};
+    daysTp d{};
 
-    auto try_return_days = [&](const std::initializer_list<const char*> pats) -> bool {
+    auto TryReturnDays = [&](const std::initializer_list<const char*> pats) -> bool {
         for (auto fmt : pats) {
             if (ParseDateOnly(s, fmt, d)) {
-                tp = seconds_tp{d.time_since_epoch()};
+                tp = secondsTp{d.time_since_epoch()};
                 return true;
             }
         }
         return false;
     };
-    auto try_return_seconds = [&](const std::initializer_list<const char*> pats) -> bool {
+    auto TryReturnSeconds = [&](const std::initializer_list<const char*> pats) -> bool {
         for (auto fmt : pats) {
             if (ParseExact(s, fmt, tp)) {
                 return true;
@@ -133,35 +134,70 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
         return false;
     };
 
+    // Helper: validate that a parsed date has all valid components
+    // Checks: year is reasonable [1900-2100], month is 1-12, day is 1-31
+    auto IsValidDate = [](const std::chrono::year_month_day& ymd) -> bool {
+        int y = int(ymd.year());
+        unsigned m = static_cast<unsigned>(ymd.month());
+        unsigned d = static_cast<unsigned>(ymd.day());
+
+        // Year range: reject obviously invalid years (e.g., year 23 or 2007 when parsed as day)
+        if (y < 1900 || y > 2100) {
+            return false;
+        }
+        // Month must be 1-12
+        if (m < 1 || m > 12) {
+            return false;
+        }
+        // Day must be 1-31 (chrono will have already validated max day per month)
+        if (d < 1 || d > 31) {
+            return false;
+        }
+        return true;
+    };
+
     switch (format) {
         case ISOdate:
         case YYYY_MM_DD: {
-            if (try_return_days({"%F", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d"})) {
-                return SysTimeToMjd(tp);
+            if (TryReturnDays({"%F", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d"})) {
+                year_month_day ymd{floor<days>(d)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             break;
         }
         case ISOdateTime:
         case YYYY_MM_DD_hh_mm:
         case YYYY_MM_DD_hh_mm_ss: {
-            if (try_return_seconds({"%FT%T", "%F %T", "%F %H:%M", "%F %H:%M:%S", "%Y.%m.%d %H:%M", "%Y.%m.%d %H:%M:%S",
-                                    "%Y/%m/%d %H:%M", "%Y/%m/%d %H:%M:%S", "%Y%m%d%H%M%S", "%Y%m%d %H:%M",
-                                    "%Y%m%dT%H%M%S"})) {
-                return SysTimeToMjd(tp);
+            if (TryReturnSeconds({"%FT%T", "%F %T", "%F %H:%M", "%F %H:%M:%S", "%Y.%m.%d %H:%M",
+                                    "%Y.%m.%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y/%m/%d %H:%M:%S",
+                                    "%Y%m%d%H%M%S", "%Y%m%d %H:%M", "%Y%m%d %H%M%S", "%Y%m%dT%H%M%S"})) {
+                year_month_day ymd{floor<days>(tp)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             break;
         }
         case DD_MM_YYYY: {
-            if (try_return_days({"%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d%m%Y"})) {
-                return SysTimeToMjd(tp);
+            if (TryReturnDays({"%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d%m%Y"})) {
+                year_month_day ymd{floor<days>(d)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             break;
         }
         case DD_MM_YYYY_hh_mm:
         case DD_MM_YYYY_hh_mm_ss: {
-            if (try_return_seconds({"%d.%m.%Y %H:%M", "%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S",
-                                    "%d-%m-%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%d%m%Y %H:%M", "%d%m%Y %H:%M:%S"})) {
-                return SysTimeToMjd(tp);
+            if (TryReturnSeconds({"%d.%m.%Y %H:%M", "%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S",
+                                    "%d-%m-%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%d%m%Y %H:%M", "%d%m%Y %H:%M:%S",
+                                    "%d%m%Y %H%M", "%d%m%Y %H%M%S"})) {
+                year_month_day ymd{floor<days>(tp)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             break;
         }
@@ -188,10 +224,10 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             const std::initializer_list<const char*> date_only_patterns = {
                 "%F", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d", "%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d%m%Y"};
 
-            if (try_return_seconds(date_time_patterns)) {
+            if (TryReturnSeconds(date_time_patterns)) {
                 return SysTimeToMjd(tp);
             }
-            if (try_return_days(date_only_patterns)) {
+            if (TryReturnDays(date_only_patterns)) {
                 return SysTimeToMjd(tp);
             }
             break;

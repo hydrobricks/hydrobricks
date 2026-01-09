@@ -137,7 +137,15 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
     wxASSERT(end);
     wxASSERT(start <= end);
 
+    // Convert from inclusive [start, end] to standard [start, end) range
+    const T* searchEnd = end + 1;
+
+    // Handle single-element or multi-element array
     if (start == end) {
+        // Single element array - check if it matches
+        if (NearlyEqual(value, *start, tolerance)) {
+            return 0;
+        }
         if (showWarning) {
             wxLogWarning(_("The value was not found in the array."));
         }
@@ -145,19 +153,19 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
     }
 
     // Determine if array is sorted ascending or descending
-    bool ascending = *(end - 1) > *start;
+    bool ascending = *end > *start;
 
     // Use std::lower_bound for binary search
     const T* it;
     if (ascending) {
-        it = std::lower_bound(start, end, value);
+        it = std::lower_bound(start, searchEnd, value);
     } else {
         // For descending order, use reverse comparator
-        it = std::lower_bound(start, end, value, [](const T& a, const T& b) { return a > b; });
+        it = std::lower_bound(start, searchEnd, value, [](const T& a, const T& b) { return a > b; });
     }
 
     // Check if exact match or within tolerance at current position
-    if (it != end && NearlyEqual(value, *it, tolerance)) {
+    if (it != searchEnd && NearlyEqual(value, *it, tolerance)) {
         return static_cast<int>(it - start);
     }
 
@@ -171,14 +179,14 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
     // Check if value is within array bounds
     if (ascending) {
-        if (value < *start || value > *(end - 1)) {
+        if (value < *start || value > *end) {
             if (showWarning) {
                 wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
             }
             return OUT_OF_RANGE;
         }
     } else {
-        if (value > *start || value < *(end - 1)) {
+        if (value > *start || value < *end) {
             if (showWarning) {
                 wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
             }

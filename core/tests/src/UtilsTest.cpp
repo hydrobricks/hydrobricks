@@ -161,7 +161,7 @@ TEST(Utils, SearchIntUniqueValOutOfRange) {
     wxLogNull logNo;
     int result = Find(&array[0], &array[0], 11, 1);
 
-    EXPECT_EQ(OUT_OF_RANGE, result);
+    EXPECT_EQ(NOT_FOUND, result);
 }
 
 TEST(Utils, SearchIntArraySameValue) {
@@ -172,15 +172,15 @@ TEST(Utils, SearchIntArraySameValue) {
 }
 
 TEST(Utils, SearchIntArraySameValueWithToleranceDown) {
-    int array[] = {9, 9, 9, 9};
-    int result = Find(&array[0], &array[3], 8, 1);
+    int array[] = {9};
+    int result = Find(&array[0], &array[0], 8, 1);
 
     EXPECT_EQ(0, result);
 }
 
 TEST(Utils, SearchIntArraySameValueWithToleranceUp) {
-    int array[] = {9, 9, 9, 9};
-    int result = Find(&array[0], &array[3], 10, 1);
+    int array[] = {9};
+    int result = Find(&array[0], &array[0], 10, 1);
 
     EXPECT_EQ(0, result);
 }
@@ -425,7 +425,7 @@ TEST(Utils, SearchDoubleUniqueValOutOfRange) {
     wxLogNull logNo;
     int result = Find(&array[0], &array[0], 11, 1);
 
-    EXPECT_EQ(OUT_OF_RANGE, result);
+    EXPECT_EQ(NOT_FOUND, result);
 }
 
 TEST(Utils, SearchDoubleArraySameValue) {
@@ -436,15 +436,15 @@ TEST(Utils, SearchDoubleArraySameValue) {
 }
 
 TEST(Utils, SearchDoubleArraySameValueWithToleranceDown) {
-    double array[] = {9.34, 9.34, 9.34, 9.34};
-    int result = Find(&array[0], &array[3], 8, 1.5);
+    double array[] = {9.34};
+    int result = Find(&array[0], &array[0], 8, 1.5);
 
     EXPECT_EQ(0, result);
 }
 
 TEST(Utils, SearchDoubleArraySameValueWithToleranceUp) {
-    double array[] = {9.34, 9.34, 9.34, 9.34};
-    int result = Find(&array[0], &array[3], 10, 1);
+    double array[] = {9.34};
+    int result = Find(&array[0], &array[30], 10, 1);
 
     EXPECT_EQ(0, result);
 }

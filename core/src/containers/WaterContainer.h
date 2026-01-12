@@ -10,6 +10,8 @@ class WaterContainer : public wxObject {
   public:
     WaterContainer(Brick* brick);
 
+    ~WaterContainer() override = default;
+
     /**
      * Check if the water container is ok.
      */

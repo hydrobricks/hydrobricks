@@ -10,6 +10,8 @@ class Flux : public wxObject {
   public:
     explicit Flux();
 
+    ~Flux() override = default;
+
     /**
      * Check that everything is correctly defined.
      *

@@ -12,6 +12,8 @@ class Splitter : public wxObject {
   public:
     explicit Splitter();
 
+    ~Splitter() override = default;
+
     /**
      * Factory method to create a splitter.
      *

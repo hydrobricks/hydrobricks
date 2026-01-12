@@ -10,6 +10,8 @@ class Solver : public wxObject {
   public:
     explicit Solver();
 
+    ~Solver() override = default;
+
     /**
      * Apply the solver.
      *

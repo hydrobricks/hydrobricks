@@ -146,6 +146,24 @@ class Brick : public wxObject {
     }
 
     /**
+     * Check if the brick has any processes.
+     *
+     * @return true if the brick has at least one process.
+     */
+    [[nodiscard]] bool HasProcesses() const {
+        return !_processes.empty();
+    }
+
+    /**
+     * Check if the brick has a hydro unit associated with it.
+     *
+     * @return true if the brick has a hydro unit.
+     */
+    [[nodiscard]] bool HasHydroUnit() const {
+        return _hydroUnit != nullptr;
+    }
+
+    /**
      * Finalize the water transfer.
      */
     virtual void Finalize();

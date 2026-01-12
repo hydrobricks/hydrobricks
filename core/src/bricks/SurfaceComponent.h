@@ -47,6 +47,24 @@ class SurfaceComponent : public Brick {
     [[nodiscard]] bool IsNull() const override;
 
     /**
+     * Check if the component has a parent land cover.
+     *
+     * @return true if the component has a parent land cover.
+     */
+    [[nodiscard]] bool HasParent() const {
+        return _parent != nullptr;
+    }
+
+    /**
+     * Get the parent land cover of this component.
+     *
+     * @return The parent land cover of this component.
+     */
+    LandCover* GetParent() const {
+        return _parent;
+    }
+
+    /**
      * Sets the parent land cover of this component.
      *
      * @param parent The parent land cover of this component.

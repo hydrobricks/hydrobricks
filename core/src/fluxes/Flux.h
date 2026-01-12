@@ -162,6 +162,24 @@ class Flux : public wxObject {
         _type = type;
     }
 
+    /**
+     * Check if the flux has a change rate linked.
+     *
+     * @return true if the flux has a change rate pointer.
+     */
+    [[nodiscard]] bool HasChangeRate() const {
+        return _changeRate != nullptr;
+    }
+
+    /**
+     * Check if the flux has a modifier.
+     *
+     * @return true if the flux has a modifier.
+     */
+    [[nodiscard]] bool HasModifier() const {
+        return _modifier != nullptr;
+    }
+
   protected:
     double _amount{};
     double* _changeRate{};

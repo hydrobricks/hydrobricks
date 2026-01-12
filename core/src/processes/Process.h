@@ -234,6 +234,24 @@ class Process : public wxObject {
         return false;
     }
 
+    /**
+     * Check if the process has any output fluxes.
+     *
+     * @return true if the process has at least one output flux.
+     */
+    [[nodiscard]] bool HasOutputFluxes() const {
+        return !_outputs.empty();
+    }
+
+    /**
+     * Check if the process has a water container.
+     *
+     * @return true if the process has a water container.
+     */
+    [[nodiscard]] bool HasWaterContainer() const {
+        return _container != nullptr;
+    }
+
   protected:
     string _name;
     WaterContainer* _container;

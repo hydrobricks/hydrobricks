@@ -135,3 +135,8 @@ void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
         _ice->SetRelatedSnowpack(snowpack);
     }
 }
+
+bool Glacier::HasIce() const {
+    return _ice->IsNotEmpty();
+}
+

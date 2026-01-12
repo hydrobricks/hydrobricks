@@ -246,6 +246,51 @@ class WaterContainer : public wxObject {
         return _parent;
     }
 
+    /**
+     * Check if the water container has any incoming fluxes.
+     *
+     * @return true if the water container has at least one incoming flux.
+     */
+    [[nodiscard]] bool HasIncomingFluxes() const {
+        return !_inputs.empty();
+    }
+
+    /**
+     * Check if the water container is an infinite storage.
+     *
+     * @return true if the water container is an infinite storage.
+     */
+    [[nodiscard]] bool IsInfiniteStorage() const {
+        return _infiniteStorage;
+    }
+
+    /**
+     * Check if the water container is empty.
+     *
+     * @return true if the water container is empty.
+     */
+    [[nodiscard]] bool IsEmpty() const {
+        return !IsNotEmpty();
+    }
+
+    /**
+     * Check if the water container has a parent brick.
+     *
+     * @return true if the water container has a parent brick.
+     */
+    [[nodiscard]] bool HasParentBrick() const {
+        return _parent != nullptr;
+    }
+
+    /**
+     * Check if the water container has a non-zero initial state.
+     *
+     * @return true if the water container has a non-zero initial state.
+     */
+    [[nodiscard]] bool HasInitialState() const {
+        return !NearlyZero(_initialState, EPSILON_F);
+    }
+
   private:
     double _content;               // [mm]
     double _contentChangeDynamic;  // [mm]

@@ -87,6 +87,13 @@ class Glacier : public LandCover {
      */
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
+    /**
+     * Check if the glacier has ice.
+     *
+     * @return True if the glacier has ice, false otherwise.
+     */
+    [[nodiscard]] bool HasIce() const;
+
   protected:
     IceContainer* _ice;
 };

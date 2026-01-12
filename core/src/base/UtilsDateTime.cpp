@@ -177,15 +177,15 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             if (TryReturnSeconds({
                 "%FT%T",
                 "%F %T",
-                "%F %H:%M",
-                "%F %H:%M:%S",
-                "%Y.%m.%d %H:%M",
                 "%Y.%m.%d %H:%M:%S",
-                "%Y/%m/%d %H:%M",
+                "%Y.%m.%d %H:%M",
+                "%F %H:%M:%S",
+                "%F %H:%M",
                 "%Y/%m/%d %H:%M:%S",
+                "%Y/%m/%d %H:%M",
                 "%Y%m%d %H:%M",
-                "%Y%m%d %H%M",
                 "%Y%m%d %H%M%S",
+                "%Y%m%d %H%M",
                 "%Y%m%d%H%M%S",
                 "%Y%m%dT%H%M%S"
             })) {
@@ -255,7 +255,6 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             };
             const std::initializer_list<const char*> date_only_patterns = {
                 "%F",
-                "%Y.%m.%d",
                 "%Y/%m/%d",
                 "%Y%m%d",
                 "%d.%m.%Y",
@@ -265,10 +264,16 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             };
 
             if (TryReturnSeconds(date_time_patterns)) {
-                return SysTimeToMjd(tp);
+                year_month_day ymd{floor<days>(tp)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             if (TryReturnDays(date_only_patterns)) {
-                return SysTimeToMjd(tp);
+                year_month_day ymd{floor<days>(tp)};
+                if (IsValidDate(ymd)) {
+                    return SysTimeToMjd(tp);
+                }
             }
             break;
         }

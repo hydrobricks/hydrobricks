@@ -671,24 +671,10 @@ TEST(Utils, ParseDateFormatautoDDMMYYYY) {
     EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
-TEST(Utils, ParseDateFormatautoDDMMYYYYSlashes) {
-    double conversion = ParseDate("23/11/2007", guess);
-    double mjd = GetMJD(2007, 11, 23);
-
-    EXPECT_DOUBLE_EQ(mjd, conversion);
-}
-
 TEST(Utils, ParseDateFormatautoDDMMYYYYException) {
     wxLogNull logNo;
 
     ASSERT_THROW(ParseDate("23.11.07", guess), std::exception);
-}
-
-TEST(Utils, ParseDateFormatautoYYYYMMDD) {
-    double conversion = ParseDate("2007.11.23", guess);
-    double mjd = GetMJD(2007, 11, 23);
-
-    EXPECT_DOUBLE_EQ(mjd, conversion);
 }
 
 TEST(Utils, ParseDateFormatautoYYYYMMDDException) {

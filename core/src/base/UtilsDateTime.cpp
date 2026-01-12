@@ -7,10 +7,9 @@
 
 #include "TimeConstants.h"
 
-
 using namespace std::chrono;
 
-std::chrono::sys_days UtilsDateTime::ToSysDays(int year, int month, int day) {
+sys_days UtilsDateTime::ToSysDays(int year, int month, int day) {
     using yearT = std::chrono::year;
     using monthT = std::chrono::month;
     using dayT = std::chrono::day;
@@ -108,7 +107,7 @@ static bool ParseDateOnly(const std::string& s, const char* fmt, std::chrono::sy
 }
 
 double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) {
-    using secondsTp = std::chrono::sys_time<std::chrono::seconds>;
+    using secondsTp = sys_time<std::chrono::seconds>;
     using daysTp = std::chrono::sys_days;
 
     const std::string s = dateStr;
@@ -159,7 +158,12 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
     switch (format) {
         case ISOdate:
         case YYYY_MM_DD: {
-            if (TryReturnDays({"%F", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d"})) {
+            if (TryReturnDays({
+                "%F",
+                "%Y.%m.%d",
+                "%Y/%m/%d",
+                "%Y%m%d"
+            })) {
                 year_month_day ymd{floor<days>(d)};
                 if (IsValidDate(ymd)) {
                     return SysTimeToMjd(tp);
@@ -170,9 +174,21 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
         case ISOdateTime:
         case YYYY_MM_DD_hh_mm:
         case YYYY_MM_DD_hh_mm_ss: {
-            if (TryReturnSeconds({"%FT%T", "%F %T", "%F %H:%M", "%F %H:%M:%S", "%Y.%m.%d %H:%M",
-                                    "%Y.%m.%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y/%m/%d %H:%M:%S",
-                                    "%Y%m%d%H%M%S", "%Y%m%d %H:%M", "%Y%m%d %H%M", "%Y%m%d %H%M%S", "%Y%m%dT%H%M%S"})) {
+            if (TryReturnSeconds({
+                "%FT%T",
+                "%F %T",
+                "%F %H:%M",
+                "%F %H:%M:%S",
+                "%Y.%m.%d %H:%M",
+                "%Y.%m.%d %H:%M:%S",
+                "%Y/%m/%d %H:%M",
+                "%Y/%m/%d %H:%M:%S",
+                "%Y%m%d %H:%M",
+                "%Y%m%d %H%M",
+                "%Y%m%d %H%M%S",
+                "%Y%m%d%H%M%S",
+                "%Y%m%dT%H%M%S"
+            })) {
                 year_month_day ymd{floor<days>(tp)};
                 if (IsValidDate(ymd)) {
                     return SysTimeToMjd(tp);
@@ -181,7 +197,12 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             break;
         }
         case DD_MM_YYYY: {
-            if (TryReturnDays({"%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d%m%Y"})) {
+            if (TryReturnDays({
+                "%d.%m.%Y",
+                "%d/%m/%Y",
+                "%d-%m-%Y",
+                "%d%m%Y"
+            })) {
                 year_month_day ymd{floor<days>(d)};
                 if (IsValidDate(ymd)) {
                     return SysTimeToMjd(tp);
@@ -191,9 +212,18 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
         }
         case DD_MM_YYYY_hh_mm:
         case DD_MM_YYYY_hh_mm_ss: {
-            if (TryReturnSeconds({"%d.%m.%Y %H:%M", "%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S",
-                                    "%d-%m-%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%d%m%Y %H:%M", "%d%m%Y %H:%M:%S",
-                                    "%d%m%Y %H%M", "%d%m%Y %H%M%S"})) {
+            if (TryReturnSeconds({
+                "%d.%m.%Y %H:%M:%S",
+                "%d.%m.%Y %H:%M",
+                "%d/%m/%Y %H:%M:%S",
+                "%d/%m/%Y %H:%M",
+                "%d-%m-%Y %H:%M:%S",
+                "%d-%m-%Y %H:%M",
+                "%d%m%Y %H:%M:%S",
+                "%d%m%Y %H:%M",
+                "%d%m%Y %H%M%S",
+                "%d%m%Y %H%M"
+            })) {
                 year_month_day ymd{floor<days>(tp)};
                 if (IsValidDate(ymd)) {
                     return SysTimeToMjd(tp);
@@ -202,27 +232,37 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
             break;
         }
         case guess: {
-            const std::initializer_list<const char*> date_time_patterns = {"%FT%T",
-                                                                           "%F %T",
-                                                                           "%F %H:%M",
-                                                                           "%F %H:%M:%S",
-                                                                           "%Y.%m.%d %H:%M",
-                                                                           "%Y.%m.%d %H:%M:%S",
-                                                                           "%Y/%m/%d %H:%M",
-                                                                           "%Y/%m/%d %H:%M:%S",
-                                                                           "%Y%m%d%H%M%S",
-                                                                           "%Y%m%d %H:%M",
-                                                                           "%Y%m%dT%H%M%S",
-                                                                           "%d.%m.%Y %H:%M",
-                                                                           "%d.%m.%Y %H:%M:%S",
-                                                                           "%d/%m/%Y %H:%M",
-                                                                           "%d/%m/%Y %H:%M:%S",
-                                                                           "%d-%m-%Y %H:%M",
-                                                                           "%d-%m-%Y %H:%M:%S",
-                                                                           "%d%m%Y %H:%M",
-                                                                           "%d%m%Y %H:%M:%S"};
+            const std::initializer_list<const char*> date_time_patterns = {
+                "%FT%T",
+                "%F %T",
+                "%Y.%m.%d %H:%M:%S",
+                "%Y.%m.%d %H:%M",
+                "%F %H:%M:%S",
+                "%F %H:%M",
+                "%Y/%m/%d %H:%M:%S",
+                "%Y/%m/%d %H:%M",
+                "%Y%m%d%H%M%S",
+                "%Y%m%d %H:%M",
+                "%Y%m%dT%H%M%S",
+                "%d.%m.%Y %H:%M:%S",
+                "%d.%m.%Y %H:%M",
+                "%d/%m/%Y %H:%M:%S",
+                "%d/%m/%Y %H:%M",
+                "%d-%m-%Y %H:%M:%S",
+                "%d-%m-%Y %H:%M",
+                "%d%m%Y %H:%M:%S",
+                "%d%m%Y %H:%M"
+            };
             const std::initializer_list<const char*> date_only_patterns = {
-                "%F", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d", "%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d%m%Y"};
+                "%F",
+                "%Y.%m.%d",
+                "%Y/%m/%d",
+                "%Y%m%d",
+                "%d.%m.%Y",
+                "%d/%m/%Y",
+                "%d-%m-%Y",
+                "%d%m%Y"
+            };
 
             if (TryReturnSeconds(date_time_patterns)) {
                 return SysTimeToMjd(tp);

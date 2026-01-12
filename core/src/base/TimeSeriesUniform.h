@@ -33,19 +33,19 @@ class TimeSeriesUniform : public TimeSeries {
     /**
      * @copydoc TimeSeries::IsDistributed()
      */
-    bool IsDistributed() override {
+    bool IsDistributed() const override {
         return false;
     }
 
     /**
      * @copydoc TimeSeries::GetStart()
      */
-    double GetStart() override;
+    double GetStart() const override;
 
     /**
      * @copydoc TimeSeries::GetEnd()
      */
-    double GetEnd() override;
+    double GetEnd() const override;
 
     /**
      * @copydoc TimeSeries::GetTotal()

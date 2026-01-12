@@ -41,7 +41,7 @@ class ActionGlacierSnowToIceTransformation : public Action {
      *
      * @return land cover name (glacier name).
      */
-    string GetLandCoverName() {
+    const string& GetLandCoverName() const {
         return _landCoverName;
     }
 
@@ -50,7 +50,7 @@ class ActionGlacierSnowToIceTransformation : public Action {
      *
      * @return vector of hydro unit IDs.
      */
-    vecInt GetHydroUnitIds() {
+    const vecInt& GetHydroUnitIds() const {
         return _hydroUnitIds;
     }
 

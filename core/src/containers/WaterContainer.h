@@ -15,7 +15,7 @@ class WaterContainer : public wxObject {
     /**
      * Check if the water container is ok.
      */
-    virtual bool IsOk();
+    virtual bool IsOk() const;
 
     /**
      * Subtract the amount of water from the dynamic content change.
@@ -86,7 +86,7 @@ class WaterContainer : public wxObject {
      *
      * @return maximum capacity [mm]
      */
-    double GetMaximumCapacity() {
+    double GetMaximumCapacity() const {
         wxASSERT(_capacity);
         return *_capacity;
     }
@@ -185,14 +185,14 @@ class WaterContainer : public wxObject {
      *
      * @return filling ratio [0-1]
      */
-    double GetTargetFillingRatio();
+    double GetTargetFillingRatio() const;
 
     /**
      * Check if the water container is not empty.
      *
      * @return true if the water container is not empty, false otherwise
      */
-    bool IsNotEmpty() {
+    bool IsNotEmpty() const {
         double content = GetContentWithChanges();
         return GreaterThan(content, 0, EPSILON_F) && GreaterThan(content, 0, PRECISION);
     }
@@ -202,7 +202,7 @@ class WaterContainer : public wxObject {
      *
      * @return true if the water container has an overflow process, false otherwise
      */
-    bool HasOverflow() {
+    bool HasOverflow() const {
         return _overflow != nullptr;
     }
 
@@ -230,7 +230,7 @@ class WaterContainer : public wxObject {
      *
      * @return sum of the water amount [mm]
      */
-    virtual double SumIncomingFluxes();
+    virtual double SumIncomingFluxes() const;
 
     /**
      * Check if the water content is accessible.
@@ -242,7 +242,7 @@ class WaterContainer : public wxObject {
      *
      * @return pointer to the parent brick
      */
-    Brick* GetParentBrick() {
+    Brick* GetParentBrick() const {
         return _parent;
     }
 

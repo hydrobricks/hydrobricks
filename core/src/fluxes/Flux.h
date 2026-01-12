@@ -17,7 +17,7 @@ class Flux : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsOk() const = 0;
 
     /**
      * Reset the flux to its initial state.
@@ -70,7 +70,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux is a forcing.
      */
-    virtual bool IsForcing() {
+    virtual bool IsForcing() const {
         return false;
     }
 
@@ -79,7 +79,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux is instantaneous.
      */
-    virtual bool IsInstantaneous() {
+    virtual bool IsInstantaneous() const {
         return false;
     }
 

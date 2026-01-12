@@ -42,7 +42,7 @@ void Glacier::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Glacier::IsOk() {
+bool Glacier::IsOk() const {
     if (!_ice->IsOk()) {
         wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
@@ -50,7 +50,7 @@ bool Glacier::IsOk() {
     return Brick::IsOk();
 }
 
-WaterContainer* Glacier::GetIceContainer() {
+WaterContainer* Glacier::GetIceContainer() const {
     return _ice;
 }
 
@@ -73,7 +73,7 @@ void Glacier::SetInitialState(double value, ContentType type) {
     }
 }
 
-double Glacier::GetContent(ContentType type) {
+double Glacier::GetContent(ContentType type) const {
     switch (type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();

@@ -672,7 +672,7 @@ void SettingsModel::SelectSubBasinSplitter(const string& name) {
     }
 }
 
-vecStr SettingsModel::GetHydroUnitLogLabels() {
+vecStr SettingsModel::GetHydroUnitLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 
@@ -709,7 +709,7 @@ vecStr SettingsModel::GetLandCoverBricksNames() const {
     return names;
 }
 
-vecStr SettingsModel::GetSubBasinLogLabels() {
+vecStr SettingsModel::GetSubBasinLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 
@@ -740,7 +740,7 @@ vecStr SettingsModel::GetSubBasinLogLabels() {
     return logNames;
 }
 
-vecStr SettingsModel::GetSubBasinGenericLogLabels() {
+vecStr SettingsModel::GetSubBasinGenericLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 

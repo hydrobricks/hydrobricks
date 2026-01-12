@@ -41,11 +41,11 @@ class ModelHydro : public wxObject {
     void UpdateParameters(SettingsModel& modelSettings);
 
     /**
-     * Check if the model is well-defined.
+     * Check that everything is correctly defined.
      *
-     * @return true if the model is well-defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] bool IsOk();
+    [[nodiscard]] bool IsOk() const;
 
     /**
      * Check if the forcing data were loaded.
@@ -82,44 +82,44 @@ class ModelHydro : public wxObject {
     /**
      * Get the outlet discharge series.
      *
-     * @return outlet discharge.
+     * @return outlet discharge series.
      */
-    axd GetOutletDischarge();
+    axd GetOutletDischarge() const;
 
     /**
      * Get the total outlet discharge.
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge();
+    double GetTotalOutletDischarge() const;
 
     /**
      * Get the total amount of water lost by evapotranspiration.
      *
      * @return total amount of water lost by evapotranspiration.
      */
-    double GetTotalET();
+    double GetTotalET() const;
 
     /**
      * Get the total change in water storage.
      *
      * @return total change in water storage.
      */
-    double GetTotalWaterStorageChanges();
+    double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total change in snow storage.
      *
      * @return total change in snow storage.
      */
-    double GetTotalSnowStorageChanges();
+    double GetTotalSnowStorageChanges() const;
 
     /*
      * Get the total change in glacier storage.
      *
      * @return total change in glacier storage.
      */
-    double GetTotalGlacierStorageChanges();
+    double GetTotalGlacierStorageChanges() const;
 
     /**
      * Add a time series to the model.
@@ -142,14 +142,14 @@ class ModelHydro : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionCount();
+    int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemCount();
+    int GetSporadicActionItemCount() const;
 
     /**
      * Create a time series and add it to the model.
@@ -179,7 +179,7 @@ class ModelHydro : public wxObject {
      *
      * @return pointer to the sub basin.
      */
-    SubBasin* GetSubBasin() {
+    SubBasin* GetSubBasin() const {
         return _subBasin;
     }
 

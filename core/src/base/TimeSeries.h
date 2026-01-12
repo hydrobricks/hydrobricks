@@ -50,21 +50,21 @@ class TimeSeries : public wxObject {
      *
      * @return true if the time series is distributed.
      */
-    [[nodiscard]] virtual bool IsDistributed() = 0;
+    [[nodiscard]] virtual bool IsDistributed() const = 0;
 
     /**
      * Get the time start of the time series.
      *
      * @return the time start of the time series.
      */
-    virtual double GetStart() = 0;
+    virtual double GetStart() const = 0;
 
     /**
      * Get the time end of the time series.
      *
      * @return the time end of the time series.
      */
-    virtual double GetEnd() = 0;
+    virtual double GetEnd() const = 0;
 
     /**
      * Get the sum of the time series data for the provided basin settings.
@@ -87,7 +87,7 @@ class TimeSeries : public wxObject {
      *
      * @return the variable type of the time series.
      */
-    VariableType GetVariableType() {
+    VariableType GetVariableType() const {
         return _type;
     }
 

@@ -30,7 +30,7 @@ void ProcessRunoffSocont::SetParameters(const ProcessSettings& processSettings) 
     _beta = GetParameterValuePointer(processSettings, "beta");
 }
 
-double ProcessRunoffSocont::GetArea() {
+double ProcessRunoffSocont::GetArea() const {
     if (_areaFraction) {
         return _areaUnit * *_areaFraction;
     }

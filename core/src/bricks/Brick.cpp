@@ -59,7 +59,7 @@ void Brick::SaveAsInitialState() {
     _water->SaveAsInitialState();
 }
 
-bool Brick::IsOk() {
+bool Brick::IsOk() const {
     if (_processes.empty()) {
         wxLogError(_("The brick %s has no process attached"), _name);
         return false;
@@ -104,8 +104,8 @@ float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const
     throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
-Process* Brick::GetProcess(int index) {
-    wxASSERT(_processes.size() > static_cast<size_t>(index));
+Process* Brick::GetProcess(size_t index) const {
+    wxASSERT(_processes.size() > index);
     wxASSERT(_processes[index]);
 
     return _processes[index];
@@ -126,7 +126,7 @@ void Brick::SetInitialState(double value, ContentType type) {
     }
 }
 
-double Brick::GetContent(ContentType type) {
+double Brick::GetContent(ContentType type) const {
     switch (type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
@@ -155,7 +155,7 @@ void Brick::ApplyConstraints(double timeStep) {
     _water->ApplyConstraints(timeStep);
 }
 
-WaterContainer* Brick::GetWaterContainer() {
+WaterContainer* Brick::GetWaterContainer() const {
     return _water.get();
 }
 
@@ -179,7 +179,7 @@ vecDoublePt Brick::GetStateVariableChangesFromProcesses() {
     return values;
 }
 
-int Brick::GetProcessConnectionCount() {
+int Brick::GetProcessConnectionCount() const {
     int counter = 0;
 
     for (auto const& process : _processes) {

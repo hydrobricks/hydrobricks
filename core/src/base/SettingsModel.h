@@ -684,21 +684,21 @@ class SettingsModel : public wxObject {
      *
      * @return logging labels for the sub basin components.
      */
-    vecStr GetSubBasinLogLabels();
+    vecStr GetSubBasinLogLabels() const;
 
     /**
      * Get the generic logging labels for the sub basin components
      *
      * @return generic logging labels for the sub basin components.
      */
-    vecStr GetSubBasinGenericLogLabels();
+    vecStr GetSubBasinGenericLogLabels() const;
 
     /**
      * Get the logging labels for the hydro unit components
      *
      * @return logging labels for the hydro unit components.
      */
-    vecStr GetHydroUnitLogLabels();
+    vecStr GetHydroUnitLogLabels() const;
 
     /**
      * Flag to log all components.
@@ -719,7 +719,7 @@ class SettingsModel : public wxObject {
      *
      * @return true if all components are logged, false otherwise.
      */
-    bool LogAll() {
+    bool LogAll() const {
         return _logAll;
     }
 

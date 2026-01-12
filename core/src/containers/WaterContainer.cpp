@@ -13,7 +13,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _parent(brick),
       _overflow(nullptr) {}
 
-bool WaterContainer::IsOk() {
+bool WaterContainer::IsOk() const {
     if (_inputs.empty()) {
         return true;
     }
@@ -194,7 +194,7 @@ void WaterContainer::SaveAsInitialState() {
     _initialState = _content;
 }
 
-double WaterContainer::SumIncomingFluxes() {
+double WaterContainer::SumIncomingFluxes() const {
     double sum = 0;
     for (auto& input : _inputs) {
         sum += input->GetAmount();
@@ -211,7 +211,7 @@ vecDoublePt WaterContainer::GetDynamicContentChanges() {
     return vecDoublePt{&_contentChangeDynamic};
 }
 
-double WaterContainer::GetTargetFillingRatio() {
+double WaterContainer::GetTargetFillingRatio() const {
     wxASSERT(GetMaximumCapacity() > 0);
     return wxMax(0.0, wxMin(1.0, GetContentWithChanges() / GetMaximumCapacity()));
 }

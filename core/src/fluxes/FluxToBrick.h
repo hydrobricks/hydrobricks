@@ -13,7 +13,7 @@ class FluxToBrick : public Flux {
     /**
      * @copydoc Flux::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Flux::GetAmount()

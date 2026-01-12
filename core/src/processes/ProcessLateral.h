@@ -14,12 +14,12 @@ class ProcessLateral : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionCount() override;
+    int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
@@ -39,7 +39,7 @@ class ProcessLateral : public Process {
      *
      * @return The area fraction of the origin land cover.
      */
-    double GetOriginLandCoverAreaFraction();
+    double GetOriginLandCoverAreaFraction() const;
 
     /**
      * Get the area fraction of the target land cover.

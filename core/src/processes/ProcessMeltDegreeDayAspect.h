@@ -21,7 +21,7 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
     /**
      * @copydoc Process::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Process::SetHydroUnitProperties()

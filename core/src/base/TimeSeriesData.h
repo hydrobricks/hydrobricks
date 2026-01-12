@@ -59,14 +59,14 @@ class TimeSeriesData : public wxObject {
      *
      * @return the start date of the time series data.
      */
-    virtual double GetStart() = 0;
+    virtual double GetStart() const = 0;
 
     /**
      * Get the end date of the time series data.
      *
      * @return the end date of the time series data.
      */
-    virtual double GetEnd() = 0;
+    virtual double GetEnd() const = 0;
 
   protected:
     vecDouble _values;
@@ -112,12 +112,12 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetStart()
      */
-    double GetStart() override;
+    double GetStart() const override;
 
     /**
      * @copydoc TimeSeriesData::GetEnd()
      */
-    double GetEnd() override;
+    double GetEnd() const override;
 
   protected:
     double _start;
@@ -165,12 +165,12 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetStart()
      */
-    double GetStart() override;
+    double GetStart() const override;
 
     /**
      * @copydoc TimeSeriesData::GetEnd()
      */
-    double GetEnd() override;
+    double GetEnd() const override;
 
   protected:
     vecDouble _dates;

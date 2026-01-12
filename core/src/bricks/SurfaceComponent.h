@@ -14,7 +14,7 @@ class SurfaceComponent : public Brick {
     /**
      * @copydoc Brick::CanHaveAreaFraction()
      */
-    [[nodiscard]] bool CanHaveAreaFraction() override {
+    [[nodiscard]] bool CanHaveAreaFraction() const override {
         return true;
     }
 
@@ -39,12 +39,12 @@ class SurfaceComponent : public Brick {
      *
      * @return The area fraction of the parent land cover.
      */
-    double GetParentAreaFraction();
+    double GetParentAreaFraction() const;
 
     /**
      * @copydoc Brick::IsNull()
      */
-    [[nodiscard]] bool IsNull() override;
+    [[nodiscard]] bool IsNull() const override;
 
     /**
      * Sets the parent land cover of this component.

@@ -24,7 +24,7 @@ class ActionsManager : public wxObject {
      *
      * @return pointer to the model.
      */
-    ModelHydro* GetModel() {
+    ModelHydro* GetModel() const {
         return _model;
     }
 
@@ -48,14 +48,14 @@ class ActionsManager : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionCount();
+    int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemCount();
+    int GetSporadicActionItemCount() const;
 
     /**
      * Update the date during the simulation. Triggers the actions that are scheduled for the current date.
@@ -84,7 +84,7 @@ class ActionsManager : public wxObject {
      *
      * @return vector of sporadic action dates.
      */
-    vecDouble GetSporadicActionDates() {
+    const vecDouble& GetSporadicActionDates() const {
         return _sporadicActionDates;
     }
 

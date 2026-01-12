@@ -43,7 +43,7 @@ class ParametersUpdater : public wxObject {
      *
      * @return previous date in MJD format.
      */
-    double GetPreviousDate() {
+    double GetPreviousDate() const {
         return _previousDate;
     }
 

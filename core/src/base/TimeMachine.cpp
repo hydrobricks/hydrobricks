@@ -47,7 +47,7 @@ void TimeMachine::Reset() {
     _currentDateStatic = _date;  // Sync static date
 }
 
-bool TimeMachine::IsOver() {
+bool TimeMachine::IsOver() const {
     return _date > _end;
 }
 
@@ -64,7 +64,7 @@ void TimeMachine::IncrementTime() {
     }
 }
 
-int TimeMachine::GetTimeStepCount() {
+int TimeMachine::GetTimeStepCount() const {
     wxASSERT(_timeStepInDays > 0);
     return static_cast<int>(1 + (_end - _start) / _timeStepInDays);
 }

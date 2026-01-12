@@ -18,7 +18,7 @@ void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsMod
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDayAspect::IsOk() {
+bool ProcessMeltDegreeDayAspect::IsOk() const {
     if (!ProcessMelt::IsOk()) {
         return false;
     }

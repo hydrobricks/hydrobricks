@@ -6,7 +6,7 @@
 FluxToBrickInstantaneous::FluxToBrickInstantaneous(Brick* brick)
     : FluxToBrick(brick) {}
 
-bool FluxToBrickInstantaneous::IsOk() {
+bool FluxToBrickInstantaneous::IsOk() const {
     return true;
 }
 
@@ -14,7 +14,7 @@ double FluxToBrickInstantaneous::GetAmount() {
     return 0;  // The amount has already been transferred.
 }
 
-double FluxToBrickInstantaneous::GetRealAmount() {
+double FluxToBrickInstantaneous::GetRealAmount() const {
     return _amount;
 }
 

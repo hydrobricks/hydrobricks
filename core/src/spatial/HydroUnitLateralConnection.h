@@ -34,7 +34,7 @@ class HydroUnitLateralConnection : public wxObject {
      *
      * @return The type of the lateral connection.
      */
-    string GetType() const {
+    const string& GetType() const {
         return _type;
     }
 

@@ -3,7 +3,7 @@
 FluxSimple::FluxSimple()
     : Flux() {}
 
-bool FluxSimple::IsOk() {
+bool FluxSimple::IsOk() const {
     return true;
 }
 

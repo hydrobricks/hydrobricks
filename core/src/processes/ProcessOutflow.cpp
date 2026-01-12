@@ -10,7 +10,7 @@ void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
     // Nothing to register
 }
 
-bool ProcessOutflow::IsOk() {
+bool ProcessOutflow::IsOk() const {
     if (_outputs.size() != 1) {
         wxLogError(_("An outflow should have a single output."));
         return false;
@@ -19,8 +19,8 @@ bool ProcessOutflow::IsOk() {
     return true;
 }
 
-int ProcessOutflow::GetConnectionCount() {
-    return 1;
+int ProcessOutflow::GetConnectionCount() const {
+    return _outputs.size();
 }
 
 double* ProcessOutflow::GetValuePointer(const string& name) {

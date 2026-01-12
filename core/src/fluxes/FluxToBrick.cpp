@@ -6,7 +6,7 @@ FluxToBrick::FluxToBrick(Brick* brick)
     : Flux(),
       _toBrick(brick) {}
 
-bool FluxToBrick::IsOk() {
+bool FluxToBrick::IsOk() const {
     return true;
 }
 

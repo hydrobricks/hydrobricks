@@ -825,7 +825,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     }
 }
 
-bool ModelHydro::IsOk() {
+bool ModelHydro::IsOk() const {
     if (!_subBasin->IsOk()) return false;
 
     return true;
@@ -879,27 +879,27 @@ bool ModelHydro::DumpOutputs(const string& path) {
     return _logger.DumpOutputs(path);
 }
 
-axd ModelHydro::GetOutletDischarge() {
+axd ModelHydro::GetOutletDischarge() const {
     return _logger.GetOutletDischarge();
 }
 
-double ModelHydro::GetTotalOutletDischarge() {
+double ModelHydro::GetTotalOutletDischarge() const {
     return _logger.GetTotalOutletDischarge();
 }
 
-double ModelHydro::GetTotalET() {
+double ModelHydro::GetTotalET() const {
     return _logger.GetTotalET();
 }
 
-double ModelHydro::GetTotalWaterStorageChanges() {
+double ModelHydro::GetTotalWaterStorageChanges() const {
     return _logger.GetTotalWaterStorageChanges();
 }
 
-double ModelHydro::GetTotalSnowStorageChanges() {
+double ModelHydro::GetTotalSnowStorageChanges() const {
     return _logger.GetTotalSnowStorageChanges();
 }
 
-double ModelHydro::GetTotalGlacierStorageChanges() {
+double ModelHydro::GetTotalGlacierStorageChanges() const {
     return _logger.GetTotalGlacierStorageChanges();
 }
 
@@ -930,11 +930,11 @@ bool ModelHydro::AddAction(Action* action) {
     return _actionsManager.AddAction(action);
 }
 
-int ModelHydro::GetActionCount() {
+int ModelHydro::GetActionCount() const {
     return _actionsManager.GetActionCount();
 }
 
-int ModelHydro::GetSporadicActionItemCount() {
+int ModelHydro::GetSporadicActionItemCount() const {
     return _actionsManager.GetSporadicActionItemCount();
 }
 

@@ -35,12 +35,12 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
     return true;
 }
 
-double TimeSeriesDistributed::GetStart() {
+double TimeSeriesDistributed::GetStart() const {
     wxASSERT(!_data.empty());
     return _data[0]->GetStart();
 }
 
-double TimeSeriesDistributed::GetEnd() {
+double TimeSeriesDistributed::GetEnd() const {
     wxASSERT(!_data.empty());
     return _data[0]->GetEnd();
 }

@@ -22,12 +22,12 @@ void SurfaceComponent::SetAreaFraction(double value) {
     }
 }
 
-double SurfaceComponent::GetParentAreaFraction() {
+double SurfaceComponent::GetParentAreaFraction() const {
     wxASSERT(_parent);
     return _parent->GetAreaFraction();
 }
 
-bool SurfaceComponent::IsNull() {
+bool SurfaceComponent::IsNull() const {
     if (NearlyZero(_areaFraction, PRECISION)) {
         return true;
     }

@@ -44,7 +44,7 @@ class Process : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsOk() const = 0;
 
     /**
      * Check if the process has a parameter with the provided name.
@@ -103,7 +103,7 @@ class Process : public wxObject {
      *
      * @return vector of pointers to the outgoing fluxes.
      */
-    vector<Flux*> GetOutputFluxes() {
+    const vector<Flux*>& GetOutputFluxes() const {
         return _outputs;
     }
 
@@ -112,7 +112,7 @@ class Process : public wxObject {
      *
      * @return number of outgoing fluxes.
      */
-    int GetOutputFluxCount() {
+    int GetOutputFluxCount() const {
         return static_cast<int>(_outputs.size());
     }
 
@@ -121,7 +121,7 @@ class Process : public wxObject {
      *
      * @return true if the process sends water to the atmosphere.
      */
-    [[nodiscard]] virtual bool ToAtmosphere() {
+    [[nodiscard]] virtual bool ToAtmosphere() const {
         return false;
     }
 
@@ -130,7 +130,7 @@ class Process : public wxObject {
      *
      * @return true if the process needs to link the target brick.
      */
-    [[nodiscard]] virtual bool NeedsTargetBrickLinking() {
+    [[nodiscard]] virtual bool NeedsTargetBrickLinking() const {
         return false;
     }
 
@@ -139,7 +139,7 @@ class Process : public wxObject {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionCount() = 0;
+    virtual int GetConnectionCount() const = 0;
 
     /**
      * Get the change rates of the process.
@@ -194,7 +194,7 @@ class Process : public wxObject {
      *
      * @return name of the process.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 
@@ -212,7 +212,7 @@ class Process : public wxObject {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer() {
+    WaterContainer* GetWaterContainer() const {
         return _container;
     }
 
@@ -244,7 +244,7 @@ class Process : public wxObject {
      *
      * @return sum of change rates from other processes.
      */
-    double GetSumChangeRatesOtherProcesses();
+    double GetSumChangeRatesOtherProcesses() const;
 
     /**
      * Get the rates of the process.

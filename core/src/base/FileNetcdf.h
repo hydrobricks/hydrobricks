@@ -35,9 +35,9 @@ class FileNetcdf : public wxObject {
     /**
      * Get the number of variables in the file.
      *
-     * @return The number of variables in the file.
+     * @return the number of variables.
      */
-    int GetVariableCount();
+    int GetVariableCount() const;
 
     /**
      * Get the variable id corresponding to the provided name.
@@ -45,7 +45,7 @@ class FileNetcdf : public wxObject {
      * @param varName The name of the variable of interest.
      * @return The id of the requested variable.
      */
-    int GetVarId(const string& varName);
+    int GetVarId(const string& varName) const;
 
     /**
      * Get the variable name corresponding to the provided id.
@@ -53,7 +53,7 @@ class FileNetcdf : public wxObject {
      * @param varId The id of the variable of interest.
      * @return The name of the requested variable.
      */
-    string GetVarName(int varId);
+    string GetVarName(int varId) const;
 
     /**
      * Get the dimension ids of the provided variable.
@@ -62,7 +62,7 @@ class FileNetcdf : public wxObject {
      * @param dimCount The number of dimensions of the variable.
      * @return A vector of the dimension ids.
      */
-    vecInt GetVarDimIds(int varId, int dimCount);
+    vecInt GetVarDimIds(int varId, int dimCount) const;
 
     /**
      * Define a new dimension.
@@ -74,20 +74,20 @@ class FileNetcdf : public wxObject {
     int DefDim(const string& dimName, int length);
 
     /**
-     * Get the dimension id corresponding to the provided name.
+     * Get a dimension ID.
      *
      * @param dimName The dimension name of interest.
      * @return The id of the requested dimension.
      */
-    int GetDimId(const string& dimName);
+    int GetDimId(const string& dimName) const;
 
     /**
-     * Get the length of a dimension.
+     * Get a dimension length.
      *
-     * @param dimName The name of the dimension of interest.
-     * @return The dimension length.
+     * @param dimName The name of the dimension.
+     * @return The length of the dimension.
      */
-    int GetDimLen(const string& dimName);
+    int GetDimLen(const string& dimName) const;
 
     /**
      * Define a new integer variable.
@@ -129,7 +129,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecInt GetVarInt1D(const string& varName, int size);
+    vecInt GetVarInt1D(const string& varName, int size) const;
 
     /**
      * Get the values of a 1D float variable. The whole vector retrieved at once.
@@ -138,7 +138,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecFloat GetVarFloat1D(const string& varName, int size);
+    vecFloat GetVarFloat1D(const string& varName, int size) const;
 
     /**
      * Get the values of a 1D double variable. The whole vector retrieved at once.
@@ -147,7 +147,7 @@ class FileNetcdf : public wxObject {
      * @param size The size of the data vector.
      * @return A vector containing the data.
      */
-    vecDouble GetVarDouble1D(const string& varName, int size);
+    vecDouble GetVarDouble1D(const string& varName, int size) const;
 
     /**
      * Get values of a 2D double variable. The whole array retrieved at once.
@@ -157,7 +157,7 @@ class FileNetcdf : public wxObject {
      * @param cols The number of columns of the data array.
      * @return An array containing the data.
      */
-    axxd GetVarDouble2D(int varId, int rows, int cols);
+    axxd GetVarDouble2D(int varId, int rows, int cols) const;
 
     /**
      * Set the variable values from a vector of integers.
@@ -213,7 +213,7 @@ class FileNetcdf : public wxObject {
      * @param varName The variable name.
      * @return True if the attribute exists, false otherwise.
      */
-    bool HasVar(const string& varName);
+    bool HasVar(const string& varName) const;
 
     /**
      * Check if an attribute exists.
@@ -222,7 +222,7 @@ class FileNetcdf : public wxObject {
      * @param varName The variable name. If empty, search in the global attributes.
      * @return True if the attribute exists, false otherwise.
      */
-    bool HasAtt(const string& attName, const string& varName = "");
+    bool HasAtt(const string& attName, const string& varName = "") const;
 
     /**
      * Get a string vector stored as an attribute.
@@ -231,7 +231,7 @@ class FileNetcdf : public wxObject {
      * @param varName The variable name. If empty, search in the global attributes.
      * @return A string vector containing the data.
      */
-    vecStr GetAttString1D(const string& attName, const string& varName = "");
+    vecStr GetAttString1D(const string& attName, const string& varName = "") const;
 
     /**
      * Store a string vector as an attribute.
@@ -243,13 +243,13 @@ class FileNetcdf : public wxObject {
     void PutAttString(const string& attName, const vecStr& values, int varId = NC_GLOBAL);
 
     /**
-     * Get a string stored as an attribute.
+     * Get a text attribute.
      *
-     * @param attName The attribute name.
-     * @param varName The variable name. If empty, search in the global attributes.
-     * @return A string containing the attribute content.
+     * @param attName The name of the attribute.
+     * @param varName The name of the variable (empty for global attribute).
+     * @return The value of the attribute.
      */
-    string GetAttText(const string& attName, const string& varName = "");
+    string GetAttText(const string& attName, const string& varName = "") const;
 
     /**
      * Store a string as an attribute.
@@ -269,7 +269,7 @@ class FileNetcdf : public wxObject {
      *
      * @param status The NetCDF status to check.
      */
-    void CheckNcStatus(int status);
+    void CheckNcStatus(int status) const;
 };
 
 #endif  // HYDROBRICKS_FILE_NETCDF_H

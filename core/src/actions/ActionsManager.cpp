@@ -59,11 +59,11 @@ bool ActionsManager::AddAction(Action* action) {
     return true;
 }
 
-int ActionsManager::GetActionCount() {
+int ActionsManager::GetActionCount() const {
     return static_cast<int>(_actions.size());
 }
 
-int ActionsManager::GetSporadicActionItemCount() {
+int ActionsManager::GetSporadicActionItemCount() const {
     int items = 0;
     for (auto& action : _actions) {
         items += action->GetSporadicItemCount();

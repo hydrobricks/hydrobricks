@@ -222,7 +222,7 @@ double* Process::GetValuePointer(const string&) {
     return nullptr;
 }
 
-double Process::GetSumChangeRatesOtherProcesses() {
+double Process::GetSumChangeRatesOtherProcesses() const {
     double sumOtherProcesses = 0;
 
     vector<Process*> otherProcesses = _container->GetParentBrick()->GetProcesses();

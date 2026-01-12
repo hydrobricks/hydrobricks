@@ -112,7 +112,7 @@ bool Logger::DumpOutputs(const string& path) {
                               _hydroUnitLabels, _hydroUnitValues, _hydroUnitFractionLabels, _hydroUnitFractions);
 }
 
-axd Logger::GetOutletDischarge() {
+axd Logger::GetOutletDischarge() const {
     for (int i = 0; i < _subBasinLabels.size(); i++) {
         if (_subBasinLabels[i] == "outlet") {
             return _subBasinValues[i];
@@ -121,7 +121,7 @@ axd Logger::GetOutletDischarge() {
     throw ConceptionIssue(_("No 'outlet' component found in logger."));
 }
 
-vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
+vecInt Logger::GetIndicesForSubBasinElements(const string& item) const {
     vecInt indices;
     for (int i = 0; i < _subBasinLabels.size(); ++i) {
         size_t found = _subBasinLabels[i].find(item);
@@ -133,7 +133,7 @@ vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
     return indices;
 }
 
-vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
+vecInt Logger::GetIndicesForHydroUnitElements(const string& item) const {
     vecInt indices;
     for (int i = 0; i < _hydroUnitLabels.size(); ++i) {
         size_t found = _hydroUnitLabels[i].find(item);
@@ -145,7 +145,7 @@ vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
     return indices;
 }
 
-double Logger::GetTotalSubBasin(const string& item) {
+double Logger::GetTotalSubBasin(const string& item) const {
     vecInt indices = GetIndicesForSubBasinElements(item);
     double sum = 0;
     for (int index : indices) {
@@ -155,7 +155,7 @@ double Logger::GetTotalSubBasin(const string& item) {
     return sum;
 }
 
-double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
+double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) const {
     vecInt indices = GetIndicesForHydroUnitElements(item);
     double sum = 0;
     size_t found = item.find(":content");
@@ -199,15 +199,15 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
     return sum;
 }
 
-double Logger::GetTotalOutletDischarge() {
+double Logger::GetTotalOutletDischarge() const {
     return GetTotalSubBasin("outlet");
 }
 
-double Logger::GetTotalET() {
+double Logger::GetTotalET() const {
     return GetTotalHydroUnits("et:output", true);
 }
 
-double Logger::GetSubBasinInitialStorageState(const string& tag) {
+double Logger::GetSubBasinInitialStorageState(const string& tag) const {
     vecInt indices = GetIndicesForSubBasinElements(tag);
     double sum = 0;
     for (int index : indices) {
@@ -217,7 +217,7 @@ double Logger::GetSubBasinInitialStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetSubBasinFinalStorageState(const string& tag) {
+double Logger::GetSubBasinFinalStorageState(const string& tag) const {
     vecInt indices = GetIndicesForSubBasinElements(tag);
     double sum = 0;
     for (int index : indices) {
@@ -227,7 +227,7 @@ double Logger::GetSubBasinFinalStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
+double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
     vecInt indices = GetIndicesForHydroUnitElements(tag);
     double sum = 0;
     for (int i : indices) {
@@ -249,7 +249,7 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
+double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
     vecInt indices = GetIndicesForHydroUnitElements(tag);
     double sum = 0;
     for (int i : indices) {
@@ -271,17 +271,17 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetTotalWaterStorageChanges() {
+double Logger::GetTotalWaterStorageChanges() const {
     return GetSubBasinFinalStorageState(":water_content") - GetSubBasinInitialStorageState(":water_content") +
            GetHydroUnitsFinalStorageState(":water_content") - GetHydroUnitsInitialStorageState(":water_content");
 }
 
-double Logger::GetTotalSnowStorageChanges() {
+double Logger::GetTotalSnowStorageChanges() const {
     return GetSubBasinFinalStorageState(":snow_content") - GetSubBasinInitialStorageState(":snow_content") +
            GetHydroUnitsFinalStorageState(":snow_content") - GetHydroUnitsInitialStorageState(":snow_content");
 }
 
-double Logger::GetTotalGlacierStorageChanges() {
+double Logger::GetTotalGlacierStorageChanges() const {
     return GetSubBasinFinalStorageState(":ice_content") - GetSubBasinInitialStorageState(":ice_content") +
            GetHydroUnitsFinalStorageState(":ice_content") - GetHydroUnitsInitialStorageState(":ice_content");
 }

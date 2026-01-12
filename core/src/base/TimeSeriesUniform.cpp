@@ -26,12 +26,12 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
-double TimeSeriesUniform::GetStart() {
+double TimeSeriesUniform::GetStart() const {
     wxASSERT(_data);
     return _data->GetStart();
 }
 
-double TimeSeriesUniform::GetEnd() {
+double TimeSeriesUniform::GetEnd() const {
     wxASSERT(_data);
     return _data->GetEnd();
 }

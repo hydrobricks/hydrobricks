@@ -14,12 +14,12 @@ class ProcessET : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionCount() override;
+    int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
@@ -29,7 +29,7 @@ class ProcessET : public Process {
     /**
      * @copydoc Process::ToAtmosphere()
      */
-    [[nodiscard]] bool ToAtmosphere() override {
+    [[nodiscard]] bool ToAtmosphere() const override {
         return true;
     }
 };

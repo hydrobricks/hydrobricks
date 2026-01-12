@@ -103,11 +103,11 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     return true;
 }
 
-double TimeSeriesDataRegular::GetStart() {
+double TimeSeriesDataRegular::GetStart() const {
     return _start;
 }
 
-double TimeSeriesDataRegular::GetEnd() {
+double TimeSeriesDataRegular::GetEnd() const {
     return _end;
 }
 
@@ -150,12 +150,12 @@ bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
     throw NotImplemented();
 }
 
-double TimeSeriesDataIrregular::GetStart() {
+double TimeSeriesDataIrregular::GetStart() const {
     wxASSERT(!_dates.empty());
     return _dates[0];
 }
 
-double TimeSeriesDataIrregular::GetEnd() {
+double TimeSeriesDataIrregular::GetEnd() const {
     wxASSERT(!_dates.empty());
     return _dates[_dates.size() - 1];
 }

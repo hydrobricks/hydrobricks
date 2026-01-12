@@ -12,7 +12,7 @@ void ProcessETSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSe
     modelSettings->AddProcessForcing("pet");
 }
 
-bool ProcessETSocont::IsOk() {
+bool ProcessETSocont::IsOk() const {
     return ProcessET::IsOk();
 }
 

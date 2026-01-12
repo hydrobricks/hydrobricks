@@ -98,7 +98,7 @@ class Brick : public wxObject {
      *
      * @return true is everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk();
+    [[nodiscard]] virtual bool IsOk() const;
 
     /**
      * Define if the brick needs to be handled by the solver.
@@ -123,7 +123,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick can have an area fraction.
      */
-    [[nodiscard]] virtual bool CanHaveAreaFraction() {
+    [[nodiscard]] virtual bool CanHaveAreaFraction() const {
         return false;
     }
 
@@ -132,7 +132,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is a land cover.
      */
-    [[nodiscard]] virtual bool IsLandCover() {
+    [[nodiscard]] virtual bool IsLandCover() const {
         return false;
     }
 
@@ -141,7 +141,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is null.
      */
-    [[nodiscard]] virtual bool IsNull() {
+    [[nodiscard]] virtual bool IsNull() const {
         return false;
     }
 
@@ -161,10 +161,10 @@ class Brick : public wxObject {
     /**
      * Get the content of the water container.
      *
-     * @param type type of the content.
-     * @return content of the water container.
+     * @param type the type of content to get.
+     * @return the content of the water container.
      */
-    virtual double GetContent(ContentType type);
+    virtual double GetContent(ContentType type) const;
 
     /**
      * Update the content of the water container.
@@ -191,7 +191,7 @@ class Brick : public wxObject {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer();
+    WaterContainer* GetWaterContainer() const;
 
     /**
      * Get a process by its index.
@@ -199,14 +199,14 @@ class Brick : public wxObject {
      * @param index index of the process.
      * @return pointer to the process.
      */
-    Process* GetProcess(int index);
+    Process* GetProcess(size_t index) const;
 
     /**
      * Get all processes of the brick.
      *
      * @return vector of pointers to the processes.
      */
-    vector<Process*>& GetProcesses() {
+    const vector<Process*>& GetProcesses() const {
         return _processes;
     }
 
@@ -215,7 +215,7 @@ class Brick : public wxObject {
      *
      * @return name of the brick.
      */
-    string GetName() const {
+    const string& GetName() const {
         return _name;
     }
 
@@ -263,11 +263,11 @@ class Brick : public wxObject {
     vecDoublePt GetStateVariableChangesFromProcesses();
 
     /**
-     * Get the number of connections of the processes.
+     * Get the number of process connections in the brick.
      *
-     * @return number of connections of the processes.
+     * @return number of process connections.
      */
-    int GetProcessConnectionCount();
+    int GetProcessConnectionCount() const;
 
     /**
      * Get the pointer to the water container content.

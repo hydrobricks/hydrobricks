@@ -37,7 +37,7 @@ class Processor : public wxObject {
      *
      * @return the number of state variables.
      */
-    int GetStateVariableCount();
+    int GetStateVariableCount() const;
 
     /**
      * Process the time step.

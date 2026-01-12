@@ -69,7 +69,7 @@ void HydroUnit::AddProperty(HydroUnitProperty* property) {
     _properties.push_back(property);
 }
 
-double HydroUnit::GetPropertyDouble(const string& name, const string& unit) {
+double HydroUnit::GetPropertyDouble(const string& name, const string& unit) const {
     for (auto property : _properties) {
         if (property->GetName() == name) {
             return property->GetValue(unit);
@@ -79,7 +79,7 @@ double HydroUnit::GetPropertyDouble(const string& name, const string& unit) {
     throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
-string HydroUnit::GetPropertyString(const string& name) {
+string HydroUnit::GetPropertyString(const string& name) const {
     for (auto property : _properties) {
         if (property->GetName() == name) {
             return property->GetValueString();
@@ -121,7 +121,7 @@ void HydroUnit::AddForcing(Forcing* forcing) {
     _forcing.push_back(forcing);
 }
 
-Forcing* HydroUnit::GetForcing(VariableType type) {
+Forcing* HydroUnit::GetForcing(VariableType type) const {
     for (auto forcing : _forcing) {
         if (forcing->GetType() == type) {
             return forcing;
@@ -140,22 +140,22 @@ void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const
     _lateralConnections.push_back(new HydroUnitLateralConnection(receiver, fraction, type));
 }
 
-int HydroUnit::GetBricksCount() {
+int HydroUnit::GetBricksCount() const {
     return static_cast<int>(_bricks.size());
 }
 
-int HydroUnit::GetSplittersCount() {
+int HydroUnit::GetSplittersCount() const {
     return static_cast<int>(_splitters.size());
 }
 
-Brick* HydroUnit::GetBrick(int index) {
+Brick* HydroUnit::GetBrick(size_t index) const {
     wxASSERT(_bricks.size() > index);
     wxASSERT(_bricks[index]);
 
     return _bricks[index];
 }
 
-bool HydroUnit::HasBrick(const string& name) {
+bool HydroUnit::HasBrick(const string& name) const {
     for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return true;
@@ -164,7 +164,7 @@ bool HydroUnit::HasBrick(const string& name) {
     return false;
 }
 
-Brick* HydroUnit::GetBrick(const string& name) {
+Brick* HydroUnit::GetBrick(const string& name) const {
     for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return brick;
@@ -174,7 +174,7 @@ Brick* HydroUnit::GetBrick(const string& name) {
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
-LandCover* HydroUnit::GetLandCover(const string& name) {
+LandCover* HydroUnit::GetLandCover(const string& name) const {
     for (auto brick : _landCoverBricks) {
         if (brick->GetName() == name) {
             return brick;
@@ -184,14 +184,14 @@ LandCover* HydroUnit::GetLandCover(const string& name) {
     throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
 }
 
-Splitter* HydroUnit::GetSplitter(int index) {
+Splitter* HydroUnit::GetSplitter(size_t index) const {
     wxASSERT(_splitters.size() > index);
     wxASSERT(_splitters[index]);
 
     return _splitters[index];
 }
 
-bool HydroUnit::HasSplitter(const string& name) {
+bool HydroUnit::HasSplitter(const string& name) const {
     for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return true;
@@ -200,7 +200,7 @@ bool HydroUnit::HasSplitter(const string& name) {
     return false;
 }
 
-Splitter* HydroUnit::GetSplitter(const string& name) {
+Splitter* HydroUnit::GetSplitter(const string& name) const {
     for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return splitter;
@@ -210,7 +210,7 @@ Splitter* HydroUnit::GetSplitter(const string& name) {
     throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
 }
 
-bool HydroUnit::IsOk() {
+bool HydroUnit::IsOk() const {
     for (auto brick : _bricks) {
         if (!brick->IsOk()) return false;
     }

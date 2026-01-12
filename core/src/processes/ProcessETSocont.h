@@ -21,7 +21,7 @@ class ProcessETSocont : public ProcessET {
     /**
      * @copydoc Process::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Process::AttachForcing()

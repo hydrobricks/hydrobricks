@@ -4,7 +4,7 @@ FluxForcing::FluxForcing()
     : Flux(),
       _forcing(nullptr) {}
 
-bool FluxForcing::IsOk() {
+bool FluxForcing::IsOk() const {
     return true;
 }
 

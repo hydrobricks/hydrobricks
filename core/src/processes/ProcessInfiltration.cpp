@@ -7,7 +7,7 @@ ProcessInfiltration::ProcessInfiltration(WaterContainer* container)
     : Process(container),
       _targetBrick(nullptr) {}
 
-bool ProcessInfiltration::IsOk() {
+bool ProcessInfiltration::IsOk() const {
     if (_outputs.size() != 1) {
         wxLogError(_("An infiltration process should have a single output."));
         return false;
@@ -20,7 +20,7 @@ bool ProcessInfiltration::IsOk() {
     return true;
 }
 
-int ProcessInfiltration::GetConnectionCount() {
+int ProcessInfiltration::GetConnectionCount() const {
     return 1;
 }
 
@@ -32,14 +32,14 @@ double* ProcessInfiltration::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-double ProcessInfiltration::GetTargetStock() {
+double ProcessInfiltration::GetTargetStock() const {
     return _targetBrick->GetWaterContainer()->GetContentWithChanges();
 }
 
-double ProcessInfiltration::GetTargetCapacity() {
+double ProcessInfiltration::GetTargetCapacity() const {
     return _targetBrick->GetWaterContainer()->GetMaximumCapacity();
 }
 
-double ProcessInfiltration::GetTargetFillingRatio() {
+double ProcessInfiltration::GetTargetFillingRatio() const {
     return _targetBrick->GetWaterContainer()->GetTargetFillingRatio();
 }

@@ -46,7 +46,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return land cover name (glacier name).
      */
-    string GetLandCoverName() {
+    const string& GetLandCoverName() const {
         return _landCoverName;
     }
 
@@ -55,7 +55,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return vector of hydro unit IDs.
      */
-    axi GetHydroUnitIds() {
+    const axi& GetHydroUnitIds() const {
         return _hydroUnitIds;
     }
 
@@ -64,7 +64,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return The lookup table for the glacier area.
      */
-    axxd GetLookupTableArea() {
+    const axxd& GetLookupTableArea() const {
         return _tableArea;
     }
 
@@ -73,7 +73,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return The lookup table for the glacier volume.
      */
-    axxd GetLookupTableVolume() {
+    const axxd& GetLookupTableVolume() const {
         return _tableVolume;
     }
 

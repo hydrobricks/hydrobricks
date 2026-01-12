@@ -14,19 +14,19 @@ class ProcessInfiltration : public Process {
     /**
      * @copydoc Process::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Process::NeedsTargetBrickLinking()
      */
-    [[nodiscard]] bool NeedsTargetBrickLinking() override {
+    [[nodiscard]] bool NeedsTargetBrickLinking() const override {
         return true;
     }
 
     /**
      * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionCount() override;
+    int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
@@ -48,21 +48,21 @@ class ProcessInfiltration : public Process {
      *
      * @return The water content of the target brick.
      */
-    double GetTargetStock();
+    double GetTargetStock() const;
 
     /**
      * Get the maximum capacity of the target brick.
      *
      * @return The maximum capacity of the target brick.
      */
-    double GetTargetCapacity();
+    double GetTargetCapacity() const;
 
     /**
      * Get the filling ratio of the target brick.
      *
      * @return The filling ratio of the target brick.
      */
-    double GetTargetFillingRatio();
+    double GetTargetFillingRatio() const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_INFILTRATION_H

@@ -39,7 +39,7 @@ class TimeMachine : public wxObject {
      *
      * @return true if the timer is over
      */
-    [[nodiscard]] bool IsOver();
+    [[nodiscard]] bool IsOver() const;
 
     /**
      * Increment the timer.
@@ -51,14 +51,14 @@ class TimeMachine : public wxObject {
      *
      * @return number of time steps
      */
-    int GetTimeStepCount();
+    int GetTimeStepCount() const;
 
     /**
      * Get the current date as a MJD.
      *
      * @return current date
      */
-    double GetDate() {
+    double GetDate() const {
         return _date;
     }
 
@@ -67,7 +67,7 @@ class TimeMachine : public wxObject {
      *
      * @return start date
      */
-    double GetStart() {
+    double GetStart() const {
         return _start;
     }
 
@@ -76,7 +76,7 @@ class TimeMachine : public wxObject {
      *
      * @return end date
      */
-    double GetEnd() {
+    double GetEnd() const {
         return _end;
     }
 

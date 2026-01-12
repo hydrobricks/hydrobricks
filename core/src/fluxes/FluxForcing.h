@@ -12,7 +12,7 @@ class FluxForcing : public Flux {
     /**
      * @copydoc Flux::IsOk()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsOk() const override;
 
     /**
      * @copydoc Flux::GetAmount()
@@ -29,7 +29,7 @@ class FluxForcing : public Flux {
     /**
      * @copydoc Flux::IsForcing()
      */
-    bool IsForcing() override {
+    bool IsForcing() const override {
         return true;
     }
 

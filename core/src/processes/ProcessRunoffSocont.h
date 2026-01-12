@@ -47,7 +47,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
      *
      * @return The area of the hydro unit [m²]
      */
-    double GetArea();
+    double GetArea() const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_RUNOFF_SOCONT_H

@@ -12,7 +12,7 @@ FileNetcdf::~FileNetcdf() {
     }
 }
 
-void FileNetcdf::CheckNcStatus(int status) {
+void FileNetcdf::CheckNcStatus(int status) const {
     if (status != NC_NOERR) {
         throw InvalidArgument(nc_strerror(status));
     }
@@ -45,28 +45,28 @@ void FileNetcdf::Close() {
     _ncId = -1;
 }
 
-int FileNetcdf::GetVariableCount() {
+int FileNetcdf::GetVariableCount() const {
     int varCount, gattCount;
     CheckNcStatus(nc_inq(_ncId, nullptr, &varCount, &gattCount, nullptr));
 
     return varCount;
 }
 
-int FileNetcdf::GetVarId(const string& varName) {
+int FileNetcdf::GetVarId(const string& varName) const {
     int varId;
     CheckNcStatus(nc_inq_varid(_ncId, varName.c_str(), &varId));
 
     return varId;
 }
 
-string FileNetcdf::GetVarName(int varId) {
+string FileNetcdf::GetVarName(int varId) const {
     char varNameChar[NC_MAX_NAME + 1];
     CheckNcStatus(nc_inq_varname(_ncId, varId, varNameChar));
 
     return {varNameChar};
 }
 
-vecInt FileNetcdf::GetVarDimIds(int varId, int dimCount) {
+vecInt FileNetcdf::GetVarDimIds(int varId, int dimCount) const {
     vecInt dimIds(dimCount);
     CheckNcStatus(nc_inq_vardimid(_ncId, varId, &dimIds[0]));
 
@@ -80,14 +80,14 @@ int FileNetcdf::DefDim(const string& dimName, int length) {
     return dimId;
 }
 
-int FileNetcdf::GetDimId(const string& dimName) {
+int FileNetcdf::GetDimId(const string& dimName) const {
     int dimId;
     CheckNcStatus(nc_inq_dimid(_ncId, dimName.c_str(), &dimId));
 
     return dimId;
 }
 
-int FileNetcdf::GetDimLen(const string& dimName) {
+int FileNetcdf::GetDimLen(const string& dimName) const {
     int dimId;
     size_t dimLen;
     CheckNcStatus(nc_inq_dimid(_ncId, dimName.c_str(), &dimId));
@@ -129,7 +129,7 @@ int FileNetcdf::DefVarDouble(const string& varName, vecInt dimIds, int dimCount,
     return varId;
 }
 
-vecInt FileNetcdf::GetVarInt1D(const string& varName, int size) {
+vecInt FileNetcdf::GetVarInt1D(const string& varName, int size) const {
     int varId;
     vecInt items(size);
 
@@ -139,7 +139,7 @@ vecInt FileNetcdf::GetVarInt1D(const string& varName, int size) {
     return items;
 }
 
-vecFloat FileNetcdf::GetVarFloat1D(const string& varName, int size) {
+vecFloat FileNetcdf::GetVarFloat1D(const string& varName, int size) const {
     int varId;
     vecFloat items(size);
 
@@ -149,7 +149,7 @@ vecFloat FileNetcdf::GetVarFloat1D(const string& varName, int size) {
     return items;
 }
 
-vecDouble FileNetcdf::GetVarDouble1D(const string& varName, int size) {
+vecDouble FileNetcdf::GetVarDouble1D(const string& varName, int size) const {
     int varId;
     vecDouble items(size);
 
@@ -159,7 +159,7 @@ vecDouble FileNetcdf::GetVarDouble1D(const string& varName, int size) {
     return items;
 }
 
-axxd FileNetcdf::GetVarDouble2D(int varId, int rows, int cols) {
+axxd FileNetcdf::GetVarDouble2D(int varId, int rows, int cols) const {
     axxd values = axxd::Zero((long long)rows, (long long)cols);
     CheckNcStatus(nc_get_var_double(_ncId, varId, values.data()));
 
@@ -198,13 +198,13 @@ void FileNetcdf::PutVar(int varId, const vecAxxd& values) {
     }
 }
 
-bool FileNetcdf::HasVar(const string& varName) {
+bool FileNetcdf::HasVar(const string& varName) const {
     int varId;
 
     return nc_inq_varid(_ncId, varName.c_str(), &varId) != NC_ENOTVAR;
 }
 
-bool FileNetcdf::HasAtt(const string& attName, const string& varName) {
+bool FileNetcdf::HasAtt(const string& attName, const string& varName) const {
     int varId = NC_GLOBAL;
     if (!varName.empty()) {
         CheckNcStatus(nc_inq_varid(_ncId, varName.c_str(), &varId));
@@ -213,7 +213,7 @@ bool FileNetcdf::HasAtt(const string& attName, const string& varName) {
     return nc_inq_att(_ncId, varId, attName.c_str(), nullptr, nullptr) != NC_ENOTATT;
 }
 
-vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) {
+vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) const {
     int varId = NC_GLOBAL;
     if (!varName.empty()) {
         CheckNcStatus(nc_inq_varid(_ncId, varName.c_str(), &varId));
@@ -245,7 +245,7 @@ void FileNetcdf::PutAttString(const string& attName, const vecStr& values, int v
     CheckNcStatus(nc_put_att_string(_ncId, varId, attName.c_str(), values.size(), &valuesChar[0]));
 }
 
-string FileNetcdf::GetAttText(const string& attName, const string& varName) {
+string FileNetcdf::GetAttText(const string& attName, const string& varName) const {
     int varId = NC_GLOBAL;
     if (!varName.empty()) {
         CheckNcStatus(nc_inq_varid(_ncId, varName.c_str(), &varId));

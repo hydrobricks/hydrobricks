@@ -32,14 +32,14 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Snowpack::IsOk() {
+bool Snowpack::IsOk() const {
     if (!_snow->IsOk()) {
         return false;
     }
     return Brick::IsOk();
 }
 
-WaterContainer* Snowpack::GetSnowContainer() {
+WaterContainer* Snowpack::GetSnowContainer() const {
     return _snow;
 }
 
@@ -62,7 +62,7 @@ void Snowpack::SetInitialState(double value, ContentType type) {
     }
 }
 
-double Snowpack::GetContent(ContentType type) {
+double Snowpack::GetContent(ContentType type) const {
     switch (type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
@@ -118,6 +118,6 @@ double* Snowpack::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-bool Snowpack::HasSnow() {
+bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
 }

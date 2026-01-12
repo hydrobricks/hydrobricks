@@ -86,7 +86,7 @@ void Processor::StoreStateVariableChanges(vecDoublePt& values) {
     }
 }
 
-int Processor::GetStateVariableCount() {
+int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
 }
 

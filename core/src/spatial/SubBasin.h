@@ -109,11 +109,11 @@ class SubBasin : public wxObject {
     void SaveAsInitialState();
 
     /**
-     * Check if the sub-basin is valid.
+     * Check if the sub-basin is properly configured.
      *
-     * @return True if the sub-basin is valid, false otherwise.
+     * @return True if everything is ok, false otherwise.
      */
-    [[nodiscard]] bool IsOk();
+    [[nodiscard]] bool IsOk() const;
 
     /**
      * Add a brick to the sub-basin.
@@ -141,7 +141,7 @@ class SubBasin : public wxObject {
      *
      * @return The number of hydro units.
      */
-    int GetHydroUnitCount();
+    int GetHydroUnitCount() const;
 
     /**
      * Get a hydro unit by its index.
@@ -149,14 +149,14 @@ class SubBasin : public wxObject {
      * @param index The index of the hydro unit to get.
      * @return The hydro unit at the specified index.
      */
-    HydroUnit* GetHydroUnit(int index);
+    HydroUnit* GetHydroUnit(size_t index) const;
 
     /**
      * Get all hydro units in the sub-basin.
      *
      * @return A vector of pointers to all hydro units.
      */
-    vector<HydroUnit*> GetHydroUnits() {
+    const vector<HydroUnit*>& GetHydroUnits() const {
         return _hydroUnits;
     }
 
@@ -166,35 +166,35 @@ class SubBasin : public wxObject {
      * @param id The ID of the hydro unit to get.
      * @return The hydro unit with the specified ID.
      */
-    HydroUnit* GetHydroUnitById(int id);
+    HydroUnit* GetHydroUnitById(int id) const;
 
     /**
      * Get the IDs of all hydro units in the sub-basin.
      *
      * @return A vector of hydro unit IDs.
      */
-    vecInt GetHydroUnitIds();
+    vecInt GetHydroUnitIds() const;
 
     /**
      * Get the areas of all hydro units in the sub-basin.
      *
      * @return A vector of hydro unit areas.
      */
-    vecDouble GetHydroUnitAreas();
+    vecDouble GetHydroUnitAreas() const;
 
     /**
      * Get the number of bricks in the sub-basin.
      *
      * @return The number of bricks.
      */
-    int GetBricksCount();
+    int GetBricksCount() const;
 
     /**
      * Get the number of splitters in the sub-basin.
      *
      * @return The number of splitters.
      */
-    int GetSplittersCount();
+    int GetSplittersCount() const;
 
     /**
      * Get a brick by its index.
@@ -202,7 +202,7 @@ class SubBasin : public wxObject {
      * @param index The index of the brick to get.
      * @return The brick at the specified index.
      */
-    Brick* GetBrick(int index);
+    Brick* GetBrick(size_t index) const;
 
     /**
      * Check if the sub-basin has a brick with a specific name.
@@ -210,7 +210,7 @@ class SubBasin : public wxObject {
      * @param name The name of the brick to check for.
      * @return True if the sub-basin has the brick, false otherwise.
      */
-    [[nodiscard]] bool HasBrick(const string& name);
+    [[nodiscard]] bool HasBrick(const string& name) const;
 
     /**
      * Get a brick by its name.
@@ -218,7 +218,7 @@ class SubBasin : public wxObject {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    Brick* GetBrick(const string& name);
+    Brick* GetBrick(const string& name) const;
 
     /**
      * Get a splitter by its index.
@@ -226,7 +226,7 @@ class SubBasin : public wxObject {
      * @param index The index of the splitter to get.
      * @return The splitter at the specified index.
      */
-    Splitter* GetSplitter(int index);
+    Splitter* GetSplitter(size_t index) const;
 
     /**
      * Check if the sub-basin has a splitter with a specific name.
@@ -234,7 +234,7 @@ class SubBasin : public wxObject {
      * @param name The name of the splitter to check for.
      * @return True if the sub-basin has the splitter, false otherwise.
      */
-    [[nodiscard]] bool HasSplitter(const string& name);
+    [[nodiscard]] bool HasSplitter(const string& name) const;
 
     /**
      * Get a splitter by its name.
@@ -242,14 +242,14 @@ class SubBasin : public wxObject {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    Splitter* GetSplitter(const string& name);
+    Splitter* GetSplitter(const string& name) const;
 
     /**
      * Check if the sub-basin has an incoming flow.
      *
      * @return True if the sub-basin has an incoming flow, false otherwise.
      */
-    [[nodiscard]] bool HasIncomingFlow();
+    [[nodiscard]] bool HasIncomingFlow() const;
 
     /**
      * Add an input connector to the sub-basin.

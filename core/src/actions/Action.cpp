@@ -56,7 +56,7 @@ bool Action::ApplyIfRecursive(const Time date) {
     return true;
 }
 
-int Action::GetIndexForInsertion(double date) {
+int Action::GetIndexForInsertion(double date) const {
     int index = 0;
     for (double storedDate : _sporadicDates) {
         if (date <= storedDate) {

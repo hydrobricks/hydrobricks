@@ -14,7 +14,7 @@ class LandCover : public Brick {
     /**
      * @copydoc Brick::CanHaveAreaFraction()
      */
-    [[nodiscard]] bool CanHaveAreaFraction() override {
+    [[nodiscard]] bool CanHaveAreaFraction() const override {
         return true;
     }
 
@@ -23,7 +23,7 @@ class LandCover : public Brick {
      *
      * @return The area fraction of the land cover.
      */
-    double GetAreaFraction() {
+    double GetAreaFraction() const {
         return _areaFraction;
     }
 
@@ -46,14 +46,14 @@ class LandCover : public Brick {
     /**
      * @copydoc Brick::IsLandCover()
      */
-    [[nodiscard]] bool IsLandCover() override {
+    [[nodiscard]] bool IsLandCover() const override {
         return true;
     }
 
     /**
      * @copydoc Brick::IsNull()
      */
-    [[nodiscard]] bool IsNull() override {
+    [[nodiscard]] bool IsNull() const override {
         return NearlyZero(_areaFraction, PRECISION);
     }
 

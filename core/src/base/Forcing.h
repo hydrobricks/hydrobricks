@@ -22,7 +22,7 @@ class Forcing : public wxObject {
      *
      * @return the type of the forcing.
      */
-    VariableType GetType() {
+    VariableType GetType() const {
         return _type;
     }
 

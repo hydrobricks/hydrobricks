@@ -55,7 +55,7 @@ class HydroUnit : public wxObject {
      * @param unit The unit of the property to get.
      * @return The value of the property.
      */
-    double GetPropertyDouble(const string& name, const string& unit = "");
+    double GetPropertyDouble(const string& name, const string& unit = "") const;
 
     /**
      * Get a property of the hydro unit as a string.
@@ -63,7 +63,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the property to get.
      * @return The value of the property as a string.
      */
-    string GetPropertyString(const string& name);
+    string GetPropertyString(const string& name) const;
 
     /**
      * Add a brick to the hydro unit.
@@ -100,7 +100,7 @@ class HydroUnit : public wxObject {
      * @param type The type of forcing to get.
      * @return The forcing of the specified type.
      */
-    Forcing* GetForcing(VariableType type);
+    Forcing* GetForcing(VariableType type) const;
 
     /**
      * Add a lateral connection to the hydro unit.
@@ -152,14 +152,14 @@ class HydroUnit : public wxObject {
      *
      * @return The number of bricks.
      */
-    int GetBricksCount();
+    int GetBricksCount() const;
 
     /**
      * Get the number of splitters in the hydro unit.
      *
      * @return The number of splitters.
      */
-    int GetSplittersCount();
+    int GetSplittersCount() const;
 
     /**
      * Get a brick by its index.
@@ -167,7 +167,7 @@ class HydroUnit : public wxObject {
      * @param index The index of the brick to get.
      * @return The brick at the specified index.
      */
-    Brick* GetBrick(int index);
+    Brick* GetBrick(size_t index) const;
 
     /**
      * Check if the hydro unit has a brick with a specific name.
@@ -175,7 +175,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the brick to check for.
      * @return True if the hydro unit has the brick, false otherwise.
      */
-    [[nodiscard]] bool HasBrick(const string& name);
+    [[nodiscard]] bool HasBrick(const string& name) const;
 
     /**
      * Get a brick by its name.
@@ -183,7 +183,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    Brick* GetBrick(const string& name);
+    Brick* GetBrick(const string& name) const;
 
     /**
      * Get a vector of all snowpack bricks in the hydro unit.
@@ -207,7 +207,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the land cover to get.
      * @return The land cover with the specified name.
      */
-    LandCover* GetLandCover(const string& name);
+    LandCover* GetLandCover(const string& name) const;
 
     /**
      * Get a splitter by its index.
@@ -215,7 +215,7 @@ class HydroUnit : public wxObject {
      * @param index The index of the splitter to get.
      * @return The splitter at the specified index.
      */
-    Splitter* GetSplitter(int index);
+    Splitter* GetSplitter(size_t index) const;
 
     /**
      * Check if the hydro unit has a splitter with a specific name.
@@ -223,7 +223,7 @@ class HydroUnit : public wxObject {
      * @param name The name of the splitter to check for.
      * @return True if the hydro unit has the splitter, false otherwise.
      */
-    [[nodiscard]] bool HasSplitter(const string& name);
+    [[nodiscard]] bool HasSplitter(const string& name) const;
 
     /**
      * Get a splitter by its name.
@@ -231,14 +231,14 @@ class HydroUnit : public wxObject {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    Splitter* GetSplitter(const string& name);
+    Splitter* GetSplitter(const string& name) const;
 
     /**
-     * Check if everything is ok with the hydro unit.
+     * Check if the hydro unit is properly configured.
      *
      * @return True if everything is ok, false otherwise.
      */
-    [[nodiscard]] bool IsOk();
+    [[nodiscard]] bool IsOk() const;
 
     /**
      * Change the area fraction of a land cover in the hydro unit.
@@ -261,7 +261,7 @@ class HydroUnit : public wxObject {
      *
      * @return The type of the hydro unit.
      */
-    Types GetType() {
+    Types GetType() const {
         return _type;
     }
 
@@ -297,7 +297,7 @@ class HydroUnit : public wxObject {
      *
      * @return A vector of lateral connections associated with the hydro unit.
      */
-    [[nodiscard]] vector<HydroUnitLateralConnection*> GetLateralConnections() const {
+    [[nodiscard]] const vector<HydroUnitLateralConnection*>& GetLateralConnections() const {
         return _lateralConnections;
     }
 

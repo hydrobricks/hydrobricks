@@ -19,7 +19,7 @@ void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsMo
     modelSettings->AddProcessForcing("solar_radiation");
 }
 
-bool ProcessMeltTemperatureIndex::IsOk() {
+bool ProcessMeltTemperatureIndex::IsOk() const {
     if (!ProcessMelt::IsOk()) {
         return false;
     }

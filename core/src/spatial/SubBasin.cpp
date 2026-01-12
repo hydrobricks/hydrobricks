@@ -113,7 +113,7 @@ void SubBasin::SaveAsInitialState() {
     }
 }
 
-bool SubBasin::IsOk() {
+bool SubBasin::IsOk() const {
     if (_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));
         return false;
@@ -146,18 +146,18 @@ void SubBasin::AddHydroUnit(HydroUnit* unit) {
     _area += unit->GetArea();
 }
 
-int SubBasin::GetHydroUnitCount() {
+int SubBasin::GetHydroUnitCount() const {
     return static_cast<int>(_hydroUnits.size());
 }
 
-HydroUnit* SubBasin::GetHydroUnit(int index) {
+HydroUnit* SubBasin::GetHydroUnit(size_t index) const {
     wxASSERT(_hydroUnits.size() > index);
     wxASSERT(_hydroUnits[index]);
 
     return _hydroUnits[index];
 }
 
-HydroUnit* SubBasin::GetHydroUnitById(int id) {
+HydroUnit* SubBasin::GetHydroUnitById(int id) const {
     for (auto unit : _hydroUnits) {
         if (unit->GetId() == id) {
             return unit;
@@ -167,7 +167,7 @@ HydroUnit* SubBasin::GetHydroUnitById(int id) {
     return nullptr;
 }
 
-vecInt SubBasin::GetHydroUnitIds() {
+vecInt SubBasin::GetHydroUnitIds() const {
     vecInt ids;
     ids.reserve(_hydroUnits.size());
     for (auto unit : _hydroUnits) {
@@ -177,7 +177,7 @@ vecInt SubBasin::GetHydroUnitIds() {
     return ids;
 }
 
-vecDouble SubBasin::GetHydroUnitAreas() {
+vecDouble SubBasin::GetHydroUnitAreas() const {
     vecDouble areas;
     areas.reserve(_hydroUnits.size());
     for (auto unit : _hydroUnits) {
@@ -187,22 +187,22 @@ vecDouble SubBasin::GetHydroUnitAreas() {
     return areas;
 }
 
-int SubBasin::GetBricksCount() {
+int SubBasin::GetBricksCount() const {
     return static_cast<int>(_bricks.size());
 }
 
-int SubBasin::GetSplittersCount() {
+int SubBasin::GetSplittersCount() const {
     return static_cast<int>(_splitters.size());
 }
 
-Brick* SubBasin::GetBrick(int index) {
+Brick* SubBasin::GetBrick(size_t index) const {
     wxASSERT(_bricks.size() > index);
     wxASSERT(_bricks[index]);
 
     return _bricks[index];
 }
 
-bool SubBasin::HasBrick(const string& name) {
+bool SubBasin::HasBrick(const string& name) const {
     for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return true;
@@ -211,7 +211,7 @@ bool SubBasin::HasBrick(const string& name) {
     return false;
 }
 
-Brick* SubBasin::GetBrick(const string& name) {
+Brick* SubBasin::GetBrick(const string& name) const {
     for (auto brick : _bricks) {
         if (brick->GetName() == name) {
             return brick;
@@ -221,14 +221,14 @@ Brick* SubBasin::GetBrick(const string& name) {
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
-Splitter* SubBasin::GetSplitter(int index) {
+Splitter* SubBasin::GetSplitter(size_t index) const {
     wxASSERT(_splitters.size() > index);
     wxASSERT(_splitters[index]);
 
     return _splitters[index];
 }
 
-bool SubBasin::HasSplitter(const string& name) {
+bool SubBasin::HasSplitter(const string& name) const {
     for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return true;
@@ -237,7 +237,7 @@ bool SubBasin::HasSplitter(const string& name) {
     return false;
 }
 
-Splitter* SubBasin::GetSplitter(const string& name) {
+Splitter* SubBasin::GetSplitter(const string& name) const {
     for (auto splitter : _splitters) {
         if (splitter->GetName() == name) {
             return splitter;
@@ -260,7 +260,7 @@ void SubBasin::ReserveLateralConnectionsForUnits(SettingsBasin& basinSettings) {
     }
 }
 
-bool SubBasin::HasIncomingFlow() {
+bool SubBasin::HasIncomingFlow() const {
     return !_inConnectors.empty();
 }
 

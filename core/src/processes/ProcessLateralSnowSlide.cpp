@@ -16,7 +16,7 @@ ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
       _minSnowHoldingDepth(nullptr),
       _maxSnowDepth(nullptr) {}
 
-bool ProcessLateralSnowSlide::IsOk() {
+bool ProcessLateralSnowSlide::IsOk() const {
     return true;
 }
 

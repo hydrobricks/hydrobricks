@@ -194,7 +194,7 @@ class HydroUnit : public wxObject {
         vector<Brick*> snowBricks;
         snowBricks.reserve(_bricks.size());
         for (auto& brick : _bricks) {
-            if (brick->IsSnowpack()) {
+            if (brick->GetCategory() == BrickCategory::Snowpack) {
                 snowBricks.push_back(brick);
             }
         }

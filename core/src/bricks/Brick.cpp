@@ -12,6 +12,7 @@
 
 Brick::Brick()
     : _needsSolver(true),
+      _category(BrickCategory::Unknown),
       _water(nullptr),
       _hydroUnit(nullptr) {
     _water = std::make_unique<WaterContainer>(this);

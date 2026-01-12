@@ -1,7 +1,9 @@
 #include "GenericLandCover.h"
 
 GenericLandCover::GenericLandCover()
-    : LandCover() {}
+    : LandCover() {
+    _category = BrickCategory::GenericLandCover;
+}
 
 void GenericLandCover::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);

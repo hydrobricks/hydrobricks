@@ -43,13 +43,6 @@ class Glacier : public LandCover {
     WaterContainer* GetIceContainer();
 
     /**
-     * @copydoc Brick::IsGlacier()
-     */
-    [[nodiscard]] bool IsGlacier() override {
-        return true;
-    }
-
-    /**
      * @copydoc Brick::Finalize()
      */
     void Finalize() override;

@@ -3,6 +3,7 @@
 Glacier::Glacier()
     : LandCover(),
       _ice(nullptr) {
+    _category = BrickCategory::Glacier;
     _ice = new IceContainer(this);
 }
 
@@ -129,7 +130,7 @@ double* Glacier::GetValuePointer(const string& name) {
 }
 
 void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
-    if (brick->IsSnowpack()) {
+    if (brick->GetCategory() == BrickCategory::Snowpack) {
         auto snowpack = dynamic_cast<Snowpack*>(brick);
         _ice->SetRelatedSnowpack(snowpack);
     }

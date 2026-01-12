@@ -42,7 +42,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         return new ProcessOutflowOverflow(brick->GetWaterContainer());
     }
     if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
         }
@@ -50,7 +50,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIceSwat(snowBrick->GetSnowContainer());
         }
@@ -58,7 +58,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "transport:snow_slide") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
         }
@@ -75,11 +75,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
         return new ProcessETSocont(brick->GetWaterContainer());
     }
     if (processType == "melt:degree_day") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
         }
-        if (brick->IsGlacier()) {
+        if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
         }
@@ -87,11 +87,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "melt:degree_day_aspect") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltDegreeDayAspect(snowBrick->GetSnowContainer());
         }
-        if (brick->IsGlacier()) {
+        if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
         }
@@ -99,11 +99,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "melt:temperature_index") {
-        if (brick->IsSnowpack()) {
+        if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
         }
-        if (brick->IsGlacier()) {
+        if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
         }

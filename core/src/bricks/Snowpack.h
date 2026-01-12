@@ -42,13 +42,6 @@ class Snowpack : public SurfaceComponent {
     WaterContainer* GetSnowContainer();
 
     /**
-     * @copydoc Brick::IsSnowpack()
-     */
-    [[nodiscard]] bool IsSnowpack() override {
-        return true;
-    }
-
-    /**
      * @copydoc Brick::Finalize()
      */
     void Finalize() override;

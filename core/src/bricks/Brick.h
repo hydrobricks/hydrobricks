@@ -7,6 +7,18 @@
 #include "SettingsModel.h"
 #include "WaterContainer.h"
 
+/**
+ * Enumeration of brick categories.
+ */
+enum class BrickCategory {
+    Snowpack,           ///< Snowpack brick
+    Glacier,            ///< Glacier brick
+    Urban,              ///< Urban land cover
+    Vegetation,         ///< Vegetation land cover
+    GenericLandCover,   ///< Generic land cover
+    Unknown             ///< Unknown or unspecified brick type
+};
+
 class Brick : public wxObject {
   public:
     explicit Brick();
@@ -98,29 +110,20 @@ class Brick : public wxObject {
     }
 
     /**
+     * Get the category of the brick.
+     *
+     * @return the category of the brick.
+     */
+    [[nodiscard]] BrickCategory GetCategory() const {
+        return _category;
+    }
+
+    /**
      * Check if the brick can have an area fraction.
      *
      * @return true if the brick can have an area fraction.
      */
     [[nodiscard]] virtual bool CanHaveAreaFraction() {
-        return false;
-    }
-
-    /**
-     * Check if the brick is a snowpack.
-     *
-     * @return true if the brick is a snowpack.
-     */
-    [[nodiscard]] virtual bool IsSnowpack() {
-        return false;
-    }
-
-    /**
-     * Check if the brick is a glacier.
-     *
-     * @return true if the brick is a glacier.
-     */
-    [[nodiscard]] virtual bool IsGlacier() {
         return false;
     }
 
@@ -283,6 +286,7 @@ class Brick : public wxObject {
   protected:
     string _name;
     bool _needsSolver;
+    BrickCategory _category;
     std::unique_ptr<WaterContainer> _water;
     vector<Process*> _processes;
     HydroUnit* _hydroUnit;

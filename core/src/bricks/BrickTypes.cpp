@@ -1,12 +1,22 @@
 #include "BrickTypes.h"
 
+#include <unordered_map>
+
 BrickType BrickTypeFromString(const string& typeStr) {
-    if (typeStr == "storage") return BrickType::Storage;
-    if (typeStr == "generic_land_cover" || typeStr == "ground" || typeStr == "generic")
-        return BrickType::GenericLandCover;
-    if (typeStr == "glacier") return BrickType::Glacier;
-    if (typeStr == "urban") return BrickType::Urban;
-    if (typeStr == "vegetation") return BrickType::Vegetation;
-    if (typeStr == "snowpack") return BrickType::Snowpack;
+    static const std::unordered_map<string, BrickType> typeMap = {
+        {"storage", BrickType::Storage},
+        {"generic_land_cover", BrickType::GenericLandCover},
+        {"ground", BrickType::GenericLandCover},
+        {"generic", BrickType::GenericLandCover},
+        {"glacier", BrickType::Glacier},
+        {"urban", BrickType::Urban},
+        {"vegetation", BrickType::Vegetation},
+        {"snowpack", BrickType::Snowpack}
+    };
+
+    auto it = typeMap.find(typeStr);
+    if (it != typeMap.end()) {
+        return it->second;
+    }
     return BrickType::Unknown;
 }

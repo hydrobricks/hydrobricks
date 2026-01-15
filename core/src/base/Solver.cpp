@@ -1,5 +1,8 @@
 #include "Solver.h"
 
+#include <functional>
+#include <unordered_map>
+
 #include "Processor.h"
 #include "SolverEulerExplicit.h"
 #include "SolverHeunExplicit.h"
@@ -10,13 +13,20 @@ Solver::Solver()
       _nIterations(1) {}
 
 Solver* Solver::Factory(const SolverSettings& solverSettings) {
-    if (solverSettings.name == "rk4" || solverSettings.name == "runge_kutta") {
-        return new SolverRK4();
-    } else if (solverSettings.name == "euler_explicit") {
-        return new SolverEulerExplicit();
-    } else if (solverSettings.name == "heun_explicit") {
-        return new SolverHeunExplicit();
+    using FactoryFunc = std::function<Solver*()>;
+
+    static const std::unordered_map<string, FactoryFunc> factoryMap = {
+        {"rk4", []() { return new SolverRK4(); }},
+        {"runge_kutta", []() { return new SolverRK4(); }},
+        {"euler_explicit", []() { return new SolverEulerExplicit(); }},
+        {"heun_explicit", []() { return new SolverHeunExplicit(); }}
+    };
+
+    auto it = factoryMap.find(solverSettings.name);
+    if (it != factoryMap.end()) {
+        return it->second();
     }
+
     throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s."), solverSettings.name));
 }
 

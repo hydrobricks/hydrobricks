@@ -1,5 +1,8 @@
 #include "Process.h"
 
+#include <functional>
+#include <unordered_map>
+
 #include "Brick.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
@@ -115,40 +118,36 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
 }
 
 bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
-    if (processType == "outflow:linear") {
-        ProcessOutflowLinear::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:percolation" || processType == "percolation") {
-        ProcessOutflowPercolation::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:direct") {
-        ProcessOutflowDirect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:rest_direct") {
-        ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:overflow" || processType == "overflow") {
-        ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
-        ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
-        ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transport:snow_slide") {
-        ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "runoff:socont") {
-        ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "infiltration:socont") {
-        ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "et:socont") {
-        ProcessETSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:degree_day") {
-        ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:degree_day_aspect") {
-        ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:temperature_index") {
-        ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(modelSettings);
-    } else {
-        throw ConceptionIssue(
-            wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing)."), processType));
+    using RegisterFunc = std::function<void(SettingsModel*)>;
+
+    static const std::unordered_map<string, RegisterFunc> registerMap = {
+        {"outflow:linear", &ProcessOutflowLinear::RegisterProcessParametersAndForcing},
+        {"outflow:percolation", &ProcessOutflowPercolation::RegisterProcessParametersAndForcing},
+        {"percolation", &ProcessOutflowPercolation::RegisterProcessParametersAndForcing},
+        {"outflow:direct", &ProcessOutflowDirect::RegisterProcessParametersAndForcing},
+        {"outflow:rest_direct", &ProcessOutflowRestDirect::RegisterProcessParametersAndForcing},
+        {"outflow:overflow", &ProcessOutflowOverflow::RegisterProcessParametersAndForcing},
+        {"overflow", &ProcessOutflowOverflow::RegisterProcessParametersAndForcing},
+        {"transformation:snow_ice_constant", &ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing},
+        {"transform:snow_ice_constant", &ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing},
+        {"transformation:snow_ice_swat", &ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing},
+        {"transform:snow_ice_swat", &ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing},
+        {"transport:snow_slide", &ProcessLateralSnowSlide::RegisterProcessParametersAndForcing},
+        {"runoff:socont", &ProcessRunoffSocont::RegisterProcessParametersAndForcing},
+        {"infiltration:socont", &ProcessInfiltrationSocont::RegisterProcessParametersAndForcing},
+        {"et:socont", &ProcessETSocont::RegisterProcessParametersAndForcing},
+        {"melt:degree_day", &ProcessMeltDegreeDay::RegisterProcessParametersAndForcing},
+        {"melt:degree_day_aspect", &ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing},
+        {"melt:temperature_index", &ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing}};
+
+    auto it = registerMap.find(processType);
+    if (it != registerMap.end()) {
+        it->second(modelSettings);
+        return true;
     }
 
-    return true;
+    throw ConceptionIssue(
+        wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing)."), processType));
 }
 
 void Process::Reset() {

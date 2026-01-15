@@ -1,9 +1,18 @@
 #include "ContentTypes.h"
 
+#include <unordered_map>
+
 ContentType ContentTypeFromString(const string& typeStr) {
-    if (typeStr == "water") return ContentType::Water;
-    if (typeStr == "snow") return ContentType::Snow;
-    if (typeStr == "ice") return ContentType::Ice;
+    static const std::unordered_map<string, ContentType> typeMap = {
+        {"water", ContentType::Water},
+        {"snow", ContentType::Snow},
+        {"ice", ContentType::Ice}
+    };
+
+    auto it = typeMap.find(typeStr);
+    if (it != typeMap.end()) {
+        return it->second;
+    }
     return ContentType::Unknown;
 }
 

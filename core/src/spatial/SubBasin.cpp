@@ -145,6 +145,7 @@ void SubBasin::AddSplitter(Splitter* splitter) {
 
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
     _hydroUnits.push_back(unit);
+    _hydroUnitMap[unit->GetId()] = unit;
     _area += unit->GetArea();
 }
 

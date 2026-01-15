@@ -134,11 +134,13 @@ bool SubBasin::IsOk() const {
 void SubBasin::AddBrick(Brick* brick) {
     wxASSERT(brick);
     _bricks.push_back(brick);
+    _brickMap[brick->GetName()] = brick;
 }
 
 void SubBasin::AddSplitter(Splitter* splitter) {
     wxASSERT(splitter);
     _splitters.push_back(splitter);
+    _splitterMap[splitter->GetName()] = splitter;
 }
 
 void SubBasin::AddHydroUnit(HydroUnit* unit) {
@@ -158,10 +160,9 @@ HydroUnit* SubBasin::GetHydroUnit(size_t index) const {
 }
 
 HydroUnit* SubBasin::GetHydroUnitById(int id) const {
-    for (auto unit : _hydroUnits) {
-        if (unit->GetId() == id) {
-            return unit;
-        }
+    auto it = _hydroUnitMap.find(id);
+    if (it != _hydroUnitMap.end()) {
+        return it->second;
     }
     wxLogError(_("The hydro unit %d was not found"), id);
     return nullptr;
@@ -203,19 +204,13 @@ Brick* SubBasin::GetBrick(size_t index) const {
 }
 
 bool SubBasin::HasBrick(const string& name) const {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+    return _brickMap.find(name) != _brickMap.end();
 }
 
 Brick* SubBasin::GetBrick(const string& name) const {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return brick;
-        }
+    auto it = _brickMap.find(name);
+    if (it != _brickMap.end()) {
+        return it->second;
     }
 
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
@@ -229,19 +224,13 @@ Splitter* SubBasin::GetSplitter(size_t index) const {
 }
 
 bool SubBasin::HasSplitter(const string& name) const {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+    return _splitterMap.find(name) != _splitterMap.end();
 }
 
 Splitter* SubBasin::GetSplitter(const string& name) const {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return splitter;
-        }
+    auto it = _splitterMap.find(name);
+    if (it != _splitterMap.end()) {
+        return it->second;
     }
 
     throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));

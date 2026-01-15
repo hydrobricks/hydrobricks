@@ -92,40 +92,37 @@ string HydroUnit::GetPropertyString(const string& name) const {
 void HydroUnit::AddBrick(Brick* brick) {
     wxASSERT(brick);
     _bricks.push_back(brick);
+    _brickMap[brick->GetName()] = brick;
 
     brick->SetHydroUnit(this);
 
     if (brick->IsLandCover()) {
         auto* landCover = dynamic_cast<LandCover*>(brick);
         _landCoverBricks.push_back(landCover);
+        _landCoverMap[landCover->GetName()] = landCover;
     }
 }
 
 void HydroUnit::AddSplitter(Splitter* splitter) {
     wxASSERT(splitter);
     _splitters.push_back(splitter);
+    _splitterMap[splitter->GetName()] = splitter;
 }
 
 bool HydroUnit::HasForcing(VariableType type) {
-    for (auto forcing : _forcing) {
-        if (forcing->GetType() == type) {
-            return true;
-        }
-    }
-
-    return false;
+    return _forcingMap.find(type) != _forcingMap.end();
 }
 
 void HydroUnit::AddForcing(Forcing* forcing) {
     wxASSERT(forcing);
     _forcing.push_back(forcing);
+    _forcingMap[forcing->GetType()] = forcing;
 }
 
 Forcing* HydroUnit::GetForcing(VariableType type) const {
-    for (auto forcing : _forcing) {
-        if (forcing->GetType() == type) {
-            return forcing;
-        }
+    auto it = _forcingMap.find(type);
+    if (it != _forcingMap.end()) {
+        return it->second;
     }
 
     return nullptr;
@@ -156,29 +153,22 @@ Brick* HydroUnit::GetBrick(size_t index) const {
 }
 
 bool HydroUnit::HasBrick(const string& name) const {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+    return _brickMap.find(name) != _brickMap.end();
 }
 
 Brick* HydroUnit::GetBrick(const string& name) const {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return brick;
-        }
+    auto it = _brickMap.find(name);
+    if (it != _brickMap.end()) {
+        return it->second;
     }
 
     throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
 LandCover* HydroUnit::GetLandCover(const string& name) const {
-    for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == name) {
-            return brick;
-        }
+    auto it = _landCoverMap.find(name);
+    if (it != _landCoverMap.end()) {
+        return it->second;
     }
 
     throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
@@ -192,19 +182,13 @@ Splitter* HydroUnit::GetSplitter(size_t index) const {
 }
 
 bool HydroUnit::HasSplitter(const string& name) const {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+    return _splitterMap.find(name) != _splitterMap.end();
 }
 
 Splitter* HydroUnit::GetSplitter(const string& name) const {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return splitter;
-        }
+    auto it = _splitterMap.find(name);
+    if (it != _splitterMap.end()) {
+        return it->second;
     }
 
     throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
@@ -255,23 +239,30 @@ bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction)
         wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
         return false;
     }
-    for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == name) {
-            brick->SetAreaFraction(fraction);
-            return FixLandCoverFractionsTotal();
-        }
+    auto it = _landCoverMap.find(name);
+    if (it != _landCoverMap.end()) {
+        it->second->SetAreaFraction(fraction);
+        return FixLandCoverFractionsTotal();
     }
     wxLogError(_("Land cover '%s' was not found."), name);
     return false;
 }
 
 bool HydroUnit::FixLandCoverFractionsTotal() {
+    // Try to find ground or generic land cover using the map
     LandCover* ground = nullptr;
+    auto groundIt = _landCoverMap.find("ground");
+    if (groundIt != _landCoverMap.end()) {
+        ground = groundIt->second;
+    } else {
+        auto genericIt = _landCoverMap.find("generic");
+        if (genericIt != _landCoverMap.end()) {
+            ground = genericIt->second;
+        }
+    }
+
     double total = 0;
     for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == "ground" || brick->GetName() == "generic") {
-            ground = brick;
-        }
         total += brick->GetAreaFraction();
     }
 

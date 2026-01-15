@@ -308,9 +308,13 @@ class HydroUnit : public wxObject {
     vector<HydroUnitProperty*> _properties;
     vector<HydroUnitLateralConnection*> _lateralConnections;
     vector<Brick*> _bricks;
+    std::unordered_map<string, Brick*> _brickMap;
     vector<LandCover*> _landCoverBricks;
+    std::unordered_map<string, LandCover*> _landCoverMap;
     vector<Splitter*> _splitters;
+    std::unordered_map<string, Splitter*> _splitterMap;
     vector<Forcing*> _forcing;
+    std::unordered_map<VariableType, Forcing*> _forcingMap;
 };
 
 #endif

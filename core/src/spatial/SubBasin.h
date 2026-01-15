@@ -301,8 +301,11 @@ class SubBasin : public wxObject {
     double _outletTotal;
     bool _needsCleanup;
     vector<Brick*> _bricks;
+    std::unordered_map<string, Brick*> _brickMap;
     vector<Splitter*> _splitters;
+    std::unordered_map<string, Splitter*> _splitterMap;
     vector<HydroUnit*> _hydroUnits;
+    std::unordered_map<int, HydroUnit*> _hydroUnitMap;
     vector<Connector*> _inConnectors;
     vector<Connector*> _outConnectors;
     vector<Flux*> _outletFluxes;

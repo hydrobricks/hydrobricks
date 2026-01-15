@@ -165,7 +165,9 @@ void SettingsModel::AddBrickForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedBrick->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InvalidArgument(wxString::Format(
+            _("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, temperature, solar_radiation (or r_solar)"),
+            name));
     }
 }
 

@@ -21,7 +21,7 @@ Brick::Brick()
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
     BrickType type = BrickTypeFromString(brickSettings.type);
     if (type == BrickType::Unknown) {
-        wxLogError(_("Brick type '%s' not recognized."), brickSettings.type);
+        wxLogError(_("Brick type '%s' not recognized. %s"), brickSettings.type, GetBrickTypeSuggestions());
         return nullptr;
     }
     Brick* brick = Factory(type);

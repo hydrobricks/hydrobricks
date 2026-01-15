@@ -13,4 +13,18 @@
  */
 BrickType BrickTypeFromString(const string& typeStr);
 
+/**
+ * Get a list of all valid brick type strings (including synonyms).
+ *
+ * @return vector of valid brick type strings.
+ */
+vector<string> GetValidBrickTypes();
+
+/**
+ * Get a formatted string with suggestions for valid brick types.
+ *
+ * @return string with list of valid brick types.
+ */
+string GetBrickTypeSuggestions();
+
 #endif  // HYDROBRICKS_BRICK_TYPES_H

@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 #include "Brick.h"
 #include "Glacier.h"
@@ -25,6 +26,38 @@
 
 Process::Process(WaterContainer* container)
     : _container(container) {}
+
+static string GetValidProcessTypes() {
+    static const vector<string> validTypes = {
+        "outflow:linear",
+        "outflow:percolation",
+        "percolation",  // Synonyms
+        "outflow:direct",
+        "outflow:rest_direct",
+        "outflow:overflow",
+        "overflow",  // Synonyms
+        "transformation:snow_ice_constant",
+        "transform:snow_ice_constant",  // Synonyms
+        "transformation:snow_ice_swat",
+        "transform:snow_ice_swat",  // Synonyms
+        "transport:snow_slide",
+        "runoff:socont",
+        "infiltration:socont",
+        "et:socont",
+        "melt:degree_day",
+        "melt:degree_day_aspect",
+        "melt:temperature_index"
+    };
+
+    string suggestions = "Valid process types: ";
+    for (size_t i = 0; i < validTypes.size(); ++i) {
+        suggestions += validTypes[i];
+        if (i < validTypes.size() - 1) {
+            suggestions += ", ";
+        }
+    }
+    return suggestions;
+}
 
 Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     string processType = processSettings.type;
@@ -114,7 +147,8 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
 
-    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processType));
+    throw ConceptionIssue(
+        wxString::Format(_("Process type '%s' not recognized (Factory). %s"), processType, GetValidProcessTypes()));
 }
 
 bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
@@ -146,8 +180,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         return true;
     }
 
-    throw ConceptionIssue(
-        wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing)."), processType));
+    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing). %s"),
+                                           processType, GetValidProcessTypes()));
 }
 
 void Process::Reset() {

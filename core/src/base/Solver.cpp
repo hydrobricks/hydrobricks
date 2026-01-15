@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 #include "Processor.h"
 #include "SolverEulerExplicit.h"
@@ -11,6 +12,23 @@
 Solver::Solver()
     : _processor(nullptr),
       _nIterations(1) {}
+
+static string GetValidSolverNames() {
+    static const vector<string> validNames = {
+        "rk4", "runge_kutta",  // Synonyms for RK4
+        "euler_explicit",
+        "heun_explicit"
+    };
+
+    string suggestions = "Valid solver names: ";
+    for (size_t i = 0; i < validNames.size(); ++i) {
+        suggestions += validNames[i];
+        if (i < validNames.size() - 1) {
+            suggestions += ", ";
+        }
+    }
+    return suggestions;
+}
 
 Solver* Solver::Factory(const SolverSettings& solverSettings) {
     using FactoryFunc = std::function<Solver*()>;
@@ -27,7 +45,8 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
         return it->second();
     }
 
-    throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s."), solverSettings.name));
+    throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s. %s"),
+        solverSettings.name, GetValidSolverNames()));
 }
 
 void Solver::InitializeContainers() {

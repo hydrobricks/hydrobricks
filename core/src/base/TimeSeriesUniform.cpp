@@ -37,7 +37,7 @@ double TimeSeriesUniform::GetEnd() const {
 }
 
 double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesUniform::GetTotal - Not yet implemented");
 }
 
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {

@@ -119,7 +119,7 @@ void SettingsModel::AddBrickParameter(const string& name, float value, const str
     wxASSERT(_selectedBrick);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddBrickParameter - Parameter type '%s' not supported", type));
     }
 
     auto parameter = new Parameter(name, value);
@@ -131,7 +131,7 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
     wxASSERT(_selectedBrick);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetBrickParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedBrick->parameters) {
@@ -141,7 +141,7 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetBrickParameterValue - Parameter '%s' not found after type check", name));
 }
 
 bool SettingsModel::BrickHasParameter(const string& name) {
@@ -213,7 +213,7 @@ void SettingsModel::AddProcessParameter(const string& name, float value, const s
     wxASSERT(_selectedProcess);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddProcessParameter - Parameter type '%s' not supported", type));
     }
 
     // If the parameter already exists, replace its value
@@ -233,7 +233,7 @@ void SettingsModel::SetProcessParameterValue(const string& name, float value, co
     wxASSERT(_selectedProcess);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetProcessParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedProcess->parameters) {
@@ -243,7 +243,7 @@ void SettingsModel::SetProcessParameterValue(const string& name, float value, co
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetProcessParameterValue - Parameter '%s' not found after type check", name));
 }
 
 void SettingsModel::AddProcessForcing(const string& name) {
@@ -258,7 +258,7 @@ void SettingsModel::AddProcessForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedProcess->forcing.push_back(Radiation);
     } else {
-        throw InputError(_("The provided forcing is not yet supported."));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, pet, temperature, solar_radiation (or r_solar)"), name));
     }
 }
 
@@ -323,7 +323,7 @@ void SettingsModel::AddSplitterParameter(const string& name, float value, const 
     wxASSERT(_selectedSplitter);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddSplitterParameter - Parameter type '%s' not supported", type));
     }
 
     auto parameter = new Parameter(name, value);
@@ -335,7 +335,7 @@ void SettingsModel::SetSplitterParameterValue(const string& name, float value, c
     wxASSERT(_selectedSplitter);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetSplitterParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedSplitter->parameters) {
@@ -345,7 +345,7 @@ void SettingsModel::SetSplitterParameterValue(const string& name, float value, c
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetSplitterParameterValue - Parameter '%s' not found after type check", name));
 }
 
 void SettingsModel::AddSplitterForcing(const string& name) {
@@ -358,7 +358,7 @@ void SettingsModel::AddSplitterForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedSplitter->forcing.push_back(Radiation);
     } else {
-        throw InputError(_("The provided forcing is not yet supported."));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, temperature, solar_radiation (or r_solar)"), name));
     }
 }
 

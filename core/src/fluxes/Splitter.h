@@ -51,7 +51,7 @@ class Splitter : public wxObject {
      * @param forcing incoming forcing
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Splitter::AttachForcing - Should not be called (virtual)");
     }
 
     /**

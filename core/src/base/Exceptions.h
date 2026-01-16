@@ -13,11 +13,11 @@
  *
  * - HydrobricksError: Root exception for all hydrobricks-specific errors
  *
- * - Input validation errors (std::invalid_argument base) - USER's fault, detected at SETUP:
+ * - Input validation errors (std::invalid_argument semantics) - USER's fault, detected at SETUP:
  *   - InputError: Generic bad user input (invalid values, malformed configuration)
  *   - ModelConfigError: Model configuration error (unsupported operations, incompatible components)
  *
- * - Internal invariant violations (std::logic_error base) - PROGRAMMER's fault:
+ * - Internal invariant violations (std::logic_error semantics) - PROGRAMMER's fault:
  *   - NotImplemented: Feature not yet coded (legitimate but incomplete)
  *   - ShouldNotHappen: Code path that should never execute (internal bug)
  *
@@ -38,6 +38,9 @@
  */
 class HydrobricksError : public std::runtime_error {
   public:
+    explicit HydrobricksError(const char* msg)
+        : std::runtime_error(msg) {}
+
     explicit HydrobricksError(const std::string& msg)
         : std::runtime_error(msg) {}
 
@@ -63,6 +66,9 @@ class HydrobricksError : public std::runtime_error {
  */
 class InputError : public HydrobricksError {
   public:
+    explicit InputError(const char* msg)
+        : HydrobricksError(msg) {}
+
     explicit InputError(const std::string& msg)
         : HydrobricksError(msg) {}
 
@@ -88,6 +94,9 @@ class InputError : public HydrobricksError {
  */
 class ModelConfigError : public HydrobricksError {
   public:
+    explicit ModelConfigError(const char* msg)
+        : HydrobricksError(msg) {}
+
     explicit ModelConfigError(const std::string& msg)
         : HydrobricksError(msg) {}
 
@@ -115,6 +124,9 @@ class NotImplemented : public HydrobricksError {
     NotImplemented()
         : HydrobricksError(_("Function not yet implemented")) {}
 
+    explicit NotImplemented(const char* msg)
+        : HydrobricksError(msg) {}
+
     explicit NotImplemented(const std::string& msg)
         : HydrobricksError(msg) {}
 
@@ -136,6 +148,9 @@ class ShouldNotHappen : public HydrobricksError {
   public:
     ShouldNotHappen()
         : HydrobricksError(_("This should not happen...")) {}
+
+    explicit ShouldNotHappen(const char* msg)
+        : HydrobricksError(msg) {}
 
     explicit ShouldNotHappen(const std::string& msg)
         : HydrobricksError(msg) {}
@@ -159,6 +174,9 @@ class ShouldNotHappen : public HydrobricksError {
  */
 class RuntimeError : public HydrobricksError {
   public:
+    explicit RuntimeError(const char* msg)
+        : HydrobricksError(msg) {}
+
     explicit RuntimeError(const std::string& msg)
         : HydrobricksError(msg) {}
 

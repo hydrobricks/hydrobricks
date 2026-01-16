@@ -85,7 +85,7 @@ class Process : public wxObject {
      * @param forcing forcing to attach.
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::AttachForcing - Should not be called (virtual)");
     }
 
     /**
@@ -222,7 +222,7 @@ class Process : public wxObject {
      * @param brick target brick.
      */
     virtual void SetTargetBrick(Brick*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::SetTargetBrick - Should not be called (virtual)");
     }
 
     /**

@@ -38,7 +38,8 @@ void Glacier::AttachFluxIn(Flux* flux) {
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(wxString::Format("Glacier::AttachFluxIn - Unexpected flux type: %d",
+                                                static_cast<int>(flux->GetType())));
     }
 }
 

@@ -13,15 +13,15 @@ bool TimeSeriesData::SetValues(const vecDouble& values) {
 }
 
 double TimeSeriesData::GetValueFor(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesData::GetValueFor - Not yet implemented");
 }
 
 double TimeSeriesData::GetCurrentValue() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesData::GetCurrentValue - Not yet implemented");
 }
 
 double TimeSeriesData::GetSum() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesData::GetSum - Not yet implemented");
 }
 
 /*
@@ -87,7 +87,8 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
             _cursor = static_cast<int>(dt) * 1440;
             break;
         default:
-            throw NotImplemented();
+            throw NotImplemented(wxString::Format("TimeSeriesDataRegular::SetCursorToDate - Time unit %d not supported",
+                                                   static_cast<int>(_timeStepUnit)));
     }
 
     return true;
@@ -130,7 +131,7 @@ bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
 }
 
 double TimeSeriesDataIrregular::GetValueFor(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::GetValueFor - Not yet implemented");
 }
 
 double TimeSeriesDataIrregular::GetCurrentValue() {
@@ -139,15 +140,15 @@ double TimeSeriesDataIrregular::GetCurrentValue() {
 }
 
 double TimeSeriesDataIrregular::GetSum() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::GetSum - Not yet implemented");
 }
 
 bool TimeSeriesDataIrregular::SetCursorToDate(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::SetCursorToDate - Not yet implemented");
 }
 
 bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::AdvanceOneTimeStep - Not yet implemented");
 }
 
 double TimeSeriesDataIrregular::GetStart() const {

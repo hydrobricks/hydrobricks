@@ -134,7 +134,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                     *(_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
                     return;
                 }
-                throw ShouldNotHappen();
+                throw ShouldNotHappen(_("WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer"));
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *_capacity) {

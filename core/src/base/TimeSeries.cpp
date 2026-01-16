@@ -160,6 +160,6 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
         timeUnit = Hour;
         timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(wxString::Format("TimeSeries::ExtractTimeStep - Invalid time step value: %f", timeStepData));
     }
 }

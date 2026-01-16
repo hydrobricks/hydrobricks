@@ -67,5 +67,5 @@ TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("TimeSeriesDistributed::GetDataPointer - Unit ID %d not found", unitId));
 }

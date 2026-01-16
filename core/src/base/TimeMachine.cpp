@@ -72,7 +72,7 @@ int TimeMachine::GetTimeStepCount() const {
 void TimeMachine::UpdateTimeStepInDays() {
     switch (_timeStepUnit) {
         case Variable:
-            throw NotImplemented();
+            throw NotImplemented("TimeMachine::UpdateTimeStepInDays - Variable time step unit not yet supported");
         case Week:
             _timeStepInDays = _timeStep * 7;
             break;

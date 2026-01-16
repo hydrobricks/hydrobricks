@@ -14,7 +14,9 @@ FileNetcdf::~FileNetcdf() {
 
 void FileNetcdf::CheckNcStatus(int status) const {
     if (status != NC_NOERR) {
-        throw InvalidArgument(nc_strerror(status));
+        wxString msg = wxString::Format(_("NetCDF error: %s"), nc_strerror(status));
+        wxLogError(msg);
+        throw RuntimeError(msg);
     }
 }
 

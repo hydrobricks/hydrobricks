@@ -68,7 +68,7 @@ void Glacier::SetInitialState(double value, ContentType type) {
             _ice->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
@@ -80,7 +80,7 @@ double Glacier::GetContent(ContentType type) const {
         case ContentType::Ice:
             return _ice->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
@@ -94,7 +94,7 @@ void Glacier::UpdateContent(double value, ContentType type) {
             _ice->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }

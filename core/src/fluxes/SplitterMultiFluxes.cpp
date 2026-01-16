@@ -29,7 +29,7 @@ double* SplitterMultiFluxes::GetValuePointer(const string& name) {
         return _outputs[4]->GetAmountPointer();
     }
 
-    throw ConceptionIssue(_("Output cannot be find."));
+    throw ModelConfigError(_("Output cannot be find."));
 }
 
 void SplitterMultiFluxes::Compute() {

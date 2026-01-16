@@ -81,7 +81,7 @@ void Brick::SetParameters(const BrickSettings& brickSettings) {
 void Brick::AttachFluxIn(Flux* flux) {
     wxASSERT(flux);
     if (flux->GetType() != ContentType::Water) {
-        throw InvalidArgument(
+        throw ModelConfigError(
             wxString::Format(_("The flux type '%s' should be water."), ContentTypeToString(flux->GetType())));
     }
     _water->AttachFluxIn(flux);
@@ -101,7 +101,7 @@ float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const
         }
     }
 
-    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
 Process* Brick::GetProcess(size_t index) const {
@@ -121,7 +121,7 @@ void Brick::SetInitialState(double value, ContentType type) {
             _water->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
@@ -131,7 +131,7 @@ double Brick::GetContent(ContentType type) const {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }
@@ -142,7 +142,7 @@ void Brick::UpdateContent(double value, ContentType type) {
             _water->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
     }
 }

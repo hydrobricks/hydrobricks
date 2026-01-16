@@ -165,9 +165,9 @@ void SettingsModel::AddBrickForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedBrick->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(wxString::Format(
-            _("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, temperature, solar_radiation (or r_solar)"),
-            name));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: "
+                                            "precipitation, temperature, solar_radiation (or r_solar)"),
+                                          name));
     }
 }
 
@@ -204,8 +204,8 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
 
     // Register the related parameters
     if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
-        throw InvalidArgument(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
-                                               processSettings.type));
+        throw ModelConfigError(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
+                                                processSettings.type));
     }
 }
 
@@ -258,7 +258,7 @@ void SettingsModel::AddProcessForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedProcess->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InputError(_("The provided forcing is not yet supported."));
     }
 }
 
@@ -358,7 +358,7 @@ void SettingsModel::AddSplitterForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedSplitter->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InputError(_("The provided forcing is not yet supported."));
     }
 }
 
@@ -575,7 +575,7 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
 
 void SettingsModel::SelectHydroUnitBrick(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
     _selectedProcess = nullptr;
 }
@@ -586,7 +586,7 @@ void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
 
 void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
     _selectedProcess = nullptr;
 }
@@ -607,7 +607,7 @@ void SettingsModel::SelectProcess(const string& name) {
         }
     }
 
-    throw InvalidArgument(wxString::Format(_("The process '%s' was not found."), name));
+    throw ModelConfigError(wxString::Format(_("The process '%s' was not found."), name));
 }
 
 void SettingsModel::SelectProcessWithParameter(const string& name) {
@@ -621,7 +621,7 @@ void SettingsModel::SelectProcessWithParameter(const string& name) {
         }
     }
 
-    throw InvalidArgument(wxString::Format(_("The parameter '%s' was not found."), name));
+    throw ModelConfigError(wxString::Format(_("The parameter '%s' was not found."), name));
 }
 
 void SettingsModel::SelectHydroUnitSplitter(int index) {
@@ -664,13 +664,13 @@ bool SettingsModel::SelectSubBasinSplitterIfFound(const string& name) {
 
 void SettingsModel::SelectHydroUnitSplitter(const string& name) {
     if (!SelectHydroUnitSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit splitter '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The hydro unit splitter '%s' was not found", name));
     }
 }
 
 void SettingsModel::SelectSubBasinSplitter(const string& name) {
     if (!SelectSubBasinSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin splitter '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The sub-basin splitter '%s' was not found", name));
     }
 }
 

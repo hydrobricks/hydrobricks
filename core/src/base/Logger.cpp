@@ -118,7 +118,7 @@ axd Logger::GetOutletDischarge() const {
             return _subBasinValues[i];
         }
     }
-    throw ConceptionIssue(_("No 'outlet' component found in logger."));
+    throw ModelConfigError(_("No 'outlet' component found in logger."));
 }
 
 vecInt Logger::GetIndicesForSubBasinElements(const string& item) const {

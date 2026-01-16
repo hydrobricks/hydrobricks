@@ -20,7 +20,7 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == PET) {
         _pet = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type PET");
+        throw ModelConfigError(_("Forcing must be of type PET"));
     }
 }
 

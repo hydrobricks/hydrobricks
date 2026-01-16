@@ -35,7 +35,7 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     } else if (settings.timeStepUnit == "minute") {
         _timeStepUnit = Minute;
     } else {
-        throw InvalidArgument(_("Time step unit unrecognized or not implemented."));
+        throw InputError(_("Time step unit unrecognized or not implemented."));
     }
 
     UpdateTimeStepInDays();

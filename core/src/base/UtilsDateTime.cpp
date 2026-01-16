@@ -18,11 +18,11 @@ sys_days UtilsDateTime::ToSysDays(int year, int month, int day) {
     auto m = monthT{static_cast<unsigned>(month)};
     auto d = dayT{static_cast<unsigned>(day)};
     if (!y.ok() || !m.ok() || !d.ok()) {
-        throw InvalidArgument("Invalid Y-M-D provided to ToSysDays");
+        throw RuntimeError(_("Invalid Y-M-D provided to ToSysDays"));
     }
     std::chrono::year_month_day ymd{y, m, d};
     if (!ymd.ok()) {
-        throw InvalidArgument("Invalid calendar date provided to ToSysDays");
+        throw RuntimeError(_("Invalid calendar date provided to ToSysDays"));
     }
     return sys_days{ymd};
 }
@@ -30,7 +30,7 @@ sys_days UtilsDateTime::ToSysDays(int year, int month, int day) {
 void UtilsDateTime::ValidateHMS(int hour, int minute, int second) {
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 60) {
         // allow leap second 60
-        throw InvalidArgument("Invalid time-of-day (H:M:S)");
+        throw RuntimeError(_("Invalid time-of-day (H:M:S)"));
     }
 }
 
@@ -279,5 +279,5 @@ double UtilsDateTime::ParseToMJD(const std::string& dateStr, TimeFormat format) 
         }
     }
 
-    throw InvalidArgument(wxString::Format(_("The date (%s) conversion failed. Please check the format"), dateStr));
+    throw InputError(wxString::Format(_("The date (%s) conversion failed. Please check the format"), dateStr));
 }

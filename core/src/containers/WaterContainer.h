@@ -98,7 +98,7 @@ class WaterContainer : public wxObject {
      */
     void SetMaximumCapacity(float* value) {
         if (_infiniteStorage) {
-            throw ConceptionIssue(_("Trying to set the maximum capacity of an infinite storage."));
+            throw ModelConfigError(_("Trying to set the maximum capacity of an infinite storage."));
         }
         _capacity = value;
     }
@@ -174,7 +174,7 @@ class WaterContainer : public wxObject {
      */
     void UpdateContent(double value) {
         if (_infiniteStorage) {
-            throw ConceptionIssue(_("Trying to set the content of an infinite storage."));
+            throw ModelConfigError(_("Trying to set the content of an infinite storage."));
         }
 
         _content = value;

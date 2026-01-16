@@ -82,7 +82,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
@@ -90,7 +90,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessTransformSnowToIceSwat(snowBrick->GetSnowContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "transport:snow_slide") {
@@ -98,7 +98,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
             return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply transport processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "runoff:socont") {
@@ -119,7 +119,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "melt:degree_day_aspect") {
@@ -131,7 +131,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
     if (processType == "melt:temperature_index") {
@@ -143,11 +143,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
             return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
         }
-        throw ConceptionIssue(
+        throw ModelConfigError(
             wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
     }
 
-    throw ConceptionIssue(
+    throw ModelConfigError(
         wxString::Format(_("Process type '%s' not recognized (Factory). %s"), processType, GetValidProcessTypes()));
 }
 
@@ -180,8 +180,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         return true;
     }
 
-    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing). %s"),
-                                           processType, GetValidProcessTypes()));
+    throw ModelConfigError(wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing). %s"),
+                                            processType, GetValidProcessTypes()));
 }
 
 void Process::Reset() {
@@ -217,7 +217,7 @@ float* Process::GetParameterValuePointer(const ProcessSettings& processSettings,
         }
     }
 
-    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
 
 vecDouble Process::GetChangeRates() {

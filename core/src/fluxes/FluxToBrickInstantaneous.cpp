@@ -33,6 +33,6 @@ void FluxToBrickInstantaneous::UpdateFlux(double amount) {
         wxASSERT(snowBrick);
         snowBrick->GetSnowContainer()->AddAmountToStaticContentChange(_amount);
     } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), _type));
+        throw ModelConfigError(wxString::Format(_("The content type '%s' is not supported."), _type));
     }
 }

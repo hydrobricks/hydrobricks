@@ -109,16 +109,16 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         wxLogError(_("Dimension mismatch in the forcing data."));
-        throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
-                                               static_cast<int>(data.rows()), static_cast<int>(time.size()),
-                                               static_cast<int>(data.cols()), static_cast<int>(ids.size())));
+        throw InputError(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
+                                          static_cast<int>(data.rows()), static_cast<int>(time.size()),
+                                          static_cast<int>(data.cols()), static_cast<int>(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
         auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
         if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
-            throw InvalidArgument("Time series creation failed.");
+            throw RuntimeError(_("Time series creation failed."));
         }
         timeSeries->AddData(forcingData, ids[i]);
     }
@@ -144,7 +144,7 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
     } else if (StringsMatch(varName, "custom_3")) {
         varType = Custom3;
     } else {
-        throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+        throw InputError(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
     }
     return varType;
 }

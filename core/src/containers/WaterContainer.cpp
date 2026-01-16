@@ -64,7 +64,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             if (*changeRate < 0) {
                 *changeRate = 0;
             } else if (*changeRate > 10000) {
-                throw ConceptionIssue(
+                throw RuntimeError(
                     wxString::Format(_("Change rate %f in process %s is too high."), *changeRate, process->GetName()));
             }
             wxASSERT(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
@@ -138,7 +138,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *_capacity) {
-                throw ConceptionIssue(
+                throw ModelConfigError(
                     _("Forcing is coming directly into a brick with limited capacity and no overflow."));
             }
             // Limit the different rates proportionally

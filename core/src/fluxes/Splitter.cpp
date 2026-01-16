@@ -52,5 +52,5 @@ float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettin
         }
     }
 
-    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
 }

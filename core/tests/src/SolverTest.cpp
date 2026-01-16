@@ -38,7 +38,7 @@ TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
     SolverSettings settings;
 
     settings.name = "invalid_name";
-    EXPECT_THROW(Solver::Factory(settings), InvalidArgument);
+    EXPECT_THROW(Solver::Factory(settings), ModelConfigError);
 }
 
 /**

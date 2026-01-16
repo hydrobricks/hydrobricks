@@ -214,7 +214,7 @@ Brick* SubBasin::GetBrick(const string& name) const {
         return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
 Splitter* SubBasin::GetSplitter(size_t index) const {
@@ -234,7 +234,7 @@ Splitter* SubBasin::GetSplitter(const string& name) const {
         return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No splitter with the name '%s' was found."), name));
 }
 
 void SubBasin::ReserveLateralConnectionsForUnits(SettingsBasin& basinSettings) {

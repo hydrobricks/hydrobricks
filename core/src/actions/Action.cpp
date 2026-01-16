@@ -32,7 +32,7 @@ void Action::AddRecursiveDate(int month, int day) {
 }
 
 void Action::Reset() {
-    throw ConceptionIssue(_("Reset action not implemented for child action class."));
+    throw ModelConfigError(_("Reset action not implemented for child action class."));
 }
 
 bool Action::Apply(double) {
@@ -84,7 +84,7 @@ double Action::CheckLandCoverAreaFraction(const string& name, int id, double fra
         wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
         wxLogError(_("The unit area is %g, and the land cover area to assign is %g."), unitArea, lcArea);
         wxLogError(_("Failed to set the '%s' area fraction for hydro unit %d."), name, id);
-        throw ConceptionIssue(wxString::Format(_("The fraction (%f) is not in the range [0 .. 1]"), fraction));
+        throw ModelConfigError(wxString::Format(_("The fraction (%f) is not in the range [0 .. 1]"), fraction));
     }
 
     return fraction;

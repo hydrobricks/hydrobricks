@@ -77,7 +77,7 @@ void ActionsManager::DateUpdate(double date) {
         Time dateStruct = GetTimeStructFromMJD(date);
         for (int actionIndex : _recursiveActionIndices) {
             if (!_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
-                throw InvalidArgument(_("Application of a recursive action failed."));
+                throw RuntimeError(_("Application of a recursive action failed."));
             }
         }
     }
@@ -90,7 +90,7 @@ void ActionsManager::DateUpdate(double date) {
     wxASSERT(_sporadicActionDates.size() == _sporadicActionIndices.size());
     while (_sporadicActionDates.size() > _cursorManager && _sporadicActionDates[_cursorManager] <= date) {
         if (!_actions[_sporadicActionIndices[_cursorManager]]->Apply(date)) {
-            throw InvalidArgument(_("Application of a sporadic action failed."));
+            throw RuntimeError(_("Application of a sporadic action failed."));
         }
         _actions[_sporadicActionIndices[_cursorManager]]->IncrementCursor();
         _cursorManager++;

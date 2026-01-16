@@ -21,7 +21,7 @@ void SplitterRain::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Precipitation) {
         _precipitation = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Precipitation");
+        throw ModelConfigError(_("Forcing must be of type Precipitation"));
     }
 }
 

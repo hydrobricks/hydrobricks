@@ -53,10 +53,10 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
         } else if (HasParameter(processSettings, "degree_day_factor_we")) {
             _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
         } else {
-            throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
+            throw InputError(_("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'"));
         }
     } else {
-        throw InvalidArgument("Invalid aspect: " + _aspectClass);
+        throw InputError(_("Invalid aspect: ") + _aspectClass);
     }
 }
 
@@ -64,7 +64,7 @@ void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         _temperature = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature");
+        throw ModelConfigError(_("Forcing must be of type Temperature"));
     }
 }
 

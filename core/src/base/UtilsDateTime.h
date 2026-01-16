@@ -24,7 +24,7 @@ class UtilsDateTime {
     // Convert MJD to structured time.
     static Time FromMJD(double mjd);
 
-    // Parse date/time string according to TimeFormat; throws InvalidArgument on failure.
+    // Parse date/time string according to TimeFormat; throws InputError on failure.
     static double ParseToMJD(const std::string& dateStr, TimeFormat format);
 
   private:

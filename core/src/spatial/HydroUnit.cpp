@@ -76,7 +76,7 @@ double HydroUnit::GetPropertyDouble(const string& name, const string& unit) cons
         }
     }
 
-    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
 string HydroUnit::GetPropertyString(const string& name) const {
@@ -86,7 +86,7 @@ string HydroUnit::GetPropertyString(const string& name) const {
         }
     }
 
-    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
 void HydroUnit::AddBrick(Brick* brick) {
@@ -131,7 +131,7 @@ Forcing* HydroUnit::GetForcing(VariableType type) const {
 void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const string& type) {
     wxASSERT(receiver);
     if (fraction <= 0 || fraction > 1) {
-        throw ConceptionIssue(wxString::Format(_("The fraction (%f) is not in the range ]0 .. 1]"), fraction));
+        throw ModelConfigError(wxString::Format(_("The fraction (%f) is not in the range ]0 .. 1]"), fraction));
     }
 
     _lateralConnections.push_back(new HydroUnitLateralConnection(receiver, fraction, type));
@@ -162,7 +162,7 @@ Brick* HydroUnit::GetBrick(const string& name) const {
         return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
 LandCover* HydroUnit::GetLandCover(const string& name) const {
@@ -171,7 +171,7 @@ LandCover* HydroUnit::GetLandCover(const string& name) const {
         return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No land cover with the name '%s' was found."), name));
 }
 
 Splitter* HydroUnit::GetSplitter(size_t index) const {
@@ -191,7 +191,7 @@ Splitter* HydroUnit::GetSplitter(const string& name) const {
         return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No splitter with the name '%s' was found."), name));
 }
 
 bool HydroUnit::IsOk() const {

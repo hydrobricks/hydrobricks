@@ -285,7 +285,7 @@ void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings)
 
             if (process->NeedsTargetBrickLinking()) {
                 if (processSettings.outputs.size() != 1) {
-                    throw ConceptionIssue(_("There can only be a single process output for brick linking."));
+                    throw ModelConfigError(_("There can only be a single process output for brick linking."));
                 }
                 Brick* targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
                 process->SetTargetBrick(targetBrick);
@@ -305,7 +305,7 @@ void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings
 
             if (process->NeedsTargetBrickLinking()) {
                 if (processSettings.outputs.size() != 1) {
-                    throw ConceptionIssue(_("There can only be a single process output for brick linking."));
+                    throw ModelConfigError(_("There can only be a single process output for brick linking."));
                 }
                 Brick* targetBrick = nullptr;
                 if (unit->HasBrick(processSettings.outputs[0].target)) {
@@ -365,7 +365,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                     targetSplitter->AttachFluxIn(flux);
 
                 } else {
-                    throw ConceptionIssue(
+                    throw ModelConfigError(
                         wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
 
@@ -512,7 +512,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     process->AttachFluxOut(flux);
 
                 } else {
-                    throw ConceptionIssue(
+                    throw ModelConfigError(
                         wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
             }
@@ -552,7 +552,7 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ConceptionIssue(
+                throw ModelConfigError(
                     wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 
@@ -629,7 +629,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ConceptionIssue(
+                throw ModelConfigError(
                     wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 

@@ -25,7 +25,7 @@ bool ActionGlacierSnowToIceTransformation::Init() {
     }
 
     for (auto unit : _manager->GetSubBasin()->GetHydroUnits()) {
-        if (unit->GetLandCover(_landCoverName) != nullptr) {
+        if (unit->TryGetLandCover(_landCoverName) != nullptr) {
             _hydroUnitIds.push_back(unit->GetId());
         }
     }
@@ -45,14 +45,14 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
 
         // Get the glacier brick.
-        LandCover* glacierLandCover = unit->GetLandCover(_landCoverName);
+        LandCover* glacierLandCover = unit->TryGetLandCover(_landCoverName);
         if (glacierLandCover == nullptr || NearlyZero(glacierLandCover->GetAreaFraction(), PRECISION)) {
             continue;
         }
         Glacier* glacier = dynamic_cast<Glacier*>(glacierLandCover);
 
         // Get the associated snowpack.
-        Brick* snowpack = unit->GetBrick(_landCoverName + "_snowpack");
+        Brick* snowpack = unit->TryGetBrick(_landCoverName + "_snowpack");
         if (snowpack == nullptr) {
             wxLogError(_("The brick %s was not found in hydro unit %d"), (_landCoverName + "_snowpack"), id);
             continue;

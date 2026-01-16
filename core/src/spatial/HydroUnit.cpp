@@ -165,6 +165,11 @@ Brick* HydroUnit::GetBrick(const string& name) const {
     throw ModelConfigError(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
+Brick* HydroUnit::TryGetBrick(const string& name) const {
+    auto it = _brickMap.find(name);
+    return it != _brickMap.end() ? it->second : nullptr;
+}
+
 LandCover* HydroUnit::GetLandCover(const string& name) const {
     auto it = _landCoverMap.find(name);
     if (it != _landCoverMap.end()) {
@@ -172,6 +177,11 @@ LandCover* HydroUnit::GetLandCover(const string& name) const {
     }
 
     throw ModelConfigError(wxString::Format(_("No land cover with the name '%s' was found."), name));
+}
+
+LandCover* HydroUnit::TryGetLandCover(const string& name) const {
+    auto it = _landCoverMap.find(name);
+    return it != _landCoverMap.end() ? it->second : nullptr;
 }
 
 Splitter* HydroUnit::GetSplitter(size_t index) const {
@@ -192,6 +202,11 @@ Splitter* HydroUnit::GetSplitter(const string& name) const {
     }
 
     throw ModelConfigError(wxString::Format(_("No splitter with the name '%s' was found."), name));
+}
+
+Splitter* HydroUnit::TryGetSplitter(const string& name) const {
+    auto it = _splitterMap.find(name);
+    return it != _splitterMap.end() ? it->second : nullptr;
 }
 
 bool HydroUnit::IsOk() const {

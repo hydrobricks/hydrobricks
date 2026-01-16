@@ -186,6 +186,14 @@ class HydroUnit : public wxObject {
     Brick* GetBrick(const string& name) const;
 
     /**
+     * Try to get a brick by its name without throwing.
+     *
+     * @param name The name of the brick to get.
+     * @return The brick with the specified name, or nullptr if not found.
+     */
+    Brick* TryGetBrick(const string& name) const;
+
+    /**
      * Get a vector of all snowpack bricks in the hydro unit.
      *
      * @return A vector of pointers to the snowpack bricks.
@@ -210,6 +218,14 @@ class HydroUnit : public wxObject {
     LandCover* GetLandCover(const string& name) const;
 
     /**
+     * Try to get a land cover brick by its name without throwing.
+     *
+     * @param name The name of the land cover to get.
+     * @return The land cover with the specified name, or nullptr if not found.
+     */
+    LandCover* TryGetLandCover(const string& name) const;
+
+    /**
      * Get a splitter by its index.
      *
      * @param index The index of the splitter to get.
@@ -232,6 +248,14 @@ class HydroUnit : public wxObject {
      * @return The splitter with the specified name.
      */
     Splitter* GetSplitter(const string& name) const;
+
+    /**
+     * Try to get a splitter by its name without throwing.
+     *
+     * @param name The name of the splitter to get.
+     * @return The splitter with the specified name, or nullptr if not found.
+     */
+    Splitter* TryGetSplitter(const string& name) const;
 
     /**
      * Check if the hydro unit is properly configured.

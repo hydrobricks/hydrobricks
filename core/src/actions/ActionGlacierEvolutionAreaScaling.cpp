@@ -53,7 +53,7 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
         }
 
         // Initialize the glacier container.
-        LandCover* brick = unit->GetLandCover(_landCoverName);
+        LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr) {
             wxLogError(_("The land cover %s was not found in hydro unit %d"), _landCoverName, id);
             return false;
@@ -91,7 +91,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
     for (int i = 0; i < _hydroUnitIds.size(); ++i) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
-        LandCover* brick = unit->GetLandCover(_landCoverName);
+        LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr || NearlyZero(brick->GetAreaFraction(), PRECISION)) {
             continue;
         }

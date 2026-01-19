@@ -98,19 +98,20 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
         wxASSERT(_weights.size() > i);
-        double targetFraction = GetTargetLandCoverAreaFraction(_outputs[i]);
+        Flux* flux = _outputs[i].get();  // Extract raw pointer from unique_ptr
+        double targetFraction = GetTargetLandCoverAreaFraction(flux);
         if (NearlyZero(targetFraction, PRECISION)) {
             rates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }
         rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
 
-        rates[i] = AvoidUnrealisticAccumulation(rates[i], _outputs[i]);
+        rates[i] = AvoidUnrealisticAccumulation(rates[i], flux);
 
         // The weight of the flux is adjusted to account for the area ratio between the source and target land cover.
         // As it can change (e.g., due to land cover changes), we compute it dynamically.
-        double fractionAreas = ComputeFractionAreas(_outputs[i]);
-        _outputs[i]->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
+        double fractionAreas = ComputeFractionAreas(flux);
+        flux->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
     }
 
     return rates;

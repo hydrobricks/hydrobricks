@@ -29,10 +29,10 @@ class ProcessLateral : public Process {
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      * @param weight weight of the flux
      */
-    void AttachFluxOutWithWeight(Flux* flux, double weight = 1.0);
+    void AttachFluxOutWithWeight(std::unique_ptr<Flux> flux, double weight = 1.0);
 
     /**
      * Get the area fraction of the origin land cover.

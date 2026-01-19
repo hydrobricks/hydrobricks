@@ -335,21 +335,24 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            Flux* flux;
             Brick* brick = _subBasin->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
 
             // Water goes to the atmosphere (ET)
             if (process->ToAtmosphere()) {
-                flux = new FluxToAtmosphere();
-                process->AttachFluxOut(flux);
+                auto fluxPtr = std::make_unique<FluxToAtmosphere>();
+                process->AttachFluxOut(std::move(fluxPtr));
                 continue;
             }
 
             for (const auto& output : processSettings.outputs) {
+                std::unique_ptr<Flux> fluxPtr;
+                Flux* flux;
+
                 if (output.target == "outlet") {
                     // Water goes to the outlet
-                    flux = new FluxToOutlet();
+                    fluxPtr = std::make_unique<FluxToOutlet>();
+                    flux = fluxPtr.get();
                     flux->SetType(output.fluxType);
                     _subBasin->AttachOutletFlux(flux);
 
@@ -357,11 +360,13 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                     // Water goes to another brick
                     Brick* targetBrick = _subBasin->GetBrick(output.target);
                     if (output.isInstantaneous) {
-                        flux = new FluxToBrickInstantaneous(targetBrick);
+                        fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
+                        flux = fluxPtr.get();
                         flux->SetType(output.fluxType);
                         targetBrick->AttachFluxIn(flux);
                     } else {
-                        flux = new FluxToBrick(targetBrick);
+                        fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                        flux = fluxPtr.get();
                         flux->SetType(output.fluxType);
                         targetBrick->AttachFluxIn(flux);
                     }
@@ -369,7 +374,8 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                 } else if (_subBasin->HasSplitter(output.target)) {
                     // Water goes to a splitter
                     Splitter* targetSplitter = _subBasin->GetSplitter(output.target);
-                    flux = new FluxSimple();
+                    fluxPtr = std::make_unique<FluxSimple>();
+                    flux = fluxPtr.get();
                     flux->SetType(output.fluxType);
                     flux->SetAsStatic();
                     targetSplitter->AttachFluxIn(flux);
@@ -379,7 +385,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                         wxString::Format(_("The target %s to attach the flux was no found"), output.target));
                 }
 
-                process->AttachFluxOut(flux);
+                process->AttachFluxOut(std::move(fluxPtr));
             }
         }
     }
@@ -391,21 +397,21 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            Flux* flux = nullptr;
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             Process* process = brick->GetProcess(iProcess);
 
             // Water goes to the atmosphere (ET)
             if (process->ToAtmosphere()) {
-                flux = new FluxToAtmosphere();
-                process->AttachFluxOut(flux);
+                auto fluxPtr = std::make_unique<FluxToAtmosphere>();
+                process->AttachFluxOut(std::move(fluxPtr));
                 continue;
             }
 
             for (const auto& output : processSettings.outputs) {
                 if (output.target == "outlet") {
                     // Water goes to the outlet
-                    flux = new FluxToOutlet();
+                    auto fluxPtr = std::make_unique<FluxToOutlet>();
+                    Flux* flux = fluxPtr.get();
                     flux->SetAsStatic();
                     flux->SetType(output.fluxType);
 
@@ -417,7 +423,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                         flux->NeedsWeighting(true);
                     }
                     _subBasin->AttachOutletFlux(flux);
-                    process->AttachFluxOut(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
 
                 } else if (output.target == "lateral") {
                     // Cast the process to a lateral process
@@ -432,12 +438,14 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                             // Look over the snowpack bricks of the receiver unit
                             for (auto& targetBrick : receiver->GetSnowpacks()) {
                                 // Create the flux
+                                std::unique_ptr<Flux> fluxPtr;
                                 if (output.isInstantaneous) {
-                                    flux = new FluxToBrickInstantaneous(targetBrick);
+                                    fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
                                 } else {
-                                    flux = new FluxToBrick(targetBrick);
+                                    fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
                                 }
 
+                                Flux* flux = fluxPtr.get();
                                 if (output.isStatic) {
                                     flux->SetAsStatic();
                                 }
@@ -448,7 +456,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                                 flux->NeedsWeighting(true);
 
                                 targetBrick->AttachFluxIn(flux);
-                                lateralProcess->AttachFluxOutWithWeight(flux, lateralConnection->GetFraction());
+                                lateralProcess->AttachFluxOutWithWeight(std::move(fluxPtr), lateralConnection->GetFraction());
                             }
                         } else {
                             throw NotImplemented(wxString::Format("ModelHydro::CreateHydroUnitsComponents - Lateral flux type %d not yet supported",
@@ -468,12 +476,14 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     // Create the flux
+                    std::unique_ptr<Flux> fluxPtr;
                     if (output.isInstantaneous) {
-                        flux = new FluxToBrickInstantaneous(targetBrick);
+                        fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
                     } else {
-                        flux = new FluxToBrick(targetBrick);
+                        fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
                     }
 
+                    Flux* flux = fluxPtr.get();
                     flux->SetType(output.fluxType);
 
                     // If leaves surface components: weight by surface area
@@ -490,7 +500,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     targetBrick->AttachFluxIn(flux);
-                    process->AttachFluxOut(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
 
                 } else if (unit->HasSplitter(output.target) || _subBasin->HasSplitter(output.target)) {
                     bool toSubBasin = false;
@@ -505,7 +515,8 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     // Create the flux
-                    flux = new FluxSimple();
+                    auto fluxPtr = std::make_unique<FluxSimple>();
+                    Flux* flux = fluxPtr.get();
                     flux->SetType(output.fluxType);
                     flux->SetAsStatic();
 
@@ -520,7 +531,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     }
 
                     targetSplitter->AttachFluxIn(flux);
-                    process->AttachFluxOut(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
 
                 } else {
                     throw ModelConfigError(
@@ -539,17 +550,21 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
         Splitter* splitter = _subBasin->GetSplitter(iSplitter);
 
         for (const auto& output : splitterSettings.outputs) {
+            std::unique_ptr<Flux> fluxPtr;
             Flux* flux;
+
             if (output.target == "outlet") {
                 // Water goes to the outlet
-                flux = new FluxToOutlet();
+                fluxPtr = std::make_unique<FluxToOutlet>();
+                flux = fluxPtr.get();
                 flux->SetType(output.fluxType);
                 _subBasin->AttachOutletFlux(flux);
 
             } else if (_subBasin->HasBrick(output.target)) {
                 // Look for target brick
                 Brick* targetBrick = _subBasin->GetBrick(output.target);
-                flux = new FluxToBrick(targetBrick);
+                fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                flux = fluxPtr.get();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
                 targetBrick->AttachFluxIn(flux);
@@ -557,7 +572,8 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
             } else if (_subBasin->HasSplitter(output.target)) {
                 // Look for target splitter
                 Splitter* targetSplitter = _subBasin->GetSplitter(output.target);
-                flux = new FluxSimple();
+                fluxPtr = std::make_unique<FluxSimple>();
+                flux = fluxPtr.get();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
                 targetSplitter->AttachFluxIn(flux);
@@ -567,7 +583,7 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
                     wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 
-            splitter->AttachFluxOut(flux);
+            splitter->AttachFluxOut(std::move(fluxPtr));
         }
     }
 }
@@ -580,10 +596,13 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
         Splitter* splitter = unit->GetSplitter(iSplitter);
 
         for (const auto& output : splitterSettings.outputs) {
+            std::unique_ptr<Flux> fluxPtr;
             Flux* flux;
+
             if (output.target == "outlet") {
                 // Water goes to the outlet
-                flux = new FluxToOutlet();
+                fluxPtr = std::make_unique<FluxToOutlet>();
+                flux = fluxPtr.get();
                 flux->SetType(output.fluxType);
 
                 // From hydro unit to basin: weight by hydro unit area
@@ -604,7 +623,8 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 }
 
                 // Create flux
-                flux = new FluxToBrick(targetBrick);
+                fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                flux = fluxPtr.get();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
 
@@ -628,7 +648,8 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 }
 
                 // Create flux
-                flux = new FluxSimple();
+                fluxPtr = std::make_unique<FluxSimple>();
+                flux = fluxPtr.get();
                 flux->SetAsStatic();
                 flux->SetType(output.fluxType);
 
@@ -644,7 +665,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                     wxString::Format(_("The target %s to attach the flux was no found"), output.target));
             }
 
-            splitter->AttachFluxOut(flux);
+            splitter->AttachFluxOut(std::move(fluxPtr));
         }
     }
 }

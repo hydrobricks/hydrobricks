@@ -34,7 +34,7 @@ double* SplitterMultiFluxes::GetValuePointer(const string& name) {
 
 void SplitterMultiFluxes::Compute() {
     wxASSERT(!_inputs.empty());
-    for (auto output : _outputs) {
+    for (const auto& output : _outputs) {
         output->UpdateFlux(_inputs[0]->GetAmount());
     }
 }

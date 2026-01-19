@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_PROCESS_H
 #define HYDROBRICKS_PROCESS_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -91,20 +93,11 @@ class Process : public wxObject {
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
         wxASSERT(flux);
-        _outputs.push_back(flux);
-    }
-
-    /**
-     * Get the outgoing fluxes.
-     *
-     * @return vector of pointers to the outgoing fluxes.
-     */
-    const vector<Flux*>& GetOutputFluxes() const {
-        return _outputs;
+        _outputs.push_back(std::move(flux));
     }
 
     /**
@@ -114,6 +107,18 @@ class Process : public wxObject {
      */
     int GetOutputFluxCount() const {
         return static_cast<int>(_outputs.size());
+    }
+
+    /**
+     * Get an outgoing flux by its index.
+     *
+     * @param index index of the flux.
+     * @return pointer to the flux.
+     */
+    Flux* GetOutputFlux(size_t index) const {
+        wxASSERT(_outputs.size() > index);
+        wxASSERT(_outputs[index]);
+        return _outputs[index].get();
     }
 
     /**
@@ -254,8 +259,8 @@ class Process : public wxObject {
 
   protected:
     string _name;
-    WaterContainer* _container;
-    vector<Flux*> _outputs;
+    WaterContainer* _container;  // non-owning reference
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 
     /**
      * Get the sum of change rates from other processes.

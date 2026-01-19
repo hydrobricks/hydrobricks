@@ -16,20 +16,16 @@ TEST(SubBasin, HasIncomingFlow) {
 
 TEST(SubBasin, GetHydroUnitsCount1) {
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(std::unique_ptr<HydroUnit>(&unit));
+    subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
 
     EXPECT_EQ(subBasin.GetHydroUnitCount(), 1);
 }
 
 TEST(SubBasin, GetHydroUnitsCount3) {
     SubBasin subBasin;
-    HydroUnit unit1(100);
-    subBasin.AddHydroUnit(std::unique_ptr<HydroUnit>(&unit1));
-    HydroUnit unit2(100);
-    subBasin.AddHydroUnit(std::unique_ptr<HydroUnit>(&unit2));
-    HydroUnit unit3(100);
-    subBasin.AddHydroUnit(std::unique_ptr<HydroUnit>(&unit3));
+    subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
+    subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
+    subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
 
     EXPECT_EQ(subBasin.GetHydroUnitCount(), 3);
 }
@@ -44,8 +40,7 @@ TEST(SubBasin, EmptySubBasinIsNotOk) {
 
 TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
-    HydroUnit unit(100);
-    subBasin.AddHydroUnit(std::unique_ptr<HydroUnit>(&unit));
+    subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
 
     EXPECT_TRUE(subBasin.IsOk());
 }

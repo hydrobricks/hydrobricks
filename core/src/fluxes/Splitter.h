@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SPLITTER_H
 #define HYDROBRICKS_SPLITTER_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -67,11 +69,11 @@ class Splitter : public wxObject {
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
         wxASSERT(flux);
-        _outputs.push_back(flux);
+        _outputs.push_back(std::move(flux));
     }
 
     /**
@@ -106,8 +108,8 @@ class Splitter : public wxObject {
 
   protected:
     string _name;
-    vector<Flux*> _inputs;
-    vector<Flux*> _outputs;
+    vector<Flux*> _inputs;  // non-owning: owned by processes
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

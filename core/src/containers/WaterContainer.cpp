@@ -55,7 +55,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         if (process->GetWaterContainer() != this) {
             continue;
         }
-        for (auto flux : process->GetOutputFluxes()) {
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+            Flux* flux = process->GetOutputFlux(j);
             double* changeRate = flux->GetChangeRatePointer();
             if (changeRate == nullptr) {
                 // For example when the originating brick has an area = 0.
@@ -132,8 +133,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             double diff = (content + inputsStatic + change * timeStep - *_capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
-                if (_overflow->GetOutputFluxes()[0]->GetChangeRatePointer() != nullptr) {
-                    *(_overflow->GetOutputFluxes()[0]->GetChangeRatePointer()) = diff;
+                if (_overflow->GetOutputFlux(0)->GetChangeRatePointer() != nullptr) {
+                    *(_overflow->GetOutputFlux(0)->GetChangeRatePointer()) = diff;
                     return;
                 }
                 throw ShouldNotHappen(_("WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer"));
@@ -163,7 +164,8 @@ void WaterContainer::SetOutgoingRatesToZero() {
         if (process->GetWaterContainer() != this) {
             continue;
         }
-        for (auto flux : process->GetOutputFluxes()) {
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+            Flux* flux = process->GetOutputFlux(j);
             double* changeRate = flux->GetChangeRatePointer();
             if (changeRate == nullptr) {
                 // For example when the originating brick has an area = 0.

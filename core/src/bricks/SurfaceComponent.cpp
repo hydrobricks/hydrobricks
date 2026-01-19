@@ -13,7 +13,8 @@ void SurfaceComponent::SetAreaFraction(double value) {
     wxASSERT(_parent);
     _areaFraction = value;
     for (const auto& process : _processes) {
-        for (auto output : process->GetOutputFluxes()) {
+        for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
+            Flux* output = process->GetOutputFlux(i);
             if (output->NeedsWeighting()) {
                 value *= _parent->GetAreaFraction();
                 output->SetFractionLandCover(value);

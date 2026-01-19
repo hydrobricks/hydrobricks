@@ -185,7 +185,7 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
 }
 
 void Process::Reset() {
-    for (auto flux : _outputs) {
+    for (const auto& flux : _outputs) {
         flux->Reset();
     }
 }
@@ -264,8 +264,8 @@ double Process::GetSumChangeRatesOtherProcesses() const {
         if (process == this) {
             continue;
         }
-        vector<Flux*> fluxes = process->GetOutputFluxes();
-        for (auto flux : fluxes) {
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+            Flux* flux = process->GetOutputFlux(j);
             wxASSERT(flux);
             sumOtherProcesses += *flux->GetAmountPointer();
         }

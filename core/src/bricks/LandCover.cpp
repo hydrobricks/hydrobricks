@@ -12,7 +12,8 @@ LandCover::LandCover()
 void LandCover::SetAreaFraction(double value) {
     _areaFraction = value;
     for (const auto& process : _processes) {
-        for (auto output : process->GetOutputFluxes()) {
+        for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
+            Flux* output = process->GetOutputFlux(i);
             if (output->NeedsWeighting()) {
                 output->SetFractionLandCover(value);
             }

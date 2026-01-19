@@ -18,7 +18,8 @@ bool WaterContainer::IsOk() const {
         return true;
     }
 
-    for (auto process : GetParentBrick()->GetProcesses()) {
+    for (int i = 0; i < GetParentBrick()->GetProcessCount(); ++i) {
+        auto process = GetParentBrick()->GetProcess(i);
         if (process->GetWaterContainer() == this) {
             return true;
         }
@@ -49,7 +50,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     // Get outgoing change rates
     vecDoublePt outgoingRates;
     double outputs = 0;
-    for (auto process : _parent->GetProcesses()) {
+    for (int i = 0; i < _parent->GetProcessCount(); ++i) {
+        auto process = _parent->GetProcess(i);
         if (process->GetWaterContainer() != this) {
             continue;
         }
@@ -156,7 +158,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 }
 
 void WaterContainer::SetOutgoingRatesToZero() {
-    for (auto process : _parent->GetProcesses()) {
+    for (int i = 0; i < _parent->GetProcessCount(); ++i) {
+        auto process = _parent->GetProcess(i);
         if (process->GetWaterContainer() != this) {
             continue;
         }

@@ -258,8 +258,8 @@ double* Process::GetValuePointer(const string&) {
 double Process::GetSumChangeRatesOtherProcesses() const {
     double sumOtherProcesses = 0;
 
-    vector<Process*> otherProcesses = _container->GetParentBrick()->GetProcesses();
-    for (auto process : otherProcesses) {
+    for (int i = 0; i < _container->GetParentBrick()->GetProcessCount(); ++i) {
+        auto process = _container->GetParentBrick()->GetProcess(i);
         wxASSERT(process);
         if (process == this) {
             continue;

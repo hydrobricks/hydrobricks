@@ -100,10 +100,11 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
             modelSettings.SelectProcess(iProcess);
             ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            Process* process = Process::Factory(processSettings, brick);
+            auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
+            Process* process = processPtr.get();
             process->SetName(processSettings.name);
             process->SetParameters(processSettings);
-            brick->AddProcess(process);
+            brick->AddProcess(std::move(processPtr));
 
             if (processSettings.type == "overflow") {
                 brick->GetWaterContainer()->LinkOverflow(process);
@@ -199,11 +200,12 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
         modelSettings.SelectProcess(iProcess);
         ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
 
-        Process* process = Process::Factory(processSettings, brick);
+        auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
+        Process* process = processPtr.get();
         process->SetName(processSettings.name);
         process->SetHydroUnitProperties(unit, brick);
         process->SetParameters(processSettings);
-        brick->AddProcess(process);
+        brick->AddProcess(std::move(processPtr));
 
         if (processSettings.type == "overflow") {
             brick->GetWaterContainer()->LinkOverflow(process);

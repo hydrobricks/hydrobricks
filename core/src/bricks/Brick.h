@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_BRICK_H
 #define HYDROBRICKS_BRICK_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Includes.h"
 #include "Process.h"
@@ -76,11 +78,11 @@ class Brick : public wxObject {
     /**
      * Add a process to the brick.
      *
-     * @param process process to add.
+     * @param process process to add (ownership transferred).
      */
-    void AddProcess(Process* process) {
+    void AddProcess(std::unique_ptr<Process> process) {
         wxASSERT(process);
-        _processes.push_back(process);
+        _processes.push_back(std::move(process));
     }
 
     /**
@@ -212,21 +214,21 @@ class Brick : public wxObject {
     WaterContainer* GetWaterContainer() const;
 
     /**
+     * Get the number of processes in the brick.
+     *
+     * @return number of processes.
+     */
+    [[nodiscard]] size_t GetProcessCount() const {
+        return _processes.size();
+    }
+
+    /**
      * Get a process by its index.
      *
      * @param index index of the process.
      * @return pointer to the process.
      */
     Process* GetProcess(size_t index) const;
-
-    /**
-     * Get all processes of the brick.
-     *
-     * @return vector of pointers to the processes.
-     */
-    const vector<Process*>& GetProcesses() const {
-        return _processes;
-    }
 
     /**
      * Get the name of the brick.
@@ -305,9 +307,9 @@ class Brick : public wxObject {
     string _name;
     bool _needsSolver;
     BrickCategory _category;
-    std::unique_ptr<WaterContainer> _water;
-    vector<Process*> _processes;
-    HydroUnit* _hydroUnit;
+    std::unique_ptr<WaterContainer> _water;  // owning
+    std::vector<std::unique_ptr<Process>> _processes;  // owning
+    HydroUnit* _hydroUnit;  // non-owning back-reference
 };
 
 #endif  // HYDROBRICKS_BRICK_H

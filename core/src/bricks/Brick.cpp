@@ -50,7 +50,7 @@ Brick* Brick::Factory(BrickType type) {
 
 void Brick::Reset() {
     _water->Reset();
-    for (auto process : _processes) {
+    for (const auto& process : _processes) {
         process->Reset();
     }
 }
@@ -64,7 +64,7 @@ bool Brick::IsOk() const {
         wxLogError(_("The brick %s has no process attached"), _name);
         return false;
     }
-    for (auto process : _processes) {
+    for (const auto& process : _processes) {
         if (!process->IsOk()) {
             return false;
         }
@@ -108,7 +108,7 @@ Process* Brick::GetProcess(size_t index) const {
     wxASSERT(_processes.size() > index);
     wxASSERT(_processes[index]);
 
-    return _processes[index];
+    return _processes[index].get();
 }
 
 void Brick::Finalize() {

@@ -136,19 +136,22 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
 
     // Initialize the change rates to 0 and link to fluxes
     int iRate = ptIndex;
-    for (auto process : brick->GetProcesses()) {
-        for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
+    for (int i = 0; i < brick->GetProcessCount(); ++i) {
+        auto process = brick->GetProcess(i);
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
             wxASSERT(_changeRatesNoSolver.rows() > iRate);
             _changeRatesNoSolver(iRate) = 0;
 
             // Link to fluxes to enforce subsequent constraints
-            process->StoreInOutgoingFlux(&_changeRatesNoSolver(iRate), i);
+            process->StoreInOutgoingFlux(&_changeRatesNoSolver(iRate), j);
             iRate++;
         }
     }
 
     iRate = ptIndex;
-    for (auto process : brick->GetProcesses()) {
+    for (int i = 0; i < brick->GetProcessCount(); ++i) {
+        auto process = brick->GetProcess(i);
+
         // Get the change rates (per day) independently of the time step and constraints
         vecDouble rates = process->GetChangeRates();
 
@@ -163,8 +166,8 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
         process->GetWaterContainer()->ApplyConstraints(config::timeStepInDays);
 
         // Apply changes
-        for (int i = 0; i < rates.size(); ++i) {
-            process->ApplyChange(i, _changeRatesNoSolver(iRate), config::timeStepInDays);
+        for (int j = 0; j < rates.size(); ++j) {
+            process->ApplyChange(j, _changeRatesNoSolver(iRate), config::timeStepInDays);
             _changeRatesNoSolver(iRate) = 0;
             iRate++;
             ptIndex++;

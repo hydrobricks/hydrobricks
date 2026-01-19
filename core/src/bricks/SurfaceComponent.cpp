@@ -12,7 +12,7 @@ SurfaceComponent::SurfaceComponent()
 void SurfaceComponent::SetAreaFraction(double value) {
     wxASSERT(_parent);
     _areaFraction = value;
-    for (auto process : _processes) {
+    for (const auto& process : _processes) {
         for (auto output : process->GetOutputFluxes()) {
             if (output->NeedsWeighting()) {
                 value *= _parent->GetAreaFraction();

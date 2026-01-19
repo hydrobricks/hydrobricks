@@ -19,12 +19,13 @@ bool ActionGlacierSnowToIceTransformation::Init() {
         wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
         return false;
     }
-    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+    if (!_manager->GetSubBasin()->HasHydroUnits()) {
         wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
         return false;
     }
 
-    for (auto unit : _manager->GetSubBasin()->GetHydroUnits()) {
+    for (int i = 0; i < _manager->GetSubBasin()->GetHydroUnitCount(); ++i) {
+        auto unit = _manager->GetSubBasin()->GetHydroUnit(i);
         if (unit->TryGetLandCover(_landCoverName) != nullptr) {
             _hydroUnitIds.push_back(unit->GetId());
         }

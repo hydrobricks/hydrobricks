@@ -45,7 +45,7 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
         return it->second();
     }
 
-    throw InputError(wxString::Format(_("Incorrect solver name: %s. %s"), solverSettings.name, GetValidSolverNames()));
+    throw ModelConfigError(wxString::Format(_("Incorrect solver name: %s. %s"), solverSettings.name, GetValidSolverNames()));
 }
 
 void Solver::InitializeContainers() {

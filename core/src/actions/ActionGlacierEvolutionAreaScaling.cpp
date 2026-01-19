@@ -21,7 +21,7 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
         wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
         return false;
     }
-    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+    if (!_manager->GetSubBasin()->HasHydroUnits()) {
         wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
         return false;
     }

@@ -1,5 +1,7 @@
 #include "ModelHydro.h"
 
+#include <memory>
+
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
@@ -87,10 +89,11 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
 
         // Create the brick
-        Brick* brick = Brick::Factory(brickSettings);
+        auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
+        Brick* brick = brickPtr.get();
         brick->SetName(brickSettings.name);
         brick->SetParameters(brickSettings);
-        _subBasin->AddBrick(brick);
+        _subBasin->AddBrick(std::move(brickPtr));
 
         // Create the processes
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
@@ -113,9 +116,10 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
         SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
 
-        Splitter* splitter = Splitter::Factory(splitterSettings);
+        auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
+        Splitter* splitter = splitterPtr.get();
         splitter->SetName(splitterSettings.name);
-        _subBasin->AddSplitter(splitter);
+        _subBasin->AddSplitter(std::move(splitterPtr));
     }
 
     LinkSubBasinProcessesTargetBricks(modelSettings);
@@ -158,9 +162,10 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
             SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
-            Splitter* splitter = Splitter::Factory(splitterSettings);
+            auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
+            Splitter* splitter = splitterPtr.get();
             splitter->SetName(splitterSettings.name);
-            unit->AddSplitter(splitter);
+            unit->AddSplitter(std::move(splitterPtr));
 
             BuildForcingConnections(splitterSettings, unit, splitter);
         }
@@ -181,10 +186,11 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
     modelSettings.SelectHydroUnitBrick(iBrick);
     BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
 
-    Brick* brick = Brick::Factory(brickSettings);
+    auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
+    Brick* brick = brickPtr.get();
     brick->SetName(brickSettings.name);
     brick->SetParameters(brickSettings);
-    unit->AddBrick(brick);
+    unit->AddBrick(std::move(brickPtr));
 
     BuildForcingConnections(brickSettings, unit, brick);
 
@@ -644,8 +650,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
 void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick) {
     for (auto forcingType : brickSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
-            auto newForcing = new Forcing(forcingType);
-            unit->AddForcing(newForcing);
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
         }
 
         auto forcing = unit->GetForcing(forcingType);
@@ -658,8 +663,7 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
 void ModelHydro::BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process) {
     for (auto forcingType : processSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
-            auto newForcing = new Forcing(forcingType);
-            unit->AddForcing(newForcing);
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
         }
 
         auto forcing = unit->GetForcing(forcingType);
@@ -670,8 +674,7 @@ void ModelHydro::BuildForcingConnections(ProcessSettings& processSettings, Hydro
 void ModelHydro::BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter) {
     for (auto forcingType : splitterSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
-            auto newForcing = new Forcing(forcingType);
-            unit->AddForcing(newForcing);
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
         }
 
         auto forcing = unit->GetForcing(forcingType);

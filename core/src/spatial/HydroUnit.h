@@ -1,6 +1,10 @@
 #ifndef HYDROBRICKS_HYDRO_UNIT_H
 #define HYDROBRICKS_HYDRO_UNIT_H
 
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
 #include "Brick.h"
 #include "Forcing.h"
 #include "HydroUnitLateralConnection.h"
@@ -46,7 +50,7 @@ class HydroUnit : public wxObject {
      *
      * @param property The property to add.
      */
-    void AddProperty(HydroUnitProperty* property);
+    void AddProperty(std::unique_ptr<HydroUnitProperty> property);
 
     /**
      * Get a numeric property of the hydro unit.
@@ -70,14 +74,14 @@ class HydroUnit : public wxObject {
      *
      * @param brick The brick to add.
      */
-    void AddBrick(Brick* brick);
+    void AddBrick(std::unique_ptr<Brick> brick);
 
     /**
      * Add a splitter to the hydro unit.
      *
      * @param splitter The splitter to add.
      */
-    void AddSplitter(Splitter* splitter);
+    void AddSplitter(std::unique_ptr<Splitter> splitter);
 
     /**
      * Check if the hydro unit has a forcing of a specific type.
@@ -92,7 +96,7 @@ class HydroUnit : public wxObject {
      *
      * @param forcing The forcing to attach.
      */
-    void AddForcing(Forcing* forcing);
+    void AddForcing(std::unique_ptr<Forcing> forcing);
 
     /**
      * Get a forcing of a specific type.
@@ -198,12 +202,12 @@ class HydroUnit : public wxObject {
      *
      * @return A vector of pointers to the snowpack bricks.
      */
-    [[nodiscard]] vector<Brick*> GetSnowpacks() const {
-        vector<Brick*> snowBricks;
+    [[nodiscard]] std::vector<Brick*> GetSnowpacks() const {
+        std::vector<Brick*> snowBricks;
         snowBricks.reserve(_bricks.size());
-        for (auto& brick : _bricks) {
+        for (const auto& brick : _bricks) {
             if (brick->GetCategory() == BrickCategory::Snowpack) {
-                snowBricks.push_back(brick);
+                snowBricks.push_back(brick.get());
             }
         }
         return snowBricks;
@@ -321,24 +325,22 @@ class HydroUnit : public wxObject {
      *
      * @return A vector of lateral connections associated with the hydro unit.
      */
-    [[nodiscard]] const vector<HydroUnitLateralConnection*>& GetLateralConnections() const {
-        return _lateralConnections;
-    }
+    [[nodiscard]] std::vector<HydroUnitLateralConnection*> GetLateralConnections() const;
 
   protected:
     Types _type;
     int _id;
     double _area;  // [m²]
-    vector<HydroUnitProperty*> _properties;
-    vector<HydroUnitLateralConnection*> _lateralConnections;
-    vector<Brick*> _bricks;
-    std::unordered_map<string, Brick*> _brickMap;
-    vector<LandCover*> _landCoverBricks;
-    std::unordered_map<string, LandCover*> _landCoverMap;
-    vector<Splitter*> _splitters;
-    std::unordered_map<string, Splitter*> _splitterMap;
-    vector<Forcing*> _forcing;
-    std::unordered_map<VariableType, Forcing*> _forcingMap;
+    std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
+    std::vector<std::unique_ptr<HydroUnitLateralConnection>> _lateralConnections;  // owning
+    std::vector<std::unique_ptr<Brick>> _bricks;  // owning
+    std::unordered_map<string, Brick*> _brickMap;  // non-owning view into _bricks
+    std::vector<LandCover*> _landCoverBricks;  // non-owning view into _bricks
+    std::unordered_map<string, LandCover*> _landCoverMap;  // non-owning view into _landCoverBricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;  // owning
+    std::unordered_map<string, Splitter*> _splitterMap;  // non-owning view into _splitters
+    std::vector<std::unique_ptr<Forcing>> _forcing;  // owning
+    std::unordered_map<VariableType, Forcing*> _forcingMap;  // non-owning view into _forcing
 };
 
 #endif

@@ -1,11 +1,14 @@
 #ifndef HYDROBRICKS_SUBBASIN_H
 #define HYDROBRICKS_SUBBASIN_H
 
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
 #include "Connector.h"
 #include "HydroUnit.h"
 #include "Includes.h"
 #include "SettingsBasin.h"
-#include <unordered_map>
 #include "TimeMachine.h"
 
 class SubBasin : public wxObject {
@@ -118,23 +121,23 @@ class SubBasin : public wxObject {
     /**
      * Add a brick to the sub-basin.
      *
-     * @param brick The brick to add.
+     * @param brick The brick to add (ownership transferred).
      */
-    void AddBrick(Brick* brick);
+    void AddBrick(std::unique_ptr<Brick> brick);
 
     /**
      * Add a splitter to the sub-basin.
      *
-     * @param splitter The splitter to add.
+     * @param splitter The splitter to add (ownership transferred).
      */
-    void AddSplitter(Splitter* splitter);
+    void AddSplitter(std::unique_ptr<Splitter> splitter);
 
     /**
-     * Check a hydro unit to the sub-basin.
+     * Add a hydro unit to the sub-basin.
      *
-     * @param unit The hydro unit to add.
+     * @param unit The hydro unit to add (ownership transferred).
      */
-    void AddHydroUnit(HydroUnit* unit);
+    void AddHydroUnit(std::unique_ptr<HydroUnit> unit);
 
     /**
      * Get the number of hydro units in the sub-basin.
@@ -152,12 +155,12 @@ class SubBasin : public wxObject {
     HydroUnit* GetHydroUnit(size_t index) const;
 
     /**
-     * Get all hydro units in the sub-basin.
+     * Check if the sub-basin has any hydro units.
      *
-     * @return A vector of pointers to all hydro units.
+     * @return True if the sub-basin has hydro units, false otherwise.
      */
-    const vector<HydroUnit*>& GetHydroUnits() const {
-        return _hydroUnits;
+    bool HasHydroUnits() const {
+        return !_hydroUnits.empty();
     }
 
     /**
@@ -299,16 +302,15 @@ class SubBasin : public wxObject {
   protected:
     double _area;  // m2
     double _outletTotal;
-    bool _needsCleanup;
-    vector<Brick*> _bricks;
-    std::unordered_map<string, Brick*> _brickMap;
-    vector<Splitter*> _splitters;
-    std::unordered_map<string, Splitter*> _splitterMap;
-    vector<HydroUnit*> _hydroUnits;
-    std::unordered_map<int, HydroUnit*> _hydroUnitMap;
-    vector<Connector*> _inConnectors;
-    vector<Connector*> _outConnectors;
-    vector<Flux*> _outletFluxes;
+    std::vector<std::unique_ptr<Brick>> _bricks;  // owning: SubBasin-level bricks
+    std::unordered_map<string, Brick*> _brickMap;  // non-owning views into _bricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;  // owning: SubBasin-level splitters
+    std::unordered_map<string, Splitter*> _splitterMap;  // non-owning views into _splitters
+    std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;  // owning
+    std::unordered_map<int, HydroUnit*> _hydroUnitMap;  // non-owning views into _hydroUnits
+    std::vector<Connector*> _inConnectors;  // non-owning: lifetime managed externally
+    std::vector<Connector*> _outConnectors;  // non-owning: lifetime managed externally
+    std::vector<Flux*> _outletFluxes;  // non-owning: lifetime managed by process owners
 };
 
 #endif

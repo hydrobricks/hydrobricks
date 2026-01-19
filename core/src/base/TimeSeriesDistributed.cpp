@@ -3,20 +3,16 @@
 TimeSeriesDistributed::TimeSeriesDistributed(VariableType type)
     : TimeSeries(type) {}
 
-TimeSeriesDistributed::~TimeSeriesDistributed() {
-    for (auto data : _data) {
-        wxDELETE(data);
-    }
-}
+TimeSeriesDistributed::~TimeSeriesDistributed() = default;  // Automatic cleanup via unique_ptr
 
-void TimeSeriesDistributed::AddData(TimeSeriesData* data, int unitId) {
+void TimeSeriesDistributed::AddData(std::unique_ptr<TimeSeriesData> data, int unitId) {
     wxASSERT(data);
-    _data.push_back(data);
+    _data.push_back(std::move(data));
     _unitIds.push_back(unitId);
 }
 
 bool TimeSeriesDistributed::SetCursorToDate(double date) {
-    for (auto data : _data) {
+    for (const auto& data : _data) {
         if (!data->SetCursorToDate(date)) {
             return false;
         }
@@ -26,7 +22,7 @@ bool TimeSeriesDistributed::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesDistributed::AdvanceOneTimeStep() {
-    for (auto data : _data) {
+    for (const auto& data : _data) {
         if (!data->AdvanceOneTimeStep()) {
             return false;
         }
@@ -63,7 +59,7 @@ TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
 
     for (int i = 0; i < _data.size(); ++i) {
         if (_unitIds[i] == unitId) {
-            return _data[i];
+            return _data[i].get();  // Extract raw pointer from unique_ptr
         }
     }
 

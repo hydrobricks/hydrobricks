@@ -63,17 +63,17 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
                 axxd values = file.GetVarDouble2D(iVar, unitCount, timeLength);
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
                     forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             } else {
                 axxd values = file.GetVarDouble2D(iVar, timeLength, unitCount);
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
                     forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             }
 
@@ -116,11 +116,11 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
-        auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+        auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
         if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
             throw RuntimeError(_("Time series creation failed."));
         }
-        timeSeries->AddData(forcingData, ids[i]);
+        timeSeries->AddData(std::move(forcingData), ids[i]);
     }
 
     return timeSeries;

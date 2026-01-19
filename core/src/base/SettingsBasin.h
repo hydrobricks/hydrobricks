@@ -205,7 +205,7 @@ class SettingsBasin : public wxObject {
   private:
     vector<HydroUnitSettings> _hydroUnits;
     vector<LateralConnectionSettings> _lateralConnections;
-    HydroUnitSettings* _selectedHydroUnit;
+    HydroUnitSettings* _selectedHydroUnit;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_SETTING_BASIN_H

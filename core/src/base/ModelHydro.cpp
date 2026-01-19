@@ -24,8 +24,7 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() = default;
 
 bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    wxDELETE(_subBasin);
-    _subBasin = new SubBasin();
+    _subBasin = std::make_unique<SubBasin>();
     if (!_subBasin->Initialize(basinSettings)) {
         return false;
     }
@@ -941,8 +940,8 @@ double ModelHydro::GetTotalGlacierStorageChanges() const {
     return _logger.GetTotalGlacierStorageChanges();
 }
 
-bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
-    for (auto ts : _timeSeries) {
+bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
+    for (auto& ts : _timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {
             wxLogError(_("The data variable is already linked to the model."));
             return false;
@@ -959,7 +958,7 @@ bool ModelHydro::AddTimeSeries(TimeSeries* timeSeries) {
         return false;
     }
 
-    _timeSeries.push_back(timeSeries);
+    _timeSeries.push_back(std::move(timeSeries));
 
     return true;
 }
@@ -978,8 +977,8 @@ int ModelHydro::GetSporadicActionItemCount() const {
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
     try {
-        TimeSeries* timeSeries = TimeSeries::Create(varName, time, ids, data);
-        if (!AddTimeSeries(timeSeries)) {
+        auto timeSeriesPtr = std::unique_ptr<TimeSeries>(TimeSeries::Create(varName, time, ids, data));
+        if (!AddTimeSeries(std::move(timeSeriesPtr))) {
             return false;
         }
     } catch (const std::exception& e) {
@@ -991,16 +990,13 @@ bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const 
 }
 
 void ModelHydro::ClearTimeSeries() {
-    for (auto ts : _timeSeries) {
-        wxDELETE(ts);
-    }
-    _timeSeries.resize(0);
+    _timeSeries.clear();  // Automatic cleanup via unique_ptr
 }
 
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {
     wxASSERT(_subBasin);
 
-    for (auto timeSeries : _timeSeries) {
+    for (const auto& timeSeries : _timeSeries) {
         VariableType type = timeSeries->GetVariableType();
 
         for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
@@ -1016,7 +1012,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 }
 
 bool ModelHydro::InitializeTimeSeries() {
-    for (auto timeSeries : _timeSeries) {
+    for (const auto& timeSeries : _timeSeries) {
         wxASSERT(timeSeries);
         if (!timeSeries->SetCursorToDate(_timer.GetDate())) {
             return false;
@@ -1027,7 +1023,7 @@ bool ModelHydro::InitializeTimeSeries() {
 }
 
 bool ModelHydro::UpdateForcing() {
-    for (auto timeSeries : _timeSeries) {
+    for (const auto& timeSeries : _timeSeries) {
         if (!timeSeries->AdvanceOneTimeStep()) {
             return false;
         }

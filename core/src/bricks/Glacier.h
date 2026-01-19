@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include <memory>
+
 #include "IceContainer.h"
 #include "Includes.h"
 #include "LandCover.h"
@@ -95,7 +97,7 @@ class Glacier : public LandCover {
     [[nodiscard]] bool HasIce() const;
 
   protected:
-    IceContainer* _ice;
+    std::unique_ptr<IceContainer> _ice;  // owning
 };
 
 #endif  // HYDROBRICKS_GLACIER_H

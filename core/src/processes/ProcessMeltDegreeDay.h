@@ -34,7 +34,7 @@ class ProcessMeltDegreeDay : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _temperature;
+    Forcing* _temperature;  // non-owning reference
     float* _degreeDayFactor;
     float* _meltingTemperature;
 

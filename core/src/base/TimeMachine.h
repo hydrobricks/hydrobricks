@@ -130,8 +130,8 @@ class TimeMachine : public wxObject {
     int _timeStep;
     TimeUnit _timeStepUnit;
     double _timeStepInDays;
-    ParametersUpdater* _parametersUpdater;
-    ActionsManager* _actionsManager;
+    ParametersUpdater* _parametersUpdater;  // non-owning reference
+    ActionsManager* _actionsManager;  // non-owning reference
     static double _currentDateStatic;  // Holds the globally accessible current date (MJD)
 
     /**

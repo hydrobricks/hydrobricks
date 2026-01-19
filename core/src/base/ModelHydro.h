@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include <memory>
+
 #include "ActionsManager.h"
 #include "Includes.h"
 #include "Logger.h"
@@ -127,7 +129,7 @@ class ModelHydro : public wxObject {
      * @param timeSeries time series to add.
      * @return true if the time series was added successfully.
      */
-    bool AddTimeSeries(TimeSeries* timeSeries);
+    bool AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries);
 
     /**
      * Add an action to the model.
@@ -180,16 +182,16 @@ class ModelHydro : public wxObject {
      * @return pointer to the sub basin.
      */
     SubBasin* GetSubBasin() const {
-        return _subBasin;
+        return _subBasin.get();  // Return raw pointer from unique_ptr
     }
 
     /**
      * Set the sub basin.
      *
-     * @param subBasin pointer to the sub basin.
+     * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
      */
     void SetSubBasin(SubBasin* subBasin) {
-        _subBasin = subBasin;
+        _subBasin.reset(subBasin);  // Take ownership
     }
 
     /**
@@ -230,12 +232,12 @@ class ModelHydro : public wxObject {
 
   protected:
     Processor _processor;
-    SubBasin* _subBasin;
+    std::unique_ptr<SubBasin> _subBasin;  // owning (can be null)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
     ParametersUpdater _parametersUpdater;
-    vector<TimeSeries*> _timeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
 
   private:
     void BuildModelStructure(SettingsModel& modelSettings);

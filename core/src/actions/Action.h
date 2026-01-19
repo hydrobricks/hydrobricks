@@ -115,7 +115,7 @@ class Action : public wxObject {
     }
 
   protected:
-    ActionsManager* _manager;
+    ActionsManager* _manager;  // non-owning reference
     int _cursor;
     vecDouble _sporadicDates;
     bool _recursive;

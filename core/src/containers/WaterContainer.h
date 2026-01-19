@@ -218,7 +218,7 @@ class WaterContainer : public wxObject {
     /**
      * Attach incoming flux.
      *
-     * @param flux incoming flux
+     * @param flux incoming flux (non-owning reference, owned by process)
      */
     void AttachFluxIn(Flux* flux) {
         wxASSERT(flux);
@@ -296,11 +296,11 @@ class WaterContainer : public wxObject {
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]
     double _initialState;          // [mm]
-    float* _capacity;
+    float* _capacity;  // non-owning reference
     bool _infiniteStorage;
-    Brick* _parent;
-    Process* _overflow;
-    vector<Flux*> _inputs;
+    Brick* _parent;  // non-owning reference
+    Process* _overflow;  // non-owning reference
+    vector<Flux*> _inputs;  // non-owning references to fluxes owned by processes
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

@@ -39,7 +39,7 @@ class HydroUnitLateralConnection : public wxObject {
     }
 
   private:
-    HydroUnit* _receiver;
+    HydroUnit* _receiver;  // non-owning reference
     double _fraction;
     string _type;
 };

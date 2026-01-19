@@ -34,8 +34,8 @@ class ProcessMeltTemperatureIndex : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _temperature;
-    Forcing* _potentialClearSkyDirectSolarRadiation;
+    Forcing* _temperature;                            // non-owning reference
+    Forcing* _potentialClearSkyDirectSolarRadiation;  // non-owning reference
     float* _meltFactor;
     float* _meltingTemperature;
     float* _radiationCoefficient;

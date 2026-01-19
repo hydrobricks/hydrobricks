@@ -4,9 +4,7 @@ TimeSeriesUniform::TimeSeriesUniform(VariableType type)
     : TimeSeries(type),
       _data(nullptr) {}
 
-TimeSeriesUniform::~TimeSeriesUniform() {
-    wxDELETE(_data);
-}
+TimeSeriesUniform::~TimeSeriesUniform() = default;  // Automatic cleanup via unique_ptr
 
 bool TimeSeriesUniform::SetCursorToDate(double date) {
     wxASSERT(_data);

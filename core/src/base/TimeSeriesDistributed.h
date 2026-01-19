@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
 #define HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "TimeSeries.h"
 
@@ -13,10 +15,10 @@ class TimeSeriesDistributed : public TimeSeries {
     /**
      * Add data to the time series.
      *
-     * @param data pointer to the time series data.
+     * @param data pointer to the time series data (ownership transferred).
      * @param unitId ID of the unit.
      */
-    void AddData(TimeSeriesData* data, int unitId);
+    void AddData(std::unique_ptr<TimeSeriesData> data, int unitId);
 
     /**
      * @copydoc TimeSeries::SetCursorToDate()
@@ -57,7 +59,7 @@ class TimeSeriesDistributed : public TimeSeries {
 
   protected:
     vecInt _unitIds;
-    vector<TimeSeriesData*> _data;
+    std::vector<std::unique_ptr<TimeSeriesData>> _data;  // owning
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H

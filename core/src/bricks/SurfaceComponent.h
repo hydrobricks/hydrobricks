@@ -75,7 +75,7 @@ class SurfaceComponent : public Brick {
     }
 
   protected:
-    LandCover* _parent;
+    LandCover* _parent;  // non-owning reference
     double _areaFraction;
 };
 

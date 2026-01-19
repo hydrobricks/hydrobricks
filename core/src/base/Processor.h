@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_PROCESSOR_H
 #define HYDROBRICKS_PROCESSOR_H
 
+#include <memory>
+
 #include "Brick.h"
 #include "Includes.h"
 #include "Solver.h"
@@ -83,12 +85,12 @@ class Processor : public wxObject {
     }
 
   protected:
-    Solver* _solver;
-    ModelHydro* _model;
+    std::unique_ptr<Solver> _solver;  // owning
+    ModelHydro* _model;  // non-owning reference
     int _solvableConnectionCount;
     int _directConnectionCount;
     vecDoublePt _stateVariableChanges;
-    vector<Brick*> _iterableBricks;
+    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
     axd _changeRatesNoSolver;
 
   private:

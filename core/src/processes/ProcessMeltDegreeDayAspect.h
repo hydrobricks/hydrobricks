@@ -40,7 +40,7 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
 
   protected:
     string _aspectClass;
-    Forcing* _temperature;
+    Forcing* _temperature;  // non-owning reference
     float* _degreeDayFactor;
     float* _meltingTemperature;
 

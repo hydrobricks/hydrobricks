@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
+#include <memory>
+
 #include <yaml-cpp/yaml.h>
 
 #include "Includes.h"
@@ -28,7 +30,7 @@ struct ProcessSettings {
     string name;
     string type;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
 };
@@ -37,7 +39,7 @@ struct SplitterSettings {
     string name;
     string type;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
 };
@@ -47,7 +49,7 @@ struct BrickSettings {
     string type;
     string parent;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
 };
@@ -728,10 +730,10 @@ class SettingsModel : public wxObject {
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
     TimerSettings _timer;
-    ModelStructure* _selectedStructure;
-    BrickSettings* _selectedBrick;
-    ProcessSettings* _selectedProcess;
-    SplitterSettings* _selectedSplitter;
+    ModelStructure* _selectedStructure;  // non-owning reference
+    BrickSettings* _selectedBrick;  // non-owning reference
+    ProcessSettings* _selectedProcess;  // non-owning reference
+    SplitterSettings* _selectedSplitter;  // non-owning reference
 
     bool LogAll(const YAML::Node& settings);
 };

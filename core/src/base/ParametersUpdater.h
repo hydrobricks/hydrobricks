@@ -72,9 +72,9 @@ class ParametersUpdater : public wxObject {
   private:
     bool _active;
     double _previousDate;
-    vector<ParameterVariableYearly*> _parametersYearly;
-    vector<ParameterVariableMonthly*> _parametersMonthly;
-    vector<ParameterVariableDates*> _parametersDates;
+    vector<ParameterVariableYearly*> _parametersYearly;  // non-owning reference
+    vector<ParameterVariableMonthly*> _parametersMonthly;  // non-owning reference
+    vector<ParameterVariableDates*> _parametersDates;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_PARAMETERS_UPDATER_H

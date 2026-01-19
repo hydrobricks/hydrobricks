@@ -29,7 +29,7 @@ class ProcessETSocont : public ProcessET {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _pet;
+    Forcing* _pet;  // non-owning reference
     float _exponent;
 
     /**

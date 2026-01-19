@@ -2,9 +2,8 @@
 
 Snowpack::Snowpack()
     : SurfaceComponent(),
-      _snow(nullptr) {
+      _snow(std::make_unique<SnowContainer>(this)) {
     _category = BrickCategory::Snowpack;
-    _snow = new SnowContainer(this);
 }
 
 void Snowpack::Reset() {

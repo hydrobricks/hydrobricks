@@ -2,9 +2,8 @@
 
 Glacier::Glacier()
     : LandCover(),
-      _ice(nullptr) {
+      _ice(std::make_unique<IceContainer>(this)) {
     _category = BrickCategory::Glacier;
-    _ice = new IceContainer(this);
 }
 
 void Glacier::Reset() {

@@ -35,7 +35,7 @@ class Forcing : public wxObject {
 
   protected:
     VariableType _type;
-    TimeSeriesData* _timeSeriesData;
+    TimeSeriesData* _timeSeriesData;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_FORCING_H

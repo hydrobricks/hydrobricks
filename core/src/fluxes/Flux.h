@@ -182,7 +182,7 @@ class Flux : public wxObject {
 
   protected:
     double _amount{};
-    double* _changeRate{};
+    double* _changeRate{};  // non-owning reference
     bool _static{};
     bool _needsWeighting{};
     double _fractionUnitArea{1.0};

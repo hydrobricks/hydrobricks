@@ -71,7 +71,7 @@ class Brick : public wxObject {
     /**
      * Attach incoming flux.
      *
-     * @param flux incoming flux
+     * @param flux incoming flux (non-owning reference, owned by process)
      */
     virtual void AttachFluxIn(Flux* flux);
 

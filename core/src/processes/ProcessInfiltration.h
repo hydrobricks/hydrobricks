@@ -41,7 +41,7 @@ class ProcessInfiltration : public Process {
     }
 
   protected:
-    Brick* _targetBrick;
+    Brick* _targetBrick;  // non-owning reference
 
     /**
      * Get the water content of the target brick.

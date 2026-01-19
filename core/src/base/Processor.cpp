@@ -9,12 +9,10 @@ Processor::Processor()
       _solvableConnectionCount(0),
       _directConnectionCount(0) {}
 
-Processor::~Processor() {
-    wxDELETE(_solver);
-}
+Processor::~Processor() = default;  // Automatic cleanup via unique_ptr
 
 void Processor::Initialize(const SolverSettings& solverSettings) {
-    _solver = Solver::Factory(solverSettings);
+    _solver = std::unique_ptr<Solver>(Solver::Factory(solverSettings));
     _solver->Connect(this);
     ConnectToElementsToSolve();
     _solver->InitializeContainers();

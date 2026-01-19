@@ -35,7 +35,7 @@ class FluxToBrick : public Flux {
     }
 
   protected:
-    Brick* _toBrick;
+    Brick* _toBrick;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_H

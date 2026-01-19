@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SNOWPACK_H
 #define HYDROBRICKS_SNOWPACK_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "SnowContainer.h"
 #include "SurfaceComponent.h"
@@ -89,7 +91,7 @@ class Snowpack : public SurfaceComponent {
     [[nodiscard]] bool HasSnow() const;
 
   protected:
-    SnowContainer* _snow;
+    std::unique_ptr<SnowContainer> _snow;  // owning
 };
 
 #endif  // HYDROBRICKS_SNOWPACK_H

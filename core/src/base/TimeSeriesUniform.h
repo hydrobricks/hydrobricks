@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_TIME_SERIES_UNIFORM_H
 #define HYDROBRICKS_TIME_SERIES_UNIFORM_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "TimeSeries.h"
 
@@ -13,11 +15,11 @@ class TimeSeriesUniform : public TimeSeries {
     /**
      * Set the time series data.
      *
-     * @param data pointer to the time series data.
+     * @param data pointer to the time series data (ownership transferred).
      */
-    void SetData(TimeSeriesData* data) {
+    void SetData(std::unique_ptr<TimeSeriesData> data) {
         wxASSERT(data);
-        _data = data;
+        _data = std::move(data);
     }
 
     /**
@@ -58,7 +60,7 @@ class TimeSeriesUniform : public TimeSeries {
     TimeSeriesData* GetDataPointer(int unitId) override;
 
   protected:
-    TimeSeriesData* _data;
+    std::unique_ptr<TimeSeriesData> _data;  // owning
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_UNIFORM_H

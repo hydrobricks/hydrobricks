@@ -44,7 +44,7 @@ class IceContainer : public WaterContainer {
 
   private:
     bool _noMeltWhenSnowCover;
-    Snowpack* _relatedSnowpack;
+    Snowpack* _relatedSnowpack;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_ICE_CONTAINER_H

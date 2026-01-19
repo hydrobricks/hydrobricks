@@ -89,7 +89,7 @@ class ActionsManager : public wxObject {
     }
 
   protected:
-    ModelHydro* _model;
+    ModelHydro* _model;  // non-owning reference
     int _cursorManager;
     vector<Action*> _actions;
     vecDouble _sporadicActionDates;

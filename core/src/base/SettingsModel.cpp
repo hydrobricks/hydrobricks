@@ -16,30 +16,7 @@ SettingsModel::SettingsModel()
     _selectedStructure = &_modelStructures[0];
 }
 
-SettingsModel::~SettingsModel() {
-    for (auto& modelStructure : _modelStructures) {
-        for (auto& brick : modelStructure.hydroUnitBricks) {
-            for (auto& parameter : brick.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& brick : modelStructure.subBasinBricks) {
-            for (auto& parameter : brick.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& splitter : modelStructure.hydroUnitSplitters) {
-            for (auto& parameter : splitter.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& splitter : modelStructure.subBasinSplitters) {
-            for (auto& parameter : splitter.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-    }
-}
+SettingsModel::~SettingsModel() = default;  // Automatic cleanup via unique_ptr
 
 void SettingsModel::SetSolver(const string& solverName) {
     _solver.name = solverName;
@@ -122,9 +99,7 @@ void SettingsModel::AddBrickParameter(const string& name, float value, const str
         throw NotImplemented(wxString::Format("SettingsModel::AddBrickParameter - Parameter type '%s' not supported", type));
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedBrick->parameters.push_back(parameter);
+    _selectedBrick->parameters.push_back(std::make_unique<Parameter>(name, value));
 }
 
 void SettingsModel::SetBrickParameterValue(const string& name, float value, const string& type) {
@@ -224,9 +199,7 @@ void SettingsModel::AddProcessParameter(const string& name, float value, const s
         }
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedProcess->parameters.push_back(parameter);
+    _selectedProcess->parameters.push_back(std::make_unique<Parameter>(name, value));
 }
 
 void SettingsModel::SetProcessParameterValue(const string& name, float value, const string& type) {
@@ -326,9 +299,7 @@ void SettingsModel::AddSplitterParameter(const string& name, float value, const 
         throw NotImplemented(wxString::Format("SettingsModel::AddSplitterParameter - Parameter type '%s' not supported", type));
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedSplitter->parameters.push_back(parameter);
+    _selectedSplitter->parameters.push_back(std::make_unique<Parameter>(name, value));
 }
 
 void SettingsModel::SetSplitterParameterValue(const string& name, float value, const string& type) {

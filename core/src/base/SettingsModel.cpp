@@ -12,7 +12,7 @@ SettingsModel::SettingsModel()
       _selectedSplitter(nullptr) {
     ModelStructure initialStructure;
     initialStructure.id = 1;
-    _modelStructures.push_back(initialStructure);
+    _modelStructures.push_back(std::move(initialStructure));
     _selectedStructure = &_modelStructures[0];
 }
 
@@ -36,7 +36,7 @@ void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     brick.name = name;
     brick.type = type;
 
-    _selectedStructure->hydroUnitBricks.push_back(brick);
+    _selectedStructure->hydroUnitBricks.push_back(std::move(brick));
     _selectedBrick = &_selectedStructure->hydroUnitBricks[_selectedStructure->hydroUnitBricks.size() - 1];
 
     if (_logAll) {
@@ -56,7 +56,7 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
     brick.name = name;
     brick.type = type;
 
-    _selectedStructure->subBasinBricks.push_back(brick);
+    _selectedStructure->subBasinBricks.push_back(std::move(brick));
     _selectedBrick = &_selectedStructure->subBasinBricks[_selectedStructure->subBasinBricks.size() - 1];
 
     if (_logAll) {
@@ -155,7 +155,7 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     ProcessSettings processSettings;
     processSettings.name = name;
     processSettings.type = type;
-    _selectedBrick->processes.push_back(processSettings);
+    _selectedBrick->processes.push_back(std::move(processSettings));
 
     _selectedProcess = &_selectedBrick->processes[_selectedBrick->processes.size() - 1];
 
@@ -277,7 +277,7 @@ void SettingsModel::AddHydroUnitSplitter(const string& name, const string& type)
     splitter.name = name;
     splitter.type = type;
 
-    _selectedStructure->hydroUnitSplitters.push_back(splitter);
+    _selectedStructure->hydroUnitSplitters.push_back(std::move(splitter));
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[_selectedStructure->hydroUnitSplitters.size() - 1];
 }
 
@@ -288,7 +288,7 @@ void SettingsModel::AddSubBasinSplitter(const string& name, const string& type) 
     splitter.name = name;
     splitter.type = type;
 
-    _selectedStructure->subBasinSplitters.push_back(splitter);
+    _selectedStructure->subBasinSplitters.push_back(std::move(splitter));
     _selectedSplitter = &_selectedStructure->subBasinSplitters[_selectedStructure->subBasinSplitters.size() - 1];
 }
 
@@ -431,7 +431,7 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
@@ -445,7 +445,7 @@ void SettingsModel::AddSnowIceTransformation(const string& transformationProcess
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
 
         if (brickSettings.type == "glacier") {
@@ -458,7 +458,7 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         if (skipGlaciers && brickSettings.type == "glacier") {
             continue;  // Skip glaciers for redistribution
         }
@@ -472,7 +472,7 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitSplitter("snow_splitter");
         AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
         AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");

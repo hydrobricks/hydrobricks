@@ -89,11 +89,11 @@ void Brick::AttachFluxIn(Flux* flux) {
 
 bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
     return std::any_of(brickSettings.parameters.begin(), brickSettings.parameters.end(),
-                       [&name](const Parameter* parameter) { return parameter->GetName() == name; });
+                       [&name](const std::unique_ptr<Parameter>& parameter) { return parameter->GetName() == name; });
 }
 
 float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {
-    for (auto parameter : brickSettings.parameters) {
+    for (const auto& parameter : brickSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();

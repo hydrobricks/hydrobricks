@@ -40,5 +40,5 @@ double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
 
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
     wxASSERT(_data);
-    return _data;
+    return _data.get();
 }

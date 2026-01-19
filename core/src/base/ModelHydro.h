@@ -258,11 +258,11 @@ class ModelHydro : public wxObject {
 
     void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
 
-    void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
+    void BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    void BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process);
+    void BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process);
 
-    void BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
+    void BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
 
     void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
 

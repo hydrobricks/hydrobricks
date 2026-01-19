@@ -51,7 +51,7 @@ bool Glacier::IsOk() const {
 }
 
 WaterContainer* Glacier::GetIceContainer() const {
-    return _ice;
+    return _ice.get();
 }
 
 void Glacier::Finalize() {

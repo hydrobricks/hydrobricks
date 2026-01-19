@@ -12,6 +12,11 @@ Processor::Processor()
 Processor::~Processor() = default;  // Automatic cleanup via unique_ptr
 
 void Processor::Initialize(const SolverSettings& solverSettings) {
+    // Should not be called twice
+    if (_solver) {
+        throw std::runtime_error("Processor::Initialize - Processor is already initialized.");
+    }
+
     _solver = std::unique_ptr<Solver>(Solver::Factory(solverSettings));
     _solver->Connect(this);
     ConnectToElementsToSolve();

@@ -40,7 +40,7 @@ bool Snowpack::IsOk() const {
 }
 
 WaterContainer* Snowpack::GetSnowContainer() const {
-    return _snow;
+    return _snow.get();
 }
 
 void Snowpack::Finalize() {

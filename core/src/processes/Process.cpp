@@ -199,7 +199,7 @@ void Process::SetParameters(const ProcessSettings&) {
 }
 
 bool Process::HasParameter(const ProcessSettings& processSettings, const string& name) {
-    for (auto parameter : processSettings.parameters) {
+    for (const auto& parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             return true;
         }
@@ -209,7 +209,7 @@ bool Process::HasParameter(const ProcessSettings& processSettings, const string&
 }
 
 float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const string& name) {
-    for (auto parameter : processSettings.parameters) {
+    for (const auto& parameter : processSettings.parameters) {
         if (parameter->GetName() == name) {
             wxASSERT(parameter->GetValuePointer());
             parameter->SetAsLinked();

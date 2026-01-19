@@ -33,6 +33,13 @@ struct ProcessSettings {
     std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
+
+    // Move-only (contains unique_ptr)
+    ProcessSettings() = default;
+    ProcessSettings(const ProcessSettings&) = delete;
+    ProcessSettings& operator=(const ProcessSettings&) = delete;
+    ProcessSettings(ProcessSettings&&) = default;
+    ProcessSettings& operator=(ProcessSettings&&) = default;
 };
 
 struct SplitterSettings {
@@ -42,6 +49,13 @@ struct SplitterSettings {
     std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
+
+    // Move-only (contains unique_ptr)
+    SplitterSettings() = default;
+    SplitterSettings(const SplitterSettings&) = delete;
+    SplitterSettings& operator=(const SplitterSettings&) = delete;
+    SplitterSettings(SplitterSettings&&) = default;
+    SplitterSettings& operator=(SplitterSettings&&) = default;
 };
 
 struct BrickSettings {
@@ -52,6 +66,13 @@ struct BrickSettings {
     std::vector<std::unique_ptr<Parameter>> parameters;  // owning
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
+
+    // Move-only (contains unique_ptr and ProcessSettings)
+    BrickSettings() = default;
+    BrickSettings(const BrickSettings&) = delete;
+    BrickSettings& operator=(const BrickSettings&) = delete;
+    BrickSettings(BrickSettings&&) = default;
+    BrickSettings& operator=(BrickSettings&&) = default;
 };
 
 struct ModelStructure {
@@ -573,9 +594,9 @@ class SettingsModel : public wxObject {
      * Get the hydro unit brick settings by index.
      *
      * @param index index of the hydro unit brick.
-     * @return hydro unit brick settings.
+     * @return hydro unit brick settings (const reference).
      */
-    BrickSettings GetHydroUnitBrickSettings(int index) const {
+    const BrickSettings& GetHydroUnitBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->hydroUnitBricks[index];
     }
@@ -584,12 +605,12 @@ class SettingsModel : public wxObject {
      * Get the hydro unit brick settings by name.
      *
      * @param name name of the hydro unit brick.
-     * @return hydro unit brick settings.
+     * @return hydro unit brick settings (const reference).
      */
-    BrickSettings GetHydroUnitBrickSettings(const string& name) const {
+    const BrickSettings& GetHydroUnitBrickSettings(const string& name) const {
         wxASSERT(_selectedStructure);
 
-        for (auto& brick : _selectedStructure->hydroUnitBricks) {
+        for (const auto& brick : _selectedStructure->hydroUnitBricks) {
             if (brick.name == name) {
                 return brick;
             }
@@ -602,9 +623,9 @@ class SettingsModel : public wxObject {
      * Get the surface component brick settings by index.
      *
      * @param index index of the surface component brick.
-     * @return surface component brick settings.
+     * @return surface component brick settings (const reference).
      */
-    BrickSettings GetSurfaceComponentBrickSettings(int index) const {
+    const BrickSettings& GetSurfaceComponentBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         int brickIndex = _selectedStructure->surfaceComponentBricks[index];
         return _selectedStructure->hydroUnitBricks[brickIndex];
@@ -641,9 +662,9 @@ class SettingsModel : public wxObject {
      * Get the sub basin brick settings by index.
      *
      * @param index index of the sub basin brick.
-     * @return sub basin brick settings.
+     * @return sub basin brick settings (const reference).
      */
-    BrickSettings GetSubBasinBrickSettings(int index) const {
+    const BrickSettings& GetSubBasinBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->subBasinBricks[index];
     }
@@ -652,9 +673,9 @@ class SettingsModel : public wxObject {
      * Get the process settings by index.
      *
      * @param index index of the process.
-     * @return process settings.
+     * @return process settings (const reference).
      */
-    ProcessSettings GetProcessSettings(int index) const {
+    const ProcessSettings& GetProcessSettings(int index) const {
         wxASSERT(_selectedBrick);
         return _selectedBrick->processes[index];
     }
@@ -663,9 +684,9 @@ class SettingsModel : public wxObject {
      * Get the splitter settings by index.
      *
      * @param index index of the splitter.
-     * @return splitter settings.
+     * @return splitter settings (const reference).
      */
-    SplitterSettings GetHydroUnitSplitterSettings(int index) const {
+    const SplitterSettings& GetHydroUnitSplitterSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->hydroUnitSplitters[index];
     }
@@ -674,9 +695,9 @@ class SettingsModel : public wxObject {
      * Get the sub basin splitter settings by index.
      *
      * @param index index of the sub basin splitter.
-     * @return sub basin splitter settings.
+     * @return sub basin splitter settings (const reference).
      */
-    SplitterSettings GetSubBasinSplitterSettings(int index) const {
+    const SplitterSettings& GetSubBasinSplitterSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->subBasinSplitters[index];
     }

@@ -45,7 +45,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         if (modelSettings.LogAll()) {
             _logger.RecordFractions();
         }
-        _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);
+        _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin.get(), modelSettings);
         if (!_subBasin->AssignFractions(basinSettings)) {
             return false;
         }
@@ -85,7 +85,7 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
 void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         modelSettings.SelectSubBasinBrick(iBrick);
-        BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
 
         // Create the brick
         auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
@@ -97,7 +97,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         // Create the processes
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
             Process* process = processPtr.get();
@@ -114,7 +114,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
     // Create the splitters
     for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
 
         auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
         Splitter* splitter = splitterPtr.get();
@@ -160,7 +160,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
         // Create the splitters
         for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
-            SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+            const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
             auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
             Splitter* splitter = splitterPtr.get();
@@ -184,7 +184,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
 
 void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick) {
     modelSettings.SelectHydroUnitBrick(iBrick);
-    BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+    const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
 
     auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
     Brick* brick = brickPtr.get();
@@ -197,7 +197,7 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
     // Create the processes
     for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
         modelSettings.SelectProcess(iProcess);
-        ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+        const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
         auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
         Process* process = processPtr.get();
@@ -218,14 +218,14 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         // Update the brick
         modelSettings.SelectSubBasinBrick(iBrick);
-        BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
         Brick* brick = _subBasin->GetBrick(iBrick);
         brick->SetParameters(brickSettings);
 
         // Update the processes
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
             Process* process = brick->GetProcess(iProcess);
             process->SetParameters(processSettings);
         }
@@ -234,7 +234,7 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
     // Update the splitters
     for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
         Splitter* splitter = _subBasin->GetSplitter(iSplitter);
         splitter->SetParameters(splitterSettings);
     }
@@ -247,14 +247,14 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
         // Update the bricks for the hydro unit
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
             modelSettings.SelectHydroUnitBrick(iBrick);
-            BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+            const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             brick->SetParameters(brickSettings);
 
             // Update the processes
             for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
                 modelSettings.SelectProcess(iProcess);
-                ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+                const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
                 Process* process = brick->GetProcess(iProcess);
                 process->SetParameters(processSettings);
             }
@@ -263,7 +263,7 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
         // Update the splitters
         for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
-            SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+            const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
             Splitter* splitter = unit->GetSplitter(iSplitter);
             splitter->SetParameters(splitterSettings);
         }
@@ -272,7 +272,7 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
 
 void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetSurfaceComponentBrickCount(); ++iBrick) {
-        BrickSettings brickSettings = modelSettings.GetSurfaceComponentBrickSettings(iBrick);
+        const BrickSettings& brickSettings = modelSettings.GetSurfaceComponentBrickSettings(iBrick);
         if (!brickSettings.parent.empty()) {
             auto surfaceComponentBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(brickSettings.name));
             auto landCoverBrick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.parent));
@@ -287,7 +287,7 @@ void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings)
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         modelSettings.SelectSubBasinBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = _subBasin->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
@@ -307,7 +307,7 @@ void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings
     for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
         modelSettings.SelectHydroUnitBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             Process* process = brick->GetProcess(iProcess);
@@ -332,7 +332,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         modelSettings.SelectSubBasinBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = _subBasin->GetBrick(iBrick);
             Process* process = brick->GetProcess(iProcess);
@@ -394,7 +394,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
     for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
         modelSettings.SelectHydroUnitBrick(iBrick);
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
             Process* process = brick->GetProcess(iProcess);
@@ -544,7 +544,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
     for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
 
         Splitter* splitter = _subBasin->GetSplitter(iSplitter);
 
@@ -590,7 +590,7 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
 void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
         modelSettings.SelectHydroUnitSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
         Splitter* splitter = unit->GetSplitter(iSplitter);
 
@@ -669,7 +669,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
     }
 }
 
-void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick) {
+void ModelHydro::BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick) {
     for (auto forcingType : brickSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
             unit->AddForcing(std::make_unique<Forcing>(forcingType));
@@ -682,7 +682,7 @@ void ModelHydro::BuildForcingConnections(BrickSettings& brickSettings, HydroUnit
     }
 }
 
-void ModelHydro::BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process) {
+void ModelHydro::BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process) {
     for (auto forcingType : processSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
             unit->AddForcing(std::make_unique<Forcing>(forcingType));
@@ -693,7 +693,7 @@ void ModelHydro::BuildForcingConnections(ProcessSettings& processSettings, Hydro
     }
 }
 
-void ModelHydro::BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter) {
+void ModelHydro::BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter) {
     for (auto forcingType : splitterSettings.forcing) {
         if (!unit->HasForcing(forcingType)) {
             unit->AddForcing(std::make_unique<Forcing>(forcingType));
@@ -717,7 +717,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     for (int iBrickType = 0; iBrickType < modelSettings.GetSubBasinBrickCount(); ++iBrickType) {
         modelSettings.SelectSubBasinBrick(iBrickType);
-        BrickSettings brickSettings = modelSettings.GetSubBasinBrickSettings(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrickType);
 
         for (const auto& logItem : brickSettings.logItems) {
             valPt = _subBasin->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
@@ -734,7 +734,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& logItem : processSettings.logItems) {
                 valPt = _subBasin->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
@@ -750,7 +750,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
 
         for (const auto& logItem : splitterSettings.logItems) {
             valPt = _subBasin->GetSplitter(iSplitter)->GetValuePointer(logItem);
@@ -779,7 +779,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     for (int iBrickType = 0; iBrickType < modelSettings.GetHydroUnitBrickCount(); ++iBrickType) {
         modelSettings.SelectHydroUnitBrick(iBrickType);
-        BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
 
         for (const auto& logItem : brickSettings.logItems) {
             for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
@@ -801,7 +801,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
         for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
-            ProcessSettings processSettings = modelSettings.GetProcessSettings(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& logItem : processSettings.logItems) {
                 for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
@@ -824,7 +824,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
         modelSettings.SelectHydroUnitSplitter(iSplitter);
-        SplitterSettings splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
         for (const auto& logItem : splitterSettings.logItems) {
             for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
@@ -845,7 +845,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
     for (int iBrickType : modelSettings.GetLandCoverBricksIndices()) {
         modelSettings.SelectHydroUnitBrick(iBrickType);
-        BrickSettings brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
 
         for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
             HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);

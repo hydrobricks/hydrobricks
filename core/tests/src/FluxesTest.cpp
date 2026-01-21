@@ -4,6 +4,7 @@
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
+#include <memory>
 
 /**
  * Model: simple snowpack model
@@ -12,7 +13,7 @@
 class FluxWeightedModel : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -31,13 +32,13 @@ class FluxWeightedModel : public ::testing::Test {
         // Outlet
         _model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip->SetData(std::move(precip));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
+        // Automatic cleanup via unique_ptr
     }
 };
 
@@ -54,7 +55,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -110,7 +111,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -170,7 +171,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -229,7 +230,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -296,7 +297,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsOk());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -344,4 +345,36 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     double balance = discharge + et + storage - precip;
 
     EXPECT_NEAR(balance, 0.0, 0.0000001);
+}
+
+TEST(Fluxes, ToAtmosphereInstantaneous) {
+    SettingsModel model;
+    model.SetSolver("heun_explicit");
+    model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+
+    // Minimal structure with a land cover brick
+    model.AddLandCoverBrick("ground", "generic_land_cover");
+    model.SelectHydroUnitBrick("ground");
+    model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+    auto petData = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    petData->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+
+    auto tsPet = std::make_unique<TimeSeriesUniform>(PET);
+    tsPet->SetData(std::move(petData));
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro hydroModel(&subBasin);
+    EXPECT_TRUE(hydroModel.Initialize(model, basinSettings));
+
+    ASSERT_TRUE(hydroModel.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPet))));
+    ASSERT_TRUE(hydroModel.AttachTimeSeriesToHydroUnits());
+
+    // Run and check that fluxes are computed without errors
+    EXPECT_TRUE(hydroModel.Run());
 }

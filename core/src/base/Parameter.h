@@ -2,30 +2,13 @@
 #define HYDROBRICKS_PARAMETER_H
 
 #include "Includes.h"
+#include "ParameterModifier.h"
 
 class Parameter : public wxObject {
   public:
     explicit Parameter(const string& name, float val = NAN_F);
 
-    ~Parameter() override = default;
-
-    /**
-     * Check if the parameter is linked to a process.
-     *
-     * @return true if the parameter is linked to a process.
-     */
-    [[nodiscard]] bool IsLinked() const {
-        return _linked;
-    }
-
-    /**
-     * Set the parameter as linked to a process.
-     *
-     * @param value true if the parameter is linked to a process.
-     */
-    void SetAsLinked(bool value = true) {
-        _linked = value;
-    }
+    ~Parameter() override;
 
     /**
      * Get the name of the parameter.
@@ -59,7 +42,7 @@ class Parameter : public wxObject {
      *
      * @return pointer to the parameter value.
      */
-    float* GetValuePointer() {
+    const float* GetValuePointer() const {
         return &_value;
     }
 
@@ -72,10 +55,56 @@ class Parameter : public wxObject {
         _value = val;
     }
 
+    /**
+     * Set a modifier for this parameter that changes its value over time.
+     *
+     * @param modifier the parameter modifier.
+     */
+    void SetModifier(const ParameterModifier& modifier) {
+        _modifier = modifier;
+        _hasModifier = true;
+    }
+
+    /**
+     * Get the modifier for this parameter.
+     *
+     * @return pointer to the parameter modifier, or nullptr if none.
+     */
+    ParameterModifier* GetModifier() {
+        return _hasModifier ? &_modifier : nullptr;
+    }
+
+    /**
+     * Get the modifier for this parameter (const version).
+     *
+     * @return pointer to the parameter modifier, or nullptr if none.
+     */
+    const ParameterModifier* GetModifier() const {
+        return _hasModifier ? &_modifier : nullptr;
+    }
+
+    /**
+     * Check if this parameter has a modifier.
+     *
+     * @return true if the parameter has a modifier.
+     */
+    bool HasModifier() const {
+        return _hasModifier;
+    }
+
+    /**
+     * Update the parameter value using its modifier.
+     *
+     * @param date current date in MJD format.
+     * @return true if the parameter was updated successfully.
+     */
+    bool UpdateFromModifier(double date);
+
   protected:
-    bool _linked;
     string _name;
     float _value;
+    ParameterModifier _modifier;
+    bool _hasModifier = false;
 };
 
 #endif  // HYDROBRICKS_PARAMETER_H

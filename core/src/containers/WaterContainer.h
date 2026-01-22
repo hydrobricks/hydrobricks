@@ -96,7 +96,7 @@ class WaterContainer : public wxObject {
      *
      * @param value maximum capacity [mm]
      */
-    void SetMaximumCapacity(float* value) {
+    void SetMaximumCapacity(const float* value) {
         if (_infiniteStorage) {
             throw ModelConfigError(_("Trying to set the maximum capacity of an infinite storage."));
         }
@@ -296,7 +296,7 @@ class WaterContainer : public wxObject {
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]
     double _initialState;          // [mm]
-    float* _capacity;  // non-owning reference
+    const float* _capacity;  // non-owning reference
     bool _infiniteStorage;
     Brick* _parent;  // non-owning reference
     Process* _overflow;  // non-owning reference

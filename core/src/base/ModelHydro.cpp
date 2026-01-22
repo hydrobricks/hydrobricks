@@ -24,7 +24,7 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() = default;
 
 bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    _subBasin = std::make_unique<SubBasin>();
+    _subBasin = new SubBasin();
     if (!_subBasin->Initialize(basinSettings)) {
         return false;
     }
@@ -45,7 +45,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         if (modelSettings.LogAll()) {
             _logger.RecordFractions();
         }
-        _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin.get(), modelSettings);
+        _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);
         if (!_subBasin->AssignFractions(basinSettings)) {
             return false;
         }

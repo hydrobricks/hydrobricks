@@ -6,7 +6,7 @@
 ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* container)
     : ProcessMelt(container),
       _temperature(nullptr),
-      _potentialClearSkyDirectSolarRadiation(nullptr),
+      _solarRadiation(nullptr),
       _meltFactor(nullptr),
       _meltingTemperature(nullptr),
       _radiationCoefficient(nullptr) {}
@@ -35,7 +35,7 @@ bool ProcessMeltTemperatureIndex::IsOk() const {
     if (_radiationCoefficient == nullptr) {
         return false;
     }
-    if (_potentialClearSkyDirectSolarRadiation == nullptr) {
+    if (_solarRadiation == nullptr) {
         return false;
     }
 
@@ -53,7 +53,7 @@ void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         _temperature = forcing;
     } else if (forcing->GetType() == Radiation) {
-        _potentialClearSkyDirectSolarRadiation = forcing;
+        _solarRadiation = forcing;
     } else {
         throw ModelConfigError(_("Forcing must be of type Temperature or Radiation"));
     }
@@ -67,7 +67,7 @@ vecDouble ProcessMeltTemperatureIndex::GetRates() {
     double melt = 0;
     if (_temperature->GetValue() >= *_meltingTemperature) {
         melt = (_temperature->GetValue() - *_meltingTemperature) *
-               (*_meltFactor + *_radiationCoefficient * _potentialClearSkyDirectSolarRadiation->GetValue());
+               (*_meltFactor + *_radiationCoefficient * _solarRadiation->GetValue());
     }
 
     return {melt};

@@ -20,11 +20,11 @@ TEST(SettingsModel, SetSharedParameters) {
     settings.GenerateSnowpacks("melt:temperature_index");
 
     ASSERT_TRUE(settings.GetHydroUnitBrickSettings("ground_snowpack").processes.size() == 1);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("ground_snowpack").processes[0].parameters[0]->GetValue(), 3);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("ground_snowpack").processes[0].parameters[0].GetValue(), 3);
     ASSERT_TRUE(settings.GetHydroUnitBrickSettings("glacier_ice_snowpack").processes.size() == 1);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice_snowpack").processes[0].parameters[0]->GetValue(), 3);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice_snowpack").processes[0].parameters[0].GetValue(), 3);
     ASSERT_TRUE(settings.GetHydroUnitBrickSettings("glacier_debris_snowpack").processes.size() == 1);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris_snowpack").processes[0].parameters[0]->GetValue(), 3);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris_snowpack").processes[0].parameters[0].GetValue(), 3);
 
     // Ice melt processes
     settings.SelectHydroUnitBrick("glacier_ice");
@@ -33,16 +33,16 @@ TEST(SettingsModel, SetSharedParameters) {
     settings.AddBrickProcess("melt", "melt:temperature_index", "outlet");
 
     ASSERT_TRUE(settings.GetHydroUnitBrickSettings("glacier_ice").processes.size() == 1);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice").processes[0].parameters[0]->GetValue(), 3);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice").processes[0].parameters[0].GetValue(), 3);
     ASSERT_TRUE(settings.GetHydroUnitBrickSettings("glacier_debris").processes.size() == 1);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris").processes[0].parameters[0]->GetValue(), 3);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris").processes[0].parameters[0].GetValue(), 3);
 
     // Change all melt_factor parameters
     EXPECT_TRUE(settings.SetParameterValue("type:snowpack, type:glacier", "melt_factor", 5));
 
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("ground_snowpack").processes[0].parameters[0]->GetValue(), 5);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice_snowpack").processes[0].parameters[0]->GetValue(), 5);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris_snowpack").processes[0].parameters[0]->GetValue(), 5);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice").processes[0].parameters[0]->GetValue(), 5);
-    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris").processes[0].parameters[0]->GetValue(), 5);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("ground_snowpack").processes[0].parameters[0].GetValue(), 5);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice_snowpack").processes[0].parameters[0].GetValue(), 5);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris_snowpack").processes[0].parameters[0].GetValue(), 5);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_ice").processes[0].parameters[0].GetValue(), 5);
+    EXPECT_EQ(settings.GetHydroUnitBrickSettings("glacier_debris").processes[0].parameters[0].GetValue(), 5);
 }

@@ -8,7 +8,7 @@
 
 ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
     : ProcessLateral(container),
-      _slope_deg(0),
+      _slopeDeg(0),
       _coeff(nullptr),
       _exp(nullptr),
       _minSlope(nullptr),
@@ -30,7 +30,7 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
-    _slope_deg = static_cast<float>(unit->GetPropertyDouble("slope", "degrees"));
+    _slopeDeg = static_cast<float>(unit->GetPropertyDouble("slope", "degrees"));
 }
 
 void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettings) {
@@ -57,12 +57,12 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth calculated from SWE
 
     // Snow holding threshold
-    float slope = std::max(_slope_deg, *_minSlope);                     // [degrees]
+    float slope = std::max(_slopeDeg, *_minSlope);                     // [degrees]
     double snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
     double snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
 
     // Set minimum snow holding depth if slope exceeds maximum slope
-    if (_slope_deg > *_maxSlope) {
+    if (_slopeDeg > *_maxSlope) {
         snowHoldingThreshold = *_minSnowHoldingDepth;
     }
 

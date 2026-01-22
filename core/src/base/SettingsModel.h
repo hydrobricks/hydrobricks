@@ -30,32 +30,18 @@ struct ProcessSettings {
     string name;
     string type;
     vecStr logItems;
-    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
-
-    // Move-only (contains unique_ptr)
-    ProcessSettings() = default;
-    ProcessSettings(const ProcessSettings&) = delete;
-    ProcessSettings& operator=(const ProcessSettings&) = delete;
-    ProcessSettings(ProcessSettings&&) = default;
-    ProcessSettings& operator=(ProcessSettings&&) = default;
 };
 
 struct SplitterSettings {
     string name;
     string type;
     vecStr logItems;
-    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
-
-    // Move-only (contains unique_ptr)
-    SplitterSettings() = default;
-    SplitterSettings(const SplitterSettings&) = delete;
-    SplitterSettings& operator=(const SplitterSettings&) = delete;
-    SplitterSettings(SplitterSettings&&) = default;
-    SplitterSettings& operator=(SplitterSettings&&) = default;
 };
 
 struct BrickSettings {
@@ -63,16 +49,9 @@ struct BrickSettings {
     string type;
     string parent;
     vecStr logItems;
-    std::vector<std::unique_ptr<Parameter>> parameters;  // owning
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
-
-    // Move-only (contains unique_ptr and ProcessSettings)
-    BrickSettings() = default;
-    BrickSettings(const BrickSettings&) = delete;
-    BrickSettings& operator=(const BrickSettings&) = delete;
-    BrickSettings(BrickSettings&&) = default;
-    BrickSettings& operator=(BrickSettings&&) = default;
 };
 
 struct ModelStructure {

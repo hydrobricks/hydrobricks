@@ -45,7 +45,7 @@ class Splitter : public wxObject {
      * @param name name of the parameter.
      * @return pointer to the value of the parameter.
      */
-    float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
+    const float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
 
     /**
      * Attach forcing.

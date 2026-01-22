@@ -21,7 +21,7 @@
 // Eigen library
 //---------------------------------
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 //---------------------------------
 // wxWidgets library - frequently used classes

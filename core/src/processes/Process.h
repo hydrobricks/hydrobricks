@@ -64,7 +64,7 @@ class Process : public wxObject {
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
 
     /**
      * Set the properties of the hydro unit.

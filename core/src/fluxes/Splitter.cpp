@@ -43,12 +43,11 @@ Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
     return nullptr;
 }
 
-float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
+const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
     for (const auto& parameter : splitterSettings.parameters) {
-        if (parameter->GetName() == name) {
-            wxASSERT(parameter->GetValuePointer());
-            parameter->SetAsLinked();
-            return parameter->GetValuePointer();
+        if (parameter.GetName() == name) {
+            wxASSERT(parameter.GetValuePointer());
+            return parameter.GetValuePointer();
         }
     }
 

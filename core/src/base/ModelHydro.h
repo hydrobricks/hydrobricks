@@ -182,7 +182,7 @@ class ModelHydro : public wxObject {
      * @return pointer to the sub basin.
      */
     SubBasin* GetSubBasin() const {
-        return _subBasin.get();  // Return raw pointer from unique_ptr
+        return _subBasin;  // Return raw pointer from unique_ptr
     }
 
     /**
@@ -191,7 +191,8 @@ class ModelHydro : public wxObject {
      * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
      */
     void SetSubBasin(SubBasin* subBasin) {
-        _subBasin.reset(subBasin);  // Take ownership
+        wxDELETE(_subBasin);
+        _subBasin = subBasin;
     }
 
     /**
@@ -232,7 +233,7 @@ class ModelHydro : public wxObject {
 
   protected:
     Processor _processor;
-    std::unique_ptr<SubBasin> _subBasin;  // owning (can be null)
+    SubBasin* _subBasin;  // owning, but not a unique pointer (can be null)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;

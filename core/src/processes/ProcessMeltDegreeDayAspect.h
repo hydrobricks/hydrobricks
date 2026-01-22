@@ -41,8 +41,8 @@ class ProcessMeltDegreeDayAspect : public ProcessMelt {
   protected:
     string _aspectClass;
     Forcing* _temperature;  // non-owning reference
-    float* _degreeDayFactor;
-    float* _meltingTemperature;
+    const float* _degreeDayFactor;
+    const float* _meltingTemperature;
 
     /**
      * @copydoc Process::GetRates()

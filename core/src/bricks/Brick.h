@@ -59,7 +59,7 @@ class Brick : public wxObject {
      * @param name name of the parameter.
      * @return pointer to the parameter value.
      */
-    static float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
+    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
 
     /**
      * Assign the parameters to the brick element.

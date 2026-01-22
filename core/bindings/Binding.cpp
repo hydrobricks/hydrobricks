@@ -11,7 +11,7 @@
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
-#include "ParameterVariable.h"
+#include "ParameterModifier.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "SubBasin.h"
@@ -94,12 +94,31 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_name", &Parameter::SetName, "Set the parameter name.")
         .def("get_value", &Parameter::GetValue, "Get the parameter value.")
         .def("set_value", &Parameter::SetValue, "Set the parameter value.")
+        .def("set_modifier", &Parameter::SetModifier, "Set the parameter modifier.", "modifier"_a)
+        .def("has_modifier", &Parameter::HasModifier, "Check if the parameter has a modifier.")
+        .def("update_from_modifier", &Parameter::UpdateFromModifier, "Update the parameter value using its modifier.", "date"_a)
         .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
-    py::class_<ParameterVariableYearly, Parameter>(m, "ParameterVariableYearly")
-        .def(py::init<const string&>())
-        .def("set_values", &ParameterVariableYearly::SetValues, "Set the parameter values.", "year_start"_a,
-             "year_end"_a, "values"_a);
+    py::enum_<ParameterModifierType>(m, "ParameterModifierType")
+        .value("Yearly", ParameterModifierType::Yearly)
+        .value("Monthly", ParameterModifierType::Monthly)
+        .value("Dates", ParameterModifierType::Dates);
+
+    py::class_<ParameterModifier>(m, "ParameterModifier")
+        .def(py::init<>())
+        .def(py::init<ParameterModifierType>(), "type"_a)
+        .def("set_type", &ParameterModifier::SetType, "Set the modifier type.", "type"_a)
+        .def("get_type", &ParameterModifier::GetType, "Get the modifier type.")
+        .def("set_yearly_values", py::overload_cast<int, int, const vecFloat&>(&ParameterModifier::SetYearlyValues),
+             "Set the parameter values for a range of years.", "year_start"_a, "year_end"_a, "values"_a)
+        .def("set_monthly_values", py::overload_cast<const vecFloat&>(&ParameterModifier::SetMonthlyValues),
+             "Set the parameter values for each month (12 values).", "values"_a)
+        .def("set_dates_and_values", &ParameterModifier::SetDatesAndValues,
+             "Set the parameter values for specific dates.", "dates"_a, "values"_a)
+        .def("update_value", &ParameterModifier::UpdateValue, "Update the parameter value based on date.", "date"_a)
+        .def("updates_on_year_change", &ParameterModifier::UpdatesOnYearChange)
+        .def("updates_on_month_change", &ParameterModifier::UpdatesOnMonthChange)
+        .def("updates_on_date_change", &ParameterModifier::UpdatesOnDateChange);
 
     py::class_<TimeSeries>(m, "TimeSeries")
         .def_static("create", &TimeSeries::Create, "data_name"_a, "time"_a, "ids"_a, "data"_a);

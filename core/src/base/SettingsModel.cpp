@@ -12,7 +12,7 @@ SettingsModel::SettingsModel()
       _selectedSplitter(nullptr) {
     ModelStructure initialStructure;
     initialStructure.id = 1;
-    _modelStructures.push_back(std::move(initialStructure));
+    _modelStructures.push_back(initialStructure);
     _selectedStructure = &_modelStructures[0];
 }
 
@@ -36,7 +36,7 @@ void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     brick.name = name;
     brick.type = type;
 
-    _selectedStructure->hydroUnitBricks.push_back(std::move(brick));
+    _selectedStructure->hydroUnitBricks.push_back(brick);
     _selectedBrick = &_selectedStructure->hydroUnitBricks[_selectedStructure->hydroUnitBricks.size() - 1];
 
     if (_logAll) {
@@ -56,7 +56,7 @@ void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
     brick.name = name;
     brick.type = type;
 
-    _selectedStructure->subBasinBricks.push_back(std::move(brick));
+    _selectedStructure->subBasinBricks.push_back(brick);
     _selectedBrick = &_selectedStructure->subBasinBricks[_selectedStructure->subBasinBricks.size() - 1];
 
     if (_logAll) {
@@ -99,7 +99,7 @@ void SettingsModel::AddBrickParameter(const string& name, float value, const str
         throw NotImplemented(wxString::Format("SettingsModel::AddBrickParameter - Parameter type '%s' not supported", type));
     }
 
-    _selectedBrick->parameters.push_back(std::make_unique<Parameter>(name, value));
+    _selectedBrick->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetBrickParameterValue(const string& name, float value, const string& type) {
@@ -110,8 +110,8 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
     }
 
     for (auto& parameter : _selectedBrick->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
@@ -122,7 +122,7 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
 bool SettingsModel::BrickHasParameter(const string& name) {
     wxASSERT(_selectedBrick);
     for (auto& parameter : _selectedBrick->parameters) {
-        if (parameter->GetName() == name) {
+        if (parameter.GetName() == name) {
             return true;
         }
     }
@@ -155,7 +155,7 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     ProcessSettings processSettings;
     processSettings.name = name;
     processSettings.type = type;
-    _selectedBrick->processes.push_back(std::move(processSettings));
+    _selectedBrick->processes.push_back(processSettings);
 
     _selectedProcess = &_selectedBrick->processes[_selectedBrick->processes.size() - 1];
 
@@ -193,13 +193,13 @@ void SettingsModel::AddProcessParameter(const string& name, float value, const s
 
     // If the parameter already exists, replace its value
     for (auto& parameter : _selectedProcess->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
 
-    _selectedProcess->parameters.push_back(std::make_unique<Parameter>(name, value));
+    _selectedProcess->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetProcessParameterValue(const string& name, float value, const string& type) {
@@ -210,8 +210,8 @@ void SettingsModel::SetProcessParameterValue(const string& name, float value, co
     }
 
     for (auto& parameter : _selectedProcess->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
@@ -277,7 +277,7 @@ void SettingsModel::AddHydroUnitSplitter(const string& name, const string& type)
     splitter.name = name;
     splitter.type = type;
 
-    _selectedStructure->hydroUnitSplitters.push_back(std::move(splitter));
+    _selectedStructure->hydroUnitSplitters.push_back(splitter);
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[_selectedStructure->hydroUnitSplitters.size() - 1];
 }
 
@@ -288,7 +288,7 @@ void SettingsModel::AddSubBasinSplitter(const string& name, const string& type) 
     splitter.name = name;
     splitter.type = type;
 
-    _selectedStructure->subBasinSplitters.push_back(std::move(splitter));
+    _selectedStructure->subBasinSplitters.push_back(splitter);
     _selectedSplitter = &_selectedStructure->subBasinSplitters[_selectedStructure->subBasinSplitters.size() - 1];
 }
 
@@ -299,7 +299,7 @@ void SettingsModel::AddSplitterParameter(const string& name, float value, const 
         throw NotImplemented(wxString::Format("SettingsModel::AddSplitterParameter - Parameter type '%s' not supported", type));
     }
 
-    _selectedSplitter->parameters.push_back(std::make_unique<Parameter>(name, value));
+    _selectedSplitter->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetSplitterParameterValue(const string& name, float value, const string& type) {
@@ -310,8 +310,8 @@ void SettingsModel::SetSplitterParameterValue(const string& name, float value, c
     }
 
     for (auto& parameter : _selectedSplitter->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
@@ -432,12 +432,13 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
         const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string brickName = brickSettings.name;  // Store the name before potential reallocation
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
-        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SetSurfaceComponentParent(brickSettings.name);
+        AddSplitterOutput(brickName + "_snowpack", ContentType::Snow);
+        AddSurfaceComponentBrick(brickName + "_snowpack", "snowpack");
+        SetSurfaceComponentParent(brickName);
 
-        AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
+        AddBrickProcess("melt", snowMeltProcess, brickName);
     }
 }
 
@@ -473,16 +474,17 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
         const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string brickName = brickSettings.name;  // Store the name before potential reallocation
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
-        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SetSurfaceComponentParent(brickSettings.name);
+        AddSplitterOutput(brickName + "_snowpack", ContentType::Snow);
+        AddSurfaceComponentBrick(brickName + "_snowpack", "snowpack");
+        SetSurfaceComponentParent(brickName);
 
         AddBrickProcess("melt", snowMeltProcess);
         OutputProcessToSameBrick();
 
         AddBrickProcess("meltwater", outflowProcess);
-        AddProcessOutput(brickSettings.name);
+        AddProcessOutput(brickName);
     }
 }
 
@@ -585,7 +587,7 @@ void SettingsModel::SelectProcessWithParameter(const string& name) {
     wxASSERT(_selectedBrick);
     for (auto& process : _selectedBrick->processes) {
         for (auto& parameter : process.parameters) {
-            if (parameter->GetName() == name) {
+            if (parameter.GetName() == name) {
                 _selectedProcess = &process;
                 return;
             }

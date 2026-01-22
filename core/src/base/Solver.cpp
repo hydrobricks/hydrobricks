@@ -90,7 +90,7 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
         if (applyConstraints && GreaterThan(sumRates, 0, PRECISION)) {
-            brick->ApplyConstraints(config::timeStepInDays);
+            brick->ApplyConstraints(_timeStepInDays);
         }
     }
 }
@@ -109,7 +109,7 @@ void Solver::ApplyConstraintsFor(int col) {
             }
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(config::timeStepInDays);
+        brick->ApplyConstraints(_timeStepInDays);
     }
 }
 
@@ -149,7 +149,7 @@ void Solver::ApplyProcesses(int col) const {
         for (int i = 0; i < brick->GetProcessCount(); ++i) {
             auto process = brick->GetProcess(i);
             for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
-                process->ApplyChange(iConnect, _changeRates(iRate, col), config::timeStepInDays);
+                process->ApplyChange(iConnect, _changeRates(iRate, col), _timeStepInDays);
                 iRate++;
             }
         }
@@ -167,7 +167,7 @@ void Solver::ApplyProcesses(const axd& changeRates) const {
         for (int i = 0; i < brick->GetProcessCount(); ++i) {
             auto process = brick->GetProcess(i);
             for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
-                process->ApplyChange(iConnect, changeRates(iRate), config::timeStepInDays);
+                process->ApplyChange(iConnect, changeRates(iRate), _timeStepInDays);
                 iRate++;
             }
         }

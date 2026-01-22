@@ -93,7 +93,7 @@ int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
 }
 
-bool Processor::ProcessTimeStep() {
+bool Processor::ProcessTimeStep(double timeStepInDays) {
     wxASSERT(_model);
 
     SubBasin* basin = _model->GetSubBasin();
@@ -118,12 +118,12 @@ bool Processor::ProcessTimeStep() {
                 continue;
             }
 
-            ApplyDirectChanges(brick, ptIndex);
+            ApplyDirectChanges(brick, ptIndex, timeStepInDays);
         }
     }
 
     // Process the bricks that need a solver
-    if (!_solver->Solve()) {
+    if (!_solver->Solve(timeStepInDays)) {
         return false;
     }
 
@@ -134,7 +134,7 @@ bool Processor::ProcessTimeStep() {
     return true;
 }
 
-void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
+void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepInDays) {
     brick->UpdateContentFromInputs();
 
     // Initialize the change rates to 0 and link to fluxes
@@ -166,11 +166,11 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex) {
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        process->GetWaterContainer()->ApplyConstraints(config::timeStepInDays);
+        process->GetWaterContainer()->ApplyConstraints(timeStepInDays);
 
         // Apply changes
         for (int j = 0; j < rates.size(); ++j) {
-            process->ApplyChange(j, _changeRatesNoSolver(iRate), config::timeStepInDays);
+            process->ApplyChange(j, _changeRatesNoSolver(iRate), timeStepInDays);
             _changeRatesNoSolver(iRate) = 0;
             iRate++;
             ptIndex++;

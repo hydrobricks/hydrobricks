@@ -44,9 +44,10 @@ class Processor : public wxObject {
     /**
      * Process the time step.
      *
+     * @param timeStepInDays The time step in days.
      * @return true if the time step was processed successfully, false otherwise.
      */
-    bool ProcessTimeStep();
+    bool ProcessTimeStep(double timeStepInDays);
 
     /**
      * Get the state variables vector pointer.
@@ -106,8 +107,9 @@ class Processor : public wxObject {
      *
      * @param brick the brick to apply changes to.
      * @param ptIndex the index of the point in the state variable vector.
+     * @param timeStepInDays the time step in days.
      */
-    void ApplyDirectChanges(Brick* brick, int& ptIndex);
+    void ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepInDays);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

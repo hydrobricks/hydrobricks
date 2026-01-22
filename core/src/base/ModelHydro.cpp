@@ -40,7 +40,6 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         BuildModelStructure(modelSettings);
 
         _timer.Initialize(modelSettings.GetTimerSettings());
-        config::timeStepInDays = *_timer.GetTimeStepPointer();
         _processor.Initialize(modelSettings.GetSolverSettings());
         if (modelSettings.LogAll()) {
             _logger.RecordFractions();
@@ -882,7 +881,7 @@ bool ModelHydro::Run() {
     wxLogMessage(_("Simulation starting."));
 
     while (!_timer.IsOver()) {
-        if (!_processor.ProcessTimeStep()) {
+        if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
             wxLogError(_("Failed running the model."));
             return false;
         }

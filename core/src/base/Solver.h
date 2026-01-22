@@ -15,9 +15,10 @@ class Solver : public wxObject {
     /**
      * Apply the solver.
      *
+     * @param timeStepInDays The time step in days.
      * @return True if success, false otherwise.
      */
-    virtual bool Solve() = 0;
+    virtual bool Solve(double timeStepInDays) = 0;
 
     /**
      * Create the solver based on the provided settings.
@@ -47,6 +48,7 @@ class Solver : public wxObject {
     axxd _stateVariableChanges;
     axxd _changeRates;
     int _nIterations;
+    double _timeStepInDays;
 
     /**
      * Save the state variables.

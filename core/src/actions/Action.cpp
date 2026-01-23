@@ -89,3 +89,19 @@ double Action::CheckLandCoverAreaFraction(const string& name, int id, double fra
 
     return fraction;
 }
+
+bool Action::IsValid() const {
+    // Check that manager is assigned
+    if (!_manager) {
+        wxLogError(_("Action: Manager not assigned."));
+        return false;
+    }
+
+    return true;
+}
+
+void Action::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("Action validation failed. Action manager not properly assigned."));
+    }
+}

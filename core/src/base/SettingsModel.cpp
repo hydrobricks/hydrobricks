@@ -802,3 +802,39 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
 
     return true;
 }
+
+bool SettingsModel::IsValid() const {
+    // Check that solver is configured
+    if (_solver.name.empty()) {
+        wxLogError(_("SettingsModel: Solver not configured."));
+        return false;
+    }
+
+    // Check that timer is configured
+    if (_timer.start.empty() || _timer.end.empty()) {
+        wxLogError(_("SettingsModel: Timer start or end date not set."));
+        return false;
+    }
+
+    if (_timer.timeStep <= 0) {
+        wxLogError(_("SettingsModel: Time step must be positive."));
+        return false;
+    }
+
+    // Check that at least one structure exists
+    if (_modelStructures.empty()) {
+        wxLogError(_("SettingsModel: No structures defined."));
+        return false;
+    }
+
+    return true;
+}
+
+void SettingsModel::Validate() const {
+    if (!IsValid()) {
+        wxString msg = wxString::Format(
+            _("SettingsModel validation failed. Solver: '%s', Start: '%s', End: '%s', TimeStep: %d"),
+            _solver.name, _timer.start, _timer.end, _timer.timeStep);
+        throw ModelConfigError(msg);
+    }
+}

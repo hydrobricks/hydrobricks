@@ -100,6 +100,22 @@ class Parameter : public wxObject {
      */
     bool UpdateFromModifier(double date);
 
+    /**
+     * Check if the parameter is valid.
+     * Verifies that the parameter has a name and value.
+     *
+     * @return true if the parameter is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const;
+
+    /**
+     * Validate the parameter.
+     * Throws an exception if the parameter is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   protected:
     string _name;
     float _value;

@@ -114,6 +114,22 @@ class Action : public wxObject {
         return _recursive;
     }
 
+    /**
+     * Check if the action is valid.
+     * Verifies that the action is properly configured.
+     *
+     * @return true if the action is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const;
+
+    /**
+     * Validate the action.
+     * Throws an exception if the action is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
+
   protected:
     ActionsManager* _manager;  // non-owning reference
     int _cursor;

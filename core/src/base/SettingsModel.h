@@ -725,6 +725,22 @@ class SettingsModel : public wxObject {
         return _logAll;
     }
 
+    /**
+     * Check if the settings model is valid.
+     * Verifies that critical settings are configured (solver, timer, structures).
+     *
+     * @return true if the settings are valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the settings model.
+     * Throws an exception if the settings are invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   protected:
     bool _logAll;
     vector<ModelStructure> _modelStructures;

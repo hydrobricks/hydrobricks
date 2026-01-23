@@ -163,3 +163,9 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
         throw ShouldNotHappen(wxString::Format("TimeSeries::ExtractTimeStep - Invalid time step value: %f", timeStepData));
     }
 }
+
+void TimeSeries::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("TimeSeries validation failed. Time series is not properly configured."));
+    }
+}

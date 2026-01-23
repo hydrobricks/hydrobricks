@@ -42,3 +42,25 @@ TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
     wxASSERT(_data);
     return _data.get();
 }
+
+bool TimeSeriesUniform::IsValid() const {
+    // Check that data has been set
+    if (!_data) {
+        wxLogError(_("TimeSeriesUniform: No data set."));
+        return false;
+    }
+
+    // Check that the data is valid
+    if (!_data->IsValid()) {
+        wxLogError(_("TimeSeriesUniform: Data is not valid."));
+        return false;
+    }
+
+    return true;
+}
+
+void TimeSeriesUniform::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("TimeSeriesUniform validation failed. Data not properly configured."));
+    }
+}

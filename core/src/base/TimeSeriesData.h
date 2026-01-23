@@ -68,6 +68,22 @@ class TimeSeriesData : public wxObject {
      */
     virtual double GetEnd() const = 0;
 
+    /**
+     * Check if the time series data is valid.
+     * Verifies that the data has values and date range is set correctly.
+     *
+     * @return true if the time series data is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate the time series data.
+     * Throws an exception if the time series data is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const = 0;
+
   protected:
     vecDouble _values;
     int _cursor;
@@ -118,6 +134,16 @@ class TimeSeriesDataRegular : public TimeSeriesData {
      * @copydoc TimeSeriesData::GetEnd()
      */
     double GetEnd() const override;
+
+    /**
+     * @copydoc TimeSeriesData::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeriesData::Validate()
+     */
+    void Validate() const override;
 
   protected:
     double _start;
@@ -171,6 +197,16 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
      * @copydoc TimeSeriesData::GetEnd()
      */
     double GetEnd() const override;
+
+    /**
+     * @copydoc TimeSeriesData::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeriesData::Validate()
+     */
+    void Validate() const override;
 
   protected:
     vecDouble _dates;

@@ -6,7 +6,7 @@
 ProcessOutflow::ProcessOutflow(WaterContainer* container)
     : Process(container) {}
 
-void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
     // No forcing or parameters
 }
 

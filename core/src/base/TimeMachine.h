@@ -123,6 +123,22 @@ class TimeMachine : public wxObject {
      */
     static int GetCurrentDayOfYear();
 
+    /**
+     * Check if the time machine is valid.
+     * Verifies that start and end dates are properly configured.
+     *
+     * @return true if the time machine is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the time machine.
+     * Throws an exception if the time machine is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   private:
     double _date;
     double _start;

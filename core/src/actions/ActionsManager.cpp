@@ -104,3 +104,19 @@ SubBasin* ActionsManager::GetSubBasin() const {
 HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
     return _model->GetSubBasin()->GetHydroUnitById(id);
 }
+
+bool ActionsManager::IsValid() const {
+    // Check that model is assigned
+    if (!_model) {
+        wxLogError(_("ActionsManager: Model not assigned."));
+        return false;
+    }
+
+    return true;
+}
+
+void ActionsManager::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("ActionsManager validation failed. Model not properly assigned."));
+    }
+}

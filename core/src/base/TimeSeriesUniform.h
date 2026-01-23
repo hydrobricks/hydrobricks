@@ -59,6 +59,16 @@ class TimeSeriesUniform : public TimeSeries {
      */
     TimeSeriesData* GetDataPointer(int unitId) override;
 
+    /**
+     * @copydoc TimeSeries::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeries::Validate()
+     */
+    void Validate() const override;
+
   protected:
     std::unique_ptr<TimeSeriesData> _data;  // owning
 };

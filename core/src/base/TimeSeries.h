@@ -91,6 +91,22 @@ class TimeSeries : public wxObject {
         return _type;
     }
 
+    /**
+     * Check if the time series is valid.
+     * Verifies that the time series has data and proper configuration.
+     *
+     * @return true if the time series is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate the time series.
+     * Throws an exception if the time series is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
+
   protected:
     VariableType _type;
 

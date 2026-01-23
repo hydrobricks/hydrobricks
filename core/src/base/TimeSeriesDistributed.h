@@ -57,6 +57,16 @@ class TimeSeriesDistributed : public TimeSeries {
      */
     TimeSeriesData* GetDataPointer(int unitId) override;
 
+    /**
+     * @copydoc TimeSeries::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeries::Validate()
+     */
+    void Validate() const override;
+
   protected:
     vecInt _unitIds;
     std::vector<std::unique_ptr<TimeSeriesData>> _data;  // owning

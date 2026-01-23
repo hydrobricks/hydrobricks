@@ -88,6 +88,22 @@ class ActionsManager : public wxObject {
         return _sporadicActionDates;
     }
 
+    /**
+     * Check if the actions manager is valid.
+     * Verifies that the manager is properly configured with a model.
+     *
+     * @return true if the actions manager is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the actions manager.
+     * Throws an exception if the actions manager is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   protected:
     ModelHydro* _model;  // non-owning reference
     int _cursorManager;

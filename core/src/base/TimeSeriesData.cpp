@@ -112,6 +112,37 @@ double TimeSeriesDataRegular::GetEnd() const {
     return _end;
 }
 
+bool TimeSeriesDataRegular::IsValid() const {
+    // Check that values have been set
+    if (_values.empty()) {
+        wxLogError(_("TimeSeriesDataRegular: No values set."));
+        return false;
+    }
+
+    // Check that start is before end
+    if (_start > _end) {
+        wxLogError(_("TimeSeriesDataRegular: Start date (%f) is after end date (%f)."), _start, _end);
+        return false;
+    }
+
+    // Check that time step is positive
+    if (_timeStep <= 0) {
+        wxLogError(_("TimeSeriesDataRegular: Time step must be positive."));
+        return false;
+    }
+
+    return true;
+}
+
+void TimeSeriesDataRegular::Validate() const {
+    if (!IsValid()) {
+        wxString msg = wxString::Format(
+            _("TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d"),
+            _start, _end, _timeStep, static_cast<int>(_values.size()));
+        throw ModelConfigError(msg);
+    }
+}
+
 /*
  * TimeSeriesDataIrregular
  */
@@ -159,4 +190,45 @@ double TimeSeriesDataIrregular::GetStart() const {
 double TimeSeriesDataIrregular::GetEnd() const {
     wxASSERT(!_dates.empty());
     return _dates[_dates.size() - 1];
+}
+
+bool TimeSeriesDataIrregular::IsValid() const {
+    // Check that dates have been set
+    if (_dates.empty()) {
+        wxLogError(_("TimeSeriesDataIrregular: No dates set."));
+        return false;
+    }
+
+    // Check that values have been set
+    if (_values.empty()) {
+        wxLogError(_("TimeSeriesDataIrregular: No values set."));
+        return false;
+    }
+
+    // Check that dates and values match
+    if (_dates.size() != _values.size()) {
+        wxLogError(_("TimeSeriesDataIrregular: Date count (%d) does not match value count (%d)."),
+                   static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        return false;
+    }
+
+    // Check that dates are sorted
+    for (size_t i = 1; i < _dates.size(); ++i) {
+        if (_dates[i] <= _dates[i - 1]) {
+            wxLogError(_("TimeSeriesDataIrregular: Dates are not sorted (date[%d]=%f <= date[%d]=%f)."),
+                       static_cast<int>(i), _dates[i], static_cast<int>(i - 1), _dates[i - 1]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void TimeSeriesDataIrregular::Validate() const {
+    if (!IsValid()) {
+        wxString msg = wxString::Format(
+            _("TimeSeriesDataIrregular validation failed. DateCount: %d, ValueCount: %d"),
+            static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        throw ModelConfigError(msg);
+    }
 }

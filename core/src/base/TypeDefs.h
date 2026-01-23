@@ -1,14 +1,17 @@
 #ifndef HYDROBRICKS_TYPEDEFS_H
 #define HYDROBRICKS_TYPEDEFS_H
 
+#include "NumericConstants.h"
+
 /* NaN */
 static const short NAN_S = std::numeric_limits<short>::max();
-static const int NAN_I = std::numeric_limits<int>::max();
+// Sentinel value used to represent "no value" for int type (used in IsNaN(int))
+static const int INT_NAN_SENTINEL = std::numeric_limits<int>::max();
 static const float NAN_F = std::numeric_limits<float>::quiet_NaN();
 static const double NAN_D = std::numeric_limits<double>::quiet_NaN();
 
-static const double EPSILON_D = std::numeric_limits<double>::epsilon();
-static const double EPSILON_F = std::numeric_limits<float>::epsilon();
-static const double PRECISION = 0.00000001;
+// Keep NAN_I for backward compatibility
+static const int NAN_I = INT_NAN_SENTINEL;
+
 
 #endif  // HYDROBRICKS_TYPEDEFS_H

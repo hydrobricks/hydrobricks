@@ -33,7 +33,7 @@ class HydroUnitProperty : public wxObject {
      *
      * @return The name of the property.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 

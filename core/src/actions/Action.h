@@ -57,7 +57,7 @@ class Action : public wxObject {
      * @param date the date to insert.
      * @return the index for insertion.
      */
-    int GetIndexForInsertion(double date);
+    int GetIndexForInsertion(double date) const;
 
     /**
      * Check if the land cover area fraction is valid.
@@ -85,7 +85,7 @@ class Action : public wxObject {
      *
      * @return the sporadic dates vector.
      */
-    vecDouble GetSporadicDates() {
+    const vecDouble& GetSporadicDates() const {
         return _sporadicDates;
     }
 
@@ -94,7 +94,7 @@ class Action : public wxObject {
      *
      * @return the number of sporadic items.
      */
-    int GetSporadicItemsNb() {
+    int GetSporadicItemCount() const {
         return (int)_sporadicDates.size();
     }
 
@@ -114,8 +114,24 @@ class Action : public wxObject {
         return _recursive;
     }
 
+    /**
+     * Check if the action is valid.
+     * Verifies that the action is properly configured.
+     *
+     * @return true if the action is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const;
+
+    /**
+     * Validate the action.
+     * Throws an exception if the action is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
+
   protected:
-    ActionsManager* _manager;
+    ActionsManager* _manager;  // non-owning reference
     int _cursor;
     vecDouble _sporadicDates;
     bool _recursive;

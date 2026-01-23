@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include <memory>
+
 #include "IceContainer.h"
 #include "Includes.h"
 #include "LandCover.h"
@@ -31,23 +33,16 @@ class Glacier : public LandCover {
     void AttachFluxIn(Flux* flux) override;
 
     /**
-     * @copydoc Brick::IsOk()
+     * @copydoc Brick::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid(bool checkProcesses = true) const override;
 
     /**
      * Get the ice container of the glacier.
      *
      * @return The ice container of the glacier.
      */
-    WaterContainer* GetIceContainer();
-
-    /**
-     * @copydoc Brick::IsGlacier()
-     */
-    [[nodiscard]] bool IsGlacier() override {
-        return true;
-    }
+    WaterContainer* GetIceContainer() const;
 
     /**
      * @copydoc Brick::Finalize()
@@ -62,7 +57,7 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(ContentType type) override;
+    double GetContent(ContentType type) const override;
 
     /**
      * @copydoc Brick::UpdateContent()
@@ -94,8 +89,15 @@ class Glacier : public LandCover {
      */
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
+    /**
+     * Check if the glacier has ice.
+     *
+     * @return True if the glacier has ice, false otherwise.
+     */
+    [[nodiscard]] bool HasIce() const;
+
   protected:
-    IceContainer* _ice;
+    std::unique_ptr<IceContainer> _ice;  // owning
 };
 
 #endif  // HYDROBRICKS_GLACIER_H

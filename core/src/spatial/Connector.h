@@ -20,8 +20,8 @@ class Connector : public wxObject {
     void Connect(SubBasin* in, SubBasin* out);
 
   protected:
-    SubBasin* _in;
-    SubBasin* _out;
+    SubBasin* _in;  // non-owning reference
+    SubBasin* _out;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_CONNECTOR_H

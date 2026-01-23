@@ -24,7 +24,7 @@ class ProcessOutflowPercolation : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* _rate;  // [mm/d]
+    const float* _rate;  // [mm/d]
 
     /**
      * @copydoc Process::GetRates()

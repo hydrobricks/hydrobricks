@@ -3,6 +3,7 @@
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
+#include <memory>
 
 /**
  * Model: simple model without any brick
@@ -11,26 +12,25 @@
 class Splitters : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
         _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
+        // Automatic cleanup via unique_ptr
     }
 };
 
@@ -54,10 +54,10 @@ TEST_F(Splitters, SnowRain) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

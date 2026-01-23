@@ -11,14 +11,14 @@ class FluxToBrickInstantaneous : public FluxToBrick {
     explicit FluxToBrickInstantaneous(Brick* brick);
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::IsInstantaneous()
      */
-    bool IsInstantaneous() override {
+    bool IsInstantaneous() const override {
         return true;
     }
 
@@ -32,7 +32,7 @@ class FluxToBrickInstantaneous : public FluxToBrick {
      *
      * @return The real amount of water that has been transferred to the brick.
      */
-    double GetRealAmount();
+    double GetRealAmount() const;
 
     /**
      * @copydoc Flux::UpdateFlux()

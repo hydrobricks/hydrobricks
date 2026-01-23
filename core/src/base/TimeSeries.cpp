@@ -16,7 +16,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         }
 
         // Get number of units
-        int unitsNb = file.GetDimLen("hydro_units");
+        int unitCount = file.GetDimLen("hydro_units");
 
         // Get time length
         int timeLength = file.GetDimLen("time");
@@ -35,14 +35,14 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         ExtractTimeStep(timeStepData, timeStep, timeUnit);
 
         // Get ids
-        vecInt ids = file.GetVarInt1D("id", unitsNb);
+        vecInt ids = file.GetVarInt1D("id", unitCount);
 
         // Extract variables
-        int varsNb = file.GetVarsNb();
+        int varCount = file.GetVariableCount();
 
         int dimIdTime = file.GetDimId("time");
 
-        for (int iVar = 0; iVar < varsNb; ++iVar) {
+        for (int iVar = 0; iVar < varCount; ++iVar) {
             // Get variable name
             string varName = file.GetVarName(iVar);
 
@@ -60,20 +60,20 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
             vecInt dimIds = file.GetVarDimIds(iVar, 2);
 
             if (dimIds[0] == dimIdTime) {
-                axxd values = file.GetVarDouble2D(iVar, unitsNb, timeLength);
+                axxd values = file.GetVarDouble2D(iVar, unitCount, timeLength);
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
                     forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             } else {
-                axxd values = file.GetVarDouble2D(iVar, timeLength, unitsNb);
+                axxd values = file.GetVarDouble2D(iVar, timeLength, unitCount);
                 for (int i = 0; i < values.cols(); ++i) {
                     axd valuesUnit = values.col(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
                     forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             }
 
@@ -109,18 +109,18 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         wxLogError(_("Dimension mismatch in the forcing data."));
-        throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
-                                               static_cast<int>(data.rows()), static_cast<int>(time.size()),
-                                               static_cast<int>(data.cols()), static_cast<int>(ids.size())));
+        throw InputError(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
+                                          static_cast<int>(data.rows()), static_cast<int>(time.size()),
+                                          static_cast<int>(data.cols()), static_cast<int>(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
-        auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+        auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
         if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
-            throw InvalidArgument("Time series creation failed.");
+            throw RuntimeError(_("Time series creation failed."));
         }
-        timeSeries->AddData(forcingData, ids[i]);
+        timeSeries->AddData(std::move(forcingData), ids[i]);
     }
 
     return timeSeries;
@@ -144,7 +144,7 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
     } else if (StringsMatch(varName, "custom_3")) {
         varType = Custom3;
     } else {
-        throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+        throw InputError(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
     }
     return varType;
 }
@@ -160,6 +160,12 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
         timeUnit = Hour;
         timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(wxString::Format("TimeSeries::ExtractTimeStep - Invalid time step value: %f", timeStepData));
+    }
+}
+
+void TimeSeries::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("TimeSeries validation failed. Time series is not properly configured."));
     }
 }

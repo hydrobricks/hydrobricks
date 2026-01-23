@@ -11,7 +11,7 @@
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
-#include "ParameterVariable.h"
+#include "ParameterModifier.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "SubBasin.h"
@@ -78,7 +78,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_lateral_connection", &SettingsBasin::AddLateralConnection,
              "Add a lateral connection between two hydro units.", "giver_hydro_unit_id"_a, "receiver_hydro_unit_id"_a,
              "fraction"_a, "type"_a = "")
-        .def("get_lateral_connections_nb", &SettingsBasin::GetLateralConnectionsNb,
+        .def("get_lateral_connection_count", &SettingsBasin::GetLateralConnectionCount,
              "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
@@ -94,12 +94,31 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_name", &Parameter::SetName, "Set the parameter name.")
         .def("get_value", &Parameter::GetValue, "Get the parameter value.")
         .def("set_value", &Parameter::SetValue, "Set the parameter value.")
+        .def("set_modifier", &Parameter::SetModifier, "Set the parameter modifier.", "modifier"_a)
+        .def("has_modifier", &Parameter::HasModifier, "Check if the parameter has a modifier.")
+        .def("update_from_modifier", &Parameter::UpdateFromModifier, "Update the parameter value using its modifier.", "date"_a)
         .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
-    py::class_<ParameterVariableYearly, Parameter>(m, "ParameterVariableYearly")
-        .def(py::init<const string&>())
-        .def("set_values", &ParameterVariableYearly::SetValues, "Set the parameter values.", "year_start"_a,
-             "year_end"_a, "values"_a);
+    py::enum_<ParameterModifierType>(m, "ParameterModifierType")
+        .value("Yearly", ParameterModifierType::Yearly)
+        .value("Monthly", ParameterModifierType::Monthly)
+        .value("Dates", ParameterModifierType::Dates);
+
+    py::class_<ParameterModifier>(m, "ParameterModifier")
+        .def(py::init<>())
+        .def(py::init<ParameterModifierType>(), "type"_a)
+        .def("set_type", &ParameterModifier::SetType, "Set the modifier type.", "type"_a)
+        .def("get_type", &ParameterModifier::GetType, "Get the modifier type.")
+        .def("set_yearly_values", py::overload_cast<int, int, const vecFloat&>(&ParameterModifier::SetYearlyValues),
+             "Set the parameter values for a range of years.", "year_start"_a, "year_end"_a, "values"_a)
+        .def("set_monthly_values", py::overload_cast<const vecFloat&>(&ParameterModifier::SetMonthlyValues),
+             "Set the parameter values for each month (12 values).", "values"_a)
+        .def("set_dates_and_values", &ParameterModifier::SetDatesAndValues,
+             "Set the parameter values for specific dates.", "dates"_a, "values"_a)
+        .def("update_value", &ParameterModifier::UpdateValue, "Update the parameter value based on date.", "date"_a)
+        .def("updates_on_year_change", &ParameterModifier::UpdatesOnYearChange)
+        .def("updates_on_month_change", &ParameterModifier::UpdatesOnMonthChange)
+        .def("updates_on_date_change", &ParameterModifier::UpdatesOnDateChange);
 
     py::class_<TimeSeries>(m, "TimeSeries")
         .def_static("create", &TimeSeries::Create, "data_name"_a, "time"_a, "ids"_a, "data"_a);
@@ -109,8 +128,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin.",
              "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
-        .def("get_actions_nb", &ModelHydro::GetActionsNb, "Get the number of actions.")
-        .def("get_sporadic_action_items_nb", &ModelHydro::GetSporadicActionItemsNb, "Get the number of action items.")
+        .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
+        .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount, "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -138,8 +157,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
         .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_changes_nb", &ActionLandCoverChange::GetChangesNb)
-        .def("get_land_covers_nb", &ActionLandCoverChange::GetLandCoversNb);
+        .def("get_change_count", &ActionLandCoverChange::GetChangeCount)
+        .def("get_land_cover_count", &ActionLandCoverChange::GetLandCoverCount);
 
     py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")
         .def(py::init<>())

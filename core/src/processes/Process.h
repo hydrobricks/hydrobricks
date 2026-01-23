@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_PROCESS_H
 #define HYDROBRICKS_PROCESS_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -42,9 +44,17 @@ class Process : public wxObject {
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Check if the process has a parameter with the provided name.
@@ -62,7 +72,7 @@ class Process : public wxObject {
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
 
     /**
      * Set the properties of the hydro unit.
@@ -85,26 +95,17 @@ class Process : public wxObject {
      * @param forcing forcing to attach.
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::AttachForcing - Should not be called (virtual)");
     }
 
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
         wxASSERT(flux);
-        _outputs.push_back(flux);
-    }
-
-    /**
-     * Get the outgoing fluxes.
-     *
-     * @return vector of pointers to the outgoing fluxes.
-     */
-    vector<Flux*> GetOutputFluxes() {
-        return _outputs;
+        _outputs.push_back(std::move(flux));
     }
 
     /**
@@ -112,8 +113,20 @@ class Process : public wxObject {
      *
      * @return number of outgoing fluxes.
      */
-    int GetOutputFluxesNb() {
+    int GetOutputFluxCount() const {
         return static_cast<int>(_outputs.size());
+    }
+
+    /**
+     * Get an outgoing flux by its index.
+     *
+     * @param index index of the flux.
+     * @return pointer to the flux.
+     */
+    Flux* GetOutputFlux(size_t index) const {
+        wxASSERT(_outputs.size() > index);
+        wxASSERT(_outputs[index]);
+        return _outputs[index].get();
     }
 
     /**
@@ -121,7 +134,7 @@ class Process : public wxObject {
      *
      * @return true if the process sends water to the atmosphere.
      */
-    [[nodiscard]] virtual bool ToAtmosphere() {
+    [[nodiscard]] virtual bool ToAtmosphere() const {
         return false;
     }
 
@@ -130,7 +143,7 @@ class Process : public wxObject {
      *
      * @return true if the process needs to link the target brick.
      */
-    [[nodiscard]] virtual bool NeedsTargetBrickLinking() {
+    [[nodiscard]] virtual bool NeedsTargetBrickLinking() const {
         return false;
     }
 
@@ -139,7 +152,7 @@ class Process : public wxObject {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionsNb() = 0;
+    virtual int GetConnectionCount() const = 0;
 
     /**
      * Get the change rates of the process.
@@ -194,7 +207,7 @@ class Process : public wxObject {
      *
      * @return name of the process.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 
@@ -212,7 +225,7 @@ class Process : public wxObject {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer() {
+    WaterContainer* GetWaterContainer() const {
         return _container;
     }
 
@@ -222,7 +235,7 @@ class Process : public wxObject {
      * @param brick target brick.
      */
     virtual void SetTargetBrick(Brick*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::SetTargetBrick - Should not be called (virtual)");
     }
 
     /**
@@ -234,17 +247,35 @@ class Process : public wxObject {
         return false;
     }
 
+    /**
+     * Check if the process has any output fluxes.
+     *
+     * @return true if the process has at least one output flux.
+     */
+    [[nodiscard]] bool HasOutputFluxes() const {
+        return !_outputs.empty();
+    }
+
+    /**
+     * Check if the process has a water container.
+     *
+     * @return true if the process has a water container.
+     */
+    [[nodiscard]] bool HasWaterContainer() const {
+        return _container != nullptr;
+    }
+
   protected:
     string _name;
-    WaterContainer* _container;
-    vector<Flux*> _outputs;
+    WaterContainer* _container;  // non-owning reference
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 
     /**
      * Get the sum of change rates from other processes.
      *
      * @return sum of change rates from other processes.
      */
-    double GetSumChangeRatesOtherProcesses();
+    double GetSumChangeRatesOtherProcesses() const;
 
     /**
      * Get the rates of the process.

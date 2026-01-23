@@ -23,7 +23,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
         wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
         return false;
     }
-    if (_manager->GetSubBasin()->GetHydroUnits().empty()) {
+    if (!_manager->GetSubBasin()->HasHydroUnits()) {
         wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
         return false;
     }
@@ -39,7 +39,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
         // Check that the glacier area corresponds to the lookup table initial area.
         double areaRef = _tableArea(0, i);
         double areaInModel = unit->GetLandCover(_landCoverName)->GetAreaFraction() * unit->GetArea();
-        if (areaInModel == 0) {
+        if (NearlyZero(areaInModel, PRECISION)) {
             // If the glacier area is zero, initialize the fraction.
             double fraction = areaRef / unit->GetArea();
             fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), areaRef);
@@ -47,7 +47,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
             if (!unit->ChangeLandCoverAreaFraction(_landCoverName, fraction)) {
                 return false;
             }
-        } else if (std::abs(areaInModel - areaRef) > PRECISION) {
+        } else if (!NearlyEqual(areaInModel, areaRef, PRECISION)) {
             wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
                          "initial area (%g vs %g)."),
                        id, areaInModel, areaRef);
@@ -55,7 +55,7 @@ bool ActionGlacierEvolutionDeltaH::Init() {
         }
 
         // Initialize the glacier container.
-        LandCover* brick = unit->GetLandCover(_landCoverName);
+        LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr) {
             wxLogError(_("The land cover %s was not found in hydro unit %d"), _landCoverName, id);
             return false;
@@ -76,7 +76,9 @@ void ActionGlacierEvolutionDeltaH::Reset() {
     }
 
     // Re-initialize.
-    Init();
+    if (!Init()) {
+        throw RuntimeError(_("Failed to re-initialize the glacier evolution action during reset."));
+    }
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {
@@ -88,8 +90,8 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
     for (int i = 0; i < _hydroUnitIds.size(); ++i) {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
-        LandCover* brick = unit->GetLandCover(_landCoverName);
-        if (brick == nullptr || brick->GetAreaFraction() == 0) {
+        LandCover* brick = unit->TryGetLandCover(_landCoverName);
+        if (brick == nullptr || NearlyZero(brick->GetAreaFraction(), PRECISION)) {
             continue;
         }
         double area = brick->GetAreaFraction() * unit->GetArea();
@@ -131,9 +133,9 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
         HydroUnit* unit = subBasin->GetHydroUnitById(id);
         LandCover* brick = unit->GetLandCover(_landCoverName);
         double areaGlacier = _tableArea(row, i);
-        if (areaGlacier == 0) {
+        if (NearlyZero(areaGlacier, PRECISION)) {
             brick->UpdateContent(0, ContentType::Ice);
-            assert(_tableVolume(row, i) == 0);
+            assert(NearlyZero(_tableVolume(row, i), PRECISION));
         } else {
             double volumeRatio = _tableVolume(row, i) / rowVolumeSum;
             double iceWE = glacierWE * volumeRatio / areaGlacier;

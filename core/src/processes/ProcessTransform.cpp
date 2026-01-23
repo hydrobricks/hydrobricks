@@ -7,10 +7,10 @@ ProcessTransform::ProcessTransform(WaterContainer* container)
     : Process(container) {}
 
 void ProcessTransform::RegisterProcessParametersAndForcing(SettingsModel*) {
-    // Nothing to register
+    // No forcing or parameters
 }
 
-bool ProcessTransform::IsOk() {
+bool ProcessTransform::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("A transform process should have a single output."));
         return false;
@@ -19,7 +19,7 @@ bool ProcessTransform::IsOk() {
     return true;
 }
 
-int ProcessTransform::GetConnectionsNb() {
+int ProcessTransform::GetConnectionCount() const {
     return 1;
 }
 

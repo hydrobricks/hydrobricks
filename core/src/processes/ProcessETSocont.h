@@ -19,9 +19,9 @@ class ProcessETSocont : public ProcessET {
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::AttachForcing()
@@ -29,7 +29,7 @@ class ProcessETSocont : public ProcessET {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _pet;
+    Forcing* _pet;  // non-owning reference
     float _exponent;
 
     /**

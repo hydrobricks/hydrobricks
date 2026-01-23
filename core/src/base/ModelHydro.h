@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include <memory>
+
 #include "ActionsManager.h"
 #include "Includes.h"
 #include "Logger.h"
@@ -29,9 +31,10 @@ class ModelHydro : public wxObject {
      *
      * @param modelSettings settings of the model.
      * @param basinSettings settings of the basin.
+     * @param checkProcesses whether to check the processes during validation.
      * @return true if the initialization was successful.
      */
-    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
 
     /**
      * Update the model parameters.
@@ -41,11 +44,19 @@ class ModelHydro : public wxObject {
     void UpdateParameters(SettingsModel& modelSettings);
 
     /**
-     * Check if the model is well-defined.
+     * Check that everything is correctly defined.
      *
-     * @return true if the model is well-defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] bool IsOk();
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
 
     /**
      * Check if the forcing data were loaded.
@@ -82,44 +93,44 @@ class ModelHydro : public wxObject {
     /**
      * Get the outlet discharge series.
      *
-     * @return outlet discharge.
+     * @return outlet discharge series.
      */
-    axd GetOutletDischarge();
+    axd GetOutletDischarge() const;
 
     /**
      * Get the total outlet discharge.
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge();
+    double GetTotalOutletDischarge() const;
 
     /**
      * Get the total amount of water lost by evapotranspiration.
      *
      * @return total amount of water lost by evapotranspiration.
      */
-    double GetTotalET();
+    double GetTotalET() const;
 
     /**
      * Get the total change in water storage.
      *
      * @return total change in water storage.
      */
-    double GetTotalWaterStorageChanges();
+    double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total change in snow storage.
      *
      * @return total change in snow storage.
      */
-    double GetTotalSnowStorageChanges();
+    double GetTotalSnowStorageChanges() const;
 
     /*
      * Get the total change in glacier storage.
      *
      * @return total change in glacier storage.
      */
-    double GetTotalGlacierStorageChanges();
+    double GetTotalGlacierStorageChanges() const;
 
     /**
      * Add a time series to the model.
@@ -127,7 +138,7 @@ class ModelHydro : public wxObject {
      * @param timeSeries time series to add.
      * @return true if the time series was added successfully.
      */
-    bool AddTimeSeries(TimeSeries* timeSeries);
+    bool AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries);
 
     /**
      * Add an action to the model.
@@ -142,14 +153,14 @@ class ModelHydro : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionsNb();
+    int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemsNb();
+    int GetSporadicActionItemCount() const;
 
     /**
      * Create a time series and add it to the model.
@@ -179,16 +190,17 @@ class ModelHydro : public wxObject {
      *
      * @return pointer to the sub basin.
      */
-    SubBasin* GetSubBasin() {
-        return _subBasin;
+    SubBasin* GetSubBasin() const {
+        return _subBasin;  // Return raw pointer from unique_ptr
     }
 
     /**
      * Set the sub basin.
      *
-     * @param subBasin pointer to the sub basin.
+     * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
      */
     void SetSubBasin(SubBasin* subBasin) {
+        wxDELETE(_subBasin);
         _subBasin = subBasin;
     }
 
@@ -230,12 +242,12 @@ class ModelHydro : public wxObject {
 
   protected:
     Processor _processor;
-    SubBasin* _subBasin;
+    SubBasin* _subBasin;  // owning, but not a unique pointer (can be null)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
     ParametersUpdater _parametersUpdater;
-    vector<TimeSeries*> _timeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
 
   private:
     void BuildModelStructure(SettingsModel& modelSettings);
@@ -256,11 +268,11 @@ class ModelHydro : public wxObject {
 
     void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
 
-    void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
+    void BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
 
-    void BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process);
+    void BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process);
 
-    void BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
+    void BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
 
     void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
 

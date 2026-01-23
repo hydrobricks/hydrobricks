@@ -15,8 +15,8 @@ void ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(SettingsModel* mo
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDay::IsOk() {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDay::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -42,7 +42,7 @@ void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         _temperature = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature");
+        throw ModelConfigError(_("Forcing must be of type Temperature"));
     }
 }
 

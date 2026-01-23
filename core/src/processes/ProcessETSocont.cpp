@@ -12,15 +12,15 @@ void ProcessETSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSe
     modelSettings->AddProcessForcing("pet");
 }
 
-bool ProcessETSocont::IsOk() {
-    return ProcessET::IsOk();
+bool ProcessETSocont::IsValid() const {
+    return ProcessET::IsValid();
 }
 
 void ProcessETSocont::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == PET) {
         _pet = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type PET");
+        throw ModelConfigError(_("Forcing must be of type PET"));
     }
 }
 

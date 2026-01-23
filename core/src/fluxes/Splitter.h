@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SPLITTER_H
 #define HYDROBRICKS_SPLITTER_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -11,6 +13,8 @@ class HydroUnit;
 class Splitter : public wxObject {
   public:
     explicit Splitter();
+
+    ~Splitter() override = default;
 
     /**
      * Factory method to create a splitter.
@@ -23,9 +27,17 @@ class Splitter : public wxObject {
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Assign the parameters to the splitter.
@@ -41,7 +53,7 @@ class Splitter : public wxObject {
      * @param name name of the parameter.
      * @return pointer to the value of the parameter.
      */
-    float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
+    const float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
 
     /**
      * Attach forcing.
@@ -49,7 +61,7 @@ class Splitter : public wxObject {
      * @param forcing incoming forcing
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Splitter::AttachForcing - Should not be called (virtual)");
     }
 
     /**
@@ -65,11 +77,11 @@ class Splitter : public wxObject {
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
         wxASSERT(flux);
-        _outputs.push_back(flux);
+        _outputs.push_back(std::move(flux));
     }
 
     /**
@@ -89,7 +101,7 @@ class Splitter : public wxObject {
      *
      * @return name of the splitter.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 
@@ -104,8 +116,8 @@ class Splitter : public wxObject {
 
   protected:
     string _name;
-    vector<Flux*> _inputs;
-    vector<Flux*> _outputs;
+    vector<Flux*> _inputs;  // non-owning: owned by processes
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

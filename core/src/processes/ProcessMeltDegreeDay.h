@@ -19,9 +19,9 @@ class ProcessMeltDegreeDay : public ProcessMelt {
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::SetParameters()
@@ -34,9 +34,9 @@ class ProcessMeltDegreeDay : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _temperature;
-    float* _degreeDayFactor;
-    float* _meltingTemperature;
+    Forcing* _temperature;  // non-owning reference
+    const float* _degreeDayFactor;
+    const float* _meltingTemperature;
 
     /**
      * @copydoc Process::GetRates()

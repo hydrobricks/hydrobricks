@@ -9,9 +9,9 @@ class FluxToAtmosphere : public Flux {
     explicit FluxToAtmosphere();
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::GetAmount()

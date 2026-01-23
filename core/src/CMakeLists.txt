@@ -17,6 +17,7 @@ include(${CMAKE_SOURCE_DIR}/core/build/cmake/hydrobricks_core_source.cmake)
 
 # Own libraries
 add_library(core STATIC ${src_core})
+target_compile_features(core PUBLIC cxx_std_20)
 
 # DECLARE EXECUTABLE
 
@@ -50,7 +51,7 @@ endif (WIN32)
 # LINKING
 
 # Link libraries explicitly to not link Google Tests to the main app.
-target_link_libraries(core wx::base netCDF::netcdf yaml-cpp::yaml-cpp)
+target_link_libraries(core PRIVATE wx::base netCDF::netcdf yaml-cpp::yaml-cpp Eigen3::Eigen)
 target_link_libraries(hydrobricks-cli core)
 
 # COPY BINARY FILES

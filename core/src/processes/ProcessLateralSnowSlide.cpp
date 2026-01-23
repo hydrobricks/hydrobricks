@@ -8,7 +8,7 @@
 
 ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
     : ProcessLateral(container),
-      _slope_deg(0),
+      _slopeDeg(0),
       _coeff(nullptr),
       _exp(nullptr),
       _minSlope(nullptr),
@@ -16,7 +16,7 @@ ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
       _minSnowHoldingDepth(nullptr),
       _maxSnowDepth(nullptr) {}
 
-bool ProcessLateralSnowSlide::IsOk() {
+bool ProcessLateralSnowSlide::IsValid() const {
     return true;
 }
 
@@ -30,7 +30,7 @@ void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel*
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
-    _slope_deg = static_cast<float>(unit->GetPropertyDouble("slope", "degrees"));
+    _slopeDeg = static_cast<float>(unit->GetPropertyDouble("slope", "degrees"));
 }
 
 void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettings) {
@@ -53,16 +53,16 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
 
     // Current SWE value
-    double swe = _container->GetContentWithChanges();  // [mm] Snow water equivalent
-    double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth
+    double swe = _container->GetContentWithChanges();  // [mm] Snow Water Equivalent
+    double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth calculated from SWE
 
     // Snow holding threshold
-    float slope = std::max(_slope_deg, *_minSlope);                     // [degrees]
+    float slope = std::max(_slopeDeg, *_minSlope);                     // [degrees]
     double snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
     double snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
 
     // Set minimum snow holding depth if slope exceeds maximum slope
-    if (_slope_deg > *_maxSlope) {
+    if (_slopeDeg > *_maxSlope) {
         snowHoldingThreshold = *_minSnowHoldingDepth;
     }
 
@@ -77,8 +77,8 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     // Calculate excess snow to be redistributed
     double excessSwe = 0.0;
     if (snowDepth > snowHoldingThreshold) {
-        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth
-        excessSwe = excessSnowDepth / sweToDepthFactor;             // Convert to SWE [mm]
+        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth beyond threshold
+        excessSwe = excessSnowDepth / sweToDepthFactor;             // [mm] Convert excess depth to SWE
     }
 
     // Iterate through each output and calculate the lateral rate
@@ -98,19 +98,20 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
         wxASSERT(_weights.size() > i);
-        double targetFraction = GetTargetLandCoverAreaFraction(_outputs[i]);
-        if (targetFraction <= PRECISION) {
+        Flux* flux = _outputs[i].get();  // Extract raw pointer from unique_ptr
+        double targetFraction = GetTargetLandCoverAreaFraction(flux);
+        if (NearlyZero(targetFraction, PRECISION)) {
             rates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }
-        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate.
+        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
 
-        rates[i] = AvoidUnrealisticAccumulation(rates[i], _outputs[i]);
+        rates[i] = AvoidUnrealisticAccumulation(rates[i], flux);
 
         // The weight of the flux is adjusted to account for the area ratio between the source and target land cover.
         // As it can change (e.g., due to land cover changes), we compute it dynamically.
-        double fractionAreas = ComputeFractionAreas(_outputs[i]);
-        _outputs[i]->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
+        double fractionAreas = ComputeFractionAreas(flux);
+        flux->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
     }
 
     return rates;

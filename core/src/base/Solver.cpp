@@ -1,5 +1,9 @@
 #include "Solver.h"
 
+#include <functional>
+#include <unordered_map>
+#include <vector>
+
 #include "Processor.h"
 #include "SolverEulerExplicit.h"
 #include "SolverHeunExplicit.h"
@@ -9,22 +13,46 @@ Solver::Solver()
     : _processor(nullptr),
       _nIterations(1) {}
 
-Solver* Solver::Factory(const SolverSettings& solverSettings) {
-    if (solverSettings.name == "rk4" || solverSettings.name == "runge_kutta") {
-        return new SolverRK4();
-    } else if (solverSettings.name == "euler_explicit") {
-        return new SolverEulerExplicit();
-    } else if (solverSettings.name == "heun_explicit") {
-        return new SolverHeunExplicit();
+static string GetValidSolverNames() {
+    static const vector<string> validNames = {
+        "rk4", "runge_kutta",  // Synonyms for RK4
+        "euler_explicit",
+        "heun_explicit"
+    };
+
+    string suggestions = "Valid solver names: ";
+    for (size_t i = 0; i < validNames.size(); ++i) {
+        suggestions += validNames[i];
+        if (i < validNames.size() - 1) {
+            suggestions += ", ";
+        }
     }
-    throw InvalidArgument(wxString::Format(_("Incorrect solver name: %s."), solverSettings.name));
+    return suggestions;
+}
+
+Solver* Solver::Factory(const SolverSettings& solverSettings) {
+    using FactoryFunc = std::function<Solver*()>;
+
+    static const std::unordered_map<string, FactoryFunc> factoryMap = {
+        {"rk4", []() { return new SolverRK4(); }},
+        {"runge_kutta", []() { return new SolverRK4(); }},
+        {"euler_explicit", []() { return new SolverEulerExplicit(); }},
+        {"heun_explicit", []() { return new SolverHeunExplicit(); }}
+    };
+
+    auto it = factoryMap.find(solverSettings.name);
+    if (it != factoryMap.end()) {
+        return it->second();
+    }
+
+    throw ModelConfigError(wxString::Format(_("Incorrect solver name: %s. %s"), solverSettings.name, GetValidSolverNames()));
 }
 
 void Solver::InitializeContainers() {
     wxASSERT(_processor);
     wxASSERT(_nIterations > 0);
-    _stateVariableChanges = axxd::Zero(_processor->GetNbStateVariables(), _nIterations);
-    _changeRates = axxd::Zero(_processor->GetNbSolvableConnections(), _nIterations);
+    _stateVariableChanges = axxd::Zero(_processor->GetStateVariableCount(), _nIterations);
+    _changeRates = axxd::Zero(_processor->GetSolvableConnectionCount(), _nIterations);
 }
 
 void Solver::SaveStateVariables(int col) {
@@ -41,26 +69,28 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
     int iRate = 0;
     for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
         double sumRates = 0.0;
-        for (auto process : brick->GetProcesses()) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+
             // Get the change rates (per day) independently of the time step and constraints (null bricks handled)
             vecDouble rates = process->GetChangeRates();
 
-            for (int i = 0; i < rates.size(); ++i) {
+            for (int j = 0; j < rates.size(); ++j) {
                 wxASSERT(_changeRates.rows() > iRate);
-                _changeRates(iRate, col) = rates[i];
-                sumRates += rates[i];
+                _changeRates(iRate, col) = rates[j];
+                sumRates += rates[j];
 
                 // Link to fluxes to enforce subsequent constraints
                 if (applyConstraints) {
-                    process->StoreInOutgoingFlux(&_changeRates(iRate, col), i);
+                    process->StoreInOutgoingFlux(&_changeRates(iRate, col), j);
                 }
                 iRate++;
             }
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        if (applyConstraints && sumRates > PRECISION) {
-            brick->ApplyConstraints(config::timeStepInDays);
+        if (applyConstraints && GreaterThan(sumRates, 0, PRECISION)) {
+            brick->ApplyConstraints(_timeStepInDays);
         }
     }
 }
@@ -69,16 +99,17 @@ void Solver::ApplyConstraintsFor(int col) {
     wxASSERT(_processor);
     int iRate = 0;
     for (auto brick : *(_processor->GetIterableBricksVectorPt())) {
-        for (auto process : brick->GetProcesses()) {
-            for (int i = 0; i < process->GetConnectionsNb(); ++i) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetConnectionCount(); ++j) {
                 wxASSERT(_changeRates.rows() > iRate);
                 // Link to fluxes to enforce subsequent constraints
-                process->StoreInOutgoingFlux(&_changeRates(iRate, col), i);
+                process->StoreInOutgoingFlux(&_changeRates(iRate, col), j);
                 iRate++;
             }
         }
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(config::timeStepInDays);
+        brick->ApplyConstraints(_timeStepInDays);
     }
 }
 
@@ -115,9 +146,10 @@ void Solver::ApplyProcesses(int col) const {
             continue;
         }
         brick->UpdateContentFromInputs();
-        for (auto process : brick->GetProcesses()) {
-            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, _changeRates(iRate, col), config::timeStepInDays);
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
+                process->ApplyChange(iConnect, _changeRates(iRate, col), _timeStepInDays);
                 iRate++;
             }
         }
@@ -132,9 +164,10 @@ void Solver::ApplyProcesses(const axd& changeRates) const {
             continue;
         }
         brick->UpdateContentFromInputs();
-        for (auto process : brick->GetProcesses()) {
-            for (int iConnect = 0; iConnect < process->GetConnectionsNb(); ++iConnect) {
-                process->ApplyChange(iConnect, changeRates(iRate), config::timeStepInDays);
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
+                process->ApplyChange(iConnect, changeRates(iRate), _timeStepInDays);
                 iRate++;
             }
         }
@@ -148,7 +181,8 @@ void Solver::Finalize() const {
             continue;
         }
         brick->Finalize();
-        for (auto process : brick->GetProcesses()) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
             process->Finalize();
         }
     }

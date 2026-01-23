@@ -19,4 +19,18 @@ ContentType ContentTypeFromString(const string& typeStr);
  */
 string ContentTypeToString(ContentType type);
 
+/**
+ * Get a list of all valid content type strings.
+ *
+ * @return vector of valid content type strings.
+ */
+vector<string> GetValidContentTypes();
+
+/**
+ * Get a formatted string with suggestions for valid content types.
+ *
+ * @return string with list of valid content types.
+ */
+string GetContentTypeSuggestions();
+
 #endif  // HYDROBRICKS_FLUX_TYPES_H

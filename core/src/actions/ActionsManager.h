@@ -24,7 +24,7 @@ class ActionsManager : public wxObject {
      *
      * @return pointer to the model.
      */
-    ModelHydro* GetModel() {
+    ModelHydro* GetModel() const {
         return _model;
     }
 
@@ -48,14 +48,14 @@ class ActionsManager : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionsNb();
+    int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemsNb();
+    int GetSporadicActionItemCount() const;
 
     /**
      * Update the date during the simulation. Triggers the actions that are scheduled for the current date.
@@ -84,12 +84,28 @@ class ActionsManager : public wxObject {
      *
      * @return vector of sporadic action dates.
      */
-    vecDouble GetSporadicActionDates() {
+    const vecDouble& GetSporadicActionDates() const {
         return _sporadicActionDates;
     }
 
+    /**
+     * Check if the actions manager is valid.
+     * Verifies that the manager is properly configured with a model.
+     *
+     * @return true if the actions manager is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the actions manager.
+     * Throws an exception if the actions manager is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   protected:
-    ModelHydro* _model;
+    ModelHydro* _model;  // non-owning reference
     int _cursorManager;
     vector<Action*> _actions;
     vecDouble _sporadicActionDates;

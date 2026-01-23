@@ -2,7 +2,8 @@
 #define HYDROBRICKS_PARAMETERS_UPDATER_H
 
 #include "Includes.h"
-#include "ParameterVariable.h"
+
+class Parameter;
 
 class ParametersUpdater : public wxObject {
   public:
@@ -11,25 +12,11 @@ class ParametersUpdater : public wxObject {
     ~ParametersUpdater() override = default;
 
     /**
-     * Add a parameter that is variable on a yearly basis.
+     * Add a parameter that needs to be updated over time.
      *
-     * @param parameter pointer to the parameter variable yearly.
+     * @param parameter pointer to the parameter.
      */
-    void AddParameterVariableYearly(ParameterVariableYearly* parameter);
-
-    /**
-     * Add a parameter that is variable on a monthly basis.
-     *
-     * @param parameter pointer to the parameter variable monthly.
-     */
-    void AddParameterVariableMonthly(ParameterVariableMonthly* parameter);
-
-    /**
-     * Add a parameter that is variable at specific dates.
-     *
-     * @param parameter pointer to the parameter variable dates.
-     */
-    void AddParameterVariableDates(ParameterVariableDates* parameter);
+    void AddParameter(Parameter* parameter);
 
     /**
      * Update the parameters based on the current date.
@@ -43,7 +30,7 @@ class ParametersUpdater : public wxObject {
      *
      * @return previous date in MJD format.
      */
-    double GetPreviousDate() {
+    double GetPreviousDate() const {
         return _previousDate;
     }
 
@@ -51,16 +38,16 @@ class ParametersUpdater : public wxObject {
     /**
      * Update the parameters for the new year.
      *
-     * @param year new year.
+     * @param date new date in MJD format.
      */
-    void ChangingYear(int year);
+    void ChangingYear(double date);
 
     /**
      * Update the parameters for the new month.
      *
-     * @param month new month.
+     * @param date new date in MJD format.
      */
-    void ChangingMonth(int month);
+    void ChangingMonth(double date);
 
     /**
      * Update the parameters for the new date.
@@ -72,9 +59,9 @@ class ParametersUpdater : public wxObject {
   private:
     bool _active;
     double _previousDate;
-    vector<ParameterVariableYearly*> _parametersYearly;
-    vector<ParameterVariableMonthly*> _parametersMonthly;
-    vector<ParameterVariableDates*> _parametersDates;
+    vector<Parameter*> _parametersYearly;    // non-owning, parameters with yearly modifiers
+    vector<Parameter*> _parametersMonthly;   // non-owning, parameters with monthly modifiers
+    vector<Parameter*> _parametersDates;     // non-owning, parameters with date modifiers
 };
 
 #endif  // HYDROBRICKS_PARAMETERS_UPDATER_H

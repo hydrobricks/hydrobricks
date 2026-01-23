@@ -1,22 +1,32 @@
 #include "ParametersUpdater.h"
+#include "Parameter.h"
+#include "ParameterModifier.h"
 
 ParametersUpdater::ParametersUpdater()
     : _active(false),
       _previousDate(0) {}
 
-void ParametersUpdater::AddParameterVariableYearly(ParameterVariableYearly* parameter) {
-    _parametersYearly.push_back(parameter);
-    _active = true;
-}
+void ParametersUpdater::AddParameter(Parameter* parameter) {
+    if (!parameter || !parameter->HasModifier()) {
+        return;
+    }
 
-void ParametersUpdater::AddParameterVariableMonthly(ParameterVariableMonthly* parameter) {
-    _parametersMonthly.push_back(parameter);
-    _active = true;
-}
+    ParameterModifier* modifier = parameter->GetModifier();
 
-void ParametersUpdater::AddParameterVariableDates(ParameterVariableDates* parameter) {
-    _parametersDates.push_back(parameter);
-    _active = true;
+    if (modifier->UpdatesOnYearChange()) {
+        _parametersYearly.push_back(parameter);
+        _active = true;
+    }
+
+    if (modifier->UpdatesOnMonthChange()) {
+        _parametersMonthly.push_back(parameter);
+        _active = true;
+    }
+
+    if (modifier->UpdatesOnDateChange()) {
+        _parametersDates.push_back(parameter);
+        _active = true;
+    }
 }
 
 void ParametersUpdater::DateUpdate(double date) {
@@ -28,11 +38,11 @@ void ParametersUpdater::DateUpdate(double date) {
     Time newDate = GetTimeStructFromMJD(date);
 
     if (prevDate.year != newDate.year) {
-        ChangingYear(newDate.year);
-        ChangingMonth(newDate.month);
+        ChangingYear(date);
+        ChangingMonth(date);
         ChangingDate(date);
     } else if (prevDate.month != newDate.month) {
-        ChangingMonth(newDate.month);
+        ChangingMonth(date);
         ChangingDate(date);
     } else {
         ChangingDate(date);
@@ -41,20 +51,20 @@ void ParametersUpdater::DateUpdate(double date) {
     _previousDate = date;
 }
 
-void ParametersUpdater::ChangingYear(int year) {
+void ParametersUpdater::ChangingYear(double date) {
     for (auto& parameter : _parametersYearly) {
-        parameter->UpdateParameter(year);
+        parameter->UpdateFromModifier(date);
     }
 }
 
-void ParametersUpdater::ChangingMonth(int month) {
+void ParametersUpdater::ChangingMonth(double date) {
     for (auto& parameter : _parametersMonthly) {
-        parameter->UpdateParameter(month);
+        parameter->UpdateFromModifier(date);
     }
 }
 
 void ParametersUpdater::ChangingDate(double date) {
     for (auto& parameter : _parametersDates) {
-        parameter->UpdateParameter(date);
+        parameter->UpdateFromModifier(date);
     }
 }

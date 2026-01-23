@@ -10,10 +10,22 @@ class WaterContainer : public wxObject {
   public:
     WaterContainer(Brick* brick);
 
+    ~WaterContainer() override = default;
+
     /**
-     * Check if the water container is ok.
+     * Check if the water container is correctly defined.
+     *
+     * @return true if everything is correctly defined.
      */
-    virtual bool IsOk();
+    virtual bool IsValid(bool checkProcesses = true) const;
+
+    /**
+     * Validate that the water container is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Subtract the amount of water from the dynamic content change.
@@ -39,9 +51,9 @@ class WaterContainer : public wxObject {
     /**
      * Apply the constraints to the water container.
      *
-     * @param timeSte time step [s]
+     * @param timeStep time step [s]
      */
-    virtual void ApplyConstraints(double timeSte);
+    virtual void ApplyConstraints(double timeStep);
 
     /**
      * Set the outgoing rates to zero.
@@ -75,7 +87,7 @@ class WaterContainer : public wxObject {
      *
      * @return true if the water container has a maximum capacity, false otherwise
      */
-    bool HasMaximumCapacity() const {
+    [[nodiscard]] bool HasMaximumCapacity() const {
         return _capacity != nullptr;
     }
 
@@ -84,7 +96,7 @@ class WaterContainer : public wxObject {
      *
      * @return maximum capacity [mm]
      */
-    double GetMaximumCapacity() {
+    double GetMaximumCapacity() const {
         wxASSERT(_capacity);
         return *_capacity;
     }
@@ -94,9 +106,9 @@ class WaterContainer : public wxObject {
      *
      * @param value maximum capacity [mm]
      */
-    void SetMaximumCapacity(float* value) {
+    void SetMaximumCapacity(const float* value) {
         if (_infiniteStorage) {
-            throw ConceptionIssue(_("Trying to set the maximum capacity of an infinite storage."));
+            throw ModelConfigError(_("Trying to set the maximum capacity of an infinite storage."));
         }
         _capacity = value;
     }
@@ -172,7 +184,7 @@ class WaterContainer : public wxObject {
      */
     void UpdateContent(double value) {
         if (_infiniteStorage) {
-            throw ConceptionIssue(_("Trying to set the content of an infinite storage."));
+            throw ModelConfigError(_("Trying to set the content of an infinite storage."));
         }
 
         _content = value;
@@ -183,16 +195,16 @@ class WaterContainer : public wxObject {
      *
      * @return filling ratio [0-1]
      */
-    double GetTargetFillingRatio();
+    double GetTargetFillingRatio() const;
 
     /**
      * Check if the water container is not empty.
      *
      * @return true if the water container is not empty, false otherwise
      */
-    bool IsNotEmpty() {
+    bool IsNotEmpty() const {
         double content = GetContentWithChanges();
-        return content > EPSILON_F && content > PRECISION;
+        return GreaterThan(content, 0, EPSILON_F) && GreaterThan(content, 0, PRECISION);
     }
 
     /**
@@ -200,7 +212,7 @@ class WaterContainer : public wxObject {
      *
      * @return true if the water container has an overflow process, false otherwise
      */
-    bool HasOverflow() {
+    bool HasOverflow() const {
         return _overflow != nullptr;
     }
 
@@ -216,7 +228,7 @@ class WaterContainer : public wxObject {
     /**
      * Attach incoming flux.
      *
-     * @param flux incoming flux
+     * @param flux incoming flux (non-owning reference, owned by process)
      */
     void AttachFluxIn(Flux* flux) {
         wxASSERT(flux);
@@ -228,7 +240,7 @@ class WaterContainer : public wxObject {
      *
      * @return sum of the water amount [mm]
      */
-    virtual double SumIncomingFluxes();
+    virtual double SumIncomingFluxes() const;
 
     /**
      * Check if the water content is accessible.
@@ -240,8 +252,53 @@ class WaterContainer : public wxObject {
      *
      * @return pointer to the parent brick
      */
-    Brick* GetParentBrick() {
+    Brick* GetParentBrick() const {
         return _parent;
+    }
+
+    /**
+     * Check if the water container has any incoming fluxes.
+     *
+     * @return true if the water container has at least one incoming flux.
+     */
+    [[nodiscard]] bool HasIncomingFluxes() const {
+        return !_inputs.empty();
+    }
+
+    /**
+     * Check if the water container is an infinite storage.
+     *
+     * @return true if the water container is an infinite storage.
+     */
+    [[nodiscard]] bool IsInfiniteStorage() const {
+        return _infiniteStorage;
+    }
+
+    /**
+     * Check if the water container is empty.
+     *
+     * @return true if the water container is empty.
+     */
+    [[nodiscard]] bool IsEmpty() const {
+        return !IsNotEmpty();
+    }
+
+    /**
+     * Check if the water container has a parent brick.
+     *
+     * @return true if the water container has a parent brick.
+     */
+    [[nodiscard]] bool HasParentBrick() const {
+        return _parent != nullptr;
+    }
+
+    /**
+     * Check if the water container has a non-zero initial state.
+     *
+     * @return true if the water container has a non-zero initial state.
+     */
+    [[nodiscard]] bool HasInitialState() const {
+        return !NearlyZero(_initialState, EPSILON_F);
     }
 
   private:
@@ -249,11 +306,11 @@ class WaterContainer : public wxObject {
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]
     double _initialState;          // [mm]
-    float* _capacity;
+    const float* _capacity;  // non-owning reference
     bool _infiniteStorage;
-    Brick* _parent;
-    Process* _overflow;
-    vector<Flux*> _inputs;
+    Brick* _parent;  // non-owning reference
+    Process* _overflow;  // non-owning reference
+    vector<Flux*> _inputs;  // non-owning references to fluxes owned by processes
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

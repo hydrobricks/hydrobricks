@@ -1,7 +1,9 @@
 #include "Urban.h"
 
 Urban::Urban()
-    : LandCover() {}
+    : LandCover() {
+    _category = BrickCategory::Urban;
+}
 
 void Urban::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);

@@ -2,8 +2,8 @@
 
 Glacier::Glacier()
     : LandCover(),
-      _ice(nullptr) {
-    _ice = new IceContainer(this);
+      _ice(std::make_unique<IceContainer>(this)) {
+    _category = BrickCategory::Glacier;
 }
 
 void Glacier::Reset() {
@@ -19,8 +19,8 @@ void Glacier::SaveAsInitialState() {
 void Glacier::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);
     if (HasParameter(brickSettings, "infinite_storage")) {
-        float* valPtr = GetParameterValuePointer(brickSettings, "infinite_storage");
-        if (valPtr && *valPtr != 0.0f) {
+        const float* valPtr = GetParameterValuePointer(brickSettings, "infinite_storage");
+        if (valPtr && !NearlyZero(*valPtr, EPSILON_F)) {
             _ice->SetAsInfiniteStorage();
         }
     }
@@ -37,20 +37,33 @@ void Glacier::AttachFluxIn(Flux* flux) {
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(wxString::Format("Glacier::AttachFluxIn - Unexpected flux type: %d",
+                                                static_cast<int>(flux->GetType())));
     }
 }
 
-bool Glacier::IsOk() {
-    if (!_ice->IsOk()) {
+bool Glacier::IsValid(bool checkProcesses) const {
+    if (!_ice->IsValid(checkProcesses)) {
         wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
     }
-    return Brick::IsOk();
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            wxLogError(_("The brick %s has no process attached"), _name);
+            return false;
+        }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
+        }
+    }
+    // We skip water container validation as glaciers may not have water processes.
+    return true;
 }
 
-WaterContainer* Glacier::GetIceContainer() {
-    return _ice;
+WaterContainer* Glacier::GetIceContainer() const {
+    return _ice.get();
 }
 
 void Glacier::Finalize() {
@@ -67,19 +80,19 @@ void Glacier::SetInitialState(double value, ContentType type) {
             _ice->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
 
-double Glacier::GetContent(ContentType type) {
+double Glacier::GetContent(ContentType type) const {
     switch (type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
         case ContentType::Ice:
             return _ice->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
@@ -93,7 +106,7 @@ void Glacier::UpdateContent(double value, ContentType type) {
             _ice->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
     }
 }
@@ -129,8 +142,13 @@ double* Glacier::GetValuePointer(const string& name) {
 }
 
 void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
-    if (brick->IsSnowpack()) {
+    if (brick->GetCategory() == BrickCategory::Snowpack) {
         auto snowpack = dynamic_cast<Snowpack*>(brick);
         _ice->SetRelatedSnowpack(snowpack);
     }
 }
+
+bool Glacier::HasIce() const {
+    return _ice->IsNotEmpty();
+}
+

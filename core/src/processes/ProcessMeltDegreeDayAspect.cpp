@@ -18,8 +18,8 @@ void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsMod
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDayAspect::IsOk() {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDayAspect::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -28,11 +28,8 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
     if (_degreeDayFactor == nullptr) {
         return false;
     }
-    if (_meltingTemperature == nullptr) {
-        return false;
-    }
 
-    return true;
+    return _meltingTemperature != nullptr;
 }
 
 void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
@@ -53,10 +50,10 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
         } else if (HasParameter(processSettings, "degree_day_factor_we")) {
             _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
         } else {
-            throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
+            throw InputError(_("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'"));
         }
     } else {
-        throw InvalidArgument("Invalid aspect: " + _aspectClass);
+        throw InputError(_("Invalid aspect: ") + _aspectClass);
     }
 }
 
@@ -64,7 +61,7 @@ void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         _temperature = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature");
+        throw ModelConfigError(_("Forcing must be of type Temperature"));
     }
 }
 

@@ -16,30 +16,7 @@ SettingsModel::SettingsModel()
     _selectedStructure = &_modelStructures[0];
 }
 
-SettingsModel::~SettingsModel() {
-    for (auto& modelStructure : _modelStructures) {
-        for (auto& brick : modelStructure.hydroUnitBricks) {
-            for (auto& parameter : brick.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& brick : modelStructure.subBasinBricks) {
-            for (auto& parameter : brick.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& splitter : modelStructure.hydroUnitSplitters) {
-            for (auto& parameter : splitter.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-        for (auto& splitter : modelStructure.subBasinSplitters) {
-            for (auto& parameter : splitter.parameters) {
-                wxDELETE(parameter);
-            }
-        }
-    }
-}
+SettingsModel::~SettingsModel() = default;  // Automatic cleanup via unique_ptr
 
 void SettingsModel::SetSolver(const string& solverName) {
     _solver.name = solverName;
@@ -119,35 +96,33 @@ void SettingsModel::AddBrickParameter(const string& name, float value, const str
     wxASSERT(_selectedBrick);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddBrickParameter - Parameter type '%s' not supported", type));
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedBrick->parameters.push_back(parameter);
+    _selectedBrick->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetBrickParameterValue(const string& name, float value, const string& type) {
     wxASSERT(_selectedBrick);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetBrickParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedBrick->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetBrickParameterValue - Parameter '%s' not found after type check", name));
 }
 
 bool SettingsModel::BrickHasParameter(const string& name) {
     wxASSERT(_selectedBrick);
     for (auto& parameter : _selectedBrick->parameters) {
-        if (parameter->GetName() == name) {
+        if (parameter.GetName() == name) {
             return true;
         }
     }
@@ -165,7 +140,9 @@ void SettingsModel::AddBrickForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedBrick->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: "
+                                            "precipitation, temperature, solar_radiation (or r_solar)"),
+                                          name));
     }
 }
 
@@ -202,8 +179,8 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
 
     // Register the related parameters
     if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
-        throw InvalidArgument(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
-                                               processSettings.type));
+        throw ModelConfigError(wxString::Format(_("Fail to register the parameters and forcing for the process '%s'."),
+                                                processSettings.type));
     }
 }
 
@@ -211,37 +188,35 @@ void SettingsModel::AddProcessParameter(const string& name, float value, const s
     wxASSERT(_selectedProcess);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddProcessParameter - Parameter type '%s' not supported", type));
     }
 
     // If the parameter already exists, replace its value
     for (auto& parameter : _selectedProcess->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedProcess->parameters.push_back(parameter);
+    _selectedProcess->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetProcessParameterValue(const string& name, float value, const string& type) {
     wxASSERT(_selectedProcess);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetProcessParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedProcess->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetProcessParameterValue - Parameter '%s' not found after type check", name));
 }
 
 void SettingsModel::AddProcessForcing(const string& name) {
@@ -256,7 +231,7 @@ void SettingsModel::AddProcessForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedProcess->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, pet, temperature, solar_radiation (or r_solar)"), name));
     }
 }
 
@@ -321,29 +296,27 @@ void SettingsModel::AddSplitterParameter(const string& name, float value, const 
     wxASSERT(_selectedSplitter);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::AddSplitterParameter - Parameter type '%s' not supported", type));
     }
 
-    auto parameter = new Parameter(name, value);
-
-    _selectedSplitter->parameters.push_back(parameter);
+    _selectedSplitter->parameters.push_back(Parameter(name, value));
 }
 
 void SettingsModel::SetSplitterParameterValue(const string& name, float value, const string& type) {
     wxASSERT(_selectedSplitter);
 
     if (type != "constant") {
-        throw NotImplemented();
+        throw NotImplemented(wxString::Format("SettingsModel::SetSplitterParameterValue - Parameter type '%s' not supported", type));
     }
 
     for (auto& parameter : _selectedSplitter->parameters) {
-        if (parameter->GetName() == name) {
-            parameter->SetValue(value);
+        if (parameter.GetName() == name) {
+            parameter.SetValue(value);
             return;
         }
     }
 
-    throw ShouldNotHappen();
+    throw ShouldNotHappen(wxString::Format("SettingsModel::SetSplitterParameterValue - Parameter '%s' not found after type check", name));
 }
 
 void SettingsModel::AddSplitterForcing(const string& name) {
@@ -356,7 +329,7 @@ void SettingsModel::AddSplitterForcing(const string& name) {
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedSplitter->forcing.push_back(Radiation);
     } else {
-        throw InvalidArgument(_("The provided forcing is not yet supported."));
+        throw InputError(wxString::Format(_("The provided forcing '%s' is not yet supported. Valid forcing types: precipitation, temperature, solar_radiation (or r_solar)"), name));
     }
 }
 
@@ -458,13 +431,14 @@ void SettingsModel::GenerateSnowpacks(const string& snowMeltProcess) {
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string brickName = brickSettings.name;  // Store the name before potential reallocation
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
-        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SetSurfaceComponentParent(brickSettings.name);
+        AddSplitterOutput(brickName + "_snowpack", ContentType::Snow);
+        AddSurfaceComponentBrick(brickName + "_snowpack", "snowpack");
+        SetSurfaceComponentParent(brickName);
 
-        AddBrickProcess("melt", snowMeltProcess, brickSettings.name);
+        AddBrickProcess("melt", snowMeltProcess, brickName);
     }
 }
 
@@ -472,7 +446,7 @@ void SettingsModel::AddSnowIceTransformation(const string& transformationProcess
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
 
         if (brickSettings.type == "glacier") {
@@ -485,7 +459,7 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
         if (skipGlaciers && brickSettings.type == "glacier") {
             continue;  // Skip glaciers for redistribution
         }
@@ -499,17 +473,18 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
     wxASSERT(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
-        BrickSettings brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string brickName = brickSettings.name;  // Store the name before potential reallocation
         SelectHydroUnitSplitter("snow_splitter");
-        AddSplitterOutput(brickSettings.name + "_snowpack", ContentType::Snow);
-        AddSurfaceComponentBrick(brickSettings.name + "_snowpack", "snowpack");
-        SetSurfaceComponentParent(brickSettings.name);
+        AddSplitterOutput(brickName + "_snowpack", ContentType::Snow);
+        AddSurfaceComponentBrick(brickName + "_snowpack", "snowpack");
+        SetSurfaceComponentParent(brickName);
 
         AddBrickProcess("melt", snowMeltProcess);
         OutputProcessToSameBrick();
 
         AddBrickProcess("meltwater", outflowProcess);
-        AddProcessOutput(brickSettings.name);
+        AddProcessOutput(brickName);
     }
 }
 
@@ -573,7 +548,7 @@ bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
 
 void SettingsModel::SelectHydroUnitBrick(const string& name) {
     if (!SelectHydroUnitBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit brick '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The hydro unit brick '%s' was not found", name));
     }
     _selectedProcess = nullptr;
 }
@@ -584,7 +559,7 @@ void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
 
 void SettingsModel::SelectSubBasinBrick(const string& name) {
     if (!SelectSubBasinBrickIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin brick '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The sub-basin brick '%s' was not found", name));
     }
     _selectedProcess = nullptr;
 }
@@ -605,21 +580,21 @@ void SettingsModel::SelectProcess(const string& name) {
         }
     }
 
-    throw InvalidArgument(wxString::Format(_("The process '%s' was not found."), name));
+    throw ModelConfigError(wxString::Format(_("The process '%s' was not found."), name));
 }
 
 void SettingsModel::SelectProcessWithParameter(const string& name) {
     wxASSERT(_selectedBrick);
     for (auto& process : _selectedBrick->processes) {
         for (auto& parameter : process.parameters) {
-            if (parameter->GetName() == name) {
+            if (parameter.GetName() == name) {
                 _selectedProcess = &process;
                 return;
             }
         }
     }
 
-    throw InvalidArgument(wxString::Format(_("The parameter '%s' was not found."), name));
+    throw ModelConfigError(wxString::Format(_("The parameter '%s' was not found."), name));
 }
 
 void SettingsModel::SelectHydroUnitSplitter(int index) {
@@ -662,17 +637,17 @@ bool SettingsModel::SelectSubBasinSplitterIfFound(const string& name) {
 
 void SettingsModel::SelectHydroUnitSplitter(const string& name) {
     if (!SelectHydroUnitSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The hydro unit splitter '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The hydro unit splitter '%s' was not found", name));
     }
 }
 
 void SettingsModel::SelectSubBasinSplitter(const string& name) {
     if (!SelectSubBasinSplitterIfFound(name)) {
-        throw NotFound(wxString::Format("The sub-basin splitter '%s' was not found", name));
+        throw ModelConfigError(wxString::Format("The sub-basin splitter '%s' was not found", name));
     }
 }
 
-vecStr SettingsModel::GetHydroUnitLogLabels() {
+vecStr SettingsModel::GetHydroUnitLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 
@@ -709,7 +684,7 @@ vecStr SettingsModel::GetLandCoverBricksNames() const {
     return names;
 }
 
-vecStr SettingsModel::GetSubBasinLogLabels() {
+vecStr SettingsModel::GetSubBasinLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 
@@ -740,7 +715,7 @@ vecStr SettingsModel::GetSubBasinLogLabels() {
     return logNames;
 }
 
-vecStr SettingsModel::GetSubBasinGenericLogLabels() {
+vecStr SettingsModel::GetSubBasinGenericLogLabels() const {
     wxASSERT(_selectedStructure);
     wxASSERT(_modelStructures.size() == 1);
 
@@ -826,4 +801,40 @@ bool SettingsModel::LogAll(const YAML::Node& settings) {
     }
 
     return true;
+}
+
+bool SettingsModel::IsValid() const {
+    // Check that solver is configured
+    if (_solver.name.empty()) {
+        wxLogError(_("SettingsModel: Solver not configured."));
+        return false;
+    }
+
+    // Check that timer is configured
+    if (_timer.start.empty() || _timer.end.empty()) {
+        wxLogError(_("SettingsModel: Timer start or end date not set."));
+        return false;
+    }
+
+    if (_timer.timeStep <= 0) {
+        wxLogError(_("SettingsModel: Time step must be positive."));
+        return false;
+    }
+
+    // Check that at least one structure exists
+    if (_modelStructures.empty()) {
+        wxLogError(_("SettingsModel: No structures defined."));
+        return false;
+    }
+
+    return true;
+}
+
+void SettingsModel::Validate() const {
+    if (!IsValid()) {
+        wxString msg = wxString::Format(
+            _("SettingsModel validation failed. Solver: '%s', Start: '%s', End: '%s', TimeStep: %d"),
+            _solver.name, _timer.start, _timer.end, _timer.timeStep);
+        throw ModelConfigError(msg);
+    }
 }

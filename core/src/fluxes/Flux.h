@@ -10,12 +10,22 @@ class Flux : public wxObject {
   public:
     explicit Flux();
 
+    ~Flux() override = default;
+
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Reset the flux to its initial state.
@@ -68,7 +78,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux is a forcing.
      */
-    virtual bool IsForcing() {
+    virtual bool IsForcing() const {
         return false;
     }
 
@@ -77,7 +87,7 @@ class Flux : public wxObject {
      *
      * @return true if the flux is instantaneous.
      */
-    virtual bool IsInstantaneous() {
+    virtual bool IsInstantaneous() const {
         return false;
     }
 
@@ -160,9 +170,27 @@ class Flux : public wxObject {
         _type = type;
     }
 
+    /**
+     * Check if the flux has a change rate linked.
+     *
+     * @return true if the flux has a change rate pointer.
+     */
+    [[nodiscard]] bool HasChangeRate() const {
+        return _changeRate != nullptr;
+    }
+
+    /**
+     * Check if the flux has a modifier.
+     *
+     * @return true if the flux has a modifier.
+     */
+    [[nodiscard]] bool HasModifier() const {
+        return _modifier != nullptr;
+    }
+
   protected:
     double _amount{};
-    double* _changeRate{};
+    double* _changeRate{};  // non-owning reference
     bool _static{};
     bool _needsWeighting{};
     double _fractionUnitArea{1.0};

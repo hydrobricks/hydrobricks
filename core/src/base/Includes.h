@@ -21,7 +21,7 @@
 // Eigen library
 //---------------------------------
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 //---------------------------------
 // wxWidgets library - frequently used classes
@@ -104,49 +104,10 @@ typedef struct {
 } Time;
 
 //---------------------------------
-// Own exceptions
-//---------------------------------
-
-class NotImplemented : public std::logic_error {
-  public:
-    NotImplemented()
-        : std::logic_error("Function not yet implemented") {};
-};
-
-class ShouldNotHappen : public std::logic_error {
-  public:
-    ShouldNotHappen()
-        : std::logic_error("This should not happen...") {};
-};
-
-class InvalidArgument : public std::invalid_argument {
-  public:
-    explicit InvalidArgument(const wxString& msg)
-        : std::invalid_argument(msg) {};
-};
-
-class MissingParameter : public std::logic_error {
-  public:
-    explicit MissingParameter(const wxString& msg)
-        : std::logic_error(msg) {};
-};
-
-class ConceptionIssue : public std::logic_error {
-  public:
-    explicit ConceptionIssue(const wxString& msg)
-        : std::logic_error(msg) {};
-};
-
-class NotFound : public std::logic_error {
-  public:
-    explicit NotFound(const wxString& msg)
-        : std::logic_error(msg) {};
-};
-
-//---------------------------------
 // Own classes
 //---------------------------------
 
+#include "Exceptions.h"
 #include "Enums.h"
 #include "GlobVars.h"
 #include "TypeDefs.h"

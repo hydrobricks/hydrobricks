@@ -1,5 +1,7 @@
 #include "HydroUnit.h"
 
+#include <utility>
+
 #include "SettingsBasin.h"
 
 HydroUnit::HydroUnit(double area, Types type)
@@ -8,22 +10,37 @@ HydroUnit::HydroUnit(double area, Types type)
       _area(area) {}
 
 HydroUnit::~HydroUnit() {
-    for (auto forcing : _forcing) {
-        wxDELETE(forcing);
-    }
-    for (auto property : _properties) {
-        wxDELETE(property);
-    }
+    // Unique_ptr members clean up owned objects automatically.
+}
+
+void HydroUnit::ReserveBricks(size_t count) {
+    _bricks.reserve(_bricks.size() + count);
+}
+
+void HydroUnit::ReserveLandCoverBricks(size_t count) {
+    _landCoverBricks.reserve(_landCoverBricks.size() + count);
+}
+
+void HydroUnit::ReserveSplitters(size_t count) {
+    _splitters.reserve(_splitters.size() + count);
+}
+
+void HydroUnit::ReserveLateralConnections(size_t count) {
+    _lateralConnections.reserve(_lateralConnections.size() + count);
+}
+
+void HydroUnit::ReserveForcings(size_t count) {
+    _forcing.reserve(_forcing.size() + count);
 }
 
 void HydroUnit::Reset() {
-    for (auto brick : _bricks) {
+    for (const auto& brick : _bricks) {
         brick->Reset();
     }
 }
 
 void HydroUnit::SaveAsInitialState() {
-    for (auto brick : _bricks) {
+    for (const auto& brick : _bricks) {
         brick->SaveAsInitialState();
     }
 }
@@ -31,77 +48,78 @@ void HydroUnit::SaveAsInitialState() {
 void HydroUnit::SetProperties(HydroUnitSettings& unitSettings) {
     _id = unitSettings.id;
 
+    // Reserve once to avoid reallocations when adding known properties.
+    size_t propertiesCount = unitSettings.propertiesDouble.size() + unitSettings.propertiesString.size();
+    _properties.reserve(_properties.size() + propertiesCount);
+
     for (const auto& unitProperty : unitSettings.propertiesDouble) {
-        AddProperty(new HydroUnitProperty(unitProperty.name, unitProperty.value, unitProperty.unit));
+        AddProperty(std::make_unique<HydroUnitProperty>(unitProperty.name, unitProperty.value, unitProperty.unit));
     }
 
     for (const auto& unitProperty : unitSettings.propertiesString) {
-        AddProperty(new HydroUnitProperty(unitProperty.name, unitProperty.value));
+        AddProperty(std::make_unique<HydroUnitProperty>(unitProperty.name, unitProperty.value));
     }
 }
 
-void HydroUnit::AddProperty(HydroUnitProperty* property) {
+void HydroUnit::AddProperty(std::unique_ptr<HydroUnitProperty> property) {
     wxASSERT(property);
-    _properties.push_back(property);
+    _properties.push_back(std::move(property));
 }
 
-double HydroUnit::GetPropertyDouble(const string& name, const string& unit) {
-    for (auto property : _properties) {
+double HydroUnit::GetPropertyDouble(const string& name, const string& unit) const {
+    for (const auto& property : _properties) {
         if (property->GetName() == name) {
             return property->GetValue(unit);
         }
     }
 
-    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
-string HydroUnit::GetPropertyString(const string& name) {
-    for (auto property : _properties) {
+string HydroUnit::GetPropertyString(const string& name) const {
+    for (const auto& property : _properties) {
         if (property->GetName() == name) {
             return property->GetValueString();
         }
     }
 
-    throw NotFound(wxString::Format(_("No property with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
-void HydroUnit::AddBrick(Brick* brick) {
+void HydroUnit::AddBrick(std::unique_ptr<Brick> brick) {
     wxASSERT(brick);
-    _bricks.push_back(brick);
-
-    brick->SetHydroUnit(this);
-
-    if (brick->IsLandCover()) {
-        auto* landCover = dynamic_cast<LandCover*>(brick);
+    Brick* rawBrick = brick.get();
+    _brickMap[rawBrick->GetName()] = rawBrick;
+    if (rawBrick->IsLandCover()) {
+        auto* landCover = dynamic_cast<LandCover*>(rawBrick);
         _landCoverBricks.push_back(landCover);
+        _landCoverMap[landCover->GetName()] = landCover;
     }
+    rawBrick->SetHydroUnit(this);
+    _bricks.push_back(std::move(brick));
 }
 
-void HydroUnit::AddSplitter(Splitter* splitter) {
+void HydroUnit::AddSplitter(std::unique_ptr<Splitter> splitter) {
     wxASSERT(splitter);
-    _splitters.push_back(splitter);
+    Splitter* rawSplitter = splitter.get();
+    _splitterMap[rawSplitter->GetName()] = rawSplitter;
+    _splitters.push_back(std::move(splitter));
 }
 
 bool HydroUnit::HasForcing(VariableType type) {
-    for (auto forcing : _forcing) {
-        if (forcing->GetType() == type) {
-            return true;
-        }
-    }
-
-    return false;
+    return _forcingMap.find(type) != _forcingMap.end();
 }
 
-void HydroUnit::AddForcing(Forcing* forcing) {
+void HydroUnit::AddForcing(std::unique_ptr<Forcing> forcing) {
     wxASSERT(forcing);
-    _forcing.push_back(forcing);
+    _forcingMap[forcing->GetType()] = forcing.get();
+    _forcing.push_back(std::move(forcing));
 }
 
-Forcing* HydroUnit::GetForcing(VariableType type) {
-    for (auto forcing : _forcing) {
-        if (forcing->GetType() == type) {
-            return forcing;
-        }
+Forcing* HydroUnit::GetForcing(VariableType type) const {
+    auto it = _forcingMap.find(type);
+    if (it != _forcingMap.end()) {
+        return it->second;
     }
 
     return nullptr;
@@ -110,88 +128,89 @@ Forcing* HydroUnit::GetForcing(VariableType type) {
 void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const string& type) {
     wxASSERT(receiver);
     if (fraction <= 0 || fraction > 1) {
-        throw ConceptionIssue(wxString::Format(_("The fraction (%f) is not in the range ]0 .. 1]"), fraction));
+        throw ModelConfigError(wxString::Format(_("The fraction (%f) is not in the range ]0 .. 1]"), fraction));
     }
-
-    _lateralConnections.push_back(new HydroUnitLateralConnection(receiver, fraction, type));
+    _lateralConnections.push_back(std::make_unique<HydroUnitLateralConnection>(receiver, fraction, type));
 }
 
-int HydroUnit::GetBricksCount() {
+int HydroUnit::GetBricksCount() const {
     return static_cast<int>(_bricks.size());
 }
 
-int HydroUnit::GetSplittersCount() {
+int HydroUnit::GetSplittersCount() const {
     return static_cast<int>(_splitters.size());
 }
 
-Brick* HydroUnit::GetBrick(int index) {
+Brick* HydroUnit::GetBrick(size_t index) const {
     wxASSERT(_bricks.size() > index);
     wxASSERT(_bricks[index]);
 
-    return _bricks[index];
+    return _bricks[index].get();
 }
 
-bool HydroUnit::HasBrick(const string& name) {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+bool HydroUnit::HasBrick(const string& name) const {
+    return _brickMap.find(name) != _brickMap.end();
 }
 
-Brick* HydroUnit::GetBrick(const string& name) {
-    for (auto brick : _bricks) {
-        if (brick->GetName() == name) {
-            return brick;
-        }
+Brick* HydroUnit::GetBrick(const string& name) const {
+    auto it = _brickMap.find(name);
+    if (it != _brickMap.end()) {
+        return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No brick with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No brick with the name '%s' was found."), name));
 }
 
-LandCover* HydroUnit::GetLandCover(const string& name) {
-    for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == name) {
-            return brick;
-        }
+Brick* HydroUnit::TryGetBrick(const string& name) const {
+    auto it = _brickMap.find(name);
+    return it != _brickMap.end() ? it->second : nullptr;
+}
+
+LandCover* HydroUnit::GetLandCover(const string& name) const {
+    auto it = _landCoverMap.find(name);
+    if (it != _landCoverMap.end()) {
+        return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No land cover with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No land cover with the name '%s' was found."), name));
 }
 
-Splitter* HydroUnit::GetSplitter(int index) {
+LandCover* HydroUnit::TryGetLandCover(const string& name) const {
+    auto it = _landCoverMap.find(name);
+    return it != _landCoverMap.end() ? it->second : nullptr;
+}
+
+Splitter* HydroUnit::GetSplitter(size_t index) const {
     wxASSERT(_splitters.size() > index);
     wxASSERT(_splitters[index]);
 
-    return _splitters[index];
+    return _splitters[index].get();
 }
 
-bool HydroUnit::HasSplitter(const string& name) {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return true;
-        }
-    }
-    return false;
+bool HydroUnit::HasSplitter(const string& name) const {
+    return _splitterMap.find(name) != _splitterMap.end();
 }
 
-Splitter* HydroUnit::GetSplitter(const string& name) {
-    for (auto splitter : _splitters) {
-        if (splitter->GetName() == name) {
-            return splitter;
-        }
+Splitter* HydroUnit::GetSplitter(const string& name) const {
+    auto it = _splitterMap.find(name);
+    if (it != _splitterMap.end()) {
+        return it->second;
     }
 
-    throw NotFound(wxString::Format(_("No splitter with the name '%s' was found."), name));
+    throw ModelConfigError(wxString::Format(_("No splitter with the name '%s' was found."), name));
 }
 
-bool HydroUnit::IsOk() {
-    for (auto brick : _bricks) {
-        if (!brick->IsOk()) return false;
+Splitter* HydroUnit::TryGetSplitter(const string& name) const {
+    auto it = _splitterMap.find(name);
+    return it != _splitterMap.end() ? it->second : nullptr;
+}
+
+bool HydroUnit::IsValid(bool checkProcesses) const {
+    for (const auto& brick : _bricks) {
+        if (!brick->IsValid(checkProcesses)) return false;
     }
-    for (auto splitter : _splitters) {
-        if (!splitter->IsOk()) return false;
+    for (const auto& splitter : _splitters) {
+        if (!splitter->IsValid()) return false;
     }
     if (_area <= 0) {
         wxLogError(_("The hydro unit area has not been defined."));
@@ -202,11 +221,11 @@ bool HydroUnit::IsOk() {
         for (auto brick : _landCoverBricks) {
             sumLandCoverArea += brick->GetAreaFraction();
         }
-        if (std::fabs(sumLandCoverArea - 1.0) > EPSILON_D) {
-            if (std::fabs(sumLandCoverArea - 1.0) > 0.0001) {
+        if (!NearlyEqual(sumLandCoverArea, 1.0, EPSILON_D)) {
+            if (!NearlyEqual(sumLandCoverArea, 1.0, TOLERANCE_LOOSE)) {
                 wxLogError(_("The sum of the land cover fractions is not equal to 1, "
                              "but equal to %f, with %f error margin."),
-                           sumLandCoverArea, 0.0001);
+                           sumLandCoverArea, TOLERANCE_LOOSE);
                 return false;
             }
 
@@ -226,38 +245,51 @@ bool HydroUnit::IsOk() {
     return true;
 }
 
+void HydroUnit::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("HydroUnit validation failed. Check area, bricks, splitters, and land cover fractions."));
+    }
+}
+
 bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
     if ((fraction < 0) || (fraction > 1)) {
         wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
         return false;
     }
-    for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == name) {
-            brick->SetAreaFraction(fraction);
-            return FixLandCoverFractionsTotal();
-        }
+    auto it = _landCoverMap.find(name);
+    if (it != _landCoverMap.end()) {
+        it->second->SetAreaFraction(fraction);
+        return FixLandCoverFractionsTotal();
     }
     wxLogError(_("Land cover '%s' was not found."), name);
     return false;
 }
 
 bool HydroUnit::FixLandCoverFractionsTotal() {
+    // Try to find ground or generic land cover using the map
     LandCover* ground = nullptr;
+    auto groundIt = _landCoverMap.find("ground");
+    if (groundIt != _landCoverMap.end()) {
+        ground = groundIt->second;
+    } else {
+        auto genericIt = _landCoverMap.find("generic");
+        if (genericIt != _landCoverMap.end()) {
+            ground = genericIt->second;
+        }
+    }
+
     double total = 0;
     for (auto brick : _landCoverBricks) {
-        if (brick->GetName() == "ground" || brick->GetName() == "generic") {
-            ground = brick;
-        }
         total += brick->GetAreaFraction();
     }
 
-    if (std::fabs(total - 1.0) > EPSILON_D) {
+    if (!NearlyEqual(total, 1.0, EPSILON_D)) {
         double diff = total - 1.0;
         if (ground == nullptr) {
             wxLogError(_("No ground (generic) land cover found. Cannot fix the land cover fractions."));
             return false;
         }
-        if (ground->GetAreaFraction() - diff < -EPSILON_D) {
+        if (LessThan(ground->GetAreaFraction(), diff, EPSILON_D)) {
             wxLogError(_("The ground (generic) land cover (%.20g) is not large enough to compensate "
                          "the area fractions (%.20g) with error margin (%.20g)."
                          "(i.e. the sum of the other land cover fractions is too large)."),
@@ -272,4 +304,13 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
     }
 
     return true;
+}
+
+std::vector<HydroUnitLateralConnection*> HydroUnit::GetLateralConnections() const {
+    std::vector<HydroUnitLateralConnection*> views;
+    views.reserve(_lateralConnections.size());
+    for (const auto& conn : _lateralConnections) {
+        views.push_back(conn.get());
+    }
+    return views;
 }

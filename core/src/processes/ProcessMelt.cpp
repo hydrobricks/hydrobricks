@@ -6,7 +6,7 @@
 ProcessMelt::ProcessMelt(WaterContainer* container)
     : Process(container) {}
 
-bool ProcessMelt::IsOk() {
+bool ProcessMelt::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("Melt processes should have a single output."));
         return false;
@@ -15,7 +15,7 @@ bool ProcessMelt::IsOk() {
     return true;
 }
 
-int ProcessMelt::GetConnectionsNb() {
+int ProcessMelt::GetConnectionCount() const {
     return 1;
 }
 

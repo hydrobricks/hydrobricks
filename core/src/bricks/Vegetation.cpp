@@ -1,7 +1,9 @@
 #include "Vegetation.h"
 
 Vegetation::Vegetation()
-    : LandCover() {}
+    : LandCover() {
+    _category = BrickCategory::Vegetation;
+}
 
 void Vegetation::SetParameters(const BrickSettings& brickSettings) {
     Brick::SetParameters(brickSettings);

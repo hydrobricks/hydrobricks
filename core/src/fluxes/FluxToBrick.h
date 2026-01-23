@@ -11,9 +11,9 @@ class FluxToBrick : public Flux {
     explicit FluxToBrick(Brick* brick);
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::GetAmount()
@@ -35,7 +35,7 @@ class FluxToBrick : public Flux {
     }
 
   protected:
-    Brick* _toBrick;
+    Brick* _toBrick;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_FLUX_TO_BRICK_H

@@ -2,8 +2,8 @@
 
 Snowpack::Snowpack()
     : SurfaceComponent(),
-      _snow(nullptr) {
-    _snow = new SnowContainer(this);
+      _snow(std::make_unique<SnowContainer>(this)) {
+    _category = BrickCategory::Snowpack;
 }
 
 void Snowpack::Reset() {
@@ -27,19 +27,32 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(wxString::Format("Snowpack::AttachFluxIn - Unexpected flux type: %d",
+                                                static_cast<int>(flux->GetType())));
     }
 }
 
-bool Snowpack::IsOk() {
-    if (!_snow->IsOk()) {
+bool Snowpack::IsValid(bool checkProcesses) const {
+    if (!_snow->IsValid()) {
         return false;
     }
-    return Brick::IsOk();
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            wxLogError(_("The brick %s has no process attached"), _name);
+            return false;
+        }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
+        }
+    }
+    // We do not validate the water container here because it may not be used in all configurations.
+    return true;
 }
 
-WaterContainer* Snowpack::GetSnowContainer() {
-    return _snow;
+WaterContainer* Snowpack::GetSnowContainer() const {
+    return _snow.get();
 }
 
 void Snowpack::Finalize() {
@@ -56,19 +69,19 @@ void Snowpack::SetInitialState(double value, ContentType type) {
             _snow->SetInitialState(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
 
-double Snowpack::GetContent(ContentType type) {
+double Snowpack::GetContent(ContentType type) const {
     switch (type) {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
         case ContentType::Snow:
             return _snow->GetContentWithoutChanges();
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
@@ -82,7 +95,7 @@ void Snowpack::UpdateContent(double value, ContentType type) {
             _snow->UpdateContent(value);
             break;
         default:
-            throw InvalidArgument(
+            throw ModelConfigError(
                 wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
     }
 }
@@ -117,6 +130,6 @@ double* Snowpack::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-bool Snowpack::HasSnow() {
+bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
 }

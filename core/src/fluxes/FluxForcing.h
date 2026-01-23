@@ -10,9 +10,9 @@ class FluxForcing : public Flux {
     explicit FluxForcing();
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::GetAmount()
@@ -29,12 +29,12 @@ class FluxForcing : public Flux {
     /**
      * @copydoc Flux::IsForcing()
      */
-    bool IsForcing() override {
+    bool IsForcing() const override {
         return true;
     }
 
   protected:
-    Forcing* _forcing;
+    Forcing* _forcing;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_FLUX_FORCING_H

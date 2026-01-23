@@ -38,7 +38,7 @@ class ActionLandCoverChange : public Action {
      *
      * @return the number of changes in the action.
      */
-    int GetChangesNb() const {
+    int GetChangesCount() const {
         return static_cast<int>(_sporadicDates.size());
     }
 
@@ -47,7 +47,7 @@ class ActionLandCoverChange : public Action {
      *
      * @return the number of land covers in the action.
      */
-    int GetLandCoversNb() const {
+    int GetLandCoverCount() const {
         return static_cast<int>(_landCoverNames.size());
     }
 

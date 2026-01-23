@@ -35,7 +35,7 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     } else if (settings.timeStepUnit == "minute") {
         _timeStepUnit = Minute;
     } else {
-        throw InvalidArgument(_("Time step unit unrecognized or not implemented."));
+        throw InputError(_("Time step unit unrecognized or not implemented."));
     }
 
     UpdateTimeStepInDays();
@@ -47,7 +47,7 @@ void TimeMachine::Reset() {
     _currentDateStatic = _date;  // Sync static date
 }
 
-bool TimeMachine::IsOver() {
+bool TimeMachine::IsOver() const {
     return _date > _end;
 }
 
@@ -64,7 +64,7 @@ void TimeMachine::IncrementTime() {
     }
 }
 
-int TimeMachine::GetTimeStepsNb() {
+int TimeMachine::GetTimeStepCount() const {
     wxASSERT(_timeStepInDays > 0);
     return static_cast<int>(1 + (_end - _start) / _timeStepInDays);
 }
@@ -72,7 +72,7 @@ int TimeMachine::GetTimeStepsNb() {
 void TimeMachine::UpdateTimeStepInDays() {
     switch (_timeStepUnit) {
         case Variable:
-            throw NotImplemented();
+            throw NotImplemented("TimeMachine::UpdateTimeStepInDays - Variable time step unit not yet supported");
         case Week:
             _timeStepInDays = _timeStep * 7;
             break;
@@ -102,3 +102,42 @@ int TimeMachine::GetCurrentDayOfYear() {
 
     return doy;
 }
+
+bool TimeMachine::IsValid() const {
+    // Check that start and end dates are set
+    if (_start <= 0 || _end <= 0) {
+        wxLogError(_("TimeMachine: Start or end date not properly set."));
+        return false;
+    }
+
+    // Check that start is before end
+    if (_start > _end) {
+        wxLogError(_("TimeMachine: Start date (%f) is after end date (%f)."), _start, _end);
+        return false;
+    }
+
+    // Check that time step is positive
+    if (_timeStep <= 0) {
+        wxLogError(_("TimeMachine: Time step must be positive."));
+        return false;
+    }
+
+    // Check that time step in days is positive
+    if (_timeStepInDays <= 0) {
+        wxLogError(_("TimeMachine: Time step in days must be positive."));
+        return false;
+    }
+
+    return true;
+}
+
+void TimeMachine::Validate() const {
+    if (!IsValid()) {
+        wxString msg = wxString::Format(
+            _("TimeMachine validation failed. Start: %f, End: %f, TimeStep: %d, TimeStepInDays: %f"),
+            _start, _end, _timeStep, _timeStepInDays);
+        throw ModelConfigError(msg);
+    }
+}
+
+

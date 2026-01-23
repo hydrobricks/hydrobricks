@@ -12,14 +12,14 @@ class ProcessMelt : public Process {
     ~ProcessMelt() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()

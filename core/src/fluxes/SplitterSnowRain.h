@@ -10,9 +10,9 @@ class SplitterSnowRain : public Splitter {
     explicit SplitterSnowRain();
 
     /**
-     * @copydoc Splitter::IsOk()
+     * @copydoc Splitter::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Splitter::SetParameters()
@@ -37,8 +37,8 @@ class SplitterSnowRain : public Splitter {
   protected:
     Forcing* _precipitation;
     Forcing* _temperature;
-    float* _transitionStart;  // [°C]
-    float* _transitionEnd;    // [°C]
+    const float* _transitionStart;  // [°C]
+    const float* _transitionEnd;    // [°C]
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_H

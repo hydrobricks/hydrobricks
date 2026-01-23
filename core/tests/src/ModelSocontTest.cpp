@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <wx/stdpaths.h>
+#include <memory>
 
 #include "ModelHydro.h"
 #include "SettingsModel.h"
@@ -9,9 +10,9 @@
 class ModelSocontBasic : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
-    TimeSeriesUniform* _tsPet{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
+    std::unique_ptr<TimeSeriesUniform> _tsPet;
 
     void SetUp() override {
         _model.SetLogAll();
@@ -23,25 +24,23 @@ class ModelSocontBasic : public ::testing::Test {
         vecStr landCoverNames = {"ground", "glacier"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp->SetData(std::move(temperature));
 
-        auto pet = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPet = new TimeSeriesUniform(PET);
-        _tsPet->SetData(pet);
+        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
-        wxDELETE(_tsPet);
+        // RAII cleanup via unique_ptr
     }
 };
 
@@ -57,7 +56,7 @@ TEST_F(ModelSocontBasic, ModelBuildsCorrectly) {
     ModelHydro model(&subBasin);
 
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 }
 
 TEST_F(ModelSocontBasic, ModelRunsCorrectly) {
@@ -71,11 +70,11 @@ TEST_F(ModelSocontBasic, ModelRunsCorrectly) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -96,11 +95,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithoutGlacierMelt) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -131,16 +130,16 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    auto precipValues = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
     precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto* tsPrecip = new TimeSeriesUniform(Precipitation);
-    tsPrecip->SetData(precipValues);
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+    tsPrecip->SetData(std::move(precipValues));
 
-    ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -159,8 +158,6 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
 
     EXPECT_NEAR(totalGlacierMelt, 48.0, 0.0000001);
     EXPECT_NEAR(balance, 0.0, 0.0000001);
-
-    wxDELETE(tsPrecip);
 }
 
 TEST_F(ModelSocontBasic, WaterBalanceClosesWithHeunExplicit) {
@@ -174,11 +171,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithHeunExplicit) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -210,11 +207,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithEulerExplicit) {
     ModelHydro model(&subBasin);
     _model.SetSolver("euler_explicit");
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -246,11 +243,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithRungeKutta) {
     ModelHydro model(&subBasin);
     _model.SetSolver("runge_kutta");
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -284,16 +281,16 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    auto precipValues = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
     precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto* tsPrecip = new TimeSeriesUniform(Precipitation);
-    tsPrecip->SetData(precipValues);
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+    tsPrecip->SetData(std::move(precipValues));
 
-    ASSERT_TRUE(model.AddTimeSeries(tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -334,11 +331,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -376,11 +373,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMelt) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -414,11 +411,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnits) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -458,11 +455,11 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -501,12 +498,12 @@ TEST(ModelSocont, WaterBalanceCloses) {
     modelSettings.SetParameterValue("slow_reservoir", "capacity", 200);
 
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
     std::vector<TimeSeries*> vecTimeSeries;
     EXPECT_TRUE(TimeSeries::Parse("../../tests/files/catchments/ch_sitter_appenzell/meteo.nc", vecTimeSeries));
-    for (auto timeSeries : vecTimeSeries) {
-        ASSERT_TRUE(model.AddTimeSeries(timeSeries));
+    for (auto* timeSeries : vecTimeSeries) {
+        ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(timeSeries)));
     }
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
@@ -532,9 +529,9 @@ TEST(ModelSocont, WaterBalanceCloses) {
 class ModelSocontSingleLandCover : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
-    TimeSeriesUniform* _tsPet{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
+    std::unique_ptr<TimeSeriesUniform> _tsPet;
 
     void SetUp() override {
         _model.SetLogAll();
@@ -546,25 +543,23 @@ class ModelSocontSingleLandCover : public ::testing::Test {
         vecStr landCoverNames = {"ground"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         precip->SetValues({0.0, 13.8, 59.3, 34.2, 13.7, 26.1, 9.8, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         temperature->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp->SetData(std::move(temperature));
 
-        auto pet = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
         pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPet = new TimeSeriesUniform(PET);
-        _tsPet->SetData(pet);
+        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
-        wxDELETE(_tsPet);
+        // RAII cleanup via unique_ptr
     }
 };
 
@@ -582,11 +577,11 @@ TEST_F(ModelSocontSingleLandCover, QuickDischargeIsCorrect) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPet));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

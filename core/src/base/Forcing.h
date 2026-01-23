@@ -22,7 +22,7 @@ class Forcing : public wxObject {
      *
      * @return the type of the forcing.
      */
-    VariableType GetType() {
+    VariableType GetType() const {
         return _type;
     }
 
@@ -33,9 +33,25 @@ class Forcing : public wxObject {
      */
     double GetValue();
 
+    /**
+     * Check if the forcing is valid.
+     * Verifies that time series data is attached.
+     *
+     * @return true if the forcing is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the forcing.
+     * Throws an exception if the forcing is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   protected:
     VariableType _type;
-    TimeSeriesData* _timeSeriesData;
+    TimeSeriesData* _timeSeriesData;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_FORCING_H

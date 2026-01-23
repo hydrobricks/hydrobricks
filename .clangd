@@ -1,0 +1,8 @@
+Diagnostics:
+  Suppress:
+    - '_Is_pointer_address_convertible'
+  UnusedIncludes: None
+CompileFlags:
+  Add:
+    - -Wno-unused-value
+

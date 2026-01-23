@@ -29,6 +29,12 @@ bool ActionsManager::AddAction(Action* action) {
         return false;
     }
 
+    // Validate action after initialization
+    if (!action->IsValid()) {
+        wxLogError(_("Action is not valid and cannot be added to the manager."));
+        return false;
+    }
+
     int actionIndex = static_cast<int>(_actions.size());
     _actions.push_back(action);
 
@@ -59,16 +65,15 @@ bool ActionsManager::AddAction(Action* action) {
     return true;
 }
 
-int ActionsManager::GetActionsNb() {
+int ActionsManager::GetActionCount() const {
     return static_cast<int>(_actions.size());
 }
 
-int ActionsManager::GetSporadicActionItemsNb() {
+int ActionsManager::GetSporadicActionItemCount() const {
     int items = 0;
-    for (auto action : _actions) {
-        items += action->GetSporadicItemsNb();
+    for (auto& action : _actions) {
+        items += action->GetSporadicItemCount();
     }
-
     return items;
 }
 
@@ -78,7 +83,7 @@ void ActionsManager::DateUpdate(double date) {
         Time dateStruct = GetTimeStructFromMJD(date);
         for (int actionIndex : _recursiveActionIndices) {
             if (!_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
-                throw InvalidArgument(_("Application of a recursive action failed."));
+                throw RuntimeError(_("Application of a recursive action failed."));
             }
         }
     }
@@ -91,7 +96,7 @@ void ActionsManager::DateUpdate(double date) {
     wxASSERT(_sporadicActionDates.size() == _sporadicActionIndices.size());
     while (_sporadicActionDates.size() > _cursorManager && _sporadicActionDates[_cursorManager] <= date) {
         if (!_actions[_sporadicActionIndices[_cursorManager]]->Apply(date)) {
-            throw InvalidArgument(_("Application of a sporadic action failed."));
+            throw RuntimeError(_("Application of a sporadic action failed."));
         }
         _actions[_sporadicActionIndices[_cursorManager]]->IncrementCursor();
         _cursorManager++;
@@ -104,4 +109,20 @@ SubBasin* ActionsManager::GetSubBasin() const {
 
 HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
     return _model->GetSubBasin()->GetHydroUnitById(id);
+}
+
+bool ActionsManager::IsValid() const {
+    // Check that model is assigned
+    if (!_model) {
+        wxLogError(_("ActionsManager: Model not assigned."));
+        return false;
+    }
+
+    return true;
+}
+
+void ActionsManager::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("ActionsManager validation failed. Model not properly assigned."));
+    }
 }

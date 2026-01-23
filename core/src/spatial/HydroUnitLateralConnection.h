@@ -34,12 +34,12 @@ class HydroUnitLateralConnection : public wxObject {
      *
      * @return The type of the lateral connection.
      */
-    string GetType() const {
+    const string& GetType() const {
         return _type;
     }
 
   private:
-    HydroUnit* _receiver;
+    HydroUnit* _receiver;  // non-owning reference
     double _fraction;
     string _type;
 };

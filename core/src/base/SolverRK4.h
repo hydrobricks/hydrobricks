@@ -12,7 +12,7 @@ class SolverRK4 : public Solver {
     /**
      * @copydoc Solver::Solve()
      */
-    bool Solve() override;
+    bool Solve(double timeStepInDays) override;
 };
 
 #endif  // HYDROBRICKS_SOLVER_RK4_H

@@ -55,7 +55,14 @@ endif (WIN32)
 # LINKING
 
 add_dependencies(hydrobricks-tests core)
-target_link_libraries(hydrobricks-tests core)
+target_compile_features(hydrobricks-tests PUBLIC cxx_std_20)
+target_link_libraries(hydrobricks-tests core Eigen3::Eigen)
+# Avoid wx/msw/msvcrt.h redefining operator new in tests (conflicts with gtest placement new)
+target_compile_definitions(hydrobricks-tests PRIVATE
+        __NO_VC_CRTDBG__
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+)
 target_link_libraries(hydrobricks-tests GTest::gtest)
 
 if (UNIX)

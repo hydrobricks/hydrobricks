@@ -8,7 +8,7 @@
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
 
-bool ProcessLateral::IsOk() {
+bool ProcessLateral::IsValid() const {
     if (_outputs.size() == 0) {
         wxLogError(_("Lateral processes need at least 1 connection."));
         return false;
@@ -17,7 +17,7 @@ bool ProcessLateral::IsOk() {
     return true;
 }
 
-int ProcessLateral::GetConnectionsNb() {
+int ProcessLateral::GetConnectionCount() const {
     return _outputs.size();
 }
 
@@ -35,13 +35,13 @@ double* ProcessLateral::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-void ProcessLateral::AttachFluxOutWithWeight(Flux* flux, double weight) {
+void ProcessLateral::AttachFluxOutWithWeight(std::unique_ptr<Flux> flux, double weight) {
     wxASSERT(flux);
-    _outputs.push_back(flux);
+    _outputs.push_back(std::move(flux));
     _weights.push_back(weight);
 }
 
-double ProcessLateral::GetOriginLandCoverAreaFraction() {
+double ProcessLateral::GetOriginLandCoverAreaFraction() const {
     Brick* brick = _container->GetParentBrick();
     wxASSERT(brick);
     auto surfaceComponent = dynamic_cast<SurfaceComponent*>(brick);

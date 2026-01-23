@@ -6,8 +6,8 @@ FluxToBrick::FluxToBrick(Brick* brick)
     : Flux(),
       _toBrick(brick) {}
 
-bool FluxToBrick::IsOk() {
-    return true;
+bool FluxToBrick::IsValid() const {
+    return _toBrick != nullptr;
 }
 
 double FluxToBrick::GetAmount() {

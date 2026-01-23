@@ -6,7 +6,7 @@ TEST(SettingsBasin, ParseNcFile) {
     SettingsBasin settings;
     EXPECT_TRUE(settings.Parse("files/hydro-units-2-glaciers.nc"));
 
-    EXPECT_EQ(settings.GetHydroUnitsNb(), 100);
+    EXPECT_EQ(settings.GetHydroUnitCount(), 100);
 
     HydroUnitSettings unitSettings = settings.GetHydroUnitSettings(83);
 

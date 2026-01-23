@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
+#include <memory>
+
 #include <yaml-cpp/yaml.h>
 
 #include "Includes.h"
@@ -28,7 +30,7 @@ struct ProcessSettings {
     string name;
     string type;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
 };
@@ -37,7 +39,7 @@ struct SplitterSettings {
     string name;
     string type;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<OutputSettings> outputs;
 };
@@ -47,7 +49,7 @@ struct BrickSettings {
     string type;
     string parent;
     vecStr logItems;
-    vector<Parameter*> parameters;
+    vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
 };
@@ -485,7 +487,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of structures.
      */
-    int GetStructuresNb() const {
+    int GetStructureCount() const {
         return static_cast<int>(_modelStructures.size());
     }
 
@@ -494,7 +496,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of hydro unit bricks.
      */
-    int GetHydroUnitBricksNb() const {
+    int GetHydroUnitBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitBricks.size());
     }
@@ -504,7 +506,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of sub-basin bricks.
      */
-    int GetSubBasinBricksNb() const {
+    int GetSubBasinBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinBricks.size());
     }
@@ -514,7 +516,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of surface component bricks.
      */
-    int GetSurfaceComponentBricksNb() const {
+    int GetSurfaceComponentBrickCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->surfaceComponentBricks.size());
     }
@@ -524,7 +526,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of processes.
      */
-    int GetProcessesNb() const {
+    int GetProcesseCount() const {
         wxASSERT(_selectedBrick);
         return static_cast<int>(_selectedBrick->processes.size());
     }
@@ -534,7 +536,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of hydro unit splitters.
      */
-    int GetHydroUnitSplittersNb() const {
+    int GetHydroUnitSplitterCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitSplitters.size());
     }
@@ -544,7 +546,7 @@ class SettingsModel : public wxObject {
      *
      * @return number of sub-basin splitters.
      */
-    int GetSubBasinSplittersNb() const {
+    int GetSubBasinSplitterCount() const {
         wxASSERT(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinSplitters.size());
     }
@@ -571,9 +573,9 @@ class SettingsModel : public wxObject {
      * Get the hydro unit brick settings by index.
      *
      * @param index index of the hydro unit brick.
-     * @return hydro unit brick settings.
+     * @return hydro unit brick settings (const reference).
      */
-    BrickSettings GetHydroUnitBrickSettings(int index) const {
+    const BrickSettings& GetHydroUnitBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->hydroUnitBricks[index];
     }
@@ -582,12 +584,12 @@ class SettingsModel : public wxObject {
      * Get the hydro unit brick settings by name.
      *
      * @param name name of the hydro unit brick.
-     * @return hydro unit brick settings.
+     * @return hydro unit brick settings (const reference).
      */
-    BrickSettings GetHydroUnitBrickSettings(const string& name) const {
+    const BrickSettings& GetHydroUnitBrickSettings(const string& name) const {
         wxASSERT(_selectedStructure);
 
-        for (auto& brick : _selectedStructure->hydroUnitBricks) {
+        for (const auto& brick : _selectedStructure->hydroUnitBricks) {
             if (brick.name == name) {
                 return brick;
             }
@@ -600,9 +602,9 @@ class SettingsModel : public wxObject {
      * Get the surface component brick settings by index.
      *
      * @param index index of the surface component brick.
-     * @return surface component brick settings.
+     * @return surface component brick settings (const reference).
      */
-    BrickSettings GetSurfaceComponentBrickSettings(int index) const {
+    const BrickSettings& GetSurfaceComponentBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         int brickIndex = _selectedStructure->surfaceComponentBricks[index];
         return _selectedStructure->hydroUnitBricks[brickIndex];
@@ -639,9 +641,9 @@ class SettingsModel : public wxObject {
      * Get the sub basin brick settings by index.
      *
      * @param index index of the sub basin brick.
-     * @return sub basin brick settings.
+     * @return sub basin brick settings (const reference).
      */
-    BrickSettings GetSubBasinBrickSettings(int index) const {
+    const BrickSettings& GetSubBasinBrickSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->subBasinBricks[index];
     }
@@ -650,9 +652,9 @@ class SettingsModel : public wxObject {
      * Get the process settings by index.
      *
      * @param index index of the process.
-     * @return process settings.
+     * @return process settings (const reference).
      */
-    ProcessSettings GetProcessSettings(int index) const {
+    const ProcessSettings& GetProcessSettings(int index) const {
         wxASSERT(_selectedBrick);
         return _selectedBrick->processes[index];
     }
@@ -661,9 +663,9 @@ class SettingsModel : public wxObject {
      * Get the splitter settings by index.
      *
      * @param index index of the splitter.
-     * @return splitter settings.
+     * @return splitter settings (const reference).
      */
-    SplitterSettings GetHydroUnitSplitterSettings(int index) const {
+    const SplitterSettings& GetHydroUnitSplitterSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->hydroUnitSplitters[index];
     }
@@ -672,9 +674,9 @@ class SettingsModel : public wxObject {
      * Get the sub basin splitter settings by index.
      *
      * @param index index of the sub basin splitter.
-     * @return sub basin splitter settings.
+     * @return sub basin splitter settings (const reference).
      */
-    SplitterSettings GetSubBasinSplitterSettings(int index) const {
+    const SplitterSettings& GetSubBasinSplitterSettings(int index) const {
         wxASSERT(_selectedStructure);
         return _selectedStructure->subBasinSplitters[index];
     }
@@ -684,21 +686,21 @@ class SettingsModel : public wxObject {
      *
      * @return logging labels for the sub basin components.
      */
-    vecStr GetSubBasinLogLabels();
+    vecStr GetSubBasinLogLabels() const;
 
     /**
      * Get the generic logging labels for the sub basin components
      *
      * @return generic logging labels for the sub basin components.
      */
-    vecStr GetSubBasinGenericLogLabels();
+    vecStr GetSubBasinGenericLogLabels() const;
 
     /**
      * Get the logging labels for the hydro unit components
      *
      * @return logging labels for the hydro unit components.
      */
-    vecStr GetHydroUnitLogLabels();
+    vecStr GetHydroUnitLogLabels() const;
 
     /**
      * Flag to log all components.
@@ -719,19 +721,35 @@ class SettingsModel : public wxObject {
      *
      * @return true if all components are logged, false otherwise.
      */
-    bool LogAll() {
+    bool LogAll() const {
         return _logAll;
     }
+
+    /**
+     * Check if the settings model is valid.
+     * Verifies that critical settings are configured (solver, timer, structures).
+     *
+     * @return true if the settings are valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the settings model.
+     * Throws an exception if the settings are invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
 
   protected:
     bool _logAll;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
     TimerSettings _timer;
-    ModelStructure* _selectedStructure;
-    BrickSettings* _selectedBrick;
-    ProcessSettings* _selectedProcess;
-    SplitterSettings* _selectedSplitter;
+    ModelStructure* _selectedStructure;  // non-owning reference
+    BrickSettings* _selectedBrick;  // non-owning reference
+    ProcessSettings* _selectedProcess;  // non-owning reference
+    SplitterSettings* _selectedSplitter;  // non-owning reference
 
     bool LogAll(const YAML::Node& settings);
 };

@@ -3,7 +3,7 @@
 SplitterMultiFluxes::SplitterMultiFluxes()
     : Splitter() {}
 
-bool SplitterMultiFluxes::IsOk() {
+bool SplitterMultiFluxes::IsValid() const {
     if (_outputs.empty()) {
         wxLogError(_("SplitterMultiFluxes has no input."));
         return false;
@@ -29,12 +29,12 @@ double* SplitterMultiFluxes::GetValuePointer(const string& name) {
         return _outputs[4]->GetAmountPointer();
     }
 
-    throw ConceptionIssue(_("Output cannot be find."));
+    throw ModelConfigError(_("Output cannot be find."));
 }
 
 void SplitterMultiFluxes::Compute() {
     wxASSERT(!_inputs.empty());
-    for (auto output : _outputs) {
+    for (const auto& output : _outputs) {
         output->UpdateFlux(_inputs[0]->GetAmount());
     }
 }

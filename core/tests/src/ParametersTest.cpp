@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "ParameterVariable.h"
+#include "Parameter.h"
+#include "ParameterModifier.h"
 #include "ParametersUpdater.h"
 
 std::vector<double> GenerateDailyDatesVector() {
@@ -14,116 +15,123 @@ std::vector<double> GenerateDailyDatesVector() {
     return dates;
 }
 
-TEST(ParameterVariableYearly, SetValues) {
-    ParameterVariableYearly parameter("dummy_parameter");
+TEST(YearlyModifier, SetValues) {
+    ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
-    EXPECT_TRUE(parameter.SetValues(2000, 2010, values));
+    EXPECT_TRUE(modifier.SetYearlyValues(2000, 2010, values));
 }
 
-TEST(ParameterVariableYearly, SetValuesWrongSize) {
-    ParameterVariableYearly parameter("dummy_parameter");
+TEST(YearlyModifier, SetValuesWrongSize) {
+    ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     wxLogNull logNo;
 
-    EXPECT_FALSE(parameter.SetValues(2000, 2011, values));
+    EXPECT_FALSE(modifier.SetYearlyValues(2000, 2011, values));
 }
 
-TEST(ParameterVariableYearly, UpdateParameter) {
-    ParameterVariableYearly parameter("dummy_parameter");
+TEST(YearlyModifier, UpdateValue) {
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    parameter.SetValues(2000, 2010, values);
-
-    parameter.UpdateParameter(2005);
+    modifier.SetYearlyValues(2000, 2010, values);
+    parameter.SetModifier(modifier);
+    parameter.UpdateFromModifier(GetMJD(2005, 6, 15));
 
     EXPECT_EQ(parameter.GetValue(), 6);
 }
 
-TEST(ParameterVariableYearly, UpdateParameterNotFound) {
-    ParameterVariableYearly parameter("dummy_parameter");
-    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    parameter.SetValues(2000, 2010, values);
+TEST(YearlyModifier, UpdateValueNotFound) {
     wxLogNull logNo;
-
-    EXPECT_FALSE(parameter.UpdateParameter(2015));
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Yearly);
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    modifier.SetYearlyValues(2000, 2010, values);
+    parameter.SetModifier(modifier);
+    EXPECT_FALSE(parameter.UpdateFromModifier(GetMJD(2015, 1, 1)));
     EXPECT_TRUE(IsNaN(parameter.GetValue()));
 }
 
-TEST(ParameterVariableMonthly, SetValues) {
-    ParameterVariableMonthly parameter("dummy_parameter");
+TEST(MonthlyModifier, SetValues) {
+    ParameterModifier modifier(ParameterModifierType::Monthly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
-    EXPECT_TRUE(parameter.SetValues(values));
+    EXPECT_TRUE(modifier.SetMonthlyValues(values));
 }
 
-TEST(ParameterVariableMonthly, SetValuesWrongSize) {
-    ParameterVariableMonthly parameter("dummy_parameter");
+TEST(MonthlyModifier, SetValuesWrongSize) {
+    ParameterModifier modifier(ParameterModifierType::Monthly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     wxLogNull logNo;
 
-    EXPECT_FALSE(parameter.SetValues(values));
+    EXPECT_FALSE(modifier.SetMonthlyValues(values));
 }
 
-TEST(ParameterVariableMonthly, UpdateParameter) {
-    ParameterVariableMonthly parameter("dummy_parameter");
+TEST(MonthlyModifier, UpdateValue) {
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Monthly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    parameter.SetValues(values);
-
-    parameter.UpdateParameter(3);
+    modifier.SetMonthlyValues(values);
+    parameter.SetModifier(modifier);
+    parameter.UpdateFromModifier(GetMJD(2010, 3, 15));
 
     EXPECT_EQ(parameter.GetValue(), 3);
 }
 
-TEST(ParameterVariableDates, SetValues) {
-    ParameterVariableDates parameter("dummy_parameter");
+TEST(DatesModifier, SetValues) {
+    ParameterModifier modifier(ParameterModifierType::Dates);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
 
-    EXPECT_TRUE(parameter.SetTimeAndValues(dates, values));
+    EXPECT_TRUE(modifier.SetDatesAndValues(dates, values));
 }
 
-TEST(ParameterVariableDates, SetValuesWrongSize) {
-    ParameterVariableDates parameter("dummy_parameter");
+TEST(DatesModifier, SetValuesWrongSize) {
+    ParameterModifier modifier(ParameterModifierType::Dates);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::vector<double> dates = GenerateDailyDatesVector();
     wxLogNull logNo;
 
-    EXPECT_FALSE(parameter.SetTimeAndValues(dates, values));
+    EXPECT_FALSE(modifier.SetDatesAndValues(dates, values));
 }
 
-TEST(ParameterVariableDates, UpdateParameter) {
-    ParameterVariableDates parameter("dummy_parameter");
+TEST(DatesModifier, UpdateValue) {
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
-    parameter.SetTimeAndValues(dates, values);
-
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Dates);
+    modifier.SetDatesAndValues(dates, values);
+    parameter.SetModifier(modifier);
     double dateExtract = GetMJD(2010, 1, 4);
-    parameter.UpdateParameter(dateExtract);
+    parameter.UpdateFromModifier(dateExtract);
 
     EXPECT_EQ(parameter.GetValue(), 4);
 }
 
-TEST(ParameterVariableDates, UpdateParameterNotFound) {
-    ParameterVariableDates parameter("dummy_parameter");
+TEST(DatesModifier, UpdateValueNotFound) {
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
-    parameter.SetTimeAndValues(dates, values);
-
     wxLogNull logNo;
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Dates);
+    modifier.SetDatesAndValues(dates, values);
+    parameter.SetModifier(modifier);
     double dateExtract = GetMJD(2010, 1, 20);
 
-    EXPECT_FALSE(parameter.UpdateParameter(dateExtract));
+    EXPECT_FALSE(parameter.UpdateFromModifier(dateExtract));
     EXPECT_TRUE(IsNaN(parameter.GetValue()));
 }
 
 TEST(ParametersUpdater, DateUpdateDay) {
-    ParameterVariableDates parameter("dummy_parameter");
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
-    parameter.SetTimeAndValues(dates, values);
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Dates);
+    modifier.SetDatesAndValues(dates, values);
+    parameter.SetModifier(modifier);
 
     ParametersUpdater updater;
-    updater.AddParameterVariableDates(&parameter);
+    updater.AddParameter(&parameter);
     updater.DateUpdate(GetMJD(2010, 2, 1));
     updater.DateUpdate(GetMJD(2010, 1, 4));
 
@@ -131,12 +139,14 @@ TEST(ParametersUpdater, DateUpdateDay) {
 }
 
 TEST(ParametersUpdater, DateUpdateMonth) {
-    ParameterVariableMonthly parameter("dummy_parameter");
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Monthly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    parameter.SetValues(values);
+    modifier.SetMonthlyValues(values);
+    parameter.SetModifier(modifier);
 
     ParametersUpdater updater;
-    updater.AddParameterVariableMonthly(&parameter);
+    updater.AddParameter(&parameter);
     updater.DateUpdate(GetMJD(2010, 2, 1));
     updater.DateUpdate(GetMJD(2010, 3, 1));
 
@@ -144,12 +154,14 @@ TEST(ParametersUpdater, DateUpdateMonth) {
 }
 
 TEST(ParametersUpdater, DateUpdateYear) {
-    ParameterVariableYearly parameter("dummy_parameter");
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8};
-    parameter.SetValues(2011, 2018, values);
+    modifier.SetYearlyValues(2011, 2018, values);
+    parameter.SetModifier(modifier);
 
     ParametersUpdater updater;
-    updater.AddParameterVariableYearly(&parameter);
+    updater.AddParameter(&parameter);
     updater.DateUpdate(GetMJD(2014, 1, 1));
     updater.DateUpdate(GetMJD(2015, 3, 13));
 

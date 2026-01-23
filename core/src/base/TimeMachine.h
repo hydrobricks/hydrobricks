@@ -39,7 +39,7 @@ class TimeMachine : public wxObject {
      *
      * @return true if the timer is over
      */
-    [[nodiscard]] bool IsOver();
+    [[nodiscard]] bool IsOver() const;
 
     /**
      * Increment the timer.
@@ -51,14 +51,14 @@ class TimeMachine : public wxObject {
      *
      * @return number of time steps
      */
-    int GetTimeStepsNb();
+    int GetTimeStepCount() const;
 
     /**
      * Get the current date as a MJD.
      *
      * @return current date
      */
-    double GetDate() {
+    double GetDate() const {
         return _date;
     }
 
@@ -67,7 +67,7 @@ class TimeMachine : public wxObject {
      *
      * @return start date
      */
-    double GetStart() {
+    double GetStart() const {
         return _start;
     }
 
@@ -76,7 +76,7 @@ class TimeMachine : public wxObject {
      *
      * @return end date
      */
-    double GetEnd() {
+    double GetEnd() const {
         return _end;
     }
 
@@ -123,6 +123,22 @@ class TimeMachine : public wxObject {
      */
     static int GetCurrentDayOfYear();
 
+    /**
+     * Check if the time machine is valid.
+     * Verifies that start and end dates are properly configured.
+     *
+     * @return true if the time machine is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the time machine.
+     * Throws an exception if the time machine is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   private:
     double _date;
     double _start;
@@ -130,8 +146,8 @@ class TimeMachine : public wxObject {
     int _timeStep;
     TimeUnit _timeStepUnit;
     double _timeStepInDays;
-    ParametersUpdater* _parametersUpdater;
-    ActionsManager* _actionsManager;
+    ParametersUpdater* _parametersUpdater;  // non-owning reference
+    ActionsManager* _actionsManager;  // non-owning reference
     static double _currentDateStatic;  // Holds the globally accessible current date (MJD)
 
     /**

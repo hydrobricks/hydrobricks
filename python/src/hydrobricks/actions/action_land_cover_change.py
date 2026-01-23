@@ -100,17 +100,17 @@ class ActionLandCoverChange(Action):
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(land_cover, area_unit, file_content)
 
-    def get_changes_nb(self) -> int:
+    def get_change_count(self) -> int:
         """
         Get the number of changes registered.
         """
-        return self.action.get_changes_nb()
+        return self.action.get_change_count()
 
-    def get_land_covers_nb(self) -> int:
+    def get_land_cover_count(self) -> int:
         """
         Get the number of land covers registered.
         """
-        return self.action.get_land_covers_nb()
+        return self.action.get_land_cover_count()
 
     @classmethod
     def create_action_for_glaciers(
@@ -211,7 +211,7 @@ class ActionLandCoverChange(Action):
             debris_glaciers = [None] * len(times)
 
         # Get the hydro units
-        n_unit_ids = catchment.get_hydro_units_nb()
+        n_unit_ids = catchment.get_hydro_unit_count()
         hydro_units = catchment.hydro_units
 
         # Create the dataframes

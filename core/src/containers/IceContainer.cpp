@@ -10,7 +10,7 @@ IceContainer::IceContainer(Brick* brick)
 void IceContainer::ApplyConstraints(double timeStep) {
     if (_noMeltWhenSnowCover) {
         if (_relatedSnowpack == nullptr) {
-            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
+            throw ModelConfigError(_("No snowpack provided for the glacier melt limitation."));
         }
         if (_relatedSnowpack->HasSnow()) {
             SetOutgoingRatesToZero();
@@ -22,7 +22,7 @@ void IceContainer::ApplyConstraints(double timeStep) {
 bool IceContainer::ContentAccessible() const {
     if (_noMeltWhenSnowCover) {
         if (_relatedSnowpack == nullptr) {
-            throw ConceptionIssue(_("No snowpack provided for the glacier melt limitation."));
+            throw ModelConfigError(_("No snowpack provided for the glacier melt limitation."));
         }
         if (_relatedSnowpack->HasSnow()) {
             return false;

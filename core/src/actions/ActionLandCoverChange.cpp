@@ -18,8 +18,8 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
 
 void ActionLandCoverChange::Reset() {
     // Roll back all changes.
-    int nbChanges = static_cast<int>(_hydroUnitIds.size());
-    for (int i = nbChanges - 1; i >= 0; --i) {
+    int changeCount = static_cast<int>(_hydroUnitIds.size());
+    for (int i = changeCount - 1; i >= 0; --i) {
         HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[i]);
         string landCoverName = _landCoverNames[_landCoverIds[i]];
         double areaFraction = _areas[i] / unit->GetArea();

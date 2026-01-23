@@ -22,9 +22,9 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     ~ProcessLateralSnowSlide() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * Register the process parameters and forcing in the settings model.
@@ -51,13 +51,13 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     }
 
   protected:
-    float _slope_deg;             // Slope of the hydro unit [°]
-    float* _coeff;                // Coefficient in the equation []
-    float* _exp;                  // Exponent  in the equation []
-    float* _minSlope;             // Minimum slope for snow holding [°]
-    float* _maxSlope;             // Maximum slope for snow holding [°]
-    float* _minSnowHoldingDepth;  // Minimum snow holding depth (when slope > maxSlope) [mm]
-    float* _maxSnowDepth;         // Maximum snow depth (not in the original method) [mm]
+    float _slopeDeg;                    // Slope of the hydro unit [°]
+    const float* _coeff;                // Coefficient in the equation []
+    const float* _exp;                  // Exponent  in the equation []
+    const float* _minSlope;             // Minimum slope for snow holding [°]
+    const float* _maxSlope;             // Maximum slope for snow holding [°]
+    const float* _minSnowHoldingDepth;  // Minimum snow holding depth (when slope > maxSlope) [mm]
+    const float* _maxSnowDepth;         // Maximum snow depth (not in the original method) [mm]
 
     /**
      * @copydoc Process::GetRates()

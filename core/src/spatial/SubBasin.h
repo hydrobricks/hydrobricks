@@ -116,7 +116,7 @@ class SubBasin : public wxObject {
      *
      * @return True if everything is correctly defined, false otherwise.
      */
-    [[nodiscard]] bool IsValid() const;
+    [[nodiscard]] bool IsValid(bool checkProcesses = true) const;
 
     /**
      * Validate that the sub basin is correctly defined.

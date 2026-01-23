@@ -42,14 +42,20 @@ void Glacier::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Glacier::IsValid() const {
-    if (!_ice->IsValid()) {
+bool Glacier::IsValid(bool checkProcesses) const {
+    if (!_ice->IsValid(checkProcesses)) {
         wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
     }
-    for (const auto& process : _processes) {
-        if (!process->IsValid()) {
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            wxLogError(_("The brick %s has no process attached"), _name);
             return false;
+        }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
         }
     }
     // We skip water container validation as glaciers may not have water processes.

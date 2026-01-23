@@ -109,16 +109,16 @@ void SubBasin::SaveAsInitialState() {
     }
 }
 
-bool SubBasin::IsValid() const {
+bool SubBasin::IsValid(bool checkProcesses) const {
     if (_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));
         return false;
     }
     for (const auto& unit : _hydroUnits) {
-        if (!unit->IsValid()) return false;
+        if (!unit->IsValid(checkProcesses)) return false;
     }
     for (const auto& brick : _bricks) {
-        if (!brick->IsValid()) return false;
+        if (!brick->IsValid(checkProcesses)) return false;
     }
     for (const auto& splitter : _splitters) {
         if (!splitter->IsValid()) return false;

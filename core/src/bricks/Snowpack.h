@@ -34,7 +34,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::IsValid()
      */
-    [[nodiscard]] bool IsValid() const override;
+    [[nodiscard]] bool IsValid(bool checkProcesses = true) const override;
 
     /**
      * Get the snow container.

@@ -35,7 +35,7 @@ bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin
     return true;
 }
 
-bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses) {
     try {
         // Validate settings before building model
         if (!modelSettings.IsValid()) {
@@ -63,7 +63,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         }
 
         // Validate sub-basin after full setup
-        if (!_subBasin->IsValid()) {
+        if (!_subBasin->IsValid(checkProcesses)) {
             wxLogError(_("Sub-basin failed validation after initialization."));
             return false;
         }

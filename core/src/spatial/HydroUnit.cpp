@@ -205,9 +205,9 @@ Splitter* HydroUnit::TryGetSplitter(const string& name) const {
     return it != _splitterMap.end() ? it->second : nullptr;
 }
 
-bool HydroUnit::IsValid() const {
+bool HydroUnit::IsValid(bool checkProcesses) const {
     for (const auto& brick : _bricks) {
-        if (!brick->IsValid()) return false;
+        if (!brick->IsValid(checkProcesses)) return false;
     }
     for (const auto& splitter : _splitters) {
         if (!splitter->IsValid()) return false;

@@ -31,9 +31,10 @@ class ModelHydro : public wxObject {
      *
      * @param modelSettings settings of the model.
      * @param basinSettings settings of the basin.
+     * @param checkProcesses whether to check the processes during validation.
      * @return true if the initialization was successful.
      */
-    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
 
     /**
      * Update the model parameters.

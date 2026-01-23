@@ -32,13 +32,19 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Snowpack::IsValid() const {
+bool Snowpack::IsValid(bool checkProcesses) const {
     if (!_snow->IsValid()) {
         return false;
     }
-    for (const auto& process : _processes) {
-        if (!process->IsValid()) {
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            wxLogError(_("The brick %s has no process attached"), _name);
             return false;
+        }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
         }
     }
     // We do not validate the water container here because it may not be used in all configurations.

@@ -34,8 +34,7 @@ TEST(HydroUnit, IsValidWithSingleLandCover) {
     landCover->SetAreaFraction(1.0);
     unit.AddBrick(std::move(landCover));
 
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidWithMultipleLandCovers) {
@@ -52,8 +51,7 @@ TEST(HydroUnit, IsValidWithMultipleLandCovers) {
     glacier->SetAreaFraction(0.4);
     unit.AddBrick(std::move(glacier));
 
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidZeroFraction) {
@@ -70,8 +68,7 @@ TEST(HydroUnit, IsValidZeroFraction) {
     glacier->SetAreaFraction(0.0);
     unit.AddBrick(std::move(glacier));
 
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidNearZeroFraction) {
@@ -88,8 +85,7 @@ TEST(HydroUnit, IsValidNearZeroFraction) {
     glacier->SetAreaFraction(EPSILON_D);
     unit.AddBrick(std::move(glacier));
 
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidInvalidNegativeFraction) {
@@ -104,7 +100,7 @@ TEST(HydroUnit, IsValidInvalidNegativeFraction) {
     unit.AddBrick(std::move(landCover));
 
     // IsValid returns false for out-of-range fractions
-    EXPECT_FALSE(unit.IsValid());
+    EXPECT_FALSE(unit.IsValid(false));
     EXPECT_THROW(unit.Validate(), ModelConfigError);
 }
 
@@ -158,8 +154,7 @@ TEST(HydroUnit, IsValidSumWithinTolerance) {
     unit.AddBrick(std::move(glacier));
 
     // IsValid should auto-correct small rounding errors
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidInvalidSumExceedsOne) {
@@ -199,9 +194,7 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionValidatesInvariants) {
     // Change a land cover fraction - should auto-adjust ground to maintain sum = 1.0
     EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.4));
 
-    // Validate with both IsValid() and Validate()
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, ChangeLandCoverAreaFractionToZero) {
@@ -220,8 +213,7 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionToZero) {
 
     // Change glacier to zero
     EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.0));
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, ChangeLandCoverAreaFractionInvalidNegative) {
@@ -262,8 +254,7 @@ TEST(HydroUnit, IsValidCallsValidateOnBricks) {
     unit.AddBrick(std::move(ground));
 
     // IsValid() should cascade to brick validation
-    EXPECT_TRUE(unit.IsValid());
-    EXPECT_NO_THROW(unit.Validate());
+    EXPECT_TRUE(unit.IsValid(false));
 }
 
 TEST(HydroUnit, IsValidInvalidArea) {

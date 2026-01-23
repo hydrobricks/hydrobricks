@@ -100,7 +100,7 @@ class Brick : public wxObject {
      *
      * @return true if everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsValid() const;
+    [[nodiscard]] virtual bool IsValid(bool checkProcesses = true) const;
 
     /**
      * Validate that everything is correctly defined.

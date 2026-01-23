@@ -17,7 +17,7 @@ class WaterContainer : public wxObject {
      *
      * @return true if everything is correctly defined.
      */
-    virtual bool IsValid() const;
+    virtual bool IsValid(bool checkProcesses = true) const;
 
     /**
      * Validate that the water container is correctly defined.

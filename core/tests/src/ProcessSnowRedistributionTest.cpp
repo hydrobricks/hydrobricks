@@ -124,7 +124,7 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
@@ -185,10 +185,10 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    EXPECT_TRUE(subBasin.IsValid(false));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsValid());
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
@@ -253,10 +253,10 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    EXPECT_TRUE(subBasin.IsValid(false));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsValid());
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));

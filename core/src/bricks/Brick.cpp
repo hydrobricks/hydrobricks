@@ -59,17 +59,19 @@ void Brick::SaveAsInitialState() {
     _water->SaveAsInitialState();
 }
 
-bool Brick::IsValid() const {
-    if (_processes.empty()) {
-        wxLogError(_("The brick %s has no process attached"), _name);
-        return false;
-    }
-    for (const auto& process : _processes) {
-        if (!process->IsValid()) {
+bool Brick::IsValid(bool checkProcesses) const {
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            wxLogError(_("The brick %s has no process attached"), _name);
             return false;
         }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
+        }
     }
-    return _water->IsValid();
+    return _water->IsValid(checkProcesses);
 }
 
 void Brick::Validate() const {

@@ -14,10 +14,6 @@ WaterContainer::WaterContainer(Brick* brick)
       _overflow(nullptr) {}
 
 bool WaterContainer::IsValid() const {
-    if (_inputs.empty()) {
-        return true;
-    }
-
     for (int i = 0; i < GetParentBrick()->GetProcessCount(); ++i) {
         auto process = GetParentBrick()->GetProcess(i);
         if (process->GetWaterContainer() == this) {

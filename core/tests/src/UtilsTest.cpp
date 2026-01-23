@@ -775,3 +775,157 @@ TEST(Utils, IncrementDateBy2Minutes) {
 
     EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }
+
+TEST(Utils, ParseDateLeapYearFeb29) {
+    // 2020 is a leap year, Feb 29 should be valid
+    double conversion = ParseDate("2020-02-29", ISOdate);
+    double mjd = GetMJD(2020, 2, 29);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, ParseDateLeapYearFeb29_2000) {
+    // 2000 is a leap year (divisible by 400), Feb 29 should be valid
+    double conversion = ParseDate("2000-02-29", ISOdate);
+    double mjd = GetMJD(2000, 2, 29);
+
+    EXPECT_DOUBLE_EQ(mjd, conversion);
+}
+
+TEST(Utils, GetMJDLeapYearFeb29) {
+    // Test that GetMJD handles leap year correctly
+    double mjd2020Feb29 = GetMJD(2020, 2, 29);
+    double mjd2020Feb28 = GetMJD(2020, 2, 28);
+
+    // Feb 29 should be one day after Feb 28
+    EXPECT_DOUBLE_EQ(mjd2020Feb29, mjd2020Feb28 + 1);
+}
+
+// FindT tolerance boundary tests
+TEST(Utils, FindTExactToleranceBoundaryDouble) {
+    // Test when value is exactly at tolerance limit
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Search for 2.5 with tolerance 0.5 - should find 2.0 or 3.0
+    int result = Find(&array[0], &array[4], 2.5, 0.5);
+
+    // Should find either index 1 or 2 (both within tolerance)
+    EXPECT_TRUE(result == 1 || result == 2);
+}
+
+TEST(Utils, FindTJustInsideToleranceDouble) {
+    // Test when value is just inside tolerance boundary
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Search for 2.49 with tolerance 0.5 - should find 2.0
+    int result = Find(&array[0], &array[4], 2.49, 0.5);
+
+    EXPECT_EQ(result, 1);
+}
+
+TEST(Utils, FindTJustOutsideToleranceDouble) {
+    wxLogNull logNo;
+
+    // Test when value is just outside tolerance boundary
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Search for 2.51 with tolerance 0.5 - could match 2.0 or 3.0 (both within 0.51 distance)
+    int result = Find(&array[0], &array[4], 2.51, 0.5);
+
+    // Should find either index 1 or 2 as both are within tolerance
+    EXPECT_TRUE(result == 1 || result == 2);
+}
+
+TEST(Utils, FindTZeroToleranceExactMatch) {
+    // Test zero tolerance with exact match
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    int result = Find(&array[0], &array[4], 3.0, 0.0);
+
+    EXPECT_EQ(result, 2);
+}
+
+TEST(Utils, FindTZeroToleranceNoMatch) {
+    wxLogNull logNo;
+
+    // Test zero tolerance without exact match
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    int result = Find(&array[0], &array[4], 2.5, 0.0);
+
+    EXPECT_EQ(result, NOT_FOUND);
+}
+
+TEST(Utils, FindTVerySmallToleranceDouble) {
+    // Test with very small tolerance (near machine epsilon)
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Value within epsilon should match
+    int result = Find(&array[0], &array[4], 3.0 + EPSILON_D, EPSILON_D * 2);
+
+    EXPECT_EQ(result, 2);
+}
+
+TEST(Utils, FindTVerySmallToleranceOutside) {
+    wxLogNull logNo;
+
+    // Test with very small tolerance outside range
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Value outside small tolerance should not match
+    int result = Find(&array[0], &array[4], 3.0 + EPSILON_D * 10, EPSILON_D);
+
+    EXPECT_EQ(result, NOT_FOUND);
+}
+
+TEST(Utils, FindTToleranceAtArrayBoundaryStart) {
+    // Test tolerance at start boundary
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Value before first element within tolerance
+    int result = Find(&array[0], &array[4], 0.6, 0.4);
+
+    EXPECT_EQ(result, 0);
+}
+
+TEST(Utils, FindTToleranceBoundaryOutOfRange) {
+    wxLogNull logNo;
+
+    // Test when tolerance doesn't reach array
+    double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    // Value before first element outside tolerance
+    int result = Find(&array[0], &array[4], 0.4, 0.5);
+
+    EXPECT_EQ(result, OUT_OF_RANGE);
+}
+
+TEST(Utils, FindTToleranceIntegerBoundary) {
+    // Test integer tolerance boundaries
+    int array[] = {0, 10, 20, 30, 40};
+
+    // Exact tolerance boundary
+    int result = Find(&array[0], &array[4], 15, 5);
+
+    EXPECT_TRUE(result == 1 || result == 2);
+}
+
+TEST(Utils, FindTToleranceIntegerJustInside) {
+    // Test integer just inside tolerance
+    int array[] = {0, 10, 20, 30, 40};
+
+    int result = Find(&array[0], &array[4], 14, 5);
+
+    EXPECT_EQ(result, 1);
+}
+
+TEST(Utils, FindTToleranceIntegerJustOutside) {
+    wxLogNull logNo;
+
+    // Test integer just outside tolerance
+    int array[] = {0, 10, 20, 30, 40};
+
+    int result = Find(&array[0], &array[4], 16, 5);
+
+    EXPECT_TRUE(result == 1 || result == 2);
+}

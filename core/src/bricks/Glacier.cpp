@@ -47,7 +47,13 @@ bool Glacier::IsValid() const {
         wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
     }
-    return Brick::IsValid();
+    for (const auto& process : _processes) {
+        if (!process->IsValid()) {
+            return false;
+        }
+    }
+    // We skip water container validation as glaciers may not have water processes.
+    return true;
 }
 
 WaterContainer* Glacier::GetIceContainer() const {

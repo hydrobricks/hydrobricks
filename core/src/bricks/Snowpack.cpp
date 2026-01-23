@@ -36,7 +36,13 @@ bool Snowpack::IsValid() const {
     if (!_snow->IsValid()) {
         return false;
     }
-    return Brick::IsValid();
+    for (const auto& process : _processes) {
+        if (!process->IsValid()) {
+            return false;
+        }
+    }
+    // We do not validate the water container here because it may not be used in all configurations.
+    return true;
 }
 
 WaterContainer* Snowpack::GetSnowContainer() const {

@@ -32,9 +32,9 @@ class Snowpack : public SurfaceComponent {
     void AttachFluxIn(Flux* flux) override;
 
     /**
-     * @copydoc Brick::IsOk()
+     * @copydoc Brick::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * Get the snow container.

@@ -15,8 +15,8 @@ void ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(SettingsModel* mo
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDay::IsOk() const {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDay::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {

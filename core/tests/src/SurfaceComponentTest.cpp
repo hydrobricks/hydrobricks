@@ -88,7 +88,7 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
     // Upcast unique_ptr<TimeSeriesUniform> to unique_ptr<TimeSeries>
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));

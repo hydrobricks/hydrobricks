@@ -272,3 +272,10 @@ double Process::GetSumChangeRatesOtherProcesses() const {
 
     return sumOtherProcesses;
 }
+
+void Process::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("Process validation failed. Check that all required properties are correctly defined."));
+    }
+}
+

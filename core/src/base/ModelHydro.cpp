@@ -861,10 +861,14 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     }
 }
 
-bool ModelHydro::IsOk() const {
-    if (!_subBasin->IsOk()) return false;
+bool ModelHydro::IsValid() const {
+    if (!_subBasin->IsValid()) return false;
 
     return true;
+}
+
+void ModelHydro::Validate() const {
+    _subBasin->Validate();
 }
 
 bool ModelHydro::ForcingLoaded() {

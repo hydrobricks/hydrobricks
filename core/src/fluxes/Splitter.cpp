@@ -53,3 +53,10 @@ const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitter
 
     throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
 }
+
+void Splitter::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("Splitter validation failed. Check that all required properties are correctly defined."));
+    }
+}
+

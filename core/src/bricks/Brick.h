@@ -98,9 +98,17 @@ class Brick : public wxObject {
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    [[nodiscard]] virtual bool IsOk() const;
+    [[nodiscard]] virtual bool IsValid() const;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Define if the brick needs to be handled by the solver.

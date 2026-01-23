@@ -4,7 +4,7 @@ SplitterRain::SplitterRain()
     : Splitter(),
       _precipitation(nullptr) {}
 
-bool SplitterRain::IsOk() const {
+bool SplitterRain::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("SplitterRain should have 1 output."));
         return false;

@@ -13,7 +13,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _parent(brick),
       _overflow(nullptr) {}
 
-bool WaterContainer::IsOk() const {
+bool WaterContainer::IsValid() const {
     if (_inputs.empty()) {
         return true;
     }
@@ -27,6 +27,12 @@ bool WaterContainer::IsOk() const {
     wxLogError(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName());
 
     return false;
+}
+
+void WaterContainer::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(wxString::Format(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName()));
+    }
 }
 
 void WaterContainer::SubtractAmountFromDynamicContentChange(double change) {

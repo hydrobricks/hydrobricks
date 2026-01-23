@@ -9,9 +9,9 @@ class FluxSimple : public Flux {
     explicit FluxSimple();
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::GetAmount()

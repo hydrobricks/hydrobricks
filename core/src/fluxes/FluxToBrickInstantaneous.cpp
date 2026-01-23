@@ -6,7 +6,7 @@
 FluxToBrickInstantaneous::FluxToBrickInstantaneous(Brick* brick)
     : FluxToBrick(brick) {}
 
-bool FluxToBrickInstantaneous::IsOk() const {
+bool FluxToBrickInstantaneous::IsValid() const {
     return true;
 }
 

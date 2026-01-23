@@ -109,22 +109,28 @@ void SubBasin::SaveAsInitialState() {
     }
 }
 
-bool SubBasin::IsOk() const {
+bool SubBasin::IsValid() const {
     if (_hydroUnits.empty()) {
         wxLogError(_("The sub basin has no hydro unit attached."));
         return false;
     }
     for (const auto& unit : _hydroUnits) {
-        if (!unit->IsOk()) return false;
+        if (!unit->IsValid()) return false;
     }
     for (const auto& brick : _bricks) {
-        if (!brick->IsOk()) return false;
+        if (!brick->IsValid()) return false;
     }
     for (const auto& splitter : _splitters) {
-        if (!splitter->IsOk()) return false;
+        if (!splitter->IsValid()) return false;
     }
 
     return true;
+}
+
+void SubBasin::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("SubBasin validation failed. Check that hydro units, bricks, and splitters are properly configured."));
+    }
 }
 
 void SubBasin::AddBrick(std::unique_ptr<Brick> brick) {

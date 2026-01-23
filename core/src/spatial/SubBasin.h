@@ -112,14 +112,22 @@ class SubBasin : public wxObject {
     void SaveAsInitialState();
 
     /**
-     * Check if the sub-basin is properly configured.
+     * Check if the sub basin is correctly defined.
      *
-     * @return True if everything is ok, false otherwise.
+     * @return True if everything is correctly defined, false otherwise.
      */
-    [[nodiscard]] bool IsOk() const;
+    [[nodiscard]] bool IsValid() const;
 
     /**
-     * Add a brick to the sub-basin.
+     * Validate that the sub basin is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
+    /**
+     * Add a brick to the sub basin.
      *
      * @param brick The brick to add (ownership transferred).
      */

@@ -12,9 +12,9 @@ class ProcessET : public Process {
     ~ProcessET() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::GetConnectionCount()

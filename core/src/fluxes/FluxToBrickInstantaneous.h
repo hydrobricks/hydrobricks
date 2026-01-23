@@ -11,9 +11,9 @@ class FluxToBrickInstantaneous : public FluxToBrick {
     explicit FluxToBrickInstantaneous(Brick* brick);
 
     /**
-     * @copydoc Flux::IsOk()
+     * @copydoc Flux::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Flux::IsInstantaneous()

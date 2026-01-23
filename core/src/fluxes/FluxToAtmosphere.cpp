@@ -3,7 +3,7 @@
 FluxToAtmosphere::FluxToAtmosphere()
     : Flux() {}
 
-bool FluxToAtmosphere::IsOk() const {
+bool FluxToAtmosphere::IsValid() const {
     return true;
 }
 

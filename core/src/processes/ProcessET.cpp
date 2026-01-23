@@ -6,7 +6,7 @@
 ProcessET::ProcessET(WaterContainer* container)
     : Process(container) {}
 
-bool ProcessET::IsOk() const {
+bool ProcessET::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("ET should have a single output."));
         return false;

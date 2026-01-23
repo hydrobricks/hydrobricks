@@ -18,8 +18,8 @@ void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsMod
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDayAspect::IsOk() const {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDayAspect::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -28,11 +28,8 @@ bool ProcessMeltDegreeDayAspect::IsOk() const {
     if (_degreeDayFactor == nullptr) {
         return false;
     }
-    if (_meltingTemperature == nullptr) {
-        return false;
-    }
 
-    return true;
+    return _meltingTemperature != nullptr;
 }
 
 void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {

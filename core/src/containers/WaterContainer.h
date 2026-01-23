@@ -13,9 +13,19 @@ class WaterContainer : public wxObject {
     ~WaterContainer() override = default;
 
     /**
-     * Check if the water container is ok.
+     * Check if the water container is correctly defined.
+     *
+     * @return true if everything is correctly defined.
      */
-    virtual bool IsOk() const;
+    virtual bool IsValid() const;
+
+    /**
+     * Validate that the water container is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Subtract the amount of water from the dynamic content change.

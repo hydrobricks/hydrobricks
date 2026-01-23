@@ -264,9 +264,17 @@ class HydroUnit : public wxObject {
     /**
      * Check if the hydro unit is properly configured.
      *
-     * @return True if everything is ok, false otherwise.
+     * @return True if everything is correctly defined, false otherwise.
      */
-    [[nodiscard]] bool IsOk() const;
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate that the hydro unit is properly configured.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
 
     /**
      * Change the area fraction of a land cover in the hydro unit.

@@ -205,12 +205,12 @@ Splitter* HydroUnit::TryGetSplitter(const string& name) const {
     return it != _splitterMap.end() ? it->second : nullptr;
 }
 
-bool HydroUnit::IsOk() const {
+bool HydroUnit::IsValid() const {
     for (const auto& brick : _bricks) {
-        if (!brick->IsOk()) return false;
+        if (!brick->IsValid()) return false;
     }
     for (const auto& splitter : _splitters) {
-        if (!splitter->IsOk()) return false;
+        if (!splitter->IsValid()) return false;
     }
     if (_area <= 0) {
         wxLogError(_("The hydro unit area has not been defined."));
@@ -243,6 +243,12 @@ bool HydroUnit::IsOk() const {
     }
 
     return true;
+}
+
+void HydroUnit::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError(_("HydroUnit validation failed. Check area, bricks, splitters, and land cover fractions."));
+    }
 }
 
 bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {

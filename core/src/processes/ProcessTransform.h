@@ -19,9 +19,9 @@ class ProcessTransform : public Process {
     static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::GetConnectionCount()

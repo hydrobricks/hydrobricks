@@ -7,7 +7,7 @@ SplitterSnowRain::SplitterSnowRain()
       _transitionStart(nullptr),
       _transitionEnd(nullptr) {}
 
-bool SplitterSnowRain::IsOk() const {
+bool SplitterSnowRain::IsValid() const {
     if (_outputs.size() != 2) {
         wxLogError(_("SplitterSnowRain should have 2 outputs."));
         return false;

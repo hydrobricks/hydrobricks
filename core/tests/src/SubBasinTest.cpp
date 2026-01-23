@@ -35,12 +35,12 @@ TEST(SubBasin, EmptySubBasinIsNotOk) {
 
     SubBasin subBasin;
 
-    EXPECT_FALSE(subBasin.IsOk());
+    EXPECT_FALSE(subBasin.IsValid());
 }
 
 TEST(SubBasin, SubBasinIsOk) {
     SubBasin subBasin;
     subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
 
-    EXPECT_TRUE(subBasin.IsOk());
+    EXPECT_TRUE(subBasin.IsValid());
 }

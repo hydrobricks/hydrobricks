@@ -8,7 +8,7 @@
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
 
-bool ProcessLateral::IsOk() const {
+bool ProcessLateral::IsValid() const {
     if (_outputs.size() == 0) {
         wxLogError(_("Lateral processes need at least 1 connection."));
         return false;

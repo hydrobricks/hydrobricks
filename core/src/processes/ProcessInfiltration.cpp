@@ -7,7 +7,7 @@ ProcessInfiltration::ProcessInfiltration(WaterContainer* container)
     : Process(container),
       _targetBrick(nullptr) {}
 
-bool ProcessInfiltration::IsOk() const {
+bool ProcessInfiltration::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("An infiltration process should have a single output."));
         return false;

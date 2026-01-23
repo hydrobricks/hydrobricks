@@ -47,7 +47,15 @@ class ModelHydro : public wxObject {
      *
      * @return true if everything is correctly defined.
      */
-    [[nodiscard]] bool IsOk() const;
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
 
     /**
      * Check if the forcing data were loaded.

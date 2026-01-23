@@ -42,12 +42,12 @@ void Glacier::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Glacier::IsOk() const {
-    if (!_ice->IsOk()) {
+bool Glacier::IsValid() const {
+    if (!_ice->IsValid()) {
         wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
         return false;
     }
-    return Brick::IsOk();
+    return Brick::IsValid();
 }
 
 WaterContainer* Glacier::GetIceContainer() const {

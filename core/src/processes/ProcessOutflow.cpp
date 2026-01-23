@@ -6,11 +6,11 @@
 ProcessOutflow::ProcessOutflow(WaterContainer* container)
     : Process(container) {}
 
-void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
-    // Nothing to register
+void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+    // No forcing or parameters
 }
 
-bool ProcessOutflow::IsOk() const {
+bool ProcessOutflow::IsValid() const {
     if (_outputs.size() != 1) {
         wxLogError(_("An outflow should have a single output."));
         return false;

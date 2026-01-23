@@ -33,9 +33,9 @@ class Glacier : public LandCover {
     void AttachFluxIn(Flux* flux) override;
 
     /**
-     * @copydoc Brick::IsOk()
+     * @copydoc Brick::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * Get the ice container of the glacier.

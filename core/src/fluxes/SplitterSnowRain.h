@@ -10,9 +10,9 @@ class SplitterSnowRain : public Splitter {
     explicit SplitterSnowRain();
 
     /**
-     * @copydoc Splitter::IsOk()
+     * @copydoc Splitter::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Splitter::SetParameters()

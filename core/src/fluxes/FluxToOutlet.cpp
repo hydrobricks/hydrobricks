@@ -3,7 +3,7 @@
 FluxToOutlet::FluxToOutlet()
     : Flux() {}
 
-bool FluxToOutlet::IsOk() const {
+bool FluxToOutlet::IsValid() const {
     return true;
 }
 

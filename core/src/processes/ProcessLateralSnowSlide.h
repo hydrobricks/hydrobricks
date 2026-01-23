@@ -22,9 +22,9 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     ~ProcessLateralSnowSlide() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * Register the process parameters and forcing in the settings model.

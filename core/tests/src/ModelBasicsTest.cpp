@@ -66,7 +66,7 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
     ModelHydro model(&subBasin);
     model.Initialize(_model1, basinSettings);
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 }
 
 TEST_F(ModelBasics, Model1RunsCorrectly) {
@@ -95,7 +95,7 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
     ModelHydro model(&subBasin);
     model.Initialize(_model2, basinSettings);
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 }
 
 TEST_F(ModelBasics, Model2RunsCorrectly) {
@@ -189,7 +189,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
@@ -225,7 +225,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
@@ -261,7 +261,7 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
@@ -293,7 +293,7 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
@@ -325,7 +325,7 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
@@ -355,7 +355,7 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();

@@ -4,8 +4,8 @@ FluxForcing::FluxForcing()
     : Flux(),
       _forcing(nullptr) {}
 
-bool FluxForcing::IsOk() const {
-    return true;
+bool FluxForcing::IsValid() const {
+    return _forcing != nullptr;
 }
 
 double FluxForcing::GetAmount() {

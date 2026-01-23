@@ -12,9 +12,9 @@ class ProcessInfiltration : public Process {
     ~ProcessInfiltration() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    [[nodiscard]] bool IsOk() const override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::NeedsTargetBrickLinking()

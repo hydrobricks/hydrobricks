@@ -32,11 +32,11 @@ void Snowpack::AttachFluxIn(Flux* flux) {
     }
 }
 
-bool Snowpack::IsOk() const {
-    if (!_snow->IsOk()) {
+bool Snowpack::IsValid() const {
+    if (!_snow->IsValid()) {
         return false;
     }
-    return Brick::IsOk();
+    return Brick::IsValid();
 }
 
 WaterContainer* Snowpack::GetSnowContainer() const {

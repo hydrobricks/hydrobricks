@@ -3,7 +3,7 @@
 SplitterMultiFluxes::SplitterMultiFluxes()
     : Splitter() {}
 
-bool SplitterMultiFluxes::IsOk() const {
+bool SplitterMultiFluxes::IsValid() const {
     if (_outputs.empty()) {
         wxLogError(_("SplitterMultiFluxes has no input."));
         return false;

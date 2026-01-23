@@ -37,8 +37,8 @@ void Glacier::AttachFluxIn(Flux* flux) {
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
-        throw ShouldNotHappen(wxString::Format("Glacier::AttachFluxIn - Unexpected flux type: %d",
-                                                static_cast<int>(flux->GetType())));
+        throw ShouldNotHappen(
+            wxString::Format("Glacier::AttachFluxIn - Unexpected flux type: %d", static_cast<int>(flux->GetType())));
     }
 }
 
@@ -151,4 +151,3 @@ void Glacier::SurfaceComponentAdded(SurfaceComponent* brick) {
 bool Glacier::HasIce() const {
     return _ice->IsNotEmpty();
 }
-

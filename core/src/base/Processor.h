@@ -87,7 +87,7 @@ class Processor : public wxObject {
 
   protected:
     std::unique_ptr<Solver> _solver;  // owning
-    ModelHydro* _model;  // non-owning reference
+    ModelHydro* _model;               // non-owning reference
     int _solvableConnectionCount;
     int _directConnectionCount;
     vecDoublePt _stateVariableChanges;

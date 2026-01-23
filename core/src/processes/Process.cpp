@@ -28,26 +28,24 @@ Process::Process(WaterContainer* container)
     : _container(container) {}
 
 static string GetValidProcessTypes() {
-    static const vector<string> validTypes = {
-        "outflow:linear",
-        "outflow:percolation",
-        "percolation",  // Synonyms
-        "outflow:direct",
-        "outflow:rest_direct",
-        "outflow:overflow",
-        "overflow",  // Synonyms
-        "transformation:snow_ice_constant",
-        "transform:snow_ice_constant",  // Synonyms
-        "transformation:snow_ice_swat",
-        "transform:snow_ice_swat",  // Synonyms
-        "transport:snow_slide",
-        "runoff:socont",
-        "infiltration:socont",
-        "et:socont",
-        "melt:degree_day",
-        "melt:degree_day_aspect",
-        "melt:temperature_index"
-    };
+    static const vector<string> validTypes = {"outflow:linear",
+                                              "outflow:percolation",
+                                              "percolation",  // Synonyms
+                                              "outflow:direct",
+                                              "outflow:rest_direct",
+                                              "outflow:overflow",
+                                              "overflow",  // Synonyms
+                                              "transformation:snow_ice_constant",
+                                              "transform:snow_ice_constant",  // Synonyms
+                                              "transformation:snow_ice_swat",
+                                              "transform:snow_ice_swat",  // Synonyms
+                                              "transport:snow_slide",
+                                              "runoff:socont",
+                                              "infiltration:socont",
+                                              "et:socont",
+                                              "melt:degree_day",
+                                              "melt:degree_day_aspect",
+                                              "melt:temperature_index"};
 
     string suggestions = "Valid process types: ";
     for (size_t i = 0; i < validTypes.size(); ++i) {
@@ -275,7 +273,7 @@ double Process::GetSumChangeRatesOtherProcesses() const {
 
 void Process::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("Process validation failed. Check that all required properties are correctly defined."));
+        throw ModelConfigError(
+            _("Process validation failed. Check that all required properties are correctly defined."));
     }
 }
-

@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
-#include <memory>
 
 /**
  * Model: simple model without any brick

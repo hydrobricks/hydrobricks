@@ -13,12 +13,12 @@
  * Enumeration of brick categories.
  */
 enum class BrickCategory {
-    Snowpack,           ///< Snowpack brick
-    Glacier,            ///< Glacier brick
-    Urban,              ///< Urban land cover
-    Vegetation,         ///< Vegetation land cover
-    GenericLandCover,   ///< Generic land cover
-    Unknown             ///< Unknown or unspecified brick type
+    Snowpack,          ///< Snowpack brick
+    Glacier,           ///< Glacier brick
+    Urban,             ///< Urban land cover
+    Vegetation,        ///< Vegetation land cover
+    GenericLandCover,  ///< Generic land cover
+    Unknown            ///< Unknown or unspecified brick type
 };
 
 class Brick : public wxObject {
@@ -315,9 +315,9 @@ class Brick : public wxObject {
     string _name;
     bool _needsSolver;
     BrickCategory _category;
-    std::unique_ptr<WaterContainer> _water;  // owning
+    std::unique_ptr<WaterContainer> _water;            // owning
     std::vector<std::unique_ptr<Process>> _processes;  // owning
-    HydroUnit* _hydroUnit;  // non-owning back-reference
+    HydroUnit* _hydroUnit;                             // non-owning back-reference
 };
 
 #endif  // HYDROBRICKS_BRICK_H

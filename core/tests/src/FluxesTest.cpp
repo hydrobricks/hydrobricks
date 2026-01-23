@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ModelHydro.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
-#include <memory>
 
 /**
  * Model: simple snowpack model

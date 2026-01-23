@@ -1,9 +1,10 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
+#include <wx/string.h>
+
 #include <stdexcept>
 #include <string>
-#include <wx/string.h>
 
 /**
  * @file Exceptions.h
@@ -105,7 +106,6 @@ class ModelConfigError : public HydrobricksError {
 
     virtual ~ModelConfigError() = default;
 };
-
 
 // ============================================================================
 // Internal Logic Errors (std::logic_error base) - Programmer's fault

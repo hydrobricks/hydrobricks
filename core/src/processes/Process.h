@@ -267,7 +267,7 @@ class Process : public wxObject {
 
   protected:
     string _name;
-    WaterContainer* _container;  // non-owning reference
+    WaterContainer* _container;                   // non-owning reference
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 
     /**

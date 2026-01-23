@@ -129,7 +129,8 @@ bool SubBasin::IsValid(bool checkProcesses) const {
 
 void SubBasin::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("SubBasin validation failed. Check that hydro units, bricks, and splitters are properly configured."));
+        throw ModelConfigError(
+            _("SubBasin validation failed. Check that hydro units, bricks, and splitters are properly configured."));
     }
 }
 

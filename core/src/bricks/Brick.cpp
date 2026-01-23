@@ -76,7 +76,8 @@ bool Brick::IsValid(bool checkProcesses) const {
 
 void Brick::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(wxString::Format(_("The brick %s validation failed. Check that all processes are properly configured."), _name));
+        throw ModelConfigError(wxString::Format(
+            _("The brick %s validation failed. Check that all processes are properly configured."), _name));
     }
 }
 

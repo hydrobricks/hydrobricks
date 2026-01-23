@@ -306,10 +306,10 @@ class WaterContainer : public wxObject {
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]
     double _initialState;          // [mm]
-    const float* _capacity;  // non-owning reference
+    const float* _capacity;        // non-owning reference
     bool _infiniteStorage;
-    Brick* _parent;  // non-owning reference
-    Process* _overflow;  // non-owning reference
+    Brick* _parent;         // non-owning reference
+    Process* _overflow;     // non-owning reference
     vector<Flux*> _inputs;  // non-owning references to fluxes owned by processes
 };
 

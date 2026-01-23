@@ -1,9 +1,9 @@
 #ifndef HYDROBRICKS_SETTINGS_MODEL_H
 #define HYDROBRICKS_SETTINGS_MODEL_H
 
-#include <memory>
-
 #include <yaml-cpp/yaml.h>
+
+#include <memory>
 
 #include "Includes.h"
 #include "Parameter.h"
@@ -746,9 +746,9 @@ class SettingsModel : public wxObject {
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
     TimerSettings _timer;
-    ModelStructure* _selectedStructure;  // non-owning reference
-    BrickSettings* _selectedBrick;  // non-owning reference
-    ProcessSettings* _selectedProcess;  // non-owning reference
+    ModelStructure* _selectedStructure;   // non-owning reference
+    BrickSettings* _selectedBrick;        // non-owning reference
+    ProcessSettings* _selectedProcess;    // non-owning reference
     SplitterSettings* _selectedSplitter;  // non-owning reference
 
     bool LogAll(const YAML::Node& settings);

@@ -5,10 +5,7 @@
 
 ContentType ContentTypeFromString(const string& typeStr) {
     static const std::unordered_map<string, ContentType> typeMap = {
-        {"water", ContentType::Water},
-        {"snow", ContentType::Snow},
-        {"ice", ContentType::Ice}
-    };
+        {"water", ContentType::Water}, {"snow", ContentType::Snow}, {"ice", ContentType::Ice}};
 
     auto it = typeMap.find(typeStr);
     if (it != typeMap.end()) {
@@ -18,11 +15,7 @@ ContentType ContentTypeFromString(const string& typeStr) {
 }
 
 vector<string> GetValidContentTypes() {
-    static const vector<string> validTypes = {
-        "water",
-        "snow",
-        "ice"
-    };
+    static const vector<string> validTypes = {"water", "snow", "ice"};
     return validTypes;
 }
 

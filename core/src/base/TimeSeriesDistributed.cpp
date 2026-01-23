@@ -91,8 +91,8 @@ bool TimeSeriesDistributed::IsValid() const {
     // Check that all data elements are valid
     for (size_t i = 0; i < _data.size(); ++i) {
         if (!_data[i]->IsValid()) {
-            wxLogError(_("TimeSeriesDistributed: Data at index %d (unit ID %d) is not valid."),
-                       static_cast<int>(i), _unitIds[i]);
+            wxLogError(_("TimeSeriesDistributed: Data at index %d (unit ID %d) is not valid."), static_cast<int>(i),
+                       _unitIds[i]);
             return false;
         }
     }
@@ -101,8 +101,8 @@ bool TimeSeriesDistributed::IsValid() const {
     for (size_t i = 0; i < _unitIds.size(); ++i) {
         for (size_t j = i + 1; j < _unitIds.size(); ++j) {
             if (_unitIds[i] == _unitIds[j]) {
-                wxLogError(_("TimeSeriesDistributed: Duplicate unit ID %d found at indices %d and %d."),
-                           _unitIds[i], static_cast<int>(i), static_cast<int>(j));
+                wxLogError(_("TimeSeriesDistributed: Duplicate unit ID %d found at indices %d and %d."), _unitIds[i],
+                           static_cast<int>(i), static_cast<int>(j));
                 return false;
             }
         }
@@ -113,9 +113,8 @@ bool TimeSeriesDistributed::IsValid() const {
 
 void TimeSeriesDistributed::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(
-            _("TimeSeriesDistributed validation failed. DataCount: %d, UnitIdCount: %d"),
-            static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
+        wxString msg = wxString::Format(_("TimeSeriesDistributed validation failed. DataCount: %d, UnitIdCount: %d"),
+                                        static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
         throw ModelConfigError(msg);
     }
 
@@ -124,9 +123,8 @@ void TimeSeriesDistributed::Validate() const {
         try {
             _data[i]->Validate();
         } catch (const ModelConfigError& e) {
-            wxString msg = wxString::Format(
-                _("TimeSeriesDistributed validation failed for unit ID %d: %s"),
-                _unitIds[i], e.what());
+            wxString msg = wxString::Format(_("TimeSeriesDistributed validation failed for unit ID %d: %s"),
+                                            _unitIds[i], e.what());
             throw ModelConfigError(msg);
         }
     }

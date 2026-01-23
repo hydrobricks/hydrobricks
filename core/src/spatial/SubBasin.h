@@ -310,15 +310,15 @@ class SubBasin : public wxObject {
   protected:
     double _area;  // m2
     double _outletTotal;
-    std::vector<std::unique_ptr<Brick>> _bricks;  // owning: SubBasin-level bricks
-    std::unordered_map<string, Brick*> _brickMap;  // non-owning views into _bricks
-    std::vector<std::unique_ptr<Splitter>> _splitters;  // owning: SubBasin-level splitters
-    std::unordered_map<string, Splitter*> _splitterMap;  // non-owning views into _splitters
+    std::vector<std::unique_ptr<Brick>> _bricks;          // owning: SubBasin-level bricks
+    std::unordered_map<string, Brick*> _brickMap;         // non-owning views into _bricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;    // owning: SubBasin-level splitters
+    std::unordered_map<string, Splitter*> _splitterMap;   // non-owning views into _splitters
     std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;  // owning
-    std::unordered_map<int, HydroUnit*> _hydroUnitMap;  // non-owning views into _hydroUnits
-    std::vector<Connector*> _inConnectors;  // non-owning: lifetime managed externally
-    std::vector<Connector*> _outConnectors;  // non-owning: lifetime managed externally
-    std::vector<Flux*> _outletFluxes;  // non-owning: lifetime managed by process owners
+    std::unordered_map<int, HydroUnit*> _hydroUnitMap;    // non-owning views into _hydroUnits
+    std::vector<Connector*> _inConnectors;                // non-owning: lifetime managed externally
+    std::vector<Connector*> _outConnectors;               // non-owning: lifetime managed externally
+    std::vector<Flux*> _outletFluxes;                     // non-owning: lifetime managed by process owners
 };
 
 #endif

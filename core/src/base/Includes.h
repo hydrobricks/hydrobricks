@@ -107,8 +107,8 @@ typedef struct {
 // Own classes
 //---------------------------------
 
-#include "Exceptions.h"
 #include "Enums.h"
+#include "Exceptions.h"
 #include "GlobVars.h"
 #include "TypeDefs.h"
 #include "Utils.h"

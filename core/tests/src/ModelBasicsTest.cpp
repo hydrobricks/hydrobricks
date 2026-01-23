@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <wx/stdpaths.h>
+
 #include <memory>
 
 #include "ModelHydro.h"

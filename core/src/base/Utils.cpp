@@ -1,9 +1,10 @@
 #include "Utils.h"
 
-#include <algorithm>
 #include <wx/ffile.h>
 #include <wx/fileconf.h>
 #include <wx/stdpaths.h>
+
+#include <algorithm>
 
 // New centralized date/time utilities
 #include "UtilsDateTime.h"

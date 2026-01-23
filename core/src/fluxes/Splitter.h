@@ -116,7 +116,7 @@ class Splitter : public wxObject {
 
   protected:
     string _name;
-    vector<Flux*> _inputs;  // non-owning: owned by processes
+    vector<Flux*> _inputs;                        // non-owning: owned by processes
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 };
 

@@ -7,7 +7,6 @@
 #include "Enums.h"
 #include "Includes.h"
 
-
 /**
  * Date/time conversion utilities centralizing MJD/JD/chrono operations.
  *

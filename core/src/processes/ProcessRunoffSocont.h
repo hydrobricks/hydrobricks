@@ -32,7 +32,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
 
   protected:
     float _slope;           // [m/m]
-    const float* _beta;           // []
+    const float* _beta;     // []
     double* _areaFraction;  // []
     double _areaUnit;       // [m²]
     double _exponent;

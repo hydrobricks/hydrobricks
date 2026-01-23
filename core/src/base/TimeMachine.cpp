@@ -134,10 +134,8 @@ bool TimeMachine::IsValid() const {
 void TimeMachine::Validate() const {
     if (!IsValid()) {
         wxString msg = wxString::Format(
-            _("TimeMachine validation failed. Start: %f, End: %f, TimeStep: %d, TimeStepInDays: %f"),
-            _start, _end, _timeStep, _timeStepInDays);
+            _("TimeMachine validation failed. Start: %f, End: %f, TimeStep: %d, TimeStepInDays: %f"), _start, _end,
+            _timeStep, _timeStepInDays);
         throw ModelConfigError(msg);
     }
 }
-
-

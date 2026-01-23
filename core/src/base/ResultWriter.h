@@ -102,4 +102,3 @@ class ResultWriter : public wxObject {
 };
 
 #endif  // HYDROBRICKS_RESULT_WRITER_H
-

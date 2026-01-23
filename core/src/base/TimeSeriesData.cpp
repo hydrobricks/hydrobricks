@@ -88,7 +88,7 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
             break;
         default:
             throw NotImplemented(wxString::Format("TimeSeriesDataRegular::SetCursorToDate - Time unit %d not supported",
-                                                   static_cast<int>(_timeStepUnit)));
+                                                  static_cast<int>(_timeStepUnit)));
     }
 
     return true;
@@ -137,8 +137,8 @@ bool TimeSeriesDataRegular::IsValid() const {
 void TimeSeriesDataRegular::Validate() const {
     if (!IsValid()) {
         wxString msg = wxString::Format(
-            _("TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d"),
-            _start, _end, _timeStep, static_cast<int>(_values.size()));
+            _("TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d"), _start,
+            _end, _timeStep, static_cast<int>(_values.size()));
         throw ModelConfigError(msg);
     }
 }
@@ -226,9 +226,8 @@ bool TimeSeriesDataIrregular::IsValid() const {
 
 void TimeSeriesDataIrregular::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(
-            _("TimeSeriesDataIrregular validation failed. DateCount: %d, ValueCount: %d"),
-            static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        wxString msg = wxString::Format(_("TimeSeriesDataIrregular validation failed. DateCount: %d, ValueCount: %d"),
+                                        static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
         throw ModelConfigError(msg);
     }
 }

@@ -37,9 +37,22 @@ bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin
 
 bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
     try {
+        // Validate settings before building model
+        if (!modelSettings.IsValid()) {
+            wxLogError(_("Model settings are not valid."));
+            return false;
+        }
+
         BuildModelStructure(modelSettings);
 
         _timer.Initialize(modelSettings.GetTimerSettings());
+
+        // Validate timer after initialization
+        if (!_timer.IsValid()) {
+            wxLogError(_("Timer initialization failed validation."));
+            return false;
+        }
+
         _processor.Initialize(modelSettings.GetSolverSettings());
         if (modelSettings.LogAll()) {
             _logger.RecordFractions();
@@ -48,6 +61,13 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
         if (!_subBasin->AssignFractions(basinSettings)) {
             return false;
         }
+
+        // Validate sub-basin after full setup
+        if (!_subBasin->IsValid()) {
+            wxLogError(_("Sub-basin failed validation after initialization."));
+            return false;
+        }
+
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
         wxLogError(_("An exception occurred during model initialization: %s."), e.what());
@@ -944,6 +964,12 @@ double ModelHydro::GetTotalGlacierStorageChanges() const {
 }
 
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
+    // Validate time series before adding
+    if (!timeSeries->IsValid()) {
+        wxLogError(_("Time series is not valid and cannot be added to the model."));
+        return false;
+    }
+
     for (auto& ts : _timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {
             wxLogError(_("The data variable is already linked to the model."));
@@ -1007,6 +1033,12 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
             if (unit->HasForcing(type)) {
                 Forcing* forcing = unit->GetForcing(type);
                 forcing->AttachTimeSeriesData(timeSeries->GetDataPointer(unit->GetId()));
+
+                // Validate forcing after attaching data
+                if (!forcing->IsValid()) {
+                    wxLogError(_("Forcing is not valid after attaching time series data for unit %d."), unit->GetId());
+                    return false;
+                }
             }
         }
     }

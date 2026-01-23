@@ -29,6 +29,12 @@ bool ActionsManager::AddAction(Action* action) {
         return false;
     }
 
+    // Validate action after initialization
+    if (!action->IsValid()) {
+        wxLogError(_("Action is not valid and cannot be added to the manager."));
+        return false;
+    }
+
     int actionIndex = static_cast<int>(_actions.size());
     _actions.push_back(action);
 

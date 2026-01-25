@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
 import HydroErr
 import numpy as np
@@ -14,75 +15,112 @@ from hydrobricks.parameters import ParameterSet
 from hydrobricks.trainer import evaluate
 from hydrobricks.models.model_settings import ModelSettings
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 class Model(ABC):
-    """Base class for the models"""
+    """Base abstract class for hydrological models"""
 
     @abstractmethod
-    def __init__(self, name: str | None = None, **kwargs):
-        self.name = name
-        self.model = ModelHydro()
-        self.spatial_structure = None
-        self.allowed_kwargs = {
+    def __init__(self, name: str | None = None, **kwargs: Any) -> None:
+        """
+        Initialize the Model base class.
+
+        Parameters
+        ----------
+        name
+            Name identifier for the model instance. Default: None
+        **kwargs
+            Additional keyword arguments for model configuration.
+            Allowed keys: 'solver', 'record_all', 'land_cover_types', 'land_cover_names'
+
+        Raises
+        ------
+        TypeError
+            If unsupported keyword arguments are provided.
+        """
+        self.name: str | None = name
+        self.model: ModelHydro = ModelHydro()
+        self.spatial_structure: HydroUnits | None = None
+        self.allowed_kwargs: set[str] = {
             'solver',
             'record_all',
             'land_cover_types',
             'land_cover_names'
         }
-        self._is_initialized = False
+        self._is_initialized: bool = False
 
         # Default options
-        self.options = dict()
-        self.solver = 'heun_explicit'
-        self.record_all = False
-        self.land_cover_types = ['ground']
-        self.land_cover_names = ['ground']
-        self.allowed_land_cover_types = ['ground']
+        self.options: dict[str, Any] = dict()
+        self.solver: str = 'heun_explicit'
+        self.record_all: bool = False
+        self.land_cover_types: list[str] = ['ground']
+        self.land_cover_names: list[str] = ['ground']
+        self.allowed_land_cover_types: list[str] = ['ground']
 
         self._set_basic_options(kwargs)
 
         # Structure
-        self.structure = dict()
-        self.parameter_aliases = dict()
-        self.parameter_constraints = []
+        self.structure: dict[str, Any] = dict()
+        self.parameter_aliases: dict[str, str] = dict()
+        self.parameter_constraints: list[tuple[str, ...]] = []
 
         # Setting base settings
-        self.settings = ModelSettings(
+        self.settings: ModelSettings = ModelSettings(
             solver=self.solver,
             record_all=self.record_all
         )
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """Clean up resources when model is deleted."""
         self.cleanup()
 
     @property
-    def name(self):
+    def name(self) -> str | None:
+        """Get the model name."""
         return self._name
 
     @name.setter
-    def name(self, name: str):
+    def name(self, name: str | None) -> None:
+        """Set the model name."""
         self._name = name
 
     def setup(
             self,
             spatial_structure: HydroUnits,
-            output_path: str,
+            output_path: str | Path,
             start_date: str,
             end_date: str | None = None
-    ):
+    ) -> None:
         """
-        Setup and run the model.
+        Setup and initialize the model for simulation.
 
         Parameters
         ----------
         spatial_structure
-            The spatial structure of the catchment.
+            The spatial structure of the catchment (hydro units).
         output_path
-            Path to save the results.
+            Path to directory where results will be saved.
         start_date
-            Starting date of the computation
+            Starting date of the computation (format: 'YYYY-MM-DD').
         end_date
-            Ending date of the computation
+            Ending date of the computation (format: 'YYYY-MM-DD').
+            If None, uses last date in time series. Default: None
+
+        Raises
+        ------
+        RuntimeError
+            If the model has already been initialized.
+        TypeError
+            If arguments have incorrect types.
+        FileNotFoundError
+            If the output path cannot be created.
+
+        Examples
+        --------
+        >>> model = SomeModel()
+        >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
         """
         if self._is_initialized:
             raise RuntimeError('The model has already been initialized. '

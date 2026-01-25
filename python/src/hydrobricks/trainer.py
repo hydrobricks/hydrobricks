@@ -2,7 +2,7 @@ from __future__ import annotations
 import importlib
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -16,37 +16,76 @@ if TYPE_CHECKING:
 
 
 class SpotpySetup:
+    """Setup class for SPOTPY optimization framework integration."""
 
     def __init__(
             self,
-            model: Model,
+            model: Model | list[Model],
             params: ParameterSet,
-            forcing: Forcing,
-            obs: Observations,
+            forcing: Forcing | list[Forcing],
+            obs: Observations | list[Observations],
             warmup: int = 365,
-            obj_func: str | callable | None = None,
+            obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
             invert_obj_func: bool = False,
             dump_outputs: bool = False,
             dump_forcing: bool = False,
             dump_dir: str = ''
-    ):
-        self.model = [model] if not isinstance(model, list) else model
-        self.params = params
-        self.params_spotpy = params.get_for_spotpy()
-        self.random_forcing = params.needs_random_forcing()
-        self.forcing = [forcing] if not isinstance(forcing, list) else forcing
+    ) -> None:
+        """
+        Initialize SPOTPY setup for model calibration.
+
+        Parameters
+        ----------
+        model
+            Single Model instance or list of Model instances for ensemble calibration.
+        params
+            ParameterSet defining the model parameters to calibrate.
+        forcing
+            Single Forcing instance or list of Forcing instances (one per model).
+        obs
+            Single Observations instance or list for observed data (one per model).
+        warmup
+            Number of days for model warmup period (skipped in evaluation).
+            Default: 365
+        obj_func
+            Objective function for optimization. If None, uses non-parametric
+            Kling-Gupta Efficiency. Can be a string (HydroErr function name) or
+            callable that takes (observed, simulated) and returns a scalar.
+            Default: None
+        invert_obj_func
+            If True, multiply objective function result by -1 (for minimizers).
+            Default: False
+        dump_outputs
+            If True, save all simulation outputs to disk. Default: False
+        dump_forcing
+            If True, save forcing data used in simulations. Default: False
+        dump_dir
+            Directory path for saving dumped outputs. Default: '' (current directory)
+
+        Raises
+        ------
+        ValueError
+            If the number of models, forcing instances, or observations don't match.
+        RuntimeError
+            If parameter constraints cannot be satisfied.
+        """
+        self.model: list[Model] = [model] if not isinstance(model, list) else model
+        self.params: ParameterSet = params
+        self.params_spotpy: Any = params.get_for_spotpy()
+        self.random_forcing: bool = params.needs_random_forcing()
+        self.forcing: list[Forcing] = [forcing] if not isinstance(forcing, list) else forcing
         for f in self.forcing:
             f.apply_operations(params)
         if not isinstance(obs, list):
-            self.obs = [obs.data[0]]
+            self.obs: list[np.ndarray] = [obs.data[0]]
         else:
-            self.obs = [o.data[0] for o in obs]
-        self.warmup = warmup
-        self.obj_func = obj_func
-        self.invert_obj_func = invert_obj_func
-        self.dump_outputs = dump_outputs
-        self.dump_forcing = dump_forcing
-        self.dump_dir = dump_dir
+            self.obs: list[np.ndarray] = [o.data[0] for o in obs]
+        self.warmup: int = warmup
+        self.obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = obj_func
+        self.invert_obj_func: bool = invert_obj_func
+        self.dump_outputs: bool = dump_outputs
+        self.dump_forcing: bool = dump_forcing
+        self.dump_dir: str = dump_dir
 
         # Check that the models, forcing and the observations have the same length
         if len(self.model) != len(self.forcing) or len(self.model) != len(self.obs):
@@ -60,7 +99,20 @@ class SpotpySetup:
         if not obj_func:
             print("Objective function: Non parametric Kling-Gupta Efficiency.")
 
-    def parameters(self) -> spotpy.parameter:
+    def parameters(self) -> Any:
+        """
+        Generate random parameter sets that satisfy constraints.
+
+        Returns
+        -------
+        Any
+            SPOTPY parameter object with valid random parameter values.
+
+        Raises
+        ------
+        RuntimeError
+            If unable to generate valid parameters after 1000 attempts.
+        """
         x = None
         for i in range(1000):
             x = spotpy.parameter.generate(self.params_spotpy)
@@ -79,6 +131,20 @@ class SpotpySetup:
         return x
 
     def simulation(self, x: spotpy.parameter) -> list[np.ndarray] | None:
+        """
+        Run model simulation with given parameter set.
+
+        Parameters
+        ----------
+        x
+            SPOTPY parameter object containing parameter values.
+
+        Returns
+        -------
+        list[np.ndarray] | None
+            List of simulated discharge time series (one per model), or None
+            if simulation failed or constraints were violated.
+        """
         params = self.params
         param_values = dict(zip(x.name, x.random))
         params.set_values(param_values)

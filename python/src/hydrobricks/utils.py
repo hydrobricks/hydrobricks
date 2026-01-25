@@ -1,21 +1,61 @@
 import datetime
 import json
 import time
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import yaml
 
 
-def validate_kwargs(kwargs, allowed_kwargs):
-    """Checks the keyword arguments against a set of allowed keys."""
+def validate_kwargs(kwargs: dict[str, Any], allowed_kwargs: Iterable[str]) -> None:
+    """
+    Checks the keyword arguments against a set of allowed keys.
+
+    Parameters
+    ----------
+    kwargs
+        Dictionary of keyword arguments to validate.
+    allowed_kwargs
+        Iterable of allowed keyword argument names.
+
+    Raises
+    ------
+    TypeError
+        If any keyword argument is not in the allowed set.
+    """
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
-            raise TypeError('Keyword argument not understood:', kwarg)
+            raise TypeError(f'Keyword argument not understood: {kwarg}')
 
 
-def dump_config_file(content, directory: str, name: str, file_type: str = 'yaml'):
+def dump_config_file(
+        content: dict[str, Any],
+        directory: str | Path,
+        name: str,
+        file_type: str = 'yaml'
+) -> None:
+    """
+    Dump configuration content to YAML and/or JSON files.
+
+    Parameters
+    ----------
+    content
+        Dictionary containing configuration data to dump.
+    directory
+        Path to directory where files will be saved.
+    name
+        Base name for the output files (without extension).
+    file_type
+        Type of file(s) to create: 'yaml', 'json', or 'both'. Default: 'yaml'
+
+    Raises
+    ------
+    ValueError
+        If file_type is not one of 'yaml', 'json', or 'both'.
+    """
     directory = Path(directory)
 
     # Dump YAML file
@@ -110,8 +150,27 @@ def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
 
 
 def compute_area(shapefile: pd.DataFrame) -> float:
-    """Compute the area of a shapefile in square meters."""
-    area = 0
+    """
+    Compute the total area of geometries in a shapefile-like DataFrame.
+
+    Parameters
+    ----------
+    shapefile
+        DataFrame with a 'geometry' column containing shapely geometry objects
+        (e.g., from geopandas.GeoDataFrame).
+
+    Returns
+    -------
+    float
+        Total area in the same units as the geometry objects (typically square meters).
+
+    Examples
+    --------
+    >>> import geopandas as gpd
+    >>> gdf = gpd.read_file('shapes.shp')
+    >>> total_area = compute_area(gdf)
+    """
+    area: float = 0.0
     for _, row in shapefile.iterrows():
         poly_area = row.geometry.area
         area += poly_area
@@ -122,25 +181,60 @@ def compute_area(shapefile: pd.DataFrame) -> float:
 class Timer:
     """Timer to time code execution. Based on: https://pypi.org/project/codetiming/"""
 
-    def __init__(self, text: str | None = None):
-        self._start_time = None
-        self.last = None
-        self.logger = print
-        self.text = "Elapsed time: {:0.4f} seconds"
+    def __init__(self, text: str | Callable[[float], str] | None = None) -> None:
+        """
+        Initialize the timer.
+
+        Parameters
+        ----------
+        text
+            Format string or callable for elapsed time output.
+            If a string, can include format placeholders: {milliseconds}, {seconds}, {minutes}.
+            If callable, receives elapsed time in seconds and returns a formatted string.
+            Default: "Elapsed time: {:0.4f} seconds"
+        """
+        self._start_time: float | None = None
+        self.last: float | None = None
+        self.logger: Callable[[str], None] = print
+        self.text: str | Callable[[float], str] = "Elapsed time: {:0.4f} seconds"
         if text is not None:
             self.text = text
 
-    def start(self):
-        """Start a new timer."""
+    def start(self) -> None:
+        """
+        Start a new timer.
+
+        Raises
+        ------
+        RuntimeError
+            If the timer is already running.
+        """
         if self._start_time is not None:
             raise RuntimeError("Timer is running. Use .stop() to stop it")
 
         self._start_time = time.perf_counter()
 
     def stop(self, show_time: bool = True) -> float:
-        """Stop the timer, and report the elapsed time."""
+        """
+        Stop the timer and report the elapsed time.
+
+        Parameters
+        ----------
+        show_time
+            If True, print the elapsed time using the logger. Default: True
+
+        Returns
+        -------
+        float
+            Elapsed time in seconds. Returns 0.0 if show_time is False.
+
+        Raises
+        ------
+        RuntimeError
+            If the timer is not running.
+        """
         if not show_time:
-            return 0
+            return 0.0
 
         if self._start_time is None:
             raise RuntimeError("Timer is not running. Use .start() to start it")

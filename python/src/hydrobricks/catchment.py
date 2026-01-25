@@ -153,7 +153,13 @@ class Catchment:
 
         Returns
         -------
-        True if successful, False otherwise.
+        bool
+            True if extraction was successful, False otherwise.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
         """
         self.dem, self.dem_data = self._extract_raster(raster_path)
         if self.dem is None:
@@ -176,20 +182,32 @@ class Catchment:
         Parameters
         ----------
         raster_path
-            Path of the DEM file.
+            Path of the raster file containing the attribute data.
         attr_name
-            Name of the attribute.
+            Name of the attribute to store in self.attributes dictionary.
         resample_to_dem_resolution
-            If True, resample the attribute to the DEM resolution.
+            If True, resample the attribute raster to DEM resolution.
+            Default: True
         resampling
-            Resampling method to use. Default is 'average'. Options are listed under
-            https://rasterio.readthedocs.io/en/stable/api/rasterio.enums.html#rasterio.enums.Resampling
+            Resampling method to use when resample_to_dem_resolution is True.
+            Options: 'nearest', 'bilinear', 'cubic', 'cubic_spline', 'lanczos',
+            'average', 'mode', 'gauss', 'max', 'min', 'med', 'q1', 'q3', 'sum', 'rms'
+            Default: 'average'
         replace_nans_by_zeros
-            If True, replace NaN values by 0. Default is True.
+            If True, replace NaN values with zero in the output raster.
+            Default: True
 
         Returns
         -------
-        True if successful, False otherwise.
+        bool
+            True if extraction was successful, False otherwise.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
+        ValueError
+            If the resampling method is not recognized.
         """
         src, data = self._extract_raster(raster_path)
         if src is None:

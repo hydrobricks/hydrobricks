@@ -27,12 +27,23 @@ km2 = Unit.KM2
 
 
 class ActionLandCoverChange(Action):
-    """Class for the land cover changes."""
+    """
+    Class for managing land cover changes over time.
 
-    def __init__(self):
+    This action tracks changes in land cover areas (e.g., glacier retreat) across
+    hydro units at specified dates.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize ActionLandCoverChange instance.
+
+        This action manages time-dependent land cover changes, updating land cover
+        areas at specified dates throughout the simulation period.
+        """
         super().__init__()
-        self.name = "ActionLandCoverChange"
-        self.action = _ActionLandCoverChange()
+        self.name: str = "ActionLandCoverChange"
+        self.action: _ActionLandCoverChange = _ActionLandCoverChange()
 
     def load_from_csv(
             self,
@@ -41,31 +52,51 @@ class ActionLandCoverChange(Action):
             land_cover: str,
             area_unit: str,
             match_with: str = 'elevation'
-    ):
+    ) -> None:
         """
-        Read land cover changes from a csv file. Such file should contain the
-        changes for a single land cover. Multiple files can be loaded consecutively.
-        The first column of the file must contain the information to identify the hydro
-        unit id, such as the id or the elevation (when using elevation bands).
-        The next columns must contain the changes at different dates for each hydro
-        unit. The first line must contain the dates of the changes in a format easily
-        parsed by Python (i.e. YYYY-MM-DD).
+        Read land cover changes from a CSV file.
+
+        The file should contain changes for a single land cover. Multiple files can be
+        loaded consecutively. The first column must contain information to identify the
+        hydro unit ID, such as the ID or elevation. Subsequent columns contain the
+        changes at different dates. The first line must contain dates in YYYY-MM-DD format.
 
         Parameters
         ----------
         path
-            Path to the csv file containing hydro units data.
+            Path to the CSV file containing land cover change data.
         hydro_units
-            The hydro units to match the land cover changes against.
+            The HydroUnits instance to match land cover changes against.
         land_cover
-            Name of the land cover to change.
+            Name of the land cover to change (e.g., 'glacier', 'forest').
         area_unit
-            Unit for the area values: "m2" or "km2"
+            Unit for the area values: 'm2' or 'km2'.
         match_with
-            Information used to identify the hydro units. Options: 'elevation', 'id'
+            Information used to identify hydro units. Options: 'elevation', 'id'.
+            Default: 'elevation'
 
-        Example of a file (with areas in km2)
-        -----------------
+        Raises
+        ------
+        FileNotFoundError
+            If the CSV file does not exist.
+        ValueError
+            If the first column values don't match hydro unit IDs or match criteria.
+        KeyError
+            If required columns are missing from the CSV file.
+
+        Examples
+        --------
+        >>> action = ActionLandCoverChange()
+        >>> action.load_from_csv(
+        ...     'glacier_changes.csv',
+        ...     hydro_units,
+        ...     land_cover='glacier',
+        ...     area_unit='km2',
+        ...     match_with='elevation'
+        ... )
+
+        Example CSV file format (with areas in km²)
+        -------------------------------------------
         elevation   2020-08-01   2025-08-01   2030-08-01   2035-08-01   2040-08-01
         4274        0.013        0.003        0            0            0
         4310        0.019        0.009        0            0            0
@@ -103,12 +134,22 @@ class ActionLandCoverChange(Action):
     def get_change_count(self) -> int:
         """
         Get the number of changes registered.
+
+        Returns
+        -------
+        int
+            Total number of land cover changes across all times and hydro units.
         """
         return self.action.get_change_count()
 
     def get_land_cover_count(self) -> int:
         """
         Get the number of land covers registered.
+
+        Returns
+        -------
+        int
+            Total number of distinct land cover types with registered changes.
         """
         return self.action.get_land_cover_count()
 
@@ -124,43 +165,62 @@ class ActionLandCoverChange(Action):
             interpolate_yearly: bool = True
     ) -> tuple[ActionLandCoverChange, list[pd.DataFrame]]:
         """
-        Extract the glacier cover changes from shapefiles, creates a
-        ActionLandCoverChange object, and assign the computed land cover
-        changes to the ActionLandCoverChange object.
+        Extract glacier cover changes from shapefiles and create an ActionLandCoverChange object.
+
+        This method processes glacier shapefiles at multiple time points, computes
+        area changes for each hydro unit, and returns a configured action object.
 
         Parameters
         ----------
         catchment
-            The catchment to extract the glacier cover changes for.
+            The catchment to extract glacier cover changes for.
         times
-            Date of the land cover, in the format: yyyy-mm-dd.
+            List of dates in format 'YYYY-MM-DD' corresponding to glacier extent data.
         full_glaciers
-            Path to the shapefile containing the extent of the glaciers
-            (debris-covered and clean ice together).
+            Path(s) to shapefile(s) containing the extent of all glaciers
+            (debris-covered and clean ice together). Can be a list of paths (one per time)
+            or a single path with placeholders.
         debris_glaciers
-            Path to the shapefile containing the extent of the debris-covered
-            glaciers.
+            Path(s) to shapefile(s) containing the extent of debris-covered glaciers only.
+            Required if with_debris is True. Default: None
         with_debris
-            True if the simulation requires debris-covered and clean-ice area
-            computations, False otherwise.
+            If True, distinguishes between debris-covered and clean-ice areas.
+            If False, treats all glacier area uniformly. Default: False
         method
-            The method to extract the glacier cover changes:
-            'vector' = vectorial extraction (more precise)
-            'raster' = raster extraction (faster)
+            Method to extract glacier cover changes:
+            - 'vector': Vectorial extraction (more precise but slower)
+            - 'raster': Raster extraction (faster but less precise)
+            Default: 'vector'
         interpolate_yearly
-            True if the changes should be interpolated to a yearly time step,
-            False otherwise (no interpolation).
+            If True, interpolate changes to yearly time steps between provided dates.
+            If False, use only the provided time points. Default: True
 
         Returns
         -------
-        changes
-            A ActionLandCoverChange object setup with the cover areas
-            extracted from the shapefiles.
-        changes_df
-            A list of the dataframes containing the cover areas extracted from the
-            shapefiles. If with_debris is True, the list contains 3 dataframes:
-            [glacier_ice, glacier_debris, ground]. If with_debris is False, the list
-            contains 2 dataframes: [glacier, ground].
+        tuple[ActionLandCoverChange, list[pd.DataFrame]]
+            A tuple containing:
+            - ActionLandCoverChange object configured with extracted cover areas
+            - List of DataFrames with cover areas. If with_debris is True:
+              [glacier_ice, glacier_debris, ground]. If False: [glacier, ground].
+
+        Raises
+        ------
+        ImportError
+            If geopandas is not installed.
+        ValueError
+            If catchment.map_unit_ids is None or if data is inconsistent.
+        FileNotFoundError
+            If shapefile paths do not exist.
+
+        Examples
+        --------
+        >>> action, dataframes = ActionLandCoverChange.create_action_for_glaciers(
+        ...     catchment=my_catchment,
+        ...     times=['2020-08-01', '2030-08-01', '2040-08-01'],
+        ...     full_glaciers='glacier_{year}.shp',
+        ...     method='vector',
+        ...     interpolate_yearly=True
+        ... )
         """
 
         if not HAS_GEOPANDAS:

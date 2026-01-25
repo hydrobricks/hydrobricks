@@ -13,17 +13,23 @@ from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolution
 
 class ActionGlacierEvolutionDeltaH(Action):
     """
-    Class for the glacier evolution based on the delta-h method.
+    Class for glacier evolution based on the delta-h method.
 
     The glacier evolution is based on the delta-h method, which spatializes the glacier
-    melt using a lookup table. The lookup table in computed by the routine
+    melt using a lookup table. The lookup table is computed by the routine
     preprocessing/glacier_evolution_delta_h.py.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initialize ActionGlacierEvolutionDeltaH instance.
+
+        This action manages glacier evolution using the delta-h method for
+        spatializing glacier melt across hydro units.
+        """
         super().__init__()
-        self.name = "ActionGlacierEvolutionDeltaH"
-        self.action = _ActionGlacierEvolutionDeltaH()
+        self.name: str = "ActionGlacierEvolutionDeltaH"
+        self.action: _ActionGlacierEvolutionDeltaH = _ActionGlacierEvolutionDeltaH()
 
     def load_from_csv(
             self,
@@ -32,33 +38,48 @@ class ActionGlacierEvolutionDeltaH(Action):
             filename_area: str = 'glacier_evolution_lookup_table_area.csv',
             filename_volume: str = 'glacier_evolution_lookup_table_volume.csv',
             update_month: str | int = 'October'
-    ):
+    ) -> None:
         """
-        Read the glacier evolution lookup table from a csv file. The file should
-        contain the glacier area evolution (in m2) for each hydro unit and increment
-        (typically 100). The first row should contain the hydro unit ids for the units
-        containing glaciers. There should be no index column in the file; the first
-        column should contain data.
+        Read the glacier evolution lookup table from CSV files.
+
+        The files should contain the glacier area and volume evolution (in m²) for each
+        hydro unit and increment (typically 100). The first row should contain the hydro
+        unit IDs for the units containing glaciers. There should be no index column in
+        the file; the first column should contain data.
 
         Parameters
         ----------
         dir_path
-            Path to the directory containing the lookup table.
+            Path to the directory containing the lookup table files.
         land_cover
-            The land cover name to apply the changes. Default is 'glacier'.
+            The land cover name to apply the changes. Default: 'glacier'
         filename_area
-            Name of the lookup table file for the glacier area. Default is
-            'glacier_evolution_lookup_table_area.csv'.
+            Name of the lookup table file for the glacier area.
+            Default: 'glacier_evolution_lookup_table_area.csv'
         filename_volume
-            Name of the lookup table file for the glacier volume. Default is
-            'glacier_evolution_lookup_table_volume.csv'.
+            Name of the lookup table file for the glacier volume.
+            Default: 'glacier_evolution_lookup_table_volume.csv'
         update_month
-            The month to apply the changes. Full english name or number (1-12).
+            The month to apply the changes. Full English name or number (1-12).
             The update will be applied at the beginning of the month, every year.
-            Default is 'October'.
+            Default: 'October'
 
-        Example of a file (with areas in m2)
-        -----------------
+        Raises
+        ------
+        FileNotFoundError
+            If the specified CSV files do not exist.
+        ValueError
+            If the CSV format is incorrect or data is inconsistent.
+        AssertionError
+            If hydro unit IDs or table shapes don't match between area and volume files.
+
+        Examples
+        --------
+        >>> action = ActionGlacierEvolutionDeltaH()
+        >>> action.load_from_csv('./data', land_cover='glacier', update_month='October')
+
+        Example of a file (with areas in m²)
+        -------------------------------------
         2       3       4       5       6
         2500.0  48125.0 34375.0 54375.0 65000.0
         2125.2  44069.6 31544.8 51044.3 61726.6
@@ -90,21 +111,25 @@ class ActionGlacierEvolutionDeltaH(Action):
             obj: GlacierEvolutionDeltaH,
             land_cover: str = 'glacier',
             update_month: str | int = 'October'
-    ):
+    ) -> None:
         """
-        Get the glacier evolution lookup table from the GlacierEvolutionDeltaH
-        instance.
+        Get the glacier evolution lookup table from a GlacierEvolutionDeltaH instance.
 
         Parameters
         ----------
         obj
-            The GlacierEvolutionDeltaH instance.
+            The GlacierEvolutionDeltaH instance containing lookup tables.
         land_cover
-            The land cover name to apply the changes. Default is 'glacier'.
+            The land cover name to apply the changes. Default: 'glacier'
         update_month
-            The month to apply the changes. Full english name or number (1-12).
+            The month to apply the changes. Full English name or number (1-12).
             The update will be applied at the beginning of the month, every year.
-            Default is 'October'.
+            Default: 'October'
+
+        Raises
+        ------
+        ValueError
+            If the object is not a GlacierEvolutionDeltaH instance.
         """
         if not isinstance(obj, GlacierEvolutionDeltaH):
             raise ValueError("The object is not a GlacierEvolutionDeltaH instance.")
@@ -125,7 +150,8 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Returns
         -------
-        The month to apply the changes.
+        int
+            The month number (1-12) when changes are applied.
         """
         return self.action.get_month()
 
@@ -135,17 +161,19 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Returns
         -------
-        The land cover name (glacier name) to apply the changes.
+        str
+            The land cover name (glacier name) to apply the changes.
         """
         return self.action.get_land_cover_name()
 
     def get_hydro_unit_ids(self) -> np.ndarray:
         """
-        Get the lookup table hydro unit ids.
+        Get the lookup table hydro unit IDs.
 
         Returns
         -------
-        The lookup table hydro unit ids.
+        np.ndarray
+            Array of hydro unit IDs (integers) for which glacier evolution is tracked.
         """
         return self.action.get_hydro_unit_ids()
 
@@ -155,7 +183,9 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Returns
         -------
-        The lookup table areas.
+        np.ndarray
+            2D array of glacier areas (in m²) for each hydro unit and time increment.
+            Shape: (n_increments, n_hydro_units)
         """
         return self.action.get_lookup_table_area()
 
@@ -165,7 +195,9 @@ class ActionGlacierEvolutionDeltaH(Action):
 
         Returns
         -------
-        The lookup table volumes.
+        np.ndarray
+            2D array of glacier volumes (in m³) for each hydro unit and time increment.
+            Shape: (n_increments, n_hydro_units)
         """
         return self.action.get_lookup_table_volume()
 
@@ -175,7 +207,26 @@ class ActionGlacierEvolutionDeltaH(Action):
             lookup_table_volume: pd.DataFrame,
             land_cover: str,
             update_month: str | int
-    ):
+    ) -> None:
+        """
+        Populate the internal C++ instance with lookup table data.
+
+        Parameters
+        ----------
+        lookup_table_area
+            DataFrame containing area evolution data with hydro unit IDs as columns.
+        lookup_table_volume
+            DataFrame containing volume evolution data with hydro unit IDs as columns.
+        land_cover
+            The land cover name to apply changes to.
+        update_month
+            The month (name or number) to apply changes.
+
+        Raises
+        ------
+        AssertionError
+            If hydro unit IDs or table shapes don't match between area and volume.
+        """
         month_num = self._convert_month_to_number(update_month)
 
         # Get the hydro unit ids from the first row

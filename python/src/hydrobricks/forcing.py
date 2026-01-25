@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+from typing import TYPE_CHECKING, Any
 
 if sys.version_info < (3, 11):
     try:
@@ -20,14 +21,16 @@ from cftime import num2date
 from hydrobricks import Dataset, pyet
 from hydrobricks._constants import TO_RAD
 from hydrobricks._optional import HAS_PYET, HAS_NETCDF
-from hydrobricks.catchment import Catchment
-from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
+if TYPE_CHECKING:
+    from hydrobricks.catchment import Catchment
+    from hydrobricks.hydro_units import HydroUnits
+
 
 class Forcing:
-    """Class for forcing data"""
+    """Class for managing forcing (meteorological) data for hydrological models."""
 
     if sys.version_info < (3, 11):
         StrEnumClass = LowercaseStrEnum
@@ -35,6 +38,7 @@ class Forcing:
         StrEnumClass = StrEnum
 
     class Variable(StrEnumClass):
+        """Enumeration of supported meteorological variables."""
         P = auto()  # Precipitation [mm]
         T = auto()  # Temperature [°C]
         T_MIN = auto()  # Minimum temperature [°C]
@@ -53,7 +57,26 @@ class Forcing:
     def __init__(
             self,
             spatial_entity: HydroUnits | Catchment
-    ):
+    ) -> None:
+        """
+        Initialize Forcing object for a spatial entity.
+
+        Parameters
+        ----------
+        spatial_entity
+            Either a HydroUnits or Catchment object defining the spatial structure.
+
+        Raises
+        ------
+        TypeError
+            If spatial_entity is not HydroUnits or Catchment.
+        ValueError
+            If the hydro_units object is empty.
+        """
+        # Import here to avoid circular imports
+        from hydrobricks.catchment import Catchment
+        from hydrobricks.hydro_units import HydroUnits
+
         if isinstance(spatial_entity, HydroUnits):
             hydro_units = spatial_entity
             catchment = None
@@ -61,8 +84,8 @@ class Forcing:
             hydro_units = spatial_entity.hydro_units
             catchment = spatial_entity
         else:
-            raise TypeError('The spatial_entity argument must be a HydroUnits or '
-                            'Catchment object, not {type(spatial_entity)}.')
+            raise TypeError(f'The spatial_entity argument must be a HydroUnits or '
+                            f'Catchment object, not {type(spatial_entity)}.')
 
         # Check hydro units
         if len(hydro_units.hydro_units) == 0:
@@ -70,25 +93,49 @@ class Forcing:
                              'one hydrological unit.')
 
         super().__init__()
-        self.data1D = TimeSeries1D()
-        self.data2D = TimeSeries2D()
-        self.catchment = catchment
-        self.hydro_units = hydro_units.hydro_units
-        self._operations = []
-        self._is_initialized = False
+        self.data1D: TimeSeries1D = TimeSeries1D()
+        self.data2D: TimeSeries2D = TimeSeries2D()
+        self.catchment: Catchment | None = catchment
+        self.hydro_units: pd.DataFrame = hydro_units.hydro_units
+        self._operations: list[dict[str, Any]] = []
+        self._is_initialized: bool = False
 
     def is_initialized(self) -> bool:
-        """ Return True if the forcing is initialized. """
+        """
+        Check if the forcing has been initialized.
+
+        Returns
+        -------
+        bool
+            True if the forcing has been initialized, False otherwise.
+        """
         return self._is_initialized
 
     def get_variable_enum(self, variable: str) -> Variable:
         """
-        Match the variable name to the enum corresponding value.
+        Match a variable name string to the corresponding Variable enum value.
 
         Parameters
         ----------
         variable
-            Variable name.
+            Variable name or alias (e.g., 'precipitation', 'precip', 'p', 'P').
+
+        Returns
+        -------
+        Variable
+            The corresponding Variable enum value.
+
+        Raises
+        ------
+        ValueError
+            If the variable name is not recognized.
+
+        Examples
+        --------
+        >>> forcing = Forcing(hydro_units)
+        >>> var = forcing.get_variable_enum('precip')
+        >>> var == Forcing.Variable.P
+        True
         """
         if variable in self.Variable.__members__:
             return self.Variable[variable]
@@ -126,6 +173,24 @@ class Forcing:
             raise ValueError(f'Variable {variable} is not recognized.')
 
     def _can_be_negative(self, variable: Variable) -> bool:
+        """
+        Check if a given variable can have negative values.
+
+        Parameters
+        ----------
+        variable
+            The Variable to check.
+
+        Returns
+        -------
+        bool
+            True if the variable can be negative, False otherwise.
+
+        Raises
+        ------
+        ValueError
+            If the variable is not recognized.
+        """
         if variable in [
             self.Variable.P,
             self.Variable.PET,
@@ -154,22 +219,39 @@ class Forcing:
             path: str | Path,
             column_time: str,
             time_format: str,
-            content: dict[str, str] | dict[str, Variable] = None
-    ):
+            content: dict[str, str] | None = None
+    ) -> None:
         """
-        Read 1D time series data from csv file.
+        Read 1D time series data from CSV file for a single station.
 
         Parameters
         ----------
         path
-            Path to the csv file containing hydro units data.
+            Path to the CSV file containing station data.
         column_time
-            Column name containing the time.
+            Column name containing the time values.
         time_format
-            Format of the time
+            Format string for parsing time values (e.g., '%Y-%m-%d').
         content
-            Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
+            Dictionary mapping variable names/aliases to CSV column names.
+            Example: {'precipitation': 'Precipitation (mm)', 'temperature': 'Temp (C)'}
+            Default: None
+
+        Raises
+        ------
+        FileNotFoundError
+            If the CSV file does not exist.
+        KeyError
+            If required columns are not found in the CSV file.
+
+        Examples
+        --------
+        >>> forcing.load_station_data_from_csv(
+        ...     'weather.csv',
+        ...     'Date',
+        ...     '%Y-%m-%d',
+        ...     {'precipitation': 'P (mm)', 'temperature': 'T (C)'}
+        ... )
         """
         # Change the variable names (key) to the enum corresponding values
         for key in list(content.keys()):
@@ -178,25 +260,34 @@ class Forcing:
 
         self.data1D.load_from_csv(path, column_time, time_format, content)
 
-    def correct_station_data(self, **kwargs):
+    def correct_station_data(self, **kwargs: Any) -> None:
         """
-        Define the prior correction operations.
+        Define prior correction operations to apply to forcing data.
 
         Parameters
         ----------
-        variable : str
-            Name of the variable to correct.
-        method : str
-            Name of the method to use. Possible values are:
-            * additive: add a constant value
-            * multiplicative: multiply by a constant value
-        correction_factor : float
-            Value of the correction factor (to add or multiply).
+        **kwargs
+            Keyword arguments defining the correction operation.
+            Required keys:
+            - variable : str
+                Name of the variable to correct.
+            - method : str
+                Correction method: 'additive' or 'multiplicative'
+            - correction_factor : float
+                Value of the correction factor (to add or multiply).
+
+        Examples
+        --------
+        >>> forcing.correct_station_data(
+        ...     variable='temperature',
+        ...     method='additive',
+        ...     correction_factor=0.5  # Add 0.5 degrees
+        ... )
         """
         kwargs['type'] = 'prior_correction'
         self._operations.append(kwargs)
 
-    def spatialize_from_station_data(self, **kwargs):
+    def spatialize_from_station_data(self, **kwargs: Any) -> None:
         """
         Define the spatialization operations from station data to all hydro units.
 

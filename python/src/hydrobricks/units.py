@@ -47,16 +47,33 @@ class Unit(StrEnumClass):
 
 def get_unit_enum(unit: str) -> Unit:
     """
-    Convert a string to a Unit.
+    Convert a string representation to a Unit enum value.
 
     Parameters
     ----------
     unit
-        The string to convert.
+        String representation of the unit. Can be in various formats:
+        - Enum member name (e.g., 'MM', 'M2')
+        - Full names (e.g., 'millimeter', 'square meter')
+        - Symbols (e.g., 'mm', 'm', 'm2')
+        - Alternative notations (e.g., 'm^2', 'm**2', 'mm/d')
 
     Returns
     -------
-    The corresponding Unit.
+    Unit
+        The corresponding Unit enum value.
+
+    Raises
+    ------
+    ValueError
+        If the unit string is not recognized.
+
+    Examples
+    --------
+    >>> get_unit_enum('mm')
+    Unit.MM
+    >>> get_unit_enum('square meter')
+    Unit.M2
     """
     if unit in Unit.__members__:
         return Unit[unit]
@@ -115,16 +132,29 @@ def get_unit_enum(unit: str) -> Unit:
 
 def get_unit_from_df_column(df: pd.DataFrame) -> Unit:
     """
-    Get the unit of a dataframe column.
+    Get the unit from a DataFrame column header.
 
     Parameters
     ----------
     df
-        The dataframe to get the unit from.
+        A single-column DataFrame with a unit specification in the column name.
+        Column name should be a tuple (name, unit) or a string with unit info.
 
     Returns
     -------
-    The unit of the dataframe.
+    Unit
+        The Unit enum value extracted from the column specification.
+
+    Raises
+    ------
+    ValueError
+        If the DataFrame has more than one column.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({('elevation', 'm'): [100, 200, 300]})
+    >>> get_unit_from_df_column(df)
+    Unit.M
     """
     if len(df.columns) != 1:
         raise ValueError("Only single column dataframes are supported.")
@@ -134,19 +164,32 @@ def get_unit_from_df_column(df: pd.DataFrame) -> Unit:
 
 def convert_unit_df(df: pd.DataFrame, new_unit: Unit | str) -> pd.DataFrame:
     """
-    Convert a dataframe (single column) to a new unit. The unit of the dataframe
-    must be specified in the name of the column (using tuples).
+    Convert a single-column DataFrame to a new unit.
+
+    The current unit is extracted from the column name (typically a tuple).
+    Conversion factors are applied based on source and target units.
 
     Parameters
     ----------
     df
-        The dataframe to convert.
+        Single-column DataFrame with unit specification in column name.
     new_unit
-        The unit to convert to.
+        Target Unit (as Unit enum or string) to convert to.
 
     Returns
     -------
-    The converted dataframe.
+    pd.DataFrame
+        New DataFrame with converted values and updated column name.
+
+    Raises
+    ------
+    ValueError
+        If conversion is not possible or unsupported between the units.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({('area', 'km2'): [1.0, 2.0]})
+    >>> converted = convert_unit_df(df, Unit.M2)
     """
     unit_from = get_unit_from_df_column(df)
     unit_to = get_unit_enum(new_unit)
@@ -157,25 +200,38 @@ def convert_unit_df(df: pd.DataFrame, new_unit: Unit | str) -> pd.DataFrame:
 
 
 def convert_unit(
-        value: float,
+        value: float | pd.DataFrame,
         unit_from: Unit | str,
         unit_to: Unit | str
 ) -> float | pd.DataFrame:
     """
-    Convert a value from one unit to another.
+    Convert a numeric value or DataFrame from one unit to another.
 
     Parameters
     ----------
     value
-        The value to convert.
+        The value or DataFrame to convert.
     unit_from
-        The unit of the value.
+        The source unit (as Unit enum or string).
     unit_to
-        The unit to convert to.
+        The target unit (as Unit enum or string).
 
     Returns
     -------
-    The converted value.
+    float | pd.DataFrame
+        The converted value(s) in the same type as input.
+
+    Raises
+    ------
+    ValueError
+        If the conversion is not implemented for the given unit pair.
+
+    Examples
+    --------
+    >>> convert_unit(1000.0, Unit.MM, Unit.M)
+    1.0
+    >>> convert_unit(5.0, 'km', 'm')
+    5000.0
     """
     if isinstance(unit_from, str):
         unit_from = get_unit_enum(unit_from)
@@ -229,20 +285,28 @@ def convert_unit(
 
 def remove_chars(input_string: str, chars_to_remove: str) -> str:
     """
-    Remove characters from a string.
+    Remove specified characters from a string.
 
     Parameters
     ----------
     input_string
         The string to remove characters from.
     chars_to_remove
-        The characters to remove.
+        String containing all characters to be removed.
 
     Returns
     -------
-    The string with the characters removed.
+    str
+        The string with specified characters removed.
+
+    Examples
+    --------
+    >>> remove_chars("hello world", " ")
+    'helloworld'
+    >>> remove_chars("(value)", "()")
+    'value'
     """
-    result = ""
+    result: str = ""
 
     for char in input_string:
         if char not in chars_to_remove:

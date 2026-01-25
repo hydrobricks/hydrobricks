@@ -2,26 +2,49 @@ from abc import ABC, abstractmethod
 
 
 class Action(ABC):
-    """Base class for the actions"""
+    """Base abstract class for model actions (dynamic updates to model state)."""
 
     @abstractmethod
-    def __init__(self):
-        self.is_initialized = False
-        self.name = "BaseAction"
+    def __init__(self) -> None:
+        """
+        Initialize the Action base class.
+
+        Subclasses should call super().__init__() and set appropriate
+        name and is_initialized values.
+        """
+        self.is_initialized: bool = False
+        self.name: str = "BaseAction"
 
     @staticmethod
     def _convert_month_to_number(update_month: str | int) -> int:
         """
-        Convert the month name to a number.
+        Convert a month name or number to a month number (1-12).
 
         Parameters
         ----------
         update_month
-            The month to convert. Full english name or number (1-12).
+            The month to convert. Can be:
+            - Full English month name (e.g., 'January', 'December')
+            - Integer from 1 to 12
 
         Returns
         -------
-        The month as a number (1-12).
+        int
+            Month as an integer (1-12).
+
+        Raises
+        ------
+        ValueError
+            If month number is not between 1 and 12, or if month name is not recognized.
+        TypeError
+            If update_month is neither a string nor an integer.
+
+        Examples
+        --------
+        >>> Action._convert_month_to_number('January')
+        1
+        >>> Action._convert_month_to_number(12)
+        12
         """
         # Convert the month name to a number
         if isinstance(update_month, int):
@@ -47,6 +70,6 @@ class Action(ABC):
             if month_num is None:
                 raise ValueError(f"Invalid month name: {update_month}")
         else:
-            raise ValueError("Month must be a string or an integer.")
+            raise TypeError("Month must be a string or an integer.")
 
         return month_num

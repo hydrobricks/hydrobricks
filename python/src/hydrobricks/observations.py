@@ -9,9 +9,10 @@ from hydrobricks.trainer import evaluate
 
 
 class Observations(TimeSeries1D):
-    """Class for forcing data"""
+    """Class for observation time series data"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize Observations instance."""
         super().__init__()
 
     def compute_reference_metric(
@@ -35,27 +36,43 @@ class Observations(TimeSeries1D):
         metric
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
-            Examples: nse, kge_2012, ...
+            Examples: 'nse', 'kge_2012', 'rmse', etc.
         start_date
-            Start date for which the observed data should be compared to the
-            mean of all years.
+            Start date string for period of interest (format: 'YYYY-MM-DD').
+            If None, uses full time series. Default: None
         end_date
-            End date for which the observed data should be compared to the
-            mean of all years.
+            End date string for period of interest (format: 'YYYY-MM-DD').
+            If None, uses full time series. Default: None
         with_exclusion
             If True, avoid using the same year's data for the same position in the
             bootstrapped sample, ensuring no self-selection for specific years.
+            Default: False
         mean_discharge
             If True, computes the average on the discharge directly rather than on
-            the result of the HydroErr function.
+            the result of the HydroErr function. Default: False
         all_combinations
             If True uses all combinations possible for the bootstrapping.
+            If False, randomly samples n_evals combinations. Default: False
         n_evals
-            Number of evaluations to perform (default: 100).
+            Number of random evaluations to perform (ignored if all_combinations=True).
+            Default: 100
 
         Returns
         -------
-        The mean value of n_evals realization of the selected metric.
+        float
+            The mean value of n_evals realizations of the selected metric.
+            Returns -1 if metric cannot be computed on single year only.
+
+        Raises
+        ------
+        ValueError
+            If metric is not recognized or if time series setup is invalid.
+
+        Examples
+        --------
+        >>> obs = Observations()
+        >>> obs.load_from_csv('data.csv', 'date', '%Y-%m-%d', {'discharge': 'Q'})
+        >>> ref_metric = obs.compute_reference_metric('nse', n_evals=100)
         """
         df = self.time.to_frame(name='date').copy()
         df['data'] = self.data[0]

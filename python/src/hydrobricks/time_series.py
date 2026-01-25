@@ -5,6 +5,7 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -13,23 +14,36 @@ from hydrobricks import rxr, xr, rasterio, pyproj
 from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
 from hydrobricks.utils import date_as_mjd
 
+if TYPE_CHECKING:
+    from hydrobricks.hydro_units import HydroUnits
+
 
 class TimeSeries:
     """Class for generic time series data"""
 
-    def __init__(self):
-        self.time = []
-        self.data = []
-        self.data_name = []
+    def __init__(self) -> None:
+        """Initialize TimeSeries with empty time and data containers."""
+        self.time: list[Any] | pd.Series | pd.DatetimeIndex = []
+        self.data: list[np.ndarray] = []
+        self.data_name: list[str] = []
 
-    def get_dates_as_mjd(self):
+    def get_dates_as_mjd(self) -> float | np.ndarray:
+        """
+        Convert time series dates to modified Julian dates.
+
+        Returns
+        -------
+        float | np.ndarray
+            Modified Julian dates. Returns float if single date, array if multiple dates.
+        """
         return date_as_mjd(self.time)
 
 
 class TimeSeries1D(TimeSeries):
     """Class for generic 1D time series data"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize 1D TimeSeries."""
         super().__init__()
 
     def load_from_csv(
@@ -37,30 +51,37 @@ class TimeSeries1D(TimeSeries):
             path: str | Path,
             column_time: str,
             time_format: str,
-            content: dict,
-            start_date: datetime | None = None,
-            end_date: datetime | None = None
-    ):
+            content: dict[str, str],
+            start_date: datetime | pd.Timestamp | None = None,
+            end_date: datetime | pd.Timestamp | None = None
+    ) -> None:
         """
-        Read time series data from csv file.
+        Read time series data from CSV file.
 
         Parameters
         ----------
         path
-            Path to the csv file containing hydro units data.
+            Path to the CSV file containing hydro units data.
         column_time
-            Column name containing the time.
+            Column name containing the time values.
         time_format
-            Format of the time
+            Format string for parsing time values (e.g., '%Y-%m-%d').
         content
-            Type of data and column name containing the data.
-            Example: {'precipitation': 'Precipitation (mm)'}
+            Dictionary mapping variable names/enums to column names in the CSV.
+            Example: {'precipitation': 'Precipitation (mm)', 'temperature': 'Temperature (C)'}
         start_date
             Start date of the time series (used to select the period of interest).
             If None, the first date of the file is used.
         end_date
             End date of the time series (used to select the period of interest).
             If None, the last date of the file is used.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified file does not exist.
+        KeyError
+            If required columns are not found in the CSV file.
         """
         file_content = pd.read_csv(
             path, parse_dates=[column_time],
@@ -81,67 +102,76 @@ class TimeSeries1D(TimeSeries):
 class TimeSeries2D(TimeSeries):
     """Class for generic 2D time series data"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize 2D TimeSeries."""
         super().__init__()
 
     def regrid_from_netcdf(
             self,
             path: str | Path,
-            file_pattern: str = None,
+            file_pattern: str | None = None,
             data_crs: int | None = None,
             var_name: str | None = None,
             dim_time: str = 'time',
             dim_x: str = 'x',
             dim_y: str = 'y',
-            hydro_units: object | None = None,
+            hydro_units: Any | None = None,
             raster_hydro_units: str | Path | None = None,
             weights_block_size: int = 100,
             apply_data_gradient: bool = True,
             gradient_type: str = 'additive',
             dem_path: str | Path | None = None
-    ):
+    ) -> None:
         """
-        Regrid time series data from netcdf files. The spatialization is done using a
-        raster of hydro unit ids. The meteorological data is resampled to the DEM
+        Regrid time series data from netCDF files. The spatialization is done using a
+        raster of hydro unit IDs. The meteorological data is resampled to the DEM
         resolution.
 
         Parameters
         ----------
         path
-            Path to a netcdf file containing the data or to a folder containing
+            Path to a netCDF file containing the data or to a folder containing
             multiple files.
         file_pattern
-            Pattern of the files to read. If None, the path is considered to be
-            a single file.
+            Glob pattern of the files to read (e.g., '*.nc'). If None, the path is
+            considered to be a single file.
         data_crs
-            CRS (as EPSG id) of the netcdf file. If None, the CRS is read from the file.
+            CRS of the netCDF file (as EPSG code). If None, the CRS is read from the file.
         var_name
-            Name of the variable to read.
+            Name of the variable to read from the netCDF file.
         dim_time
-            Name of the time dimension.
+            Name of the time dimension. Default: 'time'
         dim_x
-            Name of the x dimension.
+            Name of the x/longitude dimension. Default: 'x'
         dim_y
-            Name of the y dimension.
+            Name of the y/latitude dimension. Default: 'y'
         hydro_units
             HydroUnits object containing the hydro units to use for the spatialization.
-            Needed if `apply_data_gradient` is True.
+            Needed if apply_data_gradient is True.
         raster_hydro_units
-            Path to a raster containing the hydro unit ids to use for the
+            Path to a raster file containing the hydro unit IDs to use for the
             spatialization.
         weights_block_size
-            Size of the block of time steps to use for the 'weights' method.
-            Default: 100.
+            Size of the block of time steps to use for weight computation.
+            Default: 100
         apply_data_gradient
             If True, elevation-based gradients will be retrieved from the data and
             applied to the hydro units (e.g., for temperature and precipitation).
             If False, the data will be regridded without applying any gradient.
+            Default: True
         gradient_type
-            Type of gradient to apply. Can be 'additive' or 'multiplicative'.
-            Default: 'additive'.
+            Type of gradient to apply: 'additive' or 'multiplicative'.
+            Default: 'additive'
         dem_path
-            DEM to use for the spatialization (computation of the gradients).
-            Needed if `apply_data_gradient` is True.
+            Path to DEM raster file for spatialization (gradient computation).
+            Needed if apply_data_gradient is True.
+
+        Raises
+        ------
+        ImportError
+            If required optional dependencies (rasterio, rioxarray, netCDF4) are not installed.
+        ValueError
+            If raster_hydro_units is not provided, or if time/spatial dimensions don't match.
         """
         if not HAS_RASTERIO:
             raise ImportError("rasterio is required for 'regrid_from_netcdf'.")

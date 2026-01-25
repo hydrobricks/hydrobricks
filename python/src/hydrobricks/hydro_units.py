@@ -26,13 +26,13 @@ class HydroUnits:
     land_cover_names
         List of land cover names. Default: ['ground']
     data
-        Dataframe containing the hydro units data.
+        DataFrame containing the hydro units data.
 
     Attributes
     ----------
-    land_cover_types : list
+    land_cover_types : list[str]
         List of land cover types. Default: ['ground']
-    land_cover_names : list
+    land_cover_names : list[str]
         List of land cover names. Default: ['ground']
     hydro_units : pd.DataFrame
         Dataframe containing the hydro units data.
@@ -43,56 +43,84 @@ class HydroUnits:
             land_cover_types: list[str] | None = None,
             land_cover_names: list[str] | None = None,
             data: pd.DataFrame | None = None
-    ):
+    ) -> None:
+        """
+        Initialize HydroUnits instance.
+
+        Parameters
+        ----------
+        land_cover_types
+            List of land cover type identifiers. If None, defaults to ['ground'].
+        land_cover_names
+            List of land cover display names. If None, defaults to ['ground'].
+        data
+            Pre-existing DataFrame with hydro units data. If None, creates empty DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If land_cover_types and land_cover_names have different lengths.
+        """
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
             land_cover_types = ['ground']
         if not land_cover_names:
             land_cover_names = ['ground']
-        self.land_cover_types = land_cover_types
-        self.land_cover_names = land_cover_names
-        self.prefix_fraction = 'fraction-'
-        land_cover_cols = []
+        self.land_cover_types: list[str] = land_cover_types
+        self.land_cover_names: list[str] = land_cover_names
+        self.prefix_fraction: str = 'fraction-'
+        land_cover_cols: list[tuple[str, str]] = []
         for item in land_cover_names:
             land_cover_cols.append((f'{self.prefix_fraction}{item}', 'fraction'))
         if data is not None:
             self._set_units_data(data)
         else:
-            self.hydro_units = pd.DataFrame(columns=land_cover_cols)
+            self.hydro_units: pd.DataFrame = pd.DataFrame(columns=land_cover_cols)
 
     def load_from_csv(
             self,
             path: str | Path,
             column_elevation: str | None = None,
             column_area: str | None = None,
-            column_fractions: dict | None = None,
-            columns_areas: dict | None = None,
-            other_columns: dict | None = None
-    ):
+            column_fractions: dict[str, str] | None = None,
+            columns_areas: dict[str, str] | None = None,
+            other_columns: dict[str, str] | None = None
+    ) -> None:
         """
-        Read hydro units properties from csv file. The file must contain two header
+        Read hydro units properties from CSV file. The file must contain two header
         rows. The first row contains the column names and the second row contains the
-        units. The file must contain at a minimum the units area.
+        units. The file must contain at minimum the units area.
 
         Parameters
         ----------
         path
-            Path to the csv file containing hydro units data.
+            Path to the CSV file containing hydro units data.
         column_elevation
             Column name containing the elevation values.
-            Default: elevation
+            If None, looks for 'elevation' column. Default: None
         column_area
-            Column name containing the area values.
-            Default: area
+            Column name containing the total area values.
+            If None, looks for 'area' column. Default: None
         column_fractions
-            Column name containing the area fraction values for each land cover.
+            NOT IMPLEMENTED. Dictionary mapping land cover names to area fraction column names.
+            Default: None
         columns_areas
-            Column name containing the area values for each land cover.
+            Dictionary mapping land cover names to area column names.
+            Cannot be used with column_area. Default: None
         other_columns
-            Column name containing other values to import. The key is the property name
-            and the value is the name of the column in the csv file.
+            Dictionary mapping property names to column names in the CSV file.
             Example: {'slope': 'Slope', 'aspect': 'Aspect'}
+            Default: None
+
+        Raises
+        ------
+        FileNotFoundError
+            If the CSV file does not exist.
+        ValueError
+            If required columns are missing or are inconsistent.
+        NotImplementedError
+            If column_fractions is provided (not yet implemented).
         """
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)

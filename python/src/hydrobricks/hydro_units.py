@@ -186,14 +186,22 @@ class HydroUnits:
 
         self.populate_bounded_instance()
 
-    def save_to_csv(self, path: str | Path):
+    def save_to_csv(self, path: str | Path) -> None:
         """
         Save the hydro units to a csv file.
+
+        Exports the hydro units DataFrame to a CSV file with multi-level header
+        containing both property names and units.
 
         Parameters
         ----------
         path
             Path to the output file.
+
+        Raises
+        ------
+        ValueError
+            If no hydro units data is available.
         """
         if self.hydro_units is None:
             raise ValueError("No hydro units to save.")
@@ -201,15 +209,23 @@ class HydroUnits:
         # Save to csv file with units in the header
         self.hydro_units.to_csv(path, header=True, index=False)
 
-    def save_as(self, path: str):
+    def save_as(self, path: str) -> None:
         """
         Create a file containing the hydro unit properties. Such a file can be used in
         the command-line version of hydrobricks.
+
+        Saves hydro units and land cover information to a netCDF4 file with proper
+        dimensions and variable attributes.
 
         Parameters
         ----------
         path
             Path of the file to create.
+
+        Raises
+        ------
+        ImportError
+            If netcdf4 is not installed.
         """
         if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
@@ -251,11 +267,12 @@ class HydroUnits:
         Parameters
         ----------
         prop
-            The property to check.
+            The property name to check. Should match a column name in the hydro_units DataFrame.
 
         Returns
         -------
-        True if the property is present, False otherwise.
+        bool
+            True if the property is present, False otherwise.
         """
         return prop in self.hydro_units.columns
 
@@ -270,7 +287,27 @@ class HydroUnits:
             column_tuple: tuple[str, str],
             values: np.ndarray,
             set_first: bool = False
-    ):
+    ) -> None:
+        """
+        Add a property to the hydro units.
+
+        Adds a new column to the hydro_units DataFrame with the specified property
+        name, unit, and values. Can optionally insert as the first column.
+
+        Parameters
+        ----------
+        column_tuple
+            Tuple containing (property_name, unit_string). Example: ('elevation', 'm')
+        values
+            Numpy array containing the property values for each hydro unit.
+        set_first
+            If True, the property is added as the first column. Default: False
+
+        Raises
+        ------
+        ValueError
+            If values length doesn't match the number of hydro units.
+        """
         df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples(
             [column_tuple], names=['Property', 'Unit']))
 
@@ -292,10 +329,17 @@ class HydroUnits:
         """
         return len(self.hydro_units)
 
-    def check_land_cover_fractions_not_empty(self):
+    def check_land_cover_fractions_not_empty(self) -> None:
         """
-        Check that the land cover fractions are not empty. If there is a single one
-        (e.g. ground), set them to 1.
+        Check that the land cover fractions are not empty.
+
+        Validates that all land cover fractions have been defined. If there is a single
+        land cover type (e.g. 'ground'), automatically sets it to 1.0 for all hydro units.
+
+        Raises
+        ------
+        ValueError
+            If any land cover fraction contains NaN values (when multiple land cover types exist).
         """
         if len(self.land_cover_names) == 1:
             self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1.0
@@ -306,7 +350,13 @@ class HydroUnits:
             if self.hydro_units[field_name].isnull().values.any():
                 raise ValueError(f'The land cover "{cover_name}" contains NaN values.')
 
-    def initialize_land_cover_fractions(self):
+    def initialize_land_cover_fractions(self) -> None:
+        """
+        Initialize land cover fractions with default values.
+
+        Sets the land cover fractions of 'ground' to 1.0 and all other land cover types to 0.0
+        for all hydro units. Used as a starting point before applying specific land cover changes.
+        """
         # Set the land cover fractions of 'ground' to 1 and the rest to 0
         for cover_name in self.land_cover_names:
             field_name = self.prefix_fraction + cover_name
@@ -317,17 +367,24 @@ class HydroUnits:
             self,
             land_cover_name: str,
             land_cover_change: pd.DataFrame
-    ):
+    ) -> None:
         """
-        Initialize the hydro units from the first values of a land cover change
-        dataframe.
+        Initialize the hydro units from the first values of a land cover change dataframe.
+
+        Updates the land cover fractions for specified hydro units based on a land cover change
+        dataframe. Automatically adjusts the 'ground' land cover fraction to maintain conservation.
 
         Parameters
         ----------
         land_cover_name
             The name of the land cover to initialize.
         land_cover_change
-            The land cover change dataframe.
+            The land cover change dataframe with columns 'hydro_unit' and area values.
+
+        Raises
+        ------
+        ValueError
+            If computed land cover fraction is not in the range [0, 1].
         """
         # Land cover fraction column name
         field_name = self.prefix_fraction + land_cover_name
@@ -354,7 +411,14 @@ class HydroUnits:
 
         self.populate_bounded_instance()
 
-    def populate_bounded_instance(self):
+    def populate_bounded_instance(self) -> None:
+        """
+        Populate the SettingsBasin instance from current hydro units data.
+
+        Updates the internal SettingsBasin object with current hydro unit properties,
+        sorted by elevation in descending order. Includes land cover fractions and
+        all custom properties.
+        """
         self.settings.clear()
 
         # List properties to be set
@@ -401,15 +465,25 @@ class HydroUnits:
                 assert 0 <= fraction <= 1
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
-    def set_connectivity(self, connectivity: pd.DataFrame | Path | str):
+    def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:
         """
         Set the connectivity of the hydro units.
+
+        Configures how water flows between hydro units by setting lateral connections
+        with specified ratios. Can accept connectivity data as a DataFrame or load from file.
 
         Parameters
         ----------
         connectivity
             File or Dataframe containing the connectivity information as generated by
             catchment.calculate_connectivity().
+
+        Raises
+        ------
+        TypeError
+            If connectivity is not a DataFrame or valid file path.
+        ValueError
+            If connectivity DataFrame is missing required columns or has invalid values.
         """
         if isinstance(connectivity, (str, Path)):
             connectivity = pd.read_csv(connectivity, header=0, skiprows=[1])
@@ -474,7 +548,22 @@ class HydroUnits:
                     hydro_unit_id, connected_unit_id, ratio)
 
     @staticmethod
-    def _check_column_names(file_content: pd.DataFrame):
+    def _check_column_names(file_content: pd.DataFrame) -> None:
+        """
+        Validate and rename columns in a DataFrame read from CSV.
+
+        Renames unnamed or invalid columns to numeric indices, and converts unit
+        names to standardized enum format.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame with multi-level column index (name, unit).
+
+        Notes
+        -----
+        Modifies the DataFrame in-place by updating its column index.
+        """
         # Rename unnamed columns to 'No Unit'
         new_column_names = []
         for i, col in enumerate(file_content.columns):
@@ -493,15 +582,59 @@ class HydroUnits:
             column_name: str,
             df: pd.DataFrame
     ) -> tuple[np.ndarray, str]:
+        """
+        Extract column values and unit from a DataFrame with multi-level columns.
+
+        Parameters
+        ----------
+        column_name
+            Name of the column to extract.
+        df
+            DataFrame with multi-level column index (name, unit).
+
+        Returns
+        -------
+        tuple[np.ndarray, str]
+            Tuple containing:
+            - Flattened numpy array of column values
+            - Unit string from the column header
+        """
         col = df.loc[:, column_name]
         unit = col.columns.values[0]
         return col.values.flatten(), unit
 
     @staticmethod
     def _get_unit(prop: pd.Series) -> str:
+        """
+        Extract unit string from a pandas Series with multi-level index.
+
+        Parameters
+        ----------
+        prop
+            Pandas Series with multi-level index where the first level is the unit string.
+
+        Returns
+        -------
+        str
+            The unit string from the series index.
+        """
         return str(prop.index[0])
 
-    def _check_land_cover_areas_match(self, columns_areas: list[str]):
+    def _check_land_cover_areas_match(self, columns_areas: dict[str, str]) -> None:
+        """
+        Validate that provided land cover area columns match defined land cover names.
+
+        Parameters
+        ----------
+        columns_areas
+            Dictionary mapping land cover names to column names in the data.
+
+        Raises
+        ------
+        ValueError
+            If the number of columns doesn't match land cover names or if a land cover
+            name is not found in the defined land covers.
+        """
         if len(columns_areas) != len(self.land_cover_names):
             raise ValueError('The length of the provided "columns_areas" do not match '
                              'the size ot the land cover names.')
@@ -514,7 +647,21 @@ class HydroUnits:
             self,
             area_values: np.ndarray,
             area_unit: str
-    ):
+    ) -> None:
+        """
+        Compute and store land cover area portions for hydro units.
+
+        Calculates the total area for each hydro unit and computes normalized
+        land cover fractions. Stores results in the hydro_units DataFrame.
+
+        Parameters
+        ----------
+        area_values
+            2D array of area values per land cover type and hydro unit.
+            Shape: (num_units, num_land_covers)
+        area_unit
+            Unit string for the area values (e.g., 'm2', 'km2').
+        """
         # Compute total area
         area = np.sum(area_values, axis=1)
 
@@ -527,7 +674,24 @@ class HydroUnits:
             field_name = self.prefix_fraction + cover_name
             self.hydro_units[(field_name, 'fraction')] = fractions[:, idx]
 
-    def _set_units_data(self, data: pd.DataFrame):
+    def _set_units_data(self, data: pd.DataFrame) -> None:
+        """
+        Set hydro units data from a pre-existing DataFrame.
+
+        Initializes the hydro_units DataFrame, validates required columns,
+        and populates land cover fractions and settings.
+
+        Parameters
+        ----------
+        data
+            DataFrame with required columns 'area' and 'elevation'. If 'id' is
+            missing, it will be auto-generated.
+
+        Raises
+        ------
+        AssertionError
+            If required columns ('area', 'elevation') are missing.
+        """
         assert isinstance(data, pd.DataFrame)
         assert 'area' in data.columns
         assert 'elevation' in data.columns
@@ -542,9 +706,27 @@ class HydroUnits:
 
     @staticmethod
     def _check_land_cover_definitions(
-            land_cover_types: list[str],
-            land_cover_names: list[str]
-    ):
+            land_cover_types: list[str] | None,
+            land_cover_names: list[str] | None
+    ) -> None:
+        """
+        Validate land cover types and names consistency.
+
+        Ensures that if either land cover types or names are provided, both must be
+        provided and they must have matching lengths.
+
+        Parameters
+        ----------
+        land_cover_types
+            List of land cover type identifiers, or None.
+        land_cover_names
+            List of land cover display names, or None.
+
+        Raises
+        ------
+        ValueError
+            If one is provided without the other, or if they have different lengths.
+        """
         if land_cover_types is None and land_cover_names is None:
             return
 

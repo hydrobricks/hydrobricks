@@ -329,7 +329,7 @@ class Forcing:
         kwargs['type'] = 'spatialize_from_station'
         self._operations.append(kwargs)
 
-    def spatialize_from_gridded_data(self, **kwargs):
+    def spatialize_from_gridded_data(self, **kwargs: Any) -> None:
         """
         Define the spatialization operations from gridded data to all hydro units.
 
@@ -369,7 +369,7 @@ class Forcing:
         kwargs['type'] = 'spatialize_from_grid'
         self._operations.append(kwargs)
 
-    def compute_pet(self, **kwargs):
+    def compute_pet(self, **kwargs: Any) -> None:
         """
         Define the PET computation operations using the pyet library. The PET will be
         computed for all hydro units.
@@ -392,6 +392,13 @@ class Forcing:
             hydro unit will be used.
         other options : see pyet documentation for function-specific options. These
             options will be passed to the pyet function.
+
+        Raises
+        ------
+        ImportError
+            If pyet is not installed.
+        ValueError
+            If required variables are not available.
         """
         if not HAS_PYET:
             raise ImportError("pyet is required to do this.")
@@ -402,22 +409,35 @@ class Forcing:
 
     def apply_operations(
             self,
-            parameters: ParameterSet = None,
+            parameters: ParameterSet | None = None,
             apply_to_all: bool = True
-    ):
+    ) -> None:
         """
         Apply the pre-defined operations.
+
+        Executes all spatialization, correction, and PET computation operations
+        that were previously defined. Operations are applied in a fixed order:
+        1. Prior corrections
+        2. Station data spatialization
+        3. Gridded data spatialization
+        4. PET computation
 
         Parameters
         ----------
         parameters
-            The parameter object instance.
+            The parameter object instance. Required if operations reference parameters
+            using the 'param:' prefix.
         apply_to_all
             If True, the operations will be applied to all variables. If False, the
             operations will only be applied to the variables related to parameters
             defined in the parameters.allow_changing list. This is useful to avoid
             re-applying, during the calibration phase, operations that have already
-            been applied previously.
+            been applied previously. Default: True
+
+        Raises
+        ------
+        ValueError
+            If operations reference parameters but no parameter object is provided.
         """
         # The operations will be applied in the order defined in the list
         operation_types = [
@@ -432,16 +452,31 @@ class Forcing:
 
         self._is_initialized = True
 
-    def save_as(self, path: str | Path, max_compression: bool = False):
+    def save_as(self, path: str | Path, max_compression: bool = False) -> None:
         """
-        Create a netCDF file with the data.
+        Create a netCDF file with the forcing data.
+
+        Saves the 2D spatialized forcing data to a netCDF4 file with the structure
+        suitable for later loading with load_from().
 
         Parameters
         ----------
         path
             Path of the file to create.
         max_compression
-            Option to allow maximum compression for data in file.
+            Option to allow maximum compression for data in file. When True, uses
+            compression with least_significant_digit=3 for better storage efficiency.
+            Default: False
+
+        Raises
+        ------
+        ImportError
+            If netcdf4 is not installed.
+
+        Notes
+        -----
+        If apply_operations() has not been called, it will be called automatically
+        before saving to ensure data is properly spatialized.
         """
         if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
@@ -481,14 +516,30 @@ class Forcing:
 
         nc.close()
 
-    def load_from(self, path: str | Path):
+    def load_from(self, path: str | Path) -> None:
         """
         Load data from a netCDF file created using save_as().
+
+        Reads a previously saved netCDF file containing spatialized forcing data
+        and loads it into the Forcing object's data2D structure.
 
         Parameters
         ----------
         path
             Path of the file to read.
+
+        Raises
+        ------
+        ImportError
+            If netcdf4 is not installed.
+        ValueError
+            If the hydro units in the file don't match the Forcing object's hydro units.
+
+        Notes
+        -----
+        The loaded data will have the same structure as if it was created through
+        spatialization operations. The Forcing object will be marked as initialized
+        after successful loading.
         """
         if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
@@ -523,6 +574,17 @@ class Forcing:
         nc.close()
 
     def get_total_precipitation(self) -> float:
+        """
+        Calculate the catchment-average total precipitation.
+
+        Computes the weighted average precipitation across all hydro units based on
+        their areas.
+
+        Returns
+        -------
+        float
+            Total precipitation in mm (or original units if data is in different units).
+        """
         idx = self.data2D.data_name.index(self.Variable.P)
         data = self.data2D.data[idx].sum(axis=0)
         areas = self.hydro_units[('area', 'm2')]
@@ -534,7 +596,30 @@ class Forcing:
             operation_type: str,
             parameters: ParameterSet | None = None,
             apply_to_all: bool = True
-    ):
+    ) -> None:
+        """
+        Apply operations of a specific type in sequence.
+
+        Iterates through operations of the given type and applies them with the
+        appropriate parameters. Substitutes parameter references (param: prefix)
+        with actual parameter values.
+
+        Parameters
+        ----------
+        operation_type
+            Type of operations to apply ('prior_correction', 'spatialize_from_station',
+            'spatialize_from_grid', or 'compute_pet').
+        parameters
+            Parameter object for substituting parameter references. Required if
+            operations use 'param:' prefix.
+        apply_to_all
+            If False, only apply operations for variables in allow_changing list.
+
+        Raises
+        ------
+        ValueError
+            If operation references parameters but no parameter object provided.
+        """
         for operation_ref in self._operations:
             operation = operation_ref.copy()
 
@@ -576,8 +661,28 @@ class Forcing:
             self,
             variable: str,
             method: str = 'multiplicative',
-            **kwargs
-    ):
+            **kwargs: Any
+    ) -> None:
+        """
+        Apply a prior correction to 1D station data.
+
+        Modifies the loaded station data by applying an additive or multiplicative
+        correction factor to a specific variable.
+
+        Parameters
+        ----------
+        variable
+            Name or alias of the variable to correct.
+        method
+            Correction method: 'multiplicative' (default) or 'additive'.
+        **kwargs
+            Must contain 'correction_factor' key with the factor value.
+
+        Raises
+        ------
+        ValueError
+            If correction_factor not provided or unknown method used.
+        """
         variable = self.get_variable_enum(variable)
         idx = self.data1D.data_name.index(variable)
 
@@ -599,8 +704,34 @@ class Forcing:
             self,
             variable: str,
             method: str = 'default',
-            **kwargs
-    ):
+            **kwargs: Any
+    ) -> None:
+        """
+        Spatialize 1D station data to 2D hydro units using elevation gradients.
+
+        Converts point observations from a station to distributed values across
+        hydro units using elevation-dependent methods (additive or multiplicative
+        gradients).
+
+        Parameters
+        ----------
+        variable
+            Name or alias of the variable to spatialize.
+        method
+            Spatialization method: 'constant', 'additive_elevation_gradient',
+            'multiplicative_elevation_gradient', or
+            'multiplicative_elevation_threshold_gradients'.
+        **kwargs
+            Required/optional parameters depend on the method:
+            - ref_elevation: Reference station elevation (required for gradient methods)
+            - gradient: Elevation gradient value(s)
+            - gradient_2: Second gradient for threshold method
+
+        Raises
+        ------
+        ValueError
+            If required parameters are missing or invalid method specified.
+        """
         # Checking that the correction_factor option is not used here anymore
         if 'correction_factor' in kwargs:
             raise ValueError('The correction_factor option is to be used only '
@@ -712,8 +843,35 @@ class Forcing:
             self,
             variable: str,
             method: str = 'default',
-            **kwargs
-    ):
+            **kwargs: Any
+    ) -> None:
+        """
+        Spatialize 2D gridded data to hydro units with optional elevation gradients.
+
+        Regrids spatial meteorological data from netCDF files to hydro units,
+        optionally applying elevation-based corrections.
+
+        Parameters
+        ----------
+        variable
+            Name or alias of the variable to spatialize.
+        method
+            Spatialization method. Default is 'regrid_from_netcdf'.
+        **kwargs
+            Parameters for the regridding operation including:
+            - path: Path to netCDF file(s)
+            - file_pattern: Glob pattern for multiple files
+            - data_crs: CRS of the data (as EPSG code)
+            - var_name: Name of variable in the netCDF file
+            - raster_hydro_units: Path to hydro unit IDs raster
+            - apply_data_gradient: Whether to apply elevation gradients
+            - gradient_type: 'additive' or 'multiplicative'
+
+        Raises
+        ------
+        ValueError
+            If required parameters missing or invalid method specified.
+        """
         variable = self.get_variable_enum(variable)
 
         # Specify default methods
@@ -779,7 +937,29 @@ class Forcing:
         else:
             raise ValueError(f'Unknown method: {method}')
 
-    def _apply_pet_computation(self, method: str, use: list[str], **kwargs):
+    def _apply_pet_computation(self, method: str, use: list[str], **kwargs: Any) -> None:
+        """
+        Compute potential evapotranspiration (PET) for all hydro units.
+
+        Uses the pyet library to compute PET based on available meteorological data
+        and the specified method.
+
+        Parameters
+        ----------
+        method
+            Name of the PET computation method (e.g., 'penman', 'pm', 'hargreaves').
+        use
+            List of variables to use for computation. Can include 'elevation', 'latitude'/'lat'.
+        **kwargs
+            Additional parameters for the PET method and unit-specific data.
+
+        Raises
+        ------
+        ImportError
+            If pyet library is not installed.
+        ValueError
+            If required variables are not available.
+        """
         if not HAS_PYET:
             raise ImportError("pyet is required to do this.")
 
@@ -822,6 +1002,29 @@ class Forcing:
 
     @staticmethod
     def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:
+        """
+        Compute PET using the pyet library.
+
+        Routes the computation to the appropriate pyet method based on the
+        specified method name.
+
+        Parameters
+        ----------
+        method
+            Name of the PET computation method.
+        pyet_args
+            Dictionary of arguments to pass to the pyet method.
+
+        Returns
+        -------
+        np.ndarray
+            Array of computed PET values.
+
+        Raises
+        ------
+        ValueError
+            If the method name is not recognized.
+        """
         if method in ['Penman', 'penman']:
             return pyet.penman(**pyet_args)
         elif method in ['Penman-Monteith', 'pm']:
@@ -871,6 +1074,26 @@ class Forcing:
             use: list[str],
             i_unit: int
     ) -> dict:
+        """
+        Set meteorological variables for pyet computation.
+
+        Extracts spatialized meteorological data for a specific hydro unit and
+        adds it to the pyet arguments dictionary using pyet-compatible variable names.
+
+        Parameters
+        ----------
+        pyet_args
+            Dictionary of arguments for pyet. Will be updated with variable data.
+        use
+            List of variable names to extract and add.
+        i_unit
+            Index of the hydro unit.
+
+        Returns
+        -------
+        dict
+            Updated pyet_args dictionary with meteorological variables added.
+        """
         for v in use:
             v = self.get_variable_enum(v)
             idx = self.data2D.data_name.index(v)
@@ -893,7 +1116,20 @@ class Forcing:
 
         return pyet_args
 
-    def _check_variables_available(self, use: list[str]):
+    def _check_variables_available(self, use: list[str]) -> None:
+        """
+        Validate that all required variables are available in data2D.
+
+        Parameters
+        ----------
+        use
+            List of variable names to check.
+
+        Raises
+        ------
+        ValueError
+            If any variable is not available in data2D.
+        """
         # Check if all variables are available
         use = [self.get_variable_enum(v) for v in use]
         for v in use:
@@ -901,7 +1137,23 @@ class Forcing:
                 raise ValueError(f"Variable {v} is not available.")
 
     @staticmethod
-    def _remove_lat_elevation_options(use: list[str]):
+    def _remove_lat_elevation_options(use: list[str]) -> list[str]:
+        """
+        Remove latitude and elevation options from variable list.
+
+        These are special options that don't correspond to meteorological variables
+        in the data but rather to spatial parameters.
+
+        Parameters
+        ----------
+        use
+            List of variable names, potentially including 'latitude', 'lat', 'elevation'.
+
+        Returns
+        -------
+        list[str]
+            Filtered list with latitude and elevation removed.
+        """
         # Remove latitude and elevation from the list
         use = [u for u in use if u not in ['latitude', 'lat', 'elevation']]
         return use

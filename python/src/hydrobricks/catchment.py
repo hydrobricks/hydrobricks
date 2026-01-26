@@ -67,7 +67,8 @@ class Catchment:
             outline: str | Path | None = None,
             land_cover_types: list[str] | None = None,
             land_cover_names: list[str] | None = None,
-            hydro_units_data: pd.DataFrame | None = None):
+            hydro_units_data: pd.DataFrame | None = None
+    ) -> None:
         # Check that the required packages are installed
         if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
@@ -80,14 +81,14 @@ class Catchment:
         if outline is not None and not Path(outline).is_file():
             raise FileNotFoundError(f"File {outline} does not exist.")
 
-        self.area = None
-        self.crs = None
-        self.outline = None
-        self.dem = None
-        self.dem_data = None
-        self.attributes = {}
-        self.map_unit_ids = None
-        self.hydro_units = HydroUnits(
+        self.area: float | None = None
+        self.crs: str | None = None
+        self.outline: list | None = None
+        self.dem: rasterio.DatasetReader | None = None
+        self.dem_data: np.ndarray | None = None
+        self.attributes: dict[str, dict] = {}
+        self.map_unit_ids: np.ndarray | None = None
+        self.hydro_units: HydroUnits = HydroUnits(
             land_cover_types,
             land_cover_names,
             hydro_units_data
@@ -96,12 +97,18 @@ class Catchment:
         self._extract_outline(outline)
         self._extract_area(outline)
 
-        self._topography = None
-        self._discretization = None
-        self._connectivity = None
-        self._solar_radiation = None
+        self._topography: CatchmentTopography | None = None
+        self._discretization: CatchmentDiscretization | None = None
+        self._connectivity: CatchmentConnectivity | None = None
+        self._solar_radiation: PotentialSolarRadiation | None = None
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """
+        Clean up resources when catchment object is deleted.
+
+        Closes the DEM dataset and any MemoryFiles used for reprojected attributes
+        to avoid resource leaks.
+        """
         # Close main DEM dataset
         if self.dem is not None:
             try:
@@ -408,7 +415,7 @@ class Catchment:
 
         return self.hydro_units
 
-    def save_hydro_units_to_csv(self, path: str | Path):
+    def save_hydro_units_to_csv(self, path: str | Path) -> None:
         """
         Save the hydro units to a csv file.
 
@@ -422,7 +429,7 @@ class Catchment:
 
         self.hydro_units.save_to_csv(path)
 
-    def load_hydro_units_from_csv(self, path: str | Path):
+    def load_hydro_units_from_csv(self, path: str | Path) -> None:
         """
         Load hydro units from a csv file.
 
@@ -440,7 +447,7 @@ class Catchment:
             self,
             output_path: str | Path,
             output_filename: str = 'unit_ids.tif'
-    ):
+    ) -> None:
         """
         Save the unit ids raster to a file.
 
@@ -472,7 +479,7 @@ class Catchment:
             self,
             path: str,
             filename: str = 'unit_ids.tif'
-    ):
+    ) -> None:
         """
         Load hydro units from a raster file.
 
@@ -574,6 +581,17 @@ class Catchment:
         return self.get_dem_x_resolution() * self.get_dem_y_resolution()
 
     def get_dem_mean_lat_lon(self) -> tuple[float, float]:
+        """
+        Get the mean latitude and longitude of the DEM extent.
+
+        Calculates the central coordinates of the catchment DEM and converts them
+        from the catchment CRS to latitude/longitude (EPSG:4326).
+
+        Returns
+        -------
+        tuple[float, float]
+            Tuple of (mean_latitude, mean_longitude) in degrees.
+        """
         # Central coordinates of the catchment
         mean_x = self.dem.bounds[0] + (self.dem.bounds[2] - self.dem.bounds[0]) / 2
         if self.dem.bounds[3] > self.dem.bounds[1]:
@@ -619,7 +637,7 @@ class Catchment:
             self,
             land_cover_name: str,
             land_cover_change: pd.DataFrame
-    ):
+    ) -> None:
         """
         Initialize the HydroUnits cover area from a land cover change object.
 
@@ -641,16 +659,22 @@ class Catchment:
             land_cover_change
         )
 
-    def initialize_land_cover_fractions(self):
+    def initialize_land_cover_fractions(self) -> None:
+        """
+        Initialize land cover fractions for all hydro units.
+
+        Sets up the initial fractional areas for each land cover type within
+        each hydro unit based on the available land cover data.
+        """
         self.hydro_units.initialize_land_cover_fractions()
 
-    def discretize_by(self, *args, **kwargs):
+    def discretize_by(self, *args, **kwargs) -> None:
         """
         Call the discretize_by method of the Discretization class.
         """
         self.discretization.discretize_by(*args, **kwargs)
 
-    def create_elevation_bands(self, *args, **kwargs):
+    def create_elevation_bands(self, *args, **kwargs) -> None:
         """
         Call the create_elevation_bands method of the Discretization class.
         """
@@ -670,7 +694,7 @@ class Catchment:
         """
         return self.topography.resample_dem_and_calculate_slope_aspect(*args, **kwargs)
 
-    def calculate_slope_aspect(self):
+    def calculate_slope_aspect(self) -> None:
         """
         Call the calculate_slope_aspect method of the Topography class.
         """
@@ -688,7 +712,7 @@ class Catchment:
         """
         return self.connectivity.calculate(*args, **kwargs)
 
-    def calculate_daily_potential_radiation(self, *args, **kwargs):
+    def calculate_daily_potential_radiation(self, *args, **kwargs) -> None:
         """
         Call the calculate_daily_potential_radiation method of the
         PotentialSolarRadiation class.
@@ -702,14 +726,14 @@ class Catchment:
         """
         return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
-    def load_mean_annual_radiation_raster(self, *args, **kwargs):
+    def load_mean_annual_radiation_raster(self, *args, **kwargs) -> None:
         """
         Call the load_mean_annual_radiation_raster method of the
         PotentialSolarRadiation class.
         """
         self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
-    def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
+    def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs) -> None:
         """
         Call the upscale_and_save_mean_annual_radiation_rasters method of the
         PotentialSolarRadiation class.
@@ -754,6 +778,22 @@ class Catchment:
         return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit: np.ndarray) -> tuple[float, float]:
+        """
+        Extract the mean latitude and longitude for a hydro unit.
+
+        Calculates the mean coordinates of pixels within a unit mask and converts
+        them from the catchment CRS to latitude/longitude (EPSG:4326).
+
+        Parameters
+        ----------
+        mask_unit
+            Boolean mask array identifying the cells of the hydro unit.
+
+        Returns
+        -------
+        tuple[float, float]
+            Tuple of (mean_latitude, mean_longitude) in degrees.
+        """
         # Get rows and cols of the unit
         rows, cols = np.where(mask_unit)
 
@@ -770,7 +810,15 @@ class Catchment:
 
         return mean_lat, mean_lon
 
-    def _extract_area(self, outline: shapely.geometry.Polygon):
+    def _extract_area(self, outline: str | Path | None) -> None:
+        """
+        Extract and compute the catchment area from outline shapefile.
+
+        Parameters
+        ----------
+        outline
+            Path to shapefile containing catchment outline. If None, area is not computed.
+        """
         # The outline has to be given in meters.
         if not outline:
             return
@@ -779,7 +827,17 @@ class Catchment:
         area = compute_area(shapefile)
         self.area = area
 
-    def _extract_outline(self, outline: shapely.geometry.Polygon):
+    def _extract_outline(self, outline: str | Path | None) -> None:
+        """
+        Extract catchment outline geometry from shapefile.
+
+        Reads the shapefile, validates CRS, and stores the polygon geometries.
+
+        Parameters
+        ----------
+        outline
+            Path to shapefile containing catchment outline. If None, outline is not extracted.
+        """
         if not outline:
             return
         shapefile = gpd.read_file(outline)
@@ -790,21 +848,31 @@ class Catchment:
     def _extract_raster(
             self,
             raster_path: str | Path
-    ) -> (rasterio.DatasetReader, np.ndarray):
+    ) -> tuple[rasterio.DatasetReader, np.ndarray]:
         """
         Extract raster data for the catchment. Does not handle change in coordinates.
+
+        Reads a raster file, applies catchment outline masking if available, and
+        replaces nodata values with NaN.
 
         Parameters
         ----------
         raster_path
-            Path of the DEM file.
+            Path of the raster file.
 
         Returns
         -------
-        src
-            The rasterio dataset reader object.
-        masked_data
-            The masked raster data.
+        tuple[rasterio.DatasetReader, np.ndarray]
+            Tuple containing:
+            - src: The rasterio dataset reader object
+            - masked_data: The masked raster data as numpy array
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
+        ImportError
+            If rasterio or shapely is not installed.
         """
         if not Path(raster_path).is_file():
             raise FileNotFoundError(f"File {raster_path} does not exist.")
@@ -829,7 +897,23 @@ class Catchment:
 
         return src, masked_data
 
-    def _check_crs(self, data: rasterio.DatasetReader | gpd.GeoDataFrame):
+    def _check_crs(self, data: rasterio.DatasetReader | gpd.GeoDataFrame) -> None:
+        """
+        Check and validate CRS consistency with the catchment.
+
+        Sets the catchment CRS if not already set, or verifies that the data CRS
+        matches the catchment CRS.
+
+        Parameters
+        ----------
+        data
+            Rasterio dataset or GeoDataFrame to check CRS against.
+
+        Raises
+        ------
+        ValueError
+            If data CRS doesn't match the catchment CRS.
+        """
         data_crs = self._get_crs_from_file(data)
         if self.crs is None:
             self.crs = data_crs
@@ -839,7 +923,25 @@ class Catchment:
                                  "catchment.")
 
     @staticmethod
-    def _get_crs_from_file(data: rasterio.DatasetReader | gpd.GeoDataFrame):
+    def _get_crs_from_file(data: rasterio.DatasetReader | gpd.GeoDataFrame) -> str:
+        """
+        Extract CRS from a rasterio dataset or GeoDataFrame.
+
+        Parameters
+        ----------
+        data
+            Rasterio dataset or GeoDataFrame to extract CRS from.
+
+        Returns
+        -------
+        str
+            Coordinate Reference System identifier.
+
+        Raises
+        ------
+        ValueError
+            If data format is not recognized.
+        """
         if isinstance(data, rasterio.DatasetReader):
             return data.crs
         elif isinstance(data, gpd.GeoDataFrame):

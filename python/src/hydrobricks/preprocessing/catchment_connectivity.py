@@ -21,7 +21,7 @@ class CatchmentConnectivity:
     Class to handle connectivity of catchments.
     """
 
-    def __init__(self, catchment: Catchment):
+    def __init__(self, catchment: Catchment) -> None:
         """
         Initialize the Connectivity class.
 
@@ -30,7 +30,7 @@ class CatchmentConnectivity:
         catchment
             The catchment object.
         """
-        self.catchment = catchment
+        self.catchment: Catchment = catchment
 
     def calculate(
             self,
@@ -42,6 +42,10 @@ class CatchmentConnectivity:
         Calculate the connectivity between hydro units using a flow accumulation
         partition. Connectivity between hydro units is forced to stay within the
         catchment.
+
+        Computes how water flows from each hydro unit to downstream units based on
+        flow direction and accumulation. Results in a DataFrame with connectivity
+        values representing the fraction of flow directed to each downstream unit.
 
         Parameters
         ----------
@@ -62,7 +66,8 @@ class CatchmentConnectivity:
 
         Returns
         -------
-        The hydro units connectivity.
+        pd.DataFrame
+            DataFrame with connectivity information for each hydro unit.
         """
         if not HAS_PYSHEDS:
             raise ImportError("pysheds is required to do this.")
@@ -120,6 +125,19 @@ class CatchmentConnectivity:
         self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
 
         def remove_connectivity_out(row: pd.Series) -> pd.Series:
+            """
+            Remove connectivity to outside the catchment (key 0).
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with key 0 removed if present.
+            """
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -131,7 +149,22 @@ class CatchmentConnectivity:
             return row
 
         def connect_to_neighbours(row: pd.Series) -> pd.Series:
-            # Look for hydro units without connectivity and connect them to the neighboring hydro units
+            """
+            Connect hydro units without downstream connectivity to neighbors.
+
+            Identifies neighboring hydro units and sets connectivity proportional
+            to the length of the common border.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with neighbor connectivity added if needed.
+            """
             unit_id = row[('id', '-')]
             connectivity = row[('connectivity', '-')]
             if connectivity:
@@ -153,6 +186,19 @@ class CatchmentConnectivity:
             return row
 
         def _normalize_row(connect: dict) -> dict:
+            """
+            Normalize connectivity values to sum to 1.0.
+
+            Parameters
+            ----------
+            connect
+                Connectivity dictionary with values to normalize.
+
+            Returns
+            -------
+            dict
+                Normalized connectivity dictionary.
+            """
             total_flow = sum(connect.values())
             for k in connect:
                 connect[k] /= total_flow
@@ -160,6 +206,24 @@ class CatchmentConnectivity:
             return connect
 
         def _round_and_normalize_row(connect: dict, precision: int) -> dict:
+            """
+            Round connectivity values to specified precision while maintaining sum of 1.
+
+            Uses floor and redistribution algorithm to ensure normalized values
+            sum to exactly 1.0 after rounding.
+
+            Parameters
+            ----------
+            connect
+                Connectivity dictionary with values to round.
+            precision
+                Number of decimal places to round to.
+
+            Returns
+            -------
+            dict
+                Rounded and normalized connectivity dictionary.
+            """
             total = sum(connect.values())
             scaled = {k: v * (10 ** precision) for k, v in connect.items()}
             floored = {k: int(v) for k, v in scaled.items()}
@@ -173,7 +237,26 @@ class CatchmentConnectivity:
             # Scale back to the original precision
             return {k: floored[k] / (10 ** precision) for k in floored}
 
-        def normalize_connectivity(row: pd.Series, precision:int = 3) -> pd.Series:
+        def normalize_connectivity(row: pd.Series, precision: int = 3) -> pd.Series:
+            """
+            Normalize and filter connectivity values for a hydro unit.
+
+            Removes connectivity to areas outside the catchment, normalizes values
+            to sum to 1.0, filters out values less than 1%, and rounds to specified
+            precision.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+            precision
+                Number of decimal places for rounding.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with normalized connectivity.
+            """
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -204,6 +287,22 @@ class CatchmentConnectivity:
             return row
 
         def keep_highest_connectivity(row: pd.Series) -> pd.Series:
+            """
+            Keep only the highest connectivity value for a hydro unit.
+
+            Removes connectivity to areas outside the catchment, then keeps only
+            the single downstream unit with the highest connectivity value.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with only highest connectivity kept.
+            """
             connectivity = row[('connectivity', '-')]
             if not connectivity:
                 return row
@@ -241,7 +340,23 @@ class CatchmentConnectivity:
             df: pd.DataFrame,
             flow_acc: np.ndarray,
             flow_dir: np.ndarray
-    ):
+    ) -> None:
+        """
+        Sum contributing flow accumulation to downstream hydro units.
+
+        Iterates through all cells in the DEM, traces flow direction, and accumulates
+        flow from each hydro unit to the downstream hydro unit it flows into.
+        Updates the connectivity dictionary in the DataFrame.
+
+        Parameters
+        ----------
+        df
+            DataFrame containing hydro unit IDs and connectivity dictionaries.
+        flow_acc
+            2D array of flow accumulation values.
+        flow_dir
+            2D array of flow direction codes (D8 algorithm: 1,2,4,8,16,32,64,128).
+        """
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):

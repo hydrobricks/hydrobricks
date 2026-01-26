@@ -204,19 +204,33 @@ def get_process_param_specs() -> dict[str, list[dict]]:
 class ParameterSet:
     """Class for the parameter sets"""
 
-    def __init__(self):
-        self.parameters = pd.DataFrame(
+    def __init__(self) -> None:
+        """
+        Initialize a ParameterSet instance.
+
+        Sets up empty containers for parameters, constraints, and the list of
+        parameters to assess during calibration.
+        """
+        self.parameters: pd.DataFrame = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
                      'min', 'max', 'default_value', 'mandatory', 'prior'])
-        self.constraints = []
-        self._allow_changing = []
+        self.constraints: list[list[str]] = []
+        self._allow_changing: list[str] = []
 
     @property
-    def allow_changing(self):
+    def allow_changing(self) -> list[str]:
+        """
+        Get the list of parameters to assess during calibration.
+
+        Returns
+        -------
+        list[str]
+            List of parameter names that are allowed to change.
+        """
         return self._allow_changing
 
     @allow_changing.setter
-    def allow_changing(self, allow_changing: list[str]):
+    def allow_changing(self, allow_changing: list[str]) -> None:
         """
         Set the list of parameters to assess.
 
@@ -239,7 +253,7 @@ class ParameterSet:
             max_value: float | list[float] | None = None,
             default_value: float | list[float] | None = None,
             mandatory: bool = True
-    ):
+    ) -> None:
         """
         Define a parameter by setting its properties.
 
@@ -291,7 +305,7 @@ class ParameterSet:
         self.parameters = pd.concat([self.parameters, new_row.to_frame().T],
                                     ignore_index=True)
 
-    def add_aliases(self, parameter_name: str, aliases: list[str] | str):
+    def add_aliases(self, parameter_name: str, aliases: list[str] | str) -> None:
         """
         Add aliases to a parameter.
 
@@ -309,7 +323,7 @@ class ParameterSet:
         index = self._get_parameter_index(parameter_name)
         self.parameters.loc[index, 'aliases'] += aliases
 
-    def change_range(self, parameter: str, min_value: float, max_value: float):
+    def change_range(self, parameter: str, min_value: float, max_value: float) -> None:
         """
         Change the value range of a parameter.
 
@@ -326,9 +340,12 @@ class ParameterSet:
         self.parameters.loc[index, 'min'] = min_value
         self.parameters.loc[index, 'max'] = max_value
 
-    def set_prior(self, parameter: str, prior: spotpy.parameter):
+    def set_prior(self, parameter: str, prior: spotpy.parameter) -> None:
         """
-        Change the value range of a parameter.
+        Set a prior distribution for a parameter.
+
+        Assigns a prior probability distribution to a parameter for use in Bayesian
+        calibration methods.
 
         Parameters
         ----------
@@ -336,6 +353,11 @@ class ParameterSet:
             Name (or alias) of the parameter
         prior
             The prior distribution (instance of spotpy.parameter)
+
+        Raises
+        ------
+        ImportError
+            If spotpy is not installed.
         """
         if not HAS_SPOTPY:
             raise ImportError("spotpy is required to do this.")
@@ -344,14 +366,16 @@ class ParameterSet:
         prior.name = parameter
         self.parameters.loc[index, 'prior'] = prior
 
-    def list_constraints(self):
+    def list_constraints(self) -> None:
         """
         List the constraints currently defined.
+
+        Prints all defined parameter constraints to the console.
         """
         for constraint in self.constraints:
             print(' '.join(constraint))
 
-    def define_constraint(self, parameter_1: str, operator: str, parameter_2: str):
+    def define_constraint(self, parameter_1: str, operator: str, parameter_2: str) -> None:
         """
         Defines a constraint between 2 parameters (e.g., paramA > paramB)
 
@@ -371,7 +395,7 @@ class ParameterSet:
         constraint = [parameter_1, operator, parameter_2]
         self.constraints.append(constraint)
 
-    def remove_constraint(self, parameter_1: str, operator: str, parameter_2: str):
+    def remove_constraint(self, parameter_1: str, operator: str, parameter_2: str) -> None:
         """
         Removes a constraint between 2 parameters (e.g., paramA > paramB)
 
@@ -401,7 +425,8 @@ class ParameterSet:
 
         Returns
         -------
-        True is constraints are satisfied, False otherwise.
+        bool
+            True if constraints are satisfied, False otherwise.
         """
         for constraint in self.constraints:
             # Ignore constraints involving unused parameters
@@ -436,7 +461,8 @@ class ParameterSet:
 
         Returns
         -------
-        True is ranges are satisfied, False otherwise.
+        bool
+            True if ranges are satisfied, False otherwise.
         """
         for _, row in self.parameters.iterrows():
             min_value = row['min']
@@ -467,7 +493,7 @@ class ParameterSet:
             values: dict,
             check_range: bool = True,
             allow_adapt: bool = False
-    ):
+    ) -> None:
         """
         Set the parameter values.
 
@@ -501,8 +527,9 @@ class ParameterSet:
             The name of the parameter.
 
         Returns
-        ------
-        True if found, False otherwise.
+        -------
+        bool
+            True if found, False otherwise.
         """
         index = self._get_parameter_index(name, raise_exception=False)
         return index is not None
@@ -517,8 +544,9 @@ class ParameterSet:
             The name of the parameter.
 
         Returns
-        ------
-        The parameter value.
+        -------
+        float
+            The parameter value.
         """
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, 'value']
@@ -529,7 +557,8 @@ class ParameterSet:
 
         Returns
         -------
-        True if all parameters are defined and have a value, False otherwise.
+        bool
+            True if all parameters are defined and have a value, False otherwise.
         """
         for _, row in self.parameters.iterrows():
             if row['value'] is None:
@@ -541,8 +570,9 @@ class ParameterSet:
         Get the undefined parameters.
 
         Returns
-        ------
-        A list of the undefined parameter names.
+        -------
+        list[str]
+            List of the undefined parameter names.
         """
         undefined = []
         for _, row in self.parameters.iterrows():
@@ -553,6 +583,11 @@ class ParameterSet:
     def get_model_parameters(self) -> pd.DataFrame:
         """
         Get the model-only parameters (excluding data-related parameters).
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing model parameters only.
         """
         return self.parameters[self.parameters['component'] != 'data']
 
@@ -563,7 +598,7 @@ class ParameterSet:
             min_value: float | list[float] | None = None,
             max_value: float | list[float] | None = None,
             unit: str | None = None
-    ):
+    ) -> None:
         """
         Add a parameter related to the data.
 
@@ -611,7 +646,8 @@ class ParameterSet:
 
         Returns
         -------
-        True if relates to forcing data, False otherwise.
+        bool
+            True if relates to forcing data, False otherwise.
         """
         index = self._get_parameter_index(parameter_name)
         return self.parameters.loc[index, 'component'] == 'data'
@@ -619,6 +655,9 @@ class ParameterSet:
     def set_random_values(self, parameters: list[str]) -> pd.DataFrame:
         """
         Set the provided parameter to random values.
+
+        Randomly assigns values to specified parameters within their defined ranges.
+        Iterates until all constraints are satisfied.
 
         Parameters
         ----------
@@ -628,7 +667,13 @@ class ParameterSet:
 
         Returns
         -------
-        A dataframe with the assigned parameter values.
+        pd.DataFrame
+            A dataframe with the assigned parameter values.
+
+        Raises
+        ------
+        ValueError
+            If parameter constraints cannot be satisfied after 1000 iterations.
         """
 
         # Create a dataframe to return assigned values
@@ -776,7 +821,7 @@ class ParameterSet:
             self._generate_brick_parameters(key, brick)
             self._generate_process_parameters(key, brick)
 
-    def _register(self, component: str, spec: ParamSpec, **overrides):
+    def _register(self, component: str, spec: ParamSpec, **overrides: dict) -> None:
         """Register a parameter based on a ParamSpec.
 
         Parameters
@@ -795,7 +840,17 @@ class ParameterSet:
                 kwargs[key] = val
         self.define_parameter(component=component, **kwargs)
 
-    def _generate_process_parameters(self, key: str, brick: dict):
+    def _generate_process_parameters(self, key: str, brick: dict) -> None:
+        """
+        Register parameters for all processes in a brick.
+
+        Parameters
+        ----------
+        key
+            The brick component name.
+        brick
+            Dictionary containing the brick structure with 'processes' key.
+        """
         if 'processes' not in brick:
             return
 
@@ -824,7 +879,17 @@ class ParameterSet:
                     f"The process {kind} is not recognised in parameters generation."
                 )
 
-    def _generate_brick_parameters(self, key: str, brick: dict):
+    def _generate_brick_parameters(self, key: str, brick: dict) -> None:
+        """
+        Register parameters defined in a brick structure.
+
+        Parameters
+        ----------
+        key
+            The brick component name.
+        brick
+            Dictionary containing the brick structure with 'parameters' key.
+        """
         if 'parameters' not in brick:
             return
 
@@ -845,7 +910,22 @@ class ParameterSet:
             land_cover_types: list[str],
             land_cover_names: list[str],
             structure: dict
-    ):
+    ) -> None:
+        """
+        Register parameters for glacier processes.
+
+        Generates parameters specific to glacier melt methods, handling multiple
+        glaciers with appropriate aliases and component names.
+
+        Parameters
+        ----------
+        land_cover_types
+            List of land cover types (e.g., 'glacier', 'ground').
+        land_cover_names
+            List of land cover names corresponding to types.
+        structure
+            Model structure dictionary containing glacier configuration.
+        """
         if 'glacier' not in land_cover_types:
             return
 
@@ -969,7 +1049,22 @@ class ParameterSet:
             options: dict,
             land_cover_types: list[str],
             land_cover_names: list[str]
-    ):
+    ) -> None:
+        """
+        Register parameters for snow processes.
+
+        Generates parameters for snow melt and redistribution based on model options,
+        handling multiple snow types with appropriate aliases.
+
+        Parameters
+        ----------
+        options
+            Model options dictionary containing snow configuration.
+        land_cover_types
+            List of land cover types (e.g., 'glacier', 'ground').
+        land_cover_names
+            List of land cover names corresponding to types.
+        """
         if 'snow_melt_process' in options or 'with_snow' in options:
             # Snow/rain transition specs (pseudo-process)
             for spec in PROCESS_PARAM_SPECS['transition:snow_rain']:
@@ -1068,7 +1163,25 @@ class ParameterSet:
                         f"The snow redistribution option {red} is not recognised.")
 
     @staticmethod
-    def _check_min_max_consistency(min_value: float, max_value: float):
+    def _check_min_max_consistency(
+            min_value: float | None,
+            max_value: float | None
+    ) -> None:
+        """
+        Validate that minimum value is less than maximum value.
+
+        Parameters
+        ----------
+        min_value
+            Minimum value to check, or None.
+        max_value
+            Maximum value to check, or None.
+
+        Raises
+        ------
+        ValueError
+            If min_value >= max_value (when both are provided).
+        """
         if min_value is None or max_value is None:
             return
 
@@ -1090,7 +1203,20 @@ class ParameterSet:
                 raise ValueError(f'The provided min value ({min_v} in list is greater '
                                  f'than the max value ({max_v}).')
 
-    def _check_aliases_uniqueness(self, aliases: list[str] | None):
+    def _check_aliases_uniqueness(self, aliases: list[str] | None) -> None:
+        """
+        Validate that all aliases are unique across all parameters.
+
+        Parameters
+        ----------
+        aliases
+            List of aliases to check for uniqueness.
+
+        Raises
+        ------
+        ValueError
+            If any alias already exists in the parameters list.
+        """
         if aliases is None:
             return
 
@@ -1107,6 +1233,33 @@ class ParameterSet:
             value: float,
             allow_adapt: bool = False
     ) -> float:
+        """
+        Validate that a parameter value is within its allowed range.
+
+        Checks if a value falls within the minimum and maximum bounds defined for
+        the parameter. Can optionally adapt the value to fit the bounds.
+
+        Parameters
+        ----------
+        index
+            Index of the parameter in the DataFrame.
+        key
+            Parameter name or alias (for error messages).
+        value
+            The value to check.
+        allow_adapt
+            If True, adapt the value to fit within bounds instead of raising error.
+
+        Returns
+        -------
+        float
+            The validated (and possibly adapted) value.
+
+        Raises
+        ------
+        ValueError
+            If value is out of range and allow_adapt is False.
+        """
         max_value = self.parameters.loc[index, 'max']
         min_value = self.parameters.loc[index, 'min']
 
@@ -1145,6 +1298,27 @@ class ParameterSet:
             name: str,
             raise_exception: bool = True
     ) -> int | Hashable | None:
+        """
+        Get the index of a parameter by name or alias.
+
+        Parameters
+        ----------
+        name
+            The parameter name or alias.
+        raise_exception
+            If True, raise ValueError if parameter not found. If False, return None.
+
+        Returns
+        -------
+        int | Hashable | None
+            The index of the parameter in the DataFrame, or None if not found and
+            raise_exception is False.
+
+        Raises
+        ------
+        ValueError
+            If the parameter is not found and raise_exception is True.
+        """
         for index, row in self.parameters.iterrows():
             if row['aliases'] is not None and name in row['aliases'] \
                     or name == row['component'] + ':' + row['name']:

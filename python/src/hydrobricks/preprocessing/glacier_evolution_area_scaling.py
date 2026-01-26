@@ -21,33 +21,37 @@ class GlacierEvolutionAreaScaling:
     to large glaciers. The delta-h method is preferred for such cases.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the GlacierMassBalance class.
         """
-        self.glacier_df = None
-        self.hydro_units = None
-        self.hydro_unit_ids = None
-        self.catchment_area = None
+        self.glacier_df: pd.DataFrame | None = None
+        self.hydro_units: pd.DataFrame | None = None
+        self.hydro_unit_ids: np.ndarray | None = None
+        self.catchment_area: float | None = None
 
         # Tables
-        self.lookup_table_area = None
-        self.lookup_table_volume = None
-        self.we = None
-        self.areas_pc = None
+        self.lookup_table_area: np.ndarray | None = None
+        self.lookup_table_volume: np.ndarray | None = None
+        self.we: np.ndarray | None = None
+        self.areas_pc: np.ndarray | None = None
 
         # Pixel-wise ice water equivalent (we) for each hydro unit
-        self.px_ice_we = None
+        self.px_ice_we: np.ndarray | None = None
 
     def compute_lookup_table(
             self,
             catchment: Catchment,
             ice_thickness: str | Path,
             nb_increments: int = 200
-    ):
+    ) -> None:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
         for the glacier mass balance calculation.
+
+        Computes glacier area and volume evolution lookup tables based on incremental
+        melting using a simple volume-area scaling approach. Results stored in
+        lookup_table_area and lookup_table_volume attributes.
 
         Parameters
         ----------
@@ -111,9 +115,12 @@ class GlacierEvolutionAreaScaling:
             columns=self.hydro_unit_ids
         )
 
-    def save_as_csv(self, output_dir: str | Path):
+    def save_as_csv(self, output_dir: str | Path) -> None:
         """
         Save the glacier evolution lookup table as a CSV file.
+
+        Writes three CSV files: glacier area evolution, glacier volume evolution,
+        and optional detailed glacier area and water equivalent evolution per pixel.
 
         Parameters
         ----------
@@ -174,7 +181,21 @@ class GlacierEvolutionAreaScaling:
                 index=False
             )
 
-    def _extract_ice_thickness(self, catchment, ice_thickness):
+    def _extract_ice_thickness(self, catchment: Catchment, ice_thickness: str | Path) -> None:
+        """
+        Extract ice thickness from raster and create glacier patches.
+
+        Loads ice thickness data from a raster file, resamples it to DEM resolution,
+        identifies glacier areas, and creates glacier patches for each hydro unit.
+        Stores result in self.glacier_df and self.px_ice_we.
+
+        Parameters
+        ----------
+        catchment
+            The catchment object with map_unit_ids defined.
+        ice_thickness
+            Path to ice thickness raster file.
+        """
         catchment.extract_attribute_raster(
             ice_thickness,
             'ice_thickness',
@@ -227,7 +248,18 @@ class GlacierEvolutionAreaScaling:
 
         self.glacier_df = glacier_df
 
-    def _initialization(self, nb_increments):
+    def _initialization(self, nb_increments: int) -> None:
+        """
+        Initialize lookup tables and arrays for incremental glacier evolution.
+
+        Sets up data structures to track glacier water equivalent, area percentages,
+        and lookup tables for glacier area and volume evolution over increments.
+
+        Parameters
+        ----------
+        nb_increments
+            Number of increments for evolution computation.
+        """
         # Add rows corresponding to the number of increments
         cols = self.px_ice_we.shape[1]
         new_rows = np.empty((nb_increments, cols), dtype=object)
@@ -247,7 +279,21 @@ class GlacierEvolutionAreaScaling:
         self.lookup_table_area = np.zeros((nb_increments + 1, len(hydro_unit_ids)))
         self.lookup_table_volume = np.zeros((nb_increments + 1, len(hydro_unit_ids)))
 
-    def _update_glacier_thickness(self, increment: int, mass_change: np.ndarray):
+    def _update_glacier_thickness(self, increment: int, mass_change: np.ndarray) -> None:
+        """
+        Update glacier water equivalent for an increment of mass loss.
+
+        Distributes mass change across glacier pixels in each hydro unit,
+        ensuring that ice water equivalent never becomes negative by redistributing
+        excess melt to remaining pixels.
+
+        Parameters
+        ----------
+        increment
+            Current increment number.
+        mass_change
+            Array of mass change per hydro unit for this increment.
+        """
         # Copy the previous increment values as starting point
         self.we[increment, :] = self.we[increment - 1, :]
         self.px_ice_we[increment, :] = self.px_ice_we[increment - 1, :].copy()
@@ -277,7 +323,21 @@ class GlacierEvolutionAreaScaling:
                  f"({ref_we - melt} != {new_we})")
             self.we[increment, i_unit] = new_we
 
-    def _width_scaling(self, increment: int, catchment: Catchment):
+    def _width_scaling(self, increment: int, catchment: Catchment) -> None:
+        """
+        Update glacier area using width-scaling approach.
+
+        Recalculates glacier areas for each hydro unit based on remaining pixels with
+        non-zero ice water equivalent. Removes pixels with zero ice and updates the
+        glacier water equivalent values.
+
+        Parameters
+        ----------
+        increment
+            Current increment number.
+        catchment
+            The catchment object with DEM pixel area information.
+        """
         self.areas_pc[increment] = self.areas_pc[increment - 1]
         px_area = catchment.get_dem_pixel_area()
 
@@ -297,8 +357,11 @@ class GlacierEvolutionAreaScaling:
             for arr in self.px_ice_we[increment]
         ])
 
-    def _update_lookup_tables(self):
+    def _update_lookup_tables(self) -> None:
         """
+        Update lookup tables with glacier area and volume for each increment.
+
+        Aggregates glacier areas and volumes across hydro units based on elevation bands.
         Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled) areas for all
         respective elevation bands which are covered by glaciers (i.e. glacier water
         equivalent ≥ 0) for each elevation zone."
@@ -319,7 +382,25 @@ class GlacierEvolutionAreaScaling:
     def _get_glacier_patches(
             catchment: Catchment,
             glaciers_mask: np.ndarray
-    ) -> list[tuple[int, int, float]]:
+    ) -> list[tuple[int, float]]:
+        """
+        Extract glacier patches for each hydro unit from a glacier mask.
+
+        Identifies contiguous glacier areas within each hydro unit and calculates
+        their areas based on DEM pixel size.
+
+        Parameters
+        ----------
+        catchment
+            The catchment object with map_unit_ids and DEM information.
+        glaciers_mask
+            Binary mask where 1 indicates glacier presence.
+
+        Returns
+        -------
+        list[tuple[int, float]]
+            List of (hydro_unit_id, glacier_area) tuples.
+        """
         # Extract the pixel size
         px_area = catchment.get_dem_pixel_area()
 

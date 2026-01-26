@@ -158,7 +158,7 @@ class Model(ABC):
             self,
             parameters: ParameterSet,
             forcing: Forcing | None = None
-    ):
+    ) -> None:
         """
         Setup and run the model.
 
@@ -168,10 +168,6 @@ class Model(ABC):
             The parameters for the given model.
         forcing
             The forcing data.
-
-        Return
-        ------
-        The predicted discharge time series
         """
         if not self._is_initialized:
             raise RuntimeError('The model has not been initialized. '
@@ -209,14 +205,14 @@ class Model(ABC):
             print("An exception occurred: ", e)
 
     @staticmethod
-    def cleanup():
+    def cleanup() -> None:
         close_log()
 
     def initialize_state_variables(
             self,
             parameters: ParameterSet,
             forcing: Forcing | None = None
-    ):
+    ) -> None:
         """
         Run the model and save the state variables as initial values.
 
@@ -230,7 +226,7 @@ class Model(ABC):
         self.run(parameters, forcing)
         self.model.save_as_initial_state()
 
-    def set_forcing(self, forcing: Forcing):
+    def set_forcing(self, forcing: Forcing) -> None:
         """
         Set the forcing data.
 
@@ -290,7 +286,7 @@ class Model(ABC):
             directory: str,
             name: str,
             file_type: str = 'both'
-    ):
+    ) -> None:
         """
         Create a configuration file describing the model structure.
 
@@ -348,7 +344,7 @@ class Model(ABC):
         """
         return self.model.get_total_snow_storage_changes()
 
-    def dump_outputs(self, path: str):
+    def dump_outputs(self, path: str) -> None:
         """
         Write the model outputs to a netcdf file.
 
@@ -397,6 +393,17 @@ class Model(ABC):
         )
 
     def generate_parameters(self) -> ParameterSet:
+        """
+        Generate a ParameterSet for the model based on its structure.
+
+        Automatically creates parameter definitions based on the model structure,
+        applies any defined aliases, and applies any defined constraints.
+
+        Returns
+        -------
+        ParameterSet
+            A ParameterSet object with all model parameters defined.
+        """
         ps = ParameterSet()
         ps.generate_parameters(
             self.land_cover_types,
@@ -415,16 +422,32 @@ class Model(ABC):
         return ps
 
     @abstractmethod
-    def _define_structure(self):
+    def _define_structure(self) -> None:
         raise RuntimeError(f'The structure has to be defined by the child class '
                            f'(named {self.name}).')
 
     @abstractmethod
-    def _set_specific_options(self, kwargs):
+    def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         raise RuntimeError(f'The specific options have to be defined by the child '
                            f'class (named {self.name}).')
 
-    def _set_options(self, kwargs):
+    def _set_options(self, kwargs: dict[str, Any]) -> None:
+        """
+        Internal method to configure model options.
+
+        Processes keyword arguments, validates them against allowed options,
+        applies basic and specific options, and validates cover types.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments containing model configuration options.
+
+        Raises
+        ------
+        RuntimeError
+            If land cover names and types don't match or invalid types are provided.
+        """
         self._add_allowed_kwargs(self.options.keys())
         self._validate_kwargs(kwargs)
 
@@ -436,7 +459,19 @@ class Model(ABC):
         self._set_specific_options(kwargs)
         self._check_cover_types()
 
-    def _check_cover_types(self):
+    def _check_cover_types(self) -> None:
+        """
+        Validate that land cover names and types are consistent.
+
+        Verifies that:
+        - Names and types lists have same length
+        - All cover types are in the allowed list for this model
+
+        Raises
+        ------
+        RuntimeError
+            If validation fails.
+        """
         if len(self.land_cover_names) != len(self.land_cover_types):
             raise RuntimeError('The length of the land cover names '
                                'and types do not match.')
@@ -447,7 +482,21 @@ class Model(ABC):
                 raise RuntimeError(
                     f'The land cover {cover_type} is not used in Socont')
 
-    def _set_basic_options(self, kwargs):
+    def _set_basic_options(self, kwargs: dict[str, Any]) -> None:
+        """
+        Set basic solver and model configuration options from kwargs.
+
+        Extracts and applies the following options if present:
+        - 'solver': Numerical solver name
+        - 'record_all': Whether to record all state/flux values
+        - 'land_cover_types': List of land cover types
+        - 'land_cover_names': List of land cover names
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments containing basic options.
+        """
         if 'solver' in kwargs:
             self.solver = kwargs['solver']
         if 'record_all' in kwargs:
@@ -457,16 +506,50 @@ class Model(ABC):
         if 'land_cover_names' in kwargs:
             self.land_cover_names = kwargs['land_cover_names']
 
-    def _add_allowed_kwargs(self, kwargs):
+    def _add_allowed_kwargs(self, kwargs: Any) -> None:
+        """
+        Add keys to the set of allowed keyword arguments.
+
+        Parameters
+        ----------
+        kwargs
+            Keys (as iterable) to add to allowed_kwargs set.
+        """
         self.allowed_kwargs.update(kwargs)
 
-    def _validate_kwargs(self, kwargs):
+    def _validate_kwargs(self, kwargs: dict[str, Any]) -> None:
+        """
+        Validate that all provided keyword arguments are allowed.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments to validate against allowed_kwargs.
+
+        Raises
+        ------
+        TypeError
+            If any kwargs are not in the allowed set.
+        """
         # Validate optional keyword arguments.
         validate_kwargs(kwargs, self.allowed_kwargs)
 
-    def _generate_structure(self):
+    def _generate_structure(self) -> None:
         """
-        Generate the model structure.
+        Generate the complete model structure.
+
+        Creates all bricks (land covers, storages, etc.) and their processes
+        based on the model's structure definition. This includes:
+        - Creating basic structure elements
+        - Adding all defined bricks
+        - Adding brick parameters
+        - Adding brick processes
+        - Setting up logging
+
+        Raises
+        ------
+        RuntimeError
+            If structure creation fails.
         """
         # Generate basic elements
         self._set_structure_basics()
@@ -489,7 +572,16 @@ class Model(ABC):
 
         self.settings.add_logging_to('outlet')
 
-    def _set_structure_basics(self):
+    def _set_structure_basics(self) -> None:
+        """
+        Generate basic model structure elements.
+
+        Sets up the fundamental structure including precipitation splitting,
+        land covers, and snowpack processes based on model options.
+
+        This method extracts relevant options and calls settings methods
+        to generate the base structure.
+        """
         with_snow = True
         snow_melt_process = 'melt:degree_day'
         snow_ice_transformation = None
@@ -514,7 +606,22 @@ class Model(ABC):
             snow_redistribution=snow_redistribution
         )
 
-    def _set_structure_brick(self, brick: dict, key: str):
+    def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:
+        """
+        Add or select a brick in the model structure.
+
+        Parameters
+        ----------
+        brick
+            Brick definition dictionary containing 'kind' and 'attach_to' keys.
+        key
+            Name/identifier for the brick.
+
+        Raises
+        ------
+        RuntimeError
+            If brick has an invalid 'attach_to' value.
+        """
         if brick['kind'] == 'land_cover':
             self.settings.select_hydro_unit_brick(key)
         else:
@@ -529,8 +636,26 @@ class Model(ABC):
             self,
             key: str,
             process: str,
-            process_data: dict
-    ):
+            process_data: dict[str, Any]
+    ) -> None:
+        """
+        Add a process to a brick in the model structure.
+
+        Parameters
+        ----------
+        key
+            Name of the brick containing this process.
+        process
+            Name/identifier for the process.
+        process_data
+            Process definition dictionary containing 'kind', 'target', and optional
+            'log' and 'instantaneous' keys.
+
+        Raises
+        ------
+        RuntimeError
+            If process lacks a required target (unless it's an ET process).
+        """
         instantaneous = False
         if 'instantaneous' in process_data:
             instantaneous = process_data['instantaneous']
@@ -555,7 +680,23 @@ class Model(ABC):
             instantaneous=instantaneous
         )
 
-    def _set_parameter_values(self, parameters: ParameterSet):
+    def _set_parameter_values(self, parameters: ParameterSet) -> None:
+        """
+        Apply parameter values to the model.
+
+        Iterates through model parameters and sets them in the model settings,
+        then updates the underlying C++ model with the new parameters.
+
+        Parameters
+        ----------
+        parameters
+            ParameterSet containing the parameter values to apply.
+
+        Raises
+        ------
+        RuntimeError
+            If setting parameter values fails.
+        """
         model_params = parameters.get_model_parameters()
         for _, param in model_params.iterrows():
             if not self.settings.set_parameter_value(
@@ -563,7 +704,23 @@ class Model(ABC):
                 raise RuntimeError('Failed setting parameter values.')
         self.model.update_parameters(self.settings.settings)
 
-    def _set_forcing(self, forcing: Forcing | None):
+    def _set_forcing(self, forcing: Forcing | None) -> None:
+        """
+        Attach forcing data to the model.
+
+        If forcing is provided, spatializes it and attaches it to hydro units.
+        If no forcing is provided, verifies that forcing was previously loaded.
+
+        Parameters
+        ----------
+        forcing
+            Forcing object with meteorological data, or None if already set.
+
+        Raises
+        ------
+        RuntimeError
+            If no forcing data is available.
+        """
         if forcing is not None:
             self.set_forcing(forcing)
         elif not self.model.forcing_loaded():

@@ -34,7 +34,7 @@ class PotentialSolarRadiation:
     A class to handle solar radiation data for a catchment area.
     """
 
-    def __init__(self, catchment: Catchment):
+    def __init__(self, catchment: Catchment) -> None:
         """
         Initialize the SolarRadiation class.
 
@@ -43,8 +43,8 @@ class PotentialSolarRadiation:
         catchment
             The catchment object.
         """
-        self.catchment = catchment
-        self.mean_annual_radiation = None
+        self.catchment: Catchment = catchment
+        self.mean_annual_radiation: np.ndarray | None = None
 
     def calculate_daily_potential_radiation(
             self,
@@ -53,11 +53,14 @@ class PotentialSolarRadiation:
             atmos_transmissivity: float = 0.75,
             steps_per_hour: int = 4,
             with_cast_shadows: bool = True
-    ):
+    ) -> None:
         """
         Compute the daily mean potential clear-sky direct solar radiation
         at the DEM surface [W/m²] using Hock (1999)'s equation.
         It is computed for each day of the year and saved in a netcdf file.
+
+        Computes radiation accounting for terrain slope, aspect, latitude, and
+        solar declination. Optionally includes cast shadows from surrounding terrain.
 
         Parameters
         ----------
@@ -81,6 +84,8 @@ class PotentialSolarRadiation:
         References
         ----------
         - Original R package: https://github.com/mattols/TopoSol
+        - Hock, R. (1999). A distributed temperature-index ice-and snowmelt model
+          including potential direct solar radiation. J. Glaciol., 45(149), 101-111.
         """
         # Resample the DEM and calculate the slope and aspect
         dem, masked_dem_data, slope, aspect = (
@@ -211,9 +216,12 @@ class PotentialSolarRadiation:
             self,
             dir_path: str,
             filename: str = 'annual_potential_radiation.tif'
-    ):
+    ) -> None:
         """
         Load the mean annual radiation raster.
+
+        Loads a pre-computed mean annual radiation raster from a file and stores it
+        in the mean_annual_radiation attribute.
 
         Parameters
         ----------
@@ -231,10 +239,14 @@ class PotentialSolarRadiation:
             dem: rasterio.Dataset,
             output_path: str,
             output_filename: str = 'annual_potential_radiation.tif'
-    ):
+    ) -> None:
         """
         Save the mean annual radiation rasters (downsampled and at DEM resolution)
         to a file.
+
+        Upscales radiation from a coarser resolution to the DEM resolution using
+        bilinear interpolation if necessary, and saves both the intermediate
+        downsampled raster and the final raster at DEM resolution.
 
         Parameters
         ----------
@@ -287,7 +299,7 @@ class PotentialSolarRadiation:
             azimuth: float
     ) -> np.ndarray:
         """
-        Calculate the cast shadows.
+        Calculate the cast shadows on terrain from a given sun position.
 
         The approach relies on tilting the DEM to obtain a horizon matching the sun
         rays and filling the DEM. The algorithm is applied to the whole topography
@@ -296,18 +308,18 @@ class PotentialSolarRadiation:
         Parameters
         ----------
         dem_dataset
-            DEM as read by rasterio, containing the DEM topography
+            Opened rasterio DEM dataset.
         masked_dem
-            DEM topography, masked with np.nan for the areas outside the study catchment
+            DEM array masked for catchment extent.
         zenith
-            Solar zenith (IQBAL 2012), in degrees
+            Solar zenith angle in degrees.
         azimuth
-            Azimuth relative to the south for ZSLOPE CALC, in degrees
+            Solar azimuth angle in degrees from north.
 
         Returns
         -------
-        A np.array with the cast shadows (1), the in sun areas (0),
-        and the masked area (np.nan).
+        np.ndarray
+            Binary mask where 1 indicates shadowed areas and 0 indicates sunlit areas.
 
         Notes
         -----
@@ -641,9 +653,13 @@ class PotentialSolarRadiation:
             azimuth: float,
             aspect: float,
             tolerance: float = 10 ** (-6)
-    ) -> float:
+    ) -> np.ndarray:
         """
         Calculate the angle of incidence.
+
+        Computes the angle between the solar ray direction and the normal to the
+        terrain surface, accounting for both terrain slope and aspect relative to
+        the sun's position.
 
         Parameters
         ----------
@@ -660,7 +676,8 @@ class PotentialSolarRadiation:
 
         Returns
         -------
-        The angle of incidence.
+        np.ndarray
+            Angle of incidence in radians (maximum 90°).
 
         Notes
         -----
@@ -698,24 +715,28 @@ class PotentialSolarRadiation:
             masked_dem_data: np.ndarray,
             day_of_year: np.ndarray,
             output_path: str | None,
-            output_filename: str = 'daily_potential_radiation.nc'):
+            output_filename: str = 'daily_potential_radiation.nc'
+    ) -> None:
         """
         Save the potential radiation to a netcdf file.
+
+        Saves daily radiation arrays and computes/saves mean annual radiation.
+        Creates two output files: one for daily radiation and one for annual mean.
 
         Parameters
         ----------
         radiation
-            The potential radiation.
+            3D array of potential radiation (days × rows × cols) [W/m²].
         dem
-            The DEM.
+            Rasterio dataset of the DEM at radiation resolution.
         masked_dem_data
-            The masked DEM data.
+            DEM data masked for catchment extent.
         day_of_year
-            The array with the days of the year.
+            Array of day numbers (1-366).
         output_path
-            Path to the directory to save the netcdf file to.
+            Path to output directory.
         output_filename
-            Name of the output file. Default is 'daily_potential_radiation.nc'.
+            Filename for daily radiation output. Default is 'daily_potential_radiation.nc'.
         """
         full_path = Path(output_path) / output_filename
         print('Saving to', str(full_path), self.catchment.dem.crs)

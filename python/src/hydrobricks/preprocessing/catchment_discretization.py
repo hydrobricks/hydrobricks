@@ -16,7 +16,7 @@ class CatchmentDiscretization:
     Class to handle the discretization of catchments.
     """
 
-    def __init__(self, catchment: Catchment):
+    def __init__(self, catchment: Catchment) -> None:
         """
         Initialize the Discretization class.
 
@@ -25,7 +25,7 @@ class CatchmentDiscretization:
         catchment
             The catchment object.
         """
-        self.catchment = catchment
+        self.catchment: Catchment = catchment
 
     def create_elevation_bands(
             self,
@@ -34,9 +34,13 @@ class CatchmentDiscretization:
             distance: int = 50,
             min_elevation: int | None = None,
             max_elevation: int | None = None
-    ):
+    ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
+
+        Creates hydro units based on elevation bands using either equal-interval
+        contours or quantile-based discretization. Results are stored in the
+        catchment's map_unit_ids and hydro_units objects.
 
         Parameters
         ----------
@@ -80,9 +84,14 @@ class CatchmentDiscretization:
             radiation_number: int = 5,
             radiation_distance: int = 50,
             min_radiation: int | None = None,
-            max_radiation: int | None = None):
+            max_radiation: int | None = None
+    ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
+
+        Discretizes the catchment into hydro units based on multiple criteria
+        (elevation, slope, aspect, radiation). Creates all combinations of
+        specified criteria and populates the map_unit_ids and hydro_units objects.
 
         Parameters
         ----------

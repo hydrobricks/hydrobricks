@@ -32,7 +32,7 @@ class GlacierEvolutionDeltaH:
       14, 815–829, https://doi.org/10.5194/hess-14-815-2010, 2010.
     """
 
-    def __init__(self, hydro_units: HydroUnits | None = None):
+    def __init__(self, hydro_units: HydroUnits | None = None) -> None:
         """
         Initialize the GlacierMassBalance class.
 
@@ -41,42 +41,42 @@ class GlacierEvolutionDeltaH:
         hydro_units
             The hydro unit object.
         """
-        self.glacier_df = None
-        self.hydro_units = None
-        self.catchment_area = None
+        self.glacier_df: pd.DataFrame | None = None
+        self.hydro_units: pd.DataFrame | None = None
+        self.catchment_area: float | None = None
         if hydro_units is not None:
             self.hydro_units = hydro_units.hydro_units
             self.catchment_area = np.sum(self.hydro_units.area.values)
-        self.hydro_unit_ids = None
-        self.elev_bands = None  # Pure elevation bands for glacier discretization.
-        self.elev_bands_parts = None  # Elevation bands subdivided by hydro units.
-        self.elev_bands_indices = None  # Indices for the elevation bands parts.
-        self.pixel_based_approach = False
-        self.sub_elevation_parts = False
+        self.hydro_unit_ids: np.ndarray | None = None
+        self.elev_bands: np.ndarray | None = None  # Pure elevation bands for glacier discretization.
+        self.elev_bands_parts: np.ndarray | None = None  # Elevation bands subdivided by hydro units.
+        self.elev_bands_indices: np.ndarray | None = None  # Indices for the elevation bands parts.
+        self.pixel_based_approach: bool = False
+        self.sub_elevation_parts: bool = False
 
         # Tables
-        self.lookup_table_area = None
-        self.lookup_table_volume = None
-        self.we_parts = None  # Glacier water equivalent (we) per part.
-        self.we_bands = None  # Glacier water equivalent (we) per elevation band.
-        self.areas_pc_parts = None  # Glacier areas as a percentage of the catch. area.
-        self.areas_pc_bands = None  # Same per elevation band.
+        self.lookup_table_area: np.ndarray | None = None
+        self.lookup_table_volume: np.ndarray | None = None
+        self.we_parts: np.ndarray | None = None  # Glacier water equivalent (we) per part.
+        self.we_bands: np.ndarray | None = None  # Glacier water equivalent (we) per elevation band.
+        self.areas_pc_parts: np.ndarray | None = None  # Glacier areas as a percentage of the catch. area.
+        self.areas_pc_bands: np.ndarray | None = None  # Same per elevation band.
 
         # Delta-h parametrization based on Huss et al. (2010).
-        self.a_coeff = np.nan
-        self.b_coeff = np.nan
-        self.c_coeff = np.nan
-        self.gamma_coeff = np.nan
+        self.a_coeff: float = np.nan
+        self.b_coeff: float = np.nan
+        self.c_coeff: float = np.nan
+        self.gamma_coeff: float = np.nan
 
         # Method-related attributes
-        self.initial_total_glacier_we = np.nan
-        self.norm_elevations_bands = np.nan
-        self.norm_delta_we_bands = np.nan
-        self.scaling_factor_mm = np.nan
-        self.excess_melt_we = 0
+        self.initial_total_glacier_we: float = np.nan
+        self.norm_elevations_bands: np.ndarray | None = None
+        self.norm_delta_we_bands: np.ndarray | None = None
+        self.scaling_factor_mm: float = np.nan
+        self.excess_melt_we: int | float = 0
 
         # Pixel-wise ice water equivalent (we) for each elevation band
-        self.px_ice_we = None
+        self.px_ice_we: np.ndarray | None = None
 
     def compute_ice_thickness_change(
             self,
@@ -90,6 +90,10 @@ class GlacierEvolutionDeltaH:
         """
         Compute the normalized ice thickness change between two glacier ice thickness
         rasters for the delta-h method.
+
+        Computes elevation-dependent ice thickness changes and normalizes them for use
+        in the delta-h parameterization. Results are stored in self.norm_elevations_bands
+        and self.norm_delta_we_bands for later use.
 
         Parameters
         ----------
@@ -109,8 +113,8 @@ class GlacierEvolutionDeltaH:
 
         Returns
         -------
-        The glacier_change_df DataFrame containing the normalized ice thickness change
-        data.
+        pd.DataFrame
+            The glacier_change_df DataFrame containing the normalized ice thickness change data.
         """
         if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")

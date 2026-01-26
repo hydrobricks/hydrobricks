@@ -1,3 +1,5 @@
+from typing import Any
+
 from hydrobricks._hydrobricks import SettingsModel
 
 
@@ -8,8 +10,8 @@ class ModelSettings:
             self,
             solver: str = 'heun_explicit',
             record_all: bool = False,
-            **kwargs: dict
-    ):
+            **kwargs: Any
+    ) -> None:
         """
         Parameters
         ----------
@@ -20,7 +22,7 @@ class ModelSettings:
         kwargs
             Keyword arguments
         """
-        self.settings = SettingsModel()
+        self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
 
@@ -30,7 +32,7 @@ class ModelSettings:
             end_date: str,
             time_step: int = 1,
             time_step_unit: str = 'day'
-    ):
+    ) -> None:
         """
         Set the timer
 
@@ -77,9 +79,9 @@ class ModelSettings:
             land_cover_types: list[str],
             with_snow: bool = True,
             snow_melt_process: str = 'melt:degree_day',
-            snow_ice_transformation: str = None,
-            snow_redistribution: str = None
-    ):
+            snow_ice_transformation: str | None = None,
+            snow_redistribution: str | None = None
+    ) -> None:
         """
         Generate basic elements
 
@@ -121,7 +123,7 @@ class ModelSettings:
             if snow_redistribution:
                 self.settings.add_snow_redistribution(snow_redistribution)
 
-    def add_land_cover_brick(self, name: str, kind: str):
+    def add_land_cover_brick(self, name: str, kind: str) -> None:
         """
         Add a land cover brick
 
@@ -134,7 +136,7 @@ class ModelSettings:
         """
         self.settings.add_land_cover_brick(name, kind)
 
-    def add_hydro_unit_brick(self, name: str, kind: str):
+    def add_hydro_unit_brick(self, name: str, kind: str) -> None:
         """
         Add a hydro unit brick
 
@@ -147,7 +149,7 @@ class ModelSettings:
         """
         self.settings.add_hydro_unit_brick(name, kind)
 
-    def add_sub_basin_brick(self, name: str, kind: str):
+    def add_sub_basin_brick(self, name: str, kind: str) -> None:
         """
         Add a sub basin brick
 
@@ -160,7 +162,7 @@ class ModelSettings:
         """
         self.settings.add_sub_basin_brick(name, kind)
 
-    def select_hydro_unit_brick(self, name: str):
+    def select_hydro_unit_brick(self, name: str) -> None:
         """
         Select a hydro unit brick
 
@@ -178,7 +180,7 @@ class ModelSettings:
             target: str = '',
             log: bool = False,
             instantaneous: bool = False
-    ):
+    ) -> None:
         """
         Add a brick process
 
@@ -210,7 +212,7 @@ class ModelSettings:
             name: str,
             value: int | float | bool,
             kind: str = 'constant'
-    ):
+    ) -> None:
         """
         Add a brick parameter
 
@@ -230,7 +232,7 @@ class ModelSettings:
             name: str,
             value: int | float | bool,
             kind: str = 'constant'
-    ):
+    ) -> None:
         """
         Add a process parameter
 
@@ -245,7 +247,7 @@ class ModelSettings:
         """
         self.settings.add_process_parameter(name, float(value), kind)
 
-    def add_logging_to(self, item: str):
+    def add_logging_to(self, item: str) -> None:
         """
         Add logging to an item
 
@@ -256,10 +258,10 @@ class ModelSettings:
         """
         self.settings.add_logging_to(item)
 
-    def set_process_outputs_as_instantaneous(self):
+    def set_process_outputs_as_instantaneous(self) -> None:
         """Set all process outputs as instantaneous"""
         self.settings.set_process_outputs_as_instantaneous()
 
-    def set_process_outputs_as_static(self):
+    def set_process_outputs_as_static(self) -> None:
         """Set all process outputs as static"""
         self.settings.set_process_outputs_as_static()

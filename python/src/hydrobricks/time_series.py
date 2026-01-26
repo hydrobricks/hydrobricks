@@ -410,7 +410,35 @@ class TimeSeries2D(TimeSeries):
             dem_dx: xr.DataArray,
             dem_dy: xr.DataArray,
             hu_elevation: np.ndarray
-    ):
+    ) -> None:
+        """
+        Extract time step data with elevation-based gradient corrections.
+
+        Applies elevation-based gradients to gridded meteorological data to account
+        for the effect of elevation differences on temperature, precipitation, etc.
+        Processes data in blocks to optimize memory usage.
+
+        Parameters
+        ----------
+        data_var
+            3D xarray DataArray with dimensions (time, y, x) containing gridded data.
+        unit_weights
+            List of 2D weight arrays for each hydro unit, summing to 1.
+        i_block
+            Block index for this processing step.
+        block_size
+            Number of time steps to process in this block.
+        gradient_type
+            Type of gradient to apply: 'additive' or 'multiplicative'.
+        dem
+            2D array of digital elevation model data.
+        dem_dx
+            xarray DataArray with DEM gradients in x direction.
+        dem_dy
+            xarray DataArray with DEM gradients in y direction.
+        hu_elevation
+            1D array of elevation for each hydro unit.
+        """
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
         i_end = min(i_end, data_var.shape[0])
@@ -498,7 +526,25 @@ class TimeSeries2D(TimeSeries):
             unit_weights: list,
             i_block: int,
             block_size: int
-    ):
+    ) -> None:
+        """
+        Extract time step data and apply spatial weights.
+
+        Extracts meteorological data for a block of time steps and applies weighted
+        averaging based on the spatial distribution of data cells within each
+        hydro unit.
+
+        Parameters
+        ----------
+        data_var
+            3D xarray DataArray with dimensions (time, y, x) containing gridded data.
+        unit_weights
+            List of 2D weight arrays for each hydro unit, summing to 1.
+        i_block
+            Block index for this processing step.
+        block_size
+            Number of time steps to process in this block.
+        """
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
         i_end = min(i_end, data_var.shape[0])
@@ -514,7 +560,38 @@ class TimeSeries2D(TimeSeries):
                 data_var[i_start:i_end].to_numpy() * unit_weight,
                 axis=(1, 2))
 
-    def _select_relevant_extent(self, data_var, data_crs, dim_x, dim_y, ref_data):
+    def _select_relevant_extent(
+            self,
+            data_var: xr.DataArray,
+            data_crs: int,
+            dim_x: str,
+            dim_y: str,
+            ref_data: xr.DataArray | xr.Dataset
+    ) -> xr.DataArray:
+        """
+        Select the spatial extent of gridded data relevant to the reference data.
+
+        Clips the input data to the bounding box of the reference data (DEM or hydro units),
+        handling CRS transformations if necessary.
+
+        Parameters
+        ----------
+        data_var
+            The gridded data variable to clip.
+        data_crs
+            CRS of the gridded data (as EPSG code).
+        dim_x
+            Name of the x/longitude dimension in data_var.
+        dim_y
+            Name of the y/latitude dimension in data_var.
+        ref_data
+            Reference dataset (DEM or hydro units raster) to determine extent.
+
+        Returns
+        -------
+        xr.DataArray
+            Clipped data variable containing only the relevant spatial extent.
+        """
         x_ref_min, x_ref_max, y_ref_min, y_ref_max = self._get_spatial_bounds(ref_data)
 
         # Convert the spatial extent to the data CRS
@@ -554,6 +631,29 @@ class TimeSeries2D(TimeSeries):
             data: xr.DataArray | xr.Dataset,
             file_crs: int | None = None
     ) -> int:
+        """
+        Extract CRS information from xarray data.
+
+        Attempts to retrieve CRS from multiple sources: explicit parameter, data attributes,
+        or rioxarray crs property. Raises error if CRS cannot be determined.
+
+        Parameters
+        ----------
+        data
+            xarray DataArray or Dataset to extract CRS from.
+        file_crs
+            Explicit CRS as EPSG code. If provided, this value is returned directly.
+
+        Returns
+        -------
+        int
+            CRS as EPSG code.
+
+        Raises
+        ------
+        ValueError
+            If no CRS is found and file_crs is not provided.
+        """
         if file_crs is None:
             if 'crs' in data.attrs:
                 # Try to get it from the global attributes
@@ -568,6 +668,27 @@ class TimeSeries2D(TimeSeries):
 
     @staticmethod
     def _get_spatial_bounds(ref_data: xr.DataArray | xr.Dataset) -> tuple:
+        """
+        Extract spatial bounds from xarray data.
+
+        Determines the minimum and maximum coordinates in x and y dimensions,
+        automatically detecting dimension names (x/lon/longitude, y/lat/latitude).
+
+        Parameters
+        ----------
+        ref_data
+            xarray DataArray or Dataset containing spatial data.
+
+        Returns
+        -------
+        tuple
+            Tuple of (x_min, x_max, y_min, y_max) spatial bounds.
+
+        Raises
+        ------
+        ValueError
+            If spatial dimensions cannot be found in the data.
+        """
         # Possible names for spatial dimensions
         x_names = ['x', 'lon', 'longitude']
         y_names = ['y', 'lat', 'latitude']
@@ -588,7 +709,27 @@ class TimeSeries2D(TimeSeries):
 
     @staticmethod
     def _fill_nan_gradients(dat: xr.DataArray) -> xr.DataArray:
+        """
+        Fill NaN values in gradient arrays through interpolation and edge extension.
 
+        Uses linear interpolation along x and y dimensions, then extends edge values
+        to replace any remaining NaN values. Processes up to two iterations to ensure
+        all NaN values are filled.
+
+        Parameters
+        ----------
+        dat
+            xarray DataArray containing gradient data with potential NaN values.
+
+        Returns
+        -------
+        xr.DataArray
+            DataArray with NaN values filled using interpolation and edge extension.
+
+        Notes
+        -----
+        This function modifies the input array in-place for efficiency.
+        """
         # Fill NaN values in the gradients (loop twice)
         for _ in range(2):
             if np.isnan(dat).any():
@@ -623,9 +764,30 @@ class TimeSeries2D(TimeSeries):
             dat_dy: xr.DataArray
     ) -> xr.DataArray:
         """
-        Create a new grid whose 'x' coordinate comes from dat_dy and 'y' coordinate
-        comes from dat_dx. Reindex both arrays to this grid using nearest neighbour
-        for missing edges. Return the mean.
+        Compute the mean of x and y gradients on a common grid.
+
+        Creates a new grid whose 'x' coordinate comes from dat_dy and 'y' coordinate
+        comes from dat_dx. Reindexes both arrays to this grid using nearest neighbour
+        for missing edges. Returns the mean.
+
+        Parameters
+        ----------
+        dat_dx
+            xarray DataArray containing gradients in x direction.
+            Must have 'x' and 'y' dimensions.
+        dat_dy
+            xarray DataArray containing gradients in y direction.
+            Must have 'x' and 'y' dimensions.
+
+        Returns
+        -------
+        xr.DataArray
+            Mean of the x and y gradients on the common grid.
+
+        Raises
+        ------
+        ValueError
+            If required 'x' and 'y' dimensions are missing from input arrays.
         """
         # Ensure both have x and y dims
         if "x" not in dat_dx.dims or "y" not in dat_dx.dims:

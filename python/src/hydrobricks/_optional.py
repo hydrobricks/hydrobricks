@@ -48,8 +48,8 @@ class LazyImport:
     """Lazy import wrapper that delays actual import until first use."""
 
     def __init__(self, module_name):
-        self.module_name = module_name
-        self.module = None
+        self.module_name: str = module_name
+        self.module: object = None
 
     def __getattr__(self, item):
         if self.module is None:

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 from hydrobricks.models import Model
 
 
 class Socont(Model):
     """Socont model implementation"""
 
-    def __init__(self, name: str = 'socont', **kwargs):
+    def __init__(self, name: str = 'socont', **kwargs: Any) -> None:
         super().__init__(name=name, **kwargs)
 
         # Default options
@@ -30,7 +32,24 @@ class Socont(Model):
             raise RuntimeError(f'Socont model initialization raised '
                                f'an exception: {err}')
 
-    def _define_structure(self):
+    def _define_structure(self) -> None:
+        """
+        Define the Socont model structure with all bricks and processes.
+
+        Sets up the model's hydrological structure including:
+        - Glacier processes (if glacier land cover is present)
+        - Ground infiltration and surface runoff
+        - Soil reservoirs (slow storage, and optionally second soil layer)
+        - Surface runoff routing (Socont or linear storage)
+        - ET processes
+
+        The structure is stored in self.structure for later generation.
+
+        Raises
+        ------
+        RuntimeError
+            If surface runoff option is not recognized.
+        """
         # Add surface-related processes
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             if cover_type == 'glacier':
@@ -155,7 +174,20 @@ class Socont(Model):
             }
         }
 
-    def _define_parameter_aliases(self):
+    def _define_parameter_aliases(self) -> None:
+        """
+        Define parameter name aliases for the Socont model.
+
+        Maps component-specific parameter names to user-friendly shorthand names:
+        - A: Soil storage capacity
+        - k_slow/k_slow_1/k_slow1: First soil layer response factor
+        - k_slow_2/k_slow2: Second soil layer response factor
+        - k_snow: Snow melt storage response factor
+        - k_ice: Glacier ice melt storage response factor
+        - k_quick: Surface runoff response factor
+
+        These aliases allow users to specify parameters using simpler names.
+        """
         self.parameter_aliases = {
             'slow_reservoir:capacity': 'A',
             'slow_reservoir:response_factor': ['k_slow', 'k_slow_1', 'k_slow1'],
@@ -165,7 +197,18 @@ class Socont(Model):
             'surface_runoff:response_factor': 'k_quick'
         }
 
-    def _define_parameter_constraints(self):
+    def _define_parameter_constraints(self) -> None:
+        """
+        Define parameter constraints for the Socont model.
+
+        Enforces physical relationships between parameters:
+        - a_snow < a_ice: Snow melt degree-day < glacier ice melt degree-day
+        - k_slow_1 < k_quick: Slow flow slower than quick flow
+        - k_slow_2 < k_quick: Second soil layer slower than quick flow
+        - k_slow_2 < k_slow_1: Second soil layer slower than first layer
+
+        These constraints ensure the model behaves physically.
+        """
         self.parameter_constraints = [
             ['a_snow', '<', 'a_ice'],
             ['k_slow_1', '<', 'k_quick'],
@@ -173,7 +216,23 @@ class Socont(Model):
             ['k_slow_2', '<', 'k_slow_1'],
         ]
 
-    def _set_specific_options(self, kwargs):
+    def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
+        """
+        Set Socont-specific configuration options.
+
+        Processes Socont model options:
+        - soil_storage_nb: Number of soil storage layers (1 or 2)
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments containing Socont-specific options.
+
+        Raises
+        ------
+        ValueError
+            If soil_storage_nb is not 1 or 2.
+        """
         if 'soil_storage_nb' in kwargs:
             self.options['soil_storage_nb'] = int(kwargs['soil_storage_nb'])
             if (self.options['soil_storage_nb'] < 1 or

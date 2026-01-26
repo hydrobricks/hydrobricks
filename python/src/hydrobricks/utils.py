@@ -71,6 +71,27 @@ def dump_config_file(
 
 
 def date_as_mjd(date: str | pd.Timestamp | pd.DatetimeIndex) -> float | np.ndarray:
+    """
+    Convert date(s) to modified Julian date (MJD).
+
+    Converts a date or array of dates to modified Julian day number (MJD).
+    MJD = JD - 2400000.5, where JD is the Julian date.
+
+    Parameters
+    ----------
+    date
+        Date to convert. Can be a string (parsed as ISO format), pandas Timestamp,
+        or DatetimeIndex.
+
+    Returns
+    -------
+    float | np.ndarray
+        Modified Julian date(s). Returns float for single date, ndarray for multiple dates.
+
+    Notes
+    -----
+    Modified Julian Day (MJD) starts at midnight on November 17, 1858.
+    """
     if isinstance(date, str):
         return pd.to_datetime(date).to_julian_date() - 2400000.5
     if isinstance(date, pd.Timestamp):
@@ -83,7 +104,28 @@ def date_as_mjd(date: str | pd.Timestamp | pd.DatetimeIndex) -> float | np.ndarr
 def jd_to_date(jd: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Transform julian date numbers to year, month and day (array-based).
-    From https://gist.github.com/jiffyclub/1294443
+
+    Converts an array of Julian day numbers to calendar date components.
+    Uses the algorithm from https://gist.github.com/jiffyclub/1294443
+
+    Parameters
+    ----------
+    jd
+        Array of Julian day numbers to convert.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        Tuple of (year, month, day) arrays as integers.
+
+    Notes
+    -----
+    This algorithm handles both proleptic Gregorian (JD > 2299160) and
+    Julian calendar dates (JD <= 2299160).
+
+    References
+    ----------
+    https://gist.github.com/jiffyclub/1294443
     """
     jd = jd + 0.5
 
@@ -119,7 +161,30 @@ def jd_to_date(jd: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def days_to_hours_mins(days: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Transform a number of days to hours and minutes"""
+    """
+    Transform a number of days to hours and minutes.
+
+    Converts fractional days into hours and minutes components. Useful for
+    converting time differences to human-readable format.
+
+    Parameters
+    ----------
+    days
+        Array of fractional days to convert.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Tuple of (hours, minutes) as integer arrays.
+
+    Examples
+    --------
+    >>> hours, minutes = days_to_hours_mins(np.array([0.5, 1.25]))
+    >>> hours
+    array([12, 30])
+    >>> minutes
+    array([0, 0])
+    """
     hours = days * 24.
     hours, hour = np.modf(hours)
 
@@ -130,7 +195,34 @@ def days_to_hours_mins(days: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
-    """Transform modified julian dates to datetime instances (array-based)."""
+    """
+    Transform modified julian dates to datetime instances (array-based).
+
+    Converts an array of modified Julian day numbers to numpy datetime64 objects.
+    This is the inverse operation of date_as_mjd() for arrays.
+
+    Parameters
+    ----------
+    mjd
+        Array of modified Julian day numbers to convert.
+
+    Returns
+    -------
+    np.ndarray
+        Array of datetime64[s] (datetime in seconds precision) objects.
+
+    Notes
+    -----
+    Modified Julian Day (MJD) starts at midnight on November 17, 1858.
+    Uses the conversion: JD = MJD + 2400000.5
+
+    Examples
+    --------
+    >>> mjd = np.array([50000, 50001])
+    >>> dates = mjd_to_datetime(mjd)
+    >>> dates
+    array(['1995-10-10', '1995-10-11'], dtype='datetime64[s]')
+    """
     jd = mjd + 2400000.5
     year, month, day = jd_to_date(jd)
 

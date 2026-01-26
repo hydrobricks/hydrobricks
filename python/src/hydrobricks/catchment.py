@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
@@ -113,17 +116,19 @@ class Catchment:
         if self.dem is not None:
             try:
                 self.dem.close()
-            except Exception:
-                pass
+            except (OSError, ValueError, AttributeError) as e:
+                logger.warning(f"Error closing DEM dataset: {e}", exc_info=True)
 
         # Close any MemoryFiles kept with attributes to avoid resource leaks
         if isinstance(self.attributes, dict):
-            for entry in self.attributes.values():
+            for attr_name, entry in self.attributes.items():
                 try:
-                    if isinstance(entry, dict) and 'memfile' in entry and entry['memfile'] is not None:
+                    if (isinstance(entry, dict) and 'memfile' in entry
+                            and entry['memfile'] is not None):
                         entry['memfile'].close()
-                except Exception:
-                    pass
+                except (OSError, ValueError, AttributeError) as e:
+                    logger.warning(f"Error closing MemoryFile for attribute "
+                                   f"'{attr_name}': {e}", exc_info=True)
 
     @property
     def topography(self) -> CatchmentTopography:
@@ -292,16 +297,17 @@ class Catchment:
                 dataset.close()
                 # Open the dataset as a rasterio object for reading
                 src = memfile.open()
-            except Exception:
+            except (OSError, ValueError, rasterio.errors.RasterioIOError) as e:
                 # Clean up on error
                 try:
                     dataset.close()
-                except Exception:
-                    pass
+                except (OSError, ValueError, AttributeError):
+                    logger.debug("Could not close dataset during error cleanup", exc_info=True)
                 try:
                     memfile.close()
-                except Exception:
-                    pass
+                except (OSError, ValueError, AttributeError):
+                    logger.debug("Could not close memfile during error cleanup", exc_info=True)
+                logger.error(f"Error writing to MemoryFile: {e}", exc_info=True)
                 raise
 
         # Store the MemoryFile with the attribute so it stays alive (if created)

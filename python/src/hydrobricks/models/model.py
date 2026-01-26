@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,8 @@ from hydrobricks.models.model_settings import ModelSettings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class Model(ABC):
@@ -147,12 +150,15 @@ class Model(ABC):
 
             self._is_initialized = True
 
-        except RuntimeError:
-            print("A runtime exception occurred.")
-        except TypeError:
-            print("A type error exception occurred.")
-        except Exception:
-            print("An exception occurred.")
+        except RuntimeError as e:
+            logger.error(f"Runtime error during model setup: {e}", exc_info=True)
+            raise
+        except (OSError, PermissionError) as e:
+            logger.error(f"Error creating output directory {output_path}: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to create output directory: {e}") from e
+        except (TypeError, ValueError) as e:
+            logger.error(f"Invalid argument type or value in model setup: {e}", exc_info=True)
+            raise
 
     def run(
             self,
@@ -198,11 +204,11 @@ class Model(ABC):
             timer.stop(show_time=False)
 
         except RuntimeError as e:
-            print("A runtime exception occurred: ", e)
-        except TypeError as e:
-            print("A type error exception occurred: ", e)
-        except Exception as e:
-            print("An exception occurred: ", e)
+            logger.error(f"Runtime error during model run: {e}", exc_info=True)
+            raise
+        except (TypeError, ValueError) as e:
+            logger.error(f"Invalid argument type or value in model run: {e}", exc_info=True)
+            raise RuntimeError(f"Model run failed due to invalid input: {e}") from e
 
     @staticmethod
     def cleanup() -> None:

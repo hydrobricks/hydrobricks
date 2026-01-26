@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,6 +22,8 @@ from hydrobricks._constants import (
     TO_RAD,
 )
 from hydrobricks._optional import HAS_RASTERIO, HAS_XARRAY
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -777,7 +780,14 @@ class PotentialSolarRadiation:
         try:
             ds.to_netcdf(full_path)
             print('File successfully written.')
-        except Exception as e:
-            raise RuntimeError(f"Error writing to file: {e}")
+        except (OSError, IOError, PermissionError) as e:
+            logger.error(f"Error writing netCDF file to {full_path}: {e}", exc_info=True)
+            raise RuntimeError(f"Error writing to file: {e}") from e
+        except ValueError as e:
+            logger.error(f"Invalid data for netCDF file {full_path}: {e}", exc_info=True)
+            raise RuntimeError(f"Error writing to file: {e}") from e
         finally:
-            ds.close()
+            try:
+                ds.close()
+            except (OSError, ValueError, AttributeError) as e:
+                logger.warning(f"Error closing xarray dataset: {e}", exc_info=True)

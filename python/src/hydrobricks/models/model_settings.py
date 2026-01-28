@@ -1,6 +1,7 @@
 from typing import Any
 
 from hydrobricks._hydrobricks import SettingsModel
+from hydrobricks._exceptions import ConfigurationError
 
 
 class ModelSettings:
@@ -101,8 +102,10 @@ class ModelSettings:
             Snow redistribution method (optional)
         """
         if len(land_cover_names) != len(land_cover_types):
-            raise RuntimeError('The length of the land cover names '
-                               'and types do not match.')
+            raise ConfigurationError(
+                'The length of the land cover names and types do not match.',
+                reason='Mismatched array sizes'
+            )
 
         # Precipitation
         self.settings.generate_precipitation_splitters(with_snow)

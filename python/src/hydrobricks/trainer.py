@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from hydrobricks import spotpy
+from hydrobricks._exceptions import DataError, ModelError
 
 if TYPE_CHECKING:
     from hydrobricks.forcing import Forcing
@@ -89,8 +90,10 @@ class SpotpySetup:
 
         # Check that the models, forcing and the observations have the same length
         if len(self.model) != len(self.forcing) or len(self.model) != len(self.obs):
-            raise ValueError('The number of models, forcing and observations '
-                             'must be the same.')
+            raise ConfigurationError(
+                'The number of models, forcing and observations must be the same.',
+                reason='Mismatched ensemble sizes'
+            )
 
         if not self.random_forcing:
             for m, f in zip(self.model, self.forcing):
@@ -126,7 +129,7 @@ class SpotpySetup:
                 break
 
             if i >= 1000:
-                raise RuntimeError('The parameter constraints could not be satisfied.')
+                raise ModelError('The parameter constraints could not be satisfied.')
 
         return x
 

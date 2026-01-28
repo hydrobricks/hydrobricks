@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from hydrobricks._exceptions import ConfigurationError, ModelError
+
 
 def validate_kwargs(kwargs: dict[str, Any], allowed_kwargs: Iterable[str]) -> None:
     """
@@ -28,7 +30,11 @@ def validate_kwargs(kwargs: dict[str, Any], allowed_kwargs: Iterable[str]) -> No
     """
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
-            raise TypeError(f'Keyword argument not understood: {kwarg}')
+            raise ConfigurationError(
+                f'Keyword argument not understood: {kwarg}',
+                item_name=kwarg,
+                reason='Unknown keyword argument'
+            )
 
 
 def dump_config_file(
@@ -302,7 +308,7 @@ class Timer:
             If the timer is already running.
         """
         if self._start_time is not None:
-            raise RuntimeError("Timer is running. Use .stop() to stop it")
+            raise ModelError("Timer is running. Use .stop() to stop it")
 
         self._start_time = time.perf_counter()
 
@@ -329,7 +335,7 @@ class Timer:
             return 0.0
 
         if self._start_time is None:
-            raise RuntimeError("Timer is not running. Use .start() to start it")
+            raise ModelError("Timer is not running. Use .start() to start it")
 
         # Calculate elapsed time
         self.last = time.perf_counter() - self._start_time

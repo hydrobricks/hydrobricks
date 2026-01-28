@@ -409,7 +409,7 @@ class Forcing:
             raise DependencyError(
                 "PyEt is required for PET computation.",
                 package_name='pyet',
-                operation='compute_pet',
+                operation='Forcing.compute_pet',
                 install_command='pip install pyet'
             )
 

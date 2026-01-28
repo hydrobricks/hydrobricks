@@ -8,7 +8,8 @@ import pandas as pd
 
 from hydrobricks import spotpy
 from hydrobricks._optional import HAS_SPOTPY
-from hydrobricks._exceptions import ConfigurationError
+from hydrobricks._exceptions import (ConfigurationError, DataError,
+                                     DependencyError, ModelError)
 from hydrobricks.utils import dump_config_file
 
 
@@ -189,8 +190,11 @@ def validate_process_param_specs(specs: dict[str, list[ParamSpec]] | None = None
         for spec in spec_list:
             pair = (proc, spec.name)
             if pair in seen_pairs:
-                raise ValueError(
-                    f'Duplicate parameter name "{spec.name}" in process "{proc}".')
+                raise ConfigurationError(
+                    f'Duplicate parameter name "{spec.name}" in process "{proc}".',
+                    item_name=spec.name,
+                    reason='Duplicate definition'
+                )
             seen_pairs.add(pair)
 
 
@@ -361,7 +365,12 @@ class ParameterSet:
             If spotpy is not installed.
         """
         if not HAS_SPOTPY:
-            raise ImportError("spotpy is required to do this.")
+            raise DependencyError(
+                "spotpy is required for parameter distributions.",
+                package_name='spotpy',
+                operation='ParameterSet.set_prior',
+                install_command='pip install spotpy'
+            )
 
         index = self._get_parameter_index(parameter)
         prior.name = parameter
@@ -439,7 +448,10 @@ class ParameterSet:
             val_2 = self.get(constraint[2])
 
             if isinstance(val_1, list) or isinstance(val_2, list):
-                raise NotImplementedError
+                raise ConfigurationError(
+                    'Constraints involving list parameters are not yet implemented.',
+                    reason='Feature not yet implemented'
+                )
 
             if operator in ['>', 'gt']:
                 if val_1 <= val_2:
@@ -733,7 +745,11 @@ class ParameterSet:
         """
         for param in self.allow_changing:
             if not self.has(param):
-                raise ValueError(f'The parameter {param} was not found.')
+                raise ConfigurationError(
+                    f'The parameter {param} was not found.',
+                    item_name=param,
+                    reason='Parameter not found'
+                )
             if self.is_for_forcing(param):
                 return True
         return False
@@ -747,7 +763,12 @@ class ParameterSet:
         A list of the parameters as spotpy objects.
         """
         if not HAS_SPOTPY:
-            raise ImportError("spotpy is required to do this.")
+            raise DependencyError(
+                "spotpy is required for parameter optimization.",
+                package_name='spotpy',
+                operation='ParameterSet.get_for_spotpy',
+                install_command='pip install spotpy'
+            )
 
         spotpy_params = []
         for param_name in self.allow_changing:
@@ -889,8 +910,10 @@ class ParameterSet:
                 for spec in PROCESS_PARAM_SPECS[kind]:
                     self._register(component=key, spec=spec)
             else:
-                raise RuntimeError(
-                    f"The process {kind} is not recognised in parameters generation."
+                raise ConfigurationError(
+                    f"The process {kind} is not recognised in parameters generation.",
+                    item_value=kind,
+                    reason='Unknown process type'
                 )
 
     def _generate_brick_parameters(self, key: str, brick: dict) -> None:
@@ -915,8 +938,10 @@ class ParameterSet:
             if param_name in BRICK_PARAM_SPECS:
                 self._register(component=key, spec=BRICK_PARAM_SPECS[param_name])
             else:
-                raise RuntimeError(
-                    f"Parameter {param_name} is not recognised in params generation."
+                raise ConfigurationError(
+                    f"Parameter {param_name} is not recognised in params generation.",
+                    item_name=param_name,
+                    reason='Unknown parameter'
                 )
 
     def _generate_glacier_parameters(
@@ -961,8 +986,13 @@ class ParameterSet:
                 ]
 
             if melt_method not in PROCESS_PARAM_SPECS:
-                raise RuntimeError(f"The glacier melt method {melt_method} is not "
-                                   f"recognised in parameters generation.")
+                raise ConfigurationError(
+                    f"The glacier melt method {melt_method} is not recognised "
+                    f"in parameters generation.",
+                    item_name='melt_method',
+                    item_value=melt_method,
+                    reason='Unknown melt method'
+                )
 
             # Build dynamic alias mapping per parameter name
             alias_map: dict[str, list[str]] = {}
@@ -1116,8 +1146,12 @@ class ParameterSet:
                         self._register(component=component, spec=spec,
                                        aliases=snow_alias_map.get(spec.name, []))
                 else:
-                    raise RuntimeError(
-                        f"The snow melt process option {smp} is not recognised.")
+                    raise ConfigurationError(
+                        f"The snow melt process option {smp} is not recognised.",
+                        item_name='snow_melt_process',
+                        item_value=smp,
+                        reason='Unknown process'
+                    )
 
             # Snow/ice transformation
             if 'snow_ice_transformation' in options:
@@ -1173,8 +1207,12 @@ class ParameterSet:
                         self._register(component='type:snowpack', spec=spec,
                                        aliases=spec.aliases or [])
                 elif red is not None:
-                    raise RuntimeError(
-                        f"The snow redistribution option {red} is not recognised.")
+                    raise ConfigurationError(
+                        f"The snow redistribution option {red} is not recognised.",
+                        item_name='snow_redistribution',
+                        item_value=red,
+                        reason='Unknown option'
+                    )
 
     @staticmethod
     def _check_min_max_consistency(
@@ -1201,21 +1239,32 @@ class ParameterSet:
 
         if not isinstance(min_value, list) and not isinstance(max_value, list):
             if max_value < min_value:
-                raise ValueError(f'The provided min value ({min_value} is greater than '
-                                 f'the max value ({max_value}).')
+                raise ConfigurationError(
+                    f'The provided min value ({min_value}) is greater '
+                    f'than the max value ({max_value}).',
+                    reason='Invalid range'
+                )
             return
 
         if not isinstance(min_value, list) or not isinstance(max_value, list):
-            raise TypeError('Mixing lists and floats for the definition of '
-                            'min/max values')
+            raise ConfigurationError(
+                'Mixing lists and floats for the definition of min/max values.',
+                reason='Inconsistent parameter types'
+            )
 
         if len(min_value) != len(max_value):
-            raise ValueError('The length of the min/max lists are not equal.')
+            raise ConfigurationError(
+                'The length of the min/max lists are not equal.',
+                reason='Mismatched array lengths'
+            )
 
         for min_v, max_v in zip(min_value, max_value):
             if max_v < min_v:
-                raise ValueError(f'The provided min value ({min_v} in list is greater '
-                                 f'than the max value ({max_v}).')
+                raise ConfigurationError(
+                    f'The provided min value ({min_v}) in list is greater '
+                    f'than max value ({max_v}).',
+                    reason='Invalid range'
+                )
 
     def _check_aliases_uniqueness(self, aliases: list[str] | None) -> None:
         """
@@ -1237,8 +1286,11 @@ class ParameterSet:
         existing_aliases = self.parameters.explode('aliases')['aliases'].tolist()
         for alias in aliases:
             if alias in existing_aliases:
-                raise ValueError(f'The alias "{alias}" already exists. '
-                                 f'It must be unique.')
+                raise ConfigurationError(
+                    f'The alias "{alias}" already exists. It must be unique.',
+                    item_name=alias,
+                    reason='Duplicate alias'
+                )
 
     def _check_value_range(
             self,
@@ -1281,13 +1333,23 @@ class ParameterSet:
             if max_value is not None and value > max_value:
                 if allow_adapt:
                     return max_value
-                raise ValueError(f'The value {value} for the parameter "{key}" is '
-                                 f'above the maximum threshold ({max_value}).')
+                raise ConfigurationError(
+                    f'The value {value} for the parameter "{key}" is '
+                    f'above the maximum threshold ({max_value}).',
+                    item_name=key,
+                    item_value=value,
+                    reason='Value exceeds maximum'
+                )
             if min_value is not None and value < min_value:
                 if allow_adapt:
                     return min_value
-                raise ValueError(f'The value {value} for the parameter "{key}" is '
-                                 f'below the minimum threshold ({min_value}).')
+                raise ConfigurationError(
+                    f'The value {value} for the parameter "{key}" is '
+                    f'below the minimum threshold ({min_value}).',
+                    item_name=key,
+                    item_value=value,
+                    reason='Value below minimum'
+                )
         else:
             assert isinstance(max_value, list)
             assert isinstance(value, list)
@@ -1296,14 +1358,24 @@ class ParameterSet:
                     if allow_adapt:
                         value[i] = max_v
                     else:
-                        raise ValueError(f'The value {val} for the parameter "{key}" '
-                                         f'is above the maximum threshold ({max_v}).')
+                        raise ConfigurationError(
+                            f'The value {val} for the parameter "{key}" is '
+                            f'above the maximum threshold ({max_v}).',
+                            item_name=key,
+                            item_value=val,
+                            reason='Value exceeds maximum'
+                        )
                 if min_v is not None and val < min_v:
                     if allow_adapt:
                         value[i] = min_v
                     else:
-                        raise ValueError(f'The value {val} for the parameter "{key}" '
-                                         f'is below the minimum threshold ({min_v}).')
+                        raise ConfigurationError(
+                            f'The value {val} for the parameter "{key}" is '
+                            f'below the minimum threshold ({min_v}).',
+                            item_name=key,
+                            item_value=val,
+                            reason='Value below minimum'
+                        )
 
         return value
 
@@ -1339,6 +1411,10 @@ class ParameterSet:
                 return index
 
         if raise_exception:
-            raise ValueError(f'The parameter "{name}" was not found')
+            raise ConfigurationError(
+                f'The parameter "{name}" was not found.',
+                item_name=name,
+                reason='Parameter not found'
+            )
 
         return None

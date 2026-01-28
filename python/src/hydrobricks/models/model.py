@@ -264,13 +264,15 @@ class Model(ABC):
         for data_name, data in zip(forcing.data2D.data_name, forcing.data2D.data):
             data_name = str(data_name)
             if data is None:
-                raise RuntimeError(f'The forcing {data_name} has not '
-                                   f'been spatialized.')
+                raise ModelError(
+                    f'The forcing {data_name} has not been spatialized.',
+                    is_initialized=True
+                )
             if not self.model.create_time_series(data_name, time, ids, data):
-                raise RuntimeError('Failed adding time series.')
+                raise ModelError('Failed adding time series.')
 
         if not self.model.attach_time_series_to_hydro_units():
-            raise RuntimeError('Attaching time series failed.')
+            raise ModelError('Attaching time series failed.')
 
     def add_action(self, action: Action) -> bool:
         """
@@ -282,11 +284,14 @@ class Model(ABC):
             The action object. The dates must be sorted.
         """
         if not action.is_initialized:
-            raise RuntimeError(f'The action {action.name} has not been initialized.')
+            raise ModelError(f'The action {action.name} has not been initialized.')
 
         if not self._is_initialized:
-            raise RuntimeError('The model has not been initialized. '
-                               'Please run setup() before adding actions.')
+            raise ModelError(
+                'The model has not been initialized. '
+                'Please run setup() before adding actions.',
+                is_initialized=False
+            )
 
         return self.model.add_action(action.action)
 
@@ -445,13 +450,18 @@ class Model(ABC):
 
     @abstractmethod
     def _define_structure(self) -> None:
-        raise RuntimeError(f'The structure has to be defined by the child class '
-                           f'(named {self.name}).')
+        raise ConfigurationError(
+            f'The structure has to be defined by the child class (named {self.name}).',
+            reason='Abstract method not implemented'
+        )
 
     @abstractmethod
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
-        raise RuntimeError(f'The specific options have to be defined by the child '
-                           f'class (named {self.name}).')
+        raise ConfigurationError(
+            f'The specific options have to be defined by '
+            f'the child class (named {self.name}).',
+            reason='Abstract method not implemented'
+        )
 
     def _set_options(self, kwargs: dict[str, Any]) -> None:
         """
@@ -495,14 +505,20 @@ class Model(ABC):
             If validation fails.
         """
         if len(self.land_cover_names) != len(self.land_cover_types):
-            raise RuntimeError('The length of the land cover names '
-                               'and types do not match.')
+            raise ConfigurationError(
+                'The length of the land cover names and types do not match.',
+                reason='Mismatched array sizes'
+            )
 
         # Check allowed land cover types: ground, glacier
         for cover_type in self.land_cover_types:
             if cover_type not in self.allowed_land_cover_types:
-                raise RuntimeError(
-                    f'The land cover {cover_type} is not used in Socont')
+                raise ConfigurationError(
+                    f'The land cover {cover_type} is not used in Socont',
+                    item_name='land_cover_types',
+                    item_value=cover_type,
+                    reason='Invalid land cover type'
+                )
 
     def _set_basic_options(self, kwargs: dict[str, Any]) -> None:
         """
@@ -652,7 +668,12 @@ class Model(ABC):
             elif brick['attach_to'] == 'sub_basin':
                 self.settings.add_sub_basin_brick(key, brick['kind'])
             else:
-                raise RuntimeError(f'Brick {key} has an invalid "attach_to" value.')
+                raise ConfigurationError(
+                    f'Brick {key} has an invalid "attach_to" value.',
+                    item_name='attach_to',
+                    item_value=brick.get('attach_to'),
+                    reason='Invalid value'
+                )
 
     def _set_structure_process(
             self,
@@ -691,8 +712,11 @@ class Model(ABC):
             target = process_data['target']
         else:
             if not process_data['kind'].startswith('et:'):
-                raise RuntimeError(f'Brick {key} has a process '
-                                   f'({process}) without a target.')
+                raise ConfigurationError(
+                    f'Brick {key} has a process ({process}) without a target.',
+                    item_name='target',
+                    reason='Missing required target'
+                )
 
         self.settings.add_brick_process(
             process,
@@ -723,7 +747,7 @@ class Model(ABC):
         for _, param in model_params.iterrows():
             if not self.settings.set_parameter_value(
                     param['component'], param['name'], param['value']):
-                raise RuntimeError('Failed setting parameter values.')
+                raise ModelError('Failed setting parameter values.')
         self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing: Forcing | None) -> None:
@@ -746,4 +770,5 @@ class Model(ABC):
         if forcing is not None:
             self.set_forcing(forcing)
         elif not self.model.forcing_loaded():
-            raise RuntimeError('Please provide the forcing data at least once.')
+            raise ModelError('Please provide the forcing data at least once.',
+                             is_initialized=False)

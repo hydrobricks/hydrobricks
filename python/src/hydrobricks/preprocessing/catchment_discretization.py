@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from hydrobricks import rasterio
+from hydrobricks._exceptions import DependencyError, ConfigurationError, ModelError
 from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
@@ -142,7 +143,12 @@ class CatchmentDiscretization:
             Maximum radiation of the radiation bands (to homogenize between runs).
         """
         if not HAS_PYPROJ:
-            raise ImportError("pyproj is required to do this.")
+            raise DependencyError(
+                "pyproj is required for catchment discretization.",
+                package_name='pyproj',
+                operation='CatchmentDiscretization.create_hydro_units',
+                install_command='pip install pyproj'
+            )
 
         if isinstance(criteria, str):
             criteria = [criteria]
@@ -150,7 +156,7 @@ class CatchmentDiscretization:
         if self.catchment.topography.slope is None or self.catchment.topography.aspect is None:
             self.catchment.topography.calculate_slope_aspect()
         if 'radiation' in criteria and self.catchment.solar_radiation.mean_annual_radiation is None:
-            raise RuntimeError("Please first compute the radiation.")
+            raise ModelError("Please first compute the radiation.")
 
         self.map_unit_ids = np.zeros(self.catchment.dem_data.shape)
 
@@ -177,7 +183,12 @@ class CatchmentDiscretization:
                 for i in range(len(elevations) - 1):
                     criteria_dict['elevation'].append(elevations[i:i + 2])
             else:
-                raise ValueError("Unknown elevation band creation method.")
+                raise ConfigurationError(
+                    "Unknown elevation band creation method.",
+                    item_name='method',
+                    item_value=method,
+                    reason='Invalid method value'
+                )
 
         if 'slope' in criteria:
             criteria_dict['slope'] = []
@@ -198,15 +209,22 @@ class CatchmentDiscretization:
                 for i in range(len(slopes) - 1):
                     criteria_dict['slope'].append(slopes[i:i + 2])
             else:
-                raise ValueError("Unknown slope band creation method.")
+                raise ConfigurationError(
+                    "Unknown slope band creation method.",
+                    item_name='slope_method',
+                    item_value=slope_method,
+                    reason='Invalid method value'
+                )
 
         if 'aspect' in criteria:
             criteria_dict['aspect'] = ['N', 'E', 'S', 'W']
 
         if 'radiation' in criteria:
             if self.catchment.solar_radiation.mean_annual_radiation is None:
-                raise ValueError("No radiation data available. "
-                                 "Compute the radiation first")
+                raise ConfigurationError(
+                    "No radiation data available. Compute the radiation first.",
+                    reason='Missing required radiation data'
+                )
             criteria_dict['radiation'] = []
             if radiation_method == 'equal_intervals':
                 dist = radiation_distance
@@ -228,7 +246,13 @@ class CatchmentDiscretization:
                 for i in range(len(radiations) - 1):
                     criteria_dict['radiation'].append(radiations[i:i + 2])
             else:
-                raise ValueError("Unknown radiation band creation method.")
+                raise ConfigurationError(
+                    "Unknown radiation band creation method. "
+                    "Only 'equal_intervals' and 'quantiles' are supported.",
+                    item_name='radiation_method',
+                    item_value=radiation_method,
+                    reason='Invalid method value'
+                )
 
         res_elevation = []
         res_elevation_min = []
@@ -281,7 +305,12 @@ class CatchmentDiscretization:
                             self.catchment.topography.aspect >= 225,
                             self.catchment.topography.aspect < 315)
                     else:
-                        raise ValueError("Unknown aspect value.")
+                        raise ConfigurationError(
+                            "Unknown aspect value.",
+                            item_name='aspect',
+                            item_value=criterion,
+                            reason='Invalid aspect direction'
+                        )
                     mask_unit = np.logical_and(mask_unit, mask_aspect)
                 elif criterion_name == 'radiation':
                     radiation = self.catchment.solar_radiation.mean_annual_radiation

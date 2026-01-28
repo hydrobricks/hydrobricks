@@ -21,6 +21,7 @@ from hydrobricks._constants import (
     TO_DEG,
     TO_RAD,
 )
+from hydrobricks._exceptions import DataError, DependencyError, ModelError
 from hydrobricks._optional import HAS_RASTERIO, HAS_XARRAY
 
 logger = logging.getLogger(__name__)
@@ -334,8 +335,12 @@ class PotentialSolarRadiation:
         y_size = abs(dem_dataset.res[1])
 
         if x_size != y_size:
-            raise ValueError("The DEM x and y resolutions must be equal "
-                             "for computing the cast shadows.")
+            raise DataError(
+                "The DEM x and y resolutions must be equal "
+                "for computing the cast shadows.",
+                data_type='DEM',
+                reason='Unequal x and y resolutions'
+            )
 
         if zenith >= 90:
             cast_shadows = np.ones(dem.shape)
@@ -704,7 +709,12 @@ class PotentialSolarRadiation:
         if np.nanmax(np.abs(cosine_term) - 1) < tolerance:
             incidence_angle = np.arccos(np.clip(cosine_term, -1, 1))
         else:
-            raise ValueError("Argument of arccos is above or below 1.")
+            raise ConfigurationError(
+                "Argument of arccos is above or below 1.",
+                parameter_name='cosine_term',
+                parameter_value=cosine_term,
+                reason='Value outside [-1, 1] range'
+            )
 
         # Angle of incidence matrix
         incidence_angle[incidence_angle > 90 * TO_RAD] = 90 * TO_RAD
@@ -745,7 +755,12 @@ class PotentialSolarRadiation:
         print('Saving to', str(full_path), self.catchment.dem.crs)
 
         if not HAS_XARRAY:
-            raise ImportError("xarray is required to do this.")
+            raise DependencyError(
+                "xarray is required to save potential solar radiation data.",
+                package_name='xarray',
+                operation='PotentialSolarRadiation.save_potential_radiation_netcdf',
+                install_command='pip install xarray'
+            )
 
         rows, cols = np.where(masked_dem_data)
         xs, ys = rasterio.transform.xy(dem.transform, list(rows), list(cols))
@@ -782,10 +797,10 @@ class PotentialSolarRadiation:
             print('File successfully written.')
         except (OSError, IOError, PermissionError) as e:
             logger.error(f"Error writing netCDF file to {full_path}: {e}", exc_info=True)
-            raise RuntimeError(f"Error writing to file: {e}") from e
+            raise ModelError(f"Error writing to file: {e}") from e
         except ValueError as e:
             logger.error(f"Invalid data for netCDF file {full_path}: {e}", exc_info=True)
-            raise RuntimeError(f"Error writing to file: {e}") from e
+            raise ModelError(f"Error writing to file: {e}") from e
         finally:
             try:
                 ds.close()

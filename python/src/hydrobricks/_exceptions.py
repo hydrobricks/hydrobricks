@@ -44,18 +44,16 @@ class DataError(HydroBricksError):
     Attributes
     ----------
     data_type : str | None
-        Type of data that caused the error (e.g., 'forcing', 'observations', 'DEM').
-    variable : str | None
-        Name of the variable or data field involved.
+        Type of data that caused the error (e.g., 'observations', 'DEM').
     reason : str | None
         Explanation of why the data is invalid.
 
     Examples
     --------
     >>> raise DataError(
-    ...     "Temperature data contains NaN values",
-    ...     data_type='forcing',
-    ...     variable='temperature'
+    ...     f"dx must have 'x' and 'y' dimensions. Got dimensions: {dx.dims}",
+    ...     data_type='DEM',
+    ...     reason='Missing x or y dimension'
     ... )
     """
 
@@ -63,12 +61,10 @@ class DataError(HydroBricksError):
             self,
             message: str,
             data_type: str | None = None,
-            variable: str | None = None,
             reason: str | None = None
     ):
         super().__init__(message)
         self.data_type = data_type
-        self.variable = variable
         self.reason = reason
 
 
@@ -84,10 +80,10 @@ class ConfigurationError(HydroBricksError):
 
     Attributes
     ----------
-    parameter_name : str | None
-        Name of the parameter that caused the error.
-    parameter_value : Any
-        Value of the parameter (if applicable).
+    item_name : str | None
+        Name of the item/parameter that caused the error.
+    item_value : Any
+        Value of the item/parameter (if applicable).
     reason : str | None
         Explanation of why the configuration is invalid.
 
@@ -95,8 +91,8 @@ class ConfigurationError(HydroBricksError):
     --------
     >>> raise ConfigurationError(
     ...     "Parameter 'k' = 150 is outside valid range [0, 100]",
-    ...     parameter_name='k',
-    ...     parameter_value=150,
+    ...     item_name='k',
+    ...     item_value=150,
     ...     reason='Out of range'
     ... )
     """
@@ -104,13 +100,13 @@ class ConfigurationError(HydroBricksError):
     def __init__(
             self,
             message: str,
-            parameter_name: str | None = None,
-            parameter_value: Any = None,
+            item_name: str | None = None,
+            item_value: Any = None,
             reason: str | None = None
     ):
         super().__init__(message)
-        self.parameter_name = parameter_name
-        self.parameter_value = parameter_value
+        self.item_name = item_name
+        self.item_value = item_value
         self.reason = reason
 
 
@@ -126,8 +122,6 @@ class ModelError(HydroBricksError):
 
     Attributes
     ----------
-    timestep : int | None
-        Timestep at which the error occurred.
     is_initialized : bool | None
         Whether the model was initialized.
 
@@ -137,20 +131,14 @@ class ModelError(HydroBricksError):
     ...     "Model has not been initialized. Call setup() first.",
     ...     is_initialized=False
     ... )
-    >>> raise ModelError(
-    ...     "Model run failed at timestep 450",
-    ...     timestep=450
-    ... )
     """
 
     def __init__(
             self,
             message: str,
-            timestep: int | None = None,
             is_initialized: bool | None = None
     ):
         super().__init__(message)
-        self.timestep = timestep
         self.is_initialized = is_initialized
 
 

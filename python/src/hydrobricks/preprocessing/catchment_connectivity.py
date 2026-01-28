@@ -10,6 +10,7 @@ from scipy import ndimage
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
 from hydrobricks import pyshedsGrid
+from hydrobricks._exceptions import DependencyError, DataError, ConfigurationError
 from hydrobricks._optional import HAS_PYSHEDS
 
 if TYPE_CHECKING:
@@ -70,13 +71,24 @@ class CatchmentConnectivity:
             DataFrame with connectivity information for each hydro unit.
         """
         if not HAS_PYSHEDS:
-            raise ImportError("pysheds is required to do this.")
+            raise DependencyError(
+                "pysheds is required for connectivity calculations.",
+                package_name='pysheds',
+                operation='CatchmentConnectivity.calculate',
+                install_command='pip install pysheds'
+            )
 
         if self.catchment.dem is None:
-            raise ValueError("No DEM to calculate the connectivity.")
+            raise ConfigurationError(
+                "No DEM to calculate the connectivity.",
+                reason='Missing required DEM data'
+            )
 
         if self.catchment.map_unit_ids is None:
-            raise ValueError("No hydro units to calculate the connectivity.")
+            raise ConfigurationError(
+                "No hydro units to calculate the connectivity.",
+                reason='Catchment not discretized'
+            )
 
         # Create a pysheds instance
         dem_path = self.catchment.dem.files[0]
@@ -97,9 +109,11 @@ class CatchmentConnectivity:
 
         # Check that the hydro units are defined
         if len(self.catchment.hydro_units.hydro_units) == 0:
-            raise ValueError("No hydro units defined in the catchment. "
-                             "Please define the hydro units before "
-                             "calculating the connectivity.")
+            raise ConfigurationError(
+                "No hydro units defined in the catchment. "
+                "Please define the hydro units before calculating the connectivity.",
+                reason='Hydro units not defined'
+            )
 
         # Create a dataframe with the hydro units IDs and a column of empty dictionaries
         df = self.catchment.hydro_units.hydro_units[[('id', '-')]].copy()
@@ -327,7 +341,13 @@ class CatchmentConnectivity:
         elif mode == 'single':
             df = df.apply(keep_highest_connectivity, axis=1)
         else:
-            raise ValueError("Unknown mode.")
+            raise ConfigurationError(
+                "Unknown mode for connectivity calculation."
+                " Supported modes are 'single' and 'multiple'.",
+                item_name='mode',
+                item_value=mode,
+                reason='Invalid mode value'
+            )
 
         # Add the connectivity to the hydro units
         self.catchment.hydro_units.hydro_units[('connectivity', '-')] = df[
@@ -391,7 +411,11 @@ class CatchmentConnectivity:
                 elif flow_dir_cell == 128:
                     i_next, j_next = i - 1, j + 1
                 else:
-                    raise ValueError("Unknown flow direction.")
+                    raise DataError(
+                        "Unknown flow direction.",
+                        data_type='flow direction',
+                        reason='Invalid flow direction value'
+                    )
 
                 if (i_next < 0 or i_next >= flow_acc.shape[0] or
                         j_next < 0 or j_next >= flow_acc.shape[1]):

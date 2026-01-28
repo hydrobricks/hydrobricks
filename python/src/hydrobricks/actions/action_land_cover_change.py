@@ -8,6 +8,7 @@ import pandas as pd
 
 from hydrobricks import gpd
 from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
+from hydrobricks._exceptions import DataError, DependencyError, ConfigurationError
 from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
 from hydrobricks.actions import Action
 from hydrobricks.catchment import Catchment
@@ -115,8 +116,11 @@ class ActionLandCoverChange(Action):
             id_min = hydro_units.hydro_units[('id', '-')].min()
             id_max = hydro_units.hydro_units[('id', '-')].max()
             if col_1.min() < id_min or col_1.max() > id_max:
-                raise ValueError("The first column of the file does not contain the "
-                                 "hydro unit ids.")
+                raise DataError(
+                    "The first column of the file does not contain the hydro unit ids.",
+                    data_type='hydro unit',
+                    reason='Invalid hydro unit IDs'
+                )
             # Set the first column name to 'hydro_unit'
             file_content.rename(
                 columns={file_content.columns[0]: 'hydro_unit'},
@@ -224,15 +228,24 @@ class ActionLandCoverChange(Action):
         """
 
         if not HAS_GEOPANDAS:
-            raise ImportError("geopandas is required to do this.")
+            raise DependencyError(
+                "geopandas is required for land cover change operations.",
+                package_name='geopandas',
+                operation='ActionLandCoverChange.create_action_for_glaciers',
+                install_command='pip install geopandas'
+            )
 
         if catchment.map_unit_ids is None:
-            raise ValueError("The catchment has not been discretized "
-                             "(unit ids map missing).")
+            raise ConfigurationError(
+                "The catchment has not been discretized (unit ids map missing).",
+                reason='Catchment not initialized'
+            )
 
         if catchment.hydro_units is None:
-            raise ValueError("The catchment has not been discretized "
-                             "(hydro units missing).")
+            raise ConfigurationError(
+                "The catchment has not been discretized (hydro units missing).",
+                reason='Catchment not initialized'
+            )
 
         changes = ActionLandCoverChange()
         changes_df = changes._create_action_for_glaciers(
@@ -290,13 +303,25 @@ class ActionLandCoverChange(Action):
         """
 
         if len(full_glaciers) != len(times):
-            raise ValueError("The number of shapefiles and dates must be equal.")
+            raise DataError(
+                "The number of shapefiles and dates must be equal.",
+                data_type='glacier data',
+                reason='Mismatched array sizes'
+            )
 
         if with_debris and debris_glaciers is None:
-            raise ValueError("The debris shapefiles must be provided.")
+            raise DataError(
+                "The debris shapefiles must be provided.",
+                data_type='glacier data',
+                reason='Missing required data'
+            )
 
         if with_debris and len(debris_glaciers) != len(times):
-            raise ValueError("The number of shapefiles and dates must be equal.")
+            raise DataError(
+                "The number of shapefiles and dates must be equal.",
+                data_type='glacier data',
+                reason='Mismatched array sizes'
+            )
 
         if not with_debris and debris_glaciers is None:
             debris_glaciers = [None] * len(times)
@@ -419,7 +444,12 @@ class ActionLandCoverChange(Action):
             If catchment outline geometry is not a (multi)polygon or method is invalid.
         """
         if method not in ['vector', 'raster']:
-            raise ValueError("Unknown method.")
+            raise ConfigurationError(
+                "Unknown method. Choose either 'vector' or 'raster'.",
+                item_name='method',
+                item_value=method,
+                reason='Invalid method value'
+            )
 
         # Clip the glaciers to the catchment extent
         all_glaciers = gpd.read_file(glaciers_shapefile)
@@ -429,7 +459,11 @@ class ActionLandCoverChange(Action):
         elif catchment.outline[0].geom_type == 'Polygon':
             glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         else:
-            raise ValueError("The catchment outline must be a (multi)polygon.")
+            raise DataError(
+                "The catchment outline must be a (multi)polygon.",
+                data_type='catchment outline',
+                reason='Invalid geometry type'
+            )
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Compute the glaciated area of the catchment
@@ -776,7 +810,12 @@ class ActionLandCoverChange(Action):
                 value = int(change.iloc[1])
                 idx_id = hu_df.index[elevation_values == value].to_list()[0]
             else:
-                raise ValueError(f'No option "{match_with}" for "match_with".')
+                raise ConfigurationError(
+                    f'No option "{match_with}" for "match_with".',
+                    item_name='match_with',
+                    item_value=match_with,
+                    reason='Invalid option'
+                )
             file_content.at[row, 'hydro_unit'] = hu_df.at[idx_id, ('id', '-')]
 
     @staticmethod

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from hydrobricks import rxr, xrs, rasterio
+from hydrobricks._exceptions import DependencyError, DataError
 from hydrobricks._optional import HAS_RASTERIO, HAS_SHAPELY, HAS_PYARROW, HAS_XRSPATIAL
 
 if TYPE_CHECKING:
@@ -83,11 +84,26 @@ class CatchmentTopography:
             - Aspect array (in degrees, 0-360)
         """
         if not HAS_RASTERIO:
-            raise ImportError("rasterio is required to do this.")
+            raise DependencyError(
+                "rasterio is required for DEM resampling and processing.",
+                package_name='rasterio',
+                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
+                install_command='pip install rasterio'
+            )
         if not HAS_PYARROW:
-            raise ImportError("pyarrow is required to do this.")
+            raise DependencyError(
+                "pyarrow is required for DEM resampling.",
+                package_name='pyarrow',
+                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
+                install_command='pip install pyarrow'
+            )
         if not HAS_XRSPATIAL:
-            raise ImportError("xarray-spatial is required to do this.")
+            raise DependencyError(
+                "xarray-spatial is required for slope and aspect calculations.",
+                package_name='xarray-spatial',
+                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
+                install_command='pip install xarray-spatial'
+            )
 
         # Only resample the DEM if the resolution is different from the original
         if resolution is None or resolution == self.catchment.get_dem_x_resolution():
@@ -144,9 +160,19 @@ class CatchmentTopography:
         spatial derivatives. Results stored in self.slope and self.aspect.
         """
         if not HAS_PYARROW:
-            raise ImportError("pyarrow is required to do this.")
+            raise DependencyError(
+                "pyarrow is required for slope and aspect calculations.",
+                package_name='pyarrow',
+                operation='CatchmentTopography.calculate_slope_aspect',
+                install_command='pip install pyarrow'
+            )
         if not HAS_XRSPATIAL:
-            raise ImportError("xarray-spatial is required to do this.")
+            raise DependencyError(
+                "xarray-spatial is required for slope and aspect calculations.",
+                package_name='xarray-spatial',
+                operation='CatchmentTopography.calculate_slope_aspect',
+                install_command='pip install xarray-spatial'
+            )
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
@@ -187,12 +213,20 @@ class CatchmentTopography:
         y_pixel_size = self.catchment.get_dem_y_resolution()
 
         if azimuth > 360.0:
-            raise ValueError(
-                "Azimuth value should be less than or equal to 360 degrees")
+            raise ConfigurationError(
+                "Azimuth value should be less than or equal to 360 degrees",
+                parameter_name='azimuth',
+                parameter_value=azimuth,
+                reason='Value out of valid range'
+            )
 
         if altitude > 90.0:
-            raise ValueError(
-                "Altitude value should be less than or equal to 90 degrees")
+            raise ConfigurationError(
+                "Altitude value should be less than or equal to 90 degrees",
+                parameter_name='altitude',
+                parameter_value=altitude,
+                reason='Value out of valid range'
+            )
 
         # Account for the pixel size
         x = z_factor * x / x_pixel_size

@@ -7,6 +7,7 @@ import pandas as pd
 
 from hydrobricks import rasterio, gpd
 from hydrobricks._constants import ICE_WE
+from hydrobricks._exceptions import DataError, DependencyError, ConfigurationError
 from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
 
 if TYPE_CHECKING:
@@ -117,7 +118,12 @@ class GlacierEvolutionDeltaH:
             The glacier_change_df DataFrame containing the normalized ice thickness change data.
         """
         if not HAS_PYPROJ:
-            raise ImportError("pyproj is required to do this.")
+            raise DependencyError(
+                "pyproj is required to compute ice thickness change.",
+                package_name='pyproj',
+                operation='GlacierEvolutionDeltaH.compute_ice_thickness_change',
+                install_command='pip install pyproj'
+            )
 
         # Discretize the DEM into elevation bands at the given distance
         elevations, map_bands_ids = self._discretize_elevation_bands(
@@ -155,8 +161,11 @@ class GlacierEvolutionDeltaH:
 
         # Check shape consistency
         if ice_thickness_old.shape != ice_thickness_new.shape:
-            raise ValueError("The old and new ice thickness rasters must have the "
-                             "same shape.")
+            raise DataError(
+                "The old and new ice thickness rasters must have the same shape.",
+                data_type='ice thickness',
+                reason='Shape mismatch between rasters'
+            )
 
         map_bands_ids[(ice_thickness_old == 0) & (ice_thickness_new == 0)] = 0
         band_ids = np.unique(map_bands_ids)
@@ -288,12 +297,18 @@ class GlacierEvolutionDeltaH:
         The glacier_df DataFrame containing the glacier data.
         """
         if glacier_outline is None and ice_thickness is None:
-            raise ValueError("Either glacier_outline or ice_thickness "
-                             "should be provided.")
+            raise DataError(
+                "Either glacier_outline or ice_thickness should be provided.",
+                data_type='glacier',
+                reason='Missing required parameter'
+            )
 
         if glacier_outline is not None and ice_thickness is not None:
-            raise ValueError("Either glacier_outline or ice_thickness "
-                             "should be provided, not both.")
+            raise DataError(
+                "Either glacier_outline or ice_thickness should be provided, not both.",
+                data_type='glacier',
+                reason='Conflicting parameters'
+            )
 
         self.pixel_based_approach = pixel_based_approach
 
@@ -308,7 +323,12 @@ class GlacierEvolutionDeltaH:
         # (Farinotti et al., 2009a,b; Huss et al., 2010)).
         if ice_thickness is not None:
             if not HAS_PYPROJ:
-                raise ImportError("pyproj is required to do this.")
+                raise DependencyError(
+                    "pyproj is required to process glacier ice thickness data.",
+                    package_name='pyproj',
+                    operation='GlacierEvolutionDeltaH.initialize_from_glacier_data',
+                    install_command='pip install pyproj'
+                )
 
             # Extract the ice thickness and resample it to the DEM resolution
             catchment.extract_attribute_raster(
@@ -459,8 +479,11 @@ class GlacierEvolutionDeltaH:
             "Catchment area is not defined."
 
         if glacier_profile_csv is not None and glacier_df is not None:
-            raise ValueError("Please provide either glacier_profile_csv or glacier_df, "
-                             "not both.")
+            raise DataError(
+                "Please provide either glacier_profile_csv or glacier_df, not both.",
+                data_type='glacier',
+                reason='Conflicting parameters'
+            )
 
         if glacier_profile_csv is not None:
             # Read the glacier data
@@ -471,8 +494,11 @@ class GlacierEvolutionDeltaH:
             "Glacier data is not defined. Please provide a CSV file or a DataFrame."
 
         if self.pixel_based_approach and catchment is None:
-            raise ValueError("When pixel_based_approach is True, "
-                             "the catchment object must be provided.")
+            raise ConfigurationError(
+                "When pixel_based_approach is True, the catchment must be provided.",
+                item_name='pixel_based_approach',
+                reason='Missing required catchment parameter'
+            )
 
         if self.pixel_based_approach:
             # Add rows corresponding to the number of increments
@@ -872,8 +898,12 @@ class GlacierEvolutionDeltaH:
                                        self.we_bands[0, pos_we], 0.5))
 
                 else:
-                    raise ValueError("update_width_reference should be either "
-                                     "'previous' or 'initial'.")
+                    raise ConfigurationError(
+                        "update_width_reference should be either 'previous' or 'initial'.",
+                        item_name='update_width_reference',
+                        item_value=update_width_reference,
+                        reason='Invalid parameter value'
+                    )
 
                 # Conservation of the water equivalent
                 pos_we = self.we_bands[increment] > 0
@@ -1032,8 +1062,11 @@ class GlacierEvolutionDeltaH:
         """ Discretize the DEM into elevation bands at the given distance."""
         # Check that the catchment has been discretized
         if hydro_units_needed and catchment.map_unit_ids is None:
-            raise ValueError("Catchment has not been discretized. "
-                             "Please run create_elevation_bands() first.")
+            raise ConfigurationError(
+                "Catchment has not been discretized. "
+                "Please run create_elevation_bands() first.",
+                reason='Catchment not initialized'
+            )
 
         if catchment.hydro_units is not None and 'elevation' in catchment.hydro_units.hydro_units.columns:
             hydro_units = catchment.hydro_units.hydro_units
@@ -1044,10 +1077,15 @@ class GlacierEvolutionDeltaH:
             steps = np.diff(elevations)
             hu_steps = np.min(steps)
             if hu_steps % elevation_bands_distance != 0:
-                raise ValueError(f"Hydro unit elevation range ({hu_steps}) must be a "
-                                 f"multiple of the elevation bands distance "
-                                 f"({elevation_bands_distance}). Please adjust the "
-                                 f"elevation_bands_distance parameter.")
+                raise ConfigurationError(
+                    f"Hydro unit elevation range ({hu_steps}) must be a "
+                    f"multiple of the elevation bands distance "
+                    f"({elevation_bands_distance}). Please adjust the "
+                    f"elevation_bands_distance parameter.",
+                    item_name='elevation_bands_distance',
+                    item_value=elevation_bands_distance,
+                    reason='Value not compatible with hydro units'
+                )
 
             # Discretize the DEM into elevation bands at the given distance
             min_elevation = hydro_units['elevation'].min().values[0] - hu_steps / 2
@@ -1097,7 +1135,11 @@ class GlacierEvolutionDeltaH:
         elif catchment.outline[0].geom_type == 'Polygon':
             glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         else:
-            raise ValueError("The catchment outline must be a (multi)polygon.")
+            raise DataError(
+                "The catchment outline must be a (multi)polygon.",
+                data_type='catchment outline',
+                reason='Invalid geometry type'
+            )
         glaciers = self._simplify_df_geometries(glaciers)
 
         # Get the glacier mask

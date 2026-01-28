@@ -7,7 +7,7 @@ import pandas as pd
 from hydrobricks import Dataset
 from hydrobricks._hydrobricks import SettingsBasin
 from hydrobricks._optional import HAS_NETCDF
-from hydrobricks._exceptions import DataError, ConfigurationError
+from hydrobricks._exceptions import DataError, ConfigurationError, DependencyError
 from hydrobricks.units import (
     Unit,
     convert_unit_df,
@@ -130,8 +130,7 @@ class HydroUnits:
         if 'id' not in file_content.columns:
             raise DataError(
                 'The "id" column is required in the file.',
-                data_type='hydro_units',
-                variable='id',
+                data_type='hydro units',
                 reason='Missing required column'
             )
         vals, _ = self._get_column_values_unit('id', file_content)
@@ -146,8 +145,7 @@ class HydroUnits:
         else:
             raise DataError(
                 'The "elevation" column is required in the file.',
-                data_type='hydro_units',
-                variable='elevation',
+                data_type='hydro units',
                 reason='Missing required column'
             )
 
@@ -155,7 +153,7 @@ class HydroUnits:
             raise DataError(
                 'The "column_area" and "columns_areas" cannot be '
                 'provided at the same time.',
-                data_type='hydro_units',
+                data_type='hydro units',
                 reason='Ambiguous column specification'
             )
 
@@ -171,7 +169,7 @@ class HydroUnits:
                 elif area_unit != area_unit_idx:
                     raise DataError(
                         'The area units do not match.',
-                        data_type='area',
+                        data_type='hydro units',
                         reason='Inconsistent units across land covers'
                     )
             self._compute_area_portions(area_values, area_unit)
@@ -191,7 +189,9 @@ class HydroUnits:
                 self.add_property((prop, unit), vals)
 
         if column_fractions is not None:
-            raise NotImplementedError
+            raise ConfigurationError(
+                'The "column_fractions" parameter is not yet implemented.'
+            )
 
         if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
@@ -225,7 +225,7 @@ class HydroUnits:
         if self.hydro_units is None:
             raise DataError(
                 "No hydro units to save.",
-                data_type='hydro_units',
+                data_type='hydro units',
                 reason='Empty hydro units'
             )
 
@@ -251,7 +251,12 @@ class HydroUnits:
             If netcdf4 is not installed.
         """
         if not HAS_NETCDF:
-            raise ImportError("netcdf4 is required to do this.")
+            raise DependencyError(
+                'netcdf4 is required to save hydro units to file.',
+                package_name='netcdf4',
+                operation='HydroUnits.save_as',
+                install_command='pip install netcdf4'
+            )
 
         # Create netCDF file
         nc = Dataset(path, 'w', 'NETCDF4')
@@ -373,8 +378,7 @@ class HydroUnits:
             if self.hydro_units[field_name].isnull().values.any():
                 raise DataError(
                     f'The land cover "{cover_name}" contains NaN values.',
-                    data_type='land_cover',
-                    variable=cover_name,
+                    data_type='land cover',
                     reason='Invalid data with NaN values'
                 )
 
@@ -432,7 +436,7 @@ class HydroUnits:
             if not 0 <= fraction <= 1:
                 raise DataError(
                     f'Land cover fraction {fraction} for unit {unit_id} is outside [0, 1].',
-                    data_type='land_cover_fraction',
+                    data_type='land cover fraction',
                     reason='Fraction outside valid range'
                 )
 
@@ -520,12 +524,17 @@ class HydroUnits:
             connectivity = pd.read_csv(connectivity, header=0, skiprows=[1])
 
         if not isinstance(connectivity, pd.DataFrame):
-            raise TypeError('The connectivity must be a pandas DataFrame.')
+            raise DataError(
+                'The connectivity must be a pandas DataFrame.',
+                data_type='connectivity',
+                reason='Invalid data type'
+            )
 
         if not all(col in connectivity.columns for col in ['id', 'connectivity']):
             raise DataError(
                 'The connectivity DataFrame must contain "id" '
                 'and "connectivity" columns.',
+                data_type='connectivity',
                 reason='Missing required columns'
             )
 
@@ -554,39 +563,47 @@ class HydroUnits:
             total_ratio = sum(connected_units.values())
             if not np.isclose(total_ratio, 1.0):
                 raise DataError(
-                    f'The sum of connectivity ratios for hydro unit '
-                    f'{hydro_unit_id} is {total_ratio}, '
-                    'which is not equal to 1.'
+                    f'The sum of connectivity ratios for hydro unit {hydro_unit_id} '
+                    f'is {total_ratio}, which is not equal to 1.',
+                    data_type='connectivity',
+                    reason='Invalid connectivity ratios sum'
                 )
 
             for connected_unit_id, ratio in connected_units.items():
                 if connected_unit_id == hydro_unit_id:
                     raise DataError(
-                        f'Hydro unit {hydro_unit_id} cannot '
-                        f'be connected to itself.'
+                        f'Hydro unit {hydro_unit_id} cannot be connected to itself.',
+                        data_type='connectivity',
+                        reason='Self-connection not allowed'
                     )
                 if ratio < 0:
                     raise DataError(
-                        f'Negative connectivity ratio {ratio} for '
-                        f'hydro unit {hydro_unit_id} '
-                        f'and connected unit {connected_unit_id}.'
+                        f'Negative connectivity ratio {ratio} for hydro unit '
+                        f'{hydro_unit_id} and connected unit {connected_unit_id}.',
+                        data_type='connectivity',
+                        reason='Negative connectivity ratio'
                     )
                 elif ratio > 1:
                     raise DataError(
                         f'Connectivity ratio {ratio} for hydro unit '
                         f'{hydro_unit_id} and connected unit '
-                        f'{connected_unit_id} cannot be greater than 1.'
+                        f'{connected_unit_id} cannot be greater than 1.',
+                        data_type='connectivity',
+                        reason='Ratio exceeds maximum value'
                     )
 
                 if hydro_unit_id not in self.hydro_units[('id', '-')].values:
                     raise DataError(
-                        f'Hydro unit {hydro_unit_id} not '
-                        f'found in hydro units.'
+                        f'Hydro unit {hydro_unit_id} not found in hydro units.',
+                        data_type='connectivity',
+                        reason='Undefined hydro unit'
                     )
                 if connected_unit_id not in self.hydro_units[('id', '-')].values:
                     raise DataError(
                         f'Connected hydro unit {connected_unit_id} '
-                        f'not found in hydro units.'
+                        f'not found in hydro units.',
+                        data_type='connectivity',
+                        reason='Undefined connected hydro unit'
                     )
 
                 # Add the connectivity to the settings
@@ -685,7 +702,7 @@ class HydroUnits:
             raise DataError(
                 'The length of the provided "columns_areas" does not match '
                 f'the number of land covers ({len(self.land_cover_names)}).',
-                data_type='columns_areas',
+                data_type='land cover',
                 reason='Mismatched land cover count'
             )
         for col in columns_areas:
@@ -693,8 +710,7 @@ class HydroUnits:
                 raise DataError(
                     f'The land cover "{col}" was not found in the '
                     f'defined land covers.',
-                    data_type='land_cover',
-                    variable=col,
+                    data_type='land cover',
                     reason='Undefined land cover'
                 )
 
@@ -788,13 +804,13 @@ class HydroUnits:
         if land_cover_name is None and land_cover_type is None:
             raise DataError(
                 'The land cover name or type is undefined.',
-                data_type='land_cover',
+                data_type='land cover',
                 reason='Missing land cover specification'
             )
 
         if len(land_cover_names) != len(land_cover_types):
             raise DataError(
                 'The length of the land cover types & names do not match.',
-                data_type='land_cover',
+                data_type='land cover',
                 reason='Mismatched types and names'
             )

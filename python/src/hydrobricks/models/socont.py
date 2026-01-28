@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from hydrobricks.models import Model
+from hydrobricks._exceptions import ConfigurationError, ModelError
 
 
 class Socont(Model):
@@ -29,8 +30,7 @@ class Socont(Model):
             self._define_parameter_constraints()
 
         except RuntimeError as err:
-            raise RuntimeError(f'Socont model initialization raised '
-                               f'an exception: {err}')
+            raise ModelError(f'Socont model initialization raised an exception: {err}')
 
     def _define_structure(self) -> None:
         """
@@ -159,9 +159,13 @@ class Socont(Model):
             print("Using a linear storage for the quick flow.")
             surface_runoff_kind = 'outflow:linear'
         else:
-            raise RuntimeError(
-                f"The surface runoff option {self.options['surface_runoff']} is "
-                f"not recognised in Socont.")
+            raise ConfigurationError(
+                f"The surface runoff option {self.options['surface_runoff']} "
+                f"is not recognised in Socont.",
+                item_name='surface_runoff',
+                item_value=self.options['surface_runoff'],
+                reason='Invalid option'
+            )
 
         self.structure['surface_runoff'] = {
             'attach_to': 'hydro_unit',
@@ -237,4 +241,9 @@ class Socont(Model):
             self.options['soil_storage_nb'] = int(kwargs['soil_storage_nb'])
             if (self.options['soil_storage_nb'] < 1 or
                     self.options['soil_storage_nb'] > 2):
-                raise ValueError('The option "soil_storage_nb" can only be 1 or 2')
+                raise ConfigurationError(
+                    'The option "soil_storage_nb" can only be 1 or 2.',
+                    item_name='soil_storage_nb',
+                    item_value=self.options['soil_storage_nb'],
+                    reason='Invalid option value'
+                )

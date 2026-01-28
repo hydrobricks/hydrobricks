@@ -2,12 +2,18 @@ import sys
 
 import pandas as pd
 
+from hydrobricks._exceptions import DependencyError, DataError
+
 if sys.version_info < (3, 11):
     try:
         from strenum import LowercaseStrEnum, StrEnum
     except ImportError:
-        raise ImportError("Please install the 'StrEnum' package to use StrEnum "
-                          "on Python versions prior to 3.11.")
+        raise DependencyError(
+            "The 'strenum' package is required to use StrEnum on Python versions prior to 3.11.",
+            package_name='strenum',
+            operation='units.import',
+            install_command='pip install strenum'
+        )
 else:
     from enum import StrEnum
 
@@ -127,7 +133,11 @@ def get_unit_enum(unit: str) -> Unit:
     elif unit in ['kPa', 'kilopascal']:
         return Unit.KPA
     else:
-        raise ValueError(f"Unknown unit: {unit}")
+        raise DataError(
+            f"Unknown unit: {unit}",
+            data_type='unit',
+            reason='Unsupported unit type'
+        )
 
 
 def get_unit_from_df_column(df: pd.DataFrame) -> Unit:
@@ -157,7 +167,11 @@ def get_unit_from_df_column(df: pd.DataFrame) -> Unit:
     Unit.M
     """
     if len(df.columns) != 1:
-        raise ValueError("Only single column dataframes are supported.")
+        raise DataError(
+            "Only single column dataframes are supported.",
+            data_type='unit',
+            reason='Multiple columns provided'
+        )
 
     return get_unit_enum(df.columns[0])
 
@@ -280,7 +294,11 @@ def convert_unit(
         if unit_to == Unit.MM_D:
             return value * 24
 
-    raise ValueError(f"Conversion from {unit_from} to {unit_to} not implemented.")
+    raise DataError(
+        f"Conversion from {unit_from} to {unit_to} not implemented.",
+        data_type='unit',
+        reason='Unsupported conversion'
+    )
 
 
 def remove_chars(input_string: str, chars_to_remove: str) -> str:

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._constants import ICE_WE
+from hydrobricks._exceptions import ConfigurationError, DependencyError
 from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
@@ -65,12 +66,20 @@ class GlacierEvolutionAreaScaling:
 
         # Check that the catchment has been discretized
         if catchment.map_unit_ids is None:
-            raise ValueError("Catchment has not been discretized. "
-                             "Please run create_elevation_bands() first.")
+            raise ConfigurationError(
+                "Catchment has not been discretized. "
+                "Please run create_elevation_bands() first.",
+                reason='Catchment not initialized'
+            )
 
         # Extract the ice thickness from a TIF file.
         if not HAS_PYPROJ:
-            raise ImportError("pyproj is required to do this.")
+            raise DependencyError(
+                "pyproj is required to extract glacier thickness.",
+                package_name='pyproj',
+                operation='GlacierEvolutionAreaScaling.compute_lookup_table',
+                install_command='pip install pyproj'
+            )
 
         self.hydro_units = catchment.hydro_units.hydro_units
         self.catchment_area = np.sum(self.hydro_units.area.values)

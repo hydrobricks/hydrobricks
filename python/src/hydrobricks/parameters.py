@@ -552,7 +552,19 @@ class ParameterSet:
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, 'value']
 
-    def is_ok(self) -> bool:
+    def are_valid(self) -> bool:
+        """
+        Check if all the parameters are defined and have a value.
+        Alias of is_valid.
+
+        Returns
+        -------
+        bool
+            True if all parameters are defined and have a value, False otherwise.
+        """
+        return self.is_valid()
+
+    def is_valid(self) -> bool:
         """
         Check if all the parameters are defined and have a value.
 

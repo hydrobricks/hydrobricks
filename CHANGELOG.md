@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
 
 
+## UNRELEASED VERSION
+
+### Breaking changes
+
+- The functions model.is_ok() and parameters.is_ok() have been renamed to model.is_valid() and parameters.are_valid() or parameters.is_valid() respectively.
+
+### Added
+
+- Addition of custom C++ and Python exception classes.
+
+
 ## 0.8.6 - 2025-12-18
 
 ### Added

@@ -190,7 +190,7 @@ class Model(ABC):
                 is_initialized=False
             )
 
-        if not parameters.is_ok():
+        if not parameters.is_valid():
             raise ConfigurationError(
                 f'Some parameters were not defined: '
                 f'{",".join(parameters.get_undefined())}.'
@@ -205,7 +205,7 @@ class Model(ABC):
             self._set_parameter_values(parameters)
             self._set_forcing(forcing)
 
-            if not self.model.is_ok():
+            if not self.model.is_valid():
                 raise ConfigurationError('The model is not properly configured.')
 
             timer = Timer()

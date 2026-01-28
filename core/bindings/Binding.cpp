@@ -141,7 +141,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("update_parameters", &ModelHydro::UpdateParameters, "Update the parameters with the provided values.",
              "model_settings"_a)
         .def("forcing_loaded", &ModelHydro::ForcingLoaded, "Check if the forcing data were loaded.")
-        .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
+        .def("is_valid", &ModelHydro::IsValid, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import importlib
+import logging
 import os
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable
@@ -8,6 +9,8 @@ import numpy as np
 
 from hydrobricks import spotpy
 from hydrobricks._exceptions import DataError, ModelError
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from hydrobricks.forcing import Forcing
@@ -100,7 +103,7 @@ class SpotpySetup:
                 m.set_forcing(forcing=f)
 
         if not obj_func:
-            print("Objective function: Non parametric Kling-Gupta Efficiency.")
+            logger.info("Objective function: Non parametric Kling-Gupta Efficiency.")
 
     def parameters(self) -> Any:
         """
@@ -195,7 +198,7 @@ class SpotpySetup:
             params: spotpy.parameter | None = None
     ) -> float:
         if simulation is None:
-            print(f'Simulation results empty (params: {params}).')
+            logger.error(f'Simulation results empty (params: {params}).')
             if self.invert_obj_func:
                 return np.inf
             return -np.inf
@@ -203,11 +206,13 @@ class SpotpySetup:
         all_like = []
         for sim, obs in zip(simulation, evaluation):
             if sim is None or sim.size == 0:
-                print(f'Simulation results empty (params: {params}).')
+                logger.error(f'Simulation results empty (params: {params}).')
                 like = -np.inf
             elif len(sim) != len(obs):
-                print(f'Length of simulation and observation do not match '
-                      f'(params: {params}).')
+                logger.error(
+                    f'Length of simulation and observation do not match '
+                    f'(params: {params}).'
+                )
                 like = -np.inf
             else:
                 if not self.obj_func:

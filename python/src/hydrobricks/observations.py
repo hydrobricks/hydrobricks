@@ -1,11 +1,15 @@
 from __future__ import annotations
 import itertools
+import logging
 
 import numpy as np
 import pandas as pd
 
+from hydrobricks._exceptions import DataError
 from hydrobricks.time_series import TimeSeries1D
 from hydrobricks.trainer import evaluate
+
+logger = logging.getLogger(__name__)
 
 
 class Observations(TimeSeries1D):
@@ -61,10 +65,11 @@ class Observations(TimeSeries1D):
         -------
         float
             The mean value of n_evals realizations of the selected metric.
-            Returns -1 if metric cannot be computed on single year only.
 
         Raises
         ------
+        DataError
+            If there is only one year of data (insufficient for block bootstrapping).
         ValueError
             If metric is not recognized or if time series setup is invalid.
 
@@ -101,8 +106,12 @@ class Observations(TimeSeries1D):
             return ref_metric
 
         if len(years) == 1:
-            print("Not possible to compute the reference metric on one year only.")
-            return -1
+            raise DataError(
+                "Not possible to compute the reference metric on one year only. "
+                "At least two years of data are required for block bootstrapping.",
+                data_type='observations',
+                reason='Insufficient years for metric computation'
+            )
 
         df = df.reset_index()
         df = df.set_index('year')
@@ -156,6 +165,6 @@ class Observations(TimeSeries1D):
                 metrics[i] = value
 
         ref_metric = float(np.mean(metrics))
-        print("Reference metric is ", ref_metric)
+        logger.info(f"Reference metric computed: {ref_metric}")
 
         return ref_metric

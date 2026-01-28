@@ -1,3 +1,4 @@
+import logging
 import warnings
 
 import matplotlib.pyplot as plt
@@ -7,6 +8,8 @@ from matplotlib.colors import LightSource, ListedColormap
 
 from hydrobricks import rxr
 from hydrobricks.results import Results
+
+logger = logging.getLogger(__name__)
 
 
 def plot_hydrograph(
@@ -243,7 +246,7 @@ def create_animated_map_hydro_unit_value(
     # Save the animation
     output_path = f"{save_path}/{component.replace(':', '_')}.gif"
     ani.save(output_path, fps=fps)
-    print(f"Animation saved at {output_path}")
+    logger.info(f"Animation saved at {output_path}")
 
 
 def _generate_cmap_blue() -> ListedColormap:

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from hydrobricks.models import Model
 from hydrobricks._exceptions import ConfigurationError, ModelError
+
+logger = logging.getLogger(__name__)
 
 
 class Socont(Model):
@@ -136,7 +139,7 @@ class Socont(Model):
         }
 
         if self.options['soil_storage_nb'] == 2:
-            print("Using 2 soil storages.")
+            logger.info("Using 2 soil storages.")
             self.structure['slow_reservoir']['processes']['percolation'] = {
                 'kind': 'outflow:percolation',
                 'target': 'slow_reservoir_2'
@@ -156,7 +159,7 @@ class Socont(Model):
         if self.options['surface_runoff'] == 'socont_runoff':
             surface_runoff_kind = 'runoff:socont'
         elif self.options['surface_runoff'] == 'linear_storage':
-            print("Using a linear storage for the quick flow.")
+            logger.info("Using a linear storage for the quick flow.")
             surface_runoff_kind = 'outflow:linear'
         else:
             raise ConfigurationError(

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,8 @@ from hydrobricks._optional import HAS_PYET, HAS_NETCDF
 from hydrobricks._exceptions import DataError, ForcingError, DependencyError
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -501,7 +504,7 @@ class Forcing:
             raise ImportError("netcdf4 is required to do this.")
 
         if not self.is_initialized():
-            print("Applying operations before saving...")
+            logger.info("Applying operations before saving...")
             self.apply_operations()
             self._is_initialized = True
 

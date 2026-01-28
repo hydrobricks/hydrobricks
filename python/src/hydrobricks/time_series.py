@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import os
 import time
 import warnings
@@ -14,6 +15,8 @@ from hydrobricks import rxr, xr, rasterio, pyproj
 from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
 from hydrobricks._exceptions import (DependencyError, DataError, ConfigurationError)
 from hydrobricks._utils import date_as_mjd
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from hydrobricks.hydro_units import HydroUnits
@@ -210,7 +213,7 @@ class TimeSeries2D(TimeSeries):
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
         # Get netCDF dataset
-        print(f"Reading netcdf file(s) from {path}...")
+        logger.debug(f"Reading netcdf file(s) from {path}...")
         if file_pattern is None:
             nc_data = xr.open_dataset(path, chunks={})
         else:
@@ -224,9 +227,11 @@ class TimeSeries2D(TimeSeries):
         unit_ids_crs = self._parse_crs(unit_ids, None)
 
         if data_crs != unit_ids_crs:
-            print("The CRS of the netcdf file does not match the CRS of the "
-                  "hydro unit ids raster. Reprojection will be done from "
-                  f"{unit_ids_crs} to {data_crs}.")
+            logger.warning(
+                "The CRS of the netcdf file does not match the CRS of the "
+                "hydro unit ids raster. Reprojection will be done from "
+                f"{unit_ids_crs} to {data_crs}."
+            )
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 unit_ids = unit_ids.rio.reproject(f'epsg:{data_crs}')
@@ -359,8 +364,10 @@ class TimeSeries2D(TimeSeries):
             # If both gradients contain more than 60% NaN values, raise a warning
             if (dem_dx.isnull().sum() / dem_dx.size > 0.6 and
                     dem_dy.isnull().sum() / dem_dy.size > 0.6):
-                print("More than 60% of the DEM gradients are too small. "
-                      "Defaulting to apply_data_gradient=False.")
+                logger.warning(
+                    "More than 60% of the DEM gradients are too small. "
+                    "Defaulting to apply_data_gradient=False."
+                )
                 apply_data_gradient = False
 
             # Extract the elevation for each hydro unit
@@ -427,7 +434,7 @@ class TimeSeries2D(TimeSeries):
 
         # If the time method is 'day_of_year', convert to the full time series
         if time_method == 'day_of_year':
-            print("Converting to the full time series...")
+            logger.info("Converting to the full time series...")
             # Get the indices of jd_unique that match the values of jd
             jd = self.time.dt.strftime('%j').to_numpy().astype(int)
             indices = np.searchsorted(day_of_year, jd)
@@ -436,7 +443,8 @@ class TimeSeries2D(TimeSeries):
 
         # Print elapsed time
         elapsed_time = time.time() - start_time
-        print(f"Elapsed time: {elapsed_time:.2f} seconds (using {num_threads} threads)")
+        logger.info(f"Elapsed time: {elapsed_time:.2f} seconds "
+                    f"(using {num_threads} threads)")
 
     def _extract_time_step_data_weights_with_gradient(
             self,
@@ -484,7 +492,7 @@ class TimeSeries2D(TimeSeries):
         if i_start >= len(self.time):
             return
 
-        print(f"Extracting {self.time[i_start]}")
+        logger.debug(f"Extracting {self.time[i_start]}")
 
         if gradient_type == 'additive':
             dat_dx = data_var[i_start:i_end].diff('x')
@@ -603,7 +611,7 @@ class TimeSeries2D(TimeSeries):
         if i_start >= len(self.time):
             return
 
-        print(f"Extracting {self.time[i_start]}")
+        logger.debug(f"Extracting {self.time[i_start]}")
 
         # Extract data for each unit
         for u, unit_weight in enumerate(unit_weights):

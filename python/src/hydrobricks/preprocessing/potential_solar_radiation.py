@@ -123,7 +123,7 @@ class PotentialSolarRadiation:
         for i in range(len(day_of_year)):
             # Print every 10 days
             if day_of_year[i] % 10 == 0:
-                print('Computing radiation for day', day_of_year[i])
+                logger.debug(f'Computing radiation for day {day_of_year[i]}')
 
             # List of hour angles throughout the day.
             ha_list = np.arange(
@@ -752,7 +752,7 @@ class PotentialSolarRadiation:
             Filename for daily radiation output. Default is 'daily_potential_radiation.nc'.
         """
         full_path = Path(output_path) / output_filename
-        print('Saving to', str(full_path), self.catchment.dem.crs)
+        logger.info(f'Saving to {str(full_path)} with CRS {self.catchment.dem.crs}')
 
         if not HAS_XARRAY:
             raise DependencyError(
@@ -794,7 +794,7 @@ class PotentialSolarRadiation:
 
         try:
             ds.to_netcdf(full_path)
-            print('File successfully written.')
+            logger.info('File successfully written.')
         except (OSError, IOError, PermissionError) as e:
             logger.error(f"Error writing netCDF file to {full_path}: {e}", exc_info=True)
             raise ModelError(f"Error writing to file: {e}") from e

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import warnings
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks._units import Unit, convert_unit
 from hydrobricks._utils import compute_area, date_as_mjd
+
+logger = logging.getLogger(__name__)
 
 if HAS_SHAPELY:
     from shapely.geometry import MultiPolygon, mapping
@@ -342,7 +345,7 @@ class ActionLandCoverChange(Action):
         debris_np = np.zeros((n_unit_ids, len(times)))
         ground_np = np.zeros((n_unit_ids, len(times)))
         for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
-            print(f"Extracting glacier cover changes for {time}...")
+            logger.debug(f"Extracting glacier cover changes for {time}...")
             glacier, ice, debris, other = self._extract_glacier_cover_change(
                 catchment,
                 glacier_shp,
@@ -479,23 +482,29 @@ class ActionLandCoverChange(Action):
             glaciers_debris = self._simplify_df_geometries(glaciers_debris)
 
         # Display some glacier statistics
-        print(f"The catchment has an area of "
-              f"{convert_unit(catchment.area, m2, km2):.1f} km², from which "
-              f"{convert_unit(glaciated_area, m2, km2):.1f} km² are glaciated, "
-              f"and {convert_unit(non_glaciated_area, m2, km2):.1f} km² are "
-              f"non glaciated.")
+        logger.debug(
+            f"The catchment has an area of "
+            f"{convert_unit(catchment.area, m2, km2):.1f} km², from which "
+            f"{convert_unit(glaciated_area, m2, km2):.1f} km² are glaciated, "
+            f"and {convert_unit(non_glaciated_area, m2, km2):.1f} km² are "
+            f"non glaciated."
+        )
 
-        print(f"The catchment is {glaciated_area / catchment.area * 100:.1f}% "
-              f"glaciated.")
+        logger.debug(
+            f"The catchment is {glaciated_area / catchment.area * 100:.1f}% "
+            f"glaciated."
+        )
 
         if debris_shapefile is not None:
             debris_glaciated_area = compute_area(glaciers_debris)
             bare_ice_area = glaciated_area - debris_glaciated_area
             bare_ice_percentage = bare_ice_area / glaciated_area * 100
-            print(f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
-                  f"of bare ice, and {convert_unit(debris_glaciated_area, m2, km2):.1f}"
-                  f" km² of debris-covered ice, thus amounting to "
-                  f"{bare_ice_percentage:.1f}% of bare ice.")
+            logger.debug(
+                f"The glaciers have {convert_unit(bare_ice_area, m2, km2):.1f} km² "
+                f"of bare ice, and {convert_unit(debris_glaciated_area, m2, km2):.1f}"
+                f" km² of debris-covered ice, thus amounting to "
+                f"{bare_ice_percentage:.1f}% of bare ice."
+            )
 
         # Extract the pixel size
         x_size = catchment.get_dem_x_resolution()
@@ -507,9 +516,11 @@ class ActionLandCoverChange(Action):
             all_touched = True  # Needs to be True to include partly-covered pixels
         else:
             all_touched = False
-            print(f"The dataset in the CRS {glaciers.crs} has a spatial resolution of "
-                  f"{x_size} m, {y_size} m thus giving pixel areas "
-                  f"of {px_area} m².")
+            logger.debug(
+                f"The dataset in the CRS {glaciers.crs} has a spatial resolution of "
+                f"{x_size} m, {y_size} m thus giving pixel areas "
+                f"of {px_area} m²."
+            )
 
         # Get the glacier mask
         glaciers_mask = self._mask_dem(
@@ -593,12 +604,14 @@ class ActionLandCoverChange(Action):
 
             other_area[idx] = unit_area - glacier_area[idx]
 
-        print(f"After shapefile extraction (method: {method}), the glaciers have "
-              f"{convert_unit(np.sum(bare_ice_area), m2, km2):.1f} km² of bare ice, "
-              f"{convert_unit(np.sum(debris_area), m2, km2):.1f} km² of "
-              f"debris-covered ice, and "
-              f"{convert_unit(np.sum(other_area), m2, km2):.1f} km² of "
-              f"non-glaciated area.")
+        logger.debug(
+            f"After shapefile extraction (method: {method}), the glaciers have "
+            f"{convert_unit(np.sum(bare_ice_area), m2, km2):.1f} km² of bare ice, "
+            f"{convert_unit(np.sum(debris_area), m2, km2):.1f} km² of "
+            f"debris-covered ice, and "
+            f"{convert_unit(np.sum(other_area), m2, km2):.1f} km² of "
+            f"non-glaciated area."
+        )
 
         return glacier_area, bare_ice_area, debris_area, other_area
 

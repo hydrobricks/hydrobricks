@@ -12,6 +12,8 @@ import pandas as pd
 
 from hydrobricks import rxr, xr, rasterio, pyproj
 from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
+from hydrobricks._exceptions import (DependencyError, DataError, ConfigurationError,
+                                     SpatialError)
 from hydrobricks.utils import date_as_mjd
 
 if TYPE_CHECKING:
@@ -174,14 +176,33 @@ class TimeSeries2D(TimeSeries):
             If raster_hydro_units is not provided, or if time/spatial dimensions don't match.
         """
         if not HAS_RASTERIO:
-            raise ImportError("rasterio is required for 'regrid_from_netcdf'.")
+            raise DependencyError(
+                "rasterio is required for regridding from netCDF.",
+                package_name='rasterio',
+                operation='regrid_from_netcdf',
+                install_command='pip install rasterio'
+            )
         if not HAS_RIOXARRAY:
-            raise ImportError("rioxarray is required for 'regrid_from_netcdf'.")
+            raise DependencyError(
+                "rioxarray is required for regridding from netCDF.",
+                package_name='rioxarray',
+                operation='regrid_from_netcdf',
+                install_command='pip install rioxarray'
+            )
         if not HAS_NETCDF:
-            raise ImportError("netCDF4 is required for 'regrid_from_netcdf'.")
+            raise DependencyError(
+                "netCDF4 is required for regridding from netCDF.",
+                package_name='netCDF4',
+                operation='regrid_from_netcdf',
+                install_command='pip install netCDF4'
+            )
 
         if raster_hydro_units is None:
-            raise ValueError("You must provide a raster of the hydro units.")
+            raise DataError(
+                "You must provide a raster of the hydro units.",
+                data_type='raster_hydro_units',
+                reason='Missing required data'
+            )
 
         # Get unit ids
         with warnings.catch_warnings():
@@ -221,9 +242,13 @@ class TimeSeries2D(TimeSeries):
             time_method = 'day_of_year'
             day_of_year = nc_data.variables['day_of_year'][:]
             if len(self.time) == 0:
-                raise ValueError("Other forcing data with a full temporal array have "
-                                 "to be loaded and spatialized before data based "
-                                 "on 'day_of_year'.")
+                raise DataError(
+                    "Other forcing data with a full temporal array have "
+                    "to be loaded and spatialized before data based "
+                    "on 'day_of_year'.",
+                    data_type='day_of_year',
+                    reason='Missing preceding forcing data'
+                )
         else:
             time_method = 'full'
             time_nc = nc_data.variables[dim_time][:]
@@ -232,18 +257,29 @@ class TimeSeries2D(TimeSeries):
 
             # Check if the time steps are the same
             if len(self.time) != len(time_nc):
-                raise ValueError(f"The length of the netcdf time series "
-                                 f"({len(time_nc)}) does not match the one from the "
-                                 f"hydro units data ({len(self.time)}).")
+                raise DataError(
+                    f"The length of the netcdf time series ({len(time_nc)}) "
+                    f"does not match the one from the hydro units data ({len(self.time)}).",
+                    data_type='time_series',
+                    reason='Mismatched time series length'
+                )
             if self.time[0] != time_nc[0]:
-                raise ValueError(f"The first time step of the netcdf time series "
-                                 f"({time_nc[0].data}) does not match the one from the "
-                                 f"hydro units data ({self.time[0]}).")
+                raise DataError(
+                    f"The first time step of the netcdf time series "
+                    f"({time_nc[0].data}) does not match the one from the "
+                    f"hydro units data ({self.time[0]}).",
+                    data_type='time_series',
+                    reason='Mismatched start date'
+                )
             if self.time[len(self.time) - 1] != time_nc[len(time_nc) - 1]:
-                raise ValueError(f"The last time step of the netcdf time series "
-                                 f"({time_nc[len(time_nc) - 1].data}) does not match "
-                                 f"the one from the hydro units data "
-                                 f"({self.time[len(self.time) - 1]}).")
+                raise DataError(
+                    f"The last time step of the netcdf time series "
+                    f"({time_nc[len(time_nc) - 1].data}) does not match "
+                    f"the one from the hydro units data "
+                    f"({self.time[len(self.time) - 1]}).",
+                    data_type='time_series',
+                    reason='Mismatched end date'
+                )
 
         # Extract the unit id masks
         unit_id_masks = []
@@ -294,8 +330,12 @@ class TimeSeries2D(TimeSeries):
         if time_method == 'day_of_year':
             time_len = len(day_of_year)
             if time_len != 366:
-                raise ValueError("The time series based on 'day_of_year' must have "
-                                 "a length of 366.")
+                raise DataError(
+                    f"The time series based on 'day_of_year' must have a length of 366 "
+                    f"(got {time_len}).",
+                    data_type='day_of_year',
+                    reason='Invalid time series length for day_of_year'
+                )
 
         # If we are using the 'apply_data_gradient' option, we need to first compute
         # the reference elevation for each data grid cell.
@@ -471,8 +511,12 @@ class TimeSeries2D(TimeSeries):
             dat_dy.data = dat_dy_np
 
         else:
-            raise ValueError(f"Unknown gradient type: {gradient_type}. "
-                             "Use 'additive' or 'multiplicative'.")
+            raise ConfigurationError(
+                f"Unknown gradient type: {gradient_type}. "
+                "Use 'additive' or 'multiplicative'.",
+                parameter_name='gradient_type',
+                parameter_value=gradient_type
+            )
 
         # Compute the gradient of the data along the x and y axes
         dat_dx = dat_dx / dem_dx
@@ -490,16 +534,20 @@ class TimeSeries2D(TimeSeries):
         dat_dxy = self._mean_xy_gradient(dat_dx, dat_dy).to_numpy()
 
         if dat_dxy.shape[1:] != data_var.shape[1:]:
-            raise ValueError("The shape of the data gradient does not match the "
-                             "shape of the data variable. "
-                             f"Data shape: {data_var.shape}, "
-                             f"Gradient shape: {dat_dxy.shape}")
+            raise DataError(
+                f"The shape of the data gradient ({dat_dxy.shape[1:]}) does not match the "
+                f"shape of the data variable ({data_var.shape[1:]}).",
+                data_type='gradient',
+                reason='Shape mismatch'
+            )
 
         if dem.shape != data_var.shape[1:]:
-            raise ValueError("The shape of the DEM does not match the "
-                             "shape of the data variable. "
-                             f"Data shape: {data_var.shape}, "
-                             f"DEM shape: {dem.shape}")
+            raise DataError(
+                f"The shape of the DEM ({dem.shape}) does not match the "
+                f"shape of the data variable ({data_var.shape[1:]}).",
+                data_type='dem',
+                reason='Shape mismatch'
+            )
 
         # Extract data for each unit
         data_array = data_var[i_start:i_end].to_numpy()
@@ -651,7 +699,7 @@ class TimeSeries2D(TimeSeries):
 
         Raises
         ------
-        ValueError
+        DataError
             If no CRS is found and file_crs is not provided.
         """
         if file_crs is None:
@@ -662,8 +710,12 @@ class TimeSeries2D(TimeSeries):
                 # Try to get it from the rio crs
                 return data.rio.crs.to_epsg()
             else:
-                raise ValueError("No CRS found in the netcdf file."
-                                 "Please provide a CRS (option 'file_crs').")
+                raise DataError(
+                    "Could not determine the CRS from the data."
+                    "Please provide a CRS (option 'file_crs').",
+                    data_type='spatial_data',
+                    reason='Missing CRS information'
+                )
         return file_crs
 
     @staticmethod
@@ -698,7 +750,12 @@ class TimeSeries2D(TimeSeries):
         y_dim = next((name for name in y_names if name in ref_data.dims), None)
 
         if x_dim is None or y_dim is None:
-            raise ValueError("Could not find spatial dimensions in the reference data.")
+            raise DataError(
+                f"Could not find spatial dimensions in the reference data. "
+                f"Available dimensions: {list(ref_data.dims)}",
+                data_type='spatial_data',
+                reason='Missing x/y or lon/lat dimensions'
+            )
 
         x_ref_min = ref_data[x_dim].min().item()
         x_ref_max = ref_data[x_dim].max().item()
@@ -791,9 +848,19 @@ class TimeSeries2D(TimeSeries):
         """
         # Ensure both have x and y dims
         if "x" not in dat_dx.dims or "y" not in dat_dx.dims:
-            raise ValueError("dat_dx must have 'x' and 'y' dimensions")
+            raise DataError(
+                f"dat_dx must have 'x' and 'y' dimensions. "
+                f"Got dimensions: {dat_dx.dims}",
+                data_type='gradient_dx',
+                reason='Missing x or y dimension'
+            )
         if "x" not in dat_dy.dims or "y" not in dat_dy.dims:
-            raise ValueError("dat_dy must have 'x' and 'y' dimensions")
+            raise DataError(
+                f"dat_dy must have 'x' and 'y' dimensions. "
+                f"Got dimensions: {dat_dy.dims}",
+                data_type='gradient_dy',
+                reason='Missing x or y dimension'
+            )
 
         # Target coordinates
         coords = {}

@@ -49,6 +49,16 @@ from hydrobricks.results import Results
 from hydrobricks.time_series import TimeSeries
 from hydrobricks.trainer import evaluate
 
+# Import custom exceptions (core set only)
+from hydrobricks._exceptions import (
+    HydroBricksError,  # Base exception - catch all hydrobricks errors
+    DataError,  # Data-related errors (invalid, missing, inconsistent)
+    ConfigurationError,  # Configuration errors (parameters, model structure)
+    ModelError,  # Model execution errors (initialization, runtime)
+    ForcingError,  # Forcing data errors (spatialization, gradients)
+    DependencyError,  # Missing optional dependencies
+)
+
 init()
 __all__ = (
     # Core classes
@@ -64,4 +74,7 @@ __all__ = (
     # Lazy-loaded optional modules
     'Dataset', 'rasterio', 'gpd', 'shapely', 'spotpy', 'pyet', 'pyproj',
     'pysheds', 'pyshedsGrid', 'xr', 'rxr', 'pyarrow', 'xrs',
+    # Core custom exceptions
+    'HydroBricksError', 'DataError', 'ConfigurationError',
+    'ModelError', 'ForcingError', 'DependencyError',
 )

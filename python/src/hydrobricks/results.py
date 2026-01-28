@@ -2,6 +2,7 @@ import numpy as np
 
 from hydrobricks import xr
 from hydrobricks._optional import HAS_XARRAY
+from hydrobricks._exceptions import DependencyError
 
 
 class Results:
@@ -22,13 +23,18 @@ class Results:
 
         Raises
         ------
-        ImportError
+        DependencyError
             If xarray is not installed.
         FileNotFoundError
             If the specified file does not exist.
         """
         if not HAS_XARRAY:
-            raise ImportError("xarray is required to do this.")
+            raise DependencyError(
+                "xarray is required for reading results from netCDF files.",
+                package_name='xarray',
+                operation='Results.__init__',
+                install_command='pip install xarray'
+            )
         self.results: xr.Dataset = xr.open_dataset(filename)
         self.labels_distributed: str | list[str] | None = self.results.attrs.get('labels_distributed')
         self.labels_aggregated: str | list[str] | None = self.results.attrs.get('labels_aggregated')

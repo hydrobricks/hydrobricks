@@ -21,6 +21,7 @@ from cftime import num2date
 from hydrobricks import Dataset, pyet
 from hydrobricks._constants import TO_RAD
 from hydrobricks._optional import HAS_PYET, HAS_NETCDF
+from hydrobricks._exceptions import DataError, ForcingError, DependencyError
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
@@ -84,13 +85,17 @@ class Forcing:
             hydro_units = spatial_entity.hydro_units
             catchment = spatial_entity
         else:
-            raise TypeError(f'The spatial_entity argument must be a HydroUnits or '
-                            f'Catchment object, not {type(spatial_entity)}.')
+            raise TypeError(
+                f'The spatial_entity argument must be a HydroUnits or '
+                f'Catchment object, not {type(spatial_entity)}.'
+            )
 
         # Check hydro units
         if len(hydro_units.hydro_units) == 0:
-            raise ValueError('The hydro_units argument must contain at least '
-                             'one hydrological unit.')
+            raise ConfigurationError(
+                'The hydro_units object contains no hydrological units.',
+                reason='Empty hydro units'
+            )
 
         super().__init__()
         self.data1D: TimeSeries1D = TimeSeries1D()
@@ -395,13 +400,18 @@ class Forcing:
 
         Raises
         ------
-        ImportError
+        DependencyError
             If pyet is not installed.
         ValueError
             If required variables are not available.
         """
         if not HAS_PYET:
-            raise ImportError("pyet is required to do this.")
+            raise DependencyError(
+                "PyEt is required for PET computation.",
+                package_name='pyet',
+                operation='compute_pet',
+                install_command='pip install pyet'
+            )
 
         kwargs['type'] = 'compute_pet'
 
@@ -689,7 +699,11 @@ class Forcing:
         # Extract kwargs (None if not provided)
         correction_factor = kwargs.get('correction_factor', None)
         if correction_factor is None:
-            raise ValueError('Correction factor not provided.')
+            raise ForcingError(
+                'Correction factor not provided.',
+                variable=str(variable),
+                method=method
+            )
 
         if method == 'multiplicative':
             correction_factor = kwargs['correction_factor']
@@ -698,7 +712,11 @@ class Forcing:
             correction_factor = kwargs['correction_factor']
             self.data1D.data[idx] += correction_factor
         else:
-            raise ValueError(f'Unknown method: {method}')
+            raise ForcingError(
+                f'Unknown correction method: {method}',
+                variable=str(variable),
+                method=method
+            )
 
     def _apply_spatialization_from_station_data(
             self,

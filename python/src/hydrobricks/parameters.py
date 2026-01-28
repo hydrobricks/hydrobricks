@@ -8,6 +8,7 @@ import pandas as pd
 
 from hydrobricks import spotpy
 from hydrobricks._optional import HAS_SPOTPY
+from hydrobricks._exceptions import ConfigurationError
 from hydrobricks.utils import dump_config_file
 
 
@@ -705,7 +706,8 @@ class ParameterSet:
                 break
 
             if i >= 1000:
-                raise ValueError('The parameter constraints could not be satisfied.')
+                raise ConfigurationError('The parameter constraints could not be '
+                                         'satisfied after 1000 iterations.')
 
         return assigned_values
 

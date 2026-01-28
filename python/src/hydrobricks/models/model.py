@@ -8,6 +8,7 @@ import HydroErr
 import numpy as np
 
 from hydrobricks._hydrobricks import init_log, close_log, ModelHydro
+from hydrobricks._exceptions import ModelError, ConfigurationError
 from hydrobricks.actions.action import Action
 from hydrobricks.utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
 from hydrobricks.forcing import Forcing
@@ -126,8 +127,10 @@ class Model(ABC):
         >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
         """
         if self._is_initialized:
-            raise RuntimeError('The model has already been initialized. '
-                               'Please create a new instance.')
+            raise ModelError(
+                'The model has already been initialized. Please create a new instance.',
+                is_initialized=True
+            )
 
         try:
             if isinstance(output_path, str) and not os.path.isdir(output_path):
@@ -146,19 +149,25 @@ class Model(ABC):
                     self.settings.settings,
                     spatial_structure.settings
             ):
-                raise RuntimeError('Basin creation failed.')
+                raise ModelError('Basin creation failed.', is_initialized=False)
 
             self._is_initialized = True
 
-        except RuntimeError as e:
-            logger.error(f"Runtime error during model setup: {e}", exc_info=True)
+        except ModelError:
+            logger.error("Model initialization failed", exc_info=True)
             raise
         except (OSError, PermissionError) as e:
-            logger.error(f"Error creating output directory {output_path}: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to create output directory: {e}") from e
+            logger.error(
+                f"Error creating output directory {output_path}: {e}",
+                exc_info=True
+            )
+            raise ModelError(f"Failed to create output directory: {e}") from e
         except (TypeError, ValueError) as e:
-            logger.error(f"Invalid argument type or value in model setup: {e}", exc_info=True)
-            raise
+            logger.error(
+                f"Invalid argument type or value in model setup: {e}",
+                exc_info=True
+            )
+            raise ConfigurationError(f"Invalid configuration: {e}") from e
 
     def run(
             self,
@@ -176,12 +185,16 @@ class Model(ABC):
             The forcing data.
         """
         if not self._is_initialized:
-            raise RuntimeError('The model has not been initialized. '
-                               'Please run setup() first.')
+            raise ModelError(
+                'The model has not been initialized. Please run setup() first.',
+                is_initialized=False
+            )
 
         if not parameters.is_ok():
-            raise RuntimeError('Some parameters were not defined: '
-                               f'{",".join(parameters.get_undefined())}.')
+            raise ConfigurationError(
+                f'Some parameters were not defined: '
+                f'{",".join(parameters.get_undefined())}.'
+            )
 
         try:
             self.model.reset()
@@ -193,22 +206,25 @@ class Model(ABC):
             self._set_forcing(forcing)
 
             if not self.model.is_ok():
-                raise RuntimeError('Model is not OK.')
+                raise ConfigurationError('The model is not properly configured.')
 
             timer = Timer()
             timer.start()
 
             if not self.model.run():
-                raise RuntimeError('Model run failed.')
+                raise ModelError('Model run failed.')
 
             timer.stop(show_time=False)
 
-        except RuntimeError as e:
-            logger.error(f"Runtime error during model run: {e}", exc_info=True)
+        except ModelError:
+            logger.error("Model execution failed", exc_info=True)
+            raise
+        except ConfigurationError:
+            logger.error("Configuration error during model run", exc_info=True)
             raise
         except (TypeError, ValueError) as e:
             logger.error(f"Invalid argument type or value in model run: {e}", exc_info=True)
-            raise RuntimeError(f"Model run failed due to invalid input: {e}") from e
+            raise ConfigurationError(f"Model run failed due to invalid input: {e}") from e
 
     @staticmethod
     def cleanup() -> None:

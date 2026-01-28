@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from hydrobricks import spotpy
-from hydrobricks._exceptions import DataError, ModelError
+from hydrobricks._exceptions import DataError, ModelError, ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -68,42 +68,308 @@ class SpotpySetup:
 
         Raises
         ------
-        ValueError
-            If the number of models, forcing instances, or observations don't match.
-        RuntimeError
-            If parameter constraints cannot be satisfied.
+        ConfigurationError
+            If invalid configuration parameters or mismatched ensemble sizes.
+        DataError
+            If observation data is invalid or missing.
         """
-        self.model: list[Model] = [model] if not isinstance(model, list) else model
-        self.params: ParameterSet = params
-        self.params_spotpy: Any = params.get_for_spotpy()
-        self.random_forcing: bool = params.needs_random_forcing()
-        self.forcing: list[Forcing] = [forcing] if not isinstance(forcing, list) else forcing
-        for f in self.forcing:
-            f.apply_operations(params)
-        if not isinstance(obs, list):
-            self.obs: list[np.ndarray] = [obs.data[0]]
-        else:
-            self.obs: list[np.ndarray] = [o.data[0] for o in obs]
-        self.warmup: int = warmup
-        self.obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = obj_func
-        self.invert_obj_func: bool = invert_obj_func
-        self.dump_outputs: bool = dump_outputs
-        self.dump_forcing: bool = dump_forcing
-        self.dump_dir: str = dump_dir
+        # Validate and normalize inputs
+        self.model = self._normalize_model_list(model)
+        self.params = params
+        self.forcing = self._normalize_forcing_list(forcing)
+        self.obs = self._normalize_observations_list(obs)
 
-        # Check that the models, forcing and the observations have the same length
-        if len(self.model) != len(self.forcing) or len(self.model) != len(self.obs):
+        # Validate ensemble sizes match
+        self._validate_ensemble_sizes()
+
+        # Validate and set configuration parameters
+        self._validate_and_set_parameters(warmup, dump_dir, invert_obj_func,
+                                         dump_outputs, dump_forcing)
+
+        # Initialize SPOTPY parameters
+        self.params_spotpy = params.get_for_spotpy()
+        self.random_forcing = params.needs_random_forcing()
+
+        # Setup forcing and models
+        self._setup_forcing_and_models()
+
+        # Validate objective function
+        self._validate_and_set_objective_function(obj_func)
+
+    def _normalize_model_list(self, model: Model | list[Model]) -> list[Model]:
+        """
+        Validate and normalize model input to a list.
+
+        Parameters
+        ----------
+        model
+            Single Model instance or list of Model instances.
+
+        Returns
+        -------
+        list[Model]
+            Validated list of Model instances.
+
+        Raises
+        ------
+        ConfigurationError
+            If model is None or empty list.
+        """
+        if model is None:
             raise ConfigurationError(
-                'The number of models, forcing and observations must be the same.',
-                reason='Mismatched ensemble sizes'
+                'Model cannot be None.',
+                item_name='model',
+                reason='Required parameter missing'
             )
+        models = [model] if not isinstance(model, list) else model
+        if len(models) == 0:
+            raise ConfigurationError(
+                'Model list cannot be empty.',
+                item_name='model',
+                reason='Empty model list'
+            )
+        return models
 
-        if not self.random_forcing:
-            for m, f in zip(self.model, self.forcing):
-                m.set_forcing(forcing=f)
+    def _normalize_forcing_list(
+            self,
+            forcing: Forcing | list[Forcing]
+    ) -> list[Forcing]:
+        """
+        Validate and normalize forcing input to a list.
 
-        if not obj_func:
-            logger.info("Objective function: Non parametric Kling-Gupta Efficiency.")
+        Parameters
+        ----------
+        forcing
+            Single Forcing instance or list of Forcing instances.
+
+        Returns
+        -------
+        list[Forcing]
+            Validated list of Forcing instances.
+
+        Raises
+        ------
+        ConfigurationError
+            If forcing is None or empty list.
+        """
+        if forcing is None:
+            raise ConfigurationError(
+                'Forcing cannot be None.',
+                item_name='forcing',
+                reason='Required parameter missing'
+            )
+        forcings = [forcing] if not isinstance(forcing, list) else forcing
+        if len(forcings) == 0:
+            raise ConfigurationError(
+                'Forcing list cannot be empty.',
+                item_name='forcing',
+                reason='Empty forcing list'
+            )
+        return forcings
+
+    def _normalize_observations_list(
+            self,
+            obs: Observations | list[Observations]
+    ) -> list[np.ndarray]:
+        """
+        Validate and normalize observations to a list of numpy arrays.
+
+        Parameters
+        ----------
+        obs
+            Single Observations instance or list of Observations instances.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Validated list of observation data arrays.
+
+        Raises
+        ------
+        ConfigurationError
+            If obs is None or empty list.
+        DataError
+            If observation data is missing, invalid, or empty.
+        """
+        if obs is None:
+            raise ConfigurationError('Observations cannot be None.',
+                                   item_name='obs', reason='Required parameter missing')
+        obs_list = [obs] if not isinstance(obs, list) else obs
+        if len(obs_list) == 0:
+            raise ConfigurationError('Observations list cannot be empty.',
+                                   item_name='obs', reason='Empty observations list')
+
+        observations = []
+        for idx, o in enumerate(obs_list):
+            if not hasattr(o, 'data') or o.data is None:
+                raise DataError(
+                    f'Observations at index {idx} has no data attribute.',
+                    data_type='observations',
+                    reason='Missing or invalid observation data'
+                )
+            if len(o.data) == 0:
+                raise DataError(
+                    f'Observations at index {idx} has empty data.',
+                    data_type='observations',
+                    reason='Empty observation dataset'
+                )
+            observations.append(o.data[0])
+        return observations
+
+    def _validate_ensemble_sizes(self) -> None:
+        """
+        Validate that models, forcing, and observations have matching sizes.
+
+        Checks that the number of models equals the number of forcing instances
+        and the number of observation datasets. Raises specific errors if sizes
+        don't match.
+
+        Raises
+        ------
+        ConfigurationError
+            If len(models) != len(forcing) or len(models) != len(observations),
+            with details about which counts don't match.
+        """
+        num_models = len(self.model)
+        num_forcing = len(self.forcing)
+        num_obs = len(self.obs)
+
+        if num_models != num_forcing:
+            raise ConfigurationError(
+                f'Number of models ({num_models}) does not match '
+                f'number of forcing datasets ({num_forcing}).',
+                reason='Mismatched ensemble sizes')
+        if num_models != num_obs:
+            raise ConfigurationError(
+                f'Number of models ({num_models}) does not match '
+                f'number of observation datasets ({num_obs}).',
+                reason='Mismatched ensemble sizes')
+
+    def _validate_and_set_parameters(
+            self,
+            warmup: int,
+            dump_dir: str,
+            invert_obj_func: bool,
+            dump_outputs: bool,
+            dump_forcing: bool
+    ) -> None:
+        """
+        Validate and set configuration parameters.
+
+        Validates the warmup period and dump directory parameters, then sets
+        all configuration attributes on the instance.
+
+        Parameters
+        ----------
+        warmup
+            Number of days for model warmup period. Must be non-negative integer.
+        dump_dir
+            Directory path for saving dumped outputs. Only validated/created
+            if dump_outputs or dump_forcing is True.
+        invert_obj_func
+            If True, multiply objective function result by -1 (for minimizers).
+        dump_outputs
+            If True, save all simulation outputs to disk.
+        dump_forcing
+            If True, save forcing data used in simulations.
+
+        Raises
+        ------
+        ConfigurationError
+            If warmup is not a non-negative integer or if dump_dir cannot be
+            created/accessed.
+        """
+        if not isinstance(warmup, int) or warmup < 0:
+            raise ConfigurationError(
+                f'Warmup period must be non-negative integer, got {warmup}.',
+                item_name='warmup',
+                item_value=warmup,
+                reason='Invalid warmup configuration'
+            )
+        self.warmup = warmup
+
+        if (dump_outputs or dump_forcing) and dump_dir:
+            try:
+                dump_path = os.path.abspath(dump_dir)
+                os.makedirs(dump_path, exist_ok=True)
+                self.dump_dir = dump_path
+            except (OSError, PermissionError) as e:
+                raise ConfigurationError(
+                    f'Cannot create dump directory "{dump_dir}": {e}',
+                    item_name='dump_dir',
+                    item_value=dump_dir,
+                    reason='Directory access error'
+                ) from e
+        else:
+            self.dump_dir = ''
+
+        self.dump_outputs = dump_outputs
+        self.dump_forcing = dump_forcing
+        self.invert_obj_func = invert_obj_func
+
+    def _setup_forcing_and_models(self) -> None:
+        """
+        Apply forcing operations and configure models.
+
+        Applies parameter-dependent operations to all forcing datasets and
+        configures models with forcing data if not using random forcing.
+
+        Side Effects
+        -----------
+        - Modifies all forcing datasets via apply_operations()
+        - Configures models with forcing via set_forcing() (if not random_forcing)
+
+        Raises
+        ------
+        ModelError
+            If forcing operations or model configuration fails. Original exception
+            is preserved via exception chaining.
+        """
+        try:
+            for f in self.forcing:
+                f.apply_operations(self.params)
+            if not self.random_forcing:
+                for m, f in zip(self.model, self.forcing):
+                    m.set_forcing(forcing=f)
+        except Exception as e:
+            raise ModelError(f'Failed to setup forcing and models: {e}',
+                           is_initialized=False) from e
+
+    def _validate_and_set_objective_function(
+            self,
+            obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None
+    ) -> None:
+        """
+        Validate and set the objective function.
+
+        Parameters
+        ----------
+        obj_func
+            Objective function specification. Can be:
+            - None: Use default non-parametric Kling-Gupta Efficiency
+            - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012')
+            - callable: User-defined function with signature (observed, simulated) -> float
+
+        Raises
+        ------
+        ConfigurationError
+            If obj_func is not None, string, or callable.
+        """
+        if obj_func is None:
+            logger.info("Objective function: Non parametric Kling-Gupta Efficiency")
+            self.obj_func = None
+        elif isinstance(obj_func, str):
+            self.obj_func = obj_func
+        elif callable(obj_func):
+            self.obj_func = obj_func
+        else:
+            raise ConfigurationError(
+                f'Objective function must be None, string, or callable, '
+                f'got {type(obj_func).__name__}.',
+                item_name='obj_func',
+                item_value=obj_func,
+                reason='Invalid objective function type'
+            )
 
     def parameters(self) -> Any:
         """

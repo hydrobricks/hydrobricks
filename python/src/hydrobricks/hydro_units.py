@@ -123,32 +123,78 @@ class HydroUnits:
         NotImplementedError
             If column_fractions is provided (not yet implemented).
         """
+        # Load and prepare CSV file
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
 
-        # Check that the id column is present
+        # Validate column configuration
+        self._validate_csv_columns(file_content, column_elevation, column_area,
+                                   columns_areas, column_fractions)
+
+        # Load required columns
+        self._load_id_column(file_content)
+        self._load_elevation_column(file_content, column_elevation)
+
+        # Load area data (either single area or per-land-cover areas)
+        self._load_area_data(file_content, column_area, columns_areas)
+
+        # Load additional properties
+        self._load_other_columns(file_content, other_columns)
+
+        # Convert area units to m2 if needed
+        self._convert_area_to_m2()
+
+        # Finalize
+        self.populate_bounded_instance()
+
+    def _validate_csv_columns(
+            self,
+            file_content: pd.DataFrame,
+            column_elevation: str | None,
+            column_area: str | None,
+            columns_areas: dict[str, str] | None,
+            column_fractions: dict[str, str] | None
+    ) -> None:
+        """
+        Validate CSV column configuration for loading hydro units.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        column_elevation
+            Custom column name for elevation, if provided.
+        column_area
+            Single area column name, if provided.
+        columns_areas
+            Dictionary of land-cover-specific area columns, if provided.
+        column_fractions
+            Dictionary of land cover fractions, if provided.
+
+        Raises
+        ------
+        DataError
+            If validation fails due to missing columns or conflicting specifications.
+        ConfigurationError
+            If column_fractions is provided (not yet implemented).
+        """
+        # Check for required ID column
         if 'id' not in file_content.columns:
             raise DataError(
                 'The "id" column is required in the file.',
                 data_type='hydro units',
                 reason='Missing required column'
             )
-        vals, _ = self._get_column_values_unit('id', file_content)
-        self.add_property(('id', '-'), vals, set_first=True)
 
-        if column_elevation is not None:
-            vals, unit = self._get_column_values_unit(column_elevation, file_content)
-            self.add_property(('elevation', unit), vals)
-        elif 'elevation' in file_content.columns:
-            vals, unit = self._get_column_values_unit('elevation', file_content)
-            self.add_property(('elevation', unit), vals)
-        else:
+        # Check for required elevation column (if no custom column name is provided)
+        if column_elevation is None and 'elevation' not in file_content.columns:
             raise DataError(
                 'The "elevation" column is required in the file.',
                 data_type='hydro units',
                 reason='Missing required column'
             )
 
+        # Validate area column configuration
         if column_area is not None and columns_areas is not None:
             raise DataError(
                 'The "column_area" and "columns_areas" cannot be '
@@ -157,42 +203,166 @@ class HydroUnits:
                 reason='Ambiguous column specification'
             )
 
-        if columns_areas is not None:
-            self._check_land_cover_areas_match(columns_areas)
-            area_values = np.zeros(shape=(len(file_content), len(columns_areas)))
-            area_unit = None
-            for idx, cover in enumerate(self.land_cover_names):
-                area_values[:, idx] = file_content[columns_areas[cover]].values[:, 0]
-                area_unit_idx = file_content[columns_areas[cover]].columns.values[0]
-                if area_unit is None:
-                    area_unit = area_unit_idx
-                elif area_unit != area_unit_idx:
-                    raise DataError(
-                        'The area units do not match.',
-                        data_type='hydro units',
-                        reason='Inconsistent units across land covers'
-                    )
-            self._compute_area_portions(area_values, area_unit)
-        else:
-            if column_area is not None:
-                vals, unit = self._get_column_values_unit(column_area, file_content)
-                self.add_property(('area', unit), vals)
-            elif 'area' in file_content.columns:
-                vals, unit = self._get_column_values_unit('area', file_content)
-                self.add_property(('area', unit), vals)
-            idx = self.prefix_fraction + 'ground'
-            self.hydro_units[idx] = np.ones(len(self.hydro_units[('area', unit)]))
-
-        if other_columns is not None:
-            for prop, col in other_columns.items():
-                vals, unit = self._get_column_values_unit(col, file_content)
-                self.add_property((prop, unit), vals)
-
+        # Check for unimplemented feature
         if column_fractions is not None:
             raise ConfigurationError(
                 'The "column_fractions" parameter is not yet implemented.'
             )
 
+    def _load_id_column(self, file_content: pd.DataFrame) -> None:
+        """
+        Load hydro unit IDs from CSV file content.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        """
+        vals, _ = self._get_column_values_unit('id', file_content)
+        self.add_property(('id', '-'), vals, set_first=True)
+
+    def _load_elevation_column(
+            self,
+            file_content: pd.DataFrame,
+            column_elevation: str | None
+    ) -> None:
+        """
+        Load elevation data from CSV file content.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        column_elevation
+            Custom column name for elevation, or None to use default 'elevation'.
+        """
+        if column_elevation is not None:
+            vals, unit = self._get_column_values_unit(column_elevation, file_content)
+        else:
+            vals, unit = self._get_column_values_unit('elevation', file_content)
+        self.add_property(('elevation', unit), vals)
+
+    def _load_area_data(
+            self,
+            file_content: pd.DataFrame,
+            column_area: str | None,
+            columns_areas: dict[str, str] | None
+    ) -> None:
+        """
+        Load area data, either as a single total area or per-land-cover areas.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        column_area
+            Column name for total area, or None to use default 'area'.
+        columns_areas
+            Dictionary mapping land cover names to their area columns, or None.
+        """
+        if columns_areas is not None:
+            self._load_land_cover_areas(file_content, columns_areas)
+        else:
+            self._load_single_area(file_content, column_area)
+
+    def _load_single_area(
+            self,
+            file_content: pd.DataFrame,
+            column_area: str | None
+    ) -> None:
+        """
+        Load a single area column and set ground land cover to 100%.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        column_area
+            Column name for area, or None to use default 'area'.
+        """
+        if column_area is not None:
+            vals, unit = self._get_column_values_unit(column_area, file_content)
+        elif 'area' in file_content.columns:
+            vals, unit = self._get_column_values_unit('area', file_content)
+        else:
+            raise DataError(
+                'The "area" column is required in the file.',
+                data_type='hydro units',
+                reason='Missing required column'
+            )
+
+        self.add_property(('area', unit), vals)
+
+        # Set ground land cover to 100%
+        idx = self.prefix_fraction + 'ground'
+        self.hydro_units[idx] = np.ones(len(self.hydro_units[('area', unit)]))
+
+    def _load_land_cover_areas(
+            self,
+            file_content: pd.DataFrame,
+            columns_areas: dict[str, str]
+    ) -> None:
+        """
+        Load per-land-cover area columns and compute total area and fractions.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        columns_areas
+            Dictionary mapping land cover names to their area column names.
+
+        Raises
+        ------
+        DataError
+            If area units are inconsistent across land cover types.
+        """
+        self._check_land_cover_areas_match(columns_areas)
+        area_values = np.zeros(shape=(len(file_content), len(columns_areas)))
+        area_unit = None
+
+        for idx, cover in enumerate(self.land_cover_names):
+            area_values[:, idx] = file_content[columns_areas[cover]].values[:, 0]
+            area_unit_idx = file_content[columns_areas[cover]].columns.values[0]
+
+            if area_unit is None:
+                area_unit = area_unit_idx
+            elif area_unit != area_unit_idx:
+                raise DataError(
+                    'The area units do not match.',
+                    data_type='hydro units',
+                    reason='Inconsistent units across land covers'
+                )
+
+        self._compute_area_portions(area_values, area_unit)
+
+    def _load_other_columns(
+            self,
+            file_content: pd.DataFrame,
+            other_columns: dict[str, str] | None
+    ) -> None:
+        """
+        Load additional property columns from CSV file.
+
+        Parameters
+        ----------
+        file_content
+            DataFrame loaded from CSV with multi-level column headers.
+        other_columns
+            Dictionary mapping property names to column names, or None.
+        """
+        if other_columns is not None:
+            for prop, col in other_columns.items():
+                vals, unit = self._get_column_values_unit(col, file_content)
+                self.add_property((prop, unit), vals)
+
+    def _convert_area_to_m2(self) -> None:
+        """
+        Convert area units to m² if they are in a different unit.
+
+        Updates the hydro_units DataFrame by replacing the area column
+        with converted values in m².
+        """
         if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
             area_idx = self.hydro_units.columns.get_loc('area')
@@ -203,7 +373,6 @@ class HydroUnits:
             )
             self.hydro_units[('area', 'm2')] = new_area
 
-        self.populate_bounded_instance()
 
     def save_to_csv(self, path: str | Path) -> None:
         """
@@ -435,7 +604,7 @@ class HydroUnits:
             fraction = land_cover_area / hu_area
             if not 0 <= fraction <= 1:
                 raise DataError(
-                    f'Land cover fraction {fraction} for unit {unit_id} is outside [0, 1].',
+                    f'Land cover fraction {fraction} for unit {id} is outside [0, 1].',
                     data_type='land cover fraction',
                     reason='Fraction outside valid range'
                 )
@@ -801,7 +970,7 @@ class HydroUnits:
         if land_cover_types is None and land_cover_names is None:
             return
 
-        if land_cover_name is None and land_cover_type is None:
+        if land_cover_names is None or land_cover_types is None:
             raise DataError(
                 'The land cover name or type is undefined.',
                 data_type='land cover',

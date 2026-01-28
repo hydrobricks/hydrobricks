@@ -27,7 +27,7 @@ def test_hydro_units_creation_with_land_covers():
 
 
 def test_hydro_units_creation_with_land_covers_mismatch():
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.DataError):
         hb.HydroUnits(
             land_cover_types=['ground', 'glacier', 'glacier'],
             land_cover_names=None
@@ -35,7 +35,7 @@ def test_hydro_units_creation_with_land_covers_mismatch():
 
 
 def test_hydro_units_creation_with_land_covers_size_mismatch():
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.DataError):
         hb.HydroUnits(
             land_cover_types=['ground', 'glacier', 'glacier'],
             land_cover_names=['ground', 'glacier']
@@ -105,4 +105,4 @@ def test_set_connectivity():
     hydro_units.load_from_csv(RHONE_HUS)
     hydro_units.set_connectivity(RHONE_CONNECT)
 
-    assert hydro_units.settings.get_lateral_connection_count() == 359
+    assert hydro_units.settings.get_lateral_connections_nb() == 359

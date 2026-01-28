@@ -159,7 +159,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
         .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_change_count", &ActionLandCoverChange::GetChangeCount)
+        .def("get_changes_count", &ActionLandCoverChange::GetChangesCount)
         .def("get_land_cover_count", &ActionLandCoverChange::GetLandCoverCount);
 
     py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")

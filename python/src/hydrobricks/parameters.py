@@ -19,9 +19,9 @@ class ParamSpec:
     name: str
     unit: str | None = None
     aliases: list[str] | None = None
-    min_value: float | list[float] | None = None
-    max_value: float | list[float] | None = None
-    default_value: float | list[float] | None = None
+    min: float | list[float] | None = None
+    max: float | list[float] | None = None
+    default: float | list[float] | None = None
     mandatory: bool = True
 
     def to_kwargs(self) -> dict:
@@ -30,9 +30,9 @@ class ParamSpec:
             'name': self.name,
             'unit': self.unit,
             'aliases': None if self.aliases is None else list(self.aliases),
-            'min_value': self.min_value,
-            'max_value': self.max_value,
-            'default_value': self.default_value,
+            'min_val': self.min,
+            'max_val': self.max,
+            'default': self.default,
             'mandatory': self.mandatory,
         }
 
@@ -46,125 +46,125 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     'outflow:linear': [
         ParamSpec(
             name='response_factor', unit='1/d', aliases=[],
-            min_value=0.001, max_value=1, mandatory=True
+            min=0.001, max=1, mandatory=True
         )
     ],
     'runoff:socont': [
         ParamSpec(
             name='beta', unit='m^(4/3)/s', aliases=['beta'],
-            min_value=100, max_value=30000, mandatory=True
+            min=100, max=30000, mandatory=True
         )
     ],
     'outflow:percolation': [
         ParamSpec(
             name='percolation_rate', unit='mm/d', aliases=['percol'],
-            min_value=0, max_value=10, mandatory=True
+            min=0, max=10, mandatory=True
         )
     ],
     # Snow/rain transition (pseudo-process)
     'transition:snow_rain': [
         ParamSpec(
             name='transition_start', unit='°C', aliases=['prec_t_start'],
-            min_value=-2, max_value=2, default_value=0, mandatory=False
+            min=-2, max=2, default=0, mandatory=False
         ),
         ParamSpec(
             name='transition_end', unit='°C', aliases=['prec_t_end'],
-            min_value=0, max_value=4, default_value=2, mandatory=False
+            min=0, max=4, default=2, mandatory=False
         ),
     ],
     # Melt processes (snow + glacier unified specs)
     'melt:degree_day': [
         ParamSpec(
             name='degree_day_factor', unit='mm/d/°C', aliases=None,
-            min_value=2, max_value=20, mandatory=True  # (snow 2-12, glacier 5-20)
+            min=2, max=20, mandatory=True  # (snow 2-12, glacier 5-20)
         ),
         ParamSpec(
             name='melting_temperature', unit='°C', aliases=None,
-            min_value=0, max_value=5, default_value=0, mandatory=False
+            min=0, max=5, default=0, mandatory=False
         ),
     ],
     'melt:degree_day_aspect': [
         ParamSpec(
             name='degree_day_factor_n', unit='mm/d/°C', aliases=None,
-            min_value=0, max_value=20, mandatory=True  # (snow 0-12, glacier 1-20)
+            min=0, max=20, mandatory=True  # (snow 0-12, glacier 1-20)
         ),
         ParamSpec(
             name='degree_day_factor_s', unit='mm/d/°C', aliases=None,
-            min_value=2, max_value=20, mandatory=True  # (snow 2-12, glacier 5-20)
+            min=2, max=20, mandatory=True  # (snow 2-12, glacier 5-20)
         ),
         ParamSpec(
             name='degree_day_factor_ew', unit='mm/d/°C', aliases=None,
-            min_value=2, max_value=20, mandatory=True  # (snow 2-12, glacier 5-20)
+            min=2, max=20, mandatory=True  # (snow 2-12, glacier 5-20)
         ),
         ParamSpec(
             name='melting_temperature', unit='°C', aliases=None,
-            min_value=0, max_value=5, default_value=0, mandatory=False
+            min=0, max=5, default=0, mandatory=False
         ),
     ],
     'melt:temperature_index': [
         ParamSpec(
             name='melt_factor', unit='mm/d/°C', aliases=None,
-            min_value=0, max_value=12, mandatory=True
+            min=0, max=12, mandatory=True
         ),
         ParamSpec(
             name='radiation_coefficient', unit='m2/W*mm/d/°C', aliases=None,
-            min_value=0, max_value=1, mandatory=True
+            min=0, max=1, mandatory=True
         ),
         ParamSpec(
             name='melting_temperature', unit='°C', aliases=None,
-            min_value=0, max_value=5, default_value=0, mandatory=False
+            min=0, max=5, default=0, mandatory=False
         ),
     ],
     # Snow/ice transformation processes (dynamic aliases per glacier snowpack)
     'transform:snow_ice_constant': [
         ParamSpec(
             name='snow_ice_transformation_rate', unit='mm/d', aliases=None,
-            min_value=0, max_value=10, default_value=0.5, mandatory=True
+            min=0, max=10, default=0.5, mandatory=True
         ),
     ],
     'transform:snow_ice_swat': [
         ParamSpec(
             name='snow_ice_transformation_basal_acc_coeff', unit='-', aliases=None,
-            min_value=0.001, max_value=0.006, default_value=0.0014, mandatory=False
+            min=0.001, max=0.006, default=0.0014, mandatory=False
         ),
         ParamSpec(
             name='north_hemisphere', unit='-', aliases=None,
-            min_value=0, max_value=1, default_value=1, mandatory=False
+            min=0, max=1, default=1, mandatory=False
         ),
     ],
     # Snow redistribution processes
     'transport:snow_slide': [
         ParamSpec(
             name='coeff', unit='-', aliases=['snow_slide_coeff'],
-            min_value=0, max_value=10000, default_value=3178.4, mandatory=False
+            min=0, max=10000, default=3178.4, mandatory=False
         ),
         ParamSpec(
             name='exp', unit='-', aliases=['snow_slide_exp'],
-            min_value=-5, max_value=0, default_value=-1.998, mandatory=False
+            min=-5, max=0, default=-1.998, mandatory=False
         ),
         ParamSpec(
             name='min_slope', unit='°', aliases=['snow_slide_min_slope'],
-            min_value=0, max_value=45, default_value=10, mandatory=False
+            min=0, max=45, default=10, mandatory=False
         ),
         ParamSpec(
             name='max_slope', unit='°', aliases=['snow_slide_max_slope'],
-            min_value=45, max_value=90, default_value=75, mandatory=False
+            min=45, max=90, default=75, mandatory=False
         ),
         ParamSpec(
             name='min_snow_holding_depth', unit='mm',
             aliases=['snow_slide_min_snow_depth'],
-            min_value=0, max_value=1000, default_value=50, mandatory=False
+            min=0, max=1000, default=50, mandatory=False
         ),
         ParamSpec(
             name='max_snow_depth', unit='mm', aliases=['snow_slide_max_snow_depth'],
-            min_value=-1, max_value=50000, default_value=20000, mandatory=False
+            min=-1, max=50000, default=20000, mandatory=False
         ),
     ],
 }
 
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
     'capacity': ParamSpec(
-        name='capacity', unit='mm', aliases=[], min_value=0, max_value=3000,
+        name='capacity', unit='mm', aliases=[], min=0, max=3000,
         mandatory=True
     ),
 }
@@ -218,7 +218,7 @@ class ParameterSet:
         """
         self.parameters: pd.DataFrame = pd.DataFrame(
             columns=['component', 'name', 'unit', 'aliases', 'value',
-                     'min', 'max', 'default_value', 'mandatory', 'prior'])
+                     'min', 'max', 'default', 'mandatory', 'prior'])
         self.constraints: list[list[str]] = []
         self._allow_changing: list[str] = []
 
@@ -254,9 +254,9 @@ class ParameterSet:
             name: str,
             unit: str | None = None,
             aliases: str | list[str] | None = None,
-            min_value: float | list[float] | None = None,
-            max_value: float | list[float] | None = None,
-            default_value: float | list[float] | None = None,
+            min_val: float | list[float] | None = None,
+            max_val: float | list[float] | None = None,
+            default: float | list[float] | None = None,
             mandatory: bool = True
     ) -> None:
         """
@@ -277,22 +277,22 @@ class ParameterSet:
         aliases
             Aliases to the parameter name, such as names used in other implementations
             (e.g., kgl, an). Aliases must be unique.
-        min_value
+        min_val
             Minimum value allowed for the parameter.
-        max_value
+        max_val
             Maximum value allowed for the parameter.
-        default_value
+        default
             The parameter default value.
         mandatory
             If the parameter needs to be defined or if it can silently use the
             default value.
         """
         value = None
-        if not mandatory and default_value is not None:
-            value = default_value
+        if not mandatory and default is not None:
+            value = default
 
         self._check_aliases_uniqueness(aliases)
-        self._check_min_max_consistency(min_value, max_value)
+        self._check_min_max_consistency(min_val, max_val)
 
         new_row = pd.Series({
             'component': component,
@@ -300,9 +300,9 @@ class ParameterSet:
             'unit': unit,
             'aliases': aliases,
             'value': value,
-            'min': min_value,
-            'max': max_value,
-            'default_value': default_value,
+            'min': min_val,
+            'max': max_val,
+            'default': default,
             'mandatory': mandatory,
             'prior': None
         })
@@ -328,7 +328,7 @@ class ParameterSet:
         index = self._get_parameter_index(parameter_name)
         self.parameters.loc[index, 'aliases'] += aliases
 
-    def change_range(self, parameter: str, min_value: float, max_value: float) -> None:
+    def change_range(self, parameter: str, min_val: float, max_val: float) -> None:
         """
         Change the value range of a parameter.
 
@@ -336,14 +336,14 @@ class ParameterSet:
         ----------
         parameter
             Name (or alias) of the parameter
-        min_value
+        min_val
             New minimum value
-        max_value
+        max_val
             New maximum value
         """
         index = self._get_parameter_index(parameter)
-        self.parameters.loc[index, 'min'] = min_value
-        self.parameters.loc[index, 'max'] = max_value
+        self.parameters.loc[index, 'min'] = min_val
+        self.parameters.loc[index, 'max'] = max_val
 
     def set_prior(self, parameter: str, prior: spotpy.parameter) -> None:
         """
@@ -478,22 +478,22 @@ class ParameterSet:
             True if ranges are satisfied, False otherwise.
         """
         for _, row in self.parameters.iterrows():
-            min_value = row['min']
-            max_value = row['max']
+            min_val = row['min']
+            max_val = row['max']
             value = row['value']
 
             if value is None:
                 return False
 
-            if not isinstance(min_value, list):
-                if max_value is not None and value > max_value:
+            if not isinstance(min_val, list):
+                if max_val is not None and value > max_val:
                     return False
-                if min_value is not None and value < min_value:
+                if min_val is not None and value < min_val:
                     return False
             else:
-                assert isinstance(max_value, list)
+                assert isinstance(max_val, list)
                 assert isinstance(value, list)
-                for min_v, max_v, val in zip(min_value, max_value, value):
+                for min_v, max_v, val in zip(min_val, max_val, value):
                     if max_v is not None and val > max_v:
                         return False
                     if min_v is not None and val < min_v:
@@ -620,8 +620,8 @@ class ParameterSet:
             self,
             name: str,
             value: float | list[float] | None = None,
-            min_value: float | list[float] | None = None,
-            max_value: float | list[float] | None = None,
+            min_val: float | list[float] | None = None,
+            max_val: float | list[float] | None = None,
             unit: str | None = None
     ) -> None:
         """
@@ -633,9 +633,9 @@ class ParameterSet:
             The name of the parameter.
         value
             The parameter value.
-        min_value
+        min_val
             Minimum value allowed for the parameter.
-        max_value
+        max_val
             Maximum value allowed for the parameter.
         unit
             The unit of the parameter.
@@ -643,7 +643,7 @@ class ParameterSet:
         aliases = [name]
 
         self._check_aliases_uniqueness(aliases)
-        self._check_min_max_consistency(min_value, max_value)
+        self._check_min_max_consistency(min_val, max_val)
 
         new_row = pd.Series({
             'component': 'data',
@@ -651,9 +651,9 @@ class ParameterSet:
             'unit': unit,
             'aliases': aliases,
             'value': value,
-            'min': min_value,
-            'max': max_value,
-            'default_value': value,
+            'min': min_val,
+            'max': max_val,
+            'default': value,
             'mandatory': False
         })
 
@@ -707,20 +707,20 @@ class ParameterSet:
         for i in range(1100):
             for key in parameters:
                 index = self._get_parameter_index(key)
-                min_value = self.parameters.loc[index, 'min']
-                max_value = self.parameters.loc[index, 'max']
+                min_val = self.parameters.loc[index, 'min']
+                max_val = self.parameters.loc[index, 'max']
 
-                if isinstance(min_value, list):
+                if isinstance(min_val, list):
                     if self.parameters.loc[index, 'value'] is None:
-                        self.parameters.loc[index, 'value'] = [0] * len(min_value)
-                    for (idx, min_val), max_val in zip(enumerate(min_value), max_value):
+                        self.parameters.loc[index, 'value'] = [0] * len(min_val)
+                    for (idx, min_val), max_val in zip(enumerate(min_val), max_val):
                         self.parameters.loc[index, 'value'][idx] = \
                             random.uniform(min_val, max_val)
                 else:
                     self.parameters.loc[index, 'value'] = random.uniform(
-                        min_value, max_value)
+                        min_val, max_val)
 
-                if isinstance(min_value, list):
+                if isinstance(min_val, list):
                     assigned_values.loc[0, key] = self.parameters.loc[
                         index, 'value'].copy()
                 else:
@@ -1220,49 +1220,49 @@ class ParameterSet:
 
     @staticmethod
     def _check_min_max_consistency(
-            min_value: float | None,
-            max_value: float | None
+            min_val: float | None,
+            max_val: float | None
     ) -> None:
         """
         Validate that minimum value is less than maximum value.
 
         Parameters
         ----------
-        min_value
+        min_val
             Minimum value to check, or None.
-        max_value
+        max_val
             Maximum value to check, or None.
 
         Raises
         ------
         ValueError
-            If min_value >= max_value (when both are provided).
+            If min_val >= max_val (when both are provided).
         """
-        if min_value is None or max_value is None:
+        if min_val is None or max_val is None:
             return
 
-        if not isinstance(min_value, list) and not isinstance(max_value, list):
-            if max_value < min_value:
+        if not isinstance(min_val, list) and not isinstance(max_val, list):
+            if max_val < min_val:
                 raise ConfigurationError(
-                    f'The provided min value ({min_value}) is greater '
-                    f'than the max value ({max_value}).',
+                    f'The provided min value ({min_val}) is greater '
+                    f'than the max value ({max_val}).',
                     reason='Invalid range'
                 )
             return
 
-        if not isinstance(min_value, list) or not isinstance(max_value, list):
+        if not isinstance(min_val, list) or not isinstance(max_val, list):
             raise ConfigurationError(
                 'Mixing lists and floats for the definition of min/max values.',
                 reason='Inconsistent parameter types'
             )
 
-        if len(min_value) != len(max_value):
+        if len(min_val) != len(max_val):
             raise ConfigurationError(
                 'The length of the min/max lists are not equal.',
                 reason='Mismatched array lengths'
             )
 
-        for min_v, max_v in zip(min_value, max_value):
+        for min_v, max_v in zip(min_val, max_val):
             if max_v < min_v:
                 raise ConfigurationError(
                     f'The provided min value ({min_v}) in list is greater '
@@ -1330,34 +1330,34 @@ class ParameterSet:
         ValueError
             If value is out of range and allow_adapt is False.
         """
-        max_value = self.parameters.loc[index, 'max']
-        min_value = self.parameters.loc[index, 'min']
+        max_val = self.parameters.loc[index, 'max']
+        min_val = self.parameters.loc[index, 'min']
 
-        if not isinstance(min_value, list):
-            if max_value is not None and value > max_value:
+        if not isinstance(min_val, list):
+            if max_val is not None and value > max_val:
                 if allow_adapt:
-                    return max_value
+                    return max_val
                 raise ConfigurationError(
                     f'The value {value} for the parameter "{key}" is '
-                    f'above the maximum threshold ({max_value}).',
+                    f'above the maximum threshold ({max_val}).',
                     item_name=key,
                     item_value=value,
                     reason='Value exceeds maximum'
                 )
-            if min_value is not None and value < min_value:
+            if min_val is not None and value < min_val:
                 if allow_adapt:
-                    return min_value
+                    return min_val
                 raise ConfigurationError(
                     f'The value {value} for the parameter "{key}" is '
-                    f'below the minimum threshold ({min_value}).',
+                    f'below the minimum threshold ({min_val}).',
                     item_name=key,
                     item_value=value,
                     reason='Value below minimum'
                 )
         else:
-            assert isinstance(max_value, list)
+            assert isinstance(max_val, list)
             assert isinstance(value, list)
-            for i, (min_v, max_v, val) in enumerate(zip(min_value, max_value, value)):
+            for i, (min_v, max_v, val) in enumerate(zip(min_val, max_val, value)):
                 if max_v is not None and val > max_v:
                     if allow_adapt:
                         value[i] = max_v

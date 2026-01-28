@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 
-from hydrobricks import rxr, xr, rasterio, pyproj
-from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
+from hydrobricks._optional import (HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF,
+                                   rxr, xr, rasterio, pyproj)
 from hydrobricks._exceptions import (DependencyError, DataError, ConfigurationError)
 from hydrobricks._utils import date_as_mjd
 

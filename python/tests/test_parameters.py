@@ -19,8 +19,8 @@ def test_define_parameter():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['a_snow', 'sdd'],
-        min_value=0,
-        max_value=10,
+        min_val=0,
+        max_val=10,
         mandatory=False
     )
     assert parameter_set.parameters.loc[0].at['component'] == 'snowpack'
@@ -41,8 +41,8 @@ def test_define_parameter_min_max_mismatch():
             name='degree_day_factor',
             unit='mm/d',
             aliases=['a_snow', 'sdd'],
-            min_value=3,
-            max_value=2
+            min_val=3,
+            max_val=2
         )
 
 
@@ -53,8 +53,8 @@ def test_define_parameter_with_list():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['a_snow', 'sdd'],
-        min_value=[0, 1, 2, 3],
-        max_value=[10, 11, 12, 13]
+        min_val=[0, 1, 2, 3],
+        max_val=[10, 11, 12, 13]
     )
     assert parameter_set.parameters.loc[0].at['min'] == [0, 1, 2, 3]
     assert parameter_set.parameters.loc[0].at['max'] == [10, 11, 12, 13]
@@ -65,14 +65,14 @@ def test_define_parameter_with_list_after_float():
     parameter_set.define_parameter(
         component='glacier',
         name='degree_day_factor',
-        min_value=0,
-        max_value=8
+        min_val=0,
+        max_val=8
     )
     parameter_set.define_parameter(
         component='snowpack',
         name='degree_day_factor',
-        min_value=[0, 1, 2, 3],
-        max_value=[10, 11, 12, 13]
+        min_val=[0, 1, 2, 3],
+        max_val=[10, 11, 12, 13]
     )
     assert parameter_set.parameters.loc[1].at['min'] == [0, 1, 2, 3]
     assert parameter_set.parameters.loc[1].at['max'] == [10, 11, 12, 13]
@@ -86,8 +86,8 @@ def test_define_parameter_min_max_mismatch_types():
             name='degree_day_factor',
             unit='mm/d',
             aliases=['a_snow', 'sdd'],
-            min_value=0,
-            max_value=[1, 2]
+            min_val=0,
+            max_val=[1, 2]
         )
     with pytest.raises(TypeError):
         parameter_set.define_parameter(
@@ -95,8 +95,8 @@ def test_define_parameter_min_max_mismatch_types():
             name='degree_day_factor',
             unit='mm/d',
             aliases=['a_snow', 'sdd'],
-            min_value=[1, 2],
-            max_value=3
+            min_val=[1, 2],
+            max_val=3
         )
 
 
@@ -108,8 +108,8 @@ def test_define_parameter_min_max_mismatch_list_size():
             name='degree_day_factor',
             unit='mm/d',
             aliases=['a_snow', 'sdd'],
-            min_value=[0, 0],
-            max_value=[1, 2, 3]
+            min_val=[0, 0],
+            max_val=[1, 2, 3]
         )
 
 
@@ -121,8 +121,8 @@ def test_define_parameter_min_max_mismatch_in_list():
             name='degree_day_factor',
             unit='mm/d',
             aliases=['a_snow', 'sdd'],
-            min_value=[3, 4],
-            max_value=[1, 2]
+            min_val=[3, 4],
+            max_val=[1, 2]
         )
 
 
@@ -133,9 +133,9 @@ def test_define_parameter_nb_rows_is_correct():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['x', 'y'],
-        default_value=3,
-        min_value=0,
-        max_value=10,
+        default=3,
+        min_val=0,
+        max_val=10,
         mandatory=True
     )
     parameter_set.define_parameter(
@@ -143,9 +143,9 @@ def test_define_parameter_nb_rows_is_correct():
         name='melting_temperature',
         unit='°C',
         aliases=['z'],
-        default_value=0,
-        min_value=0,
-        max_value=5,
+        default=0,
+        min_val=0,
+        max_val=5,
         mandatory=False
     )
     assert len(parameter_set.parameters) == 2
@@ -159,9 +159,9 @@ def test_define_parameter_use_default():
         component='snowpack',
         name='degree_day_factor',
         unit='mm/d',
-        default_value=3,
-        min_value=0,
-        max_value=10,
+        default=3,
+        min_val=0,
+        max_val=10,
         mandatory=False
     )
     assert parameter_set.parameters.loc[0].at['value'] == 3
@@ -173,7 +173,7 @@ def test_define_parameter_use_default_with_list():
         component='snowpack',
         name='degree_day_factor',
         unit='mm/d',
-        default_value=[3, 4, 5],
+        default=[3, 4, 5],
         mandatory=False
     )
     assert parameter_set.parameters.loc[0].at['value'] == [3, 4, 5]
@@ -185,9 +185,9 @@ def test_define_parameter_not_using_default_if_mandatory():
         component='snowpack',
         name='degree_day_factor',
         unit='mm/d',
-        default_value=3,
-        min_value=0,
-        max_value=10,
+        default=3,
+        min_val=0,
+        max_val=10,
         mandatory=True
     )
     assert parameter_set.parameters.loc[0].at['value'] is None
@@ -289,8 +289,8 @@ def test_set_parameter_value_too_low():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['as'],
-        min_value=2,
-        max_value=6
+        min_val=2,
+        max_val=6
     )
     with pytest.raises(ValueError):
         parameter_set.set_values({'as': 1})
@@ -303,8 +303,8 @@ def test_set_parameter_value_too_high():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['as'],
-        min_value=2,
-        max_value=6
+        min_val=2,
+        max_val=6
     )
     with pytest.raises(ValueError):
         parameter_set.set_values({'as': 10})
@@ -317,8 +317,8 @@ def test_set_parameter_value_with_list_too_low():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['as'],
-        min_value=[0, 1],
-        max_value=[2, 3]
+        min_val=[0, 1],
+        max_val=[2, 3]
     )
     with pytest.raises(ValueError):
         parameter_set.set_values({'as': [1, 0]})
@@ -331,8 +331,8 @@ def test_set_parameter_value_with_list_too_high():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['as'],
-        min_value=[0, 1],
-        max_value=[2, 3]
+        min_val=[0, 1],
+        max_val=[2, 3]
     )
     with pytest.raises(ValueError):
         parameter_set.set_values({'as': [1, 5]})
@@ -346,17 +346,17 @@ def parameter_set():
         name='degree_day_factor',
         unit='mm/d',
         aliases=['a_snow', 'sdd'],
-        min_value=0,
-        max_value=10,
+        min_val=0,
+        max_val=10,
         mandatory=True
     )
     parameter_set.define_parameter(
         component='snowpack',
         name='melting_temperature',
         unit='°C',
-        min_value=0,
-        max_value=5,
-        default_value=0,
+        min_val=0,
+        max_val=5,
+        default=0,
         mandatory=False
     )
     parameter_set.define_parameter(
@@ -364,8 +364,8 @@ def parameter_set():
         name='capacity',
         unit='mm',
         aliases=['A'],
-        min_value=0,
-        max_value=3000,
+        min_val=0,
+        max_val=3000,
         mandatory=True
     )
     parameter_set.set_values({'a_snow': 3, 'A': 200})
@@ -406,22 +406,22 @@ def test_set_random_values(parameter_set: hb.ParameterSet):
         component='snowpack',
         name='melt_factor',
         aliases=['dd'],
-        min_value=0,
-        max_value=10
+        min_val=0,
+        max_val=10
     )
     parameter_set.define_parameter(
         component='snowpack',
         name='melting_temp',
         aliases=['mt'],
-        min_value=0,
-        max_value=5
+        min_val=0,
+        max_val=5
     )
     parameter_set.define_parameter(
         component='reservoir',
         name='capacity',
         aliases=['A'],
-        min_value=0,
-        max_value=3000
+        min_val=0,
+        max_val=3000
     )
     parameter_set.set_random_values(['dd', 'mt', 'A'])
     assert parameter_set.get('dd') >= 0
@@ -438,22 +438,22 @@ def test_set_random_values_with_lists(parameter_set: hb.ParameterSet):
         component='snowpack',
         name='melt_factor',
         aliases=['dd'],
-        min_value=[0, 1],
-        max_value=[2, 3]
+        min_val=[0, 1],
+        max_val=[2, 3]
     )
     parameter_set.define_parameter(
         component='snowpack',
         name='melting_temp',
         aliases=['mt'],
-        min_value=[1, 2],
-        max_value=[3, 4]
+        min_val=[1, 2],
+        max_val=[3, 4]
     )
     parameter_set.define_parameter(
         component='reservoir',
         name='capacity',
         aliases=['A'],
-        min_value=[0, 10],
-        max_value=[10, 200]
+        min_val=[0, 10],
+        max_val=[10, 200]
     )
     parameter_set.set_random_values(['dd', 'mt', 'A'])
     assert parameter_set.get('dd')[0] >= 0
@@ -476,8 +476,8 @@ def test_reset_random_values_with_lists(parameter_set: hb.ParameterSet):
         component='snowpack',
         name='melt_factor',
         aliases=['dd'],
-        min_value=[0, 1],
-        max_value=[2, 3]
+        min_val=[0, 1],
+        max_val=[2, 3]
     )
     parameter_set.set_random_values(['dd'])
     parameter_set.set_random_values(['dd'])
@@ -488,7 +488,7 @@ def test_reset_random_values_with_lists(parameter_set: hb.ParameterSet):
 
 
 def test_get_model_only_parameters(parameter_set: hb.ParameterSet):
-    parameter_set.add_data_parameter('lapse', 0.6, min_value=0, max_value=1)
+    parameter_set.add_data_parameter('lapse', 0.6, min_val=0, max_val=1)
     model_params = parameter_set.get_model_parameters()
     assert len(model_params) == 3
 
@@ -506,22 +506,22 @@ def parameter_set_constraints():
         component='reservoir',
         name='coefficient_1',
         aliases=['k1'],
-        min_value=0,
-        max_value=1
+        min_val=0,
+        max_val=1
     )
     parameter_set.define_parameter(
         component='reservoir',
         name='coefficient_2',
         aliases=['k2'],
-        min_value=0,
-        max_value=1
+        min_val=0,
+        max_val=1
     )
     parameter_set.define_parameter(
         component='reservoir',
         name='coefficient_3',
         aliases=['k3'],
-        min_value=0,
-        max_value=1
+        min_val=0,
+        max_val=1
     )
     parameter_set.define_constraint('k1', '<', 'k2')
     parameter_set.define_constraint('k2', '<', 'k3')

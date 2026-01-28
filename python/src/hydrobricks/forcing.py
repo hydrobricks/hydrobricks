@@ -151,40 +151,56 @@ class Forcing:
         if variable in self.Variable.__members__:
             return self.Variable[variable]
 
-        if variable in ['precipitation', 'precip', 'p']:
-            return self.Variable.P
-        elif variable in ['temperature', 'temp', 't']:
-            return self.Variable.T
-        elif variable in ['temperature_min', 'min_temperature', 't_min', 'tmin']:
-            return self.Variable.T_MIN
-        elif variable in ['temperature_max', 'max_temperature', 't_max', 'tmax']:
-            return self.Variable.T_MAX
-        elif variable in ['pet']:
-            return self.Variable.PET
-        elif variable in ['relative_humidity', 'rh']:
-            return self.Variable.RH
-        elif variable in ['relative_humidity_min', 'min_relative_humidity', 'rh_min',
-                          'rhmin']:
-            return self.Variable.RH_MIN
-        elif variable in ['relative_humidity_max', 'max_relative_humidity', 'rh_max',
-                          'rhmax']:
-            return self.Variable.RH_MAX
-        elif variable in ['net_radiation', 'r_net', 'r_n', 'rn']:
-            return self.Variable.R_NET
-        elif variable in ['solar_radiation', 'r_solar', 'r_s', 'rs']:
-            return self.Variable.R_SOLAR
-        elif variable in ['sunshine_duration', 'sd']:
-            return self.Variable.SD
-        elif variable in ['wind_speed', 'wind']:
-            return self.Variable.WIND
-        elif variable in ['pressure']:
-            return self.Variable.PRESSURE
+        # Dictionary mapping variable aliases to Variable enum
+        variable_aliases = {
+            'precipitation': self.Variable.P,
+            'precip': self.Variable.P,
+            'p': self.Variable.P,
+            'temperature': self.Variable.T,
+            'temp': self.Variable.T,
+            't': self.Variable.T,
+            'temperature_min': self.Variable.T_MIN,
+            'min_temperature': self.Variable.T_MIN,
+            't_min': self.Variable.T_MIN,
+            'tmin': self.Variable.T_MIN,
+            'temperature_max': self.Variable.T_MAX,
+            'max_temperature': self.Variable.T_MAX,
+            't_max': self.Variable.T_MAX,
+            'tmax': self.Variable.T_MAX,
+            'pet': self.Variable.PET,
+            'relative_humidity': self.Variable.RH,
+            'rh': self.Variable.RH,
+            'relative_humidity_min': self.Variable.RH_MIN,
+            'min_relative_humidity': self.Variable.RH_MIN,
+            'rh_min': self.Variable.RH_MIN,
+            'rhmin': self.Variable.RH_MIN,
+            'relative_humidity_max': self.Variable.RH_MAX,
+            'max_relative_humidity': self.Variable.RH_MAX,
+            'rh_max': self.Variable.RH_MAX,
+            'rhmax': self.Variable.RH_MAX,
+            'net_radiation': self.Variable.R_NET,
+            'r_net': self.Variable.R_NET,
+            'r_n': self.Variable.R_NET,
+            'rn': self.Variable.R_NET,
+            'solar_radiation': self.Variable.R_SOLAR,
+            'r_solar': self.Variable.R_SOLAR,
+            'r_s': self.Variable.R_SOLAR,
+            'rs': self.Variable.R_SOLAR,
+            'sunshine_duration': self.Variable.SD,
+            'sd': self.Variable.SD,
+            'wind_speed': self.Variable.WIND,
+            'wind': self.Variable.WIND,
+            'pressure': self.Variable.PRESSURE,
+        }
 
-        else:
-            raise ForcingError(
-                f'Variable {variable} is not recognized.',
-                variable=variable
-            )
+        if variable in variable_aliases:
+            logger.debug(f"Resolved variable alias '{variable}' to {variable_aliases[variable]}")
+            return variable_aliases[variable]
+
+        raise ForcingError(
+            f'Variable {variable} is not recognized.',
+            variable=variable
+        )
 
     def _can_be_negative(self, variable: Variable) -> bool:
         """
@@ -515,33 +531,33 @@ class Forcing:
 
         time = self.data2D.get_dates_as_mjd()
 
-        # Create netCDF file
-        nc = Dataset(path, 'w', 'NETCDF4')
+        # Create netCDF file using context manager for proper resource handling
+        logger.debug(f"Creating netCDF file: {path}")
+        with Dataset(path, 'w', 'NETCDF4') as nc:
+            # Dimensions
+            nc.createDimension('hydro_units', len(self.hydro_units))
+            nc.createDimension('time', len(time))
 
-        # Dimensions
-        nc.createDimension('hydro_units', len(self.hydro_units))
-        nc.createDimension('time', len(time))
+            # Variables
+            var_id = nc.createVariable('id', 'int', ('hydro_units',))
+            var_id[:] = self.hydro_units['id']
 
-        # Variables
-        var_id = nc.createVariable('id', 'int', ('hydro_units',))
-        var_id[:] = self.hydro_units['id']
+            var_time = nc.createVariable('time', 'float32', ('time',))
+            var_time[:] = time
+            var_time.units = 'days since 1858-11-17 00:00:00'
+            var_time.comment = 'Modified Julian Day Numer'
 
-        var_time = nc.createVariable('time', 'float32', ('time',))
-        var_time[:] = time
-        var_time.units = 'days since 1858-11-17 00:00:00'
-        var_time.comment = 'Modified Julian Day Numer'
+            for idx, variable in enumerate(self.data2D.data_name):
+                if max_compression:
+                    var_data = nc.createVariable(
+                        variable, 'float32', ('time', 'hydro_units'), zlib=True,
+                        least_significant_digit=3)
+                else:
+                    var_data = nc.createVariable(
+                        variable, 'float32', ('time', 'hydro_units'), zlib=True)
+                var_data[:, :] = self.data2D.data[idx]
 
-        for idx, variable in enumerate(self.data2D.data_name):
-            if max_compression:
-                var_data = nc.createVariable(
-                    variable, 'float32', ('time', 'hydro_units'), zlib=True,
-                    least_significant_digit=3)
-            else:
-                var_data = nc.createVariable(
-                    variable, 'float32', ('time', 'hydro_units'), zlib=True)
-            var_data[:, :] = self.data2D.data[idx]
-
-        nc.close()
+        logger.debug(f"NetCDF file created successfully")
 
     def load_from(self, path: str | Path) -> None:
         """
@@ -571,38 +587,39 @@ class Forcing:
         if not HAS_NETCDF:
             raise ImportError("netcdf4 is required to do this.")
 
-        # Open netCDF file
-        nc = Dataset(path, 'r', 'NETCDF4')
+        # Open and read netCDF file using context manager for proper resource handling
+        logger.debug(f"Loading forcing data from netCDF file: {path}")
+        with Dataset(path, 'r', 'NETCDF4') as nc:
+            # Check that hydro units are the same
+            hydro_units_nc = nc.variables['id'][:]
+            hydro_units_def = self.hydro_units[('id', '-')].values
+            if not np.array_equal(hydro_units_nc, hydro_units_def):
+                raise DataError(
+                    "The hydrological units in the netCDF file are not "
+                    "the same as those in the forcing object. The netCDF file "
+                    "contains hydrological units with ids: "
+                    f"{hydro_units_nc}. The model contains hydrological "
+                    f"units with ids: {hydro_units_def}.",
+                    data_type='netCDF hydro units',
+                    reason='ID mismatch'
+                )
 
-        # Check that hydro units are the same
-        hydro_units_nc = nc.variables['id'][:]
-        hydro_units_def = self.hydro_units[('id', '-')].values
-        if not np.array_equal(hydro_units_nc, hydro_units_def):
-            raise DataError(
-                "The hydrological units in the netCDF file are not "
-                "the same as those in the forcing object. The netCDF file "
-                "contains hydrological units with ids: "
-                f"{hydro_units_nc}. The model contains hydrological "
-                f"units with ids: {hydro_units_def}.",
-                data_type='netCDF hydro units',
-                reason='ID mismatch'
-            )
+            # Load time
+            ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
+            self.data2D.time = [pd.Timestamp(dt.year, dt.month, dt.day) for dt in ts]
+            self.data2D.time = pd.Series(self.data2D.time)
 
-        # Load time
-        ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
-        self.data2D.time = [pd.Timestamp(dt.year, dt.month, dt.day) for dt in ts]
-        self.data2D.time = pd.Series(self.data2D.time)
+            # Load variable names
+            self.data2D.data_name = [self.get_variable_enum(var) for var in nc.variables
+                                     if var not in ['id', 'time']]
 
-        # Load variable names
-        self.data2D.data_name = [self.get_variable_enum(var) for var in nc.variables
-                                 if var not in ['id', 'time']]
+            # Load data
+            self.data2D.data = []
+            for variable in self.data2D.data_name:
+                self.data2D.data.append(nc.variables[variable][:])
 
-        # Load data
-        self.data2D.data = []
-        for variable in self.data2D.data_name:
-            self.data2D.data.append(nc.variables[variable][:])
-
-        nc.close()
+        logger.debug(f"Successfully loaded forcing data with "
+                     f"{len(self.data2D.data_name)} variables")
 
     def get_total_precipitation(self) -> float:
         """
@@ -638,8 +655,11 @@ class Forcing:
         Parameters
         ----------
         operation_type
-            Type of operations to apply ('prior_correction', 'spatialize_from_station',
-            'spatialize_from_grid', or 'compute_pet').
+            Type of operations to apply:
+            - 'prior_correction': Applies additive/multiplicative corrections to station data
+            - 'spatialize_from_station': Converts point observations to distributed values
+            - 'spatialize_from_grid': Resamples gridded data to hydro units
+            - 'compute_pet': Calculates potential evapotranspiration
         parameters
             Parameter object for substituting parameter references. Required if
             operations use 'param:' prefix.
@@ -651,6 +671,14 @@ class Forcing:
         ValueError
             If operation references parameters but no parameter object provided.
         """
+        # Dictionary mapping operation types to their handler methods
+        operation_handlers = {
+            'prior_correction': self._apply_prior_correction,
+            'spatialize_from_station': self._apply_spatialization_from_station_data,
+            'spatialize_from_grid': self._apply_spatialization_from_gridded_data,
+            'compute_pet': self._apply_pet_computation,
+        }
+
         for operation_ref in self._operations:
             operation = operation_ref.copy()
 
@@ -681,21 +709,15 @@ class Forcing:
 
             # Apply the operation (or not)
             if apply_to_all or apply_operation:
-                if operation_type == 'prior_correction':
-                    self._apply_prior_correction(**operation)
-                elif operation_type == 'spatialize_from_station':
-                    self._apply_spatialization_from_station_data(**operation)
-                elif operation_type == 'spatialize_from_grid':
-                    self._apply_spatialization_from_gridded_data(**operation)
-                elif operation_type == 'compute_pet':
-                    self._apply_pet_computation(**operation)
-                else:
+                if operation_type not in operation_handlers:
                     raise ConfigurationError(
                         f'Unknown operation type: {operation_type}',
                         item_name='operation_type',
                         item_value=operation_type,
                         reason='Unknown operation'
                     )
+                logger.debug(f"Applying {operation_type} operation")
+                operation_handlers[operation_type](**operation)
 
     def _apply_prior_correction(
             self,

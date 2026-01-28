@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import warnings
+from functools import wraps
 from pathlib import Path
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -14,19 +16,55 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
 from hydrobricks import rasterio, pyproj, shapely, gpd
 from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
-from hydrobricks._exceptions import DataError
-from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.preprocessing import CatchmentConnectivity
-from hydrobricks.preprocessing import CatchmentDiscretization
-from hydrobricks.preprocessing import CatchmentTopography
-from hydrobricks.preprocessing import PotentialSolarRadiation
+from hydrobricks._exceptions import DataError, ConfigurationError
 from hydrobricks._utils import compute_area
+from hydrobricks.hydro_units import HydroUnits
 
 if HAS_SHAPELY:
     from shapely.geometry import mapping
 
 if HAS_RASTERIO:
     from rasterio.mask import mask
+
+# Type variable for lazy property decorator
+T = TypeVar('T')
+
+
+def lazy_property(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Decorator for lazy-loaded properties that are instantiated on first access.
+
+    This decorator enables on-demand loading of expensive or optional objects,
+    improving startup performance and allowing graceful handling of missing
+    optional dependencies.
+
+    Parameters
+    ----------
+    func
+        Property method that returns an instance of a preprocessing module.
+
+    Returns
+    -------
+    Callable
+        Decorated property method that caches the result after first access.
+
+    Examples
+    --------
+    >>> @lazy_property
+    ... def topography(self) -> CatchmentTopography:
+    ...     return CatchmentTopography(self)
+    """
+    cache_attr = f'_{func.__name__}'
+
+    @wraps(func)
+    def wrapper(self) -> T:
+        cached = getattr(self, cache_attr, None)
+        if cached is None:
+            cached = func(self)
+            setattr(self, cache_attr, cached)
+        return cached
+
+    return property(wrapper)
 
 
 class Catchment:
@@ -105,59 +143,118 @@ class Catchment:
         self._extract_outline(outline)
         self._extract_area(outline)
 
-        self._topography: CatchmentTopography | None = None
-        self._discretization: CatchmentDiscretization | None = None
-        self._connectivity: CatchmentConnectivity | None = None
-        self._solar_radiation: PotentialSolarRadiation | None = None
+    def __enter__(self):
+        """Context manager entry."""
+        return self
 
-    def __del__(self) -> None:
-        """
-        Clean up resources when catchment object is deleted.
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - closes all resources."""
+        self.close()
+        return False
 
-        Closes the DEM dataset and any MemoryFiles used for reprojected attributes
-        to avoid resource leaks.
+    def close(self) -> None:
         """
-        # Close main DEM dataset
+        Close all open resources (DEM dataset and MemoryFiles).
+
+        Called automatically when using the catchment as a context manager,
+        or can be called manually to explicitly release resources.
+
+        Examples
+        --------
+        # Using as context manager (recommended)
+        with Catchment(outline='boundary.shp') as catchment:
+            catchment.extract_dem('dem.tif')
+
+        # Manual cleanup
+        catchment = Catchment(outline='boundary.shp')
+        try:
+            catchment.extract_dem('dem.tif')
+        finally:
+            catchment.close()
+        """
+        self._close_dem()
+        self._close_attribute_memfiles()
+
+    def _close_dem(self) -> None:
+        """Close the main DEM dataset."""
         if self.dem is not None:
             try:
                 self.dem.close()
+                self.dem = None
             except (OSError, ValueError, AttributeError) as e:
                 logger.warning(f"Error closing DEM dataset: {e}", exc_info=True)
 
-        # Close any MemoryFiles kept with attributes to avoid resource leaks
+    def _close_attribute_memfiles(self) -> None:
+        """Close all MemoryFiles kept with attributes."""
         if isinstance(self.attributes, dict):
             for attr_name, entry in self.attributes.items():
                 try:
                     if (isinstance(entry, dict) and 'memfile' in entry
                             and entry['memfile'] is not None):
                         entry['memfile'].close()
+                        entry['memfile'] = None
                 except (OSError, ValueError, AttributeError) as e:
                     logger.warning(f"Error closing MemoryFile for attribute "
                                    f"'{attr_name}': {e}", exc_info=True)
 
-    @property
-    def topography(self) -> CatchmentTopography:
-        if self._topography is None:
-            self._topography = CatchmentTopography(self)
-        return self._topography
+    def __del__(self) -> None:
+        """Fallback cleanup when object is garbage collected."""
+        try:
+            self.close()
+        except Exception as e:
+            logger.debug(f"Error during __del__ cleanup: {e}", exc_info=True)
 
-    @property
-    def discretization(self) -> CatchmentDiscretization:
-        if self._discretization is None:
-            self._discretization = CatchmentDiscretization(self)
-        return self._discretization
+    @lazy_property
+    def topography(self) -> Any:
+        """
+        Lazy-loaded topography analysis module.
 
-    @property
-    def connectivity(self) -> CatchmentConnectivity:
-        if self._connectivity is None:
-            self._connectivity = CatchmentConnectivity(self)
-        return self._connectivity
+        Returns
+        -------
+        CatchmentTopography
+            Topography processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentTopography
+        return CatchmentTopography(self)
 
-    @property
-    def solar_radiation(self) -> PotentialSolarRadiation:
-        if self._solar_radiation is None:
-            self._solar_radiation = PotentialSolarRadiation(self)
-        return self._solar_radiation
+    @lazy_property
+    def discretization(self) -> Any:
+        """
+        Lazy-loaded discretization module.
+
+        Returns
+        -------
+        CatchmentDiscretization
+            Discretization processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentDiscretization
+        return CatchmentDiscretization(self)
+
+    @lazy_property
+    def connectivity(self) -> Any:
+        """
+        Lazy-loaded connectivity module.
+
+        Returns
+        -------
+        CatchmentConnectivity
+            Connectivity processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentConnectivity
+        return CatchmentConnectivity(self)
+
+    @lazy_property
+    def solar_radiation(self) -> Any:
+        """
+        Lazy-loaded solar radiation module.
+
+        Returns
+        -------
+        PotentialSolarRadiation
+            Solar radiation processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+        return PotentialSolarRadiation(self)
 
     def extract_dem(self, raster_path: str | Path) -> bool:
         """
@@ -777,6 +874,7 @@ class Catchment:
         """
         Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
     def load_mean_annual_radiation_raster(self, *args, **kwargs) -> None:
@@ -800,6 +898,7 @@ class Catchment:
         """
         Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
@@ -807,6 +906,7 @@ class Catchment:
         """
         Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
@@ -814,6 +914,7 @@ class Catchment:
         """
         Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
@@ -821,6 +922,7 @@ class Catchment:
         """
         Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
@@ -828,6 +930,7 @@ class Catchment:
         """
         Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
         return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit: np.ndarray) -> tuple[float, float]:
@@ -1013,20 +1116,3 @@ class Catchment:
                 reason='Unsupported type'
             )
 
-    # Copy the docstring from attached classes
-    discretize_by.__doc__ = CatchmentDiscretization.discretize_by.__doc__
-    create_elevation_bands.__doc__ = CatchmentDiscretization.create_elevation_bands.__doc__
-    get_mean_elevation.__doc__ = CatchmentTopography.get_mean_elevation.__doc__
-    resample_dem_and_calculate_slope_aspect.__doc__ = CatchmentTopography.resample_dem_and_calculate_slope_aspect.__doc__
-    calculate_slope_aspect.__doc__ = CatchmentTopography.calculate_slope_aspect.__doc__
-    get_hillshade.__doc__ = CatchmentTopography.get_hillshade.__doc__
-    calculate_connectivity.__doc__ = CatchmentConnectivity.calculate.__doc__
-    calculate_daily_potential_radiation.__doc__ = PotentialSolarRadiation.calculate_daily_potential_radiation.__doc__
-    calculate_cast_shadows.__doc__ = PotentialSolarRadiation.calculate_cast_shadows.__doc__
-    load_mean_annual_radiation_raster.__doc__ = PotentialSolarRadiation.load_mean_annual_radiation_raster.__doc__
-    upscale_and_save_mean_annual_radiation_rasters.__doc__ = PotentialSolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
-    get_solar_declination_rad.__doc__ = PotentialSolarRadiation.get_solar_declination_rad.__doc__
-    get_solar_hour_angle_limit.__doc__ = PotentialSolarRadiation.get_solar_hour_angle_limit.__doc__
-    get_solar_zenith.__doc__ = PotentialSolarRadiation.get_solar_zenith.__doc__
-    get_solar_azimuth_to_south.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_south.__doc__
-    get_solar_azimuth_to_north.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_north.__doc__

@@ -212,19 +212,25 @@ class TimeSeries2D(TimeSeries):
             unit_ids = rxr.open_rasterio(raster_hydro_units)
             unit_ids = unit_ids.squeeze().drop_vars("band")
 
+        logger.debug(f"Starting regridding from netCDF: "
+                     f"apply_data_gradient={apply_data_gradient}")
+
         # Get netCDF dataset
         logger.debug(f"Reading netcdf file(s) from {path}...")
         if file_pattern is None:
             nc_data = xr.open_dataset(path, chunks={})
         else:
             files = sorted(Path(path).glob(file_pattern))
+            logger.debug(f"Found {len(files)} files matching pattern '{file_pattern}'")
             nc_data = xr.open_mfdataset(files, chunks={})
 
         # Get CRS of the netcdf file
         data_crs = self._parse_crs(nc_data, data_crs)
+        logger.debug(f"NetCDF CRS: {data_crs}")
 
         # Get CRS of the unit ids raster
         unit_ids_crs = self._parse_crs(unit_ids, None)
+        logger.debug(f"Raster CRS: {unit_ids_crs}")
 
         if data_crs != unit_ids_crs:
             logger.warning(
@@ -239,12 +245,14 @@ class TimeSeries2D(TimeSeries):
         # Get list of hydro unit ids
         unit_ids_list = hydro_units['id'].values.squeeze()
         unit_id_count = len(unit_ids_list)
+        logger.debug(f"Processing {unit_id_count} hydro units")
 
         # Check if the file has the dimension 'day_of_year'
         time_method = None
         if 'day_of_year' in nc_data.dims:
             time_method = 'day_of_year'
             day_of_year = nc_data.variables['day_of_year'][:]
+            logger.debug(f"Using day_of_year time method with {len(day_of_year)} days")
             if len(self.time) == 0:
                 raise DataError(
                     "Other forcing data with a full temporal array have "
@@ -256,6 +264,8 @@ class TimeSeries2D(TimeSeries):
         else:
             time_method = 'full'
             time_nc = nc_data.variables[dim_time][:]
+            logger.debug(f"Using full time series with {len(time_nc)} time steps")
+
             if len(self.time) == 0:
                 self.time = pd.Series(time_nc)
 

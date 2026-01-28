@@ -461,6 +461,9 @@ class Forcing:
         ValueError
             If operations reference parameters but no parameter object is provided.
         """
+        logger.debug(f"Applying forcing operations: apply_to_all={apply_to_all}, "
+                     f"parameters={'provided' if parameters else 'None'}")
+
         # The operations will be applied in the order defined in the list
         operation_types = [
             'prior_correction',
@@ -470,8 +473,10 @@ class Forcing:
         ]
 
         for operation_type in operation_types:
+            logger.debug(f"  Applying {operation_type} operations")
             self._apply_operations_of_type(operation_type, parameters, apply_to_all)
 
+        logger.debug("All forcing operations completed successfully")
         self._is_initialized = True
 
     def save_as(self, path: str | Path, max_compression: bool = False) -> None:

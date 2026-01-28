@@ -184,6 +184,8 @@ class Model(ABC):
         forcing
             The forcing data.
         """
+        logger.debug(f"Running model: {self.name}")
+
         if not self._is_initialized:
             raise ModelError(
                 'The model has not been initialized. Please run setup() first.',
@@ -191,23 +193,31 @@ class Model(ABC):
             )
 
         if not parameters.is_valid():
+            undefined = parameters.get_undefined()
+            logger.debug(f"Invalid parameters: {undefined}")
             raise ConfigurationError(
                 f'Some parameters were not defined: '
-                f'{",".join(parameters.get_undefined())}.'
+                f'{",".join(undefined)}.'
             )
 
         try:
+            logger.debug("Resetting model state")
             self.model.reset()
 
             if forcing is not None and not forcing.is_initialized():
+                logger.debug("Applying forcing operations")
                 forcing.apply_operations(parameters)
 
+            logger.debug("Setting parameter values")
             self._set_parameter_values(parameters)
+
+            logger.debug("Setting forcing data")
             self._set_forcing(forcing)
 
             if not self.model.is_valid():
                 raise ConfigurationError('The model is not properly configured.')
 
+            logger.debug("Starting model simulation")
             timer = Timer()
             timer.start()
 
@@ -215,6 +225,7 @@ class Model(ABC):
                 raise ModelError('Model run failed.')
 
             timer.stop(show_time=False)
+            logger.debug(f"Model simulation completed in {timer.elapsed_time:.2f} seconds")
 
         except ModelError:
             logger.error("Model execution failed", exc_info=True)

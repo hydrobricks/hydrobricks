@@ -153,14 +153,24 @@ class SpotpySetup:
         """
         params = self.params
         param_values = dict(zip(x.name, x.random))
+        logger.debug(f"Setting {len(param_values)} parameter values for simulation")
         params.set_values(param_values)
 
-        if not params.constraints_satisfied() or not params.range_satisfied():
+        if not params.constraints_satisfied():
+            logger.debug("Parameter constraints not satisfied, skipping simulation")
             return None
 
+        if not params.range_satisfied():
+            logger.debug("Parameter ranges not satisfied, skipping simulation")
+            return None
+
+        logger.debug(f"Running {len(self.model)} model(s)")
         all_sim = []
-        for model, forcing, i in zip(self.model, self.forcing, range(len(self.model))):
+        for model_idx, (model, forcing) in enumerate(zip(self.model, self.forcing)):
+            logger.debug(f"  Model {model_idx}: running simulation")
+
             if self.random_forcing:
+                logger.debug(f"    Applying random forcing operations")
                 forcing.apply_operations(params, apply_to_all=False)
                 model.run(parameters=params, forcing=forcing)
             else:
@@ -168,8 +178,10 @@ class SpotpySetup:
 
             sim = model.get_outlet_discharge()
             if sim.size == 0:
+                logger.warning(f"  Model {model_idx}: no outlet discharge data")
                 return None
 
+            logger.debug(f"  Model {model_idx}: extracted {len(sim)} discharge values")
             all_sim.append(sim[self.warmup:])
 
             if self.dump_outputs or self.dump_forcing:
@@ -178,10 +190,13 @@ class SpotpySetup:
                 path = os.path.join(self.dump_dir, date_time)
                 os.makedirs(path, exist_ok=True)
                 if self.dump_outputs:
+                    logger.debug(f"    Dumping outputs to {path}")
                     model.dump_outputs(path)
                 if self.dump_forcing:
+                    logger.debug(f"    Saving forcing to {path}")
                     forcing.save_as(os.path.join(path, f'forcing_{i}.nc'))
 
+        logger.debug(f"Simulation complete: {len(all_sim)} models processed")
         return all_sim
 
     def evaluation(self) -> list[np.ndarray]:

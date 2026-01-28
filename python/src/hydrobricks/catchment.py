@@ -14,12 +14,13 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
 
 from hydrobricks import rasterio, pyproj, shapely, gpd
 from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
+from hydrobricks._exceptions import DataError
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.preprocessing import CatchmentConnectivity
 from hydrobricks.preprocessing import CatchmentDiscretization
 from hydrobricks.preprocessing import CatchmentTopography
 from hydrobricks.preprocessing import PotentialSolarRadiation
-from hydrobricks.utils import compute_area
+from hydrobricks._utils import compute_area
 
 if HAS_SHAPELY:
     from shapely.geometry import mapping
@@ -82,7 +83,11 @@ class Catchment:
 
         # Check that the outline file exists if provided
         if outline is not None and not Path(outline).is_file():
-            raise FileNotFoundError(f"File {outline} does not exist.")
+            raise DataError(
+                f"File {outline} does not exist.",
+                data_type='catchment outline file',
+                reason='File not found'
+            )
 
         self.area: float | None = None
         self.crs: str | None = None
@@ -261,12 +266,21 @@ class Catchment:
             elif resampling == 'rms':
                 resampling_id = 14
             else:
-                raise ValueError(f"Unknown resampling method: {resampling}")
+                raise ConfigurationError(
+                    f"Unknown resampling method: {resampling}",
+                    item_name='resampling',
+                    item_value=resampling,
+                    reason='Unknown method'
+                )
 
             # Resample the attribute to the DEM resolution
             # Ensure a DEM has been loaded to resample to
             if self.dem is None or self.dem_data is None:
-                raise ValueError("DEM must be loaded before resampling an attribute raster.")
+                raise DataError(
+                    "DEM must be loaded before resampling an attribute raster.",
+                    data_type='DEM',
+                    reason='DEM not loaded'
+                )
 
             # Allocate a fresh destination buffer so we don't overwrite self.dem_data
             dest = np.empty_like(self.dem_data, dtype=data.dtype)
@@ -328,7 +342,11 @@ class Catchment:
         The number of hydro units.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to count.")
+            raise DataError(
+                "No hydro units to count.",
+                data_type='hydro units',
+                reason='Not initialized'
+            )
 
         return len(self.hydro_units.hydro_units)
 
@@ -341,7 +359,11 @@ class Catchment:
         The elevation of the hydro units.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to count.")
+            raise DataError(
+                "No hydro units to count.",
+                data_type='hydro units',
+                reason='Not initialized'
+            )
 
         return self.hydro_units.hydro_units.elevation
 
@@ -431,7 +453,11 @@ class Catchment:
             Path to the output file.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to save.")
+            raise DataError(
+                "No hydro units to save.",
+                data_type='hydro units',
+                reason='Not initialized'
+            )
 
         self.hydro_units.save_to_csv(path)
 
@@ -465,7 +491,11 @@ class Catchment:
             Name of the output file. Default is 'unit_ids.tif'.
         """
         if self.map_unit_ids is None:
-            raise ValueError("No unit ids raster to save.")
+            raise DataError(
+                "No unit ids raster to save.",
+                data_type='unit ids raster',
+                reason='Not initialized'
+            )
 
         full_path = Path(output_path) / output_filename
 
@@ -554,7 +584,11 @@ class Catchment:
         The attribute raster x resolution.
         """
         if attr_name not in self.attributes.keys():
-            raise ValueError(f"Attribute raster {attr_name} not found.")
+            raise DataError(
+                f"Attribute raster {attr_name} not found.",
+                data_type='attribute raster',
+                reason='Not loaded'
+            )
 
         return abs(self.attributes[attr_name].src.transform[0])
 
@@ -572,7 +606,11 @@ class Catchment:
         The attribute raster y resolution.
         """
         if attr_name not in self.attributes.keys():
-            raise ValueError(f"Attribute raster {attr_name} not found.")
+            raise DataError(
+                f"Attribute raster {attr_name} not found.",
+                data_type='attribute raster',
+                reason='Not loaded'
+            )
 
         return abs(self.attributes[attr_name].src.transform[4])
 
@@ -655,10 +693,19 @@ class Catchment:
             The land cover change dataframe.
         """
         if self.map_unit_ids is None:
-            raise ValueError("No hydro units to initialize.")
+            raise DataError(
+                "No hydro units to initialize.",
+                data_type='hydro units',
+                reason='Not initialized'
+            )
 
         if land_cover_name == 'ground':
-            raise ValueError("You should not initialize the 'ground' land cover type.")
+            raise ConfigurationError(
+                "You should not initialize the 'ground' land cover type.",
+                item_name='land_cover_name',
+                item_value='ground',
+                reason='Invalid land cover type'
+            )
 
         self.hydro_units.initialize_from_land_cover_change(
             land_cover_name,
@@ -881,7 +928,11 @@ class Catchment:
             If rasterio or shapely is not installed.
         """
         if not Path(raster_path).is_file():
-            raise FileNotFoundError(f"File {raster_path} does not exist.")
+            raise DataError(
+                f"File {raster_path} does not exist.",
+                data_type='raster file',
+                reason='File not found'
+            )
 
         if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
@@ -925,8 +976,11 @@ class Catchment:
             self.crs = data_crs
         else:
             if self.crs != data_crs:
-                raise ValueError("The CRS of the data does not match the CRS of the "
-                                 "catchment.")
+                raise DataError(
+                    "The CRS of the data does not match the CRS of the catchment.",
+                    data_type='CRS',
+                    reason='CRS mismatch'
+                )
 
     @staticmethod
     def _get_crs_from_file(data: rasterio.DatasetReader | gpd.GeoDataFrame) -> str:
@@ -953,7 +1007,11 @@ class Catchment:
         elif isinstance(data, gpd.GeoDataFrame):
             return data.crs
         else:
-            raise ValueError("Unknown data format.")
+            raise DataError(
+                "Unknown data format.",
+                data_type='data format',
+                reason='Unsupported type'
+            )
 
     # Copy the docstring from attached classes
     discretize_by.__doc__ = CatchmentDiscretization.discretize_by.__doc__

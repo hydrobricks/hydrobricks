@@ -85,9 +85,12 @@ class Forcing:
             hydro_units = spatial_entity.hydro_units
             catchment = spatial_entity
         else:
-            raise TypeError(
+            raise ConfigurationError(
                 f'The spatial_entity argument must be a HydroUnits or '
-                f'Catchment object, not {type(spatial_entity)}.'
+                f'Catchment object, not {type(spatial_entity)}.',
+                item_name='spatial_entity',
+                item_value=type(spatial_entity).__name__,
+                reason='Invalid type'
             )
 
         # Check hydro units
@@ -175,7 +178,10 @@ class Forcing:
             return self.Variable.PRESSURE
 
         else:
-            raise ValueError(f'Variable {variable} is not recognized.')
+            raise ForcingError(
+                f'Variable {variable} is not recognized.',
+                variable=variable
+            )
 
     def _can_be_negative(self, variable: Variable) -> bool:
         """
@@ -217,7 +223,10 @@ class Forcing:
         ]:
             return True
         else:
-            raise ValueError(f'Undefined if variable {variable} can be negative.')
+            raise ForcingError(
+                f'Undefined if variable {variable} can be negative.',
+                variable=variable
+            )
 
     def load_station_data_from_csv(
             self,
@@ -561,11 +570,15 @@ class Forcing:
         hydro_units_nc = nc.variables['id'][:]
         hydro_units_def = self.hydro_units[('id', '-')].values
         if not np.array_equal(hydro_units_nc, hydro_units_def):
-            raise ValueError("The hydrological units in the netCDF file are not "
-                             "the same as those in the forcing object. The netCDF file "
-                             "contains hydrological units with ids: "
-                             f"{hydro_units_nc}. The model contains hydrological "
-                             f"units with ids: {hydro_units_def}.")
+            raise DataError(
+                "The hydrological units in the netCDF file are not "
+                "the same as those in the forcing object. The netCDF file "
+                "contains hydrological units with ids: "
+                f"{hydro_units_nc}. The model contains hydrological "
+                f"units with ids: {hydro_units_def}.",
+                data_type='netCDF hydro units',
+                reason='ID mismatch'
+            )
 
         # Load time
         ts = num2date(nc.variables['time'][:], units=nc.variables['time'].units)
@@ -645,9 +658,13 @@ class Forcing:
                 value = operation[key]
                 if isinstance(value, str) and value.startswith('param:'):
                     if parameters is None:
-                        raise ValueError('A parameters object must be provided '
-                                         'to apply the operations as it is '
-                                         f'required by the "{value}" option.')
+                        raise ConfigurationError(
+                            'A parameters object must be provided '
+                            'to apply the operations as it is '
+                            f'required by the "{value}" option.',
+                            item_name='forcing',
+                            reason='Missing required parameter'
+                        )
                     parameter_name = value.replace('param:', '')
                     operation[key] = parameters.get(parameter_name)
                     if not apply_to_all:  # Restrict to parameters that changed
@@ -665,7 +682,12 @@ class Forcing:
                 elif operation_type == 'compute_pet':
                     self._apply_pet_computation(**operation)
                 else:
-                    raise ValueError(f'Unknown operation type: {operation_type}')
+                    raise ConfigurationError(
+                        f'Unknown operation type: {operation_type}',
+                        item_name='operation_type',
+                        item_value=operation_type,
+                        reason='Unknown operation'
+                    )
 
     def _apply_prior_correction(
             self,
@@ -752,8 +774,12 @@ class Forcing:
         """
         # Checking that the correction_factor option is not used here anymore
         if 'correction_factor' in kwargs:
-            raise ValueError('The correction_factor option is to be used only '
-                             'in the correct_station_data() method.')
+            raise ConfigurationError(
+                'The correction_factor option is to be used only '
+                'in the correct_station_data() method.',
+                item_name='correction_factor',
+                reason='Wrong method for this option'
+            )
 
         variable = self.get_variable_enum(variable)
         unit_values = np.zeros((len(self.data1D.time), len(self.hydro_units)))
@@ -770,7 +796,11 @@ class Forcing:
             elif variable == self.Variable.PET:
                 method = 'constant'
             else:
-                raise ValueError(f'Unknown default method for variable: {variable}')
+                raise ForcingError(
+                    f'Unknown default method for variable: {variable}',
+                    variable=str(variable),
+                    method='spatialization'
+                )
 
         # Extract kwargs (None if not provided)
         ref_elevation = kwargs.get('ref_elevation', None)
@@ -782,8 +812,13 @@ class Forcing:
 
         if isinstance(gradient, list):
             if len(gradient) not in [1, 12]:
-                raise ValueError(f'The gradient should have a length of 1 or 12. '
-                                 f'Here: {len(gradient)}')
+                raise ConfigurationError(
+                    f'The gradient should have a length of 1 or 12. '
+                    f'Here: {len(gradient)}',
+                    item_name='gradient',
+                    item_value=len(gradient),
+                    reason='Invalid length'
+                )
 
         # Apply methods
         for i_unit, (_, unit) in enumerate(hydro_units.iterrows()):
@@ -795,7 +830,11 @@ class Forcing:
 
             elif method == 'additive_elevation_gradient':
                 if ref_elevation is None:
-                    raise ValueError('Reference elevation not provided.')
+                    raise ConfigurationError(
+                        'Reference elevation not provided.',
+                        item_name='ref_elevation',
+                        reason='Missing required parameter'
+                    )
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw + gradient * (
@@ -807,11 +846,20 @@ class Forcing:
                         unit_values[month, i_unit] = data_raw[month] + gradient[m] * (
                                 elevation - ref_elevation) / 100
                 else:
-                    raise ValueError(f'Wrong gradient format: {gradient}')
+                    raise ConfigurationError(
+                        f'Wrong gradient format: {gradient}',
+                        item_name='gradient',
+                        item_value=gradient,
+                        reason='Invalid format'
+                    )
 
             elif method == 'multiplicative_elevation_gradient':
                 if ref_elevation is None:
-                    raise ValueError('Reference elevation not provided.')
+                    raise ConfigurationError(
+                        'Reference elevation not provided.',
+                        item_name='ref_elevation',
+                        reason='Missing required parameter'
+                    )
                 if isinstance(gradient, float) or isinstance(gradient, list) \
                         and len(gradient) == 1:
                     unit_values[:, i_unit] = data_raw * (
@@ -824,7 +872,12 @@ class Forcing:
                             data_raw[month] * (1 + gradient[m] * (
                                     elevation - ref_elevation) / 100)
                 else:
-                    raise ValueError(f'Wrong gradient format: {gradient}')
+                    raise ConfigurationError(
+                        f'Wrong gradient format: {gradient}',
+                        item_name='gradient',
+                        item_value=gradient,
+                        reason='Invalid format'
+                    )
 
             elif method == 'multiplicative_elevation_threshold_gradients':
                 gradient_2 = kwargs.get('gradient_2', None)
@@ -842,7 +895,11 @@ class Forcing:
                             1 + gradient_2 * (elevation - elevation_threshold) / 100)
 
             else:
-                raise ValueError(f'Unknown method: {method}')
+                raise ForcingError(
+                    f'Unknown method: {method}',
+                    variable=str(variable),
+                    method=method
+                )
 
         # Check outputs
         if not self._can_be_negative(variable):
@@ -920,21 +977,33 @@ class Forcing:
             dem_path = None
             if apply_data_gradient:
                 if self.catchment is None:
-                    raise ValueError("apply_data_gradient is True, but no catchment "
-                                     "is defined. The catchment is required to "
-                                     "retrieve the elevation-based gradients.")
+                    raise DataError(
+                        "apply_data_gradient is True, but no catchment "
+                        "is defined. The catchment is required to "
+                        "retrieve the elevation-based gradients.",
+                        data_type='catchment',
+                        reason='Missing catchment'
+                    )
                 if self.catchment.dem is None:
-                    raise ValueError("apply_data_gradient is True, but no DEM is "
-                                     "defined in the catchment. The DEM is required "
-                                     "to retrieve the elevation-based gradients.")
+                    raise DataError(
+                        "apply_data_gradient is True, but no DEM is "
+                        "defined in the catchment. The DEM is required "
+                        "to retrieve the elevation-based gradients.",
+                        data_type='DEM',
+                        reason='Missing DEM'
+                    )
 
                 dem_path = self.catchment.dem.files
                 # Drop items with .aux.xml extension
                 dem_path = [p for p in dem_path if not p.endswith('.aux.xml')]
                 if len(dem_path) > 1:
-                    raise ValueError("apply_data_gradient is True, but the catchment "
-                                     "contains multiple DEM files. Only one DEM file "
-                                     "is supported for the elevation-based gradients.")
+                    raise DataError(
+                        "apply_data_gradient is True, but the catchment "
+                        "contains multiple DEM files. Only one DEM file "
+                        "is supported for the elevation-based gradients.",
+                        data_type='DEM',
+                        reason='Multiple DEM files'
+                    )
                 dem_path = dem_path[0]
 
             self.data2D.regrid_from_netcdf(
@@ -953,7 +1022,11 @@ class Forcing:
             )
             self.data2D.data_name.append(variable)
         else:
-            raise ValueError(f'Unknown method: {method}')
+            raise ForcingError(
+                f'Unknown method: {method}',
+                variable=str(variable),
+                method=method
+            )
 
     def _apply_pet_computation(self, method: str, use: list[str], **kwargs: Any) -> None:
         """
@@ -1084,7 +1157,11 @@ class Forcing:
         elif method in ['Oudin', 'oudin']:
             return pyet.oudin(**pyet_args)
         else:
-            raise ValueError(f'Unknown PET method: {method}')
+            raise ForcingError(
+                f'Unknown PET method: {method}',
+                variable='PET',
+                method=method
+            )
 
     def _set_pyet_variables_data(
             self,
@@ -1152,7 +1229,11 @@ class Forcing:
         use = [self.get_variable_enum(v) for v in use]
         for v in use:
             if v not in self.data2D.data_name:
-                raise ValueError(f"Variable {v} is not available.")
+                raise DataError(
+                    f"Variable {v} is not available.",
+                    data_type='forcing variable',
+                    reason='Variable not in data'
+                )
 
     @staticmethod
     def _remove_lat_elevation_options(use: list[str]) -> list[str]:

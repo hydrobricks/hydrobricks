@@ -8,7 +8,7 @@ from hydrobricks import Dataset
 from hydrobricks._hydrobricks import SettingsBasin
 from hydrobricks._optional import HAS_NETCDF
 from hydrobricks._exceptions import DataError, ConfigurationError, DependencyError
-from hydrobricks.units import (
+from hydrobricks._units import (
     Unit,
     convert_unit_df,
     get_unit_enum,

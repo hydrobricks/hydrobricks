@@ -7,6 +7,7 @@ import pandas as pd
 from hydrobricks._hydrobricks import (
     ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling
 )
+from hydrobricks._exceptions import ConfigurationError
 from hydrobricks.actions import Action
 from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
@@ -131,11 +132,15 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
         Raises
         ------
-        ValueError
+        ConfigurationError
             If the object is not a GlacierEvolutionAreaScaling instance.
         """
         if not isinstance(obj, GlacierEvolutionAreaScaling):
-            raise ValueError("The object is not a GlacierEvolutionAreaScaling instance.")
+            raise ConfigurationError(
+                "The object is not a GlacierEvolutionAreaScaling instance.",
+                item_value=type(obj).__name__,
+                reason='Invalid object type'
+            )
 
         lookup_table_area = obj.get_lookup_table_area()
         lookup_table_volume = obj.get_lookup_table_volume()

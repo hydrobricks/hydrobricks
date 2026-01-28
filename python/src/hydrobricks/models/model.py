@@ -10,7 +10,7 @@ import numpy as np
 from hydrobricks._hydrobricks import init_log, close_log, ModelHydro
 from hydrobricks._exceptions import ModelError, ConfigurationError
 from hydrobricks.actions.action import Action
-from hydrobricks.utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
+from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.parameters import ParameterSet

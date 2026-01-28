@@ -13,7 +13,7 @@ import pandas as pd
 from hydrobricks import rxr, xr, rasterio, pyproj
 from hydrobricks._optional import HAS_RASTERIO, HAS_RIOXARRAY, HAS_NETCDF
 from hydrobricks._exceptions import (DependencyError, DataError, ConfigurationError)
-from hydrobricks.utils import date_as_mjd
+from hydrobricks._utils import date_as_mjd
 
 if TYPE_CHECKING:
     from hydrobricks.hydro_units import HydroUnits

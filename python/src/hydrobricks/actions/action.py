@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from hydrobricks._exceptions import ConfigurationError
+
 
 class Action(ABC):
     """Base abstract class for model actions (dynamic updates to model state)."""
@@ -34,10 +36,9 @@ class Action(ABC):
 
         Raises
         ------
-        ValueError
-            If month number is not between 1 and 12, or if month name is not recognized.
-        TypeError
-            If update_month is neither a string nor an integer.
+        ConfigurationError
+            If month number is not between 1 and 12, or if month name is not recognized,
+            or if update_month is neither a string nor an integer.
 
         Examples
         --------
@@ -49,7 +50,12 @@ class Action(ABC):
         # Convert the month name to a number
         if isinstance(update_month, int):
             if update_month < 1 or update_month > 12:
-                raise ValueError("Month number must be between 1 and 12.")
+                raise ConfigurationError(
+                    "Month number must be between 1 and 12.",
+                    item_name='update_month',
+                    item_value=update_month,
+                    reason='Invalid month number'
+                )
             month_num = update_month
         elif isinstance(update_month, str):
             month_mapping = {
@@ -68,8 +74,18 @@ class Action(ABC):
             }
             month_num = month_mapping.get(update_month, None)
             if month_num is None:
-                raise ValueError(f"Invalid month name: {update_month}")
+                raise ConfigurationError(
+                    f"Invalid month name: {update_month}",
+                    item_name='update_month',
+                    item_value=update_month,
+                    reason='Unknown month name'
+                )
         else:
-            raise TypeError("Month must be a string or an integer.")
+            raise ConfigurationError(
+                "Month must be a string or an integer.",
+                item_name='update_month',
+                item_value=type(update_month).__name__,
+                reason='Invalid type'
+            )
 
         return month_num

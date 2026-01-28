@@ -13,8 +13,8 @@ from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS
 from hydrobricks.actions import Action
 from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.units import Unit, convert_unit
-from hydrobricks.utils import compute_area, date_as_mjd
+from hydrobricks._units import Unit, convert_unit
+from hydrobricks._utils import compute_area, date_as_mjd
 
 if HAS_SHAPELY:
     from shapely.geometry import MultiPolygon, mapping

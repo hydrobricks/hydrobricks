@@ -10,7 +10,7 @@ from hydrobricks import spotpy
 from hydrobricks._optional import HAS_SPOTPY
 from hydrobricks._exceptions import (ConfigurationError, DataError,
                                      DependencyError, ModelError)
-from hydrobricks.utils import dump_config_file
+from hydrobricks._utils import dump_config_file
 
 
 @dataclass(frozen=True)
@@ -1159,8 +1159,12 @@ class ParameterSet:
                 if algo is None:
                     return
                 if algo not in PROCESS_PARAM_SPECS:
-                    raise RuntimeError(
-                        f"The snow/ice transformation option {algo} is not recognised.")
+                    raise ConfigurationError(
+                        f"The snow/ice transformation option {algo} is not recognised.",
+                        item_name='snow_ice_transformation',
+                        item_value=algo,
+                        reason='Unknown transformation algorithm'
+                    )
                 glacier_names = [
                     cover_name for cover_type, cover_name in
                     zip(land_cover_types, land_cover_names)
@@ -1392,7 +1396,8 @@ class ParameterSet:
         name
             The parameter name or alias.
         raise_exception
-            If True, raise ValueError if parameter not found. If False, return None.
+            If True, raise ConfigurationError if parameter not found. If False,
+            return None.
 
         Returns
         -------
@@ -1402,7 +1407,7 @@ class ParameterSet:
 
         Raises
         ------
-        ValueError
+        ConfigurationError
             If the parameter is not found and raise_exception is True.
         """
         for index, row in self.parameters.iterrows():

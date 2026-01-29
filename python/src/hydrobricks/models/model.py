@@ -210,16 +210,13 @@ class Model(ABC):
                 raise ConfigurationError("The model is not properly configured.")
 
             logger.debug("Starting model simulation")
-            timer = Timer()
+            timer = Timer(text="Model simulation completed in {seconds:.2f} seconds")
             timer.start()
 
             if not self.model.run():
                 raise ModelError("Model run failed.")
 
-            timer.stop(show_time=False)
-            logger.debug(
-                f"Model simulation completed in {timer.elapsed_time:.2f} seconds"
-            )
+            timer.stop()
 
         except ModelError:
             logger.error("Model execution failed", exc_info=True)

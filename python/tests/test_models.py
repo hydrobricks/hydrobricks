@@ -283,7 +283,9 @@ def test_error_is_raised_if_parameter_missing():
         end_date="2020-12-31",
     )
 
-    with pytest.raises(RuntimeError, match=r"Some parameters were not defined*"):
+    with pytest.raises(
+        hb.ConfigurationError, match=r"Some parameters were not defined*"
+    ):
         socont.run(parameters=parameters)
 
     try:

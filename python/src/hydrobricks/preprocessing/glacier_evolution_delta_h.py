@@ -529,7 +529,7 @@ class GlacierEvolutionDeltaH:
         elev_bands_parts = self.glacier_df[("elevation", "m")].values
         initial_areas_m2 = self.glacier_df[("glacier_area", "m2")].values
         initial_we_mm = self.glacier_df[("glacier_thickness", "m")].values
-        initial_we_mm *= ICE_WE * 1000
+        initial_we_mm = initial_we_mm * ICE_WE * 1000
         hydro_unit_ids = self.glacier_df[("hydro_unit_id", "-")].values
 
         self.excess_melt_we = 0

@@ -156,14 +156,14 @@ class HydroUnit : public wxObject {
      *
      * @return The number of bricks.
      */
-    int GetBricksCount() const;
+    int GetBrickCount() const;
 
     /**
      * Get the number of splitters in the hydro unit.
      *
      * @return The number of splitters.
      */
-    int GetSplittersCount() const;
+    int GetSplitterCount() const;
 
     /**
      * Get a brick by its index.

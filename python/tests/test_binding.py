@@ -1,5 +1,11 @@
 import hydrobricks.models as models
-from hydrobricks._hydrobricks import LogNull, Parameter, ParameterVariableYearly, init
+from hydrobricks._hydrobricks import (
+    LogNull,
+    Parameter,
+    ParameterModifier,
+    ParameterModifierType,
+    init,
+)
 
 no_log = LogNull()
 
@@ -38,21 +44,19 @@ def test_parameter_change_value_with_function():
     assert param.get_value() == 2
 
 
-def test_parameter_variable_yearly_creation():
-    param = ParameterVariableYearly("param yearly variable")
-    assert param.name == "param yearly variable"
-
-
 def test_parameter_variable_yearly_value_assignment():
-    param = ParameterVariableYearly("param yearly variable")
-    assert param.set_values(
+    param = Parameter("param yearly variable", 0)
+    param_modifier = ParameterModifier(ParameterModifierType.Yearly)
+    assert param_modifier.set_yearly_values(
         year_start=2020, year_end=2025, values=[1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
     )
+    param.set_modifier(param_modifier)
+    assert param.has_modifier()
 
 
 def test_parameter_variable_yearly_value_assignment_fails_if_wrong_size():
-    param = ParameterVariableYearly("param yearly variable")
-    assert not param.set_values(
+    param_modifier = ParameterModifier(ParameterModifierType.Yearly)
+    assert not param_modifier.set_yearly_values(
         year_start=2020, year_end=2025, values=[1.0, 1.1, 1.2, 1.3, 1.4]
     )
 

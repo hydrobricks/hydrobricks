@@ -49,8 +49,8 @@ void HydroUnit::SetProperties(HydroUnitSettings& unitSettings) {
     _id = unitSettings.id;
 
     // Reserve once to avoid reallocations when adding known properties.
-    size_t propertiesCount = unitSettings.propertiesDouble.size() + unitSettings.propertiesString.size();
-    _properties.reserve(_properties.size() + propertiesCount);
+    size_t propertyCount = unitSettings.propertiesDouble.size() + unitSettings.propertiesString.size();
+    _properties.reserve(_properties.size() + propertyCount);
 
     for (const auto& unitProperty : unitSettings.propertiesDouble) {
         AddProperty(std::make_unique<HydroUnitProperty>(unitProperty.name, unitProperty.value, unitProperty.unit));
@@ -133,11 +133,11 @@ void HydroUnit::AddLateralConnection(HydroUnit* receiver, double fraction, const
     _lateralConnections.push_back(std::make_unique<HydroUnitLateralConnection>(receiver, fraction, type));
 }
 
-int HydroUnit::GetBricksCount() const {
+int HydroUnit::GetBrickCount() const {
     return static_cast<int>(_bricks.size());
 }
 
-int HydroUnit::GetSplittersCount() const {
+int HydroUnit::GetSplitterCount() const {
     return static_cast<int>(_splitters.size());
 }
 

@@ -229,7 +229,7 @@ def test_apply_pet_computation_wrong_variable_name(forcing: hb.Forcing):
     forcing.compute_pet(
         method="Priestley-Taylor", use=["xy", "rs", "tmax", "tmin", "rh", "lat"]
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ForcingError):
         forcing.apply_operations()
 
 
@@ -241,7 +241,7 @@ def test_apply_pet_computation_variables_not_available(forcing: hb.Forcing):
         use=["t", "rs", "tmax", "tmin", "rh", "lat"],
         lat=47.3,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.DataError):
         forcing.apply_operations()
 
 

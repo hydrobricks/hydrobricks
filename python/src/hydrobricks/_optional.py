@@ -82,6 +82,7 @@ HAS_NETCDF = is_module_available("netCDF4")
 if HAS_NETCDF:
     warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
     from netCDF4 import Dataset
+
     warnings.resetwarnings()
 
 HAS_RASTERIO = is_module_available("rasterio")
@@ -131,34 +132,33 @@ if HAS_XRSPATIAL:
 
 __all__ = [
     # Utility functions
-    'is_module_available',
-    'LazyImport',
+    "is_module_available",
+    "LazyImport",
     # Availability flags
-    'HAS_NETCDF',
-    'HAS_RASTERIO',
-    'HAS_GEOPANDAS',
-    'HAS_SHAPELY',
-    'HAS_SPOTPY',
-    'HAS_PYET',
-    'HAS_PYPROJ',
-    'HAS_PYSHEDS',
-    'HAS_XARRAY',
-    'HAS_RIOXARRAY',
-    'HAS_PYARROW',
-    'HAS_XRSPATIAL',
+    "HAS_NETCDF",
+    "HAS_RASTERIO",
+    "HAS_GEOPANDAS",
+    "HAS_SHAPELY",
+    "HAS_SPOTPY",
+    "HAS_PYET",
+    "HAS_PYPROJ",
+    "HAS_PYSHEDS",
+    "HAS_XARRAY",
+    "HAS_RIOXARRAY",
+    "HAS_PYARROW",
+    "HAS_XRSPATIAL",
     # Lazy-loaded modules
-    'Dataset',
-    'rasterio',
-    'gpd',
-    'shapely',
-    'spotpy',
-    'pyet',
-    'pyproj',
-    'pysheds',
-    'pyshedsGrid',
-    'xr',
-    'rxr',
-    'pyarrow',
-    'xrs',
+    "Dataset",
+    "rasterio",
+    "gpd",
+    "shapely",
+    "spotpy",
+    "pyet",
+    "pyproj",
+    "pysheds",
+    "pyshedsGrid",
+    "xr",
+    "rxr",
+    "pyarrow",
+    "xrs",
 ]
-

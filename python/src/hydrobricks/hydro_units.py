@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks import Dataset
+from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._hydrobricks import SettingsBasin
 from hydrobricks._optional import HAS_NETCDF
-from hydrobricks._exceptions import DataError, ConfigurationError, DependencyError
 from hydrobricks._units import (
     Unit,
     convert_unit_df,
@@ -40,10 +40,10 @@ class HydroUnits:
     """
 
     def __init__(
-            self,
-            land_cover_types: list[str] | None = None,
-            land_cover_names: list[str] | None = None,
-            data: pd.DataFrame | None = None
+        self,
+        land_cover_types: list[str] | None = None,
+        land_cover_names: list[str] | None = None,
+        data: pd.DataFrame | None = None,
     ) -> None:
         """
         Initialize HydroUnits instance.
@@ -55,7 +55,8 @@ class HydroUnits:
         land_cover_names
             List of land cover display names. If None, defaults to ['ground'].
         data
-            Pre-existing DataFrame with hydro units data. If None, creates empty DataFrame.
+            Pre-existing DataFrame with hydro units data.
+            If None, creates empty DataFrame.
 
         Raises
         ------
@@ -65,28 +66,28 @@ class HydroUnits:
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
-            land_cover_types = ['ground']
+            land_cover_types = ["ground"]
         if not land_cover_names:
-            land_cover_names = ['ground']
+            land_cover_names = ["ground"]
         self.land_cover_types: list[str] = land_cover_types
         self.land_cover_names: list[str] = land_cover_names
-        self.prefix_fraction: str = 'fraction-'
+        self.prefix_fraction: str = "fraction-"
         land_cover_cols: list[tuple[str, str]] = []
         for item in land_cover_names:
-            land_cover_cols.append((f'{self.prefix_fraction}{item}', 'fraction'))
+            land_cover_cols.append((f"{self.prefix_fraction}{item}", "fraction"))
         if data is not None:
             self._set_units_data(data)
         else:
             self.hydro_units: pd.DataFrame = pd.DataFrame(columns=land_cover_cols)
 
     def load_from_csv(
-            self,
-            path: str | Path,
-            column_elevation: str | None = None,
-            column_area: str | None = None,
-            column_fractions: dict[str, str] | None = None,
-            columns_areas: dict[str, str] | None = None,
-            other_columns: dict[str, str] | None = None
+        self,
+        path: str | Path,
+        column_elevation: str | None = None,
+        column_area: str | None = None,
+        column_fractions: dict[str, str] | None = None,
+        columns_areas: dict[str, str] | None = None,
+        other_columns: dict[str, str] | None = None,
     ) -> None:
         """
         Read hydro units properties from CSV file. The file must contain two header
@@ -104,7 +105,8 @@ class HydroUnits:
             Column name containing the total area values.
             If None, looks for 'area' column. Default: None
         column_fractions
-            NOT IMPLEMENTED. Dictionary mapping land cover names to area fraction column names.
+            NOT IMPLEMENTED.
+            Dictionary mapping land cover names to area fraction column names.
             Default: None
         columns_areas
             Dictionary mapping land cover names to area column names.
@@ -128,8 +130,9 @@ class HydroUnits:
         self._check_column_names(file_content)
 
         # Validate column configuration
-        self._validate_csv_columns(file_content, column_elevation, column_area,
-                                   columns_areas, column_fractions)
+        self._validate_csv_columns(
+            file_content, column_elevation, column_area, columns_areas, column_fractions
+        )
 
         # Load required columns
         self._load_id_column(file_content)
@@ -148,12 +151,12 @@ class HydroUnits:
         self.populate_bounded_instance()
 
     def _validate_csv_columns(
-            self,
-            file_content: pd.DataFrame,
-            column_elevation: str | None,
-            column_area: str | None,
-            columns_areas: dict[str, str] | None,
-            column_fractions: dict[str, str] | None
+        self,
+        file_content: pd.DataFrame,
+        column_elevation: str | None,
+        column_area: str | None,
+        columns_areas: dict[str, str] | None,
+        column_fractions: dict[str, str] | None,
     ) -> None:
         """
         Validate CSV column configuration for loading hydro units.
@@ -179,28 +182,28 @@ class HydroUnits:
             If column_fractions is provided (not yet implemented).
         """
         # Check for required ID column
-        if 'id' not in file_content.columns:
+        if "id" not in file_content.columns:
             raise DataError(
                 'The "id" column is required in the file.',
-                data_type='hydro units',
-                reason='Missing required column'
+                data_type="hydro units",
+                reason="Missing required column",
             )
 
         # Check for required elevation column (if no custom column name is provided)
-        if column_elevation is None and 'elevation' not in file_content.columns:
+        if column_elevation is None and "elevation" not in file_content.columns:
             raise DataError(
                 'The "elevation" column is required in the file.',
-                data_type='hydro units',
-                reason='Missing required column'
+                data_type="hydro units",
+                reason="Missing required column",
             )
 
         # Validate area column configuration
         if column_area is not None and columns_areas is not None:
             raise DataError(
                 'The "column_area" and "columns_areas" cannot be '
-                'provided at the same time.',
-                data_type='hydro units',
-                reason='Ambiguous column specification'
+                "provided at the same time.",
+                data_type="hydro units",
+                reason="Ambiguous column specification",
             )
 
         # Check for unimplemented feature
@@ -218,13 +221,11 @@ class HydroUnits:
         file_content
             DataFrame loaded from CSV with multi-level column headers.
         """
-        vals, _ = self._get_column_values_unit('id', file_content)
-        self.add_property(('id', '-'), vals, set_first=True)
+        vals, _ = self._get_column_values_unit("id", file_content)
+        self.add_property(("id", "-"), vals, set_first=True)
 
     def _load_elevation_column(
-            self,
-            file_content: pd.DataFrame,
-            column_elevation: str | None
+        self, file_content: pd.DataFrame, column_elevation: str | None
     ) -> None:
         """
         Load elevation data from CSV file content.
@@ -239,14 +240,14 @@ class HydroUnits:
         if column_elevation is not None:
             vals, unit = self._get_column_values_unit(column_elevation, file_content)
         else:
-            vals, unit = self._get_column_values_unit('elevation', file_content)
-        self.add_property(('elevation', unit), vals)
+            vals, unit = self._get_column_values_unit("elevation", file_content)
+        self.add_property(("elevation", unit), vals)
 
     def _load_area_data(
-            self,
-            file_content: pd.DataFrame,
-            column_area: str | None,
-            columns_areas: dict[str, str] | None
+        self,
+        file_content: pd.DataFrame,
+        column_area: str | None,
+        columns_areas: dict[str, str] | None,
     ) -> None:
         """
         Load area data, either as a single total area or per-land-cover areas.
@@ -266,9 +267,7 @@ class HydroUnits:
             self._load_single_area(file_content, column_area)
 
     def _load_single_area(
-            self,
-            file_content: pd.DataFrame,
-            column_area: str | None
+        self, file_content: pd.DataFrame, column_area: str | None
     ) -> None:
         """
         Load a single area column and set ground land cover to 100%.
@@ -282,25 +281,23 @@ class HydroUnits:
         """
         if column_area is not None:
             vals, unit = self._get_column_values_unit(column_area, file_content)
-        elif 'area' in file_content.columns:
-            vals, unit = self._get_column_values_unit('area', file_content)
+        elif "area" in file_content.columns:
+            vals, unit = self._get_column_values_unit("area", file_content)
         else:
             raise DataError(
                 'The "area" column is required in the file.',
-                data_type='hydro units',
-                reason='Missing required column'
+                data_type="hydro units",
+                reason="Missing required column",
             )
 
-        self.add_property(('area', unit), vals)
+        self.add_property(("area", unit), vals)
 
         # Set ground land cover to 100%
-        idx = self.prefix_fraction + 'ground'
-        self.hydro_units[idx] = np.ones(len(self.hydro_units[('area', unit)]))
+        idx = self.prefix_fraction + "ground"
+        self.hydro_units[idx] = np.ones(len(self.hydro_units[("area", unit)]))
 
     def _load_land_cover_areas(
-            self,
-            file_content: pd.DataFrame,
-            columns_areas: dict[str, str]
+        self, file_content: pd.DataFrame, columns_areas: dict[str, str]
     ) -> None:
         """
         Load per-land-cover area columns and compute total area and fractions.
@@ -329,17 +326,15 @@ class HydroUnits:
                 area_unit = area_unit_idx
             elif area_unit != area_unit_idx:
                 raise DataError(
-                    'The area units do not match.',
-                    data_type='hydro units',
-                    reason='Inconsistent units across land covers'
+                    "The area units do not match.",
+                    data_type="hydro units",
+                    reason="Inconsistent units across land covers",
                 )
 
         self._compute_area_portions(area_values, area_unit)
 
     def _load_other_columns(
-            self,
-            file_content: pd.DataFrame,
-            other_columns: dict[str, str] | None
+        self, file_content: pd.DataFrame, other_columns: dict[str, str] | None
     ) -> None:
         """
         Load additional property columns from CSV file.
@@ -363,16 +358,13 @@ class HydroUnits:
         Updates the hydro_units DataFrame by replacing the area column
         with converted values in m².
         """
-        if get_unit_from_df_column(self.hydro_units['area']) != Unit.M2:
-            new_area = convert_unit_df(self.hydro_units['area'], Unit.M2)
-            area_idx = self.hydro_units.columns.get_loc('area')
+        if get_unit_from_df_column(self.hydro_units["area"]) != Unit.M2:
+            new_area = convert_unit_df(self.hydro_units["area"], Unit.M2)
+            area_idx = self.hydro_units.columns.get_loc("area")
             self.hydro_units.drop(
-                self.hydro_units.columns[area_idx],
-                axis=1,
-                inplace=True
+                self.hydro_units.columns[area_idx], axis=1, inplace=True
             )
-            self.hydro_units[('area', 'm2')] = new_area
-
+            self.hydro_units[("area", "m2")] = new_area
 
     def save_to_csv(self, path: str | Path) -> None:
         """
@@ -394,8 +386,8 @@ class HydroUnits:
         if self.hydro_units is None:
             raise DataError(
                 "No hydro units to save.",
-                data_type='hydro units',
-                reason='Empty hydro units'
+                data_type="hydro units",
+                reason="Empty hydro units",
             )
 
         # Save to csv file with units in the header
@@ -421,38 +413,38 @@ class HydroUnits:
         """
         if not HAS_NETCDF:
             raise DependencyError(
-                'netcdf4 is required to save hydro units to file.',
-                package_name='netcdf4',
-                operation='HydroUnits.save_as',
-                install_command='pip install netcdf4'
+                "netcdf4 is required to save hydro units to file.",
+                package_name="netcdf4",
+                operation="HydroUnits.save_as",
+                install_command="pip install netcdf4",
             )
 
         # Create netCDF file
-        nc = Dataset(path, 'w', 'NETCDF4')
+        nc = Dataset(path, "w", "NETCDF4")
 
         # Global attributes
         nc.version = 1.0
         nc.land_cover_names = self.land_cover_names
 
         # Dimensions
-        nc.createDimension('hydro_units', len(self.hydro_units))
+        nc.createDimension("hydro_units", len(self.hydro_units))
 
         # Variables
-        var_id = nc.createVariable('id', 'int', ('hydro_units',))
-        var_id[:] = self.hydro_units['id']
+        var_id = nc.createVariable("id", "int", ("hydro_units",))
+        var_id[:] = self.hydro_units["id"]
 
-        var_area = nc.createVariable('area', 'float32', ('hydro_units',))
-        var_area[:] = self.hydro_units['area']
-        var_area.units = 'm2'
+        var_area = nc.createVariable("area", "float32", ("hydro_units",))
+        var_area[:] = self.hydro_units["area"]
+        var_area.units = "m2"
 
-        var_elevation = nc.createVariable('elevation', 'float32', ('hydro_units',))
-        var_elevation[:] = self.hydro_units['elevation']
-        var_elevation.units = 'm'
+        var_elevation = nc.createVariable("elevation", "float32", ("hydro_units",))
+        var_elevation[:] = self.hydro_units["elevation"]
+        var_elevation.units = "m"
 
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
-            var_cover = nc.createVariable(cover_name, 'float32', ('hydro_units',))
+            var_cover = nc.createVariable(cover_name, "float32", ("hydro_units",))
             var_cover[:] = self.hydro_units[self.prefix_fraction + cover_name]
-            var_cover.units = 'fraction'
+            var_cover.units = "fraction"
             var_cover.type = cover_type
 
         nc.close()
@@ -464,7 +456,8 @@ class HydroUnits:
         Parameters
         ----------
         prop
-            The property name to check. Should match a column name in the hydro_units DataFrame.
+            The property name to check. Should match a column name in the
+            hydro_units DataFrame.
 
         Returns
         -------
@@ -477,13 +470,10 @@ class HydroUnits:
         """
         Get the hydro unit ids.
         """
-        return self.hydro_units['id']
+        return self.hydro_units["id"]
 
     def add_property(
-            self,
-            column_tuple: tuple[str, str],
-            values: np.ndarray,
-            set_first: bool = False
+        self, column_tuple: tuple[str, str], values: np.ndarray, set_first: bool = False
     ) -> None:
         """
         Add a property to the hydro units.
@@ -505,8 +495,12 @@ class HydroUnits:
         ValueError
             If values length doesn't match the number of hydro units.
         """
-        df = pd.DataFrame(values, columns=pd.MultiIndex.from_tuples(
-            [column_tuple], names=['Property', 'Unit']))
+        df = pd.DataFrame(
+            values,
+            columns=pd.MultiIndex.from_tuples(
+                [column_tuple], names=["Property", "Unit"]
+            ),
+        )
 
         if self.hydro_units is None:
             self.hydro_units = df
@@ -530,13 +524,15 @@ class HydroUnits:
         """
         Check that the land cover fractions are not empty.
 
-        Validates that all land cover fractions have been defined. If there is a single
-        land cover type (e.g. 'ground'), automatically sets it to 1.0 for all hydro units.
+        Validates that all land cover fractions have been defined.
+        If there is a single land cover type (e.g. 'ground'),
+        automatically sets it to 1.0 for all hydro units.
 
         Raises
         ------
         ValueError
-            If any land cover fraction contains NaN values (when multiple land cover types exist).
+            If any land cover fraction contains NaN values
+            (when multiple land cover types exist).
         """
         if len(self.land_cover_names) == 1:
             self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1.0
@@ -547,33 +543,34 @@ class HydroUnits:
             if self.hydro_units[field_name].isnull().values.any():
                 raise DataError(
                     f'The land cover "{cover_name}" contains NaN values.',
-                    data_type='land cover',
-                    reason='Invalid data with NaN values'
+                    data_type="land cover",
+                    reason="Invalid data with NaN values",
                 )
 
     def initialize_land_cover_fractions(self) -> None:
         """
         Initialize land cover fractions with default values.
 
-        Sets the land cover fractions of 'ground' to 1.0 and all other land cover types to 0.0
-        for all hydro units. Used as a starting point before applying specific land cover changes.
+        Sets the land cover fractions of 'ground' to 1.0 and all other land cover
+        types to 0.0 for all hydro units. Used as a starting point before applying
+        specific land cover changes.
         """
         # Set the land cover fractions of 'ground' to 1 and the rest to 0
         for cover_name in self.land_cover_names:
             field_name = self.prefix_fraction + cover_name
-            self.hydro_units[(field_name, 'fraction')] = 0.0
-        self.hydro_units[(self.prefix_fraction + 'ground', 'fraction')] = 1.0
+            self.hydro_units[(field_name, "fraction")] = 0.0
+        self.hydro_units[(self.prefix_fraction + "ground", "fraction")] = 1.0
 
     def initialize_from_land_cover_change(
-            self,
-            land_cover_name: str,
-            land_cover_change: pd.DataFrame
+        self, land_cover_name: str, land_cover_change: pd.DataFrame
     ) -> None:
         """
-        Initialize the hydro units from the first values of a land cover change dataframe.
+        Initialize the hydro units from the first values of a land cover
+        change dataframe.
 
-        Updates the land cover fractions for specified hydro units based on a land cover change
-        dataframe. Automatically adjusts the 'ground' land cover fraction to maintain conservation.
+        Updates the land cover fractions for specified hydro units based on a
+        land cover change dataframe. Automatically adjusts the 'ground' land cover
+        fraction to maintain conservation.
 
         Parameters
         ----------
@@ -589,29 +586,29 @@ class HydroUnits:
         """
         # Land cover fraction column name
         field_name = self.prefix_fraction + land_cover_name
-        ground_name = self.prefix_fraction + 'ground'
+        ground_name = self.prefix_fraction + "ground"
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
         for _, row in land_cover_change.iterrows():
-            id = row['hydro_unit']
+            id = row["hydro_unit"]
             land_cover_area = row.iloc[1]
 
             # Get the hydro unit row
-            hu_idx = self.hydro_units[self.hydro_units[('id', '-')] == id].index[0]
-            hu_area = self.hydro_units.loc[hu_idx, ('area', 'm2')]
+            hu_idx = self.hydro_units[self.hydro_units[("id", "-")] == id].index[0]
+            hu_area = self.hydro_units.loc[hu_idx, ("area", "m2")]
 
             # Compute the land cover fraction
             fraction = land_cover_area / hu_area
             if not 0 <= fraction <= 1:
                 raise DataError(
-                    f'Land cover fraction {fraction} for unit {id} is outside [0, 1].',
-                    data_type='land cover fraction',
-                    reason='Fraction outside valid range'
+                    f"Land cover fraction {fraction} for unit {id} is outside [0, 1].",
+                    data_type="land cover fraction",
+                    reason="Fraction outside valid range",
                 )
 
             # Set the land cover fraction
-            self.hydro_units.loc[hu_idx, (field_name, 'fraction')] = fraction
-            self.hydro_units.loc[hu_idx, (ground_name, 'fraction')] -= fraction
+            self.hydro_units.loc[hu_idx, (field_name, "fraction")] = fraction
+            self.hydro_units.loc[hu_idx, (ground_name, "fraction")] -= fraction
 
         self.populate_bounded_instance()
 
@@ -628,41 +625,33 @@ class HydroUnits:
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():
-            if prop[0] in ['id', 'area', 'elevation']:
+            if prop[0] in ["id", "area", "elevation"]:
                 continue
-            if 'fraction-' in prop[0]:
+            if "fraction-" in prop[0]:
                 continue
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
         hydro_units = self.hydro_units.copy()
-        hydro_units.sort_values(
-            by=('elevation', 'm'),
-            ascending=False,
-            inplace=True
-        )
+        hydro_units.sort_values(by=("elevation", "m"), ascending=False, inplace=True)
 
         for _, row in hydro_units.iterrows():
             self.settings.add_hydro_unit(
-                int(row['id'].values[0]),
-                float(row['area'].values[0]),
-                float(row['elevation'].values[0])
+                int(row["id"].values[0]),
+                float(row["area"].values[0]),
+                float(row["elevation"].values[0]),
             )
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
-                    self.settings.add_hydro_unit_property_str(
-                        prop,
-                        row[prop].values[0]
-                    )
+                    self.settings.add_hydro_unit_property_str(prop, row[prop].values[0])
                 else:
                     unit = self._get_unit(row[prop])
                     self.settings.add_hydro_unit_property_double(
-                        prop,
-                        float(row[prop].values[0]),
-                        unit
+                        prop, float(row[prop].values[0]), unit
                     )
-            for cover_type, cover_name in zip(self.land_cover_types,
-                                              self.land_cover_names):
+            for cover_type, cover_name in zip(
+                self.land_cover_types, self.land_cover_names
+            ):
                 fraction = float(row[self.prefix_fraction + cover_name].values[0])
                 if np.isnan(fraction):
                     fraction = 0.0
@@ -674,7 +663,8 @@ class HydroUnits:
         Set the connectivity of the hydro units.
 
         Configures how water flows between hydro units by setting lateral connections
-        with specified ratios. Can accept connectivity data as a DataFrame or load from file.
+        with specified ratios. Can accept connectivity data as a DataFrame
+        or load from file.
 
         Parameters
         ----------
@@ -694,30 +684,30 @@ class HydroUnits:
 
         if not isinstance(connectivity, pd.DataFrame):
             raise DataError(
-                'The connectivity must be a pandas DataFrame.',
-                data_type='connectivity',
-                reason='Invalid data type'
+                "The connectivity must be a pandas DataFrame.",
+                data_type="connectivity",
+                reason="Invalid data type",
             )
 
-        if not all(col in connectivity.columns for col in ['id', 'connectivity']):
+        if not all(col in connectivity.columns for col in ["id", "connectivity"]):
             raise DataError(
                 'The connectivity DataFrame must contain "id" '
                 'and "connectivity" columns.',
-                data_type='connectivity',
-                reason='Missing required columns'
+                data_type="connectivity",
+                reason="Missing required columns",
             )
 
         # Loop through the rows and set the connectivity to the basin settings
         for _, row in connectivity.iterrows():
-            if isinstance(row['id'], pd.Series):
-                hydro_unit_id = int(row['id'].iloc[0])
+            if isinstance(row["id"], pd.Series):
+                hydro_unit_id = int(row["id"].iloc[0])
             else:
-                hydro_unit_id = int(row['id'])
+                hydro_unit_id = int(row["id"])
 
-            if isinstance(row['connectivity'], pd.Series):
-                connectivity_val = row[('connectivity', '-')]
+            if isinstance(row["connectivity"], pd.Series):
+                connectivity_val = row[("connectivity", "-")]
             else:
-                connectivity_val = row['connectivity']
+                connectivity_val = row["connectivity"]
 
             if isinstance(connectivity_val, str):
                 connectivity_val = ast.literal_eval(connectivity_val)
@@ -732,52 +722,53 @@ class HydroUnits:
             total_ratio = sum(connected_units.values())
             if not np.isclose(total_ratio, 1.0):
                 raise DataError(
-                    f'The sum of connectivity ratios for hydro unit {hydro_unit_id} '
-                    f'is {total_ratio}, which is not equal to 1.',
-                    data_type='connectivity',
-                    reason='Invalid connectivity ratios sum'
+                    f"The sum of connectivity ratios for hydro unit {hydro_unit_id} "
+                    f"is {total_ratio}, which is not equal to 1.",
+                    data_type="connectivity",
+                    reason="Invalid connectivity ratios sum",
                 )
 
             for connected_unit_id, ratio in connected_units.items():
                 if connected_unit_id == hydro_unit_id:
                     raise DataError(
-                        f'Hydro unit {hydro_unit_id} cannot be connected to itself.',
-                        data_type='connectivity',
-                        reason='Self-connection not allowed'
+                        f"Hydro unit {hydro_unit_id} cannot be connected to itself.",
+                        data_type="connectivity",
+                        reason="Self-connection not allowed",
                     )
                 if ratio < 0:
                     raise DataError(
-                        f'Negative connectivity ratio {ratio} for hydro unit '
-                        f'{hydro_unit_id} and connected unit {connected_unit_id}.',
-                        data_type='connectivity',
-                        reason='Negative connectivity ratio'
+                        f"Negative connectivity ratio {ratio} for hydro unit "
+                        f"{hydro_unit_id} and connected unit {connected_unit_id}.",
+                        data_type="connectivity",
+                        reason="Negative connectivity ratio",
                     )
                 elif ratio > 1:
                     raise DataError(
-                        f'Connectivity ratio {ratio} for hydro unit '
-                        f'{hydro_unit_id} and connected unit '
-                        f'{connected_unit_id} cannot be greater than 1.',
-                        data_type='connectivity',
-                        reason='Ratio exceeds maximum value'
+                        f"Connectivity ratio {ratio} for hydro unit "
+                        f"{hydro_unit_id} and connected unit "
+                        f"{connected_unit_id} cannot be greater than 1.",
+                        data_type="connectivity",
+                        reason="Ratio exceeds maximum value",
                     )
 
-                if hydro_unit_id not in self.hydro_units[('id', '-')].values:
+                if hydro_unit_id not in self.hydro_units[("id", "-")].values:
                     raise DataError(
-                        f'Hydro unit {hydro_unit_id} not found in hydro units.',
-                        data_type='connectivity',
-                        reason='Undefined hydro unit'
+                        f"Hydro unit {hydro_unit_id} not found in hydro units.",
+                        data_type="connectivity",
+                        reason="Undefined hydro unit",
                     )
-                if connected_unit_id not in self.hydro_units[('id', '-')].values:
+                if connected_unit_id not in self.hydro_units[("id", "-")].values:
                     raise DataError(
-                        f'Connected hydro unit {connected_unit_id} '
-                        f'not found in hydro units.',
-                        data_type='connectivity',
-                        reason='Undefined connected hydro unit'
+                        f"Connected hydro unit {connected_unit_id} "
+                        f"not found in hydro units.",
+                        data_type="connectivity",
+                        reason="Undefined connected hydro unit",
                     )
 
                 # Add the connectivity to the settings
                 self.settings.add_lateral_connection(
-                    hydro_unit_id, connected_unit_id, ratio)
+                    hydro_unit_id, connected_unit_id, ratio
+                )
 
     @staticmethod
     def _check_column_names(file_content: pd.DataFrame) -> None:
@@ -800,19 +791,18 @@ class HydroUnits:
         new_column_names = []
         for i, col in enumerate(file_content.columns):
             name = col[0]
-            if name is None or name in ['-', '', ' '] or 'Unnamed' in name:
-                name = f'{i}'
+            if name is None or name in ["-", "", " "] or "Unnamed" in name:
+                name = f"{i}"
             unit = str(get_unit_enum(col[1]))
-            if unit == 'no_unit':
-                unit = '-'
+            if unit == "no_unit":
+                unit = "-"
             new_column_names.append((name, unit))
 
         file_content.columns = pd.MultiIndex.from_tuples(new_column_names)
 
     @staticmethod
     def _get_column_values_unit(
-            column_name: str,
-            df: pd.DataFrame
+        column_name: str, df: pd.DataFrame
     ) -> tuple[np.ndarray, str]:
         """
         Extract column values and unit from a DataFrame with multi-level columns.
@@ -843,7 +833,8 @@ class HydroUnits:
         Parameters
         ----------
         prop
-            Pandas Series with multi-level index where the first level is the unit string.
+            Pandas Series with multi-level index where the first level is
+            the unit string.
 
         Returns
         -------
@@ -870,24 +861,20 @@ class HydroUnits:
         if len(columns_areas) != len(self.land_cover_names):
             raise DataError(
                 'The length of the provided "columns_areas" does not match '
-                f'the number of land covers ({len(self.land_cover_names)}).',
-                data_type='land cover',
-                reason='Mismatched land cover count'
+                f"the number of land covers ({len(self.land_cover_names)}).",
+                data_type="land cover",
+                reason="Mismatched land cover count",
             )
         for col in columns_areas:
             if col not in self.land_cover_names:
                 raise DataError(
                     f'The land cover "{col}" was not found in the '
-                    f'defined land covers.',
-                    data_type='land cover',
-                    reason='Undefined land cover'
+                    f"defined land covers.",
+                    data_type="land cover",
+                    reason="Undefined land cover",
                 )
 
-    def _compute_area_portions(
-            self,
-            area_values: np.ndarray,
-            area_unit: str
-    ) -> None:
+    def _compute_area_portions(self, area_values: np.ndarray, area_unit: str) -> None:
         """
         Compute and store land cover area portions for hydro units.
 
@@ -909,10 +896,10 @@ class HydroUnits:
         fractions = area_values / area[:, None]
 
         # Insert the results in the dataframe
-        self.hydro_units[('area', area_unit)] = area
+        self.hydro_units[("area", area_unit)] = area
         for idx, cover_name in enumerate(self.land_cover_names):
             field_name = self.prefix_fraction + cover_name
-            self.hydro_units[(field_name, 'fraction')] = fractions[:, idx]
+            self.hydro_units[(field_name, "fraction")] = fractions[:, idx]
 
     def _set_units_data(self, data: pd.DataFrame) -> None:
         """
@@ -933,21 +920,20 @@ class HydroUnits:
             If required columns ('area', 'elevation') are missing.
         """
         assert isinstance(data, pd.DataFrame)
-        assert 'area' in data.columns
-        assert 'elevation' in data.columns
+        assert "area" in data.columns
+        assert "elevation" in data.columns
 
-        if 'id' not in data.columns:
-            data['id'] = range(1, 1 + len(data))
+        if "id" not in data.columns:
+            data["id"] = range(1, 1 + len(data))
 
         self.hydro_units = data
-        idx = self.prefix_fraction + 'ground'
-        self.hydro_units[idx] = np.ones(len(self.hydro_units['area']))
+        idx = self.prefix_fraction + "ground"
+        self.hydro_units[idx] = np.ones(len(self.hydro_units["area"]))
         self.populate_bounded_instance()
 
     @staticmethod
     def _check_land_cover_definitions(
-            land_cover_types: list[str] | None,
-            land_cover_names: list[str] | None
+        land_cover_types: list[str] | None, land_cover_names: list[str] | None
     ) -> None:
         """
         Validate land cover types and names consistency.
@@ -972,14 +958,14 @@ class HydroUnits:
 
         if land_cover_names is None or land_cover_types is None:
             raise DataError(
-                'The land cover name or type is undefined.',
-                data_type='land cover',
-                reason='Missing land cover specification'
+                "The land cover name or type is undefined.",
+                data_type="land cover",
+                reason="Missing land cover specification",
             )
 
         if len(land_cover_names) != len(land_cover_types):
             raise DataError(
-                'The length of the land cover types & names do not match.',
-                data_type='land cover',
-                reason='Mismatched types and names'
+                "The length of the land cover types & names do not match.",
+                data_type="land cover",
+                reason="Mismatched types and names",
             )

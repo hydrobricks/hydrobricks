@@ -9,6 +9,7 @@ granularity for error handling without overwhelming users with too many choices.
 """
 
 from __future__ import annotations
+
 from typing import Any
 
 
@@ -28,6 +29,7 @@ class HydroBricksError(Exception):
     ...     # Catches any hydrobricks-specific error
     ...     print(f"HydroBricks error: {e}")
     """
+
     pass
 
 
@@ -58,12 +60,9 @@ class DataError(HydroBricksError):
     """
 
     def __init__(
-            self,
-            message: str,
-            data_type: str | None = None,
-            reason: str | None = None
+        self, message: str, data_type: str | None = None, reason: str | None = None
     ):
-        super().__init__(message)
+        super().__init__(message, data_type, reason)
         self.data_type = data_type
         self.reason = reason
 
@@ -98,13 +97,13 @@ class ConfigurationError(HydroBricksError):
     """
 
     def __init__(
-            self,
-            message: str,
-            item_name: str | None = None,
-            item_value: Any = None,
-            reason: str | None = None
+        self,
+        message: str,
+        item_name: str | None = None,
+        item_value: Any = None,
+        reason: str | None = None,
     ):
-        super().__init__(message)
+        super().__init__(message, item_name, item_value, reason)
         self.item_name = item_name
         self.item_value = item_value
         self.reason = reason
@@ -133,12 +132,8 @@ class ModelError(HydroBricksError):
     ... )
     """
 
-    def __init__(
-            self,
-            message: str,
-            is_initialized: bool | None = None
-    ):
-        super().__init__(message)
+    def __init__(self, message: str, is_initialized: bool | None = None):
+        super().__init__(message, is_initialized)
         self.is_initialized = is_initialized
 
 
@@ -169,12 +164,9 @@ class ForcingError(HydroBricksError):
     """
 
     def __init__(
-            self,
-            message: str,
-            variable: str | None = None,
-            method: str | None = None
+        self, message: str, variable: str | None = None, method: str | None = None
     ):
-        super().__init__(message)
+        super().__init__(message, variable, method)
         self.variable = variable
         self.method = method
 
@@ -205,13 +197,13 @@ class DependencyError(HydroBricksError):
     """
 
     def __init__(
-            self,
-            message: str,
-            package_name: str | None = None,
-            operation: str | None = None,
-            install_command: str | None = None
+        self,
+        message: str,
+        package_name: str | None = None,
+        operation: str | None = None,
+        install_command: str | None = None,
     ):
-        super().__init__(message)
+        super().__init__(message, package_name, operation, install_command)
         self.package_name = package_name
         self.operation = operation
         self.install_command = install_command

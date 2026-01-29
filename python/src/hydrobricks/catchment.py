@@ -9,16 +9,16 @@ from typing import Any, Callable, TypeVar
 import numpy as np
 import pandas as pd
 
+from hydrobricks import gpd, pyproj, rasterio, shapely
+from hydrobricks._exceptions import ConfigurationError, DataError
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._utils import compute_area
+from hydrobricks.hydro_units import HydroUnits
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
-
-from hydrobricks import rasterio, pyproj, shapely, gpd
-from hydrobricks._optional import HAS_SHAPELY, HAS_RASTERIO, HAS_GEOPANDAS, HAS_PYPROJ
-from hydrobricks._exceptions import DataError, ConfigurationError
-from hydrobricks._utils import compute_area
-from hydrobricks.hydro_units import HydroUnits
 
 if HAS_SHAPELY:
     from shapely.geometry import mapping
@@ -27,7 +27,7 @@ if HAS_RASTERIO:
     from rasterio.mask import mask
 
 # Type variable for lazy property decorator
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def lazy_property(func: Callable[..., T]) -> Callable[..., T]:
@@ -54,7 +54,7 @@ def lazy_property(func: Callable[..., T]) -> Callable[..., T]:
     ... def topography(self) -> CatchmentTopography:
     ...     return CatchmentTopography(self)
     """
-    cache_attr = f'_{func.__name__}'
+    cache_attr = f"_{func.__name__}"
 
     @wraps(func)
     def wrapper(self) -> T:
@@ -105,11 +105,11 @@ class Catchment:
     """
 
     def __init__(
-            self,
-            outline: str | Path | None = None,
-            land_cover_types: list[str] | None = None,
-            land_cover_names: list[str] | None = None,
-            hydro_units_data: pd.DataFrame | None = None
+        self,
+        outline: str | Path | None = None,
+        land_cover_types: list[str] | None = None,
+        land_cover_names: list[str] | None = None,
+        hydro_units_data: pd.DataFrame | None = None,
     ) -> None:
         # Check that the required packages are installed
         if not HAS_RASTERIO:
@@ -123,8 +123,8 @@ class Catchment:
         if outline is not None and not Path(outline).is_file():
             raise DataError(
                 f"File {outline} does not exist.",
-                data_type='catchment outline file',
-                reason='File not found'
+                data_type="catchment outline file",
+                reason="File not found",
             )
 
         self.area: float | None = None
@@ -135,9 +135,7 @@ class Catchment:
         self.attributes: dict[str, dict] = {}
         self.map_unit_ids: np.ndarray | None = None
         self.hydro_units: HydroUnits = HydroUnits(
-            land_cover_types,
-            land_cover_names,
-            hydro_units_data
+            land_cover_types, land_cover_names, hydro_units_data
         )
 
         self._extract_outline(outline)
@@ -189,13 +187,19 @@ class Catchment:
         if isinstance(self.attributes, dict):
             for attr_name, entry in self.attributes.items():
                 try:
-                    if (isinstance(entry, dict) and 'memfile' in entry
-                            and entry['memfile'] is not None):
-                        entry['memfile'].close()
-                        entry['memfile'] = None
+                    if (
+                        isinstance(entry, dict)
+                        and "memfile" in entry
+                        and entry["memfile"] is not None
+                    ):
+                        entry["memfile"].close()
+                        entry["memfile"] = None
                 except (OSError, ValueError, AttributeError) as e:
-                    logger.warning(f"Error closing MemoryFile for attribute "
-                                   f"'{attr_name}': {e}", exc_info=True)
+                    logger.warning(
+                        f"Error closing MemoryFile for attribute "
+                        f"'{attr_name}': {e}",
+                        exc_info=True,
+                    )
 
     def __del__(self) -> None:
         """Fallback cleanup when object is garbage collected."""
@@ -215,6 +219,7 @@ class Catchment:
             Topography processor for the catchment, loaded on first access.
         """
         from hydrobricks.preprocessing import CatchmentTopography
+
         return CatchmentTopography(self)
 
     @lazy_property
@@ -228,6 +233,7 @@ class Catchment:
             Discretization processor for the catchment, loaded on first access.
         """
         from hydrobricks.preprocessing import CatchmentDiscretization
+
         return CatchmentDiscretization(self)
 
     @lazy_property
@@ -241,6 +247,7 @@ class Catchment:
             Connectivity processor for the catchment, loaded on first access.
         """
         from hydrobricks.preprocessing import CatchmentConnectivity
+
         return CatchmentConnectivity(self)
 
     @lazy_property
@@ -254,6 +261,7 @@ class Catchment:
             Solar radiation processor for the catchment, loaded on first access.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation(self)
 
     def extract_dem(self, raster_path: str | Path) -> bool:
@@ -282,12 +290,12 @@ class Catchment:
         return True
 
     def extract_attribute_raster(
-            self,
-            raster_path: str | Path,
-            attr_name: str,
-            resample_to_dem_resolution: bool = True,
-            resampling: str = 'average',
-            replace_nans_by_zeros: bool = True
+        self,
+        raster_path: str | Path,
+        attr_name: str,
+        resample_to_dem_resolution: bool = True,
+        resampling: str = "average",
+        replace_nans_by_zeros: bool = True,
     ) -> bool:
         """
         Extract spatial attributes (raster) for the catchment.
@@ -332,42 +340,42 @@ class Catchment:
 
         if resample_to_dem_resolution:
             memfile = None
-            if resampling == 'nearest':
+            if resampling == "nearest":
                 resampling_id = 0
-            elif resampling == 'bilinear':
+            elif resampling == "bilinear":
                 resampling_id = 1
-            elif resampling == 'cubic':
+            elif resampling == "cubic":
                 resampling_id = 2
-            elif resampling == 'cubic_spline':
+            elif resampling == "cubic_spline":
                 resampling_id = 3
-            elif resampling == 'lanczos':
+            elif resampling == "lanczos":
                 resampling_id = 4
-            elif resampling == 'average':
+            elif resampling == "average":
                 resampling_id = 5
-            elif resampling == 'mode':
+            elif resampling == "mode":
                 resampling_id = 6
-            elif resampling == 'gauss':
+            elif resampling == "gauss":
                 resampling_id = 7
-            elif resampling == 'max':
+            elif resampling == "max":
                 resampling_id = 8
-            elif resampling == 'min':
+            elif resampling == "min":
                 resampling_id = 9
-            elif resampling == 'med':
+            elif resampling == "med":
                 resampling_id = 10
-            elif resampling == 'q1':
+            elif resampling == "q1":
                 resampling_id = 11
-            elif resampling == 'q3':
+            elif resampling == "q3":
                 resampling_id = 12
-            elif resampling == 'sum':
+            elif resampling == "sum":
                 resampling_id = 13
-            elif resampling == 'rms':
+            elif resampling == "rms":
                 resampling_id = 14
             else:
                 raise ConfigurationError(
                     f"Unknown resampling method: {resampling}",
-                    item_name='resampling',
+                    item_name="resampling",
                     item_value=resampling,
-                    reason='Unknown method'
+                    reason="Unknown method",
                 )
 
             # Resample the attribute to the DEM resolution
@@ -375,8 +383,8 @@ class Catchment:
             if self.dem is None or self.dem_data is None:
                 raise DataError(
                     "DEM must be loaded before resampling an attribute raster.",
-                    data_type='DEM',
-                    reason='DEM not loaded'
+                    data_type="DEM",
+                    reason="DEM not loaded",
                 )
 
             # Allocate a fresh destination buffer so we don't overwrite self.dem_data
@@ -388,20 +396,20 @@ class Catchment:
                 dst_transform=self.dem.transform,
                 src_crs=src.crs,
                 dst_crs=self.dem.crs,
-                resampling=resampling_id
+                resampling=resampling_id,
             )
             data = dest
 
             # Create a MemoryFile to store the reprojected data and keep it open
             memfile = rasterio.io.MemoryFile()
             dataset = memfile.open(
-                driver='GTiff',
+                driver="GTiff",
                 height=data.shape[0],
                 width=data.shape[1],
                 count=1,
                 dtype=data.dtype,
                 crs=self.dem.crs,
-                transform=self.dem.transform
+                transform=self.dem.transform,
             )
             try:
                 dataset.write(data, 1)
@@ -413,18 +421,22 @@ class Catchment:
                 try:
                     dataset.close()
                 except (OSError, ValueError, AttributeError):
-                    logger.debug("Could not close dataset during error cleanup", exc_info=True)
+                    logger.debug(
+                        "Could not close dataset during error cleanup", exc_info=True
+                    )
                 try:
                     memfile.close()
                 except (OSError, ValueError, AttributeError):
-                    logger.debug("Could not close memfile during error cleanup", exc_info=True)
+                    logger.debug(
+                        "Could not close memfile during error cleanup", exc_info=True
+                    )
                 logger.error(f"Error writing to MemoryFile: {e}", exc_info=True)
                 raise
 
         # Store the MemoryFile with the attribute so it stays alive (if created)
         entry = {"src": src, "data": data}
         if memfile is not None:
-            entry['memfile'] = memfile
+            entry["memfile"] = memfile
 
         self.attributes[attr_name] = entry
 
@@ -441,8 +453,8 @@ class Catchment:
         if self.hydro_units is None:
             raise DataError(
                 "No hydro units to count.",
-                data_type='hydro units',
-                reason='Not initialized'
+                data_type="hydro units",
+                reason="Not initialized",
             )
 
         return len(self.hydro_units.hydro_units)
@@ -458,8 +470,8 @@ class Catchment:
         if self.hydro_units is None:
             raise DataError(
                 "No hydro units to count.",
-                data_type='hydro units',
-                reason='Not initialized'
+                data_type="hydro units",
+                reason="Not initialized",
             )
 
         return self.hydro_units.hydro_units.elevation
@@ -478,12 +490,12 @@ class Catchment:
         if self.topography.slope is None or self.topography.aspect is None:
             self.topography.calculate_slope_aspect()
 
-        if 'id' not in self.hydro_units.hydro_units.columns:
+        if "id" not in self.hydro_units.hydro_units.columns:
             unit_ids = np.unique(self.map_unit_ids)
             unit_ids = unit_ids[unit_ids != 0]
-            self.hydro_units.add_property(('id', '-'), unit_ids, set_first=True)
+            self.hydro_units.add_property(("id", "-"), unit_ids, set_first=True)
         else:
-            unit_ids = self.hydro_units.hydro_units['id'].values.tolist()
+            unit_ids = self.hydro_units.hydro_units["id"].values.tolist()
 
         res_area = []
         res_elevation = []
@@ -504,14 +516,18 @@ class Catchment:
 
             # Compute the mean elevation of the unit
             res_elevation_mean.append(
-                self.topography.extract_unit_mean_elevation(mask_unit))
-            if not self.hydro_units.has('elevation'):
+                self.topography.extract_unit_mean_elevation(mask_unit)
+            )
+            if not self.hydro_units.has("elevation"):
                 res_elevation.append(
-                    self.topography.extract_unit_mean_elevation(mask_unit))
+                    self.topography.extract_unit_mean_elevation(mask_unit)
+                )
                 res_elevation_min.append(
-                    self.topography.extract_unit_min_elevation(mask_unit))
+                    self.topography.extract_unit_min_elevation(mask_unit)
+                )
                 res_elevation_max.append(
-                    self.topography.extract_unit_max_elevation(mask_unit))
+                    self.topography.extract_unit_max_elevation(mask_unit)
+                )
 
             # Compute the slope and aspect of the unit
             res_slope.append(self.topography.extract_unit_mean_slope(mask_unit))
@@ -522,17 +538,17 @@ class Catchment:
             res_lat.append(lat)
             res_lon.append(lon)
 
-        if not self.hydro_units.has('elevation'):
-            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
-            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
-            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
+        if not self.hydro_units.has("elevation"):
+            self.hydro_units.add_property(("elevation", "m"), res_elevation)
+            self.hydro_units.add_property(("elevation_min", "m"), res_elevation_min)
+            self.hydro_units.add_property(("elevation_max", "m"), res_elevation_max)
 
-        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation_mean)
-        self.hydro_units.add_property(('area', 'm2'), res_area)
-        self.hydro_units.add_property(('slope', 'deg'), res_slope)
-        self.hydro_units.add_property(('aspect', 'deg'), res_aspect)
-        self.hydro_units.add_property(('latitude', 'deg'), res_lat)
-        self.hydro_units.add_property(('longitude', 'deg'), res_lon)
+        self.hydro_units.add_property(("elevation_mean", "m"), res_elevation_mean)
+        self.hydro_units.add_property(("area", "m2"), res_area)
+        self.hydro_units.add_property(("slope", "deg"), res_slope)
+        self.hydro_units.add_property(("aspect", "deg"), res_aspect)
+        self.hydro_units.add_property(("latitude", "deg"), res_lat)
+        self.hydro_units.add_property(("longitude", "deg"), res_lon)
 
         self.hydro_units.check_land_cover_fractions_not_empty()
 
@@ -552,8 +568,8 @@ class Catchment:
         if self.hydro_units is None:
             raise DataError(
                 "No hydro units to save.",
-                data_type='hydro units',
-                reason='Not initialized'
+                data_type="hydro units",
+                reason="Not initialized",
             )
 
         self.hydro_units.save_to_csv(path)
@@ -573,9 +589,7 @@ class Catchment:
         self.hydro_units.load_from_csv(path)
 
     def save_unit_ids_raster(
-            self,
-            output_path: str | Path,
-            output_filename: str = 'unit_ids.tif'
+        self, output_path: str | Path, output_filename: str = "unit_ids.tif"
     ) -> None:
         """
         Save the unit ids raster to a file.
@@ -590,28 +604,21 @@ class Catchment:
         if self.map_unit_ids is None:
             raise DataError(
                 "No unit ids raster to save.",
-                data_type='unit ids raster',
-                reason='Not initialized'
+                data_type="unit ids raster",
+                reason="Not initialized",
             )
 
         full_path = Path(output_path) / output_filename
 
         # Create the profile
         profile = self.dem.profile
-        profile.update(
-            dtype=rasterio.uint16,
-            count=1,
-            compress='lzw',
-            nodata=0
-        )
+        profile.update(dtype=rasterio.uint16, count=1, compress="lzw", nodata=0)
 
-        with rasterio.open(full_path, 'w', **profile) as dst:
+        with rasterio.open(full_path, "w", **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
     def load_unit_ids_from_raster(
-            self,
-            path: str,
-            filename: str = 'unit_ids.tif'
+        self, path: str, filename: str = "unit_ids.tif"
     ) -> None:
         """
         Load hydro units from a raster file.
@@ -683,8 +690,8 @@ class Catchment:
         if attr_name not in self.attributes.keys():
             raise DataError(
                 f"Attribute raster {attr_name} not found.",
-                data_type='attribute raster',
-                reason='Not loaded'
+                data_type="attribute raster",
+                reason="Not loaded",
             )
 
         return abs(self.attributes[attr_name].src.transform[0])
@@ -705,8 +712,8 @@ class Catchment:
         if attr_name not in self.attributes.keys():
             raise DataError(
                 f"Attribute raster {attr_name} not found.",
-                data_type='attribute raster',
-                reason='Not loaded'
+                data_type="attribute raster",
+                reason="Not loaded",
             )
 
         return abs(self.attributes[attr_name].src.transform[4])
@@ -775,9 +782,7 @@ class Catchment:
         return shapely.geometry.box(x_min, y_min, x_max, y_max)
 
     def initialize_area_from_land_cover_change(
-            self,
-            land_cover_name: str,
-            land_cover_change: pd.DataFrame
+        self, land_cover_name: str, land_cover_change: pd.DataFrame
     ) -> None:
         """
         Initialize the HydroUnits cover area from a land cover change object.
@@ -792,21 +797,20 @@ class Catchment:
         if self.map_unit_ids is None:
             raise DataError(
                 "No hydro units to initialize.",
-                data_type='hydro units',
-                reason='Not initialized'
+                data_type="hydro units",
+                reason="Not initialized",
             )
 
-        if land_cover_name == 'ground':
+        if land_cover_name == "ground":
             raise ConfigurationError(
                 "You should not initialize the 'ground' land cover type.",
-                item_name='land_cover_name',
-                item_value='ground',
-                reason='Invalid land cover type'
+                item_name="land_cover_name",
+                item_value="ground",
+                reason="Invalid land cover type",
             )
 
         self.hydro_units.initialize_from_land_cover_change(
-            land_cover_name,
-            land_cover_change
+            land_cover_name, land_cover_change
         )
 
     def initialize_land_cover_fractions(self) -> None:
@@ -837,7 +841,7 @@ class Catchment:
         return self.topography.get_mean_elevation()
 
     def resample_dem_and_calculate_slope_aspect(
-            self, *args, **kwargs
+        self, *args, **kwargs
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Call the resample_dem_and_calculate_slope_aspect method of the Topography class.
@@ -875,6 +879,7 @@ class Catchment:
         Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
     def load_mean_annual_radiation_raster(self, *args, **kwargs) -> None:
@@ -899,6 +904,7 @@ class Catchment:
         Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
@@ -907,6 +913,7 @@ class Catchment:
         Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
@@ -915,6 +922,7 @@ class Catchment:
         Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
@@ -923,6 +931,7 @@ class Catchment:
         Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
@@ -931,6 +940,7 @@ class Catchment:
         Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
         from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit: np.ndarray) -> tuple[float, float]:
@@ -973,7 +983,8 @@ class Catchment:
         Parameters
         ----------
         outline
-            Path to shapefile containing catchment outline. If None, area is not computed.
+            Path to shapefile containing catchment outline.
+            If None, area is not computed.
         """
         # The outline has to be given in meters.
         if not outline:
@@ -992,7 +1003,8 @@ class Catchment:
         Parameters
         ----------
         outline
-            Path to shapefile containing catchment outline. If None, outline is not extracted.
+            Path to shapefile containing catchment outline.
+            If None, outline is not extracted.
         """
         if not outline:
             return
@@ -1002,8 +1014,7 @@ class Catchment:
         self.outline = geoms
 
     def _extract_raster(
-            self,
-            raster_path: str | Path
+        self, raster_path: str | Path
     ) -> tuple[rasterio.DatasetReader, np.ndarray]:
         """
         Extract raster data for the catchment. Does not handle change in coordinates.
@@ -1033,8 +1044,8 @@ class Catchment:
         if not Path(raster_path).is_file():
             raise DataError(
                 f"File {raster_path} does not exist.",
-                data_type='raster file',
-                reason='File not found'
+                data_type="raster file",
+                reason="File not found",
             )
 
         if not HAS_RASTERIO:
@@ -1081,8 +1092,8 @@ class Catchment:
             if self.crs != data_crs:
                 raise DataError(
                     "The CRS of the data does not match the CRS of the catchment.",
-                    data_type='CRS',
-                    reason='CRS mismatch'
+                    data_type="CRS",
+                    reason="CRS mismatch",
                 )
 
     @staticmethod
@@ -1112,7 +1123,6 @@ class Catchment:
         else:
             raise DataError(
                 "Unknown data format.",
-                data_type='data format',
-                reason='Unsupported type'
+                data_type="data format",
+                reason="Unsupported type",
             )
-

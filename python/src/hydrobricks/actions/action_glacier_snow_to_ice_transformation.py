@@ -15,10 +15,10 @@ class ActionGlacierSnowToIceTransformation(Action):
     """
 
     def __init__(
-            self,
-            update_month: str | int = 'September',
-            update_day: int = 30,
-            land_cover: str = 'glacier',
+        self,
+        update_month: str | int = "September",
+        update_day: int = 30,
+        land_cover: str = "glacier",
     ) -> None:
         """
         Initialize the glacier snow to ice transformation action.
@@ -41,11 +41,7 @@ class ActionGlacierSnowToIceTransformation(Action):
         """
         super().__init__()
         self.name: str = "ActionGlacierSnowToIceTransformation"
-        self._create_bounded_instance(
-            update_month,
-            update_day,
-            land_cover
-        )
+        self._create_bounded_instance(update_month, update_day, land_cover)
 
     def get_month(self) -> int:
         """
@@ -81,10 +77,10 @@ class ActionGlacierSnowToIceTransformation(Action):
         return self.action.get_land_cover_name()
 
     def _create_bounded_instance(
-            self,
-            update_month: str | int,
-            update_day: int,
-            land_cover: str,
+        self,
+        update_month: str | int,
+        update_day: int,
+        land_cover: str,
     ) -> None:
         """
         Create the internal C++ action instance.

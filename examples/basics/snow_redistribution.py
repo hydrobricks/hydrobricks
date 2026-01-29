@@ -12,15 +12,20 @@ import hydrobricks.plotting.plot_results as plotting
 # Paths
 CATCHMENT_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', 'tests', 'files', 'catchments', 'ch_rhone_gletsch'
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
+    "ch_rhone_gletsch",
 )
 CATCHMENT_DIR = CATCHMENT_DIR
-CATCHMENT_BANDS = CATCHMENT_DIR / 'hydro_units_elevation_radiation.csv'
-CATCHMENT_METEO = CATCHMENT_DIR / 'meteo.csv'
-CATCHMENT_DISCHARGE = CATCHMENT_DIR / 'discharge.csv'
-CATCHMENT_RASTER = CATCHMENT_DIR / 'unit_ids_radiation.tif'
-CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / 'connectivity_elevation_radiation.csv'
-DEM_RASTER = CATCHMENT_DIR / 'dem.tif'
+CATCHMENT_BANDS = CATCHMENT_DIR / "hydro_units_elevation_radiation.csv"
+CATCHMENT_METEO = CATCHMENT_DIR / "meteo.csv"
+CATCHMENT_DISCHARGE = CATCHMENT_DIR / "discharge.csv"
+CATCHMENT_RASTER = CATCHMENT_DIR / "unit_ids_radiation.tif"
+CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / "connectivity_elevation_radiation.csv"
+DEM_RASTER = CATCHMENT_DIR / "dem.tif"
 
 for with_snow_redistribution in [True, False]:
     working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
@@ -39,40 +44,38 @@ for with_snow_redistribution in [True, False]:
             soil_storage_nb=2,
             surface_runoff="linear_storage",
             record_all=True,
-            snow_redistribution='transport:snow_slide',
+            snow_redistribution="transport:snow_slide",
         )
     else:
         socont = models.Socont(
-            soil_storage_nb=2,
-            surface_runoff="linear_storage",
-            record_all=True
+            soil_storage_nb=2, surface_runoff="linear_storage", record_all=True
         )
 
     # Parameters
     parameters = socont.generate_parameters()
     if with_snow_redistribution:
         params = {
-            'A': 300,
-            'a_snow': 6,
-            'k_slow_1': 0.9,
-            'k_slow_2': 0.8,
-            'k_quick': 1,
-            'percol': 9.8,
-            'snow_slide_coeff': 3178.4,
-            'snow_slide_exp': -1.998,
-            'snow_slide_min_slope': 10,
-            'snow_slide_max_slope': 75,
-            'snow_slide_min_snow_depth': 50,
-            'snow_slide_max_snow_depth': 20000  # Not in original method. -1 = no limit.
+            "A": 300,
+            "a_snow": 6,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            "snow_slide_coeff": 3178.4,
+            "snow_slide_exp": -1.998,
+            "snow_slide_min_slope": 10,
+            "snow_slide_max_slope": 75,
+            "snow_slide_min_snow_depth": 50,
+            "snow_slide_max_snow_depth": 20000,  # Not in original method. -1 = no limit
         }
     else:
         params = {
-            'A': 300,
-            'a_snow': 4,
-            'k_slow_1': 0.9,
-            'k_slow_2': 0.8,
-            'k_quick': 1,
-            'percol': 9.8
+            "A": 300,
+            "a_snow": 4,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
         }
 
     parameters.set_values(params)
@@ -81,9 +84,9 @@ for with_snow_redistribution in [True, False]:
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(
         CATCHMENT_BANDS,
-        column_elevation='elevation',
-        column_area='area',
-        other_columns={'slope': 'slope'}
+        column_elevation="elevation",
+        column_area="area",
+        other_columns={"slope": "slope"},
     )
 
     # Load connectivity (computed as in compute_lateral_connectivity.py)
@@ -95,66 +98,53 @@ for with_snow_redistribution in [True, False]:
     forcing = hb.Forcing(hydro_units)
     forcing.load_station_data_from_csv(
         CATCHMENT_METEO,
-        column_time='date',
-        time_format='%d/%m/%Y',
-        content={'precipitation': 'precip(mm/day)', 'temperature': 'temp(C)'}
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"precipitation": "precip(mm/day)", "temperature": "temp(C)"},
     )
 
     forcing.spatialize_from_station_data(
-        variable='temperature',
-        ref_elevation=ref_elevation,
-        gradient=-0.6
+        variable="temperature", ref_elevation=ref_elevation, gradient=-0.6
     )
     forcing.spatialize_from_station_data(
-        variable='precipitation',
-        ref_elevation=ref_elevation,
-        gradient=0.05
+        variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
     )
-    forcing.compute_pet(
-        method='Hamon',
-        use=['t', 'lat'],
-        lat=46.6
-    )
+    forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=46.6)
 
     # Obs data
     obs = hb.Observations()
     obs.load_from_csv(
         CATCHMENT_DISCHARGE,
-        column_time='Date',
-        time_format='%d/%m/%Y',
-        content={'discharge': 'Discharge (mm/d)'}
+        column_time="Date",
+        time_format="%d/%m/%Y",
+        content={"discharge": "Discharge (mm/d)"},
     )
 
     # Model setup
     socont.setup(
         spatial_structure=hydro_units,
         output_path=str(working_dir),
-        start_date='1981-01-01',
-        end_date='2020-12-31'
+        start_date="1981-01-01",
+        end_date="2020-12-31",
     )
 
     # Run the model
-    socont.run(
-        parameters=parameters,
-        forcing=forcing
-    )
+    socont.run(parameters=parameters, forcing=forcing)
 
     # Dump all outputs
     socont.dump_outputs(str(working_dir))
 
     # Load the netcdf file
-    results = hb.Results(str(working_dir) + '/results.nc')
+    results = hb.Results(str(working_dir) + "/results.nc")
 
     # List the hydro units components available
     results.list_hydro_units_components()
 
     # Plot the SWE
-    swe = results.get_hydro_units_values(
-        component='ground_snowpack:snow_content'
-    )
+    swe = results.get_hydro_units_values(component="ground_snowpack:snow_content")
     for i in range(swe.shape[0]):
         plt.plot(results.results.time, swe[i, :], alpha=0.6)
-    plt.title('Non glacier SWE evolution per hydro unit')
+    plt.title("Non glacier SWE evolution per hydro unit")
     plt.tight_layout()
     plt.show()
 
@@ -172,7 +162,8 @@ for with_snow_redistribution in [True, False]:
 
     # Create an animated map of the snow water equivalent
     plotting.create_animated_map_hydro_unit_value(
-        results, CATCHMENT_RASTER,
+        results,
+        CATCHMENT_RASTER,
         "ground_snowpack:snow_content",
         "1990-01-01",
         "1990-03-20",

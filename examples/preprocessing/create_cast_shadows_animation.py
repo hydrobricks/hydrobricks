@@ -16,16 +16,20 @@ from hydrobricks._constants import TO_RAD
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', 'tests', 'files', 'catchments'
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
 )
-CATCHMENT_DEM = TEST_FILES_DIR / 'ch_sitter_stgallen' / 'dem.tif'
+CATCHMENT_DEM = TEST_FILES_DIR / "ch_sitter_stgallen" / "dem.tif"
 
 # Create temporary directory
 working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
 working_dir.mkdir(parents=True, exist_ok=True)
 
 # Options
-date_string = '2009-08-06'
+date_string = "2009-08-06"
 steps_per_hour = 2
 resolution = None
 
@@ -34,18 +38,15 @@ catchment = hb.Catchment()
 catchment.extract_dem(CATCHMENT_DEM)
 hillshade = catchment.get_hillshade()
 
-dem, masked_dem_data, slope, aspect = (
-    catchment.resample_dem_and_calculate_slope_aspect(
-        resolution,
-        working_dir
-    )
+dem, masked_dem_data, slope, aspect = catchment.resample_dem_and_calculate_slope_aspect(
+    resolution, working_dir
 )
 
 lat, _ = catchment.get_dem_mean_lat_lon()
 lat_rad = lat * TO_RAD
 
 # Date
-target_date = datetime.strptime(date_string, '%Y-%m-%d')
+target_date = datetime.strptime(date_string, "%Y-%m-%d")
 day_of_year = target_date.timetuple().tm_yday
 
 # Compute the solar declination
@@ -67,35 +68,24 @@ frames = []
 
 # Loop over the time steps
 for i, (zenith, azimuth) in enumerate(zip(zenith_list, azimuth_list)):
-    shadows = catchment.calculate_cast_shadows(
-        dem,
-        masked_dem_data,
-        zenith,
-        azimuth
-    )
+    shadows = catchment.calculate_cast_shadows(dem, masked_dem_data, zenith, azimuth)
 
     # Create a new figure and plot the data
     plt.figure()
-    plt.imshow(hillshade, cmap='gray')
+    plt.imshow(hillshade, cmap="gray")
     if np.any(shadows == 0):
         plt.imshow(shadows, cmap=cmap_shadow, alpha=0.8)
     else:
         plt.imshow(shadows, cmap=cmap_black, alpha=0.8)
-    plt.title(f'Cast shadow ({i + 1})')
+    plt.title(f"Cast shadow ({i + 1})")
     plt.tight_layout()
 
     # Instead of showing the figure, save it to a BytesIO object
     buf = BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format="png")
     buf.seek(0)
     frames.append(imageio.v3.imread(buf))
     plt.close()
 
 # Save frames as an animated GIF
-imageio.mimsave(
-    'animated_shadows.gif',
-    frames,
-    'GIF',
-    duration=500,
-    loop=0
-)
+imageio.mimsave("animated_shadows.gif", frames, "GIF", duration=500, loop=0)

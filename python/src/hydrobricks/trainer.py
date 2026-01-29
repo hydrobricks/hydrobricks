@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from hydrobricks import spotpy
-from hydrobricks._exceptions import DataError, ModelError, ConfigurationError
+from hydrobricks._exceptions import ConfigurationError, DataError, ModelError
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +24,17 @@ class SpotpySetup:
     """Setup class for SPOTPY optimization framework integration."""
 
     def __init__(
-            self,
-            model: Model | list[Model],
-            params: ParameterSet,
-            forcing: Forcing | list[Forcing],
-            obs: Observations | list[Observations],
-            warmup: int = 365,
-            obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
-            invert_obj_func: bool = False,
-            dump_outputs: bool = False,
-            dump_forcing: bool = False,
-            dump_dir: str = ''
+        self,
+        model: Model | list[Model],
+        params: ParameterSet,
+        forcing: Forcing | list[Forcing],
+        obs: Observations | list[Observations],
+        warmup: int = 365,
+        obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+        invert_obj_func: bool = False,
+        dump_outputs: bool = False,
+        dump_forcing: bool = False,
+        dump_dir: str = "",
     ) -> None:
         """
         Initialize SPOTPY setup for model calibration.
@@ -84,8 +84,9 @@ class SpotpySetup:
         self._validate_ensemble_sizes()
 
         # Validate and set configuration parameters
-        self._validate_and_set_parameters(warmup, dump_dir, invert_obj_func,
-                                         dump_outputs, dump_forcing)
+        self._validate_and_set_parameters(
+            warmup, dump_dir, invert_obj_func, dump_outputs, dump_forcing
+        )
 
         # Initialize SPOTPY parameters
         self.params_spotpy = params.get_for_spotpy()
@@ -118,22 +119,21 @@ class SpotpySetup:
         """
         if model is None:
             raise ConfigurationError(
-                'Model cannot be None.',
-                item_name='model',
-                reason='Required parameter missing'
+                "Model cannot be None.",
+                item_name="model",
+                reason="Required parameter missing",
             )
         models = [model] if not isinstance(model, list) else model
         if len(models) == 0:
             raise ConfigurationError(
-                'Model list cannot be empty.',
-                item_name='model',
-                reason='Empty model list'
+                "Model list cannot be empty.",
+                item_name="model",
+                reason="Empty model list",
             )
         return models
 
     def _normalize_forcing_list(
-            self,
-            forcing: Forcing | list[Forcing]
+        self, forcing: Forcing | list[Forcing]
     ) -> list[Forcing]:
         """
         Validate and normalize forcing input to a list.
@@ -155,22 +155,21 @@ class SpotpySetup:
         """
         if forcing is None:
             raise ConfigurationError(
-                'Forcing cannot be None.',
-                item_name='forcing',
-                reason='Required parameter missing'
+                "Forcing cannot be None.",
+                item_name="forcing",
+                reason="Required parameter missing",
             )
         forcings = [forcing] if not isinstance(forcing, list) else forcing
         if len(forcings) == 0:
             raise ConfigurationError(
-                'Forcing list cannot be empty.',
-                item_name='forcing',
-                reason='Empty forcing list'
+                "Forcing list cannot be empty.",
+                item_name="forcing",
+                reason="Empty forcing list",
             )
         return forcings
 
     def _normalize_observations_list(
-            self,
-            obs: Observations | list[Observations]
+        self, obs: Observations | list[Observations]
     ) -> list[np.ndarray]:
         """
         Validate and normalize observations to a list of numpy arrays.
@@ -193,26 +192,32 @@ class SpotpySetup:
             If observation data is missing, invalid, or empty.
         """
         if obs is None:
-            raise ConfigurationError('Observations cannot be None.',
-                                   item_name='obs', reason='Required parameter missing')
+            raise ConfigurationError(
+                "Observations cannot be None.",
+                item_name="obs",
+                reason="Required parameter missing",
+            )
         obs_list = [obs] if not isinstance(obs, list) else obs
         if len(obs_list) == 0:
-            raise ConfigurationError('Observations list cannot be empty.',
-                                   item_name='obs', reason='Empty observations list')
+            raise ConfigurationError(
+                "Observations list cannot be empty.",
+                item_name="obs",
+                reason="Empty observations list",
+            )
 
         observations = []
         for idx, o in enumerate(obs_list):
-            if not hasattr(o, 'data') or o.data is None:
+            if not hasattr(o, "data") or o.data is None:
                 raise DataError(
-                    f'Observations at index {idx} has no data attribute.',
-                    data_type='observations',
-                    reason='Missing or invalid observation data'
+                    f"Observations at index {idx} has no data attribute.",
+                    data_type="observations",
+                    reason="Missing or invalid observation data",
                 )
             if len(o.data) == 0:
                 raise DataError(
-                    f'Observations at index {idx} has empty data.',
-                    data_type='observations',
-                    reason='Empty observation dataset'
+                    f"Observations at index {idx} has empty data.",
+                    data_type="observations",
+                    reason="Empty observation dataset",
                 )
             observations.append(o.data[0])
         return observations
@@ -237,22 +242,24 @@ class SpotpySetup:
 
         if num_models != num_forcing:
             raise ConfigurationError(
-                f'Number of models ({num_models}) does not match '
-                f'number of forcing datasets ({num_forcing}).',
-                reason='Mismatched ensemble sizes')
+                f"Number of models ({num_models}) does not match "
+                f"number of forcing datasets ({num_forcing}).",
+                reason="Mismatched ensemble sizes",
+            )
         if num_models != num_obs:
             raise ConfigurationError(
-                f'Number of models ({num_models}) does not match '
-                f'number of observation datasets ({num_obs}).',
-                reason='Mismatched ensemble sizes')
+                f"Number of models ({num_models}) does not match "
+                f"number of observation datasets ({num_obs}).",
+                reason="Mismatched ensemble sizes",
+            )
 
     def _validate_and_set_parameters(
-            self,
-            warmup: int,
-            dump_dir: str,
-            invert_obj_func: bool,
-            dump_outputs: bool,
-            dump_forcing: bool
+        self,
+        warmup: int,
+        dump_dir: str,
+        invert_obj_func: bool,
+        dump_outputs: bool,
+        dump_forcing: bool,
     ) -> None:
         """
         Validate and set configuration parameters.
@@ -282,10 +289,10 @@ class SpotpySetup:
         """
         if not isinstance(warmup, int) or warmup < 0:
             raise ConfigurationError(
-                f'Warmup period must be non-negative integer, got {warmup}.',
-                item_name='warmup',
+                f"Warmup period must be non-negative integer, got {warmup}.",
+                item_name="warmup",
                 item_value=warmup,
-                reason='Invalid warmup configuration'
+                reason="Invalid warmup configuration",
             )
         self.warmup = warmup
 
@@ -294,15 +301,15 @@ class SpotpySetup:
                 dump_path = os.path.abspath(dump_dir)
                 os.makedirs(dump_path, exist_ok=True)
                 self.dump_dir = dump_path
-            except (OSError, PermissionError) as e:
+            except OSError as e:
                 raise ConfigurationError(
                     f'Cannot create dump directory "{dump_dir}": {e}',
-                    item_name='dump_dir',
+                    item_name="dump_dir",
                     item_value=dump_dir,
-                    reason='Directory access error'
+                    reason="Directory access error",
                 ) from e
         else:
-            self.dump_dir = ''
+            self.dump_dir = ""
 
         self.dump_outputs = dump_outputs
         self.dump_forcing = dump_forcing
@@ -333,12 +340,12 @@ class SpotpySetup:
                 for m, f in zip(self.model, self.forcing):
                     m.set_forcing(forcing=f)
         except Exception as e:
-            raise ModelError(f'Failed to setup forcing and models: {e}',
-                           is_initialized=False) from e
+            raise ModelError(
+                f"Failed to setup forcing and models: {e}", is_initialized=False
+            ) from e
 
     def _validate_and_set_objective_function(
-            self,
-            obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None
+        self, obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None
     ) -> None:
         """
         Validate and set the objective function.
@@ -349,7 +356,8 @@ class SpotpySetup:
             Objective function specification. Can be:
             - None: Use default non-parametric Kling-Gupta Efficiency
             - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012')
-            - callable: User-defined function with signature (observed, simulated) -> float
+            - callable: User-defined function with signature
+              (observed, simulated) -> float
 
         Raises
         ------
@@ -365,11 +373,11 @@ class SpotpySetup:
             self.obj_func = obj_func
         else:
             raise ConfigurationError(
-                f'Objective function must be None, string, or callable, '
-                f'got {type(obj_func).__name__}.',
-                item_name='obj_func',
+                f"Objective function must be None, string, or callable, "
+                f"got {type(obj_func).__name__}.",
+                item_name="obj_func",
                 item_value=obj_func,
-                reason='Invalid objective function type'
+                reason="Invalid objective function type",
             )
 
     def parameters(self) -> Any:
@@ -399,7 +407,7 @@ class SpotpySetup:
                 break
 
             if i >= 1000:
-                raise ModelError('The parameter constraints could not be satisfied.')
+                raise ModelError("The parameter constraints could not be satisfied.")
 
         return x
 
@@ -437,7 +445,7 @@ class SpotpySetup:
             logger.debug(f"  Model {model_idx}: running simulation")
 
             if self.random_forcing:
-                logger.debug(f"    Applying random forcing operations")
+                logger.debug("    Applying random forcing operations")
                 forcing.apply_operations(params, apply_to_all=False)
                 model.run(parameters=params, forcing=forcing)
             else:
@@ -449,7 +457,7 @@ class SpotpySetup:
                 return None
 
             logger.debug(f"  Model {model_idx}: extracted {len(sim)} discharge values")
-            all_sim.append(sim[self.warmup:])
+            all_sim.append(sim[self.warmup :])
 
             if self.dump_outputs or self.dump_forcing:
                 now = datetime.now()
@@ -461,7 +469,7 @@ class SpotpySetup:
                     model.dump_outputs(path)
                 if self.dump_forcing:
                     logger.debug(f"    Saving forcing to {path}")
-                    forcing.save_as(os.path.join(path, f'forcing_{i}.nc'))
+                    forcing.save_as(os.path.join(path, f"forcing_{model_idx}.nc"))
 
         logger.debug(f"Simulation complete: {len(all_sim)} models processed")
         return all_sim
@@ -469,18 +477,18 @@ class SpotpySetup:
     def evaluation(self) -> list[np.ndarray]:
         all_obs = []
         for obs in self.obs:
-            all_obs.append(obs[self.warmup:])
+            all_obs.append(obs[self.warmup :])
 
         return all_obs
 
     def objectivefunction(
-            self,
-            simulation: list[np.ndarray],
-            evaluation: list[np.ndarray],
-            params: spotpy.parameter | None = None
+        self,
+        simulation: list[np.ndarray],
+        evaluation: list[np.ndarray],
+        params: spotpy.parameter | None = None,
     ) -> float:
         if simulation is None:
-            logger.error(f'Simulation results empty (params: {params}).')
+            logger.error(f"Simulation results empty (params: {params}).")
             if self.invert_obj_func:
                 return np.inf
             return -np.inf
@@ -488,12 +496,12 @@ class SpotpySetup:
         all_like = []
         for sim, obs in zip(simulation, evaluation):
             if sim is None or sim.size == 0:
-                logger.error(f'Simulation results empty (params: {params}).')
+                logger.error(f"Simulation results empty (params: {params}).")
                 like = -np.inf
             elif len(sim) != len(obs):
                 logger.error(
-                    f'Length of simulation and observation do not match '
-                    f'(params: {params}).'
+                    f"Length of simulation and observation do not match "
+                    f"(params: {params})."
                 )
                 like = -np.inf
             else:
@@ -533,6 +541,6 @@ def evaluate(simulation: np.array, observation: np.array, metric: str) -> float:
     -------
     The value of the selected metric.
     """
-    eval_fct = getattr(importlib.import_module('HydroErr'), metric)
+    eval_fct = getattr(importlib.import_module("HydroErr"), metric)
 
     return eval_fct(simulation, observation)

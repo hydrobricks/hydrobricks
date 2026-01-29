@@ -18,6 +18,7 @@ PLAT_TO_CMAKE = {
 
 class CMakeExtension(Extension):
     """Setuptools extension for CMake-based builds."""
+
     def __init__(self, name, source_dir=""):
         super().__init__(name, sources=[])
         self.source_dir = os.path.abspath(source_dir)
@@ -25,6 +26,7 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     """Custom build_ext command to run CMake and build the C++ extension."""
+
     def build_extension(self, ext):
         # Flag to build in debug mode
         # self.debug = True
@@ -44,15 +46,17 @@ class CMakeBuild(build_ext):
             print("-- VCPKG_ROOT not found. Setting up vcpkg...")
             if not os.path.exists("vcpkg"):
                 subprocess.check_call(
-                    ["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+                    ["git", "clone", "https://github.com/microsoft/vcpkg.git"]
+                )
             subprocess.check_call(["git", "pull"], cwd="vcpkg")
             if sys.platform.startswith("win"):
                 subprocess.check_call(["vcpkg\\bootstrap-vcpkg.bat"])
             else:
                 subprocess.check_call(["vcpkg/bootstrap-vcpkg.sh"])
             os.environ["VCPKG_ROOT"] = os.path.abspath("vcpkg")
-            os.environ["PATH"] = os.pathsep.join([os.environ["VCPKG_ROOT"],
-                                                  os.environ["PATH"]])
+            os.environ["PATH"] = os.pathsep.join(
+                [os.environ["VCPKG_ROOT"], os.environ["PATH"]]
+            )
         else:
             print(f"-- VCPKG_ROOT found: {os.environ['VCPKG_ROOT']}")
 
@@ -88,13 +92,16 @@ class CMakeBuild(build_ext):
         # Add user-specified CMake arguments (for cross-compilation, etc.)
         if "CMAKE_ARGS" in os.environ:
             cmake_args.append(
-                item for item in os.environ["CMAKE_ARGS"].split(" ") if item)
+                item for item in os.environ["CMAKE_ARGS"].split(" ") if item
+            )
         if "PYBIND11_PYTHON_VERSION" in os.environ:
             cmake_args.append(
-                f"-DPYBIND11_PYTHON_VERSION={os.environ['PYBIND11_PYTHON_VERSION']}")
+                f"-DPYBIND11_PYTHON_VERSION={os.environ['PYBIND11_PYTHON_VERSION']}"
+            )
         if "PYBIND11_PYTHON_ROOT" in os.environ:
             cmake_args.append(
-                f"-DPYBIND11_PYTHON_ROOT={os.environ['PYBIND11_PYTHON_ROOT']}")
+                f"-DPYBIND11_PYTHON_ROOT={os.environ['PYBIND11_PYTHON_ROOT']}"
+            )
 
         # Handle MSVC-specific configurations
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
@@ -107,7 +114,8 @@ class CMakeBuild(build_ext):
 
             if not single_config:
                 cmake_args.append(
-                    f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={ext_dir}")
+                    f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={ext_dir}"
+                )
                 build_args.append(f"--config {cfg}")
 
         # Handle macOS cross-compilation
@@ -129,8 +137,11 @@ class CMakeBuild(build_ext):
 # Read long description from README
 this_directory = Path(__file__).parent
 readme_file = this_directory / "python" / "README.md"
-long_description = readme_file.read_text() if readme_file.exists() else \
-    "A modular hydrological modelling framework."
+long_description = (
+    readme_file.read_text()
+    if readme_file.exists()
+    else "A modular hydrological modelling framework."
+)
 
 # Setup configuration
 setup(

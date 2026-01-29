@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks import rxr, xrs, rasterio
-from hydrobricks._exceptions import DependencyError, DataError
-from hydrobricks._optional import HAS_RASTERIO, HAS_SHAPELY, HAS_PYARROW, HAS_XRSPATIAL
+from hydrobricks import rasterio, rxr, xrs
+from hydrobricks._exceptions import ConfigurationError, DependencyError
+from hydrobricks._optional import HAS_PYARROW, HAS_RASTERIO, HAS_SHAPELY, HAS_XRSPATIAL
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -55,9 +55,7 @@ class CatchmentTopography:
         return np.nanmean(self.catchment.dem_data)
 
     def resample_dem_and_calculate_slope_aspect(
-            self,
-            resolution: float,
-            output_path: str | Path | None = None
+        self, resolution: float, output_path: str | Path | None = None
     ) -> tuple[rasterio.DatasetReader, np.ndarray, np.ndarray, np.ndarray]:
         """
         Resample the DEM and calculate the slope and aspect of the whole DEM.
@@ -87,23 +85,23 @@ class CatchmentTopography:
         if not HAS_RASTERIO:
             raise DependencyError(
                 "rasterio is required for DEM resampling and processing.",
-                package_name='rasterio',
-                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
-                install_command='pip install rasterio'
+                package_name="rasterio",
+                operation="CatchmentTopography.resample_dem_and_calculate_slope_aspect",
+                install_command="pip install rasterio",
             )
         if not HAS_PYARROW:
             raise DependencyError(
                 "pyarrow is required for DEM resampling.",
-                package_name='pyarrow',
-                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
-                install_command='pip install pyarrow'
+                package_name="pyarrow",
+                operation="CatchmentTopography.resample_dem_and_calculate_slope_aspect",
+                install_command="pip install pyarrow",
             )
         if not HAS_XRSPATIAL:
             raise DependencyError(
                 "xarray-spatial is required for slope and aspect calculations.",
-                package_name='xarray-spatial',
-                operation='CatchmentTopography.resample_dem_and_calculate_slope_aspect',
-                install_command='pip install xarray-spatial'
+                package_name="xarray-spatial",
+                operation="CatchmentTopography.resample_dem_and_calculate_slope_aspect",
+                install_command="pip install xarray-spatial",
             )
 
         # Only resample the DEM if the resolution is different from the original
@@ -115,7 +113,7 @@ class CatchmentTopography:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = rxr.open_rasterio(dem_file).drop_vars('band')[0]
+            xr_dem = rxr.open_rasterio(dem_file).drop_vars("band")[0]
 
         x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
         y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
@@ -134,7 +132,7 @@ class CatchmentTopography:
         # Save the downsampled DEM to a file
         if isinstance(output_path, str):
             output_path = Path(output_path)
-        filepath = output_path / 'downsampled_dem.tif'
+        filepath = output_path / "downsampled_dem.tif"
         xr_dem_downsampled.rio.to_raster(filepath)
 
         # Reopen the downsampled DEM as a rasterio dataset
@@ -147,8 +145,8 @@ class CatchmentTopography:
         new_dem_data[new_dem_data == new_dem.nodata] = np.nan
         if len(new_dem_data.shape) == 3:
             new_dem_data = new_dem_data[0]
-        new_slope = xrs.slope(xr_dem_downsampled, name='slope').to_numpy()
-        new_aspect = xrs.aspect(xr_dem_downsampled, name='aspect').to_numpy()
+        new_slope = xrs.slope(xr_dem_downsampled, name="slope").to_numpy()
+        new_aspect = xrs.aspect(xr_dem_downsampled, name="aspect").to_numpy()
         xr_dem_downsampled.close()
 
         return new_dem, new_dem_data, new_slope, new_aspect
@@ -163,30 +161,27 @@ class CatchmentTopography:
         if not HAS_PYARROW:
             raise DependencyError(
                 "pyarrow is required for slope and aspect calculations.",
-                package_name='pyarrow',
-                operation='CatchmentTopography.calculate_slope_aspect',
-                install_command='pip install pyarrow'
+                package_name="pyarrow",
+                operation="CatchmentTopography.calculate_slope_aspect",
+                install_command="pip install pyarrow",
             )
         if not HAS_XRSPATIAL:
             raise DependencyError(
                 "xarray-spatial is required for slope and aspect calculations.",
-                package_name='xarray-spatial',
-                operation='CatchmentTopography.calculate_slope_aspect',
-                install_command='pip install xarray-spatial'
+                package_name="xarray-spatial",
+                operation="CatchmentTopography.calculate_slope_aspect",
+                install_command="pip install xarray-spatial",
             )
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = rxr.open_rasterio(dem_file).drop_vars('band')[0]
-            self.slope = xrs.slope(xr_dem, name='slope').to_numpy()
-            self.aspect = xrs.aspect(xr_dem, name='aspect').to_numpy()
+            xr_dem = rxr.open_rasterio(dem_file).drop_vars("band")[0]
+            self.slope = xrs.slope(xr_dem, name="slope").to_numpy()
+            self.aspect = xrs.aspect(xr_dem, name="aspect").to_numpy()
 
     def get_hillshade(
-            self,
-            azimuth: float = 315,
-            altitude: float = 45,
-            z_factor: float = 1
+        self, azimuth: float = 315, altitude: float = 45, z_factor: float = 1
     ) -> np.ndarray:
         """
         Create a hillshade from the DEM.
@@ -207,7 +202,8 @@ class CatchmentTopography:
         Returns
         -------
         np.ndarray
-            2D array of hillshade values (0-255) representing shaded relief visualization.
+            2D array of hillshade values (0-255) representing shaded
+            relief visualization.
         """
         x, y = np.gradient(self.catchment.dem.read(1))
         x_pixel_size = self.catchment.get_dem_x_resolution()
@@ -216,17 +212,17 @@ class CatchmentTopography:
         if azimuth > 360.0:
             raise ConfigurationError(
                 "Azimuth value should be less than or equal to 360 degrees",
-                parameter_name='azimuth',
+                parameter_name="azimuth",
                 parameter_value=azimuth,
-                reason='Value out of valid range'
+                reason="Value out of valid range",
             )
 
         if altitude > 90.0:
             raise ConfigurationError(
                 "Altitude value should be less than or equal to 90 degrees",
-                parameter_name='altitude',
+                parameter_name="altitude",
                 parameter_value=altitude,
-                reason='Value out of valid range'
+                reason="Value out of valid range",
             )
 
         # Account for the pixel size
@@ -240,9 +236,9 @@ class CatchmentTopography:
         slope = np.pi / 2.0 - np.arctan(np.sqrt(x * x + y * y))
         aspect = np.arctan2(-x, y)
 
-        shaded = (np.sin(altitude_rad) * np.sin(slope) +
-                  np.cos(altitude_rad) * np.cos(slope) *
-                  np.cos((azimuth_rad - np.pi / 2.0) - aspect))
+        shaded = np.sin(altitude_rad) * np.sin(slope) + np.cos(altitude_rad) * np.cos(
+            slope
+        ) * np.cos((azimuth_rad - np.pi / 2.0) - aspect)
 
         return 255 * (shaded + 1) / 2
 
@@ -264,8 +260,9 @@ class CatchmentTopography:
             Mean aspect in degrees (0-360).
         """
         aspect_rad = np.radians(self.aspect[mask_unit])
-        circular_mean_aspect_rad = math.atan2(np.mean(np.sin(aspect_rad)),
-                                              np.mean(np.cos(aspect_rad)))
+        circular_mean_aspect_rad = math.atan2(
+            np.mean(np.sin(aspect_rad)), np.mean(np.cos(aspect_rad))
+        )
         circular_mean_aspect_deg = np.degrees(circular_mean_aspect_rad)
         if circular_mean_aspect_deg < 0:
             circular_mean_aspect_deg = circular_mean_aspect_deg + 360

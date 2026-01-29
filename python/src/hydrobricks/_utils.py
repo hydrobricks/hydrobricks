@@ -31,17 +31,14 @@ def validate_kwargs(kwargs: dict[str, Any], allowed_kwargs: Iterable[str]) -> No
     for kwarg in kwargs:
         if kwarg not in allowed_kwargs:
             raise ConfigurationError(
-                f'Keyword argument not understood: {kwarg}',
+                f"Keyword argument not understood: {kwarg}",
                 item_name=kwarg,
-                reason='Unknown keyword argument'
+                reason="Unknown keyword argument",
             )
 
 
 def dump_config_file(
-        content: dict[str, Any],
-        directory: str | Path,
-        name: str,
-        file_type: str = 'yaml'
+    content: dict[str, Any], directory: str | Path, name: str, file_type: str = "yaml"
 ) -> None:
     """
     Dump configuration content to YAML and/or JSON files.
@@ -65,14 +62,14 @@ def dump_config_file(
     directory = Path(directory)
 
     # Dump YAML file
-    if file_type in ['both', 'yaml']:
-        with open(directory / f'{name}.yaml', 'w') as outfile:
+    if file_type in ["both", "yaml"]:
+        with open(directory / f"{name}.yaml", "w") as outfile:
             yaml.dump(content, outfile, sort_keys=False)
 
     # Dump JSON file
-    if file_type in ['both', 'json']:
+    if file_type in ["both", "json"]:
         json_object = json.dumps(content, indent=2)
-        with open(directory / f'{name}.json', 'w') as outfile:
+        with open(directory / f"{name}.json", "w") as outfile:
             outfile.write(json_object)
 
 
@@ -92,7 +89,8 @@ def date_as_mjd(date: str | pd.Timestamp | pd.DatetimeIndex) -> float | np.ndarr
     Returns
     -------
     float | np.ndarray
-        Modified Julian date(s). Returns float for single date, ndarray for multiple dates.
+        Modified Julian date(s). Returns float for single date,
+        ndarray for multiple dates.
 
     Notes
     -----
@@ -142,7 +140,7 @@ def jd_to_date(jd: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     b = np.zeros(len(jd))
 
     idx = tuple([i > 2299160])
-    b[idx] = i[idx] + 1 + a[idx] - np.trunc(a[idx] / 4.)
+    b[idx] = i[idx] + 1 + a[idx] - np.trunc(a[idx] / 4.0)
     idx = tuple([i <= 2299160])
     b[idx] = i[idx]
 
@@ -191,10 +189,10 @@ def days_to_hours_mins(days: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     >>> minutes
     array([0, 0])
     """
-    hours = days * 24.
+    hours = days * 24.0
     hours, hour = np.modf(hours)
 
-    minutes = hours * 60.
+    minutes = hours * 60.0
     _, minute = np.modf(minutes)
 
     return hour.astype(int), minute.astype(int)
@@ -237,7 +235,7 @@ def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
 
     hour, minute = days_to_hours_mins(frac_days)
 
-    date = np.empty(len(mjd), dtype='datetime64[s]')
+    date = np.empty(len(mjd), dtype="datetime64[s]")
 
     for idx, _ in enumerate(year):
         date[idx] = datetime.datetime(
@@ -286,15 +284,15 @@ class Timer:
         Parameters
         ----------
         text
-            Format string or callable for elapsed time output.
-            If a string, can include format placeholders: {milliseconds}, {seconds}, {minutes}.
-            If callable, receives elapsed time in seconds and returns a formatted string.
-            Default: "Elapsed time: {:0.4f} seconds"
+            Format string or callable for elapsed time output. If a string, can include
+            format placeholders: {milliseconds}, {seconds}, {minutes}. If callable,
+            receives elapsed time in seconds and returns a formatted string.
+            Default: "Elapsed time: {seconds:.4f} seconds"
         """
         self._start_time: float | None = None
         self.last: float | None = None
         self.logger: Callable[[str], None] = print
-        self.text: str | Callable[[float], str] = "Elapsed time: {:0.4f} seconds"
+        self.text: str | Callable[[float], str] = "Elapsed time: {seconds:.4f} seconds"
         if text is not None:
             self.text = text
 

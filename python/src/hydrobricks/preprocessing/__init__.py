@@ -8,10 +8,10 @@ from hydrobricks.preprocessing.glacier_evolution_delta_h import GlacierEvolution
 from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
 
 __all__ = (
-    'CatchmentConnectivity',
-    'CatchmentDiscretization',
-    'CatchmentTopography',
-    'GlacierEvolutionDeltaH',
-    'GlacierEvolutionAreaScaling',
-    'PotentialSolarRadiation'
+    "CatchmentConnectivity",
+    "CatchmentDiscretization",
+    "CatchmentTopography",
+    "GlacierEvolutionDeltaH",
+    "GlacierEvolutionAreaScaling",
+    "PotentialSolarRadiation",
 )

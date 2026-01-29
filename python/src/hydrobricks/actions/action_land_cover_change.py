@@ -8,14 +8,14 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks import gpd
+from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
-from hydrobricks._exceptions import DataError, DependencyError, ConfigurationError
 from hydrobricks._optional import HAS_GEOPANDAS, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._units import Unit, convert_unit
+from hydrobricks._utils import compute_area, date_as_mjd
 from hydrobricks.actions import Action
 from hydrobricks.catchment import Catchment
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks._units import Unit, convert_unit
-from hydrobricks._utils import compute_area, date_as_mjd
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +50,12 @@ class ActionLandCoverChange(Action):
         self.action: _ActionLandCoverChange = _ActionLandCoverChange()
 
     def load_from_csv(
-            self,
-            path: str | Path,
-            hydro_units: HydroUnits,
-            land_cover: str,
-            area_unit: str,
-            match_with: str = 'elevation'
+        self,
+        path: str | Path,
+        hydro_units: HydroUnits,
+        land_cover: str,
+        area_unit: str,
+        match_with: str = "elevation",
     ) -> None:
         """
         Read land cover changes from a CSV file.
@@ -63,7 +63,8 @@ class ActionLandCoverChange(Action):
         The file should contain changes for a single land cover. Multiple files can be
         loaded consecutively. The first column must contain information to identify the
         hydro unit ID, such as the ID or elevation. Subsequent columns contain the
-        changes at different dates. The first line must contain dates in YYYY-MM-DD format.
+        changes at different dates. The first line must contain dates in
+        YYYY-MM-DD format.
 
         Parameters
         ----------
@@ -113,24 +114,23 @@ class ActionLandCoverChange(Action):
         4562        0.613        0.603        0.593        0.583        0.573
         """
         file_content = pd.read_csv(path)
-        if match_with == 'id':
+        if match_with == "id":
             # Check that the first column contains hydro unit ids
             col_1 = file_content.iloc[:, 0]
-            id_min = hydro_units.hydro_units[('id', '-')].min()
-            id_max = hydro_units.hydro_units[('id', '-')].max()
+            id_min = hydro_units.hydro_units[("id", "-")].min()
+            id_max = hydro_units.hydro_units[("id", "-")].max()
             if col_1.min() < id_min or col_1.max() > id_max:
                 raise DataError(
                     "The first column of the file does not contain the hydro unit ids.",
-                    data_type='hydro unit',
-                    reason='Invalid hydro unit IDs'
+                    data_type="hydro unit",
+                    reason="Invalid hydro unit IDs",
                 )
             # Set the first column name to 'hydro_unit'
             file_content.rename(
-                columns={file_content.columns[0]: 'hydro_unit'},
-                inplace=True
+                columns={file_content.columns[0]: "hydro_unit"}, inplace=True
             )
         else:
-            file_content.insert(loc=0, column='hydro_unit', value=0)
+            file_content.insert(loc=0, column="hydro_unit", value=0)
             self._match_hydro_unit_ids(file_content, hydro_units, match_with)
             # Drop 2nd column (e.g., elevation)
             file_content.drop(file_content.columns[1], axis=1, inplace=True)
@@ -162,17 +162,18 @@ class ActionLandCoverChange(Action):
 
     @classmethod
     def create_action_for_glaciers(
-            cls,
-            catchment: Catchment,
-            times: list[str],
-            full_glaciers: list[str] | Path,
-            debris_glaciers: list[str] | Path | None = None,
-            with_debris: bool = False,
-            method: str = 'vector',
-            interpolate_yearly: bool = True
+        cls,
+        catchment: Catchment,
+        times: list[str],
+        full_glaciers: list[str] | Path,
+        debris_glaciers: list[str] | Path | None = None,
+        with_debris: bool = False,
+        method: str = "vector",
+        interpolate_yearly: bool = True,
     ) -> tuple[ActionLandCoverChange, list[pd.DataFrame]]:
         """
-        Extract glacier cover changes from shapefiles and create an ActionLandCoverChange object.
+        Extract glacier cover changes from shapefiles and create an
+        ActionLandCoverChange object.
 
         This method processes glacier shapefiles at multiple time points, computes
         area changes for each hydro unit, and returns a configured action object.
@@ -185,10 +186,10 @@ class ActionLandCoverChange(Action):
             List of dates in format 'YYYY-MM-DD' corresponding to glacier extent data.
         full_glaciers
             Path(s) to shapefile(s) containing the extent of all glaciers
-            (debris-covered and clean ice together). Can be a list of paths (one per time)
-            or a single path with placeholders.
+            (debris-covered and clean ice together). Can be a list of paths (one per
+            time) or a single path with placeholders.
         debris_glaciers
-            Path(s) to shapefile(s) containing the extent of debris-covered glaciers only.
+            Path(s) to shapefile(s) containing the extent of debris-covered glaciers.
             Required if with_debris is True. Default: None
         with_debris
             If True, distinguishes between debris-covered and clean-ice areas.
@@ -233,21 +234,21 @@ class ActionLandCoverChange(Action):
         if not HAS_GEOPANDAS:
             raise DependencyError(
                 "geopandas is required for land cover change operations.",
-                package_name='geopandas',
-                operation='ActionLandCoverChange.create_action_for_glaciers',
-                install_command='pip install geopandas'
+                package_name="geopandas",
+                operation="ActionLandCoverChange.create_action_for_glaciers",
+                install_command="pip install geopandas",
             )
 
         if catchment.map_unit_ids is None:
             raise ConfigurationError(
                 "The catchment has not been discretized (unit ids map missing).",
-                reason='Catchment not initialized'
+                reason="Catchment not initialized",
             )
 
         if catchment.hydro_units is None:
             raise ConfigurationError(
                 "The catchment has not been discretized (hydro units missing).",
-                reason='Catchment not initialized'
+                reason="Catchment not initialized",
             )
 
         changes = ActionLandCoverChange()
@@ -258,20 +259,20 @@ class ActionLandCoverChange(Action):
             times,
             with_debris,
             method,
-            interpolate_yearly
+            interpolate_yearly,
         )
 
         return changes, changes_df
 
     def _create_action_for_glaciers(
-            self,
-            catchment: Catchment,
-            full_glaciers: list[str] | Path,
-            debris_glaciers: list[str] | Path | None,
-            times: list[str],
-            with_debris: bool,
-            method: str,
-            interpolate_yearly: bool
+        self,
+        catchment: Catchment,
+        full_glaciers: list[str] | Path,
+        debris_glaciers: list[str] | Path | None,
+        times: list[str],
+        with_debris: bool,
+        method: str,
+        interpolate_yearly: bool,
     ) -> list[pd.DataFrame]:
         """
         Internal method to create glacier action and extract cover changes.
@@ -308,22 +309,22 @@ class ActionLandCoverChange(Action):
         if len(full_glaciers) != len(times):
             raise DataError(
                 "The number of shapefiles and dates must be equal.",
-                data_type='glacier data',
-                reason='Mismatched array sizes'
+                data_type="glacier data",
+                reason="Mismatched array sizes",
             )
 
         if with_debris and debris_glaciers is None:
             raise DataError(
                 "The debris shapefiles must be provided.",
-                data_type='glacier data',
-                reason='Missing required data'
+                data_type="glacier data",
+                reason="Missing required data",
             )
 
         if with_debris and len(debris_glaciers) != len(times):
             raise DataError(
                 "The number of shapefiles and dates must be equal.",
-                data_type='glacier data',
-                reason='Mismatched array sizes'
+                data_type="glacier data",
+                reason="Mismatched array sizes",
             )
 
         if not with_debris and debris_glaciers is None:
@@ -347,10 +348,7 @@ class ActionLandCoverChange(Action):
         for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
             logger.debug(f"Extracting glacier cover changes for {time}...")
             glacier, ice, debris, other = self._extract_glacier_cover_change(
-                catchment,
-                glacier_shp,
-                debris_shp,
-                method=method
+                catchment, glacier_shp, debris_shp, method=method
             )
             glacier_np[:, times.index(time)] = glacier
             ice_np[:, times.index(time)] = ice
@@ -368,7 +366,7 @@ class ActionLandCoverChange(Action):
             ground_np, times_full = self._interpolate_yearly(ground_np, times)
 
         # Add the columns to the dataframes
-        times_full_str = [time.strftime('%Y-%m-%d') for time in times_full]
+        times_full_str = [time.strftime("%Y-%m-%d") for time in times_full]
         empty_df = pd.DataFrame(columns=times_full_str)
         if with_debris:
             ice_df = pd.concat([ice_df, empty_df.copy()], axis=1)
@@ -388,12 +386,12 @@ class ActionLandCoverChange(Action):
         # Populate the bounded instance (not needed for the ground type)
         if with_debris:
             self._remove_rows_with_no_changes(ice_df)
-            self._populate_bounded_instance('glacier_ice', 'm2', ice_df)
+            self._populate_bounded_instance("glacier_ice", "m2", ice_df)
             self._remove_rows_with_no_changes(debris_df)
-            self._populate_bounded_instance('glacier_debris', 'm2', debris_df)
+            self._populate_bounded_instance("glacier_debris", "m2", debris_df)
         else:
             self._remove_rows_with_no_changes(glacier_df)
-            self._populate_bounded_instance('glacier', 'm2', glacier_df)
+            self._populate_bounded_instance("glacier", "m2", glacier_df)
 
         if with_debris:
             return [ice_df, debris_df, ground_df]
@@ -401,11 +399,11 @@ class ActionLandCoverChange(Action):
             return [glacier_df, ground_df]
 
     def _extract_glacier_cover_change(
-            self,
-            catchment: Catchment,
-            glaciers_shapefile: str | Path,
-            debris_shapefile: str | Path | None,
-            method: str = 'vector'
+        self,
+        catchment: Catchment,
+        glaciers_shapefile: str | Path,
+        debris_shapefile: str | Path | None,
+        method: str = "vector",
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Extract the glacier cover changes from shapefiles.
@@ -446,26 +444,26 @@ class ActionLandCoverChange(Action):
         ValueError
             If catchment outline geometry is not a (multi)polygon or method is invalid.
         """
-        if method not in ['vector', 'raster']:
+        if method not in ["vector", "raster"]:
             raise ConfigurationError(
                 "Unknown method. Choose either 'vector' or 'raster'.",
-                item_name='method',
+                item_name="method",
                 item_value=method,
-                reason='Invalid method value'
+                reason="Invalid method value",
             )
 
         # Clip the glaciers to the catchment extent
         all_glaciers = gpd.read_file(glaciers_shapefile)
         all_glaciers.to_crs(catchment.crs, inplace=True)
-        if catchment.outline[0].geom_type == 'MultiPolygon':
+        if catchment.outline[0].geom_type == "MultiPolygon":
             glaciers = gpd.clip(all_glaciers, catchment.outline[0])
-        elif catchment.outline[0].geom_type == 'Polygon':
+        elif catchment.outline[0].geom_type == "Polygon":
             glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
         else:
             raise DataError(
                 "The catchment outline must be a (multi)polygon.",
-                data_type='catchment outline',
-                reason='Invalid geometry type'
+                data_type="catchment outline",
+                reason="Invalid geometry type",
             )
         glaciers = self._simplify_df_geometries(glaciers)
 
@@ -512,7 +510,7 @@ class ActionLandCoverChange(Action):
         px_area = catchment.get_dem_pixel_area()
 
         # Define the method to extract the pixels touching the glaciers
-        if method == 'vector':
+        if method == "vector":
             all_touched = True  # Needs to be True to include partly-covered pixels
         else:
             all_touched = False
@@ -524,21 +522,15 @@ class ActionLandCoverChange(Action):
 
         # Get the glacier mask
         glaciers_mask = self._mask_dem(
-            catchment,
-            glaciers,
-            nodata=0,
-            all_touched=all_touched
+            catchment, glaciers, nodata=0, all_touched=all_touched
         )
         debris_mask = None
         if debris_shapefile is not None:
             debris_mask = self._mask_dem(
-                catchment,
-                glaciers_debris,
-                nodata=0,
-                all_touched=all_touched
+                catchment, glaciers_debris, nodata=0, all_touched=all_touched
             )
 
-        unit_ids = catchment.hydro_units.hydro_units[('id', '-')].values
+        unit_ids = catchment.hydro_units.hydro_units[("id", "-")].values
 
         glacier_area = np.zeros(len(unit_ids))
         bare_ice_area = np.zeros(len(unit_ids))
@@ -549,11 +541,11 @@ class ActionLandCoverChange(Action):
             mask_unit = catchment.map_unit_ids == unit_id
             unit_area = np.sum(mask_unit) * px_area
 
-            if method == 'vector':
+            if method == "vector":
                 warnings.filterwarnings(
                     "ignore",
                     category=RuntimeWarning,
-                    message="invalid value encountered in intersection"
+                    message="invalid value encountered in intersection",
                 )
 
                 # Create an empty list to store the pixel geometries
@@ -592,13 +584,13 @@ class ActionLandCoverChange(Action):
                 debris_area[idx] = self._compute_intersection_area(inters_debris)
                 bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
-            elif method == 'raster':
-                glacier_area[idx] = np.count_nonzero(
-                    glaciers_mask[mask_unit]) * px_area
+            elif method == "raster":
+                glacier_area[idx] = np.count_nonzero(glaciers_mask[mask_unit]) * px_area
 
                 if debris_shapefile is not None:
-                    debris_area[idx] = np.count_nonzero(
-                        debris_mask[mask_unit]) * px_area
+                    debris_area[idx] = (
+                        np.count_nonzero(debris_mask[mask_unit]) * px_area
+                    )
 
                 bare_ice_area[idx] = glacier_area[idx] - debris_area[idx]
 
@@ -617,8 +609,7 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _interpolate_yearly(
-            data: np.ndarray,
-            times: list[str]
+        data: np.ndarray, times: list[str]
     ) -> tuple[np.ndarray, pd.DatetimeIndex]:
         """
         Interpolate glacier cover changes to yearly time steps.
@@ -638,7 +629,7 @@ class ActionLandCoverChange(Action):
             - DatetimeIndex of yearly dates from first to last time point
         """
         times_dt = pd.to_datetime(times)
-        times_full = pd.date_range(times_dt[0], times_dt[-1], freq='YS')
+        times_full = pd.date_range(times_dt[0], times_dt[-1], freq="YS")
 
         # Create an array with the interpolated values
         data_full = np.zeros((data.shape[0], len(times_full)))
@@ -649,8 +640,7 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _create_new_change_dataframe(
-            hydro_units: HydroUnits,
-            n_unit_ids: int
+        hydro_units: HydroUnits, n_unit_ids: int
     ) -> pd.DataFrame:
         """
         Create a new DataFrame for storing land cover changes.
@@ -669,9 +659,9 @@ class ActionLandCoverChange(Action):
             land cover changes at different time steps.
         """
         changes_df = pd.DataFrame(index=range(n_unit_ids))
-        changes_df.insert(loc=0, column='hydro_unit', value=0)
-        ids = hydro_units.hydro_units[('id', '-')].values.squeeze()
-        changes_df.loc[:, 'hydro_unit'] = ids
+        changes_df.insert(loc=0, column="hydro_unit", value=0)
+        ids = hydro_units.hydro_units[("id", "-")].values.squeeze()
+        changes_df.loc[:, "hydro_unit"] = ids
         return changes_df
 
     @staticmethod
@@ -699,9 +689,9 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _get_intersections(
-            pixel_geo: MultiPolygon,
-            objects: gpd.GeoDataFrame,
-            intersecting_geoms: list[MultiPolygon]
+        pixel_geo: MultiPolygon,
+        objects: gpd.GeoDataFrame,
+        intersecting_geoms: list[MultiPolygon],
     ) -> None:
         """
         Find intersections between pixel geometries and GeoDataFrame objects.
@@ -721,7 +711,7 @@ class ActionLandCoverChange(Action):
         intersection geometries found between pixel_geo and each object geometry.
         """
         for _, obj in objects.iterrows():
-            intersection = pixel_geo.intersection(obj['geometry'])
+            intersection = pixel_geo.intersection(obj["geometry"])
             if not intersection.is_empty:
                 intersecting_geoms.append(intersection)
 
@@ -743,19 +733,19 @@ class ActionLandCoverChange(Action):
         gpd.GeoDataFrame
             Simplified GeoDataFrame with a single row containing the unioned geometry.
         """
-        df['new_col'] = 0
-        df = df.dissolve(by='new_col', as_index=False)
+        df["new_col"] = 0
+        df = df.dissolve(by="new_col", as_index=False)
         # Drop all columns except the geometry
-        df = df[['geometry']]
+        df = df[["geometry"]]
 
         return df
 
     @staticmethod
     def _mask_dem(
-            catchment: Catchment,
-            shapefile: gpd.GeoDataFrame,
-            nodata: float,
-            all_touched: bool = False
+        catchment: Catchment,
+        shapefile: gpd.GeoDataFrame,
+        nodata: float,
+        all_touched: bool = False,
     ) -> np.ndarray:
         """
         Create a raster mask from shapefile geometries.
@@ -790,9 +780,7 @@ class ActionLandCoverChange(Action):
 
     @staticmethod
     def _match_hydro_unit_ids(
-            file_content: pd.DataFrame,
-            hydro_units: HydroUnits,
-            match_with: str
+        file_content: pd.DataFrame, hydro_units: HydroUnits, match_with: str
     ) -> None:
         """
         Match hydro unit identifiers from a DataFrame to hydro unit IDs.
@@ -818,18 +806,18 @@ class ActionLandCoverChange(Action):
         """
         hu_df = hydro_units.hydro_units
         for row, change in file_content.iterrows():
-            if match_with == 'elevation':
-                elevation_values = hu_df[('elevation', 'm')].to_numpy(dtype=np.int64)
+            if match_with == "elevation":
+                elevation_values = hu_df[("elevation", "m")].to_numpy(dtype=np.int64)
                 value = int(change.iloc[1])
                 idx_id = hu_df.index[elevation_values == value].to_list()[0]
             else:
                 raise ConfigurationError(
                     f'No option "{match_with}" for "match_with".',
-                    item_name='match_with',
+                    item_name="match_with",
                     item_value=match_with,
-                    reason='Invalid option'
+                    reason="Invalid option",
                 )
-            file_content.at[row, 'hydro_unit'] = hu_df.at[idx_id, ('id', '-')]
+            file_content.at[row, "hydro_unit"] = hu_df.at[idx_id, ("id", "-")]
 
     @staticmethod
     def _remove_rows_with_no_changes(file_content: pd.DataFrame) -> None:
@@ -849,7 +837,7 @@ class ActionLandCoverChange(Action):
         -----
         This method modifies file_content in place, replacing unchanged values with NaN.
         """
-        for idx, (row, change) in enumerate(file_content.iterrows()):
+        for idx, (_, change) in enumerate(file_content.iterrows()):
             diff = change.to_numpy(dtype=float)[1:]
             diff = diff[0:-1] - diff[1:]
             for i_diff, v_diff in enumerate(diff):
@@ -857,10 +845,7 @@ class ActionLandCoverChange(Action):
                     file_content.iloc[idx, i_diff + 2] = np.nan
 
     def _populate_bounded_instance(
-            self,
-            land_cover: str,
-            area_unit: str,
-            file_content: pd.DataFrame
+        self, land_cover: str, area_unit: str, file_content: pd.DataFrame
     ) -> None:
         """
         Populate the internal C++ action instance with land cover change data.
@@ -880,13 +865,13 @@ class ActionLandCoverChange(Action):
         and sets is_initialized to True upon completion.
         """
         for col in list(file_content):
-            if col == 'hydro_unit' or col == 0:
+            if col == "hydro_unit" or col == 0:
                 continue
             # Extract date from column name
             mjd = date_as_mjd(col)
 
             for row in range(len(file_content[col])):
-                hu_id = file_content.loc[row, 'hydro_unit']
+                hu_id = file_content.loc[row, "hydro_unit"]
                 area = float(file_content.loc[row, col])
                 if not np.isnan(area):
                     area = convert_unit(area, area_unit, Unit.M2)

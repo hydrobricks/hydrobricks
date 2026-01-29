@@ -13,10 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def plot_hydrograph(
-        obs: np.ndarray,
-        sim: np.ndarray,
-        time: np.ndarray,
-        year: int | None = None
+    obs: np.ndarray, sim: np.ndarray, time: np.ndarray, year: int | None = None
 ) -> None:
     """
     Plot the hydrograph of observed and simulated data.
@@ -38,28 +35,28 @@ def plot_hydrograph(
     plt.figure()
     if year is not None:
         dates = time[time.dt.year == year]
-        plt.plot(dates, obs[dates.index], label='observed', color='black')
-        plt.plot(dates, sim[dates.index], label='model', color='blue')
+        plt.plot(dates, obs[dates.index], label="observed", color="black")
+        plt.plot(dates, sim[dates.index], label="model", color="blue")
     else:
-        plt.plot(time, obs, label='observed', color='black')
-        plt.plot(time, sim, label='model', color='blue')
+        plt.plot(time, obs, label="observed", color="black")
+        plt.plot(time, sim, label="model", color="blue")
     plt.legend()
-    plt.ylabel('discharge (mm/day)')
+    plt.ylabel("discharge (mm/day)")
     plt.ylim(0, None)
     plt.tight_layout()
     plt.show()
 
 
 def plot_map_hydro_unit_value(
-        results: Results,
-        unit_ids_raster_path: str,
-        component: str,
-        date: str,
-        dem_path: str | None = None,
-        min_val: int = 0,
-        max_val: int | None = None,
-        figsize: tuple[int, int] = (6.4, 4.8),
-        title: str | None = None
+    results: Results,
+    unit_ids_raster_path: str,
+    component: str,
+    date: str,
+    dem_path: str | None = None,
+    min_val: int = 0,
+    max_val: int | None = None,
+    figsize: tuple[int, int] = (6.4, 4.8),
+    title: str | None = None,
 ) -> None:
     """
     Plot the values of a component at the hydro units on a map.
@@ -112,30 +109,30 @@ def plot_map_hydro_unit_value(
     cmap = _generate_cmap_blue()
     plt.figure(figsize=figsize)
     if dem_path is not None:
-        plt.imshow(shaded_dem, cmap='gray')
+        plt.imshow(shaded_dem, cmap="gray")
         plt.imshow(val_raster, cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
     else:
         plt.imshow(val_raster, cmap=cmap, vmin=min_val, vmax=max_val)
     plt.colorbar(shrink=0.8)
-    plt.contour(boundary, levels=[0.5], linewidths=1, colors='black', alpha=1.0)
-    plt.axis('off')
+    plt.contour(boundary, levels=[0.5], linewidths=1, colors="black", alpha=1.0)
+    plt.axis("off")
     plt.title(title if title else f"{date}")
     plt.tight_layout()
     plt.show()
 
 
 def create_animated_map_hydro_unit_value(
-        results: Results,
-        unit_ids_raster_path: str,
-        component: str,
-        start_date: str,
-        end_date: str,
-        save_path: str,
-        dem_path: str | None = None,
-        min_val: int = 0,
-        max_val: int | None = None,
-        fps: int = 5,
-        figsize: tuple[int, int] = (6.4, 4.8)
+    results: Results,
+    unit_ids_raster_path: str,
+    component: str,
+    start_date: str,
+    end_date: str,
+    save_path: str,
+    dem_path: str | None = None,
+    min_val: int = 0,
+    max_val: int | None = None,
+    fps: int = 5,
+    figsize: tuple[int, int] = (6.4, 4.8),
 ) -> None:
     """
     Create an animated map of the values of a component at the hydro units.
@@ -202,18 +199,18 @@ def create_animated_map_hydro_unit_value(
 
     # Initialize the plot with the first frame of the data
     if dem_path is not None:
-        plt.imshow(shaded_dem, cmap='gray')
+        plt.imshow(shaded_dem, cmap="gray")
         im = ax.imshow(data_3d[0], cmap=cmap, alpha=0.7, vmin=min_val, vmax=max_val)
     else:
         im = ax.imshow(data_3d[0], cmap=cmap, vmin=min_val, vmax=max_val)
 
-    plt.axis('off')
+    plt.axis("off")
 
     # Add the catchment boundary
-    plt.contour(boundary, levels=[0.5], linewidths=1, colors='black', alpha=1.0)
+    plt.contour(boundary, levels=[0.5], linewidths=1, colors="black", alpha=1.0)
 
     # Initialize title
-    title = ax.set_title('Frame 0')
+    title = ax.set_title("Frame 0")
     plt.tight_layout()
 
     # Define the update function to be called for each frame
@@ -232,7 +229,7 @@ def create_animated_map_hydro_unit_value(
             List of artists to update (image and title).
         """
         im.set_array(data_3d[frame])  # Update the image data
-        date = np.datetime_as_string(dates[frame], unit='D')
+        date = np.datetime_as_string(dates[frame], unit="D")
         title.set_text(date)  # Update the title
         return [im, title]
 
@@ -241,7 +238,7 @@ def create_animated_map_hydro_unit_value(
 
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('[mm]')
+    cbar.set_label("[mm]")
 
     # Save the animation
     output_path = f"{save_path}/{component.replace(':', '_')}.gif"
@@ -263,7 +260,7 @@ def _generate_cmap_blue() -> ListedColormap:
         A custom colormap with white for zero values and blue scale for data.
     """
     # Use the blue colormap
-    cmap = plt.get_cmap('YlGnBu')
+    cmap = plt.get_cmap("YlGnBu")
 
     # Create a new colormap from the existing one
     new_colors = cmap(np.linspace(0, 1, 256))

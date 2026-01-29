@@ -52,40 +52,40 @@ class Action(ABC):
             if update_month < 1 or update_month > 12:
                 raise ConfigurationError(
                     "Month number must be between 1 and 12.",
-                    item_name='update_month',
+                    item_name="update_month",
                     item_value=update_month,
-                    reason='Invalid month number'
+                    reason="Invalid month number",
                 )
             month_num = update_month
         elif isinstance(update_month, str):
             month_mapping = {
-                'January': 1,
-                'February': 2,
-                'March': 3,
-                'April': 4,
-                'May': 5,
-                'June': 6,
-                'July': 7,
-                'August': 8,
-                'September': 9,
-                'October': 10,
-                'November': 11,
-                'December': 12
+                "January": 1,
+                "February": 2,
+                "March": 3,
+                "April": 4,
+                "May": 5,
+                "June": 6,
+                "July": 7,
+                "August": 8,
+                "September": 9,
+                "October": 10,
+                "November": 11,
+                "December": 12,
             }
             month_num = month_mapping.get(update_month, None)
             if month_num is None:
                 raise ConfigurationError(
                     f"Invalid month name: {update_month}",
-                    item_name='update_month',
+                    item_name="update_month",
                     item_value=update_month,
-                    reason='Unknown month name'
+                    reason="Unknown month name",
                 )
         else:
             raise ConfigurationError(
                 "Month must be a string or an integer.",
-                item_name='update_month',
+                item_name="update_month",
                 item_value=type(update_month).__name__,
-                reason='Invalid type'
+                reason="Invalid type",
             )
 
         return month_num

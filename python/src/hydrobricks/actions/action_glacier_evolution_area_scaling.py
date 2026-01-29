@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from hydrobricks._exceptions import ConfigurationError
 from hydrobricks._hydrobricks import (
     ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling,
 )
-from hydrobricks._exceptions import ConfigurationError
 from hydrobricks.actions import Action
 from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
@@ -34,15 +34,17 @@ class ActionGlacierEvolutionAreaScaling(Action):
         """
         super().__init__()
         self.name: str = "ActionGlacierEvolutionAreaScaling"
-        self.action: _ActionGlacierEvolutionAreaScaling = _ActionGlacierEvolutionAreaScaling()
+        self.action: _ActionGlacierEvolutionAreaScaling = (
+            _ActionGlacierEvolutionAreaScaling()
+        )
 
     def load_from_csv(
-            self,
-            dir_path: str | Path,
-            land_cover: str = 'glacier',
-            filename_area: str = 'glacier_evolution_lookup_table_area.csv',
-            filename_volume: str = 'glacier_evolution_lookup_table_volume.csv',
-            update_month: str | int = 'October'
+        self,
+        dir_path: str | Path,
+        land_cover: str = "glacier",
+        filename_area: str = "glacier_evolution_lookup_table_area.csv",
+        filename_volume: str = "glacier_evolution_lookup_table_volume.csv",
+        update_month: str | int = "October",
     ) -> None:
         """
         Read the glacier evolution lookup table from CSV files.
@@ -105,20 +107,17 @@ class ActionGlacierEvolutionAreaScaling(Action):
         lookup_table_volume = pd.read_csv(full_path_volume)
 
         self._populate_bounded_instance(
-            lookup_table_area,
-            lookup_table_volume,
-            land_cover,
-            update_month
+            lookup_table_area, lookup_table_volume, land_cover, update_month
         )
 
     def load_from(
-            self,
-            obj: GlacierEvolutionAreaScaling,
-            land_cover: str = 'glacier',
-            update_month: str | int = 'October'
+        self,
+        obj: GlacierEvolutionAreaScaling,
+        land_cover: str = "glacier",
+        update_month: str | int = "October",
     ) -> None:
         """
-        Get the glacier evolution lookup table from a GlacierEvolutionAreaScaling instance.
+        Get the evolution lookup table from a GlacierEvolutionAreaScaling instance.
 
         Parameters
         ----------
@@ -140,17 +139,14 @@ class ActionGlacierEvolutionAreaScaling(Action):
             raise ConfigurationError(
                 "The object is not a GlacierEvolutionAreaScaling instance.",
                 item_value=type(obj).__name__,
-                reason='Invalid object type'
+                reason="Invalid object type",
             )
 
         lookup_table_area = obj.get_lookup_table_area()
         lookup_table_volume = obj.get_lookup_table_volume()
 
         self._populate_bounded_instance(
-            lookup_table_area,
-            lookup_table_volume,
-            land_cover,
-            update_month
+            lookup_table_area, lookup_table_volume, land_cover, update_month
         )
 
     def get_month(self) -> int:
@@ -211,11 +207,11 @@ class ActionGlacierEvolutionAreaScaling(Action):
         return self.action.get_lookup_table_volume()
 
     def _populate_bounded_instance(
-            self,
-            lookup_table_area: pd.DataFrame,
-            lookup_table_volume: pd.DataFrame,
-            land_cover: str,
-            update_month: str | int
+        self,
+        lookup_table_area: pd.DataFrame,
+        lookup_table_volume: pd.DataFrame,
+        land_cover: str,
+        update_month: str | int,
     ) -> None:
         """
         Populate the internal C++ instance with lookup table data.
@@ -241,8 +237,9 @@ class ActionGlacierEvolutionAreaScaling(Action):
         # Get the hydro unit ids from the first row
         hu_ids = lookup_table_area.columns.astype(int).values
         hu_ids_volume = lookup_table_volume.columns.astype(int).values
-        assert np.array_equal(hu_ids, hu_ids_volume), \
-            "The hydro unit ids in the area and volume tables do not match."
+        assert np.array_equal(
+            hu_ids, hu_ids_volume
+        ), "The hydro unit ids in the area and volume tables do not match."
 
         # Get the areas from the rest of the table
         areas = lookup_table_area.astype(float).values
@@ -250,8 +247,9 @@ class ActionGlacierEvolutionAreaScaling(Action):
         # Get the volumes from the rest of the table
         volumes = lookup_table_volume.astype(float).values
 
-        assert areas.shape == volumes.shape, \
-            "The areas and volumes tables do not have the same shape."
+        assert (
+            areas.shape == volumes.shape
+        ), "The areas and volumes tables do not have the same shape."
 
         self.action.add_lookup_tables(month_num, land_cover, hu_ids, areas, volumes)
 

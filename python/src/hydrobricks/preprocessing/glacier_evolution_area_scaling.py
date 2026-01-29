@@ -12,7 +12,6 @@ from hydrobricks._optional import HAS_PYPROJ
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
-    from hydrobricks.hydro_units import HydroUnits
 
 
 class GlacierEvolutionAreaScaling:
@@ -42,10 +41,7 @@ class GlacierEvolutionAreaScaling:
         self.px_ice_we: np.ndarray | None = None
 
     def compute_lookup_table(
-            self,
-            catchment: Catchment,
-            ice_thickness: str | Path,
-            nb_increments: int = 200
+        self, catchment: Catchment, ice_thickness: str | Path, nb_increments: int = 200
     ) -> None:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -70,16 +66,16 @@ class GlacierEvolutionAreaScaling:
             raise ConfigurationError(
                 "Catchment has not been discretized. "
                 "Please run create_elevation_bands() first.",
-                reason='Catchment not initialized'
+                reason="Catchment not initialized",
             )
 
         # Extract the ice thickness from a TIF file.
         if not HAS_PYPROJ:
             raise DependencyError(
                 "pyproj is required to extract glacier thickness.",
-                package_name='pyproj',
-                operation='GlacierEvolutionAreaScaling.compute_lookup_table',
-                install_command='pip install pyproj'
+                package_name="pyproj",
+                operation="GlacierEvolutionAreaScaling.compute_lookup_table",
+                install_command="pip install pyproj",
             )
 
         self.hydro_units = catchment.hydro_units.hydro_units
@@ -108,7 +104,7 @@ class GlacierEvolutionAreaScaling:
         return pd.DataFrame(
             self.lookup_table_area,
             index=range(self.lookup_table_area.shape[0]),
-            columns=self.hydro_unit_ids
+            columns=self.hydro_unit_ids,
         )
 
     def get_lookup_table_volume(self) -> pd.DataFrame:
@@ -122,7 +118,7 @@ class GlacierEvolutionAreaScaling:
         return pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
-            columns=self.hydro_unit_ids
+            columns=self.hydro_unit_ids,
         )
 
     def save_as_csv(self, output_dir: str | Path) -> None:
@@ -143,55 +139,50 @@ class GlacierEvolutionAreaScaling:
         lookup_table_area = pd.DataFrame(
             self.lookup_table_area,
             index=range(self.lookup_table_area.shape[0]),
-            columns=self.hydro_unit_ids
+            columns=self.hydro_unit_ids,
         )
         lookup_table_area.to_csv(
-            output_dir / "glacier_evolution_lookup_table_area.csv",
-            index=False
+            output_dir / "glacier_evolution_lookup_table_area.csv", index=False
         )
 
         lookup_table_volume = pd.DataFrame(
             self.lookup_table_volume,
             index=range(self.lookup_table_volume.shape[0]),
-            columns=self.hydro_unit_ids
+            columns=self.hydro_unit_ids,
         )
         lookup_table_volume.to_csv(
-            output_dir / "glacier_evolution_lookup_table_volume.csv",
-            index=False
+            output_dir / "glacier_evolution_lookup_table_volume.csv", index=False
         )
 
         if self.areas_pc is not None:
             columns = pd.MultiIndex.from_arrays(
-                [range(len(self.areas_pc[0])),
-                 self.hydro_unit_ids],
-                names=['id',
-                       'hydro_unit_id'])
+                [range(len(self.areas_pc[0])), self.hydro_unit_ids],
+                names=["id", "hydro_unit_id"],
+            )
             details_glacier_areas = pd.DataFrame(
                 self.areas_pc * self.catchment_area,
                 index=range(self.areas_pc.shape[0]),
-                columns=columns)
+                columns=columns,
+            )
             details_glacier_areas.to_csv(
-                output_dir / "details_glacier_areas_evolution.csv",
-                index=False
+                output_dir / "details_glacier_areas_evolution.csv", index=False
             )
 
         if self.we is not None:
             columns = pd.MultiIndex.from_arrays(
-                [range(len(self.we[0])),
-                 self.hydro_unit_ids],
-                names=['id',
-                       'hydro_unit_id']
+                [range(len(self.we[0])), self.hydro_unit_ids],
+                names=["id", "hydro_unit_id"],
             )
             details_glacier_we = pd.DataFrame(
-                self.we,
-                index=range(self.we.shape[0]),
-                columns=columns)
+                self.we, index=range(self.we.shape[0]), columns=columns
+            )
             details_glacier_we.to_csv(
-                output_dir / "details_glacier_we_evolution.csv",
-                index=False
+                output_dir / "details_glacier_we_evolution.csv", index=False
             )
 
-    def _extract_ice_thickness(self, catchment: Catchment, ice_thickness: str | Path) -> None:
+    def _extract_ice_thickness(
+        self, catchment: Catchment, ice_thickness: str | Path
+    ) -> None:
         """
         Extract ice thickness from raster and create glacier patches.
 
@@ -208,26 +199,27 @@ class GlacierEvolutionAreaScaling:
         """
         catchment.extract_attribute_raster(
             ice_thickness,
-            'ice_thickness',
+            "ice_thickness",
             resample_to_dem_resolution=True,
-            resampling='average'
+            resampling="average",
         )
-        ice_thickness = catchment.attributes['ice_thickness']['data']
+        ice_thickness = catchment.attributes["ice_thickness"]["data"]
         ice_thickness[catchment.dem_data == 0] = 0.0
         glaciers_mask = np.zeros(catchment.dem_data.shape)
         glaciers_mask[ice_thickness > 0] = 1
 
-        glacier_patches = self._get_glacier_patches(
-            catchment, glaciers_mask)
+        glacier_patches = self._get_glacier_patches(catchment, glaciers_mask)
 
         # Create the dataframe for the glacier data
         glacier_df = None
         for unit_id, area in glacier_patches:
             new_row = pd.DataFrame(
                 [[unit_id, area, 0.0]],
-                columns=[('hydro_unit_id', '-'),
-                         ('glacier_area', 'm2'),
-                         ('glacier_thickness', 'm')]
+                columns=[
+                    ("hydro_unit_id", "-"),
+                    ("glacier_area", "m2"),
+                    ("glacier_thickness", "m"),
+                ],
             )
             if glacier_df is None:
                 glacier_df = new_row
@@ -238,7 +230,7 @@ class GlacierEvolutionAreaScaling:
 
         # Update the dataframe with the ice thickness
         for i_row, (idx, row) in enumerate(glacier_df.iterrows()):
-            unit_id = row[('hydro_unit_id', '-')]
+            unit_id = row[("hydro_unit_id", "-")]
 
             # Get the ice thickness for the corresponding band and unit
             mask_unit = catchment.map_unit_ids == unit_id
@@ -254,7 +246,7 @@ class GlacierEvolutionAreaScaling:
             else:
                 mean_thickness = 0.0
 
-            glacier_df.at[idx, ('glacier_thickness', 'm')] = mean_thickness
+            glacier_df.at[idx, ("glacier_thickness", "m")] = mean_thickness
 
         self.glacier_df = glacier_df
 
@@ -276,10 +268,10 @@ class GlacierEvolutionAreaScaling:
         self.px_ice_we = np.vstack([self.px_ice_we, new_rows])
 
         # Extract the relevant columns
-        initial_areas_m2 = self.glacier_df[('glacier_area', 'm2')].values
-        initial_we_mm = self.glacier_df[('glacier_thickness', 'm')].values
+        initial_areas_m2 = self.glacier_df[("glacier_area", "m2")].values
+        initial_we_mm = self.glacier_df[("glacier_thickness", "m")].values
         initial_we_mm *= ICE_WE * 1000
-        hydro_unit_ids = self.glacier_df[('hydro_unit_id', '-')].values
+        hydro_unit_ids = self.glacier_df[("hydro_unit_id", "-")].values
 
         self.hydro_unit_ids = hydro_unit_ids
         self.we = np.zeros((nb_increments + 1, len(hydro_unit_ids)))
@@ -289,7 +281,9 @@ class GlacierEvolutionAreaScaling:
         self.lookup_table_area = np.zeros((nb_increments + 1, len(hydro_unit_ids)))
         self.lookup_table_volume = np.zeros((nb_increments + 1, len(hydro_unit_ids)))
 
-    def _update_glacier_thickness(self, increment: int, mass_change: np.ndarray) -> None:
+    def _update_glacier_thickness(
+        self, increment: int, mass_change: np.ndarray
+    ) -> None:
         """
         Update glacier water equivalent for an increment of mass loss.
 
@@ -319,7 +313,7 @@ class GlacierEvolutionAreaScaling:
 
             # Ensure that the pixel-wise ice water equivalent is not negative
             while np.any(px_values < 0):
-                px_melt_deficit = - np.sum(px_values[px_values < 0])
+                px_melt_deficit = -np.sum(px_values[px_values < 0])
                 px_melt = px_melt_deficit / len(px_values[px_values > 0])
                 px_values = np.where(px_values <= 0, 0, px_values - px_melt)
 
@@ -328,9 +322,10 @@ class GlacierEvolutionAreaScaling:
             # Update the glacier water equivalent for the hydro unit
             new_we = np.mean(px_values)
             ref_we = self.we[increment, i_unit]
-            assert np.isclose(new_we, ref_we - melt, atol=1e-02), \
-                (f"Mismatch in glacier w.e. for unit {i_unit} "
-                 f"({ref_we - melt} != {new_we})")
+            assert np.isclose(new_we, ref_we - melt, atol=1e-02), (
+                f"Mismatch in glacier w.e. for unit {i_unit} "
+                f"({ref_we - melt} != {new_we})"
+            )
             self.we[increment, i_unit] = new_we
 
     def _width_scaling(self, increment: int, catchment: Catchment) -> None:
@@ -362,19 +357,18 @@ class GlacierEvolutionAreaScaling:
         self.areas_pc[increment, :] = areas / self.catchment_area
 
         # Adjust the glacier ice w.e. per part (px with 0 ice w.e. were dropped)
-        self.we[increment] = np.array([
-            np.mean(arr) if arr.size > 0 else 0
-            for arr in self.px_ice_we[increment]
-        ])
+        self.we[increment] = np.array(
+            [np.mean(arr) if arr.size > 0 else 0 for arr in self.px_ice_we[increment]]
+        )
 
     def _update_lookup_tables(self) -> None:
         """
         Update lookup tables with glacier area and volume for each increment.
 
-        Aggregates glacier areas and volumes across hydro units based on elevation bands.
-        Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled) areas for all
-        respective elevation bands which are covered by glaciers (i.e. glacier water
-        equivalent ≥ 0) for each elevation zone."
+        Aggregates glacier areas and volumes across hydro units based on elevation
+        bands. Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled)
+        areas for all respective elevation bands which are covered by glaciers
+        (i.e. glacier water equivalent ≥ 0) for each elevation zone."
         """
         # Update elevation zone areas
         for i, hydro_unit_id in enumerate(np.unique(self.hydro_unit_ids)):
@@ -390,8 +384,7 @@ class GlacierEvolutionAreaScaling:
 
     @staticmethod
     def _get_glacier_patches(
-            catchment: Catchment,
-            glaciers_mask: np.ndarray
+        catchment: Catchment, glaciers_mask: np.ndarray
     ) -> list[tuple[int, float]]:
         """
         Extract glacier patches for each hydro unit from a glacier mask.

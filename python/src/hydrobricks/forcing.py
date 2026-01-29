@@ -768,10 +768,12 @@ class Forcing:
 
         if method == "multiplicative":
             correction_factor = kwargs["correction_factor"]
-            self.data1D.data[idx] *= correction_factor
+            # Do not use in-place mutation (*=) to avoid issues with read-only arrays
+            self.data1D.data[idx] = self.data1D.data[idx] * correction_factor
         elif method == "additive":
             correction_factor = kwargs["correction_factor"]
-            self.data1D.data[idx] += correction_factor
+            # Do not use in-place mutation (+=) to avoid issues with read-only arrays
+            self.data1D.data[idx] = self.data1D.data[idx] + correction_factor
         else:
             raise ForcingError(
                 f"Unknown correction method: {method}",

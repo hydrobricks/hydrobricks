@@ -14,14 +14,14 @@ TEST(SubBasin, HasIncomingFlow) {
     EXPECT_FALSE(subBasinIn.HasIncomingFlow());
 }
 
-TEST(SubBasin, GetHydroUnitsCount1) {
+TEST(SubBasin, GetHydroUnitCount1) {
     SubBasin subBasin;
     subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
 
     EXPECT_EQ(subBasin.GetHydroUnitCount(), 1);
 }
 
-TEST(SubBasin, GetHydroUnitsCount3) {
+TEST(SubBasin, GetHydroUnitCount3) {
     SubBasin subBasin;
     subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));
     subBasin.AddHydroUnit(std::make_unique<HydroUnit>(100));

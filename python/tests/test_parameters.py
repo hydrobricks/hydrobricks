@@ -35,7 +35,7 @@ def test_define_parameter():
 
 def test_define_parameter_min_max_mismatch():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="snowpack",
             name="degree_day_factor",
@@ -77,7 +77,7 @@ def test_define_parameter_with_list_after_float():
 
 def test_define_parameter_min_max_mismatch_types():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(TypeError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="snowpack",
             name="degree_day_factor",
@@ -86,7 +86,7 @@ def test_define_parameter_min_max_mismatch_types():
             min_val=0,
             max_val=[1, 2],
         )
-    with pytest.raises(TypeError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="snowpack",
             name="degree_day_factor",
@@ -99,7 +99,7 @@ def test_define_parameter_min_max_mismatch_types():
 
 def test_define_parameter_min_max_mismatch_list_size():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="snowpack",
             name="degree_day_factor",
@@ -112,7 +112,7 @@ def test_define_parameter_min_max_mismatch_list_size():
 
 def test_define_parameter_min_max_mismatch_in_list():
     parameter_set = hb.ParameterSet()
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="snowpack",
             name="degree_day_factor",
@@ -198,7 +198,7 @@ def test_define_parameter_alias_already_used():
         unit="mm/d",
         aliases=["as", "sd"],
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.define_parameter(
             component="glacier",
             name="degree_day_factor",
@@ -259,7 +259,7 @@ def test_set_parameter_value_not_found():
     parameter_set.define_parameter(
         component="snowpack", name="degree_day_factor", unit="mm/d", aliases=["as"]
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.set_values({"xy": 2})
 
 
@@ -273,7 +273,7 @@ def test_set_parameter_value_too_low():
         min_val=2,
         max_val=6,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.set_values({"as": 1})
 
 
@@ -287,7 +287,7 @@ def test_set_parameter_value_too_high():
         min_val=2,
         max_val=6,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.set_values({"as": 10})
 
 
@@ -301,7 +301,7 @@ def test_set_parameter_value_with_list_too_low():
         min_val=[0, 1],
         max_val=[2, 3],
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.set_values({"as": [1, 0]})
 
 
@@ -315,7 +315,7 @@ def test_set_parameter_value_with_list_too_high():
         min_val=[0, 1],
         max_val=[2, 3],
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         parameter_set.set_values({"as": [1, 5]})
 
 
@@ -525,5 +525,5 @@ def test_validate_process_param_specs_duplicate_detection():
     bad_specs = {
         "test:proc": [ParamSpec(name="dup"), ParamSpec(name="dup")]  # duplicate name
     }
-    with pytest.raises(ValueError):
+    with pytest.raises(hb.ConfigurationError):
         validate_process_param_specs(bad_specs)

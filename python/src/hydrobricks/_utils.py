@@ -292,7 +292,7 @@ class Timer:
         self._start_time: float | None = None
         self.last: float | None = None
         self.logger: Callable[[str], None] = print
-        self.text: str | Callable[[float], str] = "Elapsed time: {seconds:.4f} seconds"
+        self.text: str | Callable[[float], str] = "Elapsed time: {seconds:.2f} seconds"
         if text is not None:
             self.text = text
 

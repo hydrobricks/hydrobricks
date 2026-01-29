@@ -35,8 +35,8 @@ void Processor::ConnectToElementsToSolve() {
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
         bool solverRequired = false;
-        int bricksCount = unit->GetBricksCount();
-        for (int iBrick = 0; iBrick < bricksCount; ++iBrick) {
+        int brickCount = unit->GetBrickCount();
+        for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
 
             // Add the bricks that need a solver and all their children
@@ -61,8 +61,8 @@ void Processor::ConnectToElementsToSolve() {
         }
     }
 
-    int basinBricksCount = basin->GetBricksCount();
-    for (int iBrick = 0; iBrick < basinBricksCount; ++iBrick) {
+    int basinBrickCount = basin->GetBrickCount();
+    for (int iBrick = 0; iBrick < basinBrickCount; ++iBrick) {
         Brick* brick = basin->GetBrick(iBrick);
 
         // Add the bricks need a solver here
@@ -103,13 +103,13 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
     int hydroUnitCount = basin->GetHydroUnitCount();
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
-        int splittersCount = unit->GetSplittersCount();
-        for (int iSplitter = 0; iSplitter < splittersCount; ++iSplitter) {
+        int splitterCount = unit->GetSplitterCount();
+        for (int iSplitter = 0; iSplitter < splitterCount; ++iSplitter) {
             Splitter* splitter = unit->GetSplitter(iSplitter);
             splitter->Compute();
         }
-        int bricksCount = unit->GetBricksCount();
-        for (int iBrick = 0; iBrick < bricksCount; ++iBrick) {
+        int brickCount = unit->GetBrickCount();
+        for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
             if (brick->NeedsSolver()) {
                 continue;

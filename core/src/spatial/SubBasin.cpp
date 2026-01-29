@@ -196,11 +196,11 @@ vecDouble SubBasin::GetHydroUnitAreas() const {
     return areas;
 }
 
-int SubBasin::GetBricksCount() const {
+int SubBasin::GetBrickCount() const {
     return static_cast<int>(_bricks.size());
 }
 
-int SubBasin::GetSplittersCount() const {
+int SubBasin::GetSplitterCount() const {
     return static_cast<int>(_splitters.size());
 }
 

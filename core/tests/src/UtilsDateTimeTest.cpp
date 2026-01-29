@@ -42,4 +42,3 @@ TEST(UtilsDateTime, ParseVariousPatterns) {
     // ISO with T
     EXPECT_DOUBLE_EQ(GetMJD(2020, 1, 2, 3, 4, 5), ParseDate("2020-01-02T03:04:05", guess));
 }
-

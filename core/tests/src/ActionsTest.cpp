@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ActionGlacierEvolutionDeltaH.h"
 #include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
@@ -7,8 +9,6 @@
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 #include "helpers.h"
-
-#include <memory>
 
 class ActionsInModel : public ::testing::Test {
   protected:

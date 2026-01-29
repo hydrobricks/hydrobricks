@@ -14,11 +14,8 @@ Solver::Solver()
       _nIterations(1) {}
 
 static string GetValidSolverNames() {
-    static const vector<string> validNames = {
-        "rk4", "runge_kutta",  // Synonyms for RK4
-        "euler_explicit",
-        "heun_explicit"
-    };
+    static const vector<string> validNames = {"rk4", "runge_kutta",  // Synonyms for RK4
+                                              "euler_explicit", "heun_explicit"};
 
     string suggestions = "Valid solver names: ";
     for (size_t i = 0; i < validNames.size(); ++i) {
@@ -37,15 +34,15 @@ Solver* Solver::Factory(const SolverSettings& solverSettings) {
         {"rk4", []() { return new SolverRK4(); }},
         {"runge_kutta", []() { return new SolverRK4(); }},
         {"euler_explicit", []() { return new SolverEulerExplicit(); }},
-        {"heun_explicit", []() { return new SolverHeunExplicit(); }}
-    };
+        {"heun_explicit", []() { return new SolverHeunExplicit(); }}};
 
     auto it = factoryMap.find(solverSettings.name);
     if (it != factoryMap.end()) {
         return it->second();
     }
 
-    throw ModelConfigError(wxString::Format(_("Incorrect solver name: %s. %s"), solverSettings.name, GetValidSolverNames()));
+    throw ModelConfigError(
+        wxString::Format(_("Incorrect solver name: %s. %s"), solverSettings.name, GetValidSolverNames()));
 }
 
 void Solver::InitializeContainers() {

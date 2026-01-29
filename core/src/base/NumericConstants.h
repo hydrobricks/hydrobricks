@@ -120,12 +120,11 @@ using NumericConstants::PRECISION;
 using NumericConstants::TOLERANCE_LOOSE;
 
 // Convenience functions in global namespace
+using NumericConstants::GreaterThan;
+using NumericConstants::GreaterThanOrEqual;
+using NumericConstants::LessThan;
+using NumericConstants::LessThanOrEqual;
 using NumericConstants::NearlyEqual;
 using NumericConstants::NearlyZero;
-using NumericConstants::GreaterThan;
-using NumericConstants::LessThan;
-using NumericConstants::GreaterThanOrEqual;
-using NumericConstants::LessThanOrEqual;
 
 #endif  // HYDROBRICKS_NUMERIC_CONSTANTS_H
-

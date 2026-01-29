@@ -96,7 +96,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_value", &Parameter::SetValue, "Set the parameter value.")
         .def("set_modifier", &Parameter::SetModifier, "Set the parameter modifier.", "modifier"_a)
         .def("has_modifier", &Parameter::HasModifier, "Check if the parameter has a modifier.")
-        .def("update_from_modifier", &Parameter::UpdateFromModifier, "Update the parameter value using its modifier.", "date"_a)
+        .def("update_from_modifier", &Parameter::UpdateFromModifier, "Update the parameter value using its modifier.",
+             "date"_a)
         .def("__repr__", [](const Parameter& a) { return "<_hydrobricks.Parameter named '" + a.GetName() + "'>"; });
 
     py::enum_<ParameterModifierType>(m, "ParameterModifierType")
@@ -129,7 +130,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
-        .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount, "Get the number of action items.")
+        .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount,
+             "Get the number of action items.")
         .def("add_time_series", &ModelHydro::AddTimeSeries, "Adding a time series to the model.", "time_series"_a)
         .def("create_time_series", &ModelHydro::CreateTimeSeries, "Create a time series and add it to the model.",
              "data_name"_a, "time"_a, "ids"_a, "data"_a)
@@ -139,7 +141,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("update_parameters", &ModelHydro::UpdateParameters, "Update the parameters with the provided values.",
              "model_settings"_a)
         .def("forcing_loaded", &ModelHydro::ForcingLoaded, "Check if the forcing data were loaded.")
-        .def("is_ok", &ModelHydro::IsOk, "Check if the model is correctly set up.")
+        .def("is_valid", &ModelHydro::IsValid, "Check if the model is correctly set up.")
         .def("run", &ModelHydro::Run, "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
@@ -157,7 +159,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<ActionLandCoverChange, Action>(m, "ActionLandCoverChange")
         .def(py::init<>())
         .def("add_change", &ActionLandCoverChange::AddChange, "date"_a, "hydro_unit_id"_a, "land_cover"_a, "area"_a)
-        .def("get_change_count", &ActionLandCoverChange::GetChangeCount)
+        .def("get_changes_count", &ActionLandCoverChange::GetChangesCount)
         .def("get_land_cover_count", &ActionLandCoverChange::GetLandCoverCount);
 
     py::class_<ActionGlacierEvolutionDeltaH, Action>(m, "ActionGlacierEvolutionDeltaH")

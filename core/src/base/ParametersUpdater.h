@@ -59,9 +59,9 @@ class ParametersUpdater : public wxObject {
   private:
     bool _active;
     double _previousDate;
-    vector<Parameter*> _parametersYearly;    // non-owning, parameters with yearly modifiers
-    vector<Parameter*> _parametersMonthly;   // non-owning, parameters with monthly modifiers
-    vector<Parameter*> _parametersDates;     // non-owning, parameters with date modifiers
+    vector<Parameter*> _parametersYearly;   // non-owning, parameters with yearly modifiers
+    vector<Parameter*> _parametersMonthly;  // non-owning, parameters with monthly modifiers
+    vector<Parameter*> _parametersDates;    // non-owning, parameters with date modifiers
 };
 
 #endif  // HYDROBRICKS_PARAMETERS_UPDATER_H

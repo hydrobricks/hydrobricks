@@ -13,5 +13,4 @@ static const double NAN_D = std::numeric_limits<double>::quiet_NaN();
 // Keep NAN_I for backward compatibility
 static const int NAN_I = INT_NAN_SENTINEL;
 
-
 #endif  // HYDROBRICKS_TYPEDEFS_H

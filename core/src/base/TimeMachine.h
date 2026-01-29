@@ -147,8 +147,8 @@ class TimeMachine : public wxObject {
     TimeUnit _timeStepUnit;
     double _timeStepInDays;
     ParametersUpdater* _parametersUpdater;  // non-owning reference
-    ActionsManager* _actionsManager;  // non-owning reference
-    static double _currentDateStatic;  // Holds the globally accessible current date (MJD)
+    ActionsManager* _actionsManager;        // non-owning reference
+    static double _currentDateStatic;       // Holds the globally accessible current date (MJD)
 
     /**
      * Update the time step in days.

@@ -13,7 +13,7 @@ nc_file_path = DATA_DIR / FILE_NAME
 ds = xr.open_dataset(nc_file_path)
 
 # Calculate the midpoint index for the "E" dimension
-midpoint_idx = ds.dims['E'] // 2
+midpoint_idx = ds.dims["E"] // 2
 midpoint_E = ds.E[midpoint_idx]
 
 # Extract the time range for the first three days

@@ -40,9 +40,7 @@ bool Parameter::IsValid() const {
 
 void Parameter::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(
-            _("Parameter validation failed. Name: '%s', Value: %f"),
-            _name, _value);
+        wxString msg = wxString::Format(_("Parameter validation failed. Name: '%s', Value: %f"), _name, _value);
         throw ModelConfigError(msg);
     }
 }

@@ -46,28 +46,24 @@ def test_parameter_variable_yearly_creation():
 def test_parameter_variable_yearly_value_assignment():
     param = ParameterVariableYearly("param yearly variable")
     assert param.set_values(
-        year_start=2020,
-        year_end=2025,
-        values=[1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
+        year_start=2020, year_end=2025, values=[1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
     )
 
 
 def test_parameter_variable_yearly_value_assignment_fails_if_wrong_size():
     param = ParameterVariableYearly("param yearly variable")
     assert not param.set_values(
-        year_start=2020,
-        year_end=2025,
-        values=[1.0, 1.1, 1.2, 1.3, 1.4]
+        year_start=2020, year_end=2025, values=[1.0, 1.1, 1.2, 1.3, 1.4]
     )
 
 
 def test_build_socont_model_structure():
     try:
         models.Socont(
-            land_cover_types=['ground', 'glacier', 'glacier'],
-            land_cover_names=['ground', 'glacier_ice', 'glacier_debris'],
+            land_cover_types=["ground", "glacier", "glacier"],
+            land_cover_names=["ground", "glacier_ice", "glacier_debris"],
             soil_storage_nb=2,
-            surface_runoff='linear_storage'
+            surface_runoff="linear_storage",
         )
     except Exception as exc:
         AssertionError(f"Raised an exception {exc}")

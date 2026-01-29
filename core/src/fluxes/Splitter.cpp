@@ -10,11 +10,7 @@
 Splitter::Splitter() {}
 
 static string GetValidSplitterTypes() {
-    static const vector<string> validTypes = {
-        "snow_rain",
-        "rain",
-        "multi_fluxes"
-    };
+    static const vector<string> validTypes = {"snow_rain", "rain", "multi_fluxes"};
 
     string suggestions = "Valid splitter types: ";
     for (size_t i = 0; i < validTypes.size(); ++i) {
@@ -56,7 +52,7 @@ const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitter
 
 void Splitter::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("Splitter validation failed. Check that all required properties are correctly defined."));
+        throw ModelConfigError(
+            _("Splitter validation failed. Check that all required properties are correctly defined."));
     }
 }
-

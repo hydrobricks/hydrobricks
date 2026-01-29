@@ -247,7 +247,8 @@ bool HydroUnit::IsValid(bool checkProcesses) const {
 
 void HydroUnit::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("HydroUnit validation failed. Check area, bricks, splitters, and land cover fractions."));
+        throw ModelConfigError(
+            _("HydroUnit validation failed. Check area, bricks, splitters, and land cover fractions."));
     }
 }
 

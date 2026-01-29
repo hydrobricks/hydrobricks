@@ -13,10 +13,14 @@ from hydrobricks._constants import ICE_WE
 # Paths
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', 'tests', 'files', 'catchments'
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
 )
-HYDRO_UNITS = TEST_FILES_DIR / 'synthetic_delta_h' / 'hydro_units_50m.csv'
-GLACIER_PROFILE = TEST_FILES_DIR / 'synthetic_delta_h' / 'glacier_profile_id_50m.csv'
+HYDRO_UNITS = TEST_FILES_DIR / "synthetic_delta_h" / "hydro_units_50m.csv"
+GLACIER_PROFILE = TEST_FILES_DIR / "synthetic_delta_h" / "glacier_profile_id_50m.csv"
 
 # Create temporary directory
 working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
@@ -24,11 +28,7 @@ working_dir.mkdir(parents=True, exist_ok=True)
 
 # Hydro units
 hydro_units = hb.HydroUnits()
-hydro_units.load_from_csv(
-    HYDRO_UNITS,
-    column_elevation='elevation',
-    column_area='area'
-)
+hydro_units.load_from_csv(HYDRO_UNITS, column_elevation="elevation", column_area="area")
 
 # Glacier evolution
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
@@ -37,7 +37,7 @@ glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
 glacier_evolution.compute_lookup_table(
     glacier_profile_csv=GLACIER_PROFILE,
     update_width=False,
-    glacier_area_evolution_from_topo=False
+    glacier_area_evolution_from_topo=False,
 )
 glacier_evolution.save_as_csv(working_dir)
 
@@ -45,12 +45,10 @@ print(f"Files saved to: {working_dir}")
 
 # Load the results from the CSV files
 areas_evol = pd.read_csv(
-    working_dir / "details_glacier_areas_evolution.csv",
-    header=[0, 1, 2]
+    working_dir / "details_glacier_areas_evolution.csv", header=[0, 1, 2]
 )
 we_evol = pd.read_csv(
-    working_dir / "details_glacier_we_evolution.csv",
-    header=[0, 1, 2]
+    working_dir / "details_glacier_we_evolution.csv", header=[0, 1, 2]
 )
 init_glacier_df = pd.read_csv(GLACIER_PROFILE, skiprows=[1])
 init_glacier_df = init_glacier_df.drop(
@@ -64,30 +62,17 @@ elevation_bands = init_glacier_df.elevation.values
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     volume = areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values / (1000 * ICE_WE)
-    plt.plot(
-        volume,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="lightgrey"
-    )
+    plt.plot(volume, elevation_bands, drawstyle="steps-post", color="lightgrey")
 for i in range(0, len(areas_evol), 20):  # Black lines
     volume = areas_evol.iloc[i, :].values * we_evol.iloc[i, :].values / (1000 * ICE_WE)
-    plt.plot(
-        volume,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="black"
-    )
+    plt.plot(volume, elevation_bands, drawstyle="steps-post", color="black")
 volume = areas_evol.iloc[0, :].values * we_evol.iloc[0, :].values / (1000 * ICE_WE)
-plt.plot(
-    volume,
-    elevation_bands,
-    drawstyle="steps-post",
-    color='red'
+plt.plot(volume, elevation_bands, drawstyle="steps-post", color="red")
+plt.xlabel("Glacier volume (m³)")
+plt.ylabel("Elevation (m a.s.l.)")
+plt.xlim(
+    0,
 )
-plt.xlabel('Glacier volume (m³)')
-plt.ylabel('Elevation (m a.s.l.)')
-plt.xlim(0, )
 plt.tight_layout()
 plt.show()
 
@@ -95,29 +80,21 @@ plt.show()
 plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     area = areas_evol.iloc[i, :].values
-    plt.plot(
-        area,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="lightgrey"
-    )
+    plt.plot(area, elevation_bands, drawstyle="steps-post", color="lightgrey")
 for i in range(0, len(areas_evol), 20):  # Black lines
     area = areas_evol.iloc[i, :].values
-    plt.plot(
-        area,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="black"
-    )
+    plt.plot(area, elevation_bands, drawstyle="steps-post", color="black")
 plt.plot(
     init_glacier_df.glacier_area,
     init_glacier_df.elevation,
     drawstyle="steps-post",
-    color='red'
+    color="red",
 )
-plt.xlabel('Glacier area (scaled) (m²)')
-plt.ylabel('Elevation (m a.s.l.)')
-plt.xlim(0, )
+plt.xlabel("Glacier area (scaled) (m²)")
+plt.ylabel("Elevation (m a.s.l.)")
+plt.xlim(
+    0,
+)
 plt.tight_layout()
 plt.show()
 
@@ -127,24 +104,16 @@ plt.figure()
 for i in range(0, len(areas_evol), 5):  # Grey lines
     area = areas_evol.iloc[i, :].values
     ratio = area / init_glacier_df.glacier_area.values
-    plt.plot(
-        ratio,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="lightgrey"
-    )
+    plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="lightgrey")
 for i in range(0, len(areas_evol), 20):  # Black lines
     area = areas_evol.iloc[i, :].values
     ratio = area / init_glacier_df.glacier_area.values
     ratio[np.isnan(ratio) | np.isinf(ratio)] = 0
-    plt.plot(
-        ratio,
-        elevation_bands,
-        drawstyle="steps-post",
-        color="black"
-    )
-plt.xlabel('Glacier area (scaled) / Glacier initial area (-)')
-plt.ylabel('Elevation (m a.s.l.)')
-plt.xlim(0, )
+    plt.plot(ratio, elevation_bands, drawstyle="steps-post", color="black")
+plt.xlabel("Glacier area (scaled) / Glacier initial area (-)")
+plt.ylabel("Elevation (m a.s.l.)")
+plt.xlim(
+    0,
+)
 plt.tight_layout()
 plt.show()

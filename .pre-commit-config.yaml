@@ -2,6 +2,19 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
 
+minimum_pre_commit_version: '2.20.0'
+default_language_version:
+  python: python3
+
+# Global exclude pattern
+exclude: |
+  (?x)^(
+      docs/|
+      tests/files/|
+      tests/resources/|
+      .*/gcovr
+  )
+
 repos:
 # Standard hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -14,6 +27,8 @@ repos:
   - id: check-symlinks
   - id: check-yaml
   - id: debug-statements
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 
@@ -22,11 +37,14 @@ repos:
   rev: 7.0.0
   hooks:
   - id: isort
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
+    args: ['--profile', 'black']
+
+# Black code formatter
+- repo: https://github.com/psf/black
+  rev: 24.10.0
+  hooks:
+  - id: black
+    language_version: python3.14
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
@@ -34,22 +52,12 @@ repos:
   hooks:
   - id: pyupgrade
     args: ["--py38-plus"]
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.5.6
   hooks:
   - id: remove-tabs
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
 
 # Flake 8
 - repo: https://github.com/PyCQA/flake8
@@ -57,11 +65,13 @@ repos:
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
+
+# Check for common spelling mistakes
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.3.0
+  hooks:
+  - id: codespell
+    args: [--ignore-words-list=crate]
 
 # CMake formatting
 - repo: https://github.com/cheshirekow/cmake-format-precommit

@@ -28,7 +28,30 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=6.0"]
+test = [
+    "pytest>=6.0",
+    "cftime",
+    "HydroErr",
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "StrEnum",
+    "dask",
+    "dask-expr",
+    "geopandas",
+    "netCDF4",
+    "pyet",
+    "rasterio",
+    "rioxarray",
+    "shapely",
+    "xarray",
+    "pyarrow",
+    "xarray-spatial",
+    "pysheds"
+]
+dev = [
+    "pre-commit>=3.4.0"
+]
 
 [project.urls]
 "Source Code" = "https://github.com/hydrobricks/hydrobricks"
@@ -67,28 +90,6 @@ filterwarnings = [
 testpaths = ["python/tests"]
 
 [tool.cibuildwheel]
-test-requires = [
-    "pytest",
-    "cftime",
-    "HydroErr",
-    "numpy",
-    "pandas",
-    "pyyaml",
-    "StrEnum",
-    "dask",
-    "dask-expr",
-    "geopandas",
-    "netCDF4",
-    "pyet",
-    "rasterio",
-    "rioxarray",
-    "shapely",
-    "xarray",
-    "pyarrow",
-    "xarray-spatial",
-    "pysheds",
-    "datashader==0.17.0a0"
-]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]

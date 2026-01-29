@@ -338,16 +338,16 @@ class HydroUnit : public wxObject {
   protected:
     Types _type;
     int _id;
-    double _area;  // [m²]
-    std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
+    double _area;                                                                  // [m²]
+    std::vector<std::unique_ptr<HydroUnitProperty>> _properties;                   // owning
     std::vector<std::unique_ptr<HydroUnitLateralConnection>> _lateralConnections;  // owning
-    std::vector<std::unique_ptr<Brick>> _bricks;  // owning
-    std::unordered_map<string, Brick*> _brickMap;  // non-owning view into _bricks
-    std::vector<LandCover*> _landCoverBricks;  // non-owning view into _bricks
-    std::unordered_map<string, LandCover*> _landCoverMap;  // non-owning view into _landCoverBricks
-    std::vector<std::unique_ptr<Splitter>> _splitters;  // owning
-    std::unordered_map<string, Splitter*> _splitterMap;  // non-owning view into _splitters
-    std::vector<std::unique_ptr<Forcing>> _forcing;  // owning
+    std::vector<std::unique_ptr<Brick>> _bricks;                                   // owning
+    std::unordered_map<string, Brick*> _brickMap;                                  // non-owning view into _bricks
+    std::vector<LandCover*> _landCoverBricks;                                      // non-owning view into _bricks
+    std::unordered_map<string, LandCover*> _landCoverMap;    // non-owning view into _landCoverBricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;       // owning
+    std::unordered_map<string, Splitter*> _splitterMap;      // non-owning view into _splitters
+    std::vector<std::unique_ptr<Forcing>> _forcing;          // owning
     std::unordered_map<VariableType, Forcing*> _forcingMap;  // non-owning view into _forcing
 };
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from hydrobricks._exceptions import ConfigurationError
 from hydrobricks._hydrobricks import (
     ActionGlacierEvolutionAreaScaling as _ActionGlacierEvolutionAreaScaling,
 )
@@ -24,45 +25,68 @@ class ActionGlacierEvolutionAreaScaling(Action):
     preprocessing/glacier_evolution_area_scaling.py
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initialize ActionGlacierEvolutionAreaScaling instance.
+
+        This action manages glacier evolution using area-volume scaling relationships,
+        updating glacier areas based on volume changes for each hydro unit.
+        """
         super().__init__()
-        self.name = "ActionGlacierEvolutionAreaScaling"
-        self.action = _ActionGlacierEvolutionAreaScaling()
+        self.name: str = "ActionGlacierEvolutionAreaScaling"
+        self.action: _ActionGlacierEvolutionAreaScaling = (
+            _ActionGlacierEvolutionAreaScaling()
+        )
 
     def load_from_csv(
-            self,
-            dir_path: str | Path,
-            land_cover: str = 'glacier',
-            filename_area: str = 'glacier_evolution_lookup_table_area.csv',
-            filename_volume: str = 'glacier_evolution_lookup_table_volume.csv',
-            update_month: str | int = 'October'
-    ):
+        self,
+        dir_path: str | Path,
+        land_cover: str = "glacier",
+        filename_area: str = "glacier_evolution_lookup_table_area.csv",
+        filename_volume: str = "glacier_evolution_lookup_table_volume.csv",
+        update_month: str | int = "October",
+    ) -> None:
         """
-        Read the glacier evolution lookup table from a csv file. The file should
-        contain the glacier area evolution (in m2) for each hydro unit and increment
-        (typically 100). The first row should contain the hydro unit ids for the units
-        containing glaciers. There should be no index column in the file; the first
-        column should contain data.
+        Read the glacier evolution lookup table from CSV files.
+
+        The files should contain the glacier area and volume evolution (in m²) for each
+        hydro unit and increment (typically 100). The first row should contain the hydro
+        unit IDs for the units containing glaciers. There should be no index column in
+        the file; the first column should contain data.
 
         Parameters
         ----------
         dir_path
-            Path to the directory containing the lookup table.
+            Path to the directory containing the lookup table files.
         land_cover
-            The land cover name to apply the changes. Default is 'glacier'.
+            The land cover name to apply the changes. Default: 'glacier'
         filename_area
-            Name of the lookup table file for the glacier area. Default is
-            'glacier_evolution_lookup_table_area.csv'.
+            Name of the lookup table file for the glacier area.
+            Default: 'glacier_evolution_lookup_table_area.csv'
         filename_volume
-            Name of the lookup table file for the glacier volume. Default is
-            'glacier_evolution_lookup_table_volume.csv'.
+            Name of the lookup table file for the glacier volume.
+            Default: 'glacier_evolution_lookup_table_volume.csv'
         update_month
-            The month to apply the changes. Full english name or number (1-12).
+            The month to apply the changes. Full English name or number (1-12).
             The update will be applied at the beginning of the month, every year.
-            Default is 'October'.
+            Default: 'October'
 
-        Example of a file (with areas in m2)
-        -----------------
+        Raises
+        ------
+        FileNotFoundError
+            If the specified CSV files do not exist.
+        ValueError
+            If the CSV format is incorrect or data is inconsistent.
+        AssertionError
+            If hydro unit IDs or table shapes don't match between area and volume files.
+
+        Examples
+        --------
+        >>> action = ActionGlacierEvolutionAreaScaling()
+        >>> action.load_from_csv('./data', land_cover='glacier', update_month='October')
+
+        Example of a file (with areas in m²)
+        -------------------------------------
         2       3       4       5       6
         2500.0  48125.0 34375.0 54375.0 65000.0
         2125.2  44069.6 31544.8 51044.3 61726.6
@@ -83,44 +107,46 @@ class ActionGlacierEvolutionAreaScaling(Action):
         lookup_table_volume = pd.read_csv(full_path_volume)
 
         self._populate_bounded_instance(
-            lookup_table_area,
-            lookup_table_volume,
-            land_cover,
-            update_month
+            lookup_table_area, lookup_table_volume, land_cover, update_month
         )
 
     def load_from(
-            self,
-            obj: GlacierEvolutionAreaScaling,
-            land_cover: str = 'glacier',
-            update_month: str | int = 'October'
-    ):
+        self,
+        obj: GlacierEvolutionAreaScaling,
+        land_cover: str = "glacier",
+        update_month: str | int = "October",
+    ) -> None:
         """
-        Get the glacier evolution lookup table from the GlacierEvolutionAreaScaling
-        instance.
+        Get the evolution lookup table from a GlacierEvolutionAreaScaling instance.
 
         Parameters
         ----------
         obj
-            The GlacierEvolutionAreaScaling instance.
+            The GlacierEvolutionAreaScaling instance containing lookup tables.
         land_cover
-            The land cover name to apply the changes. Default is 'glacier'.
+            The land cover name to apply the changes. Default: 'glacier'
         update_month
-            The month to apply the changes. Full english name or number (1-12).
+            The month to apply the changes. Full English name or number (1-12).
             The update will be applied at the beginning of the month, every year.
-            Default is 'October'.
+            Default: 'October'
+
+        Raises
+        ------
+        ConfigurationError
+            If the object is not a GlacierEvolutionAreaScaling instance.
         """
         if not isinstance(obj, GlacierEvolutionAreaScaling):
-            raise ValueError("The object is not a GlacierEvolutionAreaScaling instance.")
+            raise ConfigurationError(
+                "The object is not a GlacierEvolutionAreaScaling instance.",
+                item_value=type(obj).__name__,
+                reason="Invalid object type",
+            )
 
         lookup_table_area = obj.get_lookup_table_area()
         lookup_table_volume = obj.get_lookup_table_volume()
 
         self._populate_bounded_instance(
-            lookup_table_area,
-            lookup_table_volume,
-            land_cover,
-            update_month
+            lookup_table_area, lookup_table_volume, land_cover, update_month
         )
 
     def get_month(self) -> int:
@@ -129,7 +155,8 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
         Returns
         -------
-        The month to apply the changes.
+        int
+            The month number (1-12) when changes are applied.
         """
         return self.action.get_month()
 
@@ -139,17 +166,19 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
         Returns
         -------
-        The land cover name (glacier name) to apply the changes.
+        str
+            The land cover name (glacier name) to apply the changes.
         """
         return self.action.get_land_cover_name()
 
     def get_hydro_unit_ids(self) -> np.ndarray:
         """
-        Get the lookup table hydro unit ids.
+        Get the lookup table hydro unit IDs.
 
         Returns
         -------
-        The lookup table hydro unit ids.
+        np.ndarray
+            Array of hydro unit IDs (integers) for which glacier evolution is tracked.
         """
         return self.action.get_hydro_unit_ids()
 
@@ -159,7 +188,9 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
         Returns
         -------
-        The lookup table areas.
+        np.ndarray
+            2D array of glacier areas (in m²) for each hydro unit and time increment.
+            Shape: (n_increments, n_hydro_units)
         """
         return self.action.get_lookup_table_area()
 
@@ -169,24 +200,46 @@ class ActionGlacierEvolutionAreaScaling(Action):
 
         Returns
         -------
-        The lookup table volumes.
+        np.ndarray
+            2D array of glacier volumes (in m³) for each hydro unit and time increment.
+            Shape: (n_increments, n_hydro_units)
         """
         return self.action.get_lookup_table_volume()
 
     def _populate_bounded_instance(
-            self,
-            lookup_table_area: pd.DataFrame,
-            lookup_table_volume: pd.DataFrame,
-            land_cover: str,
-            update_month: str | int
-    ):
+        self,
+        lookup_table_area: pd.DataFrame,
+        lookup_table_volume: pd.DataFrame,
+        land_cover: str,
+        update_month: str | int,
+    ) -> None:
+        """
+        Populate the internal C++ instance with lookup table data.
+
+        Parameters
+        ----------
+        lookup_table_area
+            DataFrame containing area evolution data with hydro unit IDs as columns.
+        lookup_table_volume
+            DataFrame containing volume evolution data with hydro unit IDs as columns.
+        land_cover
+            The land cover name to apply changes to.
+        update_month
+            The month (name or number) to apply changes.
+
+        Raises
+        ------
+        AssertionError
+            If hydro unit IDs or table shapes don't match between area and volume.
+        """
         month_num = self._convert_month_to_number(update_month)
 
         # Get the hydro unit ids from the first row
         hu_ids = lookup_table_area.columns.astype(int).values
         hu_ids_volume = lookup_table_volume.columns.astype(int).values
-        assert np.array_equal(hu_ids, hu_ids_volume), \
-            "The hydro unit ids in the area and volume tables do not match."
+        assert np.array_equal(
+            hu_ids, hu_ids_volume
+        ), "The hydro unit ids in the area and volume tables do not match."
 
         # Get the areas from the rest of the table
         areas = lookup_table_area.astype(float).values
@@ -194,8 +247,9 @@ class ActionGlacierEvolutionAreaScaling(Action):
         # Get the volumes from the rest of the table
         volumes = lookup_table_volume.astype(float).values
 
-        assert areas.shape == volumes.shape, \
-            "The areas and volumes tables do not have the same shape."
+        assert (
+            areas.shape == volumes.shape
+        ), "The areas and volumes tables do not have the same shape."
 
         self.action.add_lookup_tables(month_num, land_cover, hu_ids, areas, volumes)
 

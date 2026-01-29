@@ -30,4 +30,3 @@ void Flux::Validate() const {
         throw ModelConfigError(_("Flux validation failed. Check that all required properties are correctly defined."));
     }
 }
-

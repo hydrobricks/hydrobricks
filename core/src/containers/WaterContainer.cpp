@@ -31,7 +31,8 @@ bool WaterContainer::IsValid(bool checkProcesses) const {
 
 void WaterContainer::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(wxString::Format(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName()));
+        throw ModelConfigError(
+            wxString::Format(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName()));
     }
 }
 
@@ -143,7 +144,8 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                     *(_overflow->GetOutputFlux(0)->GetChangeRatePointer()) = diff;
                     return;
                 }
-                throw ShouldNotHappen(_("WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer"));
+                throw ShouldNotHappen(
+                    _("WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer"));
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *_capacity) {

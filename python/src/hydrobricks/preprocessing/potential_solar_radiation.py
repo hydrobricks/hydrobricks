@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks import rxr, xr, rasterio
+from hydrobricks import rasterio, rxr, xr
 from hydrobricks._constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,

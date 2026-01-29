@@ -21,7 +21,7 @@ from cftime import num2date
 
 from hydrobricks import Dataset, pyet
 from hydrobricks._constants import TO_RAD
-from hydrobricks._optional import HAS_PYET, HAS_NETCDF
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET
 from hydrobricks._exceptions import DataError, ForcingError, DependencyError
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hydrobricks._hydrobricks import (
-    ActionGlacierSnowToIceTransformation as _ActionGlacierSnowToIceTransformation
+    ActionGlacierSnowToIceTransformation as _ActionGlacierSnowToIceTransformation,
 )
 from hydrobricks.actions import Action
 

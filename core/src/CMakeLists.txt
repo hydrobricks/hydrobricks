@@ -52,7 +52,7 @@ endif (WIN32)
 
 # Link libraries explicitly to not link Google Tests to the main app.
 target_link_libraries(core PRIVATE wx::base netCDF::netcdf yaml-cpp::yaml-cpp Eigen3::Eigen)
-target_link_libraries(hydrobricks-cli core)
+target_link_libraries(hydrobricks-cli core Eigen3::Eigen)
 
 # COPY BINARY FILES
 

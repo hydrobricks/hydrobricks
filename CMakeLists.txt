@@ -82,11 +82,11 @@ else ()
     # setup.h directory dynamically (version-agnostic)
     include_directories(${wxWidgets_BINARY_DIR}/lib)
 
-    # Try to find the setup.h directory dynamically
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # Try to find the setup.h directory dynamically. First try the more common non-debug variant, then fall back to
+    # debug variant if needed
+    file(GLOB WX_SETUP_INCLUDE_DIR "${wxWidgets_BINARY_DIR}/lib/wx/include/base-unicode-static-*")
+    if (NOT WX_SETUP_INCLUDE_DIR)
         file(GLOB WX_SETUP_INCLUDE_DIR "${wxWidgets_BINARY_DIR}/lib/wx/include/base-unicode-debug-static-*")
-    else ()
-        file(GLOB WX_SETUP_INCLUDE_DIR "${wxWidgets_BINARY_DIR}/lib/wx/include/base-unicode-static-*")
     endif ()
 
     if (WX_SETUP_INCLUDE_DIR)

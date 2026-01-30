@@ -15,10 +15,9 @@
     {
       "name": "netcdf-c",
       "version>=": "4.9.3",
+      "default-features": false,
       "features": [
-        "netcdf-4",
-        "szip",
-        "zstd"
+        "netcdf-4"
       ]
     },
     {

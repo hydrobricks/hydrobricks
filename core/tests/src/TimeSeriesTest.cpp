@@ -38,9 +38,9 @@ TEST(TimeSeries, ParseFile) {
     EXPECT_EQ(vecTimeSeries[2]->GetVariableType(), PET);
 
     double date = GetMJD(2014, 10, 20);
-    EXPECT_FLOAT_EQ(vecTimeSeries[0]->GetDataPointer(3)->GetValueFor(date), 25.31445313f);
-    EXPECT_FLOAT_EQ(vecTimeSeries[0]->GetDataPointer(11)->GetValueFor(date), 23.58593750f);
+    EXPECT_NEAR(vecTimeSeries[0]->GetDataPointer(3)->GetValueFor(date), 25.31445313, 1e-6);
+    EXPECT_NEAR(vecTimeSeries[0]->GetDataPointer(11)->GetValueFor(date), 23.58593750, 1e-6);
 
     date = GetMJD(2014, 11, 27);
-    EXPECT_FLOAT_EQ(vecTimeSeries[1]->GetDataPointer(5)->GetValueFor(date), 8.23046875f);
+    EXPECT_NEAR(vecTimeSeries[1]->GetDataPointer(5)->GetValueFor(date), 8.23046875, 1e-6);
 }

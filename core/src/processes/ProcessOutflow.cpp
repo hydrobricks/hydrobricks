@@ -20,7 +20,7 @@ bool ProcessOutflow::IsValid() const {
 }
 
 int ProcessOutflow::GetConnectionCount() const {
-    return _outputs.size();
+    return static_cast<int>(_outputs.size());
 }
 
 double* ProcessOutflow::GetValuePointer(const string& name) {

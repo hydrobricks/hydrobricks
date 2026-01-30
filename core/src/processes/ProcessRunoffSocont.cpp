@@ -22,7 +22,7 @@ void ProcessRunoffSocont::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) 
         _areaFraction = landCover->GetAreaFractionPointer();
     }
     _areaUnit = unit->GetArea();
-    _slope = unit->GetPropertyDouble("slope", "m/m");
+    _slope = unit->GetPropertyFloat("slope", "m/m");
 }
 
 void ProcessRunoffSocont::SetParameters(const ProcessSettings& processSettings) {

@@ -11,7 +11,8 @@
  * Date/time conversion utilities centralizing MJD/JD/chrono operations.
  *
  * Implementation notes:
- * - Uses C++20 chrono (sys_days, from_stream) for robust parsing.
+ * - Uses standard C++ chrono library (sys_days, system_clock) for conversions.
+ * - Uses cross-platform date parsing (std::get_time on Windows, strptime on Unix/Linux).
  * - Uses standard MJD definition (JD - 2400000.5).
  * - All operations assume UTC; no time zone or DST adjustments are applied.
  */

@@ -23,7 +23,7 @@ TEST(TimeMachine, IncrementHour) {
     timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 3, 1), 1, Hour);
     timer.IncrementTime();
 
-    EXPECT_FLOAT_EQ(timer.GetDate(), GetMJD(2020, 1, 1, 1));
+    EXPECT_DOUBLE_EQ(timer.GetDate(), GetMJD(2020, 1, 1, 1));
 }
 
 TEST(TimeMachine, IncrementMinute) {
@@ -31,7 +31,7 @@ TEST(TimeMachine, IncrementMinute) {
     timer.Initialize(GetMJD(2020, 1, 1), GetMJD(2020, 3, 1), 1, Minute);
     timer.IncrementTime();
 
-    EXPECT_FLOAT_EQ(timer.GetDate(), GetMJD(2020, 1, 1, 0, 1));
+    EXPECT_DOUBLE_EQ(timer.GetDate(), GetMJD(2020, 1, 1, 0, 1));
 }
 
 TEST(TimeMachine, IsNotOver) {

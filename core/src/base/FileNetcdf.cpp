@@ -95,7 +95,7 @@ int FileNetcdf::GetDimLen(const string& dimName) const {
     CheckNcStatus(nc_inq_dimid(_ncId, dimName.c_str(), &dimId));
     CheckNcStatus(nc_inq_dimlen(_ncId, dimId, &dimLen));
 
-    return dimLen;
+    return static_cast<int>(dimLen);
 }
 
 int FileNetcdf::DefVarInt(const string& varName, vecInt dimIds, int dimCount, bool compress) {

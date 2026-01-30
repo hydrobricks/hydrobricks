@@ -32,7 +32,7 @@ vecDouble ProcessTransformSnowToIceSwat::GetRates() {
     int doy = TimeMachine::GetCurrentDayOfYear();
     bool northHemisphere = !(*_northHemisphere == 0);
     int daysRef = (northHemisphere) ? 81 : 264;  // 81 = March 22, 264 = September 21
-    float coeff = *_basalAccCoeff * (1 + std::sin(2.0f * constants::pi * (doy - daysRef) / 365.0f));
+    auto coeff = static_cast<float>(*_basalAccCoeff * (1 + std::sin(2.0f * constants::pi * (doy - daysRef) / 365.0f)));
 
     return {coeff * _container->GetContentWithChanges()};  // [mm/day]
 }

@@ -76,6 +76,10 @@ double HydroUnit::GetPropertyDouble(const string& name, const string& unit) cons
     throw ModelConfigError(wxString::Format(_("No property with the name '%s' was found."), name));
 }
 
+float HydroUnit::GetPropertyFloat(const string& name, const string& unit) const {
+    return static_cast<float>(GetPropertyDouble(name, unit));
+}
+
 string HydroUnit::GetPropertyString(const string& name) const {
     for (const auto& property : _properties) {
         if (property->GetName() == name) {

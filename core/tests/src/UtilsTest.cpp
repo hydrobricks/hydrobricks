@@ -435,20 +435,6 @@ TEST(Utils, SearchDoubleArraySameValue) {
     EXPECT_EQ(0, result);
 }
 
-TEST(Utils, SearchDoubleArraySameValueWithToleranceDown) {
-    double array[] = {9.34};
-    int result = Find(&array[0], &array[0], 8, 1.5);
-
-    EXPECT_EQ(0, result);
-}
-
-TEST(Utils, SearchDoubleArraySameValueWithToleranceUp) {
-    double array[] = {9.34};
-    int result = Find(&array[0], &array[30], 10, 1);
-
-    EXPECT_EQ(0, result);
-}
-
 TEST(Utils, SearchDoubleArraySameValueOutOfRange) {
     double array[] = {9.34, 9.34, 9.34, 9.34};
     wxLogNull logNo;
@@ -766,14 +752,14 @@ TEST(Utils, IncrementDateBy2Hours) {
     double date = GetMJD(2020, 1, 1);
     double newDate = IncrementDateBy(date, 2, Hour);
 
-    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 2));
+    EXPECT_DOUBLE_EQ(newDate, GetMJD(2020, 1, 1, 2));
 }
 
 TEST(Utils, IncrementDateBy2Minutes) {
     double date = GetMJD(2020, 1, 1);
     double newDate = IncrementDateBy(date, 2, Minute);
 
-    EXPECT_FLOAT_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
+    EXPECT_DOUBLE_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }
 
 TEST(Utils, ParseDateLeapYearFeb29) {

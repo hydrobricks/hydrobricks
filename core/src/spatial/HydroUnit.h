@@ -62,6 +62,15 @@ class HydroUnit : public wxObject {
     double GetPropertyDouble(const string& name, const string& unit = "") const;
 
     /**
+     * Get a float property of the hydro unit.
+     *
+     * @param name The name of the property to get.
+     * @param unit The unit of the property to get.
+     * @return The value of the property.
+     */
+    float GetPropertyFloat(const string& name, const string& unit = "") const;
+
+    /**
      * Get a property of the hydro unit as a string.
      *
      * @param name The name of the property to get.

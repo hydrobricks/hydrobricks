@@ -18,7 +18,7 @@ bool ProcessLateral::IsValid() const {
 }
 
 int ProcessLateral::GetConnectionCount() const {
-    return _outputs.size();
+    return static_cast<int>(_outputs.size());
 }
 
 double* ProcessLateral::GetValuePointer(const string& name) {

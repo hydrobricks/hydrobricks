@@ -73,7 +73,7 @@ void SettingsModel::AddLandCoverBrick(const string& name, const string& type) {
     wxASSERT(_selectedStructure);
 
     AddHydroUnitBrick(name, type);
-    _selectedStructure->landCoverBricks.push_back(_selectedStructure->hydroUnitBricks.size() - 1);
+    _selectedStructure->landCoverBricks.push_back(static_cast<int>(_selectedStructure->hydroUnitBricks.size() - 1));
 
     if (SelectHydroUnitSplitterIfFound("rain_splitter")) {
         AddSplitterOutput(name);
@@ -84,7 +84,8 @@ void SettingsModel::AddSurfaceComponentBrick(const string& name, const string& t
     wxASSERT(_selectedStructure);
 
     AddHydroUnitBrick(name, type);
-    _selectedStructure->surfaceComponentBricks.push_back(_selectedStructure->hydroUnitBricks.size() - 1);
+    _selectedStructure->surfaceComponentBricks.push_back(
+        static_cast<int>(_selectedStructure->hydroUnitBricks.size() - 1));
 }
 
 void SettingsModel::SetSurfaceComponentParent(const string& name) {

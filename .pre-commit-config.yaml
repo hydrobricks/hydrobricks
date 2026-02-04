@@ -40,8 +40,8 @@ repos:
     args: ['--profile', 'black']
 
 # Black code formatter
-- repo: https://github.com/psf/black
-  rev: 24.10.0
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 26.1.0
   hooks:
   - id: black
     language_version: python3.14
@@ -68,7 +68,7 @@ repos:
 
 # Check for common spelling mistakes
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.3.0
+  rev: v2.4.1
   hooks:
   - id: codespell
     args: [--ignore-words-list=crate]

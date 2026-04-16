@@ -34,14 +34,14 @@ repos:
 
 # Sort imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 7.0.0
+  rev: 8.0.1
   hooks:
   - id: isort
     args: ['--profile', 'black']
 
 # Black code formatter
-- repo: https://github.com/psf/black
-  rev: 24.10.0
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 26.3.1
   hooks:
   - id: black
     language_version: python3.14
@@ -68,7 +68,7 @@ repos:
 
 # Check for common spelling mistakes
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.3.0
+  rev: v2.4.2
   hooks:
   - id: codespell
     args: [--ignore-words-list=crate]
@@ -88,7 +88,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v21.1.8
+  rev: v22.1.3
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

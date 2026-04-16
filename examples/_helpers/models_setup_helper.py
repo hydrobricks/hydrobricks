@@ -170,16 +170,14 @@ class ModelSetupHelper:
         parameters = socont.generate_parameters()
         parameters.define_constraint("k_slow_2", "<", "k_slow_1")
         if self.precip_corr_factor is None:
-            parameters.add_data_parameter(
-                "temp_gradients", -0.6, min_value=-1, max_value=0
-            )
+            parameters.add_data_parameter("temp_gradients", -0.6, min_val=-1, max_val=0)
         if self.precip_corr_factor is None:
             parameters.add_data_parameter(
-                "precip_corr_factor", 0.85, min_value=0.7, max_value=1.3
+                "precip_corr_factor", 0.85, min_val=0.7, max_val=1.3
             )
         if self.use_precip_gradient:
             parameters.add_data_parameter(
-                "precip_gradient", 0.05, min_value=0, max_value=0.2
+                "precip_gradient", 0.05, min_val=0, max_val=0.2
             )
 
         return socont, parameters

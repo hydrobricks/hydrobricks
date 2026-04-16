@@ -24,7 +24,7 @@ bool WaterContainer::IsValid(bool checkProcesses) const {
             return true;
         }
     }
-    wxLogError(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName());
+    LogError("A container of the brick {} has no process attached.", GetParentBrick()->GetName());
 
     return false;
 }
@@ -32,7 +32,7 @@ bool WaterContainer::IsValid(bool checkProcesses) const {
 void WaterContainer::Validate() const {
     if (!IsValid()) {
         throw ModelConfigError(
-            wxString::Format(_("A container of the brick %s has no process attached."), GetParentBrick()->GetName()));
+            std::format("A container of the brick {} has no process attached.", GetParentBrick()->GetName()));
     }
 }
 
@@ -69,15 +69,15 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                 // For example when the originating brick has an area = 0.
                 continue;
             }
-            wxASSERT(changeRate);
-            wxASSERT(*changeRate < 10000);
+            assert(changeRate);
+            assert(*changeRate < 10000);
             if (*changeRate < 0) {
                 *changeRate = 0;
             } else if (*changeRate > 10000) {
                 throw RuntimeError(
-                    wxString::Format(_("Change rate %f in process %s is too high."), *changeRate, process->GetName()));
+                    std::format("Change rate {} in process {} is too high.", *changeRate, process->GetName()));
             }
-            wxASSERT(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
+            assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
             outgoingRates.push_back(changeRate);
             outputs += *changeRate;
         }
@@ -101,12 +101,12 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             // For example when the originating brick has an area = 0.
             continue;
         }
-        wxASSERT(changeRate);
-        wxASSERT(*changeRate < 1000);
+        assert(changeRate);
+        assert(*changeRate < 1000);
         if (*changeRate < 0) {
             *changeRate = 0;
         }
-        wxASSERT(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
+        assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
         incomingRates.push_back(changeRate);
         inputs += *changeRate;
     }
@@ -119,10 +119,10 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         double diff = (content + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate : outgoingRates) {
-            wxASSERT(rate != nullptr);
-            wxASSERT(*rate < 1000);
-            wxASSERT(GreaterThanOrEqual(*rate, 0, EPSILON_D));
-            wxASSERT(*rate >= 0);
+            assert(rate != nullptr);
+            assert(*rate < 1000);
+            assert(GreaterThanOrEqual(*rate, 0, EPSILON_D));
+            assert(*rate >= 0);
             if (NearlyZero(*rate, EPSILON_D)) {
                 continue;
             }
@@ -145,18 +145,18 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                     return;
                 }
                 throw ShouldNotHappen(
-                    _("WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer"));
+                    "WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer");
             }
             // Check that it is not only due to forcing
             if (content + inputsStatic > *_capacity) {
                 throw ModelConfigError(
-                    _("Forcing is coming directly into a brick with limited capacity and no overflow."));
+                    "Forcing is coming directly into a brick with limited capacity and no overflow.");
             }
             // Limit the different rates proportionally
             for (auto rate : incomingRates) {
-                wxASSERT(rate != nullptr);
-                wxASSERT(*rate < 1000);
-                wxASSERT(GreaterThanOrEqual(*rate, 0, EPSILON_D));
+                assert(rate != nullptr);
+                assert(*rate < 1000);
+                assert(GreaterThanOrEqual(*rate, 0, EPSILON_D));
                 if (NearlyZero(*rate, EPSILON_D)) {
                     continue;
                 }
@@ -179,7 +179,7 @@ void WaterContainer::SetOutgoingRatesToZero() {
                 // For example when the originating brick has an area = 0.
                 continue;
             }
-            wxASSERT(changeRate);
+            assert(changeRate);
             *changeRate = 0;
         }
     }
@@ -190,9 +190,9 @@ void WaterContainer::Finalize() {
     _content += _contentChangeDynamic + _contentChangeStatic;
     _contentChangeDynamic = 0;
     _contentChangeStatic = 0;
-    wxASSERT(GreaterThanOrEqual(_content, 0, PRECISION));
+    assert(GreaterThanOrEqual(_content, 0, PRECISION));
     if (LessThan(_content, 0, PRECISION)) {
-        wxLogError(_("Water container %s has negative content (%f)."), GetParentBrick()->GetName(), _content);
+        LogError("Water container {} has negative content ({}).", GetParentBrick()->GetName(), _content);
         _content = 0;
     }
 }
@@ -225,6 +225,6 @@ vecDoublePt WaterContainer::GetDynamicContentChanges() {
 }
 
 double WaterContainer::GetTargetFillingRatio() const {
-    wxASSERT(GetMaximumCapacity() > 0);
-    return wxMax(0.0, wxMin(1.0, GetContentWithChanges() / GetMaximumCapacity()));
+    assert(GetMaximumCapacity() > 0);
+    return std::max(0.0, std::min(1.0, GetContentWithChanges() / GetMaximumCapacity()));
 }

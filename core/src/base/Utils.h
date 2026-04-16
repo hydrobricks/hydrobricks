@@ -1,10 +1,12 @@
 #ifndef HYDROBRICKS_UTILS_H
 #define HYDROBRICKS_UTILS_H
 
+#include <chrono>
+
 #include "Includes.h"
 
 /**
- * Initialization of the user directory and the config file.
+ * Initialization of the user directory.
  */
 [[nodiscard]] bool InitHydrobricks();
 
@@ -18,7 +20,7 @@
  *
  * @return The user directory path.
  */
-wxString GetUserDirPath();
+string GetUserDirPath();
 
 /**
  * Check that the output directory exists and create it if not.
@@ -30,9 +32,9 @@ wxString GetUserDirPath();
 /**
  * Display the processing time.
  *
- * @param sw The stop watch instance created before the computations.
+ * @param startTime The time point recorded before the computations began.
  */
-void DisplayProcessingTime(const wxStopWatch& sw);
+void DisplayProcessingTime(std::chrono::steady_clock::time_point startTime);
 
 /**
  * Create a log file at the given path.
@@ -89,7 +91,7 @@ bool IsNaN(float value);
 bool IsNaN(double value);
 
 /**
- * Ge the path separator of the OS used.
+ * Get the path separator of the OS used.
  *
  * @return The path separator of the current OS.
  */

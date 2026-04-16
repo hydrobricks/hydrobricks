@@ -18,7 +18,7 @@ class TimeSeriesUniform : public TimeSeries {
      * @param data pointer to the time series data (ownership transferred).
      */
     void SetData(std::unique_ptr<TimeSeriesData> data) {
-        wxASSERT(data);
+        assert(data);
         _data = std::move(data);
     }
 

@@ -5,11 +5,11 @@
 
 #include "Includes.h"
 
-class FileNetcdf : public wxObject {
+class FileNetcdf {
   public:
     explicit FileNetcdf();
 
-    ~FileNetcdf() override;
+    ~FileNetcdf();
 
     /**
      * Open a NetCDF file as read only.

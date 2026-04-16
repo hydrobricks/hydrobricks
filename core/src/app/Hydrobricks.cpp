@@ -1,14 +1,8 @@
 #include "Hydrobricks.h"
 
-#include <wx/fileconf.h>
-#include <wx/filefn.h>
-#include <wx/log.h>
+#include <cstring>
+#include <iostream>
 
-#if _DEBUG
-#include <wx/debug.h>
-#endif
-
-#include "CmdLineDesc.h"
 #include "ModelHydro.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
@@ -16,151 +10,174 @@
 #include "TimeSeries.h"
 #include "Utils.h"
 
-wxIMPLEMENT_APP_CONSOLE(Hydrobricks);
+static const char* kUsage =
+    "Usage: hydrobricks [OPTIONS]\n"
+    "\n"
+    "Options:\n"
+    "  --model-file <path>       Path to the model settings file\n"
+    "  --parameters-file <path>  Path to the model parameters file\n"
+    "  --basin-file <path>       Path to the spatial structure file\n"
+    "  --data-file <path>        Path to the time series data file\n"
+    "  --output-path <path>      Directory to save outputs (no trailing separator)\n"
+    "  --start-date <YYYY-MM-DD> Starting date of the modelling\n"
+    "  --end-date <YYYY-MM-DD>   Ending date of the modelling\n"
+    "  --version                 Show version number and quit\n"
+    "  --help                    Show this help message and quit\n";
 
-bool Hydrobricks::OnInit() {
-#if _DEBUG
-#ifdef __WXMSW__
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-#endif
+static const char* kBanner =
+    "\n"
+    "________________________________________________________\n"
+    " _               _           _          _      _        \n"
+    "| |__  _   _  __| |_ __ ___ | |__  _ __(_) ___| | _____\n"
+    "| '_ \\| | | |/ _` | '__/ _ \\| '_ \\| '__| |/ __| |/ / __|\n"
+    "| | | | |_| | (_| | | | (_) | |_) | |  | | (__|   <\\__ \\\n"
+    "|_| |_|\\__, |\\__,_|_|  \\___/|_.__/|_|  |_|\\___|_|\\_\\___/\n"
+    "       |___/\n"
+    "________________________________________________________\n"
+    "\n";
 
-    // Set application name
-    wxString appName = "hydrobricks";
-    wxApp::SetAppName(appName);
+bool ParseArgs(int argc, char** argv, CliArgs& args) {
+    std::cout << kBanner;
 
-    // Init
-    InitHydrobricks();
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
+            std::cout << kUsage;
+            return false;
+        }
+        if (std::strcmp(argv[i], "--version") == 0 || std::strcmp(argv[i], "-v") == 0) {
+            std::cout << std::format("hydrobricks version {}.{}.{}, {}\n", HYDROBRICKS_MAJOR_VERSION,
+                                     HYDROBRICKS_MINOR_VERSION, HYDROBRICKS_PATCH_VERSION, __DATE__);
+            return false;
+        }
 
-    // Call default action
-    if (!wxApp::OnInit()) {
-        CleanUp();
-        return false;
+        auto getNext = [&](const char* name) -> string {
+            if (i + 1 >= argc) {
+                LogError("Missing value for argument '{}'.", name);
+                return "";
+            }
+            return argv[++i];
+        };
+
+        if (std::strcmp(argv[i], "--model-file") == 0) {
+            args.modelFile = getNext("--model-file");
+        } else if (std::strcmp(argv[i], "--parameters-file") == 0) {
+            args.parametersFile = getNext("--parameters-file");
+        } else if (std::strcmp(argv[i], "--basin-file") == 0) {
+            args.basinFile = getNext("--basin-file");
+        } else if (std::strcmp(argv[i], "--data-file") == 0) {
+            args.dataFile = getNext("--data-file");
+        } else if (std::strcmp(argv[i], "--output-path") == 0) {
+            args.outputPath = getNext("--output-path");
+        } else if (std::strcmp(argv[i], "--start-date") == 0) {
+            args.startDate = getNext("--start-date");
+        } else if (std::strcmp(argv[i], "--end-date") == 0) {
+            args.endDate = getNext("--end-date");
+        } else {
+            LogError("Unknown argument '{}'.", argv[i]);
+            std::cout << kUsage;
+            return false;
+        }
+
+        if (args.modelFile.empty() && std::strcmp(argv[i - 1], "--model-file") == 0) return false;
+        if (args.parametersFile.empty() && std::strcmp(argv[i - 1], "--parameters-file") == 0) return false;
+        if (args.basinFile.empty() && std::strcmp(argv[i - 1], "--basin-file") == 0) return false;
+        if (args.dataFile.empty() && std::strcmp(argv[i - 1], "--data-file") == 0) return false;
+        if (args.outputPath.empty() && std::strcmp(argv[i - 1], "--output-path") == 0) return false;
+        if (args.startDate.empty() && std::strcmp(argv[i - 1], "--start-date") == 0) return false;
+        if (args.endDate.empty() && std::strcmp(argv[i - 1], "--end-date") == 0) return false;
     }
 
-    return true;
+    // Validate required arguments
+    bool ok = true;
+    if (args.modelFile.empty()) {
+        LogError("The argument '--model-file' is required.");
+        ok = false;
+    }
+    if (args.parametersFile.empty()) {
+        LogError("The argument '--parameters-file' is required.");
+        ok = false;
+    }
+    if (args.basinFile.empty()) {
+        LogError("The argument '--basin-file' is required.");
+        ok = false;
+    }
+    if (args.dataFile.empty()) {
+        LogError("The argument '--data-file' is required.");
+        ok = false;
+    }
+    if (args.outputPath.empty()) {
+        LogError("The argument '--output-path' is required.");
+        ok = false;
+    }
+    if (args.startDate.empty()) {
+        LogError("The argument '--start-date' is required.");
+        ok = false;
+    }
+    if (args.endDate.empty()) {
+        LogError("The argument '--end-date' is required.");
+        ok = false;
+    }
+
+    if (!ok) {
+        std::cout << kUsage;
+    }
+
+    return ok;
 }
 
-void Hydrobricks::OnInitCmdLine(wxCmdLineParser& parser) {
-    wxAppConsole::OnInitCmdLine(parser);
+int RunModel(const CliArgs& args) {
+    auto startTime = std::chrono::steady_clock::now();
 
-    parser.SetDesc(cmdLineDesc);
-    parser.SetLogo(cmdLineLogo);
+    // Load basin settings
+    SettingsBasin basinSettings;
+    if (!basinSettings.Parse(args.basinFile)) {
+        LogError("Failed to load basin file '{}'.", args.basinFile);
+        return 1;
+    }
 
-    // Must refuse '/' as parameter starter or cannot use "/path" style paths
-    parser.SetSwitchChars(wxT("-"));
+    // Initialize sub-basin
+    SubBasin subBasin;
+    if (!subBasin.Initialize(basinSettings)) {
+        LogError("Failed to initialize sub-basin.");
+        return 1;
+    }
+
+    // Load time series
+    std::vector<TimeSeries*> vecTimeSeries;
+    if (!TimeSeries::Parse(args.dataFile, vecTimeSeries)) {
+        LogError("Failed to load data file '{}'.", args.dataFile);
+        return 1;
+    }
+
+    // Build model settings
+    // Note: loading SettingsModel from a YAML file requires model-type-specific
+    // construction and is currently only supported via the Python interface.
+    LogError("Direct CLI model execution is not yet implemented. Use the Python interface to run models.");
+    for (auto* ts : vecTimeSeries) {
+        delete ts;
+    }
+    return 1;
 }
 
-bool Hydrobricks::OnCmdLineParsed(wxCmdLineParser& parser) {
-    // Add a new line
-    wxPrintf("\n");
+int main(int argc, char** argv) {
+    try {
+        InitHydrobricks();
 
-    // Check if the user asked for command-line help
-    if (parser.Found("help")) {
-        parser.Usage();
-        return false;
+        CliArgs args;
+        if (!ParseArgs(argc, argv, args)) {
+            return 0;
+        }
+
+        int result = RunModel(args);
+
+        CloseLog();
+        return result;
+
+    } catch (const std::exception& e) {
+        LogError("Fatal exception: {}", e.what());
+        return 1;
+    } catch (...) {
+        LogError("Unknown fatal exception.");
+        return 1;
     }
-
-    // Check if the user asked for the version
-    if (parser.Found("version")) {
-        wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
-                                            HYDROBRICKS_PATCH_VERSION);
-        wxPrintf("hydrobricks version %s, %s", version, static_cast<const wxChar*>(wxString::FromAscii(__DATE__)));
-        return false;
-    }
-
-    /*
-     * Hydrobricks inputs
-     */
-    wxString input = wxEmptyString;
-
-    if (parser.Found("model-file", &input)) {
-        _modelFile = input;
-    } else {
-        wxLogError("The argument 'model-file' is missing.");
-        return false;
-    }
-
-    if (parser.Found("parameters-file", &input)) {
-        _parametersFile = input;
-    } else {
-        wxLogError("The argument 'parameters-file' is missing.");
-        return false;
-    }
-
-    if (parser.Found("basin-file", &input)) {
-        _basinFile = input;
-    } else {
-        wxLogError("The argument 'basin-file' is missing.");
-        return false;
-    }
-
-    if (parser.Found("data-file", &input)) {
-        _dataFile = input;
-    } else {
-        wxLogError("The argument 'data-file' is missing.");
-        return false;
-    }
-
-    if (parser.Found("output-path", &input)) {
-        _outputPath = input;
-    } else {
-        wxLogError("The argument 'output-path' is missing.");
-        return false;
-    }
-
-    if (parser.Found("start-date", &input)) {
-        _startDate = input;
-    } else {
-        wxLogError("The argument 'start-date' is missing.");
-        return false;
-    }
-
-    if (parser.Found("end-date", &input)) {
-        _endDate = input;
-    } else {
-        wxLogError("The argument 'end-date' is missing.");
-        return false;
-    }
-
-    return wxAppConsole::OnCmdLineParsed(parser);
-}
-
-int Hydrobricks::OnRun() {
-    return wxApp::OnRun();
-}
-
-int Hydrobricks::OnExit() {
-    CleanUp();
-
-#ifdef _DEBUG
-#ifdef __WXMSW__
-    _CrtDumpMemoryLeaks();
-#endif
-#endif
-
-    return 0;
-}
-
-void Hydrobricks::CleanUp() {
-    wxFileConfig::Get()->Flush();
-    delete wxFileConfig::Set((wxFileConfig*)nullptr);
-
-    wxApp::CleanUp();
-}
-
-bool Hydrobricks::OnExceptionInMainLoop() {
-    wxLogError(_("An exception occurred."));
-    CleanUp();
-    return false;
-}
-
-void Hydrobricks::OnFatalException() {
-    wxLogError(_("A fatal exception occurred."));
-    CleanUp();
-}
-
-void Hydrobricks::OnUnhandledException() {
-    wxLogError(_("An unhandled exception occurred."));
-    CleanUp();
 }

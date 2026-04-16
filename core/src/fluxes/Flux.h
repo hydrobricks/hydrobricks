@@ -6,11 +6,11 @@
 
 class Modifier;
 
-class Flux : public wxObject {
+class Flux {
   public:
     explicit Flux();
 
-    ~Flux() override = default;
+    virtual ~Flux() = default;
 
     /**
      * Check that everything is correctly defined.

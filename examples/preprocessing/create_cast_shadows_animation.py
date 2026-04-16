@@ -1,4 +1,6 @@
+import logging
 import os.path
+import sys
 import tempfile
 import uuid
 from datetime import datetime
@@ -12,6 +14,13 @@ from matplotlib.colors import ListedColormap
 
 import hydrobricks as hb
 from hydrobricks._constants import TO_RAD
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
 
 # Paths
 TEST_FILES_DIR = Path(

@@ -405,6 +405,9 @@ class TimeSeries2D(TimeSeries):
         data_idx = data_var[0].copy()
         data_idx.values = np.arange(data_idx.size).reshape(data_idx.shape)
         data_idx = data_idx.astype(float)
+        assert len(data_idx.shape) == 2
+        assert data_idx.shape[0] > 0
+        assert data_idx.shape[1] > 0
 
         # Reproject the data cell indices to the hydro unit raster
         with warnings.catch_warnings():
@@ -704,8 +707,17 @@ class TimeSeries2D(TimeSeries):
         x_coords = data_var[dim_x].values
         y_coords = data_var[dim_y].values
 
+        x_reversed = False
+        if x_coords[0] > x_coords[1]:  # Decreasing
+            x_coords = x_coords[::-1]
+            x_reversed = True
         x_start_idx = np.searchsorted(x_coords, x_min_dat, side="right") - 1
         x_end_idx = np.searchsorted(x_coords, x_max_dat, side="left")
+
+        y_reversed = False
+        if y_coords[0] > y_coords[1]:  # Decreasing
+            y_coords = y_coords[::-1]
+            y_reversed = True
         y_start_idx = np.searchsorted(y_coords, y_min_dat, side="right") - 1
         y_end_idx = np.searchsorted(y_coords, y_max_dat, side="left")
 
@@ -714,8 +726,14 @@ class TimeSeries2D(TimeSeries):
         y_start = y_coords[max(y_start_idx, 0)]
         y_end = y_coords[min(y_end_idx, len(y_coords) - 1)]
 
-        x_sel = slice(min(x_start, x_end), max(x_start, x_end))
-        y_sel = slice(min(y_start, y_end), max(y_start, y_end))
+        if x_reversed:
+            x_sel = slice(max(x_start, x_end), min(x_start, x_end))
+        else:
+            x_sel = slice(min(x_start, x_end), max(x_start, x_end))
+        if y_reversed:
+            y_sel = slice(max(y_start, y_end), min(y_start, y_end))
+        else:
+            y_sel = slice(min(y_start, y_end), max(y_start, y_end))
 
         data_var = data_var.sel({dim_x: x_sel, dim_y: y_sel})
 

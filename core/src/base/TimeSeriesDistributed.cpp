@@ -6,7 +6,7 @@ TimeSeriesDistributed::TimeSeriesDistributed(VariableType type)
 TimeSeriesDistributed::~TimeSeriesDistributed() = default;  // Automatic cleanup via unique_ptr
 
 void TimeSeriesDistributed::AddData(std::unique_ptr<TimeSeriesData> data, int unitId) {
-    wxASSERT(data);
+    assert(data);
     _data.push_back(std::move(data));
     _unitIds.push_back(unitId);
 }
@@ -32,12 +32,12 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
 }
 
 double TimeSeriesDistributed::GetStart() const {
-    wxASSERT(!_data.empty());
+    assert(!_data.empty());
     return _data[0]->GetStart();
 }
 
 double TimeSeriesDistributed::GetEnd() const {
-    wxASSERT(!_data.empty());
+    assert(!_data.empty());
     return _data[0]->GetEnd();
 }
 
@@ -55,7 +55,7 @@ double TimeSeriesDistributed::GetTotal(const SettingsBasin* basinSettings) {
 }
 
 TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
-    wxASSERT(_data.size() == _unitIds.size());
+    assert(_data.size() == _unitIds.size());
 
     for (int i = 0; i < _data.size(); ++i) {
         if (_unitIds[i] == unitId) {
@@ -63,27 +63,27 @@ TimeSeriesData* TimeSeriesDistributed::GetDataPointer(int unitId) {
         }
     }
 
-    throw ShouldNotHappen(wxString::Format("TimeSeriesDistributed::GetDataPointer - Unit ID %d not found", unitId));
+    throw ShouldNotHappen(std::format("TimeSeriesDistributed::GetDataPointer - Unit ID {} not found", unitId));
 }
 
 bool TimeSeriesDistributed::IsValid() const {
     // Check that data has been added
     if (_data.empty()) {
-        wxLogError(_("TimeSeriesDistributed: No data added."));
+        LogError("TimeSeriesDistributed: No data added.");
         return false;
     }
 
     // Check that unit IDs and data vectors match in size
     if (_data.size() != _unitIds.size()) {
-        wxLogError(_("TimeSeriesDistributed: Data count (%d) does not match unit ID count (%d)."),
-                   static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
+        LogError("TimeSeriesDistributed: Data count ({}) does not match unit ID count ({}).",
+                 static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
         return false;
     }
 
     // Check that all data pointers are valid
     for (size_t i = 0; i < _data.size(); ++i) {
         if (!_data[i]) {
-            wxLogError(_("TimeSeriesDistributed: Data at index %d is null."), static_cast<int>(i));
+            LogError("TimeSeriesDistributed: Data at index {} is null.", static_cast<int>(i));
             return false;
         }
     }
@@ -91,8 +91,8 @@ bool TimeSeriesDistributed::IsValid() const {
     // Check that all data elements are valid
     for (size_t i = 0; i < _data.size(); ++i) {
         if (!_data[i]->IsValid()) {
-            wxLogError(_("TimeSeriesDistributed: Data at index %d (unit ID %d) is not valid."), static_cast<int>(i),
-                       _unitIds[i]);
+            LogError("TimeSeriesDistributed: Data at index {} (unit ID {}) is not valid.", static_cast<int>(i),
+                     _unitIds[i]);
             return false;
         }
     }
@@ -101,8 +101,8 @@ bool TimeSeriesDistributed::IsValid() const {
     for (size_t i = 0; i < _unitIds.size(); ++i) {
         for (size_t j = i + 1; j < _unitIds.size(); ++j) {
             if (_unitIds[i] == _unitIds[j]) {
-                wxLogError(_("TimeSeriesDistributed: Duplicate unit ID %d found at indices %d and %d."), _unitIds[i],
-                           static_cast<int>(i), static_cast<int>(j));
+                LogError("TimeSeriesDistributed: Duplicate unit ID {} found at indices {} and {}.", _unitIds[i],
+                         static_cast<int>(i), static_cast<int>(j));
                 return false;
             }
         }
@@ -113,8 +113,8 @@ bool TimeSeriesDistributed::IsValid() const {
 
 void TimeSeriesDistributed::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(_("TimeSeriesDistributed validation failed. DataCount: %d, UnitIdCount: %d"),
-                                        static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
+        string msg = std::format("TimeSeriesDistributed validation failed. DataCount: {}, UnitIdCount: {}",
+                                 static_cast<int>(_data.size()), static_cast<int>(_unitIds.size()));
         throw ModelConfigError(msg);
     }
 
@@ -123,8 +123,8 @@ void TimeSeriesDistributed::Validate() const {
         try {
             _data[i]->Validate();
         } catch (const ModelConfigError& e) {
-            wxString msg = wxString::Format(_("TimeSeriesDistributed validation failed for unit ID %d: %s"),
-                                            _unitIds[i], e.what());
+            string msg = std::format("TimeSeriesDistributed validation failed for unit ID {}: {}", _unitIds[i],
+                                     e.what());
             throw ModelConfigError(msg);
         }
     }

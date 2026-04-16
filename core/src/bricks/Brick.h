@@ -21,11 +21,11 @@ enum class BrickCategory {
     Unknown            ///< Unknown or unspecified brick type
 };
 
-class Brick : public wxObject {
+class Brick {
   public:
     explicit Brick();
 
-    ~Brick() override = default;
+    virtual ~Brick() = default;
 
     /**
      * Factory method to create a brick.
@@ -81,7 +81,7 @@ class Brick : public wxObject {
      * @param process process to add (ownership transferred).
      */
     void AddProcess(std::unique_ptr<Process> process) {
-        wxASSERT(process);
+        assert(process);
         _processes.push_back(std::move(process));
     }
 
@@ -262,7 +262,7 @@ class Brick : public wxObject {
      * @return pointer to the hydro unit.
      */
     HydroUnit* GetHydroUnit() const {
-        wxASSERT(_hydroUnit);
+        assert(_hydroUnit);
         return _hydroUnit;
     }
 
@@ -272,7 +272,7 @@ class Brick : public wxObject {
      * @param hydroUnit pointer to the hydro unit.
      */
     void SetHydroUnit(HydroUnit* hydroUnit) {
-        wxASSERT(hydroUnit);
+        assert(hydroUnit);
         _hydroUnit = hydroUnit;
     }
 

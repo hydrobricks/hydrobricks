@@ -7,8 +7,8 @@ Connector::Connector()
       _out(nullptr) {}
 
 void Connector::Connect(SubBasin* in, SubBasin* out) {
-    wxASSERT(in);
-    wxASSERT(out);
+    assert(in);
+    assert(out);
     _in = in;
     _out = out;
     _in->AddOutputConnector(this);

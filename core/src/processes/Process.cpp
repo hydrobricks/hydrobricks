@@ -81,7 +81,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply transformation processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
@@ -89,7 +89,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessTransformSnowToIceSwat(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply transformation processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "transport:snow_slide") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
@@ -97,7 +97,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply transport processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply transport processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "runoff:socont") {
         return new ProcessRunoffSocont(brick->GetWaterContainer());
@@ -118,7 +118,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "melt:degree_day_aspect") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
@@ -130,7 +130,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "melt:temperature_index") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
@@ -142,11 +142,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
             return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
+            std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));
     }
 
     throw ModelConfigError(
-        wxString::Format(_("Process type '%s' not recognized (Factory). %s"), processType, GetValidProcessTypes()));
+        std::format("Process type '{}' not recognized (Factory). {}", processType, GetValidProcessTypes()));
 }
 
 bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
@@ -178,8 +178,8 @@ bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const s
         return true;
     }
 
-    throw ModelConfigError(wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing). %s"),
-                                            processType, GetValidProcessTypes()));
+    throw ModelConfigError(std::format("Process type '{}' not recognized (RegisterParametersAndForcing). {}",
+                                       processType, GetValidProcessTypes()));
 }
 
 void Process::Reset() {
@@ -209,12 +209,12 @@ bool Process::HasParameter(const ProcessSettings& processSettings, const string&
 const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const string& name) {
     for (auto& parameter : processSettings.parameters) {
         if (parameter.GetName() == name) {
-            wxASSERT(parameter.GetValuePointer());
+            assert(parameter.GetValuePointer());
             return parameter.GetValuePointer();
         }
     }
 
-    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
 vecDouble Process::GetChangeRates() {
@@ -228,16 +228,16 @@ vecDouble Process::GetChangeRates() {
 }
 
 void Process::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(_outputs.size() > index);
-    wxASSERT(rate);
+    assert(_outputs.size() > index);
+    assert(rate);
     _outputs[index]->LinkChangeRate(rate);
 }
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
-    wxASSERT(_outputs.size() > connectionIndex);
-    wxASSERT(rate >= 0);
+    assert(_outputs.size() > connectionIndex);
+    assert(rate >= 0);
     if (rate < 0) {
-        wxLogError(_("Negative rate (%f) in process %s, connection %d."), rate, GetName(), connectionIndex);
+        LogError("Negative rate ({}) in process {}, connection {}.", rate, GetName(), connectionIndex);
         rate = 0;
     }
     if (GreaterThan(rate, 0, PRECISION)) {
@@ -257,13 +257,13 @@ double Process::GetSumChangeRatesOtherProcesses() const {
 
     for (int i = 0; i < _container->GetParentBrick()->GetProcessCount(); ++i) {
         auto process = _container->GetParentBrick()->GetProcess(i);
-        wxASSERT(process);
+        assert(process);
         if (process == this) {
             continue;
         }
         for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
             Flux* flux = process->GetOutputFlux(j);
-            wxASSERT(flux);
+            assert(flux);
             sumOtherProcesses += *flux->GetAmountPointer();
         }
     }
@@ -273,7 +273,6 @@ double Process::GetSumChangeRatesOtherProcesses() const {
 
 void Process::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(
-            _("Process validation failed. Check that all required properties are correctly defined."));
+        throw ModelConfigError("Process validation failed. Check that all required properties are correctly defined.");
     }
 }

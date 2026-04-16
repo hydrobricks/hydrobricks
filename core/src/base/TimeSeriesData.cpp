@@ -38,8 +38,8 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeS
 bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
     double calcEnd = IncrementDateBy(_start, _timeStep * static_cast<int>(values.size() - 1), _timeStepUnit);
     if (calcEnd != _end) {
-        wxLogError(_("The size of the time series data does not match the time properties."));
-        wxLogError(_("End of the data (%d) != end of the dates (%d)."), calcEnd, _end);
+        LogError("The size of the time series data does not match the time properties.");
+        LogError("End of the data ({}) != end of the dates ({}).", calcEnd, _end);
         return false;
     }
 
@@ -53,7 +53,7 @@ double TimeSeriesDataRegular::GetValueFor(double date) {
 }
 
 double TimeSeriesDataRegular::GetCurrentValue() {
-    wxASSERT(_values.size() > _cursor);
+    assert(_values.size() > _cursor);
     return _values[_cursor];
 }
 
@@ -66,11 +66,11 @@ double TimeSeriesDataRegular::GetSum() {
 
 bool TimeSeriesDataRegular::SetCursorToDate(double date) {
     if (date < _start) {
-        wxLogError(_("The desired date is before the data starting date."));
+        LogError("The desired date is before the data starting date.");
         return false;
     }
     if (date > _end) {
-        wxLogError(_("The desired date is after the data ending date."));
+        LogError("The desired date is after the data ending date.");
         return false;
     }
 
@@ -87,8 +87,8 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
             _cursor = static_cast<int>(dt) * 1440;
             break;
         default:
-            throw NotImplemented(wxString::Format("TimeSeriesDataRegular::SetCursorToDate - Time unit %d not supported",
-                                                  static_cast<int>(_timeStepUnit)));
+            throw NotImplemented(std::format("TimeSeriesDataRegular::SetCursorToDate - Time unit {} not supported",
+                                             static_cast<int>(_timeStepUnit)));
     }
 
     return true;
@@ -96,7 +96,7 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 
 bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     if (_cursor >= _values.size()) {
-        wxLogError(_("The desired date is after the data ending date."));
+        LogError("The desired date is after the data ending date.");
         return false;
     }
     _cursor++;
@@ -115,19 +115,19 @@ double TimeSeriesDataRegular::GetEnd() const {
 bool TimeSeriesDataRegular::IsValid() const {
     // Check that values have been set
     if (_values.empty()) {
-        wxLogError(_("TimeSeriesDataRegular: No values set."));
+        LogError("TimeSeriesDataRegular: No values set.");
         return false;
     }
 
     // Check that start is before end
     if (_start > _end) {
-        wxLogError(_("TimeSeriesDataRegular: Start date (%f) is after end date (%f)."), _start, _end);
+        LogError("TimeSeriesDataRegular: Start date ({}) is after end date ({}).", _start, _end);
         return false;
     }
 
     // Check that time step is positive
     if (_timeStep <= 0) {
-        wxLogError(_("TimeSeriesDataRegular: Time step must be positive."));
+        LogError("TimeSeriesDataRegular: Time step must be positive.");
         return false;
     }
 
@@ -136,9 +136,9 @@ bool TimeSeriesDataRegular::IsValid() const {
 
 void TimeSeriesDataRegular::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(
-            _("TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d"), _start,
-            _end, _timeStep, static_cast<int>(_values.size()));
+        string msg = std::format(
+            "TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d", _start, _end,
+            _timeStep, static_cast<int>(_values.size()));
         throw ModelConfigError(msg);
     }
 }
@@ -153,7 +153,7 @@ TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble& dates)
 
 bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
     if (_dates.size() != values.size()) {
-        wxLogError(_("The size of the time series data does not match the dates array."));
+        LogError("The size of the time series data does not match the dates array.");
         return false;
     }
 
@@ -166,7 +166,7 @@ double TimeSeriesDataIrregular::GetValueFor(double) {
 }
 
 double TimeSeriesDataIrregular::GetCurrentValue() {
-    wxASSERT(_values.size() > _cursor);
+    assert(_values.size() > _cursor);
     return _values[_cursor];
 }
 
@@ -183,40 +183,40 @@ bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
 }
 
 double TimeSeriesDataIrregular::GetStart() const {
-    wxASSERT(!_dates.empty());
+    assert(!_dates.empty());
     return _dates[0];
 }
 
 double TimeSeriesDataIrregular::GetEnd() const {
-    wxASSERT(!_dates.empty());
+    assert(!_dates.empty());
     return _dates[_dates.size() - 1];
 }
 
 bool TimeSeriesDataIrregular::IsValid() const {
     // Check that dates have been set
     if (_dates.empty()) {
-        wxLogError(_("TimeSeriesDataIrregular: No dates set."));
+        LogError("TimeSeriesDataIrregular: No dates set.");
         return false;
     }
 
     // Check that values have been set
     if (_values.empty()) {
-        wxLogError(_("TimeSeriesDataIrregular: No values set."));
+        LogError("TimeSeriesDataIrregular: No values set.");
         return false;
     }
 
     // Check that dates and values match
     if (_dates.size() != _values.size()) {
-        wxLogError(_("TimeSeriesDataIrregular: Date count (%d) does not match value count (%d)."),
-                   static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        LogError("TimeSeriesDataIrregular: Date count ({}) does not match value count ({}).",
+                 static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
         return false;
     }
 
     // Check that dates are sorted
     for (size_t i = 1; i < _dates.size(); ++i) {
         if (_dates[i] <= _dates[i - 1]) {
-            wxLogError(_("TimeSeriesDataIrregular: Dates are not sorted (date[%d]=%f <= date[%d]=%f)."),
-                       static_cast<int>(i), _dates[i], static_cast<int>(i - 1), _dates[i - 1]);
+            LogError("TimeSeriesDataIrregular: Dates are not sorted (date[{}]={} <= date[{}]={}).", static_cast<int>(i),
+                     _dates[i], static_cast<int>(i - 1), _dates[i - 1]);
             return false;
         }
     }
@@ -226,8 +226,8 @@ bool TimeSeriesDataIrregular::IsValid() const {
 
 void TimeSeriesDataIrregular::Validate() const {
     if (!IsValid()) {
-        wxString msg = wxString::Format(_("TimeSeriesDataIrregular validation failed. DateCount: %d, ValueCount: %d"),
-                                        static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        string msg = std::format("TimeSeriesDataIrregular validation failed. DateCount: {}, ValueCount: {}",
+                                 static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
         throw ModelConfigError(msg);
     }
 }

@@ -3,7 +3,7 @@
 
 #include "Includes.h"
 
-class HydroUnitProperty : public wxObject {
+class HydroUnitProperty {
   public:
     HydroUnitProperty();
 
@@ -11,7 +11,7 @@ class HydroUnitProperty : public wxObject {
 
     HydroUnitProperty(string name, string valueString, string unit = "");
 
-    ~HydroUnitProperty() override = default;
+    virtual ~HydroUnitProperty() = default;
 
     /**
      * Get the value of the property.

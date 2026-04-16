@@ -1,82 +1,79 @@
 #include "Utils.h"
 
-#include <wx/ffile.h>
-#include <wx/fileconf.h>
-#include <wx/stdpaths.h>
-
 #include <algorithm>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
 
 // New centralized date/time utilities
 #include "UtilsDateTime.h"
 
+static string GetUserDataDir() {
+#ifdef _WIN32
+    const char* appdata = getenv("APPDATA");
+    if (appdata) return string(appdata);
+    const char* home = getenv("USERPROFILE");
+    if (home) return string(home);
+    return ".";
+#else
+    const char* home = getenv("HOME");
+    if (home) return string(home) + "/.local/share";
+    return ".";
+#endif
+}
+
+string GetUserDirPath() {
+    return (std::filesystem::path(GetUserDataDir()) / "hydrobricks").string();
+}
+
 bool InitHydrobricks() {
-    // Create the user directory if necessary
-    wxFileName userDir = wxFileName::DirName(GetUserDirPath());
-    if (!userDir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
-        return false;
-    }
-
-    // Set config file
-    wxFileName filePath = wxFileConfig::GetLocalFile("hydrobricks", wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-    filePath.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-    wxFileConfig* pConfig = new wxFileConfig("hydrobricks", wxEmptyString, filePath.GetFullPath(), wxEmptyString,
-                                             wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_SUBDIR);
-    wxFileConfig::Set(pConfig);
-
-    return true;
+    std::error_code ec;
+    std::filesystem::create_directories(GetUserDirPath(), ec);
+    return !ec;
 }
 
 bool InitHydrobricksForPython() {
-    wxInitialize();
     return InitHydrobricks();
 }
 
-wxString GetUserDirPath() {
-    wxStandardPathsBase& stdPth = wxStandardPaths::Get();
-    stdPth.UseAppInfo(0);
-    wxString userDir = stdPth.GetUserDataDir();
-    userDir.Append(wxFileName::GetPathSeparator());
-    userDir.Append("hydrobricks");
-    userDir.Append(wxFileName::GetPathSeparator());
-
-    return userDir;
-}
-
 void InitLog(const string& path) {
-    wxString fullPath = path;
-    wxString logFileName = wxString::Format("hydrobricks_%s.log", wxDateTime::Now().Format("%Y-%m-%d_%H%M%S"));
-    fullPath.Append(wxFileName::GetPathSeparator());
-    fullPath.Append(logFileName);
-    wxFFile* logFile = new wxFFile(fullPath, "w");
-    auto* pLogFile = new wxLogStderr(logFile->fp());
-    new wxLogChain(pLogFile);
-    wxString version = wxString::Format("%d.%d.%d", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
-                                        HYDROBRICKS_PATCH_VERSION);
-    wxLogMessage("hydrobricks version %s, %s", version, static_cast<const wxChar*>(wxString::FromAscii(__DATE__)));
+    auto now = std::chrono::system_clock::now();
+    auto nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm* tm = std::localtime(&nowTime);
+    char timeBuf[32];
+    std::strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d_%H%M%S", tm);
+
+    string logFileName = std::format("hydrobricks_{}.log", timeBuf);
+    string fullPath = (std::filesystem::path(path) / logFileName).string();
+    LogSetFile(fullPath);
+
+    string version = std::format("{}.{}.{}", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
+                                 HYDROBRICKS_PATCH_VERSION);
+    LogMessage(std::format("hydrobricks version {}, {}", version, __DATE__));
 }
 
 void CloseLog() {
-    wxLog::FlushActive();
-    delete wxLog::SetActiveTarget(nullptr);
+    LogFlush();
 }
 
 void SetMaxLogLevel() {
-    wxLog::SetLogLevel(wxLOG_Max);
+    LogSetLevel(LogLevel::Debug);
 }
 
 void SetDebugLogLevel() {
-    wxLog::SetLogLevel(wxLOG_Debug);
+    LogSetLevel(LogLevel::Debug);
 }
 
 void SetMessageLogLevel() {
-    wxLog::SetLogLevel(wxLOG_Message);
+    LogSetLevel(LogLevel::Message);
 }
 
 bool CheckOutputDirectory(const string& path) {
-    if (!wxFileName::DirExists(path)) {
-        wxFileName dir = wxFileName(path);
-        if (!dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
-            wxLogError(_("The path %s could not be created."), path);
+    if (!std::filesystem::is_directory(path)) {
+        std::error_code ec;
+        std::filesystem::create_directories(path, ec);
+        if (ec) {
+            LogError("The path {} could not be created.", path);
             return false;
         }
     }
@@ -84,20 +81,23 @@ bool CheckOutputDirectory(const string& path) {
     return true;
 }
 
-void DisplayProcessingTime(const wxStopWatch& sw) {
-    auto dispTime = float(sw.Time());
-    wxString watchUnit = "ms";
+void DisplayProcessingTime(std::chrono::steady_clock::time_point startTime) {
+    auto elapsed = std::chrono::steady_clock::now() - startTime;
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
+    float dispTime = static_cast<float>(ms);
+    string watchUnit = "ms";
     if (dispTime > 3600000) {
-        dispTime = dispTime / 3600000.0f;
+        dispTime /= 3600000.0f;
         watchUnit = "h";
     } else if (dispTime > 60000) {
-        dispTime = dispTime / 60000.0f;
+        dispTime /= 60000.0f;
         watchUnit = "min";
     } else if (dispTime > 1000) {
-        dispTime = dispTime / 1000.0f;
+        dispTime /= 1000.0f;
         watchUnit = "s";
     }
-    wxLogMessage(_("Processing time: %.2f %s."), dispTime, watchUnit);
+    LogMessage(std::format("Processing time: {:.2f} {}.", dispTime, watchUnit));
 }
 
 bool IsNaN(const int value) {
@@ -113,7 +113,7 @@ bool IsNaN(const double value) {
 }
 
 const char* GetPathSeparator() {
-    return wxString(wxFileName::GetPathSeparator()).c_str();
+    return "/";
 }
 
 bool StringsMatch(const string& str1, const string& str2) {
@@ -141,9 +141,9 @@ int Find(const double* start, const double* end, double value, double tolerance,
 
 template <class T>
 int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) {
-    wxASSERT(start);
-    wxASSERT(end);
-    wxASSERT(start <= end);
+    assert(start);
+    assert(end);
+    assert(start <= end);
 
     // Convert from inclusive [start, end] to standard [start, end) range
     const T* searchEnd = end + 1;
@@ -155,7 +155,7 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
             return 0;
         }
         if (showWarning) {
-            wxLogWarning(_("The value was not found in the array."));
+            LogWarning("The value was not found in the array.");
         }
         return NOT_FOUND;
     }
@@ -189,21 +189,21 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
     if (ascending) {
         if (value < *start || value > *end) {
             if (showWarning) {
-                wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
+                LogWarning("The value ({}) is out of the array range.", static_cast<float>(value));
             }
             return OUT_OF_RANGE;
         }
     } else {
         if (value > *start || value < *end) {
             if (showWarning) {
-                wxLogWarning(_("The value (%f) is out of the array range."), static_cast<float>(value));
+                LogWarning("The value ({}) is out of the array range.", static_cast<float>(value));
             }
             return OUT_OF_RANGE;
         }
     }
 
     if (showWarning) {
-        wxLogWarning(_("The value was not found in the array."));
+        LogWarning("The value was not found in the array.");
     }
     return NOT_FOUND;
 }
@@ -219,14 +219,14 @@ double IncrementDateBy(double date, int amount, TimeUnit unit) {
         case Minute:
             return date + amount / 1440.0;
         default:
-            wxLogError(_("The provided time step unit is not allowed."));
+            LogError("The provided time step unit is not allowed.");
     }
 
     return 0;
 }
 
 Time GetTimeStructFromMJD(double mjd) {
-    wxASSERT(mjd >= 0);
+    assert(mjd >= 0);
 
     return UtilsDateTime::FromMJD(mjd);
 }
@@ -236,12 +236,12 @@ double ParseDate(const string& dateStr, TimeFormat format) {
 }
 
 double GetMJD(int year, int month, int day, int hour, int minute, int second) {
-    wxASSERT(year > 0);
-    wxASSERT(month > 0);
-    wxASSERT(day > 0);
-    wxASSERT(hour >= 0);
-    wxASSERT(minute >= 0);
-    wxASSERT(second >= 0);
+    assert(year > 0);
+    assert(month > 0);
+    assert(day > 0);
+    assert(hour >= 0);
+    assert(minute >= 0);
+    assert(second >= 0);
 
     return UtilsDateTime::ToMJD(year, month, day, hour, minute, second);
 }

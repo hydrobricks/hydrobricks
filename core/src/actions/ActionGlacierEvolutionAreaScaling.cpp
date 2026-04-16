@@ -18,11 +18,11 @@ void ActionGlacierEvolutionAreaScaling::AddLookupTables(int month, const string&
 
 bool ActionGlacierEvolutionAreaScaling::Init() {
     if (_manager->GetSubBasin() == nullptr) {
-        wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
+        LogError("The model is likely not initialized (setup()) as the sub-basin is not defined.");
         return false;
     }
     if (!_manager->GetSubBasin()->HasHydroUnits()) {
-        wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
+        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin.");
         return false;
     }
 
@@ -30,7 +30,7 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
         int id = _hydroUnitIds[i];
         HydroUnit* unit = _manager->GetHydroUnitById(id);
         if (unit == nullptr) {
-            wxLogError(_("The hydro unit %d was not found"), id);
+            LogError("The hydro unit {} was not found", id);
             return false;
         }
 
@@ -46,16 +46,17 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
                 return false;
             }
         } else if (!NearlyEqual(areaInModel, areaRef, PRECISION)) {
-            wxLogError(_("The glacier area fraction in hydro unit %d does not match the lookup table "
-                         "initial area (%g vs %g)."),
-                       id, areaInModel, areaRef);
+            LogError(
+                "The glacier area fraction in hydro unit %d does not match the lookup table "
+                "initial area (%g vs %g).",
+                id, areaInModel, areaRef);
             return false;
         }
 
         // Initialize the glacier container.
         LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr) {
-            wxLogError(_("The land cover %s was not found in hydro unit %d"), _landCoverName, id);
+            LogError("The land cover {} was not found in hydro unit {}", _landCoverName, id);
             return false;
         }
         double iceWE = _tableVolume(0, i) * constants::iceDensity / areaRef;
@@ -75,7 +76,7 @@ void ActionGlacierEvolutionAreaScaling::Reset() {
 
     // Re-initialize.
     if (!Init()) {
-        throw RuntimeError(_("Failed to re-initialize the glacier evolution area scaling action during reset."));
+        throw RuntimeError("Failed to re-initialize the glacier evolution area scaling action during reset.");
     }
 }
 

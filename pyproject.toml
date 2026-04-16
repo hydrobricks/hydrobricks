@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "cftime",
-    "numpy",
+    "numpy==2.3.5",
     "HydroErr",
     "pandas",
     "pyyaml",
@@ -32,7 +32,7 @@ test = [
     "pytest>=6.0",
     "cftime",
     "HydroErr",
-    "numpy",
+    "numpy==2.3.5",
     "pandas",
     "pyyaml",
     "StrEnum",

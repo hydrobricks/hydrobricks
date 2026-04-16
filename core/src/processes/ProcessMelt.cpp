@@ -8,7 +8,7 @@ ProcessMelt::ProcessMelt(WaterContainer* container)
 
 bool ProcessMelt::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("Melt processes should have a single output."));
+        LogError("Melt processes should have a single output.");
         return false;
     }
 

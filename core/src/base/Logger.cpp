@@ -1,7 +1,5 @@
 #include "Logger.h"
 
-#include <wx/filename.h>
-
 #include "ResultWriter.h"
 
 Logger::Logger()
@@ -38,54 +36,54 @@ void Logger::Reset() {
 }
 
 void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
-    wxASSERT(_subBasinValuesPt.size() > iLabel);
+    assert(_subBasinValuesPt.size() > iLabel);
     _subBasinValuesPt[iLabel] = valPt;
 }
 
 void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
-    wxASSERT(_hydroUnitValuesPt.size() > iLabel);
-    wxASSERT(_hydroUnitValuesPt[iLabel].size() > iUnit);
+    assert(_hydroUnitValuesPt.size() > iLabel);
+    assert(_hydroUnitValuesPt[iLabel].size() > iUnit);
     _hydroUnitValuesPt[iLabel][iUnit] = valPt;
 }
 
 void Logger::SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt) {
     if (_recordFractions) {
-        wxASSERT(_hydroUnitFractionsPt.size() > iLabel);
-        wxASSERT(_hydroUnitFractionsPt[iLabel].size() > iUnit);
+        assert(_hydroUnitFractionsPt.size() > iLabel);
+        assert(_hydroUnitFractionsPt[iLabel].size() > iUnit);
         _hydroUnitFractionsPt[iLabel][iUnit] = valPt;
     }
 }
 
 void Logger::SetDate(double date) {
-    wxASSERT(_cursor < _time.size());
+    assert(_cursor < _time.size());
     _time[_cursor] = date;
 }
 
 void Logger::SaveInitialValues() {
     for (int iSubBasin = 0; iSubBasin < _subBasinValuesPt.size(); ++iSubBasin) {
-        wxASSERT(_subBasinValuesPt[iSubBasin]);
+        assert(_subBasinValuesPt[iSubBasin]);
         _subBasinInitialValues[iSubBasin] = *_subBasinValuesPt[iSubBasin];
     }
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            wxASSERT(_hydroUnitValuesPt[iUnitVal][iUnit]);
+            assert(_hydroUnitValuesPt[iUnitVal][iUnit]);
             _hydroUnitInitialValues[iUnitVal](iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
         }
     }
 }
 
 void Logger::Record() {
-    wxASSERT(_cursor < _time.size());
+    assert(_cursor < _time.size());
 
     for (int iSubBasin = 0; iSubBasin < _subBasinValuesPt.size(); ++iSubBasin) {
-        wxASSERT(_subBasinValuesPt[iSubBasin]);
+        assert(_subBasinValuesPt[iSubBasin]);
         _subBasinValues[iSubBasin][_cursor] = *_subBasinValuesPt[iSubBasin];
     }
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            wxASSERT(_hydroUnitValuesPt[iUnitVal][iUnit]);
+            assert(_hydroUnitValuesPt[iUnitVal][iUnit]);
             _hydroUnitValues[iUnitVal](_cursor, iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
         }
     }
@@ -93,7 +91,7 @@ void Logger::Record() {
     if (_recordFractions) {
         for (int iUnitVal = 0; iUnitVal < _hydroUnitFractionsPt.size(); ++iUnitVal) {
             for (int iUnit = 0; iUnit < _hydroUnitFractions[iUnitVal].cols(); ++iUnit) {
-                wxASSERT(_hydroUnitFractionsPt[iUnitVal][iUnit]);
+                assert(_hydroUnitFractionsPt[iUnitVal][iUnit]);
                 _hydroUnitFractions[iUnitVal](_cursor, iUnit) = *_hydroUnitFractionsPt[iUnitVal][iUnit];
             }
         }
@@ -118,7 +116,7 @@ axd Logger::GetOutletDischarge() const {
             return _subBasinValues[i];
         }
     }
-    throw ModelConfigError(_("No 'outlet' component found in logger."));
+    throw ModelConfigError("No 'outlet' component found in logger.");
 }
 
 vecInt Logger::GetIndicesForSubBasinElements(const string& item) const {
@@ -235,8 +233,8 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
         string componentName = _hydroUnitLabels[i];
         for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
             string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
-                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
+            if (componentName.starts_with(fractionLabel + ":") ||
+                componentName.starts_with(fractionLabel + "_snowpack:")) {
                 fraction = _hydroUnitFractions[j](0, Eigen::placeholders::all);
                 break;
             }
@@ -257,8 +255,8 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
         string componentName = _hydroUnitLabels[i];
         for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
             string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
-                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
+            if (componentName.starts_with(fractionLabel + ":") ||
+                componentName.starts_with(fractionLabel + "_snowpack:")) {
                 fraction = _hydroUnitFractions[j](Eigen::placeholders::last, Eigen::placeholders::all);
                 break;
             }

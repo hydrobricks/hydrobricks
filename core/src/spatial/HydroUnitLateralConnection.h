@@ -5,11 +5,11 @@
 
 class HydroUnit;
 
-class HydroUnitLateralConnection : public wxObject {
+class HydroUnitLateralConnection {
   public:
     HydroUnitLateralConnection(HydroUnit* receiver, double fraction, string type = "");
 
-    ~HydroUnitLateralConnection() override = default;
+    virtual ~HydroUnitLateralConnection() = default;
 
     /**
      * Get the hydro unit that receives the flow from this lateral connection.

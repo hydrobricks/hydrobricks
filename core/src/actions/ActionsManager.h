@@ -8,11 +8,11 @@ class SubBasin;
 class ModelHydro;
 class Action;
 
-class ActionsManager : public wxObject {
+class ActionsManager {
   public:
     ActionsManager();
 
-    ~ActionsManager() override = default;
+    virtual ~ActionsManager() = default;
 
     /**
      * Reset the actions manager.

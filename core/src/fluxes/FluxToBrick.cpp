@@ -15,7 +15,7 @@ double FluxToBrick::GetAmount() {
 }
 
 void FluxToBrick::UpdateFlux(double amount) {
-    wxASSERT(_toBrick);
+    assert(_toBrick);
     if (_fractionTotal < 1.0) {
         _amount = amount * _fractionTotal;
     } else {

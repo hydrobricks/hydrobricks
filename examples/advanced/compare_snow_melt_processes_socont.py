@@ -1,9 +1,19 @@
+import logging
+import sys
+
 import matplotlib.pyplot as plt
 import spotpy
 
 import hydrobricks as hb
 import hydrobricks.trainer as trainer
 from examples._helpers.models_setup_helper import ModelSetupHelper
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
 
 # Select the methods to compare
 methods = ["temperature_index", "degree_day", "degree_day_aspect"]
@@ -20,6 +30,8 @@ ref_elevation = 2702
 
 # Run spotpy for each method
 for method in methods:
+    logging.info(f"Method {method} started")
+
     # Set up the case study options
     helper = ModelSetupHelper(
         catchment_name, start_date="1981-01-01", end_date="2020-12-31"

@@ -1,7 +1,6 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <wx/log.h>
 
 #include "Action.h"
 #include "ActionGlacierEvolutionAreaScaling.h"
@@ -195,5 +194,14 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_land_cover_name", &ActionGlacierSnowToIceTransformation::GetLandCoverName,
              "Get the land cover name (glacier name).");
 
-    py::class_<wxLogNull>(m, "LogNull").def(py::init<>());
+    // LogNull: temporarily suppresses all log output below Error (RAII-style).
+    struct LogNull {
+        LogNull() {
+            LogSetLevel(LogLevel::Error);
+        }
+        ~LogNull() {
+            LogSetLevel(LogLevel::Message);
+        }
+    };
+    py::class_<LogNull>(m, "LogNull").def(py::init<>());
 }

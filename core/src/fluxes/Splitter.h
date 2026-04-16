@@ -10,11 +10,11 @@
 
 class HydroUnit;
 
-class Splitter : public wxObject {
+class Splitter {
   public:
     explicit Splitter();
 
-    ~Splitter() override = default;
+    virtual ~Splitter() = default;
 
     /**
      * Factory method to create a splitter.
@@ -70,7 +70,7 @@ class Splitter : public wxObject {
      * @param flux incoming flux
      */
     void AttachFluxIn(Flux* flux) {
-        wxASSERT(flux);
+        assert(flux);
         _inputs.push_back(flux);
     }
 
@@ -80,7 +80,7 @@ class Splitter : public wxObject {
      * @param flux outgoing flux (ownership transferred)
      */
     void AttachFluxOut(std::unique_ptr<Flux> flux) {
-        wxASSERT(flux);
+        assert(flux);
         _outputs.push_back(std::move(flux));
     }
 

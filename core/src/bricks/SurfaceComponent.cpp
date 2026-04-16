@@ -10,7 +10,7 @@ SurfaceComponent::SurfaceComponent()
 }
 
 void SurfaceComponent::SetAreaFraction(double value) {
-    wxASSERT(_parent);
+    assert(_parent);
     _areaFraction = value;
     for (const auto& process : _processes) {
         for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
@@ -24,7 +24,7 @@ void SurfaceComponent::SetAreaFraction(double value) {
 }
 
 double SurfaceComponent::GetParentAreaFraction() const {
-    wxASSERT(_parent);
+    assert(_parent);
     return _parent->GetAreaFraction();
 }
 

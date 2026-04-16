@@ -19,7 +19,7 @@ void Action::AddRecursiveDate(int month, int day) {
     // Check that the month is valid.
     if (month < 1 || month > 12) {
         month = 1;
-        wxLogError("Invalid month: %d", month);
+        LogError("Invalid month: {}", month);
     }
 
     // Check that the day is valid for the given month.
@@ -32,7 +32,7 @@ void Action::AddRecursiveDate(int month, int day) {
 }
 
 void Action::Reset() {
-    throw ModelConfigError(_("Reset action not implemented for child action class."));
+    throw ModelConfigError("Reset action not implemented for child action class.");
 }
 
 bool Action::Apply(double) {
@@ -81,10 +81,10 @@ double Action::CheckLandCoverAreaFraction(const string& name, int id, double fra
 
     // If the fraction is not in the range [0, 1], raise an error.
     if ((fraction < 0) || (fraction > 1)) {
-        wxLogError(_("The given fraction (%f) for '%s' is not in the allowed range [0 .. 1]"), fraction, name);
-        wxLogError(_("The unit area is %g, and the land cover area to assign is %g."), unitArea, lcArea);
-        wxLogError(_("Failed to set the '%s' area fraction for hydro unit %d."), name, id);
-        throw ModelConfigError(wxString::Format(_("The fraction (%f) is not in the range [0 .. 1]"), fraction));
+        LogError("The given fraction ({}) for '{}' is not in the allowed range [0 .. 1]", fraction, name);
+        LogError("The unit area is {}, and the land cover area to assign is {}.", unitArea, lcArea);
+        LogError("Failed to set the '{}' area fraction for hydro unit {}.", name, id);
+        throw ModelConfigError(std::format("The fraction ({}) is not in the range [0 .. 1]", fraction));
     }
 
     return fraction;
@@ -93,7 +93,7 @@ double Action::CheckLandCoverAreaFraction(const string& name, int id, double fra
 bool Action::IsValid() const {
     // Check that manager is assigned
     if (!_manager) {
-        wxLogError(_("Action: Manager not assigned."));
+        LogError("Action: Manager not assigned.");
         return false;
     }
 
@@ -102,6 +102,6 @@ bool Action::IsValid() const {
 
 void Action::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("Action validation failed. Action manager not properly assigned."));
+        throw ModelConfigError("Action validation failed. Action manager not properly assigned.");
     }
 }

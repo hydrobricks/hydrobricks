@@ -52,5 +52,5 @@ vecDouble ProcessRunoffSocont::GetRates() {
     double dh = qQuick * storageShape * dt;                                     // [m]
     double runoff = (dh / storageShape) * 1000;                                 // [mm]
 
-    return {wxMin(runoff, _container->GetContentWithChanges())};
+    return {std::min(runoff, _container->GetContentWithChanges())};
 }

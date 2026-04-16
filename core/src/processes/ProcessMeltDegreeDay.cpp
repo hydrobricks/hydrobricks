@@ -42,7 +42,7 @@ void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == Temperature) {
         _temperature = forcing;
     } else {
-        throw ModelConfigError(_("Forcing must be of type Temperature"));
+        throw ModelConfigError("Forcing must be of type Temperature");
     }
 }
 

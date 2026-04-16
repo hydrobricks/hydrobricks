@@ -91,13 +91,13 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
 
     // Cap the excess SWE to a maximum of 1000 mm to prevent unrealistic redistribution rates
     if (excessSwe > 1000.0) {
-        wxLogDebug(_("Snow redistribution: excess SWE (%f mm) is too high, capping to 1000 mm."), excessSwe);
+        LogDebug("Snow redistribution: excess SWE ({} mm) is too high, capping to 1000 mm.", excessSwe);
         excessSwe = 1000.0;
     }
 
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
-        wxASSERT(_weights.size() > i);
+        assert(_weights.size() > i);
         Flux* flux = _outputs[i].get();  // Extract raw pointer from unique_ptr
         double targetFraction = GetTargetLandCoverAreaFraction(flux);
         if (NearlyZero(targetFraction, PRECISION)) {
@@ -121,9 +121,9 @@ double ProcessLateralSnowSlide::AvoidUnrealisticAccumulation(double rate, Flux* 
     // Do not redistribute snow if the target snowpack has more than 1.5 times the overall maximum snow depth.
     // This avoids unrealistic accumulation in the target snowpack.
     auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
-    wxASSERT(fluxToBrick);
+    assert(fluxToBrick);
     Brick* targetBrick = fluxToBrick->GetTargetBrick();
-    wxASSERT(targetBrick);
+    assert(targetBrick);
     auto targetSnowpack = dynamic_cast<Snowpack*>(targetBrick);
     double targetSwe = targetSnowpack->GetContent(ContentType::Snow);
     const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;

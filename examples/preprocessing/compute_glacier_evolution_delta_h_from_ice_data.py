@@ -2,6 +2,8 @@
 Compute glacier evolution (delta h) from ice data.
 """
 
+import logging
+import sys
 import tempfile
 import uuid
 from pathlib import Path
@@ -12,6 +14,13 @@ import pandas as pd
 
 import hydrobricks as hb
 from hydrobricks._constants import ICE_WE
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
 
 DISCRETIZE_BY_RADIATION = True  # Set to True to use radiation discretization
 COMPUTE_RADIATION = False  # True: compute radiation. False: use the precomputed data.

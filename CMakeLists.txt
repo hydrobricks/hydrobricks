@@ -59,47 +59,6 @@ option(USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer in
 set(BUILD_TESTING OFF)
 mark_as_advanced(BUILD_TESTING)
 
-# Pre-set wxWidgets options
-set(wxUSE_GUI OFF)
-set(wxBUILD_INSTALL OFF)
-set(wxBUILD_SAMPLES OFF)
-set(wxBUILD_TESTS OFF)
-set(wxBUILD_SHARED OFF)
-
-# Get and build wxbase from wxWidgets
-FetchContent_Declare(
-    wxWidgets
-    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
-    GIT_TAG v3.2.9)
-FetchContent_MakeAvailable(wxWidgets)
-
-include_directories(${wxWidgets_SOURCE_DIR}/include)
-if (WIN32)
-    include_directories(${wxWidgets_BINARY_DIR}/lib/vc_x64_lib/$<IF:$<CONFIG:Debug>,baseud,baseu>)
-    message(STATUS "wxWidgets setup dir = ${wxWidgets_BINARY_DIR}/lib/vc_x64_lib/$<IF:$<CONFIG:Debug>,baseud,baseu>")
-else ()
-    # On Unix-like systems, wxWidgets generates setup.h in lib/wx/include/<toolkit>-<configuration> Find the actual
-    # setup.h directory dynamically (version-agnostic)
-    include_directories(${wxWidgets_BINARY_DIR}/lib)
-
-    # Try to find the setup.h directory dynamically. First try the more common non-debug variant, then fall back to
-    # debug variant if needed
-    file(GLOB WX_SETUP_INCLUDE_DIR "${wxWidgets_BINARY_DIR}/lib/wx/include/base-unicode-static-*")
-    if (NOT WX_SETUP_INCLUDE_DIR)
-        file(GLOB WX_SETUP_INCLUDE_DIR "${wxWidgets_BINARY_DIR}/lib/wx/include/base-unicode-debug-static-*")
-    endif ()
-
-    if (WX_SETUP_INCLUDE_DIR)
-        include_directories(${WX_SETUP_INCLUDE_DIR})
-        message(STATUS "wxWidgets setup dir = ${WX_SETUP_INCLUDE_DIR}")
-    else ()
-        message(WARNING "Could not find wxWidgets setup.h directory. Build may fail.")
-    endif ()
-endif ()
-link_directories(${wxWidgets_BINARY_DIR}/lib)
-message(STATUS "wxWidgets include dir = ${wxWidgets_SOURCE_DIR}/include")
-message(STATUS "wxWidgets lib dir = ${wxWidgets_BINARY_DIR}/lib")
-
 # Get and build yaml-cpp (master branch)
 FetchContent_Declare(
     yaml-cpp

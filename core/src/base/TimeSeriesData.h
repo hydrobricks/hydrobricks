@@ -3,11 +3,11 @@
 
 #include "Includes.h"
 
-class TimeSeriesData : public wxObject {
+class TimeSeriesData {
   public:
     TimeSeriesData();
 
-    ~TimeSeriesData() override = default;
+    virtual ~TimeSeriesData() = default;
 
     /**
      * Set the values of the time series data.

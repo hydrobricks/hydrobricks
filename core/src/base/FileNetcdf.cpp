@@ -1,7 +1,6 @@
 #include "FileNetcdf.h"
 
-#include <wx/file.h>
-#include <wx/filename.h>
+#include <filesystem>
 
 FileNetcdf::FileNetcdf()
     : _ncId(-1) {}
@@ -14,15 +13,15 @@ FileNetcdf::~FileNetcdf() {
 
 void FileNetcdf::CheckNcStatus(int status) const {
     if (status != NC_NOERR) {
-        wxString msg = wxString::Format(_("NetCDF error: %s"), nc_strerror(status));
-        wxLogError(msg);
+        string msg = std::format("NetCDF error: {}", nc_strerror(status));
+        LogError(msg);
         throw RuntimeError(msg);
     }
 }
 
 bool FileNetcdf::OpenReadOnly(const string& path) {
-    if (!wxFile::Exists(path)) {
-        wxLogError(_("The file %s could not be found."), path);
+    if (!std::filesystem::exists(path)) {
+        LogError("The file {} could not be found.", path);
         return false;
     }
 
@@ -32,8 +31,9 @@ bool FileNetcdf::OpenReadOnly(const string& path) {
 }
 
 bool FileNetcdf::Create(const string& path) {
-    if (!wxFileName(path).DirExists()) {
-        wxLogError(_("The directory %s could not be found."), wxFileName(path).GetPath());
+    auto parentPath = std::filesystem::path(path).parent_path();
+    if (!parentPath.empty() && !std::filesystem::is_directory(parentPath)) {
+        LogError("The directory {} could not be found.", parentPath.string());
         return false;
     }
 
@@ -260,12 +260,11 @@ string FileNetcdf::GetAttText(const string& attName, const string& varName) cons
     CheckNcStatus(nc_get_att_text(_ncId, varId, attName.c_str(), text));
     text[attLen] = '\0';
     string value = string(text);
-    wxDELETEA(text);
+    delete[] text;
 
     return value;
 }
 
 void FileNetcdf::PutAttText(const string& attName, const string& value, int varId) {
-    wxCharBuffer buffer = wxString(value).ToUTF8();
-    CheckNcStatus(nc_put_att_text(_ncId, varId, attName.c_str(), strlen(buffer.data()), buffer.data()));
+    CheckNcStatus(nc_put_att_text(_ncId, varId, attName.c_str(), value.size(), value.c_str()));
 }

@@ -15,7 +15,7 @@
 
 struct HydroUnitSettings;
 
-class HydroUnit : public wxObject {
+class HydroUnit {
   public:
     enum Types {
         Distributed,
@@ -26,7 +26,7 @@ class HydroUnit : public wxObject {
 
     explicit HydroUnit(double area = UNDEFINED, Types type = Undefined);
 
-    ~HydroUnit() override;
+    virtual ~HydroUnit();
 
     /**
      * Reset the hydro unit to its initial state.

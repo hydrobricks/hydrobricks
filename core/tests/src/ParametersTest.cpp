@@ -25,7 +25,6 @@ TEST(YearlyModifier, SetValues) {
 TEST(YearlyModifier, SetValuesWrongSize) {
     ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    wxLogNull logNo;
 
     EXPECT_FALSE(modifier.SetYearlyValues(2000, 2011, values));
 }
@@ -42,7 +41,6 @@ TEST(YearlyModifier, UpdateValue) {
 }
 
 TEST(YearlyModifier, UpdateValueNotFound) {
-    wxLogNull logNo;
     Parameter parameter("dummy_parameter");
     ParameterModifier modifier(ParameterModifierType::Yearly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
@@ -62,7 +60,6 @@ TEST(MonthlyModifier, SetValues) {
 TEST(MonthlyModifier, SetValuesWrongSize) {
     ParameterModifier modifier(ParameterModifierType::Monthly);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    wxLogNull logNo;
 
     EXPECT_FALSE(modifier.SetMonthlyValues(values));
 }
@@ -90,7 +87,6 @@ TEST(DatesModifier, SetValuesWrongSize) {
     ParameterModifier modifier(ParameterModifierType::Dates);
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::vector<double> dates = GenerateDailyDatesVector();
-    wxLogNull logNo;
 
     EXPECT_FALSE(modifier.SetDatesAndValues(dates, values));
 }
@@ -111,7 +107,6 @@ TEST(DatesModifier, UpdateValue) {
 TEST(DatesModifier, UpdateValueNotFound) {
     std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<double> dates = GenerateDailyDatesVector();
-    wxLogNull logNo;
     Parameter parameter("dummy_parameter");
     ParameterModifier modifier(ParameterModifierType::Dates);
     modifier.SetDatesAndValues(dates, values);

@@ -16,11 +16,11 @@ bool ActionGlacierSnowToIceTransformation::Init() {
     _hydroUnitIds.clear();
 
     if (_manager->GetSubBasin() == nullptr) {
-        wxLogError(_("The model is likely not initialized (setup()) as the sub-basin is not defined."));
+        LogError("The model is likely not initialized (setup()) as the sub-basin is not defined.");
         return false;
     }
     if (!_manager->GetSubBasin()->HasHydroUnits()) {
-        wxLogError(_("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin."));
+        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin.");
         return false;
     }
 
@@ -55,7 +55,7 @@ bool ActionGlacierSnowToIceTransformation::Apply(double) {
         // Get the associated snowpack.
         Brick* snowpack = unit->TryGetBrick(_landCoverName + "_snowpack");
         if (snowpack == nullptr) {
-            wxLogError(_("The brick %s was not found in hydro unit %d"), (_landCoverName + "_snowpack"), id);
+            LogError("The brick {} was not found in hydro unit {}", (_landCoverName + "_snowpack"), id);
             continue;
         }
 

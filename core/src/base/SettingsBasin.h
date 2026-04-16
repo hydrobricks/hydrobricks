@@ -44,11 +44,11 @@ struct LateralConnectionSettings {
     double fraction;
 };
 
-class SettingsBasin : public wxObject {
+class SettingsBasin {
   public:
     explicit SettingsBasin();
 
-    ~SettingsBasin() override;
+    virtual ~SettingsBasin();
 
     /**
      * Add a new hydro unit.
@@ -120,7 +120,7 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected hydro unit.
      */
     HydroUnitSettings GetHydroUnitSettings(int index) const {
-        wxASSERT(_hydroUnits.size() > index);
+        assert(_hydroUnits.size() > index);
         return _hydroUnits[index];
     }
 
@@ -131,8 +131,8 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected land cover.
      */
     LandCoverSettings GetLandCoverSettings(int index) const {
-        wxASSERT(_selectedHydroUnit);
-        wxASSERT(_selectedHydroUnit->landCovers.size() > index);
+        assert(_selectedHydroUnit);
+        assert(_selectedHydroUnit->landCovers.size() > index);
         return _selectedHydroUnit->landCovers[index];
     }
 
@@ -143,8 +143,8 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected surface component.
      */
     SurfaceComponentSettings GetSurfaceComponentSettings(int index) const {
-        wxASSERT(_selectedHydroUnit);
-        wxASSERT(_selectedHydroUnit->surfaceComponents.size() > index);
+        assert(_selectedHydroUnit);
+        assert(_selectedHydroUnit->surfaceComponents.size() > index);
         return _selectedHydroUnit->surfaceComponents[index];
     }
 
@@ -172,7 +172,7 @@ class SettingsBasin : public wxObject {
      * @return number of land covers.
      */
     int GetLandCoverCount() const {
-        wxASSERT(_selectedHydroUnit);
+        assert(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->landCovers.size());
     }
 
@@ -182,7 +182,7 @@ class SettingsBasin : public wxObject {
      * @return number of surface components.
      */
     int GetSurfaceComponentCount() const {
-        wxASSERT(_selectedHydroUnit);
+        assert(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->surfaceComponents.size());
     }
 

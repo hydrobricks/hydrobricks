@@ -62,3 +62,4 @@ vcpkg/
 *.whl
 **/forcing.nc
 **/daily_potential_radiation.nc
+.claude/

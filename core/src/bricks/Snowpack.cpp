@@ -21,14 +21,14 @@ void Snowpack::SetParameters(const BrickSettings& brickSettings) {
 }
 
 void Snowpack::AttachFluxIn(Flux* flux) {
-    wxASSERT(flux);
+    assert(flux);
     if (flux->GetType() == ContentType::Snow) {
         _snow->AttachFluxIn(flux);
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen(
-            wxString::Format("Snowpack::AttachFluxIn - Unexpected flux type: %d", static_cast<int>(flux->GetType())));
+            std::format("Snowpack::AttachFluxIn - Unexpected flux type: {}", static_cast<int>(flux->GetType())));
     }
 }
 
@@ -38,7 +38,7 @@ bool Snowpack::IsValid(bool checkProcesses) const {
     }
     if (checkProcesses) {
         if (_processes.empty()) {
-            wxLogError(_("The brick %s has no process attached"), _name);
+            LogError("The brick {} has no process attached", _name);
             return false;
         }
         for (const auto& process : _processes) {
@@ -70,7 +70,7 @@ void Snowpack::SetInitialState(double value, ContentType type) {
             break;
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
     }
 }
 
@@ -82,7 +82,7 @@ double Snowpack::GetContent(ContentType type) const {
             return _snow->GetContentWithoutChanges();
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
     }
 }
 
@@ -96,7 +96,7 @@ void Snowpack::UpdateContent(double value, ContentType type) {
             break;
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for snowpack."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
     }
 }
 

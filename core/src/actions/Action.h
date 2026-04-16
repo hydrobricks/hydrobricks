@@ -4,11 +4,11 @@
 #include "ActionsManager.h"
 #include "Includes.h"
 
-class Action : public wxObject {
+class Action {
   public:
     Action();
 
-    ~Action() override = default;
+    virtual ~Action() = default;
 
     /**
      * Initialize the action.

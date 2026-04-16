@@ -6,11 +6,11 @@
 
 class Brick;
 
-class WaterContainer : public wxObject {
+class WaterContainer {
   public:
     WaterContainer(Brick* brick);
 
-    ~WaterContainer() override = default;
+    virtual ~WaterContainer() = default;
 
     /**
      * Check if the water container is correctly defined.
@@ -97,7 +97,7 @@ class WaterContainer : public wxObject {
      * @return maximum capacity [mm]
      */
     double GetMaximumCapacity() const {
-        wxASSERT(_capacity);
+        assert(_capacity);
         return *_capacity;
     }
 
@@ -108,7 +108,7 @@ class WaterContainer : public wxObject {
      */
     void SetMaximumCapacity(const float* value) {
         if (_infiniteStorage) {
-            throw ModelConfigError(_("Trying to set the maximum capacity of an infinite storage."));
+            throw ModelConfigError("Trying to set the maximum capacity of an infinite storage.");
         }
         _capacity = value;
     }
@@ -184,7 +184,7 @@ class WaterContainer : public wxObject {
      */
     void UpdateContent(double value) {
         if (_infiniteStorage) {
-            throw ModelConfigError(_("Trying to set the content of an infinite storage."));
+            throw ModelConfigError("Trying to set the content of an infinite storage.");
         }
 
         _content = value;
@@ -231,7 +231,7 @@ class WaterContainer : public wxObject {
      * @param flux incoming flux (non-owning reference, owned by process)
      */
     void AttachFluxIn(Flux* flux) {
-        wxASSERT(flux);
+        assert(flux);
         _inputs.push_back(flux);
     }
 

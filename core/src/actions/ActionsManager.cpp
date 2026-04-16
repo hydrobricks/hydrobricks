@@ -22,16 +22,16 @@ void ActionsManager::Reset() {
 }
 
 bool ActionsManager::AddAction(Action* action) {
-    wxASSERT(action);
+    assert(action);
     action->SetManager(this);
     if (!action->Init()) {
-        wxLogError(_("Action initialization failed."));
+        LogError("Action initialization failed.");
         return false;
     }
 
     // Validate action after initialization
     if (!action->IsValid()) {
-        wxLogError(_("Action is not valid and cannot be added to the manager."));
+        LogError("Action is not valid and cannot be added to the manager.");
         return false;
     }
 
@@ -83,7 +83,7 @@ void ActionsManager::DateUpdate(double date) {
         Time dateStruct = GetTimeStructFromMJD(date);
         for (int actionIndex : _recursiveActionIndices) {
             if (!_actions[actionIndex]->ApplyIfRecursive(dateStruct)) {
-                throw RuntimeError(_("Application of a recursive action failed."));
+                throw RuntimeError("Application of a recursive action failed.");
             }
         }
     }
@@ -93,10 +93,10 @@ void ActionsManager::DateUpdate(double date) {
     }
 
     // Sporadic actions
-    wxASSERT(_sporadicActionDates.size() == _sporadicActionIndices.size());
+    assert(_sporadicActionDates.size() == _sporadicActionIndices.size());
     while (_sporadicActionDates.size() > _cursorManager && _sporadicActionDates[_cursorManager] <= date) {
         if (!_actions[_sporadicActionIndices[_cursorManager]]->Apply(date)) {
-            throw RuntimeError(_("Application of a sporadic action failed."));
+            throw RuntimeError("Application of a sporadic action failed.");
         }
         _actions[_sporadicActionIndices[_cursorManager]]->IncrementCursor();
         _cursorManager++;
@@ -114,7 +114,7 @@ HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
 bool ActionsManager::IsValid() const {
     // Check that model is assigned
     if (!_model) {
-        wxLogError(_("ActionsManager: Model not assigned."));
+        LogError("ActionsManager: Model not assigned.");
         return false;
     }
 
@@ -123,6 +123,6 @@ bool ActionsManager::IsValid() const {
 
 void ActionsManager::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("ActionsManager validation failed. Model not properly assigned."));
+        throw ModelConfigError("ActionsManager validation failed. Model not properly assigned.");
     }
 }

@@ -8,7 +8,7 @@ ProcessET::ProcessET(WaterContainer* container)
 
 bool ProcessET::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("ET should have a single output."));
+        LogError("ET should have a single output.");
         return false;
     }
 

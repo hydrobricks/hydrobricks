@@ -13,27 +13,32 @@ TEST(Solver, FactoryBuildsSolvers) {
     settings.name = "rk4";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    delete solver;
+    solver = nullptr;
 
     settings.name = "runge_kutta";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    delete solver;
+    solver = nullptr;
 
     settings.name = "runge_kutta";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    delete solver;
+    solver = nullptr;
 
     settings.name = "euler_explicit";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    delete solver;
+    solver = nullptr;
 
     settings.name = "heun_explicit";
     solver = Solver::Factory(settings);
     EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    delete solver;
+    solver = nullptr;
 }
 
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {

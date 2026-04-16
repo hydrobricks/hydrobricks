@@ -11,11 +11,11 @@
 #include "SettingsBasin.h"
 #include "TimeMachine.h"
 
-class SubBasin : public wxObject {
+class SubBasin {
   public:
     SubBasin();
 
-    ~SubBasin() override;
+    virtual ~SubBasin();
 
     /**
      * Initialize the sub-basin with the given settings.

@@ -1,4 +1,6 @@
+import logging
 import os.path
+import sys
 import tempfile
 import uuid
 from pathlib import Path
@@ -7,6 +9,13 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
 
 # Paths
 TEST_FILES_DIR = Path(

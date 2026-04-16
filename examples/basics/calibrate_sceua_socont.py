@@ -1,8 +1,18 @@
+import logging
+import sys
+
 import matplotlib.pyplot as plt
 import spotpy
 
 import hydrobricks.trainer as trainer
 from examples._helpers.models_setup_helper import ModelSetupHelper
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
 
 # Set up the model
 helper = ModelSetupHelper(

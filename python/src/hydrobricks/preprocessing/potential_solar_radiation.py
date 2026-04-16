@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 import logging
 import warnings
 from pathlib import Path
@@ -176,7 +175,6 @@ class PotentialSolarRadiation:
                 del potential_radiation
                 if with_cast_shadows:
                     del cast_shadows
-                gc.collect()
 
             with warnings.catch_warnings():
                 # This function throws a warning for the first slides of nanmean,

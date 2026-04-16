@@ -49,7 +49,6 @@ TEST(Utils, SearchIntAscendingLast) {
 
 TEST(Utils, SearchIntAscendingOutOfRange) {
     int array[] = {0, 1, 2, 3, 5, 7, 8, 9, 10, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 1000, 0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -57,7 +56,6 @@ TEST(Utils, SearchIntAscendingOutOfRange) {
 
 TEST(Utils, SearchIntAscendingNotFound) {
     int array[] = {0, 1, 2, 3, 5, 7, 8, 9, 10, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 6, 0);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -107,7 +105,6 @@ TEST(Utils, SearchIntDescendingLast) {
 
 TEST(Utils, SearchIntDescendingOutOfRange) {
     int array[] = {100, 10, 9, 8, 7, 5, 3, 2, 1, 0};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], -1, 0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -115,7 +112,6 @@ TEST(Utils, SearchIntDescendingOutOfRange) {
 
 TEST(Utils, SearchIntDescendingNotFound) {
     int array[] = {100, 10, 9, 8, 7, 5, 3, 2, 1, 0};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 6, 0);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -158,7 +154,6 @@ TEST(Utils, SearchIntUniqueValWithTolerance) {
 
 TEST(Utils, SearchIntUniqueValOutOfRange) {
     int array[] = {9};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[0], 11, 1);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -187,7 +182,6 @@ TEST(Utils, SearchIntArraySameValueWithToleranceUp) {
 
 TEST(Utils, SearchIntArraySameValueOutOfRange) {
     int array[] = {9, 9, 9, 9};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[3], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -223,7 +217,6 @@ TEST(Utils, SearchDoubleAscendingLast) {
 
 TEST(Utils, SearchDoubleAscendingOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 1000, 0.0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -231,7 +224,6 @@ TEST(Utils, SearchDoubleAscendingOutOfRange) {
 
 TEST(Utils, SearchDoubleAscendingNotFound) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 6, 0.0);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -253,7 +245,6 @@ TEST(Utils, SearchDoubleAscendingWithToleranceFirstLimit) {
 
 TEST(Utils, SearchDoubleAscendingWithToleranceFirstOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], -1, 1.353);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -275,7 +266,6 @@ TEST(Utils, SearchDoubleAscendingWithToleranceMidLimit) {
 
 TEST(Utils, SearchDoubleAscendingWithToleranceMidNotFound) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 11.45, 0.99);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -297,7 +287,6 @@ TEST(Utils, SearchDoubleAscendingWithToleranceLastLimit) {
 
 TEST(Utils, SearchDoubleAscendingWithToleranceLastOutOfRange) {
     double array[] = {0.354, 1.932, 2.7, 3.56, 5.021, 5.75, 8.2, 9.65, 10.45, 100};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 101.5, 1.499);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -326,7 +315,6 @@ TEST(Utils, SearchDoubleDescendingLast) {
 
 TEST(Utils, SearchDoubleDescendingOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], -1.23, 0.0);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -334,7 +322,6 @@ TEST(Utils, SearchDoubleDescendingOutOfRange) {
 
 TEST(Utils, SearchDoubleDescendingNotFound) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 6.2, 0.0);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -356,7 +343,6 @@ TEST(Utils, SearchDoubleDescendingWithToleranceFirstLimit) {
 
 TEST(Utils, SearchDoubleDescendingWithToleranceFirstOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], -1, 1.353);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -378,7 +364,6 @@ TEST(Utils, SearchDoubleDescendingWithToleranceMidLimit) {
 
 TEST(Utils, SearchDoubleDescendingWithToleranceMidOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 11.45, 0.999);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -400,7 +385,6 @@ TEST(Utils, SearchDoubleDescendingWithToleranceLastLimit) {
 
 TEST(Utils, SearchDoubleDescendingWithToleranceLastOutOfRange) {
     double array[] = {100, 10.45, 9.65, 8.2, 5.75, 5.021, 3.56, 2.7, 1.932, 0.354};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[9], 102.21, 2.2);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -422,7 +406,6 @@ TEST(Utils, SearchDoubleUniqueValWithTolerance) {
 
 TEST(Utils, SearchDoubleUniqueValOutOfRange) {
     double array[] = {9.3401};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[0], 11, 1);
 
     EXPECT_EQ(NOT_FOUND, result);
@@ -437,7 +420,6 @@ TEST(Utils, SearchDoubleArraySameValue) {
 
 TEST(Utils, SearchDoubleArraySameValueOutOfRange) {
     double array[] = {9.34, 9.34, 9.34, 9.34};
-    wxLogNull logNo;
     int result = Find(&array[0], &array[3], 11, 1);
 
     EXPECT_EQ(OUT_OF_RANGE, result);
@@ -545,8 +527,6 @@ TEST(Utils, ParseDateFormatDDMMYYYYNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatDDMMYYYYException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07", DD_MM_YYYY), std::exception);
 }
 
@@ -565,8 +545,6 @@ TEST(Utils, ParseDateFormatYYYYMMDDNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatYYYYMMDDException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.2007", YYYY_MM_DD), std::exception);
 }
 
@@ -585,8 +563,6 @@ TEST(Utils, ParseDateFormatDDMMYYYYhhmmNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatDDMMYYYYhhmmException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05", DD_MM_YYYY_hh_mm), std::exception);
 }
 
@@ -605,8 +581,6 @@ TEST(Utils, ParseDateFormatYYYYMMDDhhmmNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatYYYYMMDDhhmmException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.2007 13:05", YYYY_MM_DD_hh_mm), std::exception);
 }
 
@@ -625,8 +599,6 @@ TEST(Utils, ParseDateFormatDDMMYYYYhhmmssNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatDDMMYYYYhhmmssException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", DD_MM_YYYY_hh_mm_ss), std::exception);
 }
 
@@ -645,8 +617,6 @@ TEST(Utils, ParseDateFormatYYYYMMDDhhmmssNoSpace) {
 }
 
 TEST(Utils, ParseDateFormatYYYYMMDDhhmmssException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.2007 13:05:01", YYYY_MM_DD_hh_mm_ss), std::exception);
 }
 
@@ -658,14 +628,10 @@ TEST(Utils, ParseDateFormatautoDDMMYYYY) {
 }
 
 TEST(Utils, ParseDateFormatautoDDMMYYYYException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07", guess), std::exception);
 }
 
 TEST(Utils, ParseDateFormatautoYYYYMMDDException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("11.2007", guess), std::exception);
 }
 
@@ -677,8 +643,6 @@ TEST(Utils, ParseDateFormatautoDDMMYYYYhhmm) {
 }
 
 TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
 }
 
@@ -690,8 +654,6 @@ TEST(Utils, ParseDateFormatautoYYYYMMDDhhmm) {
 }
 
 TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05", guess), std::exception);
 }
 
@@ -703,8 +665,6 @@ TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmss) {
 }
 
 TEST(Utils, ParseDateFormatautoDDMMYYYYhhmmssException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
 }
 
@@ -716,14 +676,10 @@ TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmss) {
 }
 
 TEST(Utils, ParseDateFormatautoYYYYMMDDhhmmssException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("23.11.07 13:05:01", guess), std::exception);
 }
 
 TEST(Utils, ParseDateFormatautohhmmException) {
-    wxLogNull logNo;
-
     ASSERT_THROW(ParseDate("13:05:01", guess), std::exception);
 }
 
@@ -810,8 +766,6 @@ TEST(Utils, FindTJustInsideToleranceDouble) {
 }
 
 TEST(Utils, FindTJustOutsideToleranceDouble) {
-    wxLogNull logNo;
-
     // Test when value is just outside tolerance boundary
     double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
 
@@ -832,8 +786,6 @@ TEST(Utils, FindTZeroToleranceExactMatch) {
 }
 
 TEST(Utils, FindTZeroToleranceNoMatch) {
-    wxLogNull logNo;
-
     // Test zero tolerance without exact match
     double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
 
@@ -853,8 +805,6 @@ TEST(Utils, FindTVerySmallToleranceDouble) {
 }
 
 TEST(Utils, FindTVerySmallToleranceOutside) {
-    wxLogNull logNo;
-
     // Test with very small tolerance outside range
     double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
 
@@ -875,8 +825,6 @@ TEST(Utils, FindTToleranceAtArrayBoundaryStart) {
 }
 
 TEST(Utils, FindTToleranceBoundaryOutOfRange) {
-    wxLogNull logNo;
-
     // Test when tolerance doesn't reach array
     double array[] = {1.0, 2.0, 3.0, 4.0, 5.0};
 
@@ -906,8 +854,6 @@ TEST(Utils, FindTToleranceIntegerJustInside) {
 }
 
 TEST(Utils, FindTToleranceIntegerJustOutside) {
-    wxLogNull logNo;
-
     // Test integer just outside tolerance
     int array[] = {0, 10, 20, 30, 40};
 

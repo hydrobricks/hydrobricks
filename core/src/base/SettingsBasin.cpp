@@ -18,7 +18,7 @@ void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
 }
 
 void SettingsBasin::AddLandCover(const string& name, const string& type, double fraction) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     LandCoverSettings element;
     element.name = name;
@@ -28,7 +28,7 @@ void SettingsBasin::AddLandCover(const string& name, const string& type, double 
 }
 
 void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value, const string& unit) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     HydroUnitPropertyDouble property;
     property.name = name;
@@ -38,7 +38,7 @@ void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value,
 }
 
 void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string& value) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     HydroUnitPropertyString property;
     property.name = name;
@@ -63,7 +63,7 @@ void SettingsBasin::Clear() {
 }
 
 void SettingsBasin::SelectUnit(int index) {
-    wxASSERT(_hydroUnits.size() > index);
+    assert(_hydroUnits.size() > index);
     _selectedHydroUnit = &_hydroUnits[index];
 }
 
@@ -145,7 +145,7 @@ bool SettingsBasin::Parse(const string& path) {
         }
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 

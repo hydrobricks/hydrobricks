@@ -12,11 +12,11 @@ class Brick;
 class HydroUnit;
 class WaterContainer;
 
-class Process : public wxObject {
+class Process {
   public:
     explicit Process(WaterContainer* container);
 
-    ~Process() override = default;
+    virtual ~Process() = default;
 
     /**
      * Factory method to create a process.
@@ -104,7 +104,7 @@ class Process : public wxObject {
      * @param flux outgoing flux (ownership transferred)
      */
     void AttachFluxOut(std::unique_ptr<Flux> flux) {
-        wxASSERT(flux);
+        assert(flux);
         _outputs.push_back(std::move(flux));
     }
 
@@ -124,8 +124,8 @@ class Process : public wxObject {
      * @return pointer to the flux.
      */
     Flux* GetOutputFlux(size_t index) const {
-        wxASSERT(_outputs.size() > index);
-        wxASSERT(_outputs[index]);
+        assert(_outputs.size() > index);
+        assert(_outputs[index]);
         return _outputs[index].get();
     }
 

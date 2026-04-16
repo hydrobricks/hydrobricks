@@ -11,11 +11,11 @@
 #include "SubBasin.h"
 #include "TimeSeries.h"
 
-class ModelHydro : public wxObject {
+class ModelHydro {
   public:
     ModelHydro(SubBasin* subBasin = nullptr);
 
-    ~ModelHydro() override;
+    virtual ~ModelHydro();
 
     /**
      * Initialize the model along with the basin.
@@ -200,7 +200,8 @@ class ModelHydro : public wxObject {
      * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
      */
     void SetSubBasin(SubBasin* subBasin) {
-        wxDELETE(_subBasin);
+        delete _subBasin;
+        _subBasin = nullptr;
         _subBasin = subBasin;
     }
 

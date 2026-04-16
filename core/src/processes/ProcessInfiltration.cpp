@@ -9,11 +9,11 @@ ProcessInfiltration::ProcessInfiltration(WaterContainer* container)
 
 bool ProcessInfiltration::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("An infiltration process should have a single output."));
+        LogError("An infiltration process should have a single output.");
         return false;
     }
     if (_targetBrick == nullptr) {
-        wxLogError(_("An infiltration process must be linked to a target brick."));
+        LogError("An infiltration process must be linked to a target brick.");
         return false;
     }
 

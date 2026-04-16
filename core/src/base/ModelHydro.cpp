@@ -39,7 +39,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
     try {
         // Validate settings before building model
         if (!modelSettings.IsValid()) {
-            wxLogError(_("Model settings are not valid."));
+            LogError("Model settings are not valid.");
             return false;
         }
 
@@ -49,7 +49,7 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
 
         // Validate timer after initialization
         if (!_timer.IsValid()) {
-            wxLogError(_("Timer initialization failed validation."));
+            LogError("Timer initialization failed validation.");
             return false;
         }
 
@@ -64,13 +64,13 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
 
         // Validate sub-basin after full setup
         if (!_subBasin->IsValid(checkProcesses)) {
-            wxLogError(_("Sub-basin failed validation after initialization."));
+            LogError("Sub-basin failed validation after initialization.");
             return false;
         }
 
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred during model initialization: %s."), e.what());
+        LogError("An exception occurred during model initialization: {}.", e.what());
         return false;
     }
 
@@ -79,9 +79,8 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
 
 void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
     if (modelSettings.GetStructureCount() > 1) {
-        throw NotImplemented(
-            wxString::Format("ModelHydro::BuildModelStructure - Multiple structures (%d) not yet supported",
-                             modelSettings.GetStructureCount()));
+        throw NotImplemented(std::format("ModelHydro::BuildModelStructure - Multiple structures ({}) not yet supported",
+                                         modelSettings.GetStructureCount()));
     }
 
     modelSettings.SelectStructure(1);
@@ -92,9 +91,8 @@ void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
 
 void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
     if (modelSettings.GetStructureCount() > 1) {
-        throw NotImplemented(
-            wxString::Format("ModelHydro::UpdateParameters - Multiple structures (%d) not yet supported",
-                             modelSettings.GetStructureCount()));
+        throw NotImplemented(std::format("ModelHydro::UpdateParameters - Multiple structures ({}) not yet supported",
+                                         modelSettings.GetStructureCount()));
     }
 
     modelSettings.SelectStructure(1);
@@ -297,8 +295,8 @@ void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, Hydr
         if (!brickSettings.parent.empty()) {
             auto surfaceComponentBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(brickSettings.name));
             auto landCoverBrick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.parent));
-            wxASSERT(surfaceComponentBrick);
-            wxASSERT(landCoverBrick);
+            assert(surfaceComponentBrick);
+            assert(landCoverBrick);
             surfaceComponentBrick->SetParent(landCoverBrick);
         }
     }
@@ -315,7 +313,7 @@ void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings)
 
             if (process->NeedsTargetBrickLinking()) {
                 if (processSettings.outputs.size() != 1) {
-                    throw ModelConfigError(_("There can only be a single process output for brick linking."));
+                    throw ModelConfigError("There can only be a single process output for brick linking.");
                 }
                 Brick* targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
                 process->SetTargetBrick(targetBrick);
@@ -335,7 +333,7 @@ void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings
 
             if (process->NeedsTargetBrickLinking()) {
                 if (processSettings.outputs.size() != 1) {
-                    throw ModelConfigError(_("There can only be a single process output for brick linking."));
+                    throw ModelConfigError("There can only be a single process output for brick linking.");
                 }
                 Brick* targetBrick = nullptr;
                 if (unit->HasBrick(processSettings.outputs[0].target)) {
@@ -401,8 +399,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
                     targetSplitter->AttachFluxIn(flux);
 
                 } else {
-                    throw ModelConfigError(
-                        wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                    throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
                 }
 
                 process->AttachFluxOut(std::move(fluxPtr));
@@ -447,7 +444,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
 
                 } else if (output.target == "lateral") {
                     // Cast the process to a lateral process
-                    wxASSERT(process->IsLateralProcess());
+                    assert(process->IsLateralProcess());
                     auto lateralProcess = dynamic_cast<ProcessLateral*>(process);
 
                     // Get target unit from lateral connections
@@ -480,8 +477,8 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                                                                         lateralConnection->GetFraction());
                             }
                         } else {
-                            throw NotImplemented(wxString::Format(
-                                "ModelHydro::CreateHydroUnitsComponents - Lateral flux type %d not yet supported",
+                            throw NotImplemented(std::format(
+                                "ModelHydro::CreateHydroUnitsComponents - Lateral flux type {} not yet supported",
                                 static_cast<int>(output.fluxType)));
                         }
                     }
@@ -556,8 +553,7 @@ void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroU
                     process->AttachFluxOut(std::move(fluxPtr));
 
                 } else {
-                    throw ModelConfigError(
-                        wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                    throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
                 }
             }
         }
@@ -601,8 +597,7 @@ void ModelHydro::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ModelConfigError(
-                    wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
             }
 
             splitter->AttachFluxOut(std::move(fluxPtr));
@@ -683,8 +678,7 @@ void ModelHydro::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, Hyd
                 targetSplitter->AttachFluxIn(flux);
 
             } else {
-                throw ModelConfigError(
-                    wxString::Format(_("The target %s to attach the flux was no found"), output.target));
+                throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
             }
 
             splitter->AttachFluxOut(std::move(fluxPtr));
@@ -731,8 +725,8 @@ void ModelHydro::BuildForcingConnections(const SplitterSettings& splitterSetting
 void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     if (modelSettings.GetStructureCount() > 1) {
         throw NotImplemented(
-            wxString::Format("ModelHydro::ConnectLoggerToValues - Multiple structures (%d) not yet supported",
-                             modelSettings.GetStructureCount()));
+            std::format("ModelHydro::ConnectLoggerToValues - Multiple structures ({}) not yet supported",
+                        modelSettings.GetStructureCount()));
     }
 
     double* valPt = nullptr;
@@ -750,9 +744,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 valPt = _subBasin->GetBrick(iBrickType)->GetValuePointer(logItem);
             }
             if (valPt == nullptr) {
-                throw ShouldNotHappen(wxString::Format(
-                    "ModelHydro::ConnectLoggerToValues - Log item '%s' not found in sub-basin brick %d", logItem,
-                    iBrickType));
+                throw ShouldNotHappen(
+                    std::format("ModelHydro::ConnectLoggerToValues - Log item '{}' not found in sub-basin brick {}",
+                                logItem, iBrickType));
             }
             _logger.SetSubBasinValuePointer(iLabel, valPt);
             iLabel++;
@@ -766,9 +760,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 valPt = _subBasin->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
                 if (valPt == nullptr) {
                     throw ShouldNotHappen(
-                        wxString::Format("ModelHydro::ConnectLoggerToValues - Log item '%s' not found in sub-basin "
-                                         "process %d of brick %d",
-                                         logItem, iProcess, iBrickType));
+                        std::format("ModelHydro::ConnectLoggerToValues - Log item '{}' not found in sub-basin process "
+                                    "{} of brick {}",
+                                    logItem, iProcess, iBrickType));
                 }
                 _logger.SetSubBasinValuePointer(iLabel, valPt);
                 iLabel++;
@@ -783,9 +777,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
         for (const auto& logItem : splitterSettings.logItems) {
             valPt = _subBasin->GetSplitter(iSplitter)->GetValuePointer(logItem);
             if (valPt == nullptr) {
-                throw ShouldNotHappen(wxString::Format(
-                    "ModelHydro::ConnectLoggerToValues - Log item '%s' not found in sub-basin splitter %d", logItem,
-                    iSplitter));
+                throw ShouldNotHappen(
+                    std::format("ModelHydro::ConnectLoggerToValues - Log item '{}' not found in sub-basin splitter {}",
+                                logItem, iSplitter));
             }
             _logger.SetSubBasinValuePointer(iLabel, valPt);
             iLabel++;
@@ -796,8 +790,8 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
     for (auto& genericLogLabel : genericLogLabels) {
         valPt = _subBasin->GetValuePointer(genericLogLabel);
         if (valPt == nullptr) {
-            throw ShouldNotHappen(wxString::Format(
-                "ModelHydro::ConnectLoggerToValues - Generic log label '%s' not found in sub-basin", genericLogLabel));
+            throw ShouldNotHappen(std::format(
+                "ModelHydro::ConnectLoggerToValues - Generic log label '{}' not found in sub-basin", genericLogLabel));
         }
         _logger.SetSubBasinValuePointer(iLabel, valPt);
         iLabel++;
@@ -820,8 +814,8 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                 ->GetValuePointer(logItem);
                 }
                 if (valPt == nullptr) {
-                    throw ShouldNotHappen(wxString::Format(
-                        "ModelHydro::ConnectLoggerToValues - Log item '%s' not found in hydro unit %d brick %d",
+                    throw ShouldNotHappen(std::format(
+                        "ModelHydro::ConnectLoggerToValues - Log item '{}' not found in hydro unit {} brick {}",
                         logItem, iUnit, iBrickType));
                 }
                 _logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
@@ -841,9 +835,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                     valPt = process->GetValuePointer(logItem);
                     if (valPt == nullptr) {
                         throw ShouldNotHappen(
-                            wxString::Format("ModelHydro::ConnectLoggerToValues - Log item '%s' not found in hydro "
-                                             "unit %d process %d of brick %d",
-                                             logItem, iUnit, iProcess, iBrickType));
+                            std::format("ModelHydro::ConnectLoggerToValues - Log item '{}' not found in hydro unit {} "
+                                        "process {} of brick {}",
+                                        logItem, iUnit, iProcess, iBrickType));
                     }
                     _logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
                 }
@@ -863,8 +857,8 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
                 valPt = unit->GetSplitter(iSplitter)->GetValuePointer(logItem);
                 if (valPt == nullptr) {
-                    throw ShouldNotHappen(wxString::Format(
-                        "ModelHydro::ConnectLoggerToValues - Log item '%s' not found in hydro unit %d splitter %d",
+                    throw ShouldNotHappen(std::format(
+                        "ModelHydro::ConnectLoggerToValues - Log item '{}' not found in hydro unit {} splitter {}",
                         logItem, iUnit, iSplitter));
                 }
                 _logger.SetHydroUnitValuePointer(iUnit, iLabel, valPt);
@@ -887,9 +881,9 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
 
             if (valPt == nullptr) {
                 throw ShouldNotHappen(
-                    wxString::Format("ModelHydro::ConnectLoggerToValues - Area fraction pointer not found for land "
-                                     "cover brick '%s' in unit %d",
-                                     brickSettings.name, iUnit));
+                    std::format("ModelHydro::ConnectLoggerToValues - Area fraction pointer not found for land cover "
+                                "brick '{}' in unit {}",
+                                brickSettings.name, iUnit));
             }
             _logger.SetHydroUnitFractionPointer(iUnit, iLabel, valPt);
         }
@@ -918,11 +912,11 @@ bool ModelHydro::Run() {
 
     _logger.SaveInitialValues();
 
-    wxLogMessage(_("Simulation starting."));
+    LogMessage("Simulation starting.");
 
     while (!_timer.IsOver()) {
         if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
-            wxLogError(_("Failed running the model."));
+            LogError("Failed running the model.");
             return false;
         }
         _logger.SetDate(_timer.GetDate());
@@ -930,12 +924,12 @@ bool ModelHydro::Run() {
         _timer.IncrementTime();
         _logger.Increment();
         if (!UpdateForcing()) {
-            wxLogError(_("Failed updating the forcing data."));
+            LogError("Failed updating the forcing data.");
             return false;
         }
     }
 
-    wxLogMessage(_("Simulation completed."));
+    LogMessage("Simulation completed.");
 
     return true;
 }
@@ -982,24 +976,24 @@ double ModelHydro::GetTotalGlacierStorageChanges() const {
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
     // Validate time series before adding
     if (!timeSeries->IsValid()) {
-        wxLogError(_("Time series is not valid and cannot be added to the model."));
+        LogError("Time series is not valid and cannot be added to the model.");
         return false;
     }
 
     for (auto& ts : _timeSeries) {
         if (ts->GetVariableType() == timeSeries->GetVariableType()) {
-            wxLogError(_("The data variable is already linked to the model."));
+            LogError("The data variable is already linked to the model.");
             return false;
         }
     }
 
     if (timeSeries->GetStart() > _timer.GetStart()) {
-        wxLogError(_("The data starts after the beginning of the modelling period."));
+        LogError("The data starts after the beginning of the modelling period.");
         return false;
     }
 
     if (timeSeries->GetEnd() < _timer.GetEnd()) {
-        wxLogError(_("The data ends before the end of the modelling period."));
+        LogError("The data ends before the end of the modelling period.");
         return false;
     }
 
@@ -1027,7 +1021,7 @@ bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const 
             return false;
         }
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred during timeseries creation: %s."), e.what());
+        LogError("An exception occurred during timeseries creation: {}.", e.what());
         return false;
     }
 
@@ -1039,7 +1033,7 @@ void ModelHydro::ClearTimeSeries() {
 }
 
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {
-    wxASSERT(_subBasin);
+    assert(_subBasin);
 
     for (const auto& timeSeries : _timeSeries) {
         VariableType type = timeSeries->GetVariableType();
@@ -1052,7 +1046,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 
                 // Validate forcing after attaching data
                 if (!forcing->IsValid()) {
-                    wxLogError(_("Forcing is not valid after attaching time series data for unit %d."), unit->GetId());
+                    LogError("Forcing is not valid after attaching time series data for unit {}.", unit->GetId());
                     return false;
                 }
             }
@@ -1064,7 +1058,7 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
 
 bool ModelHydro::InitializeTimeSeries() {
     for (const auto& timeSeries : _timeSeries) {
-        wxASSERT(timeSeries);
+        assert(timeSeries);
         if (!timeSeries->SetCursorToDate(_timer.GetDate())) {
             return false;
         }

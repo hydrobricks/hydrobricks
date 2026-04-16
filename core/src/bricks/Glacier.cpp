@@ -31,25 +31,25 @@ void Glacier::SetParameters(const BrickSettings& brickSettings) {
 }
 
 void Glacier::AttachFluxIn(Flux* flux) {
-    wxASSERT(flux);
+    assert(flux);
     if (flux->GetType() == ContentType::Ice) {
         _ice->AttachFluxIn(flux);
     } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
         throw ShouldNotHappen(
-            wxString::Format("Glacier::AttachFluxIn - Unexpected flux type: %d", static_cast<int>(flux->GetType())));
+            std::format("Glacier::AttachFluxIn - Unexpected flux type: {}", static_cast<int>(flux->GetType())));
     }
 }
 
 bool Glacier::IsValid(bool checkProcesses) const {
     if (!_ice->IsValid(checkProcesses)) {
-        wxLogError(_("The glacier ice container is not OK (brick %s)."), _name);
+        LogError("The glacier ice container is not OK (brick {}).", _name);
         return false;
     }
     if (checkProcesses) {
         if (_processes.empty()) {
-            wxLogError(_("The brick %s has no process attached"), _name);
+            LogError("The brick {} has no process attached", _name);
             return false;
         }
         for (const auto& process : _processes) {
@@ -81,7 +81,7 @@ void Glacier::SetInitialState(double value, ContentType type) {
             break;
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for glaciers.", ContentTypeToString(type)));
     }
 }
 
@@ -93,7 +93,7 @@ double Glacier::GetContent(ContentType type) const {
             return _ice->GetContentWithoutChanges();
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for glaciers.", ContentTypeToString(type)));
     }
 }
 
@@ -107,7 +107,7 @@ void Glacier::UpdateContent(double value, ContentType type) {
             break;
         default:
             throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported for glaciers."), ContentTypeToString(type)));
+                std::format("The content type '{}' is not supported for glaciers.", ContentTypeToString(type)));
     }
 }
 

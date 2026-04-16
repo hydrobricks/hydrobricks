@@ -21,7 +21,7 @@ Brick::Brick()
 Brick* Brick::Factory(const BrickSettings& brickSettings) {
     BrickType type = BrickTypeFromString(brickSettings.type);
     if (type == BrickType::Unknown) {
-        wxLogError(_("Brick type '%s' not recognized. %s"), brickSettings.type, GetBrickTypeSuggestions());
+        LogError("Brick type '{}' not recognized. {}", brickSettings.type, GetBrickTypeSuggestions());
         return nullptr;
     }
     Brick* brick = Factory(type);
@@ -43,7 +43,7 @@ Brick* Brick::Factory(BrickType type) {
         case BrickType::Snowpack:
             return new Snowpack();
         default:
-            wxLogError(_("Brick type enum not recognized."));
+            LogError("Brick type enum not recognized.");
             return nullptr;
     }
 }
@@ -62,7 +62,7 @@ void Brick::SaveAsInitialState() {
 bool Brick::IsValid(bool checkProcesses) const {
     if (checkProcesses) {
         if (_processes.empty()) {
-            wxLogError(_("The brick %s has no process attached"), _name);
+            LogError("The brick {} has no process attached", _name);
             return false;
         }
         for (const auto& process : _processes) {
@@ -76,8 +76,8 @@ bool Brick::IsValid(bool checkProcesses) const {
 
 void Brick::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(wxString::Format(
-            _("The brick %s validation failed. Check that all processes are properly configured."), _name));
+        throw ModelConfigError(
+            std::format("The brick {} validation failed. Check that all processes are properly configured.", _name));
     }
 }
 
@@ -88,10 +88,10 @@ void Brick::SetParameters(const BrickSettings& brickSettings) {
 }
 
 void Brick::AttachFluxIn(Flux* flux) {
-    wxASSERT(flux);
+    assert(flux);
     if (flux->GetType() != ContentType::Water) {
         throw ModelConfigError(
-            wxString::Format(_("The flux type '%s' should be water."), ContentTypeToString(flux->GetType())));
+            std::format("The flux type '{}' should be water.", ContentTypeToString(flux->GetType())));
     }
     _water->AttachFluxIn(flux);
 }
@@ -104,17 +104,17 @@ bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name)
 const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {
     for (auto& parameter : brickSettings.parameters) {
         if (parameter.GetName() == name) {
-            wxASSERT(parameter.GetValuePointer());
+            assert(parameter.GetValuePointer());
             return parameter.GetValuePointer();
         }
     }
 
-    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
 Process* Brick::GetProcess(size_t index) const {
-    wxASSERT(_processes.size() > index);
-    wxASSERT(_processes[index]);
+    assert(_processes.size() > index);
+    assert(_processes[index]);
 
     return _processes[index].get();
 }
@@ -129,8 +129,7 @@ void Brick::SetInitialState(double value, ContentType type) {
             _water->SetInitialState(value);
             break;
         default:
-            throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw ModelConfigError(std::format("The content type '{}' is not supported.", ContentTypeToString(type)));
     }
 }
 
@@ -139,8 +138,7 @@ double Brick::GetContent(ContentType type) const {
         case ContentType::Water:
             return _water->GetContentWithoutChanges();
         default:
-            throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw ModelConfigError(std::format("The content type '{}' is not supported.", ContentTypeToString(type)));
     }
 }
 
@@ -150,8 +148,7 @@ void Brick::UpdateContent(double value, ContentType type) {
             _water->UpdateContent(value);
             break;
         default:
-            throw ModelConfigError(
-                wxString::Format(_("The content type '%s' is not supported."), ContentTypeToString(type)));
+            throw ModelConfigError(std::format("The content type '{}' is not supported.", ContentTypeToString(type)));
     }
 }
 

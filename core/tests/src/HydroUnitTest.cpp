@@ -89,8 +89,6 @@ TEST(HydroUnit, IsValidNearZeroFraction) {
 }
 
 TEST(HydroUnit, IsValidInvalidNegativeFraction) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     // Negative fraction should be invalid (but IsValid auto-corrects small errors)
@@ -105,8 +103,6 @@ TEST(HydroUnit, IsValidInvalidNegativeFraction) {
 }
 
 TEST(HydroUnit, IsValidInvalidFractionAboveOne) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     // Fraction above 1.0 should be invalid
@@ -120,8 +116,6 @@ TEST(HydroUnit, IsValidInvalidFractionAboveOne) {
 }
 
 TEST(HydroUnit, IsValidInvalidSumNotEqualOne) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     // Fractions not summing to 1.0 should be invalid (beyond TOLERANCE_LOOSE)
@@ -158,8 +152,6 @@ TEST(HydroUnit, IsValidSumWithinTolerance) {
 }
 
 TEST(HydroUnit, IsValidInvalidSumExceedsOne) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     // Fractions summing to more than 1.0 (beyond tolerance) should be invalid
@@ -217,8 +209,6 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionToZero) {
 }
 
 TEST(HydroUnit, ChangeLandCoverAreaFractionInvalidNegative) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     auto ground = std::make_unique<LandCover>();
@@ -231,8 +221,6 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionInvalidNegative) {
 }
 
 TEST(HydroUnit, ChangeLandCoverAreaFractionInvalidAboveOne) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(100, HydroUnit::Lumped);
 
     auto ground = std::make_unique<LandCover>();
@@ -258,8 +246,6 @@ TEST(HydroUnit, IsValidCallsValidateOnBricks) {
 }
 
 TEST(HydroUnit, IsValidInvalidArea) {
-    wxLogNull logNo;  // Suppress error messages
-
     // Unit with zero or negative area should be invalid
     HydroUnit unit(0, HydroUnit::Lumped);
 
@@ -268,8 +254,6 @@ TEST(HydroUnit, IsValidInvalidArea) {
 }
 
 TEST(HydroUnit, IsValidNegativeArea) {
-    wxLogNull logNo;  // Suppress error messages
-
     HydroUnit unit(-100, HydroUnit::Lumped);
 
     EXPECT_FALSE(unit.IsValid());

@@ -5,11 +5,11 @@
 
 class SubBasin;
 
-class Connector : public wxObject {
+class Connector {
   public:
     Connector();
 
-    ~Connector() override = default;
+    virtual ~Connector() = default;
 
     /**
      * Connect two sub-basins.

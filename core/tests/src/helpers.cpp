@@ -9,7 +9,7 @@ TimeMachine GenerateTimeMachineDaily() {
 bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, vecStr& landCoverNames, int soilStorageNb,
                              const string& surfaceRunoff, bool infiniteGlacierStorage) {
     if (landCoverNames.size() != landCoverTypes.size()) {
-        wxLogError(_("The length of the land cover names and types do not match."));
+        LogError("The length of the land cover names and types do not match.");
         return false;
     }
 
@@ -27,7 +27,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         } else if (type == "glacier") {
             settings.AddLandCoverBrick(landCoverNames[i], "glacier");
         } else {
-            wxLogError(_("The land cover type %s is not used in Socont"), type);
+            LogError("The land cover type {} is not used in Socont", type);
             return false;
         }
     }
@@ -75,7 +75,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
         settings.AddBrickProcess("overflow", "overflow", "outlet");
     } else if (soilStorageNb == 2) {
-        wxLogMessage(_("Using 2 soil storages."));
+        LogMessage("Using 2 soil storages.");
         settings.AddHydroUnitBrick("slow_reservoir", "storage");
         settings.AddBrickParameter("capacity", 200.0f);
         settings.AddBrickProcess("et", "et:socont");
@@ -86,18 +86,18 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
         settings.SetProcessParameterValue("response_factor", 0.02f);
     } else {
-        wxLogError(_("There can be only one or two groundwater storages."));
+        LogError("There can be only one or two groundwater storages.");
     }
 
     settings.AddHydroUnitBrick("surface_runoff", "storage");
     if (surfaceRunoff == "socont_runoff") {
         settings.AddBrickProcess("runoff", "runoff:socont", "outlet");
     } else if (surfaceRunoff == "linear_storage") {
-        wxLogMessage(_("Using a linear storage for the quick flow."));
+        LogMessage("Using a linear storage for the quick flow.");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
         settings.SetProcessParameterValue("response_factor", 0.8f);
     } else {
-        wxLogError(_("The surface runoff option %s is not recognised in Socont."), surfaceRunoff);
+        LogError("The surface runoff option {} is not recognised in Socont.", surfaceRunoff);
         return false;
     }
 

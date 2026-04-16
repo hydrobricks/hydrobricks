@@ -5,11 +5,11 @@
 
 class Parameter;
 
-class ParametersUpdater : public wxObject {
+class ParametersUpdater {
   public:
     ParametersUpdater();
 
-    ~ParametersUpdater() override = default;
+    virtual ~ParametersUpdater() = default;
 
     /**
      * Add a parameter that needs to be updated over time.

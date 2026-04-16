@@ -12,7 +12,7 @@ void ProcessTransform::RegisterProcessParametersAndForcing(SettingsModel*) {
 
 bool ProcessTransform::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("A transform process should have a single output."));
+        LogError("A transform process should have a single output.");
         return false;
     }
 

@@ -65,11 +65,11 @@ struct ModelStructure {
     vector<SplitterSettings> subBasinSplitters;
 };
 
-class SettingsModel : public wxObject {
+class SettingsModel {
   public:
     explicit SettingsModel();
 
-    ~SettingsModel() override;
+    virtual ~SettingsModel();
 
     /**
      * Set the solver name.
@@ -497,7 +497,7 @@ class SettingsModel : public wxObject {
      * @return number of hydro unit bricks.
      */
     int GetHydroUnitBrickCount() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitBricks.size());
     }
 
@@ -507,7 +507,7 @@ class SettingsModel : public wxObject {
      * @return number of sub-basin bricks.
      */
     int GetSubBasinBrickCount() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinBricks.size());
     }
 
@@ -517,7 +517,7 @@ class SettingsModel : public wxObject {
      * @return number of surface component bricks.
      */
     int GetSurfaceComponentBrickCount() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return static_cast<int>(_selectedStructure->surfaceComponentBricks.size());
     }
 
@@ -527,7 +527,7 @@ class SettingsModel : public wxObject {
      * @return number of processes.
      */
     int GetProcesseCount() const {
-        wxASSERT(_selectedBrick);
+        assert(_selectedBrick);
         return static_cast<int>(_selectedBrick->processes.size());
     }
 
@@ -537,7 +537,7 @@ class SettingsModel : public wxObject {
      * @return number of hydro unit splitters.
      */
     int GetHydroUnitSplitterCount() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return static_cast<int>(_selectedStructure->hydroUnitSplitters.size());
     }
 
@@ -547,7 +547,7 @@ class SettingsModel : public wxObject {
      * @return number of sub-basin splitters.
      */
     int GetSubBasinSplitterCount() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return static_cast<int>(_selectedStructure->subBasinSplitters.size());
     }
 
@@ -576,7 +576,7 @@ class SettingsModel : public wxObject {
      * @return hydro unit brick settings (const reference).
      */
     const BrickSettings& GetHydroUnitBrickSettings(int index) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->hydroUnitBricks[index];
     }
 
@@ -587,7 +587,7 @@ class SettingsModel : public wxObject {
      * @return hydro unit brick settings (const reference).
      */
     const BrickSettings& GetHydroUnitBrickSettings(const string& name) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
 
         for (const auto& brick : _selectedStructure->hydroUnitBricks) {
             if (brick.name == name) {
@@ -605,7 +605,7 @@ class SettingsModel : public wxObject {
      * @return surface component brick settings (const reference).
      */
     const BrickSettings& GetSurfaceComponentBrickSettings(int index) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         int brickIndex = _selectedStructure->surfaceComponentBricks[index];
         return _selectedStructure->hydroUnitBricks[brickIndex];
     }
@@ -616,7 +616,7 @@ class SettingsModel : public wxObject {
      * @return indices of the surface component bricks.
      */
     vecInt GetSurfaceComponentBricksIndices() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->surfaceComponentBricks;
     }
 
@@ -626,7 +626,7 @@ class SettingsModel : public wxObject {
      * @return indices of the land cover bricks.
      */
     vecInt GetLandCoverBricksIndices() const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->landCoverBricks;
     }
 
@@ -644,7 +644,7 @@ class SettingsModel : public wxObject {
      * @return sub basin brick settings (const reference).
      */
     const BrickSettings& GetSubBasinBrickSettings(int index) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->subBasinBricks[index];
     }
 
@@ -655,7 +655,7 @@ class SettingsModel : public wxObject {
      * @return process settings (const reference).
      */
     const ProcessSettings& GetProcessSettings(int index) const {
-        wxASSERT(_selectedBrick);
+        assert(_selectedBrick);
         return _selectedBrick->processes[index];
     }
 
@@ -666,7 +666,7 @@ class SettingsModel : public wxObject {
      * @return splitter settings (const reference).
      */
     const SplitterSettings& GetHydroUnitSplitterSettings(int index) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->hydroUnitSplitters[index];
     }
 
@@ -677,7 +677,7 @@ class SettingsModel : public wxObject {
      * @return sub basin splitter settings (const reference).
      */
     const SplitterSettings& GetSubBasinSplitterSettings(int index) const {
-        wxASSERT(_selectedStructure);
+        assert(_selectedStructure);
         return _selectedStructure->subBasinSplitters[index];
     }
 
@@ -709,9 +709,9 @@ class SettingsModel : public wxObject {
      */
     void SetLogAll(bool logAll = true) {
         if (logAll) {
-            wxLogVerbose("Logging all components.");
+            LogDebug("Logging all components.");
         } else {
-            wxLogVerbose("Minimal logging.");
+            LogDebug("Minimal logging.");
         }
         _logAll = logAll;
     }

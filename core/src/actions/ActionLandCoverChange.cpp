@@ -30,11 +30,11 @@ void ActionLandCoverChange::Reset() {
 }
 
 bool ActionLandCoverChange::Apply(double) {
-    wxASSERT(_sporadicDates.size() > _cursor);
-    wxASSERT(_hydroUnitIds.size() > _cursor);
-    wxASSERT(_areas.size() > _cursor);
-    wxASSERT(_landCoverIds.size() > _cursor);
-    wxASSERT(_landCoverNames.size() > _landCoverIds[_cursor]);
+    assert(_sporadicDates.size() > _cursor);
+    assert(_hydroUnitIds.size() > _cursor);
+    assert(_areas.size() > _cursor);
+    assert(_landCoverIds.size() > _cursor);
+    assert(_landCoverNames.size() > _landCoverIds[_cursor]);
 
     HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[_cursor]);
     string landCoverName = _landCoverNames[_landCoverIds[_cursor]];

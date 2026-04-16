@@ -103,8 +103,6 @@ TEST_F(SnowpackModel, DegreeDay) {
 }
 
 TEST_F(SnowpackModel, ModelClosesBalance) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
 
@@ -263,8 +261,6 @@ class GlacierModel : public ::testing::Test {
 };
 
 TEST_F(GlacierModel, UnlimitedSupply) {
-    wxLogNull logNo;
-
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("glacier", "glacier", 1);
@@ -354,8 +350,6 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 };
 
 TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
@@ -398,8 +392,6 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 }
 
 TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
@@ -504,8 +496,6 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
 };
 
 TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("ground", "ground", 0.2);

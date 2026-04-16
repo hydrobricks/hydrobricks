@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <wx/file.h>
-#include <wx/stdpaths.h>
+
+#include <filesystem>
 
 #include "FileNetcdf.h"
 
@@ -13,11 +13,10 @@ TEST(FileNetcdf, FileGetsOpened) {
 TEST(FileNetcdf, FileGetsCreated) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    EXPECT_TRUE(file.Create(path.ToStdString()));
-    wxFile::Exists(path);
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    EXPECT_TRUE(file.Create(path));
     file.Close();
-    wxRemoveFile(path);
+    std::filesystem::remove(path);
 }
 
 TEST(FileNetcdf, VarsNumberIsRead) {
@@ -59,14 +58,13 @@ TEST(FileNetcdf, VarDimIdsAreRead) {
 TEST(FileNetcdf, DimGetsDefined) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    wxFile::Exists(path);
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
     file.DefDim("dim1", 100);
     EXPECT_EQ(file.GetDimLen("dim1"), 100);
     file.Close();
 
-    wxRemoveFile(path);
+    std::filesystem::remove(path);
 }
 
 TEST(FileNetcdf, DimIdIsRead) {
@@ -89,46 +87,46 @@ TEST(FileNetcdf, DimLengthIsRead) {
 TEST(FileNetcdf, VarIntGetsDefined) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarInt("var1", {dim1Id}, 1, false);
     file.DefVarInt("var2", {dim1Id}, 1, true);
     EXPECT_EQ(file.GetDimLen("dim1"), 100);
     file.Close();
 
-    wxRemoveFile(path);
+    std::filesystem::remove(path);
 }
 
 TEST(FileNetcdf, VarFloatGetsDefined) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarFloat("var1", {dim1Id}, 1, false);
     file.DefVarFloat("var2", {dim1Id}, 1, true);
     EXPECT_EQ(file.GetDimLen("dim1"), 100);
     file.Close();
 
-    wxRemoveFile(path);
+    std::filesystem::remove(path);
 }
 
 TEST(FileNetcdf, VarDoubleGetsDefined) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 100);
     file.DefVarDouble("var1", {dim1Id}, 1, false);
     file.DefVarDouble("var2", {dim1Id}, 1, true);
     EXPECT_EQ(file.GetDimLen("dim1"), 100);
     file.Close();
 
-    wxRemoveFile(path);
+    std::filesystem::remove(path);
 }
 
 TEST(FileNetcdf, VarInt1DIsRead) {
@@ -160,9 +158,9 @@ TEST(FileNetcdf, VarFloat1DIsRead) {
 TEST(FileNetcdf, VarDouble1DIsRead) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var2", {dim1Id}, 1, true);
     vecDouble valuesIn = {0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.0010};
@@ -193,9 +191,9 @@ TEST(FileNetcdf, VarDouble2DIsRead) {
 TEST(FileNetcdf, VarInt1DIsWritten) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarInt("var2", {dim1Id}, 1, true);
     vecInt valuesIn = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -211,9 +209,9 @@ TEST(FileNetcdf, VarInt1DIsWritten) {
 TEST(FileNetcdf, VarFloat1DIsWritten) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarFloat("var2", {dim1Id}, 1, true);
     vecFloat valuesIn = {0.0001f, 0.0002f, 0.0003f, 0.0004f, 0.0005f, 0.0006f, 0.0007f, 0.0008f, 0.0009f, 0.0010f};
@@ -229,9 +227,9 @@ TEST(FileNetcdf, VarFloat1DIsWritten) {
 TEST(FileNetcdf, VarDouble1DIsWritten) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var2", {dim1Id}, 1, true);
     vecDouble valuesIn = {0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008, 0.0009, 0.0010};
@@ -260,9 +258,9 @@ TEST(FileNetcdf, AttString1DIsRead) {
 TEST(FileNetcdf, AttString1DIsWritten) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var1", {dim1Id}, 1, true);
     int varId = file.GetVarId("var1");
@@ -282,25 +280,25 @@ TEST(FileNetcdf, AttTextIsRead) {
 
     ASSERT_TRUE(file.OpenReadOnly("files/hydro-units-2-glaciers.nc"));
 
-    wxString type = file.GetAttText("type", "glacier-debris");
+    string type = file.GetAttText("type", "glacier-debris");
 
-    EXPECT_TRUE(type.IsSameAs("glacier"));
+    EXPECT_EQ(type, "glacier");
 }
 
 TEST(FileNetcdf, AttTextIsWritten) {
     FileNetcdf file;
 
-    wxString path = wxStandardPaths::Get().GetTempDir() + "/hb_test_file.nc";
-    ASSERT_TRUE(file.Create(path.ToStdString()));
-    ASSERT_TRUE(wxFile::Exists(path));
+    string path = std::filesystem::temp_directory_path().string() + "/hb_test_file.nc";
+    ASSERT_TRUE(file.Create(path));
+    ASSERT_TRUE(std::filesystem::exists(path));
     int dim1Id = file.DefDim("dim1", 10);
     file.DefVarDouble("var1", {dim1Id}, 1, true);
     int varId = file.GetVarId("var1");
     file.PutAttText("att_name", "my_att", varId);
 
-    wxString retrieved = file.GetAttText("att_name", "var1");
+    string retrieved = file.GetAttText("att_name", "var1");
 
     file.Close();
 
-    EXPECT_TRUE(retrieved.IsSameAs("my_att"));
+    EXPECT_EQ(retrieved, "my_att");
 }

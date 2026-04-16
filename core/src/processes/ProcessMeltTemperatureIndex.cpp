@@ -55,7 +55,7 @@ void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
     } else if (forcing->GetType() == Radiation) {
         _solarRadiation = forcing;
     } else {
-        throw ModelConfigError(_("Forcing must be of type Temperature or Radiation"));
+        throw ModelConfigError("Forcing must be of type Temperature or Radiation");
     }
 }
 

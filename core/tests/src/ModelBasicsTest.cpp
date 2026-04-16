@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <wx/stdpaths.h>
 
+#include <filesystem>
 #include <memory>
 
 #include "ModelHydro.h"
@@ -129,8 +129,6 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPrecipSingleRainyDay = std::make_unique<TimeSeriesUniform>(Precipitation);
     tsPrecipSingleRainyDay->SetData(std::move(data));
-
-    wxLogNull logNo;
     ASSERT_FALSE(model.AddTimeSeries(std::move(tsPrecipSingleRainyDay)));
 }
 
@@ -148,8 +146,6 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     data->SetValues({0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPrecipSingleRainyDay = std::make_unique<TimeSeriesUniform>(Precipitation);
     tsPrecipSingleRainyDay->SetData(std::move(data));
-
-    wxLogNull logNo;
     ASSERT_FALSE(model.AddTimeSeries(std::move(tsPrecipSingleRainyDay)));
 }
 
@@ -168,7 +164,7 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_TRUE(model.DumpOutputs(wxStandardPaths::Get().GetTempDir().ToStdString()));
+    EXPECT_TRUE(model.DumpOutputs(std::filesystem::temp_directory_path().string()));
 }
 
 TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {

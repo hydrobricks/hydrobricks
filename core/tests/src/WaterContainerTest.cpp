@@ -13,8 +13,6 @@ class TestBrick : public Brick {
 };
 
 TEST(WaterContainer, ValidateContentExceedsCapacity) {
-    wxLogNull logNo;  // Suppress error messages
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -27,8 +25,6 @@ TEST(WaterContainer, ValidateContentExceedsCapacity) {
 }
 
 TEST(WaterContainer, ValidateContentJustOverCapacity) {
-    wxLogNull logNo;  // Suppress error messages
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -41,8 +37,6 @@ TEST(WaterContainer, ValidateContentJustOverCapacity) {
 }
 
 TEST(WaterContainer, ValidateContentWithDynamicChangesExceedsCapacity) {
-    wxLogNull logNo;
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -56,8 +50,6 @@ TEST(WaterContainer, ValidateContentWithDynamicChangesExceedsCapacity) {
 }
 
 TEST(WaterContainer, ValidateContentWithStaticChangesExceedsCapacity) {
-    wxLogNull logNo;
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -71,8 +63,6 @@ TEST(WaterContainer, ValidateContentWithStaticChangesExceedsCapacity) {
 }
 
 TEST(WaterContainer, ValidateContentWithBothChangesExceedsCapacity) {
-    wxLogNull logNo;
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -87,8 +77,6 @@ TEST(WaterContainer, ValidateContentWithBothChangesExceedsCapacity) {
 }
 
 TEST(WaterContainer, ValidateNegativeContent) {
-    wxLogNull logNo;
-
     TestBrick brick;
     WaterContainer container(&brick);
 
@@ -101,8 +89,6 @@ TEST(WaterContainer, ValidateNegativeContent) {
 }
 
 TEST(WaterContainer, ValidateSlightlyNegativeContent) {
-    wxLogNull logNo;
-
     TestBrick brick;
     WaterContainer container(&brick);
 

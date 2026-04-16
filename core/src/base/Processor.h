@@ -9,11 +9,11 @@
 
 class ModelHydro;
 
-class Processor : public wxObject {
+class Processor {
   public:
     explicit Processor();
 
-    ~Processor() override;
+    virtual ~Processor();
 
     /**
      * Initialize the processor with the solver settings.

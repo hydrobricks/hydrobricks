@@ -42,14 +42,14 @@ double HydroUnitProperty::GetValue(const string& unit) const {
             return _value / 1000000.0;
         }
     }
-    wxLogError(_("The unit '%s' is not supported for the property '%s'."), unit, _name);
+    LogError("The unit '{}' is not supported for the property '{}'.", unit, _name);
 
     return NAN_D;
 }
 
 string HydroUnitProperty::GetValueString() const {
     if (_valueString.empty()) {
-        wxLogError(_("The value (string) for the property '%s' is empty."), _name);
+        LogError("The value (string) for the property '{}' is empty.", _name);
     }
 
     return _valueString;

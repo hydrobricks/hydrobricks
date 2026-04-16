@@ -34,7 +34,7 @@ Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
     if (splitterSettings.type == "multi_fluxes") {
         return new SplitterMultiFluxes();
     }
-    wxLogError(_("Splitter type '%s' not recognized. %s"), splitterSettings.type, GetValidSplitterTypes());
+    LogError("Splitter type '{}' not recognized. {}", splitterSettings.type, GetValidSplitterTypes());
 
     return nullptr;
 }
@@ -42,17 +42,16 @@ Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
 const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
     for (const auto& parameter : splitterSettings.parameters) {
         if (parameter.GetName() == name) {
-            wxASSERT(parameter.GetValuePointer());
+            assert(parameter.GetValuePointer());
             return parameter.GetValuePointer();
         }
     }
 
-    throw ModelConfigError(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
 void Splitter::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(
-            _("Splitter validation failed. Check that all required properties are correctly defined."));
+        throw ModelConfigError("Splitter validation failed. Check that all required properties are correctly defined.");
     }
 }

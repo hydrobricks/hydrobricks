@@ -6,11 +6,11 @@
 
 class Processor;
 
-class Solver : public wxObject {
+class Solver {
   public:
     explicit Solver();
 
-    ~Solver() override = default;
+    virtual ~Solver() = default;
 
     /**
      * Apply the solver.
@@ -34,7 +34,7 @@ class Solver : public wxObject {
      * @param processor The processor to connect with.
      */
     void Connect(Processor* processor) {
-        wxASSERT(processor);
+        assert(processor);
         _processor = processor;
     }
 

@@ -1,7 +1,6 @@
 #include "ResultWriter.h"
 
-#include <wx/filename.h>
-
+#include <filesystem>
 #include <fstream>
 
 #include "FileNetcdf.h"
@@ -10,17 +9,15 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
                                const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecAxd& subBasinValues,
                                const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                                const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
-    if (!wxDirExists(path)) {
-        wxLogError(_("The directory %s could not be found."), path);
+    if (!std::filesystem::is_directory(path)) {
+        LogError("The directory {} could not be found.", path);
         return false;
     }
 
-    wxLogMessage(_("Writing output file."));
+    LogMessage("Writing output file.");
 
     try {
-        string filePath = path;
-        filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
-        filePath.append("/results.nc");
+        string filePath = (std::filesystem::path(path) / "results.nc").string();
 
         FileNetcdf file;
 
@@ -78,31 +75,29 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         }
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 
-    wxLogMessage(_("Output file written."));
+    LogMessage("Output file written.");
 
     return true;
 }
 
 bool ResultWriter::WriteCSV(const string& path, const axd& time, const vecStr& labels, const vecAxd& values) {
-    if (!wxDirExists(path)) {
-        wxLogError(_("The directory %s could not be found."), path);
+    if (!std::filesystem::is_directory(path)) {
+        LogError("The directory {} could not be found.", path);
         return false;
     }
 
-    wxLogMessage(_("Writing CSV output file."));
+    LogMessage("Writing CSV output file.");
 
     try {
-        string filePath = path;
-        filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
-        filePath.append("/results.csv");
+        string filePath = (std::filesystem::path(path) / "results.csv").string();
 
         std::ofstream outFile(filePath);
         if (!outFile.is_open()) {
-            wxLogError(_("Could not open file %s for writing."), filePath);
+            LogError("Could not open file {} for writing.", filePath);
             return false;
         }
 
@@ -125,37 +120,34 @@ bool ResultWriter::WriteCSV(const string& path, const axd& time, const vecStr& l
         outFile.close();
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 
-    wxLogMessage(_("CSV output file written."));
+    LogMessage("CSV output file written.");
 
     return true;
 }
 
-bool ResultWriter::AppendToNetCDF(const string& filePath, int timeStep, double time, const axd& subBasinValues,
-                                  const axxd& hydroUnitValues, const axxd& hydroUnitFractions) {
-    // This would require implementing streaming write capability in FileNetcdf
-    // For now, this is a placeholder for future implementation
-    wxLogWarning(_("Streaming NetCDF writing is not yet implemented."));
+bool ResultWriter::AppendToNetCDF(const string& /*filePath*/, int /*timeStep*/, double /*time*/,
+                                  const axd& /*subBasinValues*/, const axxd& /*hydroUnitValues*/,
+                                  const axxd& /*hydroUnitFractions*/) {
+    LogWarning("Streaming NetCDF writing is not yet implemented.");
     return false;
 }
 
-string ResultWriter::InitializeStreamingNetCDF(const string& path, int timeSize, const vecInt& hydroUnitIds,
-                                               const axd& hydroUnitAreas, const vecStr& subBasinLabels,
-                                               const vecStr& hydroUnitLabels, const vecStr& hydroUnitFractionLabels) {
-    // This would initialize a NetCDF file structure for streaming writes
-    // For now, this is a placeholder for future implementation
-    wxLogWarning(_("Streaming NetCDF initialization is not yet implemented."));
+string ResultWriter::InitializeStreamingNetCDF(const string& /*path*/, int /*timeSize*/, const vecInt& /*hydroUnitIds*/,
+                                               const axd& /*hydroUnitAreas*/, const vecStr& /*subBasinLabels*/,
+                                               const vecStr& /*hydroUnitLabels*/,
+                                               const vecStr& /*hydroUnitFractionLabels*/) {
+    LogWarning("Streaming NetCDF initialization is not yet implemented.");
     return "";
 }
 
-bool ResultWriter::CreateNetCDFStructure(const string& filePath, int timeSize, int numHydroUnits, int numSubBasinItems,
-                                         int numHydroUnitItems, int numFractions, const vecInt& hydroUnitIds,
-                                         const axd& hydroUnitAreas, const vecStr& subBasinLabels,
-                                         const vecStr& hydroUnitLabels, const vecStr& hydroUnitFractionLabels) {
-    // Helper method for creating NetCDF structure
-    // For now, this is a placeholder for future implementation
+bool ResultWriter::CreateNetCDFStructure(const string& /*filePath*/, int /*timeSize*/, int /*numHydroUnits*/,
+                                         int /*numSubBasinItems*/, int /*numHydroUnitItems*/, int /*numFractions*/,
+                                         const vecInt& /*hydroUnitIds*/, const axd& /*hydroUnitAreas*/,
+                                         const vecStr& /*subBasinLabels*/, const vecStr& /*hydroUnitLabels*/,
+                                         const vecStr& /*hydroUnitFractionLabels*/) {
     return false;
 }

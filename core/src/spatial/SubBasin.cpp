@@ -19,7 +19,7 @@ bool SubBasin::Initialize(SettingsBasin& basinSettings) {
     try {
         BuildBasin(basinSettings);
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred during basin initialization: %s."), e.what());
+        LogError("An exception occurred during basin initialization: {}.", e.what());
         return false;
     }
 
@@ -50,7 +50,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
         if (giver && receiver) {
             giver->AddLateralConnection(receiver, connection.fraction, connection.type);
         } else {
-            wxLogError(_("Invalid hydro unit IDs in lateral connection settings."));
+            LogError("Invalid hydro unit IDs in lateral connection settings.");
         }
     }
 }
@@ -68,7 +68,7 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
 
                 auto brick = dynamic_cast<LandCover*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
-                wxASSERT(brick);
+                assert(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
 
@@ -76,12 +76,12 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
                 auto brick = dynamic_cast<SurfaceComponent*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
-                wxASSERT(brick);
+                assert(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
         }
     } catch (const std::exception& e) {
-        wxLogError(_("An exception occurred while assigning the fractions: %s."), e.what());
+        LogError("An exception occurred while assigning the fractions: {}.", e.what());
         return false;
     }
 
@@ -111,7 +111,7 @@ void SubBasin::SaveAsInitialState() {
 
 bool SubBasin::IsValid(bool checkProcesses) const {
     if (_hydroUnits.empty()) {
-        wxLogError(_("The sub basin has no hydro unit attached."));
+        LogError("The sub basin has no hydro unit attached.");
         return false;
     }
     for (const auto& unit : _hydroUnits) {
@@ -130,26 +130,26 @@ bool SubBasin::IsValid(bool checkProcesses) const {
 void SubBasin::Validate() const {
     if (!IsValid()) {
         throw ModelConfigError(
-            _("SubBasin validation failed. Check that hydro units, bricks, and splitters are properly configured."));
+            "SubBasin validation failed. Check that hydro units, bricks, and splitters are properly configured.");
     }
 }
 
 void SubBasin::AddBrick(std::unique_ptr<Brick> brick) {
-    wxASSERT(brick);
+    assert(brick);
     Brick* rawBrick = brick.get();
     _brickMap[rawBrick->GetName()] = rawBrick;
     _bricks.push_back(std::move(brick));
 }
 
 void SubBasin::AddSplitter(std::unique_ptr<Splitter> splitter) {
-    wxASSERT(splitter);
+    assert(splitter);
     Splitter* rawSplitter = splitter.get();
     _splitterMap[rawSplitter->GetName()] = rawSplitter;
     _splitters.push_back(std::move(splitter));
 }
 
 void SubBasin::AddHydroUnit(std::unique_ptr<HydroUnit> unit) {
-    wxASSERT(unit);
+    assert(unit);
     HydroUnit* rawUnit = unit.get();
     _hydroUnitMap[rawUnit->GetId()] = rawUnit;
     _area += rawUnit->GetArea();
@@ -161,8 +161,8 @@ int SubBasin::GetHydroUnitCount() const {
 }
 
 HydroUnit* SubBasin::GetHydroUnit(size_t index) const {
-    wxASSERT(_hydroUnits.size() > index);
-    wxASSERT(_hydroUnits[index]);
+    assert(_hydroUnits.size() > index);
+    assert(_hydroUnits[index]);
 
     return _hydroUnits[index].get();
 }
@@ -172,7 +172,7 @@ HydroUnit* SubBasin::GetHydroUnitById(int id) const {
     if (it != _hydroUnitMap.end()) {
         return it->second;
     }
-    wxLogError(_("The hydro unit %d was not found"), id);
+    LogError("The hydro unit {} was not found", id);
     return nullptr;
 }
 
@@ -205,8 +205,8 @@ int SubBasin::GetSplitterCount() const {
 }
 
 Brick* SubBasin::GetBrick(size_t index) const {
-    wxASSERT(_bricks.size() > index);
-    wxASSERT(_bricks[index]);
+    assert(_bricks.size() > index);
+    assert(_bricks[index]);
 
     return _bricks[index].get();
 }
@@ -221,12 +221,12 @@ Brick* SubBasin::GetBrick(const string& name) const {
         return it->second;
     }
 
-    throw ModelConfigError(wxString::Format(_("No brick with the name '%s' was found."), name));
+    throw ModelConfigError(std::format("No brick with the name '{}' was found.", name));
 }
 
 Splitter* SubBasin::GetSplitter(size_t index) const {
-    wxASSERT(_splitters.size() > index);
-    wxASSERT(_splitters[index]);
+    assert(_splitters.size() > index);
+    assert(_splitters[index]);
 
     return _splitters[index].get();
 }
@@ -241,7 +241,7 @@ Splitter* SubBasin::GetSplitter(const string& name) const {
         return it->second;
     }
 
-    throw ModelConfigError(wxString::Format(_("No splitter with the name '%s' was found."), name));
+    throw ModelConfigError(std::format("No splitter with the name '{}' was found.", name));
 }
 
 void SubBasin::ReserveLateralConnectionsForUnits(SettingsBasin& basinSettings) {
@@ -262,17 +262,17 @@ bool SubBasin::HasIncomingFlow() const {
 }
 
 void SubBasin::AddInputConnector(Connector* connector) {
-    wxASSERT(connector);
+    assert(connector);
     _inConnectors.push_back(connector);
 }
 
 void SubBasin::AddOutputConnector(Connector* connector) {
-    wxASSERT(connector);
+    assert(connector);
     _outConnectors.push_back(connector);
 }
 
 void SubBasin::AttachOutletFlux(Flux* flux) {
-    wxASSERT(flux);
+    assert(flux);
     _outletFluxes.push_back(flux);
 }
 
@@ -280,7 +280,7 @@ double* SubBasin::GetValuePointer(const string& name) {
     if (name == "outlet") {
         return &_outletTotal;
     }
-    wxLogError(_("Element '%s' not found"), name);
+    LogError("Element '{}' not found", name);
 
     return nullptr;
 }

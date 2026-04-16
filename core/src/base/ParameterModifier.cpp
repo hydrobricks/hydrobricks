@@ -13,7 +13,7 @@ bool ParameterModifier::SetYearlyValues(int yearStart, int yearEnd, const vecFlo
     }
 
     if (_values.size() != _dates.size()) {
-        wxLogError(_("The length of the variable parameter values and the number of years do not match."));
+        LogError("The length of the variable parameter values and the number of years do not match.");
         return false;
     }
 
@@ -29,7 +29,7 @@ bool ParameterModifier::SetMonthlyValues(const vecFloat& values) {
     _dates.clear();
 
     if (_values.size() != 12) {
-        wxLogError(_("The length of the variable parameter values must be 12 (one per month)."));
+        LogError("The length of the variable parameter values must be 12 (one per month).");
         return false;
     }
 
@@ -45,7 +45,7 @@ bool ParameterModifier::SetDatesAndValues(const vecDouble& dates, const vecFloat
     _values = values;
 
     if (_values.size() != _dates.size()) {
-        wxLogError(_("The length of the variable parameter values and the dates do not match."));
+        LogError("The length of the variable parameter values and the dates do not match.");
         return false;
     }
 
@@ -55,14 +55,14 @@ bool ParameterModifier::SetDatesAndValues(const vecDouble& dates, const vecFloat
 float ParameterModifier::UpdateValue(double date) {
     switch (_type) {
         case ParameterModifierType::Yearly: {
-            wxASSERT(!_dates.empty());
+            assert(!_dates.empty());
             Time timeStruct = GetTimeStructFromMJD(date);
             int year = timeStruct.year;
 
             int i = Find(&_dates.front(), &_dates.back(), static_cast<double>(year));
 
             if (i < 0) {
-                wxLogError(_("The given year was not found in the reference years of the parameter."));
+                LogError("The given year was not found in the reference years of the parameter.");
                 return NAN_F;
             }
 
@@ -73,19 +73,19 @@ float ParameterModifier::UpdateValue(double date) {
             Time timeStruct = GetTimeStructFromMJD(date);
             int month = timeStruct.month;
 
-            wxASSERT(month > 0);
-            wxASSERT(month <= 12);
+            assert(month > 0);
+            assert(month <= 12);
 
             return _values[month - 1];
         }
 
         case ParameterModifierType::Dates: {
-            wxASSERT(!_dates.empty());
+            assert(!_dates.empty());
 
             int i = Find(&_dates.front(), &_dates.back(), date);
 
             if (i < 0) {
-                wxLogError(_("The given date was not found in the reference dates of the parameter."));
+                LogError("The given date was not found in the reference dates of the parameter.");
                 return NAN_F;
             }
 

@@ -81,7 +81,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         }
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 
@@ -108,17 +108,17 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     auto timeSeries = new TimeSeriesDistributed(varType);
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
-        wxLogError(_("Dimension mismatch in the forcing data."));
-        throw InputError(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
-                                          static_cast<int>(data.rows()), static_cast<int>(time.size()),
-                                          static_cast<int>(data.cols()), static_cast<int>(ids.size())));
+        LogError("Dimension mismatch in the forcing data.");
+        throw InputError(std::format("Dimension mismatch in the forcing data ({} != {} and/or {} != {}).",
+                                     static_cast<int>(data.rows()), static_cast<int>(time.size()),
+                                     static_cast<int>(data.cols()), static_cast<int>(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
         axd valuesUnit = data.col(i);
         auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
         if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
-            throw RuntimeError(_("Time series creation failed."));
+            throw RuntimeError("Time series creation failed.");
         }
         timeSeries->AddData(std::move(forcingData), ids[i]);
     }
@@ -144,7 +144,7 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
     } else if (StringsMatch(varName, "custom_3")) {
         varType = Custom3;
     } else {
-        throw InputError(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+        throw InputError(std::format("Unrecognized variable type ({}) in the provided data.", varName));
     }
     return varType;
 }
@@ -160,13 +160,12 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
         timeUnit = Hour;
         timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
-        throw ShouldNotHappen(
-            wxString::Format("TimeSeries::ExtractTimeStep - Invalid time step value: %f", timeStepData));
+        throw ShouldNotHappen(std::format("TimeSeries::ExtractTimeStep - Invalid time step value: {}", timeStepData));
     }
 }
 
 void TimeSeries::Validate() const {
     if (!IsValid()) {
-        throw ModelConfigError(_("TimeSeries validation failed. Time series is not properly configured."));
+        throw ModelConfigError("TimeSeries validation failed. Time series is not properly configured.");
     }
 }

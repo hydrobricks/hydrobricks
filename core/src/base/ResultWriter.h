@@ -11,10 +11,10 @@
  * It decouples the data recording/logging from the output writing concerns,
  * allowing for flexible output strategies (snapshot-based or streaming).
  */
-class ResultWriter : public wxObject {
+class ResultWriter {
   public:
     ResultWriter() = default;
-    ~ResultWriter() override = default;
+    virtual ~ResultWriter() = default;
 
     /**
      * Write results to a NetCDF file.

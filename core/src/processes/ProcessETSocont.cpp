@@ -20,11 +20,11 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == PET) {
         _pet = forcing;
     } else {
-        throw ModelConfigError(_("Forcing must be of type PET"));
+        throw ModelConfigError("Forcing must be of type PET");
     }
 }
 
 vecDouble ProcessETSocont::GetRates() {
-    wxASSERT(_container->HasMaximumCapacity());
+    assert(_container->HasMaximumCapacity());
     return {_pet->GetValue() * pow(_container->GetTargetFillingRatio(), _exponent)};
 }

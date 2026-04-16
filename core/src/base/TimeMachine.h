@@ -6,11 +6,11 @@
 #include "ParametersUpdater.h"
 #include "SettingsModel.h"
 
-class TimeMachine : public wxObject {
+class TimeMachine {
   public:
     TimeMachine();
 
-    ~TimeMachine() override = default;
+    virtual ~TimeMachine() = default;
 
     /**
      * Initialize the time machine (timer).

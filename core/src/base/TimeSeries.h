@@ -5,11 +5,11 @@
 #include "SettingsBasin.h"
 #include "TimeSeriesData.h"
 
-class TimeSeries : public wxObject {
+class TimeSeries {
   public:
     explicit TimeSeries(VariableType type);
 
-    ~TimeSeries() override = default;
+    virtual ~TimeSeries() = default;
 
     /**
      * Parse the time series netCDF file.

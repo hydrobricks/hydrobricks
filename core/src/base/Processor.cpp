@@ -94,7 +94,7 @@ int Processor::GetStateVariableCount() const {
 }
 
 bool Processor::ProcessTimeStep(double timeStepInDays) {
-    wxASSERT(_model);
+    assert(_model);
 
     SubBasin* basin = _model->GetSubBasin();
 
@@ -142,7 +142,7 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepIn
     for (int i = 0; i < brick->GetProcessCount(); ++i) {
         auto process = brick->GetProcess(i);
         for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
-            wxASSERT(_changeRatesNoSolver.rows() > iRate);
+            assert(_changeRatesNoSolver.rows() > iRate);
             _changeRatesNoSolver(iRate) = 0;
 
             // Link to fluxes to enforce subsequent constraints
@@ -160,7 +160,7 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepIn
 
         int iRateCopy = iRate;
         for (double rate : rates) {
-            wxASSERT(_changeRatesNoSolver.rows() > iRateCopy);
+            assert(_changeRatesNoSolver.rows() > iRateCopy);
             _changeRatesNoSolver(iRateCopy) = rate;
             iRateCopy++;
         }

@@ -1,8 +1,6 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
-#include <wx/string.h>
-
 #include <stdexcept>
 #include <string>
 
@@ -45,9 +43,6 @@ class HydrobricksError : public std::runtime_error {
     explicit HydrobricksError(const std::string& msg)
         : std::runtime_error(msg) {}
 
-    explicit HydrobricksError(const wxString& msg)
-        : std::runtime_error(std::string(msg.mb_str())) {}
-
     virtual ~HydrobricksError() = default;
 };
 
@@ -71,9 +66,6 @@ class InputError : public HydrobricksError {
         : HydrobricksError(msg) {}
 
     explicit InputError(const std::string& msg)
-        : HydrobricksError(msg) {}
-
-    explicit InputError(const wxString& msg)
         : HydrobricksError(msg) {}
 
     virtual ~InputError() = default;
@@ -101,9 +93,6 @@ class ModelConfigError : public HydrobricksError {
     explicit ModelConfigError(const std::string& msg)
         : HydrobricksError(msg) {}
 
-    explicit ModelConfigError(const wxString& msg)
-        : HydrobricksError(msg) {}
-
     virtual ~ModelConfigError() = default;
 };
 
@@ -122,15 +111,12 @@ class ModelConfigError : public HydrobricksError {
 class NotImplemented : public HydrobricksError {
   public:
     NotImplemented()
-        : HydrobricksError(_("Function not yet implemented")) {}
+        : HydrobricksError("Function not yet implemented") {}
 
     explicit NotImplemented(const char* msg)
         : HydrobricksError(msg) {}
 
     explicit NotImplemented(const std::string& msg)
-        : HydrobricksError(msg) {}
-
-    explicit NotImplemented(const wxString& msg)
         : HydrobricksError(msg) {}
 
     virtual ~NotImplemented() = default;
@@ -147,15 +133,12 @@ class NotImplemented : public HydrobricksError {
 class ShouldNotHappen : public HydrobricksError {
   public:
     ShouldNotHappen()
-        : HydrobricksError(_("This should not happen...")) {}
+        : HydrobricksError("This should not happen...") {}
 
     explicit ShouldNotHappen(const char* msg)
         : HydrobricksError(msg) {}
 
     explicit ShouldNotHappen(const std::string& msg)
-        : HydrobricksError(msg) {}
-
-    explicit ShouldNotHappen(const wxString& msg)
         : HydrobricksError(msg) {}
 
     virtual ~ShouldNotHappen() = default;
@@ -178,9 +161,6 @@ class RuntimeError : public HydrobricksError {
         : HydrobricksError(msg) {}
 
     explicit RuntimeError(const std::string& msg)
-        : HydrobricksError(msg) {}
-
-    explicit RuntimeError(const wxString& msg)
         : HydrobricksError(msg) {}
 
     virtual ~RuntimeError() = default;

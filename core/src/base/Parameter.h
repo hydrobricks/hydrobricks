@@ -4,11 +4,11 @@
 #include "Includes.h"
 #include "ParameterModifier.h"
 
-class Parameter : public wxObject {
+class Parameter {
   public:
     explicit Parameter(const string& name, float val = NAN_F);
 
-    ~Parameter() override;
+    virtual ~Parameter();
 
     /**
      * Get the name of the parameter.

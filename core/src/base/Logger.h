@@ -5,11 +5,11 @@
 #include "SettingsModel.h"
 #include "SubBasin.h"
 
-class Logger : public wxObject {
+class Logger {
   public:
     explicit Logger();
 
-    ~Logger() override = default;
+    virtual ~Logger() = default;
 
     /**
      * Initialize the logger with the size of the time vector and the sub-basin object.

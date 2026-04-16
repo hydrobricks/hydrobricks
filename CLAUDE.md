@@ -96,4 +96,8 @@ A model is a graph of **Bricks** connected by **Fluxes**. Each Brick represents 
 - **C++**: clang-format Google style, 120-column limit (see `.clang-format`)
 - **CMake**: cmake-format, tab size 4, line width 120 (see `.cmake-format.yaml`)
 
-Dependencies managed via vcpkg (`vcpkg.json`); fetched at CMake configure time: wxWidgets (non-GUI base only), yaml-cpp, pybind11.
+Dependencies managed via vcpkg (`vcpkg.json`); fetched at CMake configure time via `FetchContent`: yaml-cpp, pybind11. NetCDF, Eigen3, GTest fetched via vcpkg.
+
+### Logging
+
+The C++ core uses a custom lightweight logger (`core/src/base/Log.h`/`Log.cpp`). Use `LogError(...)`, `LogWarning(...)`, `LogMessage(...)`, `LogDebug(...)` — all accept `std::format`-style format strings. Log level is controlled via `LogSetLevel(LogLevel::Debug/Message/Warning/Error)`. Python bindings expose `init_log(path)`, `close_log()`, `set_debug_log_level()`, `set_message_log_level()`.

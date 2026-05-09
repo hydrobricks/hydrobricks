@@ -221,7 +221,7 @@ class SubBasin {
      * @param name The name of the brick to check for.
      * @return True if the sub-basin has the brick, false otherwise.
      */
-    [[nodiscard]] bool HasBrick(const string& name) const;
+    [[nodiscard]] bool HasBrick(std::string_view name) const;
 
     /**
      * Get a brick by its name.
@@ -229,7 +229,7 @@ class SubBasin {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    [[nodiscard]] Brick* GetBrick(const string& name) const;
+    [[nodiscard]] Brick* GetBrick(std::string_view name) const;
 
     /**
      * Get a splitter by its index.
@@ -245,7 +245,7 @@ class SubBasin {
      * @param name The name of the splitter to check for.
      * @return True if the sub-basin has the splitter, false otherwise.
      */
-    [[nodiscard]] bool HasSplitter(const string& name) const;
+    [[nodiscard]] bool HasSplitter(std::string_view name) const;
 
     /**
      * Get a splitter by its name.
@@ -253,7 +253,7 @@ class SubBasin {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    [[nodiscard]] Splitter* GetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* GetSplitter(std::string_view name) const;
 
     /**
      * Check if the sub-basin has an incoming flow.
@@ -289,7 +289,7 @@ class SubBasin {
      * @param name The name of the variable to get the pointer for.
      * @return A pointer to the variable's value.
      */
-    double* GetValuePointer(const string& name);
+    double* GetValuePointer(std::string_view name);
 
     /**
      * GCompute the outlet discharge for the sub-basin.

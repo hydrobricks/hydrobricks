@@ -64,7 +64,7 @@ class Process {
      * @param name name of the parameter to check.
      * @return true if the process has a parameter with the provided name.
      */
-    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, const string& name);
+    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Get the value pointer of a parameter.
@@ -73,7 +73,7 @@ class Process {
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Set the properties of the hydro unit.
@@ -201,7 +201,7 @@ class Process {
      * @param name name of the element to get.
      * @return pointer to the value of the given element.
      */
-    [[nodiscard]] virtual double* GetValuePointer(const string& name);
+    [[nodiscard]] virtual double* GetValuePointer(std::string_view name);
 
     /**
      * Get the name of the process.

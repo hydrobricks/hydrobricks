@@ -226,7 +226,7 @@ void Process::SetParameters(const ProcessSettings&) {
     // Nothing to do...
 }
 
-bool Process::HasParameter(const ProcessSettings& processSettings, const string& name) {
+bool Process::HasParameter(const ProcessSettings& processSettings, std::string_view name) {
     for (const auto& parameter : processSettings.parameters) {
         if (parameter.GetName() == name) {
             return true;
@@ -236,7 +236,7 @@ bool Process::HasParameter(const ProcessSettings& processSettings, const string&
     return false;
 }
 
-const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const string& name) {
+const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name) {
     for (auto& parameter : processSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());
@@ -278,7 +278,7 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     }
 }
 
-double* Process::GetValuePointer(const string&) {
+double* Process::GetValuePointer(std::string_view) {
     return nullptr;
 }
 

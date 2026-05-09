@@ -82,7 +82,7 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * @copydoc LandCover::SurfaceComponentAdded()

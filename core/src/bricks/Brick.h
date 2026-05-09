@@ -50,7 +50,7 @@ class Brick {
      * @param name name of the parameter to check.
      * @return true if the brick has a parameter with the provided name.
      */
-    static bool HasParameter(const BrickSettings& brickSettings, const string& name);
+    static bool HasParameter(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Get the pointer to the parameter value.
@@ -59,7 +59,7 @@ class Brick {
      * @param name name of the parameter.
      * @return pointer to the parameter value.
      */
-    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
+    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Assign the parameters to the brick element.
@@ -260,8 +260,8 @@ class Brick {
      *
      * @param name new name of the brick.
      */
-    void SetName(const string& name) {
-        _name = name;
+    void SetName(std::string_view name) {
+        _name = string(name);
     }
 
     /**
@@ -310,14 +310,14 @@ class Brick {
      *
      * @param name name of the container type (e.g., "water", "ice", or "snow").
      */
-    double* GetBaseValuePointer(const string& name);
+    double* GetBaseValuePointer(std::string_view name);
 
     /**
      * Get the pointer to the water container content.
      *
      * @param name name of the container type (e.g., "water", "ice", or "snow").
      */
-    virtual double* GetValuePointer(const string& name);
+    virtual double* GetValuePointer(std::string_view name);
 
   protected:
     string _name;

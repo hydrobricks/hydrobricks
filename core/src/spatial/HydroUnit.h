@@ -59,7 +59,7 @@ class HydroUnit {
      * @param unit The unit of the property to get.
      * @return The value of the property.
      */
-    [[nodiscard]] double GetPropertyDouble(const string& name, const string& unit = "") const;
+    [[nodiscard]] double GetPropertyDouble(std::string_view name, std::string_view unit = "") const;
 
     /**
      * Get a float property of the hydro unit.
@@ -68,7 +68,7 @@ class HydroUnit {
      * @param unit The unit of the property to get.
      * @return The value of the property.
      */
-    [[nodiscard]] float GetPropertyFloat(const string& name, const string& unit = "") const;
+    [[nodiscard]] float GetPropertyFloat(std::string_view name, std::string_view unit = "") const;
 
     /**
      * Get a property of the hydro unit as a string.
@@ -76,7 +76,7 @@ class HydroUnit {
      * @param name The name of the property to get.
      * @return The value of the property as a string.
      */
-    [[nodiscard]] string GetPropertyString(const string& name) const;
+    [[nodiscard]] string GetPropertyString(std::string_view name) const;
 
     /**
      * Add a brick to the hydro unit.
@@ -188,7 +188,7 @@ class HydroUnit {
      * @param name The name of the brick to check for.
      * @return True if the hydro unit has the brick, false otherwise.
      */
-    [[nodiscard]] bool HasBrick(const string& name) const;
+    [[nodiscard]] bool HasBrick(std::string_view name) const;
 
     /**
      * Get a brick by its name.
@@ -196,7 +196,7 @@ class HydroUnit {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    [[nodiscard]] Brick* GetBrick(const string& name) const;
+    [[nodiscard]] Brick* GetBrick(std::string_view name) const;
 
     /**
      * Try to get a brick by its name without throwing.
@@ -204,7 +204,7 @@ class HydroUnit {
      * @param name The name of the brick to get.
      * @return The brick with the specified name, or nullptr if not found.
      */
-    [[nodiscard]] Brick* TryGetBrick(const string& name) const;
+    [[nodiscard]] Brick* TryGetBrick(std::string_view name) const;
 
     /**
      * Get a vector of all snowpack bricks in the hydro unit.
@@ -228,7 +228,7 @@ class HydroUnit {
      * @param name The name of the land cover to get.
      * @return The land cover with the specified name.
      */
-    [[nodiscard]] LandCover* GetLandCover(const string& name) const;
+    [[nodiscard]] LandCover* GetLandCover(std::string_view name) const;
 
     /**
      * Try to get a land cover brick by its name without throwing.
@@ -236,7 +236,7 @@ class HydroUnit {
      * @param name The name of the land cover to get.
      * @return The land cover with the specified name, or nullptr if not found.
      */
-    [[nodiscard]] LandCover* TryGetLandCover(const string& name) const;
+    [[nodiscard]] LandCover* TryGetLandCover(std::string_view name) const;
 
     /**
      * Get a splitter by its index.
@@ -252,7 +252,7 @@ class HydroUnit {
      * @param name The name of the splitter to check for.
      * @return True if the hydro unit has the splitter, false otherwise.
      */
-    [[nodiscard]] bool HasSplitter(const string& name) const;
+    [[nodiscard]] bool HasSplitter(std::string_view name) const;
 
     /**
      * Get a splitter by its name.
@@ -260,7 +260,7 @@ class HydroUnit {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    [[nodiscard]] Splitter* GetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* GetSplitter(std::string_view name) const;
 
     /**
      * Try to get a splitter by its name without throwing.
@@ -268,7 +268,7 @@ class HydroUnit {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name, or nullptr if not found.
      */
-    [[nodiscard]] Splitter* TryGetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* TryGetSplitter(std::string_view name) const;
 
     /**
      * Check if the hydro unit is properly configured.
@@ -292,7 +292,7 @@ class HydroUnit {
      * @param name The name of the land cover to change.
      * @param fraction The new area fraction of the land cover.
      */
-    bool ChangeLandCoverAreaFraction(const string& name, double fraction);
+    bool ChangeLandCoverAreaFraction(std::string_view name, double fraction);
 
     /**
      * Fix the land cover fractions to ensure that they sum to 1.

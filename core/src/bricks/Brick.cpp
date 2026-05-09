@@ -104,12 +104,12 @@ void Brick::AttachFluxIn(std::unique_ptr<Flux> flux) {
     _water->AttachFluxInOwned(std::move(flux));
 }
 
-bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
+bool Brick::HasParameter(const BrickSettings& brickSettings, std::string_view name) {
     return std::any_of(brickSettings.parameters.begin(), brickSettings.parameters.end(),
                        [&name](const Parameter& parameter) { return parameter.GetName() == name; });
 }
 
-const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {
+const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name) {
     for (auto& parameter : brickSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());
@@ -202,7 +202,7 @@ int Brick::GetProcessConnectionCount() const {
     return counter;
 }
 
-double* Brick::GetBaseValuePointer(const string& name) {
+double* Brick::GetBaseValuePointer(std::string_view name) {
     if ((name == "water" || name == "water_content") && _water) {
         return _water->GetContentPointer();
     }
@@ -210,6 +210,6 @@ double* Brick::GetBaseValuePointer(const string& name) {
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const string&) {
+double* Brick::GetValuePointer(std::string_view) {
     return nullptr;
 }

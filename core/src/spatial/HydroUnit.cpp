@@ -66,7 +66,7 @@ void HydroUnit::AddProperty(std::unique_ptr<HydroUnitProperty> property) {
     _properties.push_back(std::move(property));
 }
 
-double HydroUnit::GetPropertyDouble(const string& name, const string& unit) const {
+double HydroUnit::GetPropertyDouble(std::string_view name, std::string_view unit) const {
     for (const auto& property : _properties) {
         if (property->GetName() == name) {
             return property->GetValue(unit);
@@ -76,11 +76,11 @@ double HydroUnit::GetPropertyDouble(const string& name, const string& unit) cons
     throw ModelConfigError(std::format("No property with the name '{}' was found.", name));
 }
 
-float HydroUnit::GetPropertyFloat(const string& name, const string& unit) const {
+float HydroUnit::GetPropertyFloat(std::string_view name, std::string_view unit) const {
     return static_cast<float>(GetPropertyDouble(name, unit));
 }
 
-string HydroUnit::GetPropertyString(const string& name) const {
+string HydroUnit::GetPropertyString(std::string_view name) const {
     for (const auto& property : _properties) {
         if (property->GetName() == name) {
             return property->GetValueString();
@@ -152,12 +152,12 @@ Brick* HydroUnit::GetBrick(size_t index) const {
     return _bricks[index].get();
 }
 
-bool HydroUnit::HasBrick(const string& name) const {
-    return _brickMap.find(name) != _brickMap.end();
+bool HydroUnit::HasBrick(std::string_view name) const {
+    return _brickMap.find(string(name)) != _brickMap.end();
 }
 
-Brick* HydroUnit::GetBrick(const string& name) const {
-    auto it = _brickMap.find(name);
+Brick* HydroUnit::GetBrick(std::string_view name) const {
+    auto it = _brickMap.find(string(name));
     if (it != _brickMap.end()) {
         return it->second;
     }
@@ -165,13 +165,13 @@ Brick* HydroUnit::GetBrick(const string& name) const {
     throw ModelConfigError(std::format("No brick with the name '{}' was found.", name));
 }
 
-Brick* HydroUnit::TryGetBrick(const string& name) const {
-    auto it = _brickMap.find(name);
+Brick* HydroUnit::TryGetBrick(std::string_view name) const {
+    auto it = _brickMap.find(string(name));
     return it != _brickMap.end() ? it->second : nullptr;
 }
 
-LandCover* HydroUnit::GetLandCover(const string& name) const {
-    auto it = _landCoverMap.find(name);
+LandCover* HydroUnit::GetLandCover(std::string_view name) const {
+    auto it = _landCoverMap.find(string(name));
     if (it != _landCoverMap.end()) {
         return it->second;
     }
@@ -179,8 +179,8 @@ LandCover* HydroUnit::GetLandCover(const string& name) const {
     throw ModelConfigError(std::format("No land cover with the name '{}' was found.", name));
 }
 
-LandCover* HydroUnit::TryGetLandCover(const string& name) const {
-    auto it = _landCoverMap.find(name);
+LandCover* HydroUnit::TryGetLandCover(std::string_view name) const {
+    auto it = _landCoverMap.find(string(name));
     return it != _landCoverMap.end() ? it->second : nullptr;
 }
 
@@ -191,12 +191,12 @@ Splitter* HydroUnit::GetSplitter(size_t index) const {
     return _splitters[index].get();
 }
 
-bool HydroUnit::HasSplitter(const string& name) const {
-    return _splitterMap.find(name) != _splitterMap.end();
+bool HydroUnit::HasSplitter(std::string_view name) const {
+    return _splitterMap.find(string(name)) != _splitterMap.end();
 }
 
-Splitter* HydroUnit::GetSplitter(const string& name) const {
-    auto it = _splitterMap.find(name);
+Splitter* HydroUnit::GetSplitter(std::string_view name) const {
+    auto it = _splitterMap.find(string(name));
     if (it != _splitterMap.end()) {
         return it->second;
     }
@@ -204,8 +204,8 @@ Splitter* HydroUnit::GetSplitter(const string& name) const {
     throw ModelConfigError(std::format("No splitter with the name '{}' was found.", name));
 }
 
-Splitter* HydroUnit::TryGetSplitter(const string& name) const {
-    auto it = _splitterMap.find(name);
+Splitter* HydroUnit::TryGetSplitter(std::string_view name) const {
+    auto it = _splitterMap.find(string(name));
     return it != _splitterMap.end() ? it->second : nullptr;
 }
 
@@ -256,12 +256,12 @@ void HydroUnit::Validate() const {
     }
 }
 
-bool HydroUnit::ChangeLandCoverAreaFraction(const string& name, double fraction) {
+bool HydroUnit::ChangeLandCoverAreaFraction(std::string_view name, double fraction) {
     if ((fraction < 0) || (fraction > 1)) {
         LogError("The given fraction ({}) for '{}' is not in the allowed range [0 .. 1]", fraction, name);
         return false;
     }
-    auto it = _landCoverMap.find(name);
+    auto it = _landCoverMap.find(string(name));
     if (it != _landCoverMap.end()) {
         it->second->SetAreaFraction(fraction);
         return FixLandCoverFractionsTotal();

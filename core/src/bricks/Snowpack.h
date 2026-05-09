@@ -81,7 +81,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * Check if the snowpack has snow.

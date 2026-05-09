@@ -139,7 +139,7 @@ int Find(const double* start, const double* end, double value, double tolerance,
     return FindT<double>(start, end, value, tolerance, showWarning);
 }
 
-template <class T>
+template <std::totally_ordered T>
 int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) {
     assert(start);
     assert(end);

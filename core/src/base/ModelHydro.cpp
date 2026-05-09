@@ -108,7 +108,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
 
         // Create the brick
-        auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
+        auto brickPtr = Brick::Factory(brickSettings);
         Brick* brick = brickPtr.get();
         brick->SetName(brickSettings.name);
         brick->SetParameters(brickSettings);
@@ -119,7 +119,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
             modelSettings.SelectProcess(iProcess);
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
+            auto processPtr = Process::Factory(processSettings, brick);
             Process* process = processPtr.get();
             process->SetName(processSettings.name);
             process->SetTimeMachine(&_timer);
@@ -137,7 +137,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         modelSettings.SelectSubBasinSplitter(iSplitter);
         const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
 
-        auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
+        auto splitterPtr = Splitter::Factory(splitterSettings);
         Splitter* splitter = splitterPtr.get();
         splitter->SetName(splitterSettings.name);
         _subBasin->AddSplitter(std::move(splitterPtr));
@@ -183,7 +183,7 @@ void ModelHydro::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             modelSettings.SelectHydroUnitSplitter(iSplitter);
             const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
-            auto splitterPtr = std::unique_ptr<Splitter>(Splitter::Factory(splitterSettings));
+            auto splitterPtr = Splitter::Factory(splitterSettings);
             Splitter* splitter = splitterPtr.get();
             splitter->SetName(splitterSettings.name);
             unit->AddSplitter(std::move(splitterPtr));
@@ -1019,7 +1019,7 @@ int ModelHydro::GetSporadicActionItemCount() const {
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
     try {
-        auto timeSeriesPtr = std::unique_ptr<TimeSeries>(TimeSeries::Create(varName, time, ids, data));
+        auto timeSeriesPtr = TimeSeries::Create(varName, time, ids, data);
         if (!AddTimeSeries(std::move(timeSeriesPtr))) {
             return false;
         }

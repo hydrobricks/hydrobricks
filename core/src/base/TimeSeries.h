@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_TIME_SERIES_H
 #define HYDROBRICKS_TIME_SERIES_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "SettingsBasin.h"
 #include "TimeSeriesData.h"
@@ -17,7 +19,7 @@ class TimeSeries {
      * @param path path to the netCDF file.
      * @param vecTimeSeries vector to store the parsed time series.
      */
-    [[nodiscard]] static bool Parse(const string& path, vector<TimeSeries*>& vecTimeSeries);
+    [[nodiscard]] static bool Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries);
 
     /**
      * Create a time series from the provided data.
@@ -28,7 +30,7 @@ class TimeSeries {
      * @param data time series data.
      * @return pointer to the created time series.
      */
-    static TimeSeries* Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
+    static std::unique_ptr<TimeSeries> Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     /**
      * Set the internal cursor to the provided date.

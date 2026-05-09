@@ -25,7 +25,7 @@ TEST(TimeSeriesDataRegular, SetValueTooShort) {
 }
 
 TEST(TimeSeries, ParseFile) {
-    std::vector<TimeSeries*> vecTimeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> vecTimeSeries;
     EXPECT_TRUE(TimeSeries::Parse("files/time-series-data.nc", vecTimeSeries));
 
     EXPECT_EQ(vecTimeSeries.size(), 3);

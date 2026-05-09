@@ -33,7 +33,7 @@ class Brick {
      * @param brickSettings settings of the brick.
      * @return the created brick.
      */
-    static Brick* Factory(const BrickSettings& brickSettings);
+    static std::unique_ptr<Brick> Factory(const BrickSettings& brickSettings);
 
     /**
      * Factory method to create a brick.
@@ -41,7 +41,7 @@ class Brick {
      * @param type type of the brick.
      * @return the created brick.
      */
-    static Brick* Factory(BrickType type);
+    static std::unique_ptr<Brick> Factory(BrickType type);
 
     /**
      * Check if the brick has a parameter with the provided name.

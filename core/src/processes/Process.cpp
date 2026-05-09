@@ -57,28 +57,28 @@ static string GetValidProcessTypes() {
     return suggestions;
 }
 
-Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
+std::unique_ptr<Process> Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
     string processType = processSettings.type;
 
     if (processType == "outflow:linear") {
-        return new ProcessOutflowLinear(brick->GetWaterContainer());
+        return std::make_unique<ProcessOutflowLinear>(brick->GetWaterContainer());
     }
     if (processType == "outflow:percolation" || processType == "percolation") {
-        return new ProcessOutflowPercolation(brick->GetWaterContainer());
+        return std::make_unique<ProcessOutflowPercolation>(brick->GetWaterContainer());
     }
     if (processType == "outflow:direct") {
-        return new ProcessOutflowDirect(brick->GetWaterContainer());
+        return std::make_unique<ProcessOutflowDirect>(brick->GetWaterContainer());
     }
     if (processType == "outflow:rest_direct") {
-        return new ProcessOutflowRestDirect(brick->GetWaterContainer());
+        return std::make_unique<ProcessOutflowRestDirect>(brick->GetWaterContainer());
     }
     if (processType == "outflow:overflow" || processType == "overflow") {
-        return new ProcessOutflowOverflow(brick->GetWaterContainer());
+        return std::make_unique<ProcessOutflowOverflow>(brick->GetWaterContainer());
     }
     if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessTransformSnowToIceConstant>(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply transformation processes to unsupported brick: {}", brick->GetName()));
@@ -86,7 +86,7 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "transformation:snow_ice_swat" || processType == "transform:snow_ice_swat") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessTransformSnowToIceSwat(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessTransformSnowToIceSwat>(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply transformation processes to unsupported brick: {}", brick->GetName()));
@@ -94,28 +94,28 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "transport:snow_slide") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessLateralSnowSlide>(snowBrick->GetSnowContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply transport processes to unsupported brick: {}", brick->GetName()));
     }
     if (processType == "runoff:socont") {
-        return new ProcessRunoffSocont(brick->GetWaterContainer());
+        return std::make_unique<ProcessRunoffSocont>(brick->GetWaterContainer());
     }
     if (processType == "infiltration:socont") {
-        return new ProcessInfiltrationSocont(brick->GetWaterContainer());
+        return std::make_unique<ProcessInfiltrationSocont>(brick->GetWaterContainer());
     }
     if (processType == "et:socont") {
-        return new ProcessETSocont(brick->GetWaterContainer());
+        return std::make_unique<ProcessETSocont>(brick->GetWaterContainer());
     }
     if (processType == "melt:degree_day") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessMeltDegreeDay>(snowBrick->GetSnowContainer());
         }
         if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
+            return std::make_unique<ProcessMeltDegreeDay>(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));
@@ -123,11 +123,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "melt:degree_day_aspect") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltDegreeDayAspect(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessMeltDegreeDayAspect>(snowBrick->GetSnowContainer());
         }
         if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
+            return std::make_unique<ProcessMeltDegreeDayAspect>(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));
@@ -135,11 +135,11 @@ Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) 
     if (processType == "melt:temperature_index") {
         if (brick->GetCategory() == BrickCategory::Snowpack) {
             auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
+            return std::make_unique<ProcessMeltTemperatureIndex>(snowBrick->GetSnowContainer());
         }
         if (brick->GetCategory() == BrickCategory::Glacier) {
             auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
+            return std::make_unique<ProcessMeltTemperatureIndex>(glacierBrick->GetIceContainer());
         }
         throw ModelConfigError(
             std::format("Trying to apply melting processes to unsupported brick: {}", brick->GetName()));

@@ -7,7 +7,7 @@
 TimeSeries::TimeSeries(VariableType type)
     : _type(type) {}
 
-bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
+bool TimeSeries::Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -54,7 +54,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
             VariableType varType = MatchVariableType(varName);
 
             // Instantiate time series
-            auto timeSeries = new TimeSeriesDistributed(varType);
+            auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
             // Retrieve values from netCDF
             vecInt dimIds = file.GetVarDimIds(iVar, 2);
@@ -77,7 +77,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
                 }
             }
 
-            vecTimeSeries.push_back(timeSeries);
+            vecTimeSeries.push_back(std::move(timeSeries));
         }
 
     } catch (std::exception& e) {
@@ -88,7 +88,8 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
     return true;
 }
 
-TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi& ids, const axxd& data) {
+std::unique_ptr<TimeSeries> TimeSeries::Create(const string& varName, const axd& time, const axi& ids,
+                                               const axxd& data) {
     // Get time
     Time startSt = GetTimeStructFromMJD(time[0]);
     Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
@@ -105,7 +106,7 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     VariableType varType = MatchVariableType(varName);
 
     // Instantiate time series
-    auto timeSeries = new TimeSeriesDistributed(varType);
+    auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         LogError("Dimension mismatch in the forcing data.");

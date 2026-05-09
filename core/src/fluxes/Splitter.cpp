@@ -22,17 +22,17 @@ static string GetValidSplitterTypes() {
     return suggestions;
 }
 
-Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
+std::unique_ptr<Splitter> Splitter::Factory(const SplitterSettings& splitterSettings) {
     if (splitterSettings.type == "snow_rain") {
-        auto splitter = new SplitterSnowRain();
+        auto splitter = std::make_unique<SplitterSnowRain>();
         splitter->SetParameters(splitterSettings);
         return splitter;
     }
     if (splitterSettings.type == "rain") {
-        return new SplitterRain();
+        return std::make_unique<SplitterRain>();
     }
     if (splitterSettings.type == "multi_fluxes") {
-        return new SplitterMultiFluxes();
+        return std::make_unique<SplitterMultiFluxes>();
     }
     LogError("Splitter type '{}' not recognized. {}", splitterSettings.type, GetValidSplitterTypes());
 

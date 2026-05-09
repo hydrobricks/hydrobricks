@@ -26,7 +26,7 @@ class Process {
      * @param brick the related brick.
      * @return the created process.
      */
-    static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
+    static std::unique_ptr<Process> Factory(const ProcessSettings& processSettings, Brick* brick);
 
     /**
      * Register the parameters and the needed forcing for the process.

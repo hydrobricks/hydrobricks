@@ -143,7 +143,7 @@ int RunModel(const CliArgs& args) {
     }
 
     // Load time series
-    std::vector<TimeSeries*> vecTimeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> vecTimeSeries;
     if (!TimeSeries::Parse(args.dataFile, vecTimeSeries)) {
         LogError("Failed to load data file '{}'.", args.dataFile);
         return 1;
@@ -153,9 +153,6 @@ int RunModel(const CliArgs& args) {
     // Note: loading SettingsModel from a YAML file requires model-type-specific
     // construction and is currently only supported via the Python interface.
     LogError("Direct CLI model execution is not yet implemented. Use the Python interface to run models.");
-    for (auto* ts : vecTimeSeries) {
-        delete ts;
-    }
     return 1;
 }
 

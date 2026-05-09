@@ -501,10 +501,11 @@ TEST(ModelSocont, WaterBalanceCloses) {
     EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    std::vector<TimeSeries*> vecTimeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> vecTimeSeries;
     EXPECT_TRUE(TimeSeries::Parse("../../tests/files/catchments/ch_sitter_appenzell/meteo.nc", vecTimeSeries));
-    for (auto* timeSeries : vecTimeSeries) {
-        ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(timeSeries)));
+    TimeSeries* firstTs = vecTimeSeries[0].get();
+    for (auto& timeSeries : vecTimeSeries) {
+        ASSERT_TRUE(model.AddTimeSeries(std::move(timeSeries)));
     }
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
@@ -513,7 +514,7 @@ TEST(ModelSocont, WaterBalanceCloses) {
     Logger* logger = model.GetLogger();
 
     // Water balance components
-    double precip = vecTimeSeries[0]->GetTotal(&basinSettings);
+    double precip = firstTs->GetTotal(&basinSettings);
     double discharge = logger->GetTotalOutletDischarge();
     double et = logger->GetTotalET();
     double storage = logger->GetTotalWaterStorageChanges();

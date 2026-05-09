@@ -229,8 +229,8 @@ class Observations(TimeSeries1D):
         df = df.reset_index().set_index("year")
 
         if start_date and end_date:
-            idx = pd.date_range(start_date, end_date)
-            comparing_years = np.unique(idx.year)
+            date_range = pd.date_range(start_date, end_date)
+            comparing_years = np.unique(date_range.year)
 
             comparing_df = df.set_index("date")
             comparing_df = comparing_df[

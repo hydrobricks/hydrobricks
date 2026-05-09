@@ -24,7 +24,8 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() = default;
 
 bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    _subBasin = new SubBasin();
+    _ownedSubBasin = std::make_unique<SubBasin>();
+    _subBasin = _ownedSubBasin.get();
     if (!_subBasin->Initialize(basinSettings)) {
         return false;
     }

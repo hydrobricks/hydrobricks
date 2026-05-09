@@ -195,13 +195,12 @@ class ModelHydro {
     }
 
     /**
-     * Set the sub basin.
+     * Set the sub basin (non-owning; caller retains ownership).
      *
-     * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
+     * @param subBasin pointer to the sub basin.
      */
     void SetSubBasin(SubBasin* subBasin) {
-        delete _subBasin;
-        _subBasin = nullptr;
+        _ownedSubBasin.reset();
         _subBasin = subBasin;
     }
 
@@ -243,7 +242,8 @@ class ModelHydro {
 
   protected:
     Processor _processor;
-    SubBasin* _subBasin;  // owning, but not a unique pointer (can be null)
+    std::unique_ptr<SubBasin> _ownedSubBasin;  // owning: set only when ModelHydro creates the SubBasin
+    SubBasin* _subBasin;                       // non-owning view (points to _ownedSubBasin or an external SubBasin)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;

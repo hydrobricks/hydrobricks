@@ -34,6 +34,7 @@ Available flags:
     - HAS_PYET: PyEt library
     - HAS_PYPROJ: Pyproj library
     - HAS_PYSHEDS: Pysheds library
+    - HAS_SCIPY: SciPy library
     - HAS_XARRAY: xarray library
     - HAS_RIOXARRAY: rioxarray library
     - HAS_PYARROW: PyArrow library
@@ -72,6 +73,7 @@ pyet = None
 pyproj = None
 pysheds = None
 pyshedsGrid = None
+scipy = None
 xr = None
 rxr = None
 pyarrow = None
@@ -114,6 +116,10 @@ if HAS_PYSHEDS:
     pysheds = LazyImport("pysheds")
     from pysheds.grid import Grid as pyshedsGrid
 
+HAS_SCIPY = is_module_available("scipy")
+if HAS_SCIPY:
+    scipy = LazyImport("scipy")
+
 HAS_XARRAY = is_module_available("xarray")
 if HAS_XARRAY:
     xr = LazyImport("xarray")
@@ -143,6 +149,7 @@ __all__ = [
     "HAS_PYET",
     "HAS_PYPROJ",
     "HAS_PYSHEDS",
+    "HAS_SCIPY",
     "HAS_XARRAY",
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
@@ -157,6 +164,7 @@ __all__ = [
     "pyproj",
     "pysheds",
     "pyshedsGrid",
+    "scipy",
     "xr",
     "rxr",
     "pyarrow",

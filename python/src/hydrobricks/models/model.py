@@ -78,7 +78,7 @@ class Model(ABC):
 
     def __del__(self) -> None:
         """Clean up resources when model is deleted."""
-        self.cleanup()
+        self._cleanup()
 
     @property
     def name(self) -> str | None:
@@ -233,7 +233,7 @@ class Model(ABC):
             ) from e
 
     @staticmethod
-    def cleanup() -> None:
+    def _cleanup() -> None:
         close_log()
 
     def initialize_state_variables(

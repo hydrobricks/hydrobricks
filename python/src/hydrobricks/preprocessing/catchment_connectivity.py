@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy import ndimage
 
 from hydrobricks import pyshedsGrid
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
-from hydrobricks._optional import HAS_PYSHEDS
+from hydrobricks._optional import HAS_PYSHEDS, HAS_SCIPY
+
+if HAS_SCIPY:
+    from scipy import ndimage
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
@@ -329,6 +331,14 @@ class CatchmentConnectivity:
             return row
 
         if force_connectivity:
+            if not HAS_SCIPY:
+                raise DependencyError(
+                    "scipy is required for connectivity calculations "
+                    "with force_connectivity=True.",
+                    package_name="scipy",
+                    operation="CatchmentConnectivity.calculate",
+                    install_command="pip install scipy",
+                )
             df = df.apply(remove_connectivity_out, axis=1)
             df = df.apply(connect_to_neighbours, axis=1)
 

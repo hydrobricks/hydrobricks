@@ -61,7 +61,7 @@ class ProcessLateral : public Process {
      *
      * @return true if the process is a lateral process.
      */
-    [[nodiscard]] bool IsLateralProcess() const override {
+    [[nodiscard]] bool IsLateralProcess() const noexcept override {
         return true;
     }
 

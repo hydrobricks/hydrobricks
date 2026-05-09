@@ -46,7 +46,7 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     /**
      * @copydoc Process::IsLateralProcess()
      */
-    [[nodiscard]] bool IsLateralProcess() const override {
+    [[nodiscard]] bool IsLateralProcess() const noexcept override {
         return true;
     }
 

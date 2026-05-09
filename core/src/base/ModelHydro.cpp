@@ -693,9 +693,9 @@ void ModelHydro::BuildForcingConnections(const BrickSettings& brickSettings, Hyd
         }
 
         auto forcing = unit->GetForcing(forcingType);
-        auto forcingFlux = new FluxForcing();
+        auto forcingFlux = std::make_unique<FluxForcing>();
         forcingFlux->AttachForcing(forcing);
-        brick->AttachFluxIn(forcingFlux);
+        brick->AttachFluxIn(std::move(forcingFlux));
     }
 }
 

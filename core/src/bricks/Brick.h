@@ -69,11 +69,19 @@ class Brick {
     virtual void SetParameters(const BrickSettings& brickSettings);
 
     /**
-     * Attach incoming flux.
+     * Attach incoming flux (non-owning; caller retains ownership).
      *
      * @param flux incoming flux (non-owning reference, owned by process)
      */
     virtual void AttachFluxIn(Flux* flux);
+
+    /**
+     * Attach incoming flux and take ownership of it.
+     * Used for forcing fluxes that are not owned by any process.
+     *
+     * @param flux incoming flux (ownership transferred)
+     */
+    virtual void AttachFluxIn(std::unique_ptr<Flux> flux);
 
     /**
      * Add a process to the brick.

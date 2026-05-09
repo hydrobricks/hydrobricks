@@ -96,6 +96,15 @@ void Brick::AttachFluxIn(Flux* flux) {
     _water->AttachFluxIn(flux);
 }
 
+void Brick::AttachFluxIn(std::unique_ptr<Flux> flux) {
+    assert(flux);
+    if (flux->GetType() != ContentType::Water) {
+        throw ModelConfigError(
+            std::format("The flux type '{}' should be water.", ContentTypeToString(flux->GetType())));
+    }
+    _water->AttachFluxInOwned(std::move(flux));
+}
+
 bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
     return std::any_of(brickSettings.parameters.begin(), brickSettings.parameters.end(),
                        [&name](const Parameter& parameter) { return parameter.GetName() == name; });

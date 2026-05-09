@@ -226,13 +226,25 @@ class WaterContainer {
     }
 
     /**
-     * Attach incoming flux.
+     * Attach incoming flux (non-owning; caller retains ownership).
      *
      * @param flux incoming flux (non-owning reference, owned by process)
      */
     void AttachFluxIn(Flux* flux) {
         assert(flux);
         _inputs.push_back(flux);
+    }
+
+    /**
+     * Attach incoming flux and take ownership of it.
+     * Used for forcing fluxes that are not owned by any process.
+     *
+     * @param flux incoming flux (ownership transferred)
+     */
+    void AttachFluxInOwned(std::unique_ptr<Flux> flux) {
+        assert(flux);
+        _inputs.push_back(flux.get());
+        _ownedInputFluxes.push_back(std::move(flux));
     }
 
     /**
@@ -308,9 +320,10 @@ class WaterContainer {
     double _initialState;          // [mm]
     const float* _capacity;        // non-owning reference
     bool _infiniteStorage;
-    Brick* _parent;         // non-owning reference
-    Process* _overflow;     // non-owning reference
-    vector<Flux*> _inputs;  // non-owning references to fluxes owned by processes
+    Brick* _parent;                                        // non-owning reference
+    Process* _overflow;                                    // non-owning reference
+    vector<Flux*> _inputs;                                 // non-owning references
+    std::vector<std::unique_ptr<Flux>> _ownedInputFluxes;  // owning: forcing fluxes not owned by processes
 };
 
 #endif  // HYDROBRICKS_WATER_CONTAINER_H

@@ -53,10 +53,8 @@ void Solver::InitializeContainers() {
 
 void Solver::SaveStateVariables(int col) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : _processor->GetStateVariables()) {
-        _stateVariableChanges(counter, col) = *value;
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        _stateVariableChanges(i, col) = *value;
     }
 }
 
@@ -118,19 +116,15 @@ void Solver::ResetStateVariableChanges() {
 
 void Solver::SetStateVariablesToIteration(int col) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : _processor->GetStateVariables()) {
-        *value = _stateVariableChanges(counter, col);
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        *value = _stateVariableChanges(i, col);
     }
 }
 
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : _processor->GetStateVariables()) {
-        *value = (_stateVariableChanges(counter, col1) + _stateVariableChanges(counter, col2)) / 2.0;
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        *value = (_stateVariableChanges(i, col1) + _stateVariableChanges(i, col2)) / 2.0;
     }
 }
 

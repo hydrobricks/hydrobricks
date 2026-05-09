@@ -20,6 +20,7 @@
 #include <format>
 #include <memory>
 #include <numeric>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>

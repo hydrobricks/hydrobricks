@@ -251,40 +251,6 @@ class ModelHydro {
     std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
 
   private:
-    void BuildModelStructure(SettingsModel& modelSettings);
-
-    void CreateSubBasinComponents(SettingsModel& modelSettings);
-
-    void CreateHydroUnitsComponents(SettingsModel& modelSettings);
-
-    void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
-
-    void UpdateSubBasinParameters(SettingsModel& modelSettings);
-
-    void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
-
-    void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
-
-    void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
-
-    void BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process);
-
-    void BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
-
-    void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildSubBasinSplittersFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void ConnectLoggerToValues(SettingsModel& modelSettings);
-
     ModelResult InitializeTimeSeries();
 
     ModelResult UpdateForcing();

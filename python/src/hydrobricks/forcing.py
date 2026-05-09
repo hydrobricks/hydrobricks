@@ -1,22 +1,9 @@
 from __future__ import annotations
 
 import logging
-import sys
-from typing import TYPE_CHECKING, Any
-
-if sys.version_info < (3, 11):
-    try:
-        from strenum import LowercaseStrEnum, StrEnum
-    except ImportError:
-        raise ImportError(
-            "Please install the 'StrEnum' package to use StrEnum "
-            "on Python versions prior to 3.11."
-        )
-else:
-    from enum import StrEnum
-
 from enum import auto
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -30,7 +17,7 @@ from hydrobricks._exceptions import (
     DependencyError,
     ForcingError,
 )
-from hydrobricks._optional import HAS_NETCDF, HAS_PYET
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET, StrEnumClass
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
@@ -87,11 +74,6 @@ if TYPE_CHECKING:
 
 class Forcing:
     """Class for managing forcing (meteorological) data for hydrological models."""
-
-    if sys.version_info < (3, 11):
-        StrEnumClass = LowercaseStrEnum
-    else:
-        StrEnumClass = StrEnum
 
     class Variable(StrEnumClass):
         """Enumeration of supported meteorological variables."""

@@ -1,29 +1,9 @@
-import sys
+from enum import auto
 
 import pandas as pd
 
-from hydrobricks._exceptions import DataError, DependencyError
-
-if sys.version_info < (3, 11):
-    try:
-        from strenum import LowercaseStrEnum, StrEnum
-    except ImportError:
-        raise DependencyError(
-            "The 'strenum' package is required to use StrEnum on Python "
-            "versions prior to 3.11.",
-            package_name="strenum",
-            operation="units.import",
-            install_command="pip install strenum",
-        )
-else:
-    from enum import StrEnum
-
-from enum import auto
-
-if sys.version_info < (3, 11):
-    StrEnumClass = LowercaseStrEnum
-else:
-    StrEnumClass = StrEnum
+from hydrobricks._exceptions import DataError
+from hydrobricks._optional import StrEnumClass
 
 
 class Unit(StrEnumClass):

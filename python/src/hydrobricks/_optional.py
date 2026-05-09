@@ -42,6 +42,7 @@ Available flags:
 """
 
 import importlib.util
+import sys
 import warnings
 
 
@@ -61,6 +62,23 @@ class LazyImport:
 def is_module_available(module_name):
     """Check if a module is available for import."""
     return importlib.util.find_spec(module_name) is not None
+
+
+# Python version compatibility: StrEnum
+if sys.version_info < (3, 11):
+    try:
+        from strenum import LowercaseStrEnum, StrEnum
+
+        StrEnumClass = LowercaseStrEnum
+    except ImportError:
+        raise ImportError(
+            "The 'strenum' package is required on Python < 3.11. "
+            "Install with: pip install strenum"
+        ) from None
+else:
+    from enum import StrEnum
+
+    StrEnumClass = StrEnum
 
 
 # Provide default placeholders so attributes are always present
@@ -140,6 +158,9 @@ __all__ = [
     # Utility functions
     "is_module_available",
     "LazyImport",
+    # Python version compatibility
+    "StrEnum",
+    "StrEnumClass",
     # Availability flags
     "HAS_NETCDF",
     "HAS_RASTERIO",

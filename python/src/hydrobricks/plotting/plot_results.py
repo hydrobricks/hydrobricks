@@ -289,8 +289,8 @@ def _load_units_ids_raster(unit_ids_raster_path: str) -> np.ndarray:
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-        unit_ids_raster = rxr.open_rasterio(unit_ids_raster_path)
-        unit_ids_raster = unit_ids_raster.squeeze().drop_vars("band")
+        with rxr.open_rasterio(unit_ids_raster_path) as _raw:
+            unit_ids_raster = _raw.squeeze().drop_vars("band")
 
     return unit_ids_raster.to_numpy()
 
@@ -314,8 +314,8 @@ def _load_dem(dem_path: str) -> np.ndarray:
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-        dem = rxr.open_rasterio(dem_path)
-        dem = dem.squeeze().drop_vars("band")
+        with rxr.open_rasterio(dem_path) as _raw:
+            dem = _raw.squeeze().drop_vars("band").load()
 
     return dem
 

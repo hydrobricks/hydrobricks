@@ -224,9 +224,8 @@ class PotentialSolarRadiation:
         filename
             Name of the input file. Default is 'annual_potential_radiation.tif'.
         """
-        self.mean_annual_radiation = rxr.open_rasterio(
-            Path(dir_path) / filename
-        ).drop_vars("band")[0]
+        with rxr.open_rasterio(Path(dir_path) / filename) as _raw:
+            self.mean_annual_radiation = _raw.drop_vars("band")[0].load()
 
     def upscale_and_save_mean_annual_radiation_rasters(
         self,

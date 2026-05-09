@@ -219,8 +219,8 @@ class TimeSeries2D(TimeSeries):
         # Get unit ids
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            unit_ids = rxr.open_rasterio(raster_hydro_units)
-            unit_ids = unit_ids.squeeze().drop_vars("band")
+            with rxr.open_rasterio(raster_hydro_units) as _raw:
+                unit_ids = _raw.squeeze().drop_vars("band").load()
 
         logger.debug(
             f"Starting regridding from netCDF: "
@@ -337,8 +337,8 @@ class TimeSeries2D(TimeSeries):
         # Open the DEM if needed
         dem = None
         if apply_data_gradient:
-            dem = rxr.open_rasterio(dem_path)
-            dem = dem.squeeze().drop_vars("band")
+            with rxr.open_rasterio(dem_path) as _raw:
+                dem = _raw.squeeze().drop_vars("band").load()
 
         # Get the spatial extent of interest
         ref_data = dem if apply_data_gradient else unit_ids

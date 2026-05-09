@@ -261,6 +261,12 @@ class Model(ABC):
         forcing
             The forcing data.
         """
+        if not self._is_initialized:
+            raise ModelError(
+                "The model has not been initialized. "
+                "Please run setup() before setting forcing data.",
+                is_initialized=False,
+            )
         self.model.clear_time_series()
         time = forcing.data2D.time.to_numpy()
         time = date_as_mjd(time)

@@ -47,9 +47,26 @@ class Results:
         )
         self.hydro_units_ids: np.ndarray = self.results.hydro_units_ids.to_numpy()
 
+    def close(self) -> None:
+        """Close the netCDF dataset and release the file handle."""
+        if hasattr(self, "results") and self.results is not None:
+            self.results.close()
+
+    def __enter__(self) -> "Results":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        """Context manager exit — closes the dataset."""
+        self.close()
+        return False
+
     def __del__(self) -> None:
-        """Close the netCDF dataset on deletion."""
-        self.results.close()
+        """Fallback cleanup when object is garbage collected."""
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def list_hydro_units_components(self) -> None:
         """

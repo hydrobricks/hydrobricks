@@ -127,13 +127,26 @@ class HydroUnits:
         NotImplementedError
             If column_fractions is provided (not yet implemented).
         """
+        # Validate parameter conflicts before touching the filesystem
+        if column_area is not None and columns_areas is not None:
+            raise DataError(
+                'The "column_area" and "columns_areas" cannot be '
+                "provided at the same time.",
+                data_type="hydro units",
+                reason="Ambiguous column specification",
+            )
+        if column_fractions is not None:
+            raise ConfigurationError(
+                'The "column_fractions" parameter is not yet implemented.'
+            )
+
         # Load and prepare CSV file
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
 
         # Validate column configuration
         self._validate_csv_columns(
-            file_content, column_elevation, column_area, columns_areas, column_fractions
+            file_content, column_elevation, column_area, columns_areas
         )
 
         # Load required columns
@@ -158,7 +171,6 @@ class HydroUnits:
         column_elevation: str | None,
         column_area: str | None,
         columns_areas: dict[str, str] | None,
-        column_fractions: dict[str, str] | None,
     ) -> None:
         """
         Validate CSV column configuration for loading hydro units.
@@ -173,15 +185,11 @@ class HydroUnits:
             Single area column name, if provided.
         columns_areas
             Dictionary of land-cover-specific area columns, if provided.
-        column_fractions
-            Dictionary of land cover fractions, if provided.
 
         Raises
         ------
         DataError
             If validation fails due to missing columns or conflicting specifications.
-        ConfigurationError
-            If column_fractions is provided (not yet implemented).
         """
         # Check for required ID column
         if "id" not in file_content.columns:
@@ -197,21 +205,6 @@ class HydroUnits:
                 'The "elevation" column is required in the file.',
                 data_type="hydro units",
                 reason="Missing required column",
-            )
-
-        # Validate area column configuration
-        if column_area is not None and columns_areas is not None:
-            raise DataError(
-                'The "column_area" and "columns_areas" cannot be '
-                "provided at the same time.",
-                data_type="hydro units",
-                reason="Ambiguous column specification",
-            )
-
-        # Check for unimplemented feature
-        if column_fractions is not None:
-            raise ConfigurationError(
-                'The "column_fractions" parameter is not yet implemented.'
             )
 
     def _load_id_column(self, file_content: pd.DataFrame) -> None:

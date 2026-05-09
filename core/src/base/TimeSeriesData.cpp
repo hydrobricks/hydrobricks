@@ -77,13 +77,13 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
     double dt = date - _start;
 
     switch (_timeStepUnit) {
-        case Day:
+        case TimeUnit::Day:
             _cursor = static_cast<int>(dt);
             break;
-        case Hour:
+        case TimeUnit::Hour:
             _cursor = static_cast<int>(dt) * 24;
             break;
-        case Minute:
+        case TimeUnit::Minute:
             _cursor = static_cast<int>(dt) * 1440;
             break;
         default:

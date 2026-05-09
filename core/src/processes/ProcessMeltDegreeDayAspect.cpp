@@ -58,7 +58,7 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
 }
 
 void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Temperature) {
+    if (forcing->GetType() == VariableType::Temperature) {
         _temperature = forcing;
     } else {
         throw ModelConfigError("Forcing must be of type Temperature");

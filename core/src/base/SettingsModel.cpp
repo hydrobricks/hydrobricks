@@ -139,11 +139,11 @@ void SettingsModel::AddBrickForcing(const string& name) {
     assert(_selectedBrick);
 
     if (name == "precipitation") {
-        _selectedBrick->forcing.push_back(Precipitation);
+        _selectedBrick->forcing.push_back(VariableType::Precipitation);
     } else if (name == "temperature") {
-        _selectedBrick->forcing.push_back(Temperature);
+        _selectedBrick->forcing.push_back(VariableType::Temperature);
     } else if (name == "solar_radiation" || name == "r_solar") {
-        _selectedBrick->forcing.push_back(Radiation);
+        _selectedBrick->forcing.push_back(VariableType::Radiation);
     } else {
         throw InputError(
             std::format("The provided forcing '{}' is not yet supported. Valid forcing types: precipitation, "
@@ -232,13 +232,13 @@ void SettingsModel::AddProcessForcing(const string& name) {
     assert(_selectedProcess);
 
     if (name == "precipitation") {
-        _selectedProcess->forcing.push_back(Precipitation);
+        _selectedProcess->forcing.push_back(VariableType::Precipitation);
     } else if (name == "pet") {
-        _selectedProcess->forcing.push_back(PET);
+        _selectedProcess->forcing.push_back(VariableType::PET);
     } else if (name == "temperature") {
-        _selectedProcess->forcing.push_back(Temperature);
+        _selectedProcess->forcing.push_back(VariableType::Temperature);
     } else if (name == "solar_radiation" || name == "r_solar") {
-        _selectedProcess->forcing.push_back(Radiation);
+        _selectedProcess->forcing.push_back(VariableType::Radiation);
     } else {
         throw InputError(
             std::format("The provided forcing '{}' is not yet supported. Valid forcing types: precipitation, pet, "
@@ -338,11 +338,11 @@ void SettingsModel::AddSplitterForcing(const string& name) {
     assert(_selectedSplitter);
 
     if (name == "precipitation") {
-        _selectedSplitter->forcing.push_back(Precipitation);
+        _selectedSplitter->forcing.push_back(VariableType::Precipitation);
     } else if (name == "temperature") {
-        _selectedSplitter->forcing.push_back(Temperature);
+        _selectedSplitter->forcing.push_back(VariableType::Temperature);
     } else if (name == "solar_radiation" || name == "r_solar") {
-        _selectedSplitter->forcing.push_back(Radiation);
+        _selectedSplitter->forcing.push_back(VariableType::Radiation);
     } else {
         throw InputError(
             std::format("The provided forcing '{}' is not yet supported. Valid forcing types: precipitation, "

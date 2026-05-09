@@ -55,10 +55,10 @@ class SolverLinearStorage : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, TimeUnit::Day);
         data->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(data));
     }
     void TearDown() override {
@@ -208,10 +208,10 @@ class Solver2LinearStorages : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, TimeUnit::Day);
         data->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(data));
     }
     void TearDown() override {
@@ -372,16 +372,18 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto dataPrec = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto dataPrec = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1,
+                                                                TimeUnit::Day);
         dataPrec->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(dataPrec));
 
-        auto dataPET = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto dataPET = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1,
+                                                               TimeUnit::Day);
         dataPET->SetValues(
             {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPET = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPET = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPET->SetData(std::move(dataPET));
     }
     void TearDown() override {

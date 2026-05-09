@@ -27,19 +27,21 @@ class ActionsInModel : public ::testing::Test {
         vecStr landCoverNames = {"ground", "glacier"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 2, "linear_storage", false);
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         _tsTemp->SetData(std::move(temperature));
 
-        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
         pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {
@@ -94,17 +96,18 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     _model.SetTimer("2000-01-01", "2020-12-31", 1, "day");
     int timeStepCount = GetMJD(2020, 12, 31) - GetMJD(2000, 1, 1) + 1;
 
-    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, TimeUnit::Day);
     vecDouble valuesPrecip(timeStepCount, 0.0);
     precip->SetValues(valuesPrecip);
     _tsPrecip->SetData(std::move(precip));
 
-    auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1,
+                                                               TimeUnit::Day);
     vecDouble valuesTemp(timeStepCount, 2.0);
     temperature->SetValues(valuesTemp);
     _tsTemp->SetData(std::move(temperature));
 
-    auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, Day);
+    auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, TimeUnit::Day);
     vecDouble valuesPet(timeStepCount, 0.0);
     pet->SetValues(valuesPet);
     _tsPet->SetData(std::move(pet));
@@ -170,19 +173,21 @@ class ActionsInModel2LandCovers : public ::testing::Test {
         vecStr landCoverNames = {"ground", "glacier_ice", "glacier_debris"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         _tsTemp->SetData(std::move(temperature));
 
-        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
         pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {
@@ -314,19 +319,20 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, TimeUnit::Day);
     precip->SetValues({0.0, 50.0, 50.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
     tsPrecip->SetData(std::move(precip));
 
-    auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1,
+                                                               TimeUnit::Day);
     temperature->SetValues({-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0});
-    auto tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+    auto tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
     tsTemp->SetData(std::move(temperature));
 
-    auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, Day);
+    auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 9, 25), GetMJD(2020, 10, 4), 1, TimeUnit::Day);
     pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto tsPet = std::make_unique<TimeSeriesUniform>(PET);
+    auto tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
     tsPet->SetData(std::move(pet));
 
     subBasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, ContentType::Ice);

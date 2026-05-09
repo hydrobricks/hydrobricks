@@ -17,7 +17,7 @@ bool ProcessETSocont::IsValid() const {
 }
 
 void ProcessETSocont::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == PET) {
+    if (forcing->GetType() == VariableType::PET) {
         _pet = forcing;
     } else {
         throw ModelConfigError("Forcing must be of type PET");

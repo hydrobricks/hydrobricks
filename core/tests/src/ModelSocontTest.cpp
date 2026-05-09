@@ -25,19 +25,21 @@ class ModelSocontBasic : public ::testing::Test {
         vecStr landCoverNames = {"ground", "glacier"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 2, "linear_storage");
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         _tsTemp->SetData(std::move(temperature));
 
-        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
         pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {
@@ -133,9 +135,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                TimeUnit::Day);
     precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
     tsPrecip->SetData(std::move(precipValues));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
@@ -284,9 +287,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                TimeUnit::Day);
     precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    auto tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
     tsPrecip->SetData(std::move(precipValues));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
@@ -545,19 +549,21 @@ class ModelSocontSingleLandCover : public ::testing::Test {
         vecStr landCoverNames = {"ground"};
         GenerateStructureSocont(_model, landCoverTypes, landCoverNames, 1, "socont_runoff");
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 13.8, 59.3, 34.2, 13.7, 26.1, 9.8, 0.0, 0.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         _tsTemp->SetData(std::move(temperature));
 
-        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
         pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPet = std::make_unique<TimeSeriesUniform>(PET);
+        _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPet->SetData(std::move(pet));
     }
     void TearDown() override {

@@ -5,7 +5,7 @@ TimeMachine::TimeMachine()
       _start(0),
       _end(0),
       _timeStep(0),
-      _timeStepUnit(Day),
+      _timeStepUnit(TimeUnit::Day),
       _timeStepInDays(0),
       _parametersUpdater(nullptr),
       _actionsManager(nullptr) {}
@@ -26,11 +26,11 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     _timeStep = settings.timeStep;
 
     if (settings.timeStepUnit == "day") {
-        _timeStepUnit = Day;
+        _timeStepUnit = TimeUnit::Day;
     } else if (settings.timeStepUnit == "hour") {
-        _timeStepUnit = Hour;
+        _timeStepUnit = TimeUnit::Hour;
     } else if (settings.timeStepUnit == "minute") {
-        _timeStepUnit = Minute;
+        _timeStepUnit = TimeUnit::Minute;
     } else {
         throw InputError("Time step unit unrecognized or not implemented.");
     }
@@ -65,18 +65,18 @@ int TimeMachine::GetTimeStepCount() const {
 
 void TimeMachine::UpdateTimeStepInDays() {
     switch (_timeStepUnit) {
-        case Variable:
+        case TimeUnit::Variable:
             throw NotImplemented("TimeMachine::UpdateTimeStepInDays - Variable time step unit not yet supported");
-        case Week:
+        case TimeUnit::Week:
             _timeStepInDays = _timeStep * 7;
             break;
-        case Day:
+        case TimeUnit::Day:
             _timeStepInDays = _timeStep;
             break;
-        case Hour:
+        case TimeUnit::Hour:
             _timeStepInDays = _timeStep / 24.0;
             break;
-        case Minute:
+        case TimeUnit::Minute:
             _timeStepInDays = _timeStep / 1440.0;
             break;
         default:

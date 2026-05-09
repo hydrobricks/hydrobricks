@@ -18,7 +18,7 @@ void SplitterRain::SetParameters(const SplitterSettings&) {
 }
 
 void SplitterRain::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Precipitation) {
+    if (forcing->GetType() == VariableType::Precipitation) {
         _precipitation = forcing;
     } else {
         throw ModelConfigError("Forcing must be of type Precipitation");

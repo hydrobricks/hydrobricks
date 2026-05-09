@@ -48,14 +48,14 @@ class ActionsManager {
      *
      * @return number of actions.
      */
-    int GetActionCount() const;
+    [[nodiscard]] int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemCount() const;
+    [[nodiscard]] int GetSporadicActionItemCount() const;
 
     /**
      * Update the date during the simulation. Triggers the actions that are scheduled for the current date.
@@ -69,7 +69,7 @@ class ActionsManager {
      *
      * @return pointer to the sub basin.
      */
-    SubBasin* GetSubBasin() const;
+    [[nodiscard]] SubBasin* GetSubBasin() const;
 
     /**
      * Get hydro unit by ID.
@@ -77,7 +77,7 @@ class ActionsManager {
      * @param id ID of the hydro unit.
      * @return pointer to the hydro unit.
      */
-    HydroUnit* GetHydroUnitById(int id) const;
+    [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
 
     /**
      * Get the list of sporadic action dates (i.e., actions that are not recursive).

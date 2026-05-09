@@ -59,14 +59,14 @@ class TimeSeries {
      *
      * @return the time start of the time series.
      */
-    virtual double GetStart() const = 0;
+    [[nodiscard]] virtual double GetStart() const = 0;
 
     /**
      * Get the time end of the time series.
      *
      * @return the time end of the time series.
      */
-    virtual double GetEnd() const = 0;
+    [[nodiscard]] virtual double GetEnd() const = 0;
 
     /**
      * Get the sum of the time series data for the provided basin settings.
@@ -74,7 +74,7 @@ class TimeSeries {
      * @param basinSettings settings of the basin.
      * @return the sum of the time series data.
      */
-    virtual double GetTotal(const SettingsBasin* basinSettings) = 0;
+    [[nodiscard]] virtual double GetTotal(const SettingsBasin* basinSettings) = 0;
 
     /**
      * Get the data pointer for the provided unit ID.

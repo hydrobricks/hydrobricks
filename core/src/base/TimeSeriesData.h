@@ -23,21 +23,21 @@ class TimeSeriesData {
      * @param date date to get the value for.
      * @return the value for the provided date.
      */
-    virtual double GetValueFor(double date);
+    [[nodiscard]] virtual double GetValueFor(double date);
 
     /**
      * Get the current value.
      *
      * @return the current value.
      */
-    virtual double GetCurrentValue();
+    [[nodiscard]] virtual double GetCurrentValue();
 
     /**
      * Get the sum of the values.
      *
      * @return the sum of the values.
      */
-    virtual double GetSum();
+    [[nodiscard]] virtual double GetSum();
 
     /**
      * Set the cursor to the provided date.
@@ -59,14 +59,14 @@ class TimeSeriesData {
      *
      * @return the start date of the time series data.
      */
-    virtual double GetStart() const = 0;
+    [[nodiscard]] virtual double GetStart() const = 0;
 
     /**
      * Get the end date of the time series data.
      *
      * @return the end date of the time series data.
      */
-    virtual double GetEnd() const = 0;
+    [[nodiscard]] virtual double GetEnd() const = 0;
 
     /**
      * Check if the time series data is valid.

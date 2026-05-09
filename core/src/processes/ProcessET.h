@@ -19,7 +19,7 @@ class ProcessET : public Process {
     /**
      * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionCount() const override;
+    [[nodiscard]] int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()

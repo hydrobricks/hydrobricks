@@ -39,7 +39,7 @@ class Processor {
      *
      * @return the number of state variables.
      */
-    int GetStateVariableCount() const;
+    [[nodiscard]] int GetStateVariableCount() const;
 
     /**
      * Process the time step.

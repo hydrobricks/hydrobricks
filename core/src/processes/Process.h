@@ -153,14 +153,14 @@ class Process {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionCount() const = 0;
+    [[nodiscard]] virtual int GetConnectionCount() const = 0;
 
     /**
      * Get the change rates of the process.
      *
      * @return vector of change rates.
      */
-    virtual vecDouble GetChangeRates();
+    [[nodiscard]] virtual vecDouble GetChangeRates();
 
     /**
      * Store the water corresponding to the change rates in the outgoing fluxes.
@@ -201,7 +201,7 @@ class Process {
      * @param name name of the element to get.
      * @return pointer to the value of the given element.
      */
-    virtual double* GetValuePointer(const string& name);
+    [[nodiscard]] virtual double* GetValuePointer(const string& name);
 
     /**
      * Get the name of the process.
@@ -254,7 +254,7 @@ class Process {
      *
      * @return true if the process is a lateral process.
      */
-    [[nodiscard]] virtual bool IsLateralProcess() const {
+    [[nodiscard]] virtual bool IsLateralProcess() const noexcept {
         return false;
     }
 
@@ -263,7 +263,7 @@ class Process {
      *
      * @return true if the process has at least one output flux.
      */
-    [[nodiscard]] bool HasOutputFluxes() const {
+    [[nodiscard]] bool HasOutputFluxes() const noexcept {
         return !_outputs.empty();
     }
 
@@ -272,7 +272,7 @@ class Process {
      *
      * @return true if the process has a water container.
      */
-    [[nodiscard]] bool HasWaterContainer() const {
+    [[nodiscard]] bool HasWaterContainer() const noexcept {
         return _container != nullptr;
     }
 
@@ -287,14 +287,14 @@ class Process {
      *
      * @return sum of change rates from other processes.
      */
-    double GetSumChangeRatesOtherProcesses() const;
+    [[nodiscard]] double GetSumChangeRatesOtherProcesses() const;
 
     /**
      * Get the rates of the process.
      *
      * @return vector of rates.
      */
-    virtual vecDouble GetRates() = 0;
+    [[nodiscard]] virtual vecDouble GetRates() = 0;
 };
 
 #endif  // HYDROBRICKS_PROCESS_H

@@ -526,7 +526,7 @@ class SettingsModel {
      *
      * @return number of processes.
      */
-    int GetProcesseCount() const {
+    int GetProcessCount() const {
         assert(_selectedBrick);
         return static_cast<int>(_selectedBrick->processes.size());
     }

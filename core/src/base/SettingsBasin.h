@@ -200,7 +200,7 @@ class SettingsBasin {
      *
      * @return total area of the sub basin.
      */
-    double GetTotalArea() const;
+    [[nodiscard]] double GetTotalArea() const;
 
   private:
     vector<HydroUnitSettings> _hydroUnits;

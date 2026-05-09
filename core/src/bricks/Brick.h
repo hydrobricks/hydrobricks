@@ -200,7 +200,7 @@ class Brick {
      * @param type the type of content to get.
      * @return the content of the water container.
      */
-    virtual double GetContent(ContentType type) const;
+    [[nodiscard]] virtual double GetContent(ContentType type) const;
 
     /**
      * Update the content of the water container.
@@ -227,14 +227,14 @@ class Brick {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer() const;
+    [[nodiscard]] WaterContainer* GetWaterContainer() const;
 
     /**
      * Get the number of processes in the brick.
      *
      * @return number of processes.
      */
-    [[nodiscard]] size_t GetProcessCount() const {
+    [[nodiscard]] size_t GetProcessCount() const noexcept {
         return _processes.size();
     }
 
@@ -244,14 +244,14 @@ class Brick {
      * @param index index of the process.
      * @return pointer to the process.
      */
-    Process* GetProcess(size_t index) const;
+    [[nodiscard]] Process* GetProcess(size_t index) const;
 
     /**
      * Get the name of the brick.
      *
      * @return name of the brick.
      */
-    const string& GetName() const {
+    [[nodiscard]] const string& GetName() const noexcept {
         return _name;
     }
 

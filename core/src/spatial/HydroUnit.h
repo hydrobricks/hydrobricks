@@ -59,7 +59,7 @@ class HydroUnit {
      * @param unit The unit of the property to get.
      * @return The value of the property.
      */
-    double GetPropertyDouble(const string& name, const string& unit = "") const;
+    [[nodiscard]] double GetPropertyDouble(const string& name, const string& unit = "") const;
 
     /**
      * Get a float property of the hydro unit.
@@ -68,7 +68,7 @@ class HydroUnit {
      * @param unit The unit of the property to get.
      * @return The value of the property.
      */
-    float GetPropertyFloat(const string& name, const string& unit = "") const;
+    [[nodiscard]] float GetPropertyFloat(const string& name, const string& unit = "") const;
 
     /**
      * Get a property of the hydro unit as a string.
@@ -76,7 +76,7 @@ class HydroUnit {
      * @param name The name of the property to get.
      * @return The value of the property as a string.
      */
-    string GetPropertyString(const string& name) const;
+    [[nodiscard]] string GetPropertyString(const string& name) const;
 
     /**
      * Add a brick to the hydro unit.
@@ -113,7 +113,7 @@ class HydroUnit {
      * @param type The type of forcing to get.
      * @return The forcing of the specified type.
      */
-    Forcing* GetForcing(VariableType type) const;
+    [[nodiscard]] Forcing* GetForcing(VariableType type) const;
 
     /**
      * Add a lateral connection to the hydro unit.
@@ -165,14 +165,14 @@ class HydroUnit {
      *
      * @return The number of bricks.
      */
-    int GetBrickCount() const;
+    [[nodiscard]] int GetBrickCount() const;
 
     /**
      * Get the number of splitters in the hydro unit.
      *
      * @return The number of splitters.
      */
-    int GetSplitterCount() const;
+    [[nodiscard]] int GetSplitterCount() const;
 
     /**
      * Get a brick by its index.
@@ -180,7 +180,7 @@ class HydroUnit {
      * @param index The index of the brick to get.
      * @return The brick at the specified index.
      */
-    Brick* GetBrick(size_t index) const;
+    [[nodiscard]] Brick* GetBrick(size_t index) const;
 
     /**
      * Check if the hydro unit has a brick with a specific name.
@@ -196,7 +196,7 @@ class HydroUnit {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    Brick* GetBrick(const string& name) const;
+    [[nodiscard]] Brick* GetBrick(const string& name) const;
 
     /**
      * Try to get a brick by its name without throwing.
@@ -204,7 +204,7 @@ class HydroUnit {
      * @param name The name of the brick to get.
      * @return The brick with the specified name, or nullptr if not found.
      */
-    Brick* TryGetBrick(const string& name) const;
+    [[nodiscard]] Brick* TryGetBrick(const string& name) const;
 
     /**
      * Get a vector of all snowpack bricks in the hydro unit.
@@ -228,7 +228,7 @@ class HydroUnit {
      * @param name The name of the land cover to get.
      * @return The land cover with the specified name.
      */
-    LandCover* GetLandCover(const string& name) const;
+    [[nodiscard]] LandCover* GetLandCover(const string& name) const;
 
     /**
      * Try to get a land cover brick by its name without throwing.
@@ -236,7 +236,7 @@ class HydroUnit {
      * @param name The name of the land cover to get.
      * @return The land cover with the specified name, or nullptr if not found.
      */
-    LandCover* TryGetLandCover(const string& name) const;
+    [[nodiscard]] LandCover* TryGetLandCover(const string& name) const;
 
     /**
      * Get a splitter by its index.
@@ -244,7 +244,7 @@ class HydroUnit {
      * @param index The index of the splitter to get.
      * @return The splitter at the specified index.
      */
-    Splitter* GetSplitter(size_t index) const;
+    [[nodiscard]] Splitter* GetSplitter(size_t index) const;
 
     /**
      * Check if the hydro unit has a splitter with a specific name.
@@ -260,7 +260,7 @@ class HydroUnit {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    Splitter* GetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* GetSplitter(const string& name) const;
 
     /**
      * Try to get a splitter by its name without throwing.
@@ -268,7 +268,7 @@ class HydroUnit {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name, or nullptr if not found.
      */
-    Splitter* TryGetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* TryGetSplitter(const string& name) const;
 
     /**
      * Check if the hydro unit is properly configured.

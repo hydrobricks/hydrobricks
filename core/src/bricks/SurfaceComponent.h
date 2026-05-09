@@ -39,7 +39,7 @@ class SurfaceComponent : public Brick {
      *
      * @return The area fraction of the parent land cover.
      */
-    double GetParentAreaFraction() const;
+    [[nodiscard]] double GetParentAreaFraction() const;
 
     /**
      * @copydoc Brick::IsNull()

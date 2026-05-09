@@ -115,7 +115,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
         _subBasin->AddBrick(std::move(brickPtr));
 
         // Create the processes
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
@@ -216,7 +216,7 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
     BuildForcingConnections(brickSettings, unit, brick);
 
     // Create the processes
-    for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+    for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
         modelSettings.SelectProcess(iProcess);
         const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
@@ -245,7 +245,7 @@ void ModelHydro::UpdateSubBasinParameters(SettingsModel& modelSettings) {
         brick->SetParameters(brickSettings);
 
         // Update the processes
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
             Process* process = brick->GetProcess(iProcess);
@@ -274,7 +274,7 @@ void ModelHydro::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             brick->SetParameters(brickSettings);
 
             // Update the processes
-            for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+            for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
                 modelSettings.SelectProcess(iProcess);
                 const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
                 Process* process = brick->GetProcess(iProcess);
@@ -308,7 +308,7 @@ void ModelHydro::LinkSurfaceComponentsParents(SettingsModel& modelSettings, Hydr
 void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings) {
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         modelSettings.SelectSubBasinBrick(iBrick);
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = _subBasin->GetBrick(iBrick);
@@ -328,7 +328,7 @@ void ModelHydro::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings)
 void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
         modelSettings.SelectHydroUnitBrick(iBrick);
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
@@ -353,7 +353,7 @@ void ModelHydro::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings
 void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
     for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
         modelSettings.SelectSubBasinBrick(iBrick);
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = _subBasin->GetBrick(iBrick);
@@ -414,7 +414,7 @@ void ModelHydro::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
 void ModelHydro::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
     for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
         modelSettings.SelectHydroUnitBrick(iBrick);
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
@@ -755,7 +755,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
             iLabel++;
         }
 
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
@@ -826,7 +826,7 @@ void ModelHydro::ConnectLoggerToValues(SettingsModel& modelSettings) {
             iLabel++;
         }
 
-        for (int iProcess = 0; iProcess < modelSettings.GetProcesseCount(); ++iProcess) {
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 

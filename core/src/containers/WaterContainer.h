@@ -17,7 +17,7 @@ class WaterContainer {
      *
      * @return true if everything is correctly defined.
      */
-    virtual bool IsValid(bool checkProcesses = true) const;
+    [[nodiscard]] virtual bool IsValid(bool checkProcesses = true) const;
 
     /**
      * Validate that the water container is correctly defined.
@@ -80,14 +80,14 @@ class WaterContainer {
      *
      * @return dynamic content changes [mm]
      */
-    vecDoublePt GetDynamicContentChanges();
+    [[nodiscard]] vecDoublePt GetDynamicContentChanges();
 
     /**
      * Check if the water container has a maximum capacity.
      *
      * @return true if the water container has a maximum capacity, false otherwise
      */
-    [[nodiscard]] bool HasMaximumCapacity() const {
+    [[nodiscard]] bool HasMaximumCapacity() const noexcept {
         return _capacity != nullptr;
     }
 
@@ -96,7 +96,7 @@ class WaterContainer {
      *
      * @return maximum capacity [mm]
      */
-    double GetMaximumCapacity() const {
+    [[nodiscard]] double GetMaximumCapacity() const {
         assert(_capacity);
         return *_capacity;
     }
@@ -195,7 +195,7 @@ class WaterContainer {
      *
      * @return filling ratio [0-1]
      */
-    double GetTargetFillingRatio() const;
+    [[nodiscard]] double GetTargetFillingRatio() const;
 
     /**
      * Check if the water container is not empty.

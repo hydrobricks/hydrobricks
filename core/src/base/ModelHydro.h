@@ -102,35 +102,35 @@ class ModelHydro {
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge() const;
+    [[nodiscard]] double GetTotalOutletDischarge() const;
 
     /**
      * Get the total amount of water lost by evapotranspiration.
      *
      * @return total amount of water lost by evapotranspiration.
      */
-    double GetTotalET() const;
+    [[nodiscard]] double GetTotalET() const;
 
     /**
      * Get the total change in water storage.
      *
      * @return total change in water storage.
      */
-    double GetTotalWaterStorageChanges() const;
+    [[nodiscard]] double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total change in snow storage.
      *
      * @return total change in snow storage.
      */
-    double GetTotalSnowStorageChanges() const;
+    [[nodiscard]] double GetTotalSnowStorageChanges() const;
 
     /*
      * Get the total change in glacier storage.
      *
      * @return total change in glacier storage.
      */
-    double GetTotalGlacierStorageChanges() const;
+    [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
      * Add a time series to the model.
@@ -153,14 +153,14 @@ class ModelHydro {
      *
      * @return number of actions.
      */
-    int GetActionCount() const;
+    [[nodiscard]] int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemCount() const;
+    [[nodiscard]] int GetSporadicActionItemCount() const;
 
     /**
      * Create a time series and add it to the model.

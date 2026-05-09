@@ -30,7 +30,7 @@ class TimeSeriesData {
      *
      * @return the current value.
      */
-    [[nodiscard]] virtual double GetCurrentValue();
+    [[nodiscard]] virtual double GetCurrentValue() const;
 
     /**
      * Get the sum of the values.
@@ -108,7 +108,7 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetCurrentValue()
      */
-    double GetCurrentValue() override;
+    double GetCurrentValue() const override;
 
     /**
      * @copydoc TimeSeriesData::GetSum()
@@ -171,7 +171,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetCurrentValue()
      */
-    double GetCurrentValue() override;
+    double GetCurrentValue() const override;
 
     /**
      * @copydoc TimeSeriesData::GetSum()

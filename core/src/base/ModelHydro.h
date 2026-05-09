@@ -63,7 +63,7 @@ class ModelHydro {
      *
      * @return true if the forcing data were loaded.
      */
-    [[nodiscard]] bool ForcingLoaded();
+    [[nodiscard]] bool ForcingLoaded() const;
 
     /**
      * Run the model.

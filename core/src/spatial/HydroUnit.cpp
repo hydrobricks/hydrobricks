@@ -110,7 +110,7 @@ void HydroUnit::AddSplitter(std::unique_ptr<Splitter> splitter) {
     _splitters.push_back(std::move(splitter));
 }
 
-bool HydroUnit::HasForcing(VariableType type) {
+bool HydroUnit::HasForcing(VariableType type) const {
     return _forcingMap.find(type) != _forcingMap.end();
 }
 

@@ -98,7 +98,7 @@ class HydroUnit {
      * @param type The type of forcing to check for.
      * @return True if the hydro unit has the forcing, false otherwise.
      */
-    [[nodiscard]] bool HasForcing(VariableType type);
+    [[nodiscard]] bool HasForcing(VariableType type) const;
 
     /**
      * Attach a forcing to the hydro unit.

@@ -625,7 +625,7 @@ class SettingsModel {
      *
      * @return indices of the land cover bricks.
      */
-    vecInt GetLandCoverBricksIndices() const {
+    const vecInt& GetLandCoverBricksIndices() const {
         assert(_selectedStructure);
         return _selectedStructure->landCoverBricks;
     }

@@ -904,7 +904,7 @@ void ModelHydro::Validate() const {
     _subBasin->Validate();
 }
 
-bool ModelHydro::ForcingLoaded() {
+bool ModelHydro::ForcingLoaded() const {
     return !_timeSeries.empty();
 }
 

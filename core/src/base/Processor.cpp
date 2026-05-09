@@ -81,7 +81,7 @@ void Processor::ConnectToElementsToSolve() {
     }
 }
 
-void Processor::StoreStateVariableChanges(vecDoublePt& values) {
+void Processor::StoreStateVariableChanges(std::span<double*> values) {
     if (!values.empty()) {
         for (auto const& value : values) {
             _stateVariableChanges.push_back(value);

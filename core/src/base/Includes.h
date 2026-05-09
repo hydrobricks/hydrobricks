@@ -19,6 +19,7 @@
 #include <format>
 #include <memory>
 #include <numeric>
+#include <span>
 #include <string>
 #include <vector>
 

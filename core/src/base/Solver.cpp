@@ -54,7 +54,7 @@ void Solver::InitializeContainers() {
 void Solver::SaveStateVariables(int col) {
     assert(_processor);
     int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+    for (auto value : _processor->GetStateVariables()) {
         _stateVariableChanges(counter, col) = *value;
         counter++;
     }
@@ -111,7 +111,7 @@ void Solver::ApplyConstraintsFor(int col) {
 
 void Solver::ResetStateVariableChanges() {
     assert(_processor);
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+    for (auto value : _processor->GetStateVariables()) {
         *value = 0;
     }
 }
@@ -119,7 +119,7 @@ void Solver::ResetStateVariableChanges() {
 void Solver::SetStateVariablesToIteration(int col) {
     assert(_processor);
     int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+    for (auto value : _processor->GetStateVariables()) {
         *value = _stateVariableChanges(counter, col);
         counter++;
     }
@@ -128,7 +128,7 @@ void Solver::SetStateVariablesToIteration(int col) {
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
     assert(_processor);
     int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+    for (auto value : _processor->GetStateVariables()) {
         *value = (_stateVariableChanges(counter, col1) + _stateVariableChanges(counter, col2)) / 2.0;
         counter++;
     }

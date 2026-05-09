@@ -16,6 +16,7 @@
 #include <cmath>
 #include <concepts>
 #include <exception>
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <memory>
@@ -32,6 +33,7 @@
 
 using std::vector;
 using string = std::string;
+using ModelResult = std::expected<void, string>;
 using vecStr = vector<string>;
 using vecInt = vector<int>;
 using vecFloat = vector<float>;

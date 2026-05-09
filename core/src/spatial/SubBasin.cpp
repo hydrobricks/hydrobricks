@@ -15,15 +15,14 @@ SubBasin::~SubBasin() {
     // Unique_ptr members clean up owned objects automatically.
 }
 
-bool SubBasin::Initialize(SettingsBasin& basinSettings) {
+ModelResult SubBasin::Initialize(SettingsBasin& basinSettings) {
     try {
         BuildBasin(basinSettings);
     } catch (const std::exception& e) {
-        LogError("An exception occurred during basin initialization: {}.", e.what());
-        return false;
+        return std::unexpected(std::format("Basin initialization failed: {}", e.what()));
     }
 
-    return true;
+    return {};
 }
 
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
@@ -55,7 +54,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     }
 }
 
-bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
+ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     try {
         int hydroUnitCount = basinSettings.GetHydroUnitCount();
         int landCoverCount = basinSettings.GetLandCoverCount();
@@ -81,11 +80,10 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             }
         }
     } catch (const std::exception& e) {
-        LogError("An exception occurred while assigning the fractions: {}.", e.what());
-        return false;
+        return std::unexpected(std::format("Fraction assignment failed: {}", e.what()));
     }
 
-    return true;
+    return {};
 }
 
 void SubBasin::Reset() {

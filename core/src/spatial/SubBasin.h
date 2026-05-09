@@ -23,7 +23,7 @@ class SubBasin {
      * @param basinSettings The settings to initialize the sub-basin with.
      * @return True if the initialization was successful, false otherwise.
      */
-    [[nodiscard]] bool Initialize(SettingsBasin& basinSettings);
+    [[nodiscard]] ModelResult Initialize(SettingsBasin& basinSettings);
 
     /**
      * Build the basin with the given settings.
@@ -99,7 +99,7 @@ class SubBasin {
      * @param basinSettings The settings to assign the fractions with.
      * @return True if the assignment was successful, false otherwise.
      */
-    [[nodiscard]] bool AssignFractions(SettingsBasin& basinSettings);
+    [[nodiscard]] ModelResult AssignFractions(SettingsBasin& basinSettings);
 
     /**
      * Reset the sub-basin to its initial state.

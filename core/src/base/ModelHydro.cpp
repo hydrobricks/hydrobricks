@@ -23,35 +23,27 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 
 ModelHydro::~ModelHydro() = default;
 
-bool ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
     _ownedSubBasin = std::make_unique<SubBasin>();
     _subBasin = _ownedSubBasin.get();
-    if (!_subBasin->Initialize(basinSettings)) {
-        return false;
+    if (auto r = _subBasin->Initialize(basinSettings); !r) {
+        return r;
     }
-    if (!Initialize(modelSettings, basinSettings)) {
-        return false;
-    }
-
-    return true;
+    return Initialize(modelSettings, basinSettings);
 }
 
-bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses) {
+ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses) {
     try {
-        // Validate settings before building model
         if (!modelSettings.IsValid()) {
-            LogError("Model settings are not valid.");
-            return false;
+            return std::unexpected("Model settings are not valid.");
         }
 
         BuildModelStructure(modelSettings);
 
         _timer.Initialize(modelSettings.GetTimerSettings());
 
-        // Validate timer after initialization
         if (!_timer.IsValid()) {
-            LogError("Timer initialization failed validation.");
-            return false;
+            return std::unexpected("Timer initialization failed validation.");
         }
 
         _processor.Initialize(modelSettings.GetSolverSettings());
@@ -59,23 +51,20 @@ bool ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSe
             _logger.RecordFractions();
         }
         _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);
-        if (!_subBasin->AssignFractions(basinSettings)) {
-            return false;
+        if (auto r = _subBasin->AssignFractions(basinSettings); !r) {
+            return r;
         }
 
-        // Validate sub-basin after full setup
         if (!_subBasin->IsValid(checkProcesses)) {
-            LogError("Sub-basin failed validation after initialization.");
-            return false;
+            return std::unexpected("Sub-basin failed validation after initialization.");
         }
 
         ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
-        LogError("An exception occurred during model initialization: {}.", e.what());
-        return false;
+        return std::unexpected(std::format("Model initialization failed: {}", e.what()));
     }
 
-    return true;
+    return {};
 }
 
 void ModelHydro::BuildModelStructure(SettingsModel& modelSettings) {
@@ -908,9 +897,9 @@ bool ModelHydro::ForcingLoaded() const {
     return !_timeSeries.empty();
 }
 
-bool ModelHydro::Run() {
-    if (!InitializeTimeSeries()) {
-        return false;
+ModelResult ModelHydro::Run() {
+    if (auto r = InitializeTimeSeries(); !r) {
+        return r;
     }
 
     _logger.SaveInitialValues();
@@ -919,22 +908,20 @@ bool ModelHydro::Run() {
 
     while (!_timer.IsOver()) {
         if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
-            LogError("Failed running the model.");
-            return false;
+            return std::unexpected("Time step processing failed.");
         }
         _logger.SetDate(_timer.GetDate());
         _logger.Record();
         _timer.IncrementTime();
         _logger.Increment();
-        if (!UpdateForcing()) {
-            LogError("Failed updating the forcing data.");
-            return false;
+        if (auto r = UpdateForcing(); !r) {
+            return std::unexpected(std::format("Failed updating forcing: {}", r.error()));
         }
     }
 
     LogMessage("Simulation completed.");
 
-    return true;
+    return {};
 }
 
 void ModelHydro::Reset() {
@@ -1059,23 +1046,23 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
     return true;
 }
 
-bool ModelHydro::InitializeTimeSeries() {
+ModelResult ModelHydro::InitializeTimeSeries() {
     for (const auto& timeSeries : _timeSeries) {
         assert(timeSeries);
         if (!timeSeries->SetCursorToDate(_timer.GetDate())) {
-            return false;
+            return std::unexpected("Failed to position time series cursor at simulation start.");
         }
     }
 
-    return true;
+    return {};
 }
 
-bool ModelHydro::UpdateForcing() {
+ModelResult ModelHydro::UpdateForcing() {
     for (const auto& timeSeries : _timeSeries) {
         if (!timeSeries->AdvanceOneTimeStep()) {
-            return false;
+            return std::unexpected("Time series ended before simulation period.");
         }
     }
 
-    return true;
+    return {};
 }

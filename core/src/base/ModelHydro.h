@@ -24,7 +24,7 @@ class ModelHydro {
      * @param basinSettings settings of the basin.
      * @return true if the initialization was successful.
      */
-    bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    ModelResult InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
     /**
      * Initialize the model.
@@ -34,7 +34,7 @@ class ModelHydro {
      * @param checkProcesses whether to check the processes during validation.
      * @return true if the initialization was successful.
      */
-    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
+    ModelResult Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
 
     /**
      * Update the model parameters.
@@ -70,7 +70,7 @@ class ModelHydro {
      *
      * @return true if the model run was successful.
      */
-    [[nodiscard]] bool Run();
+    [[nodiscard]] ModelResult Run();
 
     /**
      * Reset the model.
@@ -285,9 +285,9 @@ class ModelHydro {
 
     void ConnectLoggerToValues(SettingsModel& modelSettings);
 
-    bool InitializeTimeSeries();
+    ModelResult InitializeTimeSeries();
 
-    bool UpdateForcing();
+    ModelResult UpdateForcing();
 };
 
 #endif  // HYDROBRICKS_MODEL_HYDRO_H

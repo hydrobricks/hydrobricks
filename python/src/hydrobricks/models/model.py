@@ -145,10 +145,9 @@ class Model(ABC):
             self.settings.set_timer(start_date, end_date, 1, "day")
 
             # Initialize the model (with sub basin creation)
-            if not self.model.init_with_basin(
+            self.model.init_with_basin(
                 self.settings.settings, spatial_structure.settings
-            ):
-                raise ModelError("Basin creation failed.", is_initialized=False)
+            )
 
             self._is_initialized = True
 
@@ -213,8 +212,7 @@ class Model(ABC):
             timer = Timer(text="Model simulation completed in {seconds:.2f} seconds")
             timer.start()
 
-            if not self.model.run():
-                raise ModelError("Model run failed.")
+            self.model.run()
 
             timer.stop()
 
@@ -225,12 +223,8 @@ class Model(ABC):
             logger.error("Configuration error during model run", exc_info=True)
             raise
         except (TypeError, ValueError) as e:
-            logger.error(
-                f"Invalid argument type or value in model run: {e}", exc_info=True
-            )
-            raise ConfigurationError(
-                f"Model run failed due to invalid input: {e}"
-            ) from e
+            logger.error(f"Model run failed: {e}", exc_info=True)
+            raise ModelError(f"Model run failed: {e}") from e
 
     @staticmethod
     def _cleanup() -> None:

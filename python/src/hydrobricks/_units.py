@@ -53,6 +53,75 @@ class Unit(StrEnumClass):
     KPA = auto()  # [kPa]
 
 
+_UNIT_ALIASES: dict[str, Unit] = {
+    "mm": Unit.MM,
+    "millimeter": Unit.MM,
+    "m": Unit.M,
+    "meter": Unit.M,
+    "km": Unit.KM,
+    "kilometer": Unit.KM,
+    "m2": Unit.M2,
+    "m^2": Unit.M2,
+    "m**2": Unit.M2,
+    "square meter": Unit.M2,
+    "km2": Unit.KM2,
+    "km^2": Unit.KM2,
+    "km**2": Unit.KM2,
+    "square kilometer": Unit.KM2,
+    "deg": Unit.DEG,
+    "degree": Unit.DEG,
+    "degrees": Unit.DEG,
+    "year": Unit.YEAR,
+    "years": Unit.YEAR,
+    "month": Unit.MONTH,
+    "months": Unit.MONTH,
+    "day": Unit.DAY,
+    "days": Unit.DAY,
+    "h": Unit.H,
+    "hour": Unit.H,
+    "hours": Unit.H,
+    "s": Unit.S,
+    "second": Unit.S,
+    "seconds": Unit.S,
+    "mm/d": Unit.MM_D,
+    "mm/day": Unit.MM_D,
+    "mm_d": Unit.MM_D,
+    "mm_day": Unit.MM_D,
+    "millimeter per day": Unit.MM_D,
+    "mm/h": Unit.MM_H,
+    "mm/hour": Unit.MM_H,
+    "mm_h": Unit.MM_H,
+    "mm_hour": Unit.MM_H,
+    "millimeter per hour": Unit.MM_H,
+    "m/s": Unit.M_S,
+    "m/second": Unit.M_S,
+    "m_s": Unit.M_S,
+    "m_second": Unit.M_S,
+    "meter per second": Unit.M_S,
+    "°C": Unit.C,
+    "C": Unit.C,
+    "celsius": Unit.C,
+    "°K": Unit.K,
+    "K": Unit.K,
+    "kelvin": Unit.K,
+    "%": Unit.PC,
+    "percent": Unit.PC,
+    "frac": Unit.FRAC,
+    "fraction": Unit.FRAC,
+    "MJ/m2/d": Unit.MJ_M2_D,
+    "MJ/m2/day": Unit.MJ_M2_D,
+    "MJ_m2_d": Unit.MJ_M2_D,
+    "MJ_m2_day": Unit.MJ_M2_D,
+    "W/m2": Unit.W_M2,
+    "W_m2": Unit.W_M2,
+    "W/m^2": Unit.W_M2,
+    "W/m**2": Unit.W_M2,
+    "Watt per square meter": Unit.W_M2,
+    "kPa": Unit.KPA,
+    "kilopascal": Unit.KPA,
+}
+
+
 def get_unit_enum(unit: str) -> Unit:
     """
     Convert a string representation to a Unit enum value.
@@ -92,52 +161,12 @@ def get_unit_enum(unit: str) -> Unit:
     if unit in ["-", ""] or "Unnamed" in unit:
         return Unit.NO_UNIT
 
-    if unit in ["mm", "millimeter"]:
-        return Unit.MM
-    elif unit in ["m", "meter"]:
-        return Unit.M
-    elif unit in ["km", "kilometer"]:
-        return Unit.KM
-    elif unit in ["m2", "m^2", "m**2", "square meter"]:
-        return Unit.M2
-    elif unit in ["km2", "km^2", "km**2", "square kilometer"]:
-        return Unit.KM2
-    elif unit in ["deg", "degree", "degrees"]:
-        return Unit.DEG
-    elif unit in ["year", "years"]:
-        return Unit.YEAR
-    elif unit in ["month", "months"]:
-        return Unit.MONTH
-    elif unit in ["day", "days"]:
-        return Unit.DAY
-    elif unit in ["h", "hour", "hours"]:
-        return Unit.H
-    elif unit in ["s", "second", "seconds"]:
-        return Unit.S
-    elif unit in ["mm/d", "mm/day", "mm_d", "mm_day", "millimeter per day"]:
-        return Unit.MM_D
-    elif unit in ["mm/h", "mm/hour", "mm_h", "mm_hour", "millimeter per hour"]:
-        return Unit.MM_H
-    elif unit in ["m/s", "m/second", "m_s", "m_second", "meter per second"]:
-        return Unit.M_S
-    elif unit in ["°C", "C", "celsius"]:
-        return Unit.C
-    elif unit in ["°K", "K", "kelvin"]:
-        return Unit.K
-    elif unit in ["%", "percent"]:
-        return Unit.PC
-    elif unit in ["frac", "fraction"]:
-        return Unit.FRAC
-    elif unit in ["MJ/m2/d", "MJ/m2/day", "MJ_m2_d", "MJ_m2_day"]:
-        return Unit.MJ_M2_D
-    elif unit in ["W/m2", "W_m2", "W/m^2", "W/m**2", "Watt per square meter"]:
-        return Unit.W_M2
-    elif unit in ["kPa", "kilopascal"]:
-        return Unit.KPA
-    else:
+    result = _UNIT_ALIASES.get(unit)
+    if result is None:
         raise DataError(
             f"Unknown unit: {unit}", data_type="unit", reason="Unsupported unit type"
         )
+    return result
 
 
 def get_unit_from_df_column(df: pd.DataFrame) -> Unit:

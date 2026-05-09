@@ -229,7 +229,7 @@ class Results:
         values = self.get_hydro_units_values(component, start_date, end_date)
         lc_areas = self.get_land_cover_areas(land_cover)
 
-        return values * lc_areas / lc_areas.sum(axis=0)
+        return (values * lc_areas).sum(axis=1) / lc_areas.sum(axis=1)
 
     def get_mean_swe(
         self, start_date: str | None = None, end_date: str | None = None

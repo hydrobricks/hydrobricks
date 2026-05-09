@@ -859,7 +859,7 @@ bool SettingsModel::IsValid() const {
 
 void SettingsModel::Validate() const {
     if (!IsValid()) {
-        string msg = std::format("SettingsModel validation failed. Solver: '%s', Start: '%s', End: '%s', TimeStep: %d",
+        string msg = std::format("SettingsModel validation failed. Solver: '{}', Start: '{}', End: '{}', TimeStep: {}",
                                  _solver.name, _timer.start, _timer.end, _timer.timeStep);
         throw ModelConfigError(msg);
     }

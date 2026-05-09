@@ -133,7 +133,7 @@ bool TimeMachine::IsValid() const {
 
 void TimeMachine::Validate() const {
     if (!IsValid()) {
-        string msg = std::format("TimeMachine validation failed. Start: %f, End: %f, TimeStep: %d, TimeStepInDays: %f",
+        string msg = std::format("TimeMachine validation failed. Start: {}, End: {}, TimeStep: {}, TimeStepInDays: {}",
                                  _start, _end, _timeStep, _timeStepInDays);
         throw ModelConfigError(msg);
     }

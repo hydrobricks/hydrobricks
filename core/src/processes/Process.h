@@ -10,6 +10,7 @@
 
 class Brick;
 class HydroUnit;
+class TimeMachine;
 class WaterContainer;
 
 class Process {
@@ -221,6 +222,16 @@ class Process {
     }
 
     /**
+     * Set the time machine (non-owning reference).
+     * Required by processes that depend on the current simulation date.
+     *
+     * @param timeMachine pointer to the time machine.
+     */
+    void SetTimeMachine(TimeMachine* timeMachine) {
+        _timeMachine = timeMachine;
+    }
+
+    /**
      * Get the water container associated with the process.
      *
      * @return pointer to the water container.
@@ -268,6 +279,7 @@ class Process {
   protected:
     string _name;
     WaterContainer* _container;                   // non-owning reference
+    TimeMachine* _timeMachine{nullptr};           // non-owning reference
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 
     /**

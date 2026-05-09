@@ -108,20 +108,11 @@ class TimeMachine {
     }
 
     /**
-     * Get the current date (MJD) from the global timer state.
-     *
-     * @return current date as MJD.
-     */
-    static double GetCurrentDate() {
-        return _currentDateStatic;
-    }
-
-    /**
-     * Get the current day of the year (1-366) from the static current date.
+     * Get the current day of the year (1-366) from the current date.
      *
      * @return current day of the year.
      */
-    static int GetCurrentDayOfYear();
+    int GetCurrentDayOfYear() const;
 
     /**
      * Check if the time machine is valid.
@@ -148,7 +139,6 @@ class TimeMachine {
     double _timeStepInDays;
     ParametersUpdater* _parametersUpdater;  // non-owning reference
     ActionsManager* _actionsManager;        // non-owning reference
-    static double _currentDateStatic;       // Holds the globally accessible current date (MJD)
 
     /**
      * Update the time step in days.

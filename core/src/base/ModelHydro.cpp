@@ -122,6 +122,7 @@ void ModelHydro::CreateSubBasinComponents(SettingsModel& modelSettings) {
             auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
             Process* process = processPtr.get();
             process->SetName(processSettings.name);
+            process->SetTimeMachine(&_timer);
             process->SetParameters(processSettings);
             brick->AddProcess(std::move(processPtr));
 
@@ -222,6 +223,7 @@ void ModelHydro::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* u
         auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
         Process* process = processPtr.get();
         process->SetName(processSettings.name);
+        process->SetTimeMachine(&_timer);
         process->SetHydroUnitProperties(unit, brick);
         process->SetParameters(processSettings);
         brick->AddProcess(std::move(processPtr));

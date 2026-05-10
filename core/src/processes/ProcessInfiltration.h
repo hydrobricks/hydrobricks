@@ -31,7 +31,7 @@ class ProcessInfiltration : public Process {
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * @copydoc Process::SetTargetBrick()

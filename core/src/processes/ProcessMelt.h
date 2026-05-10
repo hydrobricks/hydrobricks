@@ -24,7 +24,7 @@ class ProcessMelt : public Process {
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_H

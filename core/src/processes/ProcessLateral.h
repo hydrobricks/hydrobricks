@@ -24,7 +24,7 @@ class ProcessLateral : public Process {
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * Attach outgoing flux.

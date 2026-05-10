@@ -19,7 +19,7 @@ class HydroUnitProperty {
      * @param unit The unit to convert the value to. If empty, the original unit is used.
      * @return The value of the property.
      */
-    [[nodiscard]] double GetValue(const string& unit = "") const;
+    [[nodiscard]] double GetValue(std::string_view unit = "") const;
 
     /**
      * Get the value of the property as a string.

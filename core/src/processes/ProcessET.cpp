@@ -19,7 +19,7 @@ int ProcessET::GetConnectionCount() const {
     return 1;
 }
 
-double* ProcessET::GetValuePointer(const string& name) {
+double* ProcessET::GetValuePointer(std::string_view name) {
     if (name == "output") {
         return _outputs[0]->GetAmountPointer();
     }

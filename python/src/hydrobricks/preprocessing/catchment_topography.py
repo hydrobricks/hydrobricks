@@ -113,7 +113,8 @@ class CatchmentTopography:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = rxr.open_rasterio(dem_file).drop_vars("band")[0]
+            with rxr.open_rasterio(dem_file) as _raw:
+                xr_dem = _raw.drop_vars("band")[0].load()
 
         x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
         y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
@@ -176,9 +177,10 @@ class CatchmentTopography:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             dem_file = self.catchment.dem.files[0]
-            xr_dem = rxr.open_rasterio(dem_file).drop_vars("band")[0]
-            self.slope = xrs.slope(xr_dem, name="slope").to_numpy()
-            self.aspect = xrs.aspect(xr_dem, name="aspect").to_numpy()
+            with rxr.open_rasterio(dem_file) as _raw:
+                xr_dem = _raw.drop_vars("band")[0]
+                self.slope = xrs.slope(xr_dem, name="slope").to_numpy()
+                self.aspect = xrs.aspect(xr_dem, name="aspect").to_numpy()
 
     def get_hillshade(
         self, azimuth: float = 315, altitude: float = 45, z_factor: float = 1

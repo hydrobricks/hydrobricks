@@ -166,15 +166,11 @@ class Observations(TimeSeries1D):
         df["day_of_year"] = df.index.strftime("%m-%d")
         df["mean_discharge"] = df.groupby("day_of_year")["data"].transform("mean")
 
-        # Optional: save debug output
-        df.to_csv(
-            "mean_discharge.csv", columns=["mean_discharge"], float_format="%.12f"
-        )
-        df.to_csv("data.csv", columns=["data"], float_format="%.12f")
-
         # Apply date filtering if specified
-        if start_date and end_date:
-            df = df[(df.index >= start_date) & (df.index <= end_date)]
+        if start_date:
+            df = df[df.index >= start_date]
+        if end_date:
+            df = df[df.index <= end_date]
 
         return evaluate(df.mean_discharge.values, df.data.values, metric)
 
@@ -229,8 +225,8 @@ class Observations(TimeSeries1D):
         df = df.reset_index().set_index("year")
 
         if start_date and end_date:
-            idx = pd.date_range(start_date, end_date)
-            comparing_years = np.unique(idx.year)
+            date_range = pd.date_range(start_date, end_date)
+            comparing_years = np.unique(date_range.year)
 
             comparing_df = df.set_index("date")
             comparing_df = comparing_df[

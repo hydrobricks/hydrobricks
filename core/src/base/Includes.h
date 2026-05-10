@@ -14,12 +14,17 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <concepts>
 #include <exception>
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <memory>
 #include <numeric>
+#include <ranges>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 //---------------------------------
@@ -27,27 +32,27 @@
 //---------------------------------
 
 using std::vector;
-typedef std::string string;
-typedef vector<string> vecStr;
-typedef vector<int> vecInt;
-typedef vector<float> vecFloat;
-typedef vector<double> vecDouble;
-typedef vector<double*> vecDoublePt;
-typedef Eigen::ArrayXd axd;
-typedef Eigen::ArrayXi axi;
-typedef Eigen::ArrayXXd axxd;
-typedef vector<Eigen::ArrayXd> vecAxd;
-typedef vector<Eigen::ArrayXXd> vecAxxd;
+using string = std::string;
+using ModelResult = std::expected<void, string>;
+using vecStr = vector<string>;
+using vecInt = vector<int>;
+using vecFloat = vector<float>;
+using vecDouble = vector<double>;
+using vecDoublePt = vector<double*>;
+using axd = Eigen::ArrayXd;
+using axi = Eigen::ArrayXi;
+using axxd = Eigen::ArrayXXd;
+using vecAxd = vector<Eigen::ArrayXd>;
+using vecAxxd = vector<Eigen::ArrayXXd>;
 
-// A time structure
-typedef struct {
+struct Time {
     int year;
     int month;
     int day;
     int hour;
     int min;
     int sec;
-} Time;
+};
 
 //---------------------------------
 // Own classes

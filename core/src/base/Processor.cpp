@@ -17,7 +17,7 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
         throw std::runtime_error("Processor::Initialize - Processor is already initialized.");
     }
 
-    _solver = std::unique_ptr<Solver>(Solver::Factory(solverSettings));
+    _solver = Solver::Factory(solverSettings);
     _solver->Connect(this);
     ConnectToElementsToSolve();
     _solver->InitializeContainers();
@@ -81,7 +81,7 @@ void Processor::ConnectToElementsToSolve() {
     }
 }
 
-void Processor::StoreStateVariableChanges(vecDoublePt& values) {
+void Processor::StoreStateVariableChanges(std::span<double*> values) {
     if (!values.empty()) {
         for (auto const& value : values) {
             _stateVariableChanges.push_back(value);

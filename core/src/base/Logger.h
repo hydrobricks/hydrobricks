@@ -86,7 +86,7 @@ class Logger {
      *
      * @return outlet discharge series.
      */
-    axd GetOutletDischarge() const;
+    [[nodiscard]] axd GetOutletDischarge() const;
 
     /**
      * Get the indices of the sub-basin elements for a given item.
@@ -94,7 +94,7 @@ class Logger {
      * @param item item to search for.
      * @return vector of indices.
      */
-    vecInt GetIndicesForSubBasinElements(const string& item) const;
+    [[nodiscard]] vecInt GetIndicesForSubBasinElements(const string& item) const;
 
     /**
      * Get the indices of the hydro unit elements for a given item.
@@ -102,7 +102,7 @@ class Logger {
      * @param item item to search for.
      * @return vector of indices.
      */
-    vecInt GetIndicesForHydroUnitElements(const string& item) const;
+    [[nodiscard]] vecInt GetIndicesForHydroUnitElements(const string& item) const;
 
     /**
      * Get the sum of a sub-basin values for a given item.
@@ -110,7 +110,7 @@ class Logger {
      * @param item item to search for.
      * @return total value.
      */
-    double GetTotalSubBasin(const string& item) const;
+    [[nodiscard]] double GetTotalSubBasin(const string& item) const;
 
     /**
      * Get the sum of hydro unit values for a given item.
@@ -119,21 +119,21 @@ class Logger {
      * @param needsAreaWeighting if true, area weighting is applied.
      * @return total value.
      */
-    double GetTotalHydroUnits(const string& item, bool needsAreaWeighting = false) const;
+    [[nodiscard]] double GetTotalHydroUnits(const string& item, bool needsAreaWeighting = false) const;
 
     /**
      * Get the total outlet discharge over time.
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge() const;
+    [[nodiscard]] double GetTotalOutletDischarge() const;
 
     /**
      * Get the total ET over time.
      *
      * @return total ET.
      */
-    double GetTotalET() const;
+    [[nodiscard]] double GetTotalET() const;
 
     /**
      * Get the initial storage state of a sub-basin for a given tag.
@@ -141,7 +141,7 @@ class Logger {
      * @param tag tag to search for.
      * @return initial storage state.
      */
-    double GetSubBasinInitialStorageState(const string& tag) const;
+    [[nodiscard]] double GetSubBasinInitialStorageState(const string& tag) const;
 
     /**
      * Get the final storage state of a sub-basin for a given tag.
@@ -149,7 +149,7 @@ class Logger {
      * @param tag tag to search for.
      * @return final storage state.
      */
-    double GetSubBasinFinalStorageState(const string& tag) const;
+    [[nodiscard]] double GetSubBasinFinalStorageState(const string& tag) const;
 
     /**
      * Get the initial storage state of a hydro unit for a given tag.
@@ -157,7 +157,7 @@ class Logger {
      * @param tag tag to search for.
      * @return initial storage state.
      */
-    double GetHydroUnitsInitialStorageState(const string& tag) const;
+    [[nodiscard]] double GetHydroUnitsInitialStorageState(const string& tag) const;
 
     /**
      * Get the final storage state of a hydro unit for a given tag.
@@ -165,28 +165,28 @@ class Logger {
      * @param tag tag to search for.
      * @return final storage state.
      */
-    double GetHydroUnitsFinalStorageState(const string& tag) const;
+    [[nodiscard]] double GetHydroUnitsFinalStorageState(const string& tag) const;
 
     /**
      * Get the total water storage changes.
      *
      * @return the total water storage changes.
      */
-    double GetTotalWaterStorageChanges() const;
+    [[nodiscard]] double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total snow storage changes.
      *
      * @return the total snow storage changes.
      */
-    double GetTotalSnowStorageChanges() const;
+    [[nodiscard]] double GetTotalSnowStorageChanges() const;
 
     /**
      * Get the total glacier storage changes.
      *
      * @return the total glacier storage changes.
      */
-    double GetTotalGlacierStorageChanges() const;
+    [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
      * Get all the sub-basin values.

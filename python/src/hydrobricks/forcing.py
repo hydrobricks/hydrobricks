@@ -1,22 +1,9 @@
 from __future__ import annotations
 
 import logging
-import sys
-from typing import TYPE_CHECKING, Any
-
-if sys.version_info < (3, 11):
-    try:
-        from strenum import LowercaseStrEnum, StrEnum
-    except ImportError:
-        raise ImportError(
-            "Please install the 'StrEnum' package to use StrEnum "
-            "on Python versions prior to 3.11."
-        )
-else:
-    from enum import StrEnum
-
 from enum import auto
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -30,11 +17,55 @@ from hydrobricks._exceptions import (
     DependencyError,
     ForcingError,
 )
-from hydrobricks._optional import HAS_NETCDF, HAS_PYET
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET, StrEnumClass
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
 logger = logging.getLogger(__name__)
+
+# Maps canonical PET method names (and their short aliases) to pyet function names.
+_PET_METHOD_MAP: dict[str, str] = {
+    "Penman": "penman",
+    "penman": "penman",
+    "Penman-Monteith": "pm",
+    "pm": "pm",
+    "ASCE-PM": "pm_asce",
+    "pm_asce": "pm_asce",
+    "FAO-56": "pm_fao56",
+    "pm_fao56": "pm_fao56",
+    "Priestley-Taylor": "priestley_taylor",
+    "priestley_taylor": "priestley_taylor",
+    "Kimberly-Penman": "kimberly_penman",
+    "kimberly_penman": "kimberly_penman",
+    "Thom-Oliver": "thom_oliver",
+    "thom_oliver": "thom_oliver",
+    "Blaney-Criddle": "blaney_criddle",
+    "blaney_criddle": "blaney_criddle",
+    "Hamon": "hamon",
+    "hamon": "hamon",
+    "Romanenko": "romanenko",
+    "romanenko": "romanenko",
+    "Linacre": "linacre",
+    "linacre": "linacre",
+    "Haude": "haude",
+    "haude": "haude",
+    "Turc": "turc",
+    "turc": "turc",
+    "Jensen-Haise": "jensen_haise",
+    "jensen_haise": "jensen_haise",
+    "McGuinness-Bordne": "mcguinness_bordne",
+    "mcguinness_bordne": "mcguinness_bordne",
+    "Hargreaves": "hargreaves",
+    "hargreaves": "hargreaves",
+    "FAO-24 radiation": "fao_24",
+    "fao_24": "fao_24",
+    "Abtew": "abtew",
+    "abtew": "abtew",
+    "Makkink": "makkink",
+    "makkink": "makkink",
+    "Oudin": "oudin",
+    "oudin": "oudin",
+}
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -43,11 +74,6 @@ if TYPE_CHECKING:
 
 class Forcing:
     """Class for managing forcing (meteorological) data for hydrological models."""
-
-    if sys.version_info < (3, 11):
-        StrEnumClass = LowercaseStrEnum
-    else:
-        StrEnumClass = StrEnum
 
     class Variable(StrEnumClass):
         """Enumeration of supported meteorological variables."""
@@ -1164,50 +1190,12 @@ class Forcing:
         ValueError
             If the method name is not recognized.
         """
-        if method in ["Penman", "penman"]:
-            return pyet.penman(**pyet_args)
-        elif method in ["Penman-Monteith", "pm"]:
-            return pyet.pm(**pyet_args)
-        elif method in ["ASCE-PM", "pm_asce"]:
-            return pyet.pm_asce(**pyet_args)
-        elif method in ["FAO-56", "pm_fao56"]:
-            return pyet.pm_fao56(**pyet_args)
-        elif method in ["Priestley-Taylor", "priestley_taylor"]:
-            return pyet.priestley_taylor(**pyet_args)
-        elif method in ["Kimberly-Penman", "kimberly_penman"]:
-            return pyet.kimberly_penman(**pyet_args)
-        elif method in ["Thom-Oliver", "thom_oliver"]:
-            return pyet.thom_oliver(**pyet_args)
-        elif method in ["Blaney-Criddle", "blaney_criddle"]:
-            return pyet.blaney_criddle(**pyet_args)
-        elif method in ["Hamon", "hamon"]:
-            return pyet.hamon(**pyet_args)
-        elif method in ["Romanenko", "romanenko"]:
-            return pyet.romanenko(**pyet_args)
-        elif method in ["Linacre", "linacre"]:
-            return pyet.linacre(**pyet_args)
-        elif method in ["Haude", "haude"]:
-            return pyet.haude(**pyet_args)
-        elif method in ["Turc", "turc"]:
-            return pyet.turc(**pyet_args)
-        elif method in ["Jensen-Haise", "jensen_haise"]:
-            return pyet.jensen_haise(**pyet_args)
-        elif method in ["McGuinness-Bordne", "mcguinness_bordne"]:
-            return pyet.mcguinness_bordne(**pyet_args)
-        elif method in ["Hargreaves", "hargreaves"]:
-            return pyet.hargreaves(**pyet_args)
-        elif method in ["FAO-24 radiation", "fao_24"]:
-            return pyet.fao_24(**pyet_args)
-        elif method in ["Abtew", "abtew"]:
-            return pyet.abtew(**pyet_args)
-        elif method in ["Makkink", "makkink"]:
-            return pyet.makkink(**pyet_args)
-        elif method in ["Oudin", "oudin"]:
-            return pyet.oudin(**pyet_args)
-        else:
+        pyet_func_name = _PET_METHOD_MAP.get(method)
+        if pyet_func_name is None:
             raise ForcingError(
                 f"Unknown PET method: {method}", variable="PET", method=method
             )
+        return getattr(pyet, pyet_func_name)(**pyet_args)
 
     def _set_pyet_variables_data(
         self, pyet_args: dict, use: list[str], i_unit: int

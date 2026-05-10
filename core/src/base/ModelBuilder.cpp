@@ -1,0 +1,780 @@
+#include "ModelBuilder.h"
+
+#include "FluxForcing.h"
+#include "FluxSimple.h"
+#include "FluxToAtmosphere.h"
+#include "FluxToBrick.h"
+#include "FluxToBrickInstantaneous.h"
+#include "FluxToOutlet.h"
+#include "Forcing.h"
+#include "HydroUnit.h"
+#include "LandCover.h"
+#include "Logger.h"
+#include "Process.h"
+#include "ProcessLateral.h"
+#include "SettingsModel.h"
+#include "Splitter.h"
+#include "SubBasin.h"
+#include "SurfaceComponent.h"
+#include "TimeMachine.h"
+
+ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger)
+    : _subBasin(subBasin),
+      _timer(timer),
+      _logger(logger) {
+    assert(subBasin);
+    assert(timer);
+    assert(logger);
+}
+
+void ModelBuilder::BuildModelStructure(SettingsModel& modelSettings) {
+    if (modelSettings.GetStructureCount() > 1) {
+        throw NotImplemented(
+            std::format("ModelBuilder::BuildModelStructure - Multiple structures ({}) not yet supported",
+                        modelSettings.GetStructureCount()));
+    }
+
+    modelSettings.SelectStructure(1);
+
+    CreateSubBasinComponents(modelSettings);
+    CreateHydroUnitsComponents(modelSettings);
+}
+
+void ModelBuilder::CreateSubBasinComponents(SettingsModel& modelSettings) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
+        modelSettings.SelectSubBasinBrick(iBrick);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
+
+        auto brickPtr = Brick::Factory(brickSettings);
+        Brick* brick = brickPtr.get();
+        brick->SetName(brickSettings.name);
+        brick->SetParameters(brickSettings);
+        _subBasin->AddBrick(std::move(brickPtr));
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            auto processPtr = Process::Factory(processSettings, brick);
+            Process* process = processPtr.get();
+            process->SetName(processSettings.name);
+            process->SetTimeMachine(_timer);
+            process->SetParameters(processSettings);
+            brick->AddProcess(std::move(processPtr));
+
+            if (processSettings.type == "overflow") {
+                brick->GetWaterContainer()->LinkOverflow(process);
+            }
+        }
+    }
+
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
+        modelSettings.SelectSubBasinSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+
+        auto splitterPtr = Splitter::Factory(splitterSettings);
+        Splitter* splitter = splitterPtr.get();
+        splitter->SetName(splitterSettings.name);
+        _subBasin->AddSplitter(std::move(splitterPtr));
+    }
+
+    LinkSubBasinProcessesTargetBricks(modelSettings);
+    BuildSubBasinBricksFluxes(modelSettings);
+    BuildSubBasinSplittersFluxes(modelSettings);
+}
+
+void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
+    vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
+    vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
+    int hydroUnitCount = _subBasin->GetHydroUnitCount();
+
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+
+        for (int iBrick : surfaceCompIndices) {
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
+        }
+
+        for (int iBrick : landCoversIndices) {
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
+        }
+
+        for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+            if (std::find(surfaceCompIndices.begin(), surfaceCompIndices.end(), iBrick) != surfaceCompIndices.end()) {
+                continue;
+            }
+            if (std::find(landCoversIndices.begin(), landCoversIndices.end(), iBrick) != landCoversIndices.end()) {
+                continue;
+            }
+            CreateHydroUnitBrick(modelSettings, unit, iBrick);
+        }
+
+        for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
+            modelSettings.SelectHydroUnitSplitter(iSplitter);
+            const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+
+            auto splitterPtr = Splitter::Factory(splitterSettings);
+            Splitter* splitter = splitterPtr.get();
+            splitter->SetName(splitterSettings.name);
+            unit->AddSplitter(std::move(splitterPtr));
+
+            BuildForcingConnections(splitterSettings, unit, splitter);
+        }
+
+        LinkSurfaceComponentsParents(modelSettings, unit);
+    }
+
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
+        BuildHydroUnitBricksFluxes(modelSettings, unit);
+        BuildHydroUnitSplittersFluxes(modelSettings, unit);
+    }
+}
+
+void ModelBuilder::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick) {
+    modelSettings.SelectHydroUnitBrick(iBrick);
+    const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+
+    auto brickPtr = std::unique_ptr<Brick>(Brick::Factory(brickSettings));
+    Brick* brick = brickPtr.get();
+    brick->SetName(brickSettings.name);
+    brick->SetParameters(brickSettings);
+    unit->AddBrick(std::move(brickPtr));
+
+    BuildForcingConnections(brickSettings, unit, brick);
+
+    for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+        modelSettings.SelectProcess(iProcess);
+        const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+        auto processPtr = std::unique_ptr<Process>(Process::Factory(processSettings, brick));
+        Process* process = processPtr.get();
+        process->SetName(processSettings.name);
+        process->SetTimeMachine(_timer);
+        process->SetHydroUnitProperties(unit, brick);
+        process->SetParameters(processSettings);
+        brick->AddProcess(std::move(processPtr));
+
+        if (processSettings.type == "overflow") {
+            brick->GetWaterContainer()->LinkOverflow(process);
+        }
+
+        BuildForcingConnections(processSettings, unit, process);
+    }
+}
+
+void ModelBuilder::UpdateSubBasinParameters(SettingsModel& modelSettings) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
+        modelSettings.SelectSubBasinBrick(iBrick);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrick);
+        Brick* brick = _subBasin->GetBrick(iBrick);
+        brick->SetParameters(brickSettings);
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+            Process* process = brick->GetProcess(iProcess);
+            process->SetParameters(processSettings);
+        }
+    }
+
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
+        modelSettings.SelectSubBasinSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+        Splitter* splitter = _subBasin->GetSplitter(iSplitter);
+        splitter->SetParameters(splitterSettings);
+    }
+}
+
+void ModelBuilder::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+
+        for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+            modelSettings.SelectHydroUnitBrick(iBrick);
+            const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
+            brick->SetParameters(brickSettings);
+
+            for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+                modelSettings.SelectProcess(iProcess);
+                const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+                Process* process = brick->GetProcess(iProcess);
+                process->SetParameters(processSettings);
+            }
+        }
+
+        for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
+            modelSettings.SelectHydroUnitSplitter(iSplitter);
+            const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+            Splitter* splitter = unit->GetSplitter(iSplitter);
+            splitter->SetParameters(splitterSettings);
+        }
+    }
+}
+
+void ModelBuilder::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSurfaceComponentBrickCount(); ++iBrick) {
+        const BrickSettings& brickSettings = modelSettings.GetSurfaceComponentBrickSettings(iBrick);
+        if (!brickSettings.parent.empty()) {
+            auto surfaceComponentBrick = dynamic_cast<SurfaceComponent*>(unit->GetBrick(brickSettings.name));
+            auto landCoverBrick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.parent));
+            assert(surfaceComponentBrick);
+            assert(landCoverBrick);
+            surfaceComponentBrick->SetParent(landCoverBrick);
+        }
+    }
+}
+
+void ModelBuilder::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
+        modelSettings.SelectSubBasinBrick(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            Brick* brick = _subBasin->GetBrick(iBrick);
+            Process* process = brick->GetProcess(iProcess);
+
+            if (process->NeedsTargetBrickLinking()) {
+                if (processSettings.outputs.size() != 1) {
+                    throw ModelConfigError("There can only be a single process output for brick linking.");
+                }
+                Brick* targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                process->SetTargetBrick(targetBrick);
+            }
+        }
+    }
+}
+
+void ModelBuilder::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+        modelSettings.SelectHydroUnitBrick(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
+            Process* process = brick->GetProcess(iProcess);
+
+            if (process->NeedsTargetBrickLinking()) {
+                if (processSettings.outputs.size() != 1) {
+                    throw ModelConfigError("There can only be a single process output for brick linking.");
+                }
+                Brick* targetBrick = nullptr;
+                if (unit->HasBrick(processSettings.outputs[0].target)) {
+                    targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                } else {
+                    targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                }
+                process->SetTargetBrick(targetBrick);
+            }
+        }
+    }
+}
+
+void ModelBuilder::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
+    for (int iBrick = 0; iBrick < modelSettings.GetSubBasinBrickCount(); ++iBrick) {
+        modelSettings.SelectSubBasinBrick(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            Brick* brick = _subBasin->GetBrick(iBrick);
+            Process* process = brick->GetProcess(iProcess);
+
+            if (process->ToAtmosphere()) {
+                auto fluxPtr = std::make_unique<FluxToAtmosphere>();
+                process->AttachFluxOut(std::move(fluxPtr));
+                continue;
+            }
+
+            for (const auto& output : processSettings.outputs) {
+                std::unique_ptr<Flux> fluxPtr;
+                Flux* flux;
+
+                if (output.target == "outlet") {
+                    fluxPtr = std::make_unique<FluxToOutlet>();
+                    flux = fluxPtr.get();
+                    flux->SetType(output.fluxType);
+                    _subBasin->AttachOutletFlux(flux);
+
+                } else if (_subBasin->HasBrick(output.target)) {
+                    Brick* targetBrick = _subBasin->GetBrick(output.target);
+                    if (output.isInstantaneous) {
+                        fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
+                    } else {
+                        fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                    }
+                    flux = fluxPtr.get();
+                    flux->SetType(output.fluxType);
+                    targetBrick->AttachFluxIn(flux);
+
+                } else if (_subBasin->HasSplitter(output.target)) {
+                    Splitter* targetSplitter = _subBasin->GetSplitter(output.target);
+                    fluxPtr = std::make_unique<FluxSimple>();
+                    flux = fluxPtr.get();
+                    flux->SetType(output.fluxType);
+                    flux->SetAsStatic();
+                    targetSplitter->AttachFluxIn(flux);
+
+                } else {
+                    throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
+                }
+
+                process->AttachFluxOut(std::move(fluxPtr));
+            }
+        }
+    }
+}
+
+void ModelBuilder::BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+        modelSettings.SelectHydroUnitBrick(iBrick);
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
+            Process* process = brick->GetProcess(iProcess);
+
+            if (process->ToAtmosphere()) {
+                auto fluxPtr = std::make_unique<FluxToAtmosphere>();
+                process->AttachFluxOut(std::move(fluxPtr));
+                continue;
+            }
+
+            for (const auto& output : processSettings.outputs) {
+                if (output.target == "outlet") {
+                    auto fluxPtr = std::make_unique<FluxToOutlet>();
+                    Flux* flux = fluxPtr.get();
+                    flux->SetAsStatic();
+                    flux->SetType(output.fluxType);
+                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                    if (brick->CanHaveAreaFraction()) {
+                        flux->NeedsWeighting(true);
+                    }
+                    _subBasin->AttachOutletFlux(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
+
+                } else if (output.target == "lateral") {
+                    assert(process->IsLateralProcess());
+                    auto lateralProcess = dynamic_cast<ProcessLateral*>(process);
+
+                    for (auto& lateralConnection : unit->GetLateralConnections()) {
+                        HydroUnit* receiver = lateralConnection->GetReceiver();
+
+                        if (output.fluxType == ContentType::Snow) {
+                            for (auto& targetBrick : receiver->GetSnowpacks()) {
+                                std::unique_ptr<Flux> fluxPtr;
+                                if (output.isInstantaneous) {
+                                    fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
+                                } else {
+                                    fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                                }
+
+                                Flux* flux = fluxPtr.get();
+                                if (output.isStatic) {
+                                    flux->SetAsStatic();
+                                }
+                                flux->SetType(output.fluxType);
+                                flux->NeedsWeighting(true);
+                                targetBrick->AttachFluxIn(flux);
+                                lateralProcess->AttachFluxOutWithWeight(std::move(fluxPtr),
+                                                                        lateralConnection->GetFraction());
+                            }
+                        } else {
+                            throw NotImplemented(
+                                std::format("ModelBuilder::BuildHydroUnitBricksFluxes - Lateral flux type {} "
+                                            "not yet supported",
+                                            static_cast<int>(output.fluxType)));
+                        }
+                    }
+
+                } else if (unit->HasBrick(output.target) || _subBasin->HasBrick(output.target)) {
+                    bool toSubBasin = false;
+                    Brick* targetBrick = nullptr;
+
+                    if (unit->HasBrick(output.target)) {
+                        targetBrick = unit->GetBrick(output.target);
+                    } else {
+                        targetBrick = _subBasin->GetBrick(output.target);
+                        toSubBasin = true;
+                    }
+
+                    std::unique_ptr<Flux> fluxPtr;
+                    if (output.isInstantaneous) {
+                        fluxPtr = std::make_unique<FluxToBrickInstantaneous>(targetBrick);
+                    } else {
+                        fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                    }
+
+                    Flux* flux = fluxPtr.get();
+                    flux->SetType(output.fluxType);
+
+                    if (brick->CanHaveAreaFraction() && !targetBrick->CanHaveAreaFraction()) {
+                        flux->NeedsWeighting(true);
+                    }
+
+                    if (toSubBasin) {
+                        flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                        flux->SetAsStatic();
+                    } else if (output.isStatic) {
+                        flux->SetAsStatic();
+                    }
+
+                    targetBrick->AttachFluxIn(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
+
+                } else if (unit->HasSplitter(output.target) || _subBasin->HasSplitter(output.target)) {
+                    bool toSubBasin = false;
+                    Splitter* targetSplitter = nullptr;
+
+                    if (unit->HasSplitter(output.target)) {
+                        targetSplitter = unit->GetSplitter(output.target);
+                    } else {
+                        targetSplitter = _subBasin->GetSplitter(output.target);
+                        toSubBasin = true;
+                    }
+
+                    auto fluxPtr = std::make_unique<FluxSimple>();
+                    Flux* flux = fluxPtr.get();
+                    flux->SetType(output.fluxType);
+                    flux->SetAsStatic();
+
+                    if (brick->CanHaveAreaFraction()) {
+                        flux->NeedsWeighting(true);
+                    }
+
+                    if (toSubBasin) {
+                        flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                    }
+
+                    targetSplitter->AttachFluxIn(flux);
+                    process->AttachFluxOut(std::move(fluxPtr));
+
+                } else {
+                    throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
+                }
+            }
+        }
+    }
+}
+
+void ModelBuilder::BuildSubBasinSplittersFluxes(SettingsModel& modelSettings) {
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
+        modelSettings.SelectSubBasinSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+
+        Splitter* splitter = _subBasin->GetSplitter(iSplitter);
+
+        for (const auto& output : splitterSettings.outputs) {
+            std::unique_ptr<Flux> fluxPtr;
+            Flux* flux;
+
+            if (output.target == "outlet") {
+                fluxPtr = std::make_unique<FluxToOutlet>();
+                flux = fluxPtr.get();
+                flux->SetType(output.fluxType);
+                _subBasin->AttachOutletFlux(flux);
+
+            } else if (_subBasin->HasBrick(output.target)) {
+                Brick* targetBrick = _subBasin->GetBrick(output.target);
+                fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                flux = fluxPtr.get();
+                flux->SetAsStatic();
+                flux->SetType(output.fluxType);
+                targetBrick->AttachFluxIn(flux);
+
+            } else if (_subBasin->HasSplitter(output.target)) {
+                Splitter* targetSplitter = _subBasin->GetSplitter(output.target);
+                fluxPtr = std::make_unique<FluxSimple>();
+                flux = fluxPtr.get();
+                flux->SetAsStatic();
+                flux->SetType(output.fluxType);
+                targetSplitter->AttachFluxIn(flux);
+
+            } else {
+                throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
+            }
+
+            splitter->AttachFluxOut(std::move(fluxPtr));
+        }
+    }
+}
+
+void ModelBuilder::BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
+        modelSettings.SelectHydroUnitSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+
+        Splitter* splitter = unit->GetSplitter(iSplitter);
+
+        for (const auto& output : splitterSettings.outputs) {
+            std::unique_ptr<Flux> fluxPtr;
+            Flux* flux;
+
+            if (output.target == "outlet") {
+                fluxPtr = std::make_unique<FluxToOutlet>();
+                flux = fluxPtr.get();
+                flux->SetType(output.fluxType);
+                flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                _subBasin->AttachOutletFlux(flux);
+
+            } else if (unit->HasBrick(output.target) || _subBasin->HasBrick(output.target)) {
+                bool toSubBasin = false;
+                Brick* targetBrick = nullptr;
+
+                if (unit->HasBrick(output.target)) {
+                    targetBrick = unit->GetBrick(output.target);
+                } else {
+                    targetBrick = _subBasin->GetBrick(output.target);
+                    toSubBasin = true;
+                }
+
+                fluxPtr = std::make_unique<FluxToBrick>(targetBrick);
+                flux = fluxPtr.get();
+                flux->SetAsStatic();
+                flux->SetType(output.fluxType);
+
+                if (toSubBasin) {
+                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                }
+
+                targetBrick->AttachFluxIn(flux);
+
+            } else if (unit->HasSplitter(output.target) || _subBasin->HasSplitter(output.target)) {
+                bool toSubBasin = false;
+                Splitter* targetSplitter = nullptr;
+
+                if (unit->HasSplitter(output.target)) {
+                    targetSplitter = unit->GetSplitter(output.target);
+                } else {
+                    targetSplitter = _subBasin->GetSplitter(output.target);
+                    toSubBasin = true;
+                }
+
+                fluxPtr = std::make_unique<FluxSimple>();
+                flux = fluxPtr.get();
+                flux->SetAsStatic();
+                flux->SetType(output.fluxType);
+
+                if (toSubBasin) {
+                    flux->SetFractionUnitArea(unit->GetArea() / _subBasin->GetArea());
+                }
+
+                targetSplitter->AttachFluxIn(flux);
+
+            } else {
+                throw ModelConfigError(std::format("The target {} to attach the flux was no found", output.target));
+            }
+
+            splitter->AttachFluxOut(std::move(fluxPtr));
+        }
+    }
+}
+
+void ModelBuilder::BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick) {
+    for (auto forcingType : brickSettings.forcing) {
+        if (!unit->HasForcing(forcingType)) {
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
+        }
+
+        auto forcing = unit->GetForcing(forcingType);
+        auto forcingFlux = std::make_unique<FluxForcing>();
+        forcingFlux->AttachForcing(forcing);
+        brick->AttachFluxIn(std::move(forcingFlux));
+    }
+}
+
+void ModelBuilder::BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process) {
+    for (auto forcingType : processSettings.forcing) {
+        if (!unit->HasForcing(forcingType)) {
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
+        }
+
+        auto forcing = unit->GetForcing(forcingType);
+        process->AttachForcing(forcing);
+    }
+}
+
+void ModelBuilder::BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit,
+                                           Splitter* splitter) {
+    for (auto forcingType : splitterSettings.forcing) {
+        if (!unit->HasForcing(forcingType)) {
+            unit->AddForcing(std::make_unique<Forcing>(forcingType));
+        }
+
+        auto forcing = unit->GetForcing(forcingType);
+        splitter->AttachForcing(forcing);
+    }
+}
+
+void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
+    if (modelSettings.GetStructureCount() > 1) {
+        throw NotImplemented(
+            std::format("ModelBuilder::ConnectLoggerToValues - Multiple structures ({}) not yet supported",
+                        modelSettings.GetStructureCount()));
+    }
+
+    double* valPt = nullptr;
+
+    // Sub basin values
+    int iLabel = 0;
+
+    for (int iBrickType = 0; iBrickType < modelSettings.GetSubBasinBrickCount(); ++iBrickType) {
+        modelSettings.SelectSubBasinBrick(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetSubBasinBrickSettings(iBrickType);
+
+        for (const auto& logItem : brickSettings.logItems) {
+            valPt = _subBasin->GetBrick(iBrickType)->GetBaseValuePointer(logItem);
+            if (valPt == nullptr) {
+                valPt = _subBasin->GetBrick(iBrickType)->GetValuePointer(logItem);
+            }
+            if (valPt == nullptr) {
+                throw ShouldNotHappen(
+                    std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin brick {}",
+                                logItem, iBrickType));
+            }
+            _logger->SetSubBasinValuePointer(iLabel, valPt);
+            iLabel++;
+        }
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            for (const auto& logItem : processSettings.logItems) {
+                valPt = _subBasin->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
+                if (valPt == nullptr) {
+                    throw ShouldNotHappen(
+                        std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin "
+                                    "process {} of brick {}",
+                                    logItem, iProcess, iBrickType));
+                }
+                _logger->SetSubBasinValuePointer(iLabel, valPt);
+                iLabel++;
+            }
+        }
+    }
+
+    for (int iSplitter = 0; iSplitter < modelSettings.GetSubBasinSplitterCount(); ++iSplitter) {
+        modelSettings.SelectSubBasinSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetSubBasinSplitterSettings(iSplitter);
+
+        for (const auto& logItem : splitterSettings.logItems) {
+            valPt = _subBasin->GetSplitter(iSplitter)->GetValuePointer(logItem);
+            if (valPt == nullptr) {
+                throw ShouldNotHappen(
+                    std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin "
+                                "splitter {}",
+                                logItem, iSplitter));
+            }
+            _logger->SetSubBasinValuePointer(iLabel, valPt);
+            iLabel++;
+        }
+    }
+
+    vecStr genericLogLabels = modelSettings.GetSubBasinGenericLogLabels();
+    for (auto& genericLogLabel : genericLogLabels) {
+        valPt = _subBasin->GetValuePointer(genericLogLabel);
+        if (valPt == nullptr) {
+            throw ShouldNotHappen(
+                std::format("ModelBuilder::ConnectLoggerToValues - Generic log label '{}' not found in sub-basin",
+                            genericLogLabel));
+        }
+        _logger->SetSubBasinValuePointer(iLabel, valPt);
+        iLabel++;
+    }
+
+    // Hydro unit values
+    iLabel = 0;
+
+    for (int iBrickType = 0; iBrickType < modelSettings.GetHydroUnitBrickCount(); ++iBrickType) {
+        modelSettings.SelectHydroUnitBrick(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+
+        for (const auto& logItem : brickSettings.logItems) {
+            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+                auto unit = _subBasin->GetHydroUnit(iUnit);
+                auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
+                valPt = brick->GetBaseValuePointer(logItem);
+                if (valPt == nullptr) {
+                    valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
+                                ->GetValuePointer(logItem);
+                }
+                if (valPt == nullptr) {
+                    throw ShouldNotHappen(
+                        std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro unit "
+                                    "{} brick {}",
+                                    logItem, iUnit, iBrickType));
+                }
+                _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+            }
+            iLabel++;
+        }
+
+        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+            modelSettings.SelectProcess(iProcess);
+            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+
+            for (const auto& logItem : processSettings.logItems) {
+                for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+                    auto unit = _subBasin->GetHydroUnit(iUnit);
+                    auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
+                    auto process = brick->GetProcess(iProcess);
+                    valPt = process->GetValuePointer(logItem);
+                    if (valPt == nullptr) {
+                        throw ShouldNotHappen(
+                            std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro "
+                                        "unit {} process {} of brick {}",
+                                        logItem, iUnit, iProcess, iBrickType));
+                    }
+                    _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+                }
+                iLabel++;
+            }
+        }
+    }
+
+    // Splitter values
+    for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
+        modelSettings.SelectHydroUnitSplitter(iSplitter);
+        const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+
+        for (const auto& logItem : splitterSettings.logItems) {
+            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+                HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+                valPt = unit->GetSplitter(iSplitter)->GetValuePointer(logItem);
+                if (valPt == nullptr) {
+                    throw ShouldNotHappen(
+                        std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro unit "
+                                    "{} splitter {}",
+                                    logItem, iUnit, iSplitter));
+                }
+                _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+                iLabel++;
+            }
+        }
+    }
+
+    // Fractions
+    iLabel = 0;
+
+    for (int iBrickType : modelSettings.GetLandCoverBricksIndices()) {
+        modelSettings.SelectHydroUnitBrick(iBrickType);
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+
+        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+            HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+            LandCover* brick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.name));
+            valPt = brick->GetAreaFractionPointer();
+
+            if (valPt == nullptr) {
+                throw ShouldNotHappen(
+                    std::format("ModelBuilder::ConnectLoggerToValues - Area fraction pointer not found for land "
+                                "cover brick '{}' in unit {}",
+                                brickSettings.name, iUnit));
+            }
+            _logger->SetHydroUnitFractionPointer(iUnit, iLabel, valPt);
+        }
+        iLabel++;
+    }
+}

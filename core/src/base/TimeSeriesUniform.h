@@ -42,22 +42,22 @@ class TimeSeriesUniform : public TimeSeries {
     /**
      * @copydoc TimeSeries::GetStart()
      */
-    double GetStart() const override;
+    [[nodiscard]] double GetStart() const override;
 
     /**
      * @copydoc TimeSeries::GetEnd()
      */
-    double GetEnd() const override;
+    [[nodiscard]] double GetEnd() const override;
 
     /**
      * @copydoc TimeSeries::GetTotal()
      */
-    double GetTotal(const SettingsBasin* basinSettings) override;
+    [[nodiscard]] double GetTotal(const SettingsBasin* basinSettings) override;
 
     /**
      * @copydoc TimeSeries::GetDataPointer()
      */
-    TimeSeriesData* GetDataPointer(int unitId) override;
+    [[nodiscard]] TimeSeriesData* GetDataPointer(int unitId) override;
 
     /**
      * @copydoc TimeSeries::IsValid()

@@ -156,7 +156,7 @@ int Find(const double* start, const double* end, double value, double tolerance 
  * @param showWarning option to show a warning if the value was not found in the vector (default: true).
  * @return The index of the searched value.
  */
-template <class T>
+template <std::totally_ordered T>
 int FindT(const T* start, const T* end, T value, T tolerance = 0, bool showWarning = true);
 
 /**

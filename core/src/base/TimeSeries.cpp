@@ -7,7 +7,7 @@
 TimeSeries::TimeSeries(VariableType type)
     : _type(type) {}
 
-bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
+bool TimeSeries::Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -54,7 +54,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
             VariableType varType = MatchVariableType(varName);
 
             // Instantiate time series
-            auto timeSeries = new TimeSeriesDistributed(varType);
+            auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
             // Retrieve values from netCDF
             vecInt dimIds = file.GetVarDimIds(iVar, 2);
@@ -77,7 +77,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
                 }
             }
 
-            vecTimeSeries.push_back(timeSeries);
+            vecTimeSeries.push_back(std::move(timeSeries));
         }
 
     } catch (std::exception& e) {
@@ -88,7 +88,8 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
     return true;
 }
 
-TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi& ids, const axxd& data) {
+std::unique_ptr<TimeSeries> TimeSeries::Create(const string& varName, const axd& time, const axi& ids,
+                                               const axxd& data) {
     // Get time
     Time startSt = GetTimeStructFromMJD(time[0]);
     Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
@@ -105,7 +106,7 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     VariableType varType = MatchVariableType(varName);
 
     // Instantiate time series
-    auto timeSeries = new TimeSeriesDistributed(varType);
+    auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
         LogError("Dimension mismatch in the forcing data.");
@@ -129,20 +130,20 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 VariableType TimeSeries::MatchVariableType(const string& varName) {
     VariableType varType;
     if (StringsMatch(varName, "precipitation") || StringsMatch(varName, "p")) {
-        varType = Precipitation;
+        varType = VariableType::Precipitation;
     } else if (StringsMatch(varName, "temperature") || StringsMatch(varName, "t")) {
-        varType = Temperature;
+        varType = VariableType::Temperature;
     } else if (StringsMatch(varName, "solar_radiation") || StringsMatch(varName, "r_solar") ||
                StringsMatch(varName, "r")) {
-        varType = Radiation;
+        varType = VariableType::Radiation;
     } else if (StringsMatch(varName, "pet") || StringsMatch(varName, "etp")) {
-        varType = PET;
+        varType = VariableType::PET;
     } else if (StringsMatch(varName, "custom_1")) {
-        varType = Custom1;
+        varType = VariableType::Custom1;
     } else if (StringsMatch(varName, "custom_2")) {
-        varType = Custom2;
+        varType = VariableType::Custom2;
     } else if (StringsMatch(varName, "custom_3")) {
-        varType = Custom3;
+        varType = VariableType::Custom3;
     } else {
         throw InputError(std::format("Unrecognized variable type ({}) in the provided data.", varName));
     }
@@ -151,13 +152,13 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
 
 void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& timeUnit) {
     timeStep = 0;
-    timeUnit = Day;
+    timeUnit = TimeUnit::Day;
     if (timeStepData == 1.0) {
         timeStep = 1;
     } else if (timeStepData > 1.0) {
         timeStep = static_cast<int>(round(timeStepData));
     } else if (timeStepData < 1.0) {
-        timeUnit = Hour;
+        timeUnit = TimeUnit::Hour;
         timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
         throw ShouldNotHappen(std::format("TimeSeries::ExtractTimeStep - Invalid time step value: {}", timeStepData));

@@ -57,7 +57,7 @@ class Action {
      * @param date the date to insert.
      * @return the index for insertion.
      */
-    int GetIndexForInsertion(double date) const;
+    [[nodiscard]] int GetIndexForInsertion(double date) const;
 
     /**
      * Check if the land cover area fraction is valid.

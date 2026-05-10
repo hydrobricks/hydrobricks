@@ -1,11 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## UNRELEASED VERSION
+## 0.8.7 - 2026-05-10
 
 ### Breaking changes
 
@@ -13,7 +13,36 @@ and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Addition of custom C++ and Python exception classes.
+- Add custom exception classes (C++ and Python).
+- Add additional IsValid() functions (C++).
+- Add BrickCategory enum (C++).
+- Add Has* methods to various classes for better state checking (C++).
+- Add TryGet methods to HydroUnit (C++).
+
+### Fixed
+
+- Handle decreasing coordinate axes in TimeSeries2D spatial selection.
+
+### Changed
+
+- Various C++ and Python code refactoring.
+- Rename count variables (e.g. GetChangesNb() becomes GetChangesCount() in C++ and get_hydro_unit_nb() becomes get_hydro_unit_count() in Python).
+- Externalize results writing from the Logger to a dedicated Results class (C++).
+- Provide more information when enums fail to parse (C++).
+- Refactor C++ exceptions.
+- Improve pointers ownership (C++).
+- Refactor Parameters in the C++ core.
+- Rename IsOk() to IsValid() in the C++ core.
+- Update logging to use the logging module instead of print statements (Python).
+- Refactor the Observations class (Python).
+- Refactor the trainer class (Python).
+- Remove wxWidgets dependency in favor of C++ standard library features.
+- Simplify area computation in `compute_area` (Python).
+- Improve raster file I/O resource management (Python).
+- Centralize object creation with registry pattern (C++).
+- Adopt C++23 standard library features (C++).
+- Enhance error handling with std::expected (C++).
+- Decouple model construction from ModelHydro class (C++).
 
 
 ## 0.8.6 - 2025-12-18

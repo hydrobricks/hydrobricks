@@ -26,12 +26,12 @@ class ProcessTransform : public Process {
     /**
      * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionCount() const override;
+    [[nodiscard]] int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_TRANSFORM_H

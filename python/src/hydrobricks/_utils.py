@@ -1,4 +1,3 @@
-import datetime
 import json
 import time
 from collections.abc import Callable, Iterable
@@ -235,14 +234,19 @@ def mjd_to_datetime(mjd: np.ndarray) -> np.ndarray:
 
     hour, minute = days_to_hours_mins(frac_days)
 
-    date = np.empty(len(mjd), dtype="datetime64[s]")
-
-    for idx, _ in enumerate(year):
-        date[idx] = datetime.datetime(
-            year[idx], month[idx], day[idx], hour[idx], minute[idx], 0, 0
+    return (
+        pd.to_datetime(
+            {
+                "year": year,
+                "month": month,
+                "day": day.astype(int),
+                "hour": hour,
+                "minute": minute,
+            }
         )
-
-    return date
+        .to_numpy()
+        .astype("datetime64[s]")
+    )
 
 
 def compute_area(shapefile: pd.DataFrame) -> float:
@@ -266,12 +270,7 @@ def compute_area(shapefile: pd.DataFrame) -> float:
     >>> gdf = gpd.read_file('shapes.shp')
     >>> total_area = compute_area(gdf)
     """
-    area: float = 0.0
-    for _, row in shapefile.iterrows():
-        poly_area = row.geometry.area
-        area += poly_area
-
-    return area
+    return float(shapefile.geometry.area.sum())
 
 
 class Timer:

@@ -19,7 +19,7 @@ int ProcessMelt::GetConnectionCount() const {
     return 1;
 }
 
-double* ProcessMelt::GetValuePointer(const string& name) {
+double* ProcessMelt::GetValuePointer(std::string_view name) {
     if (name == "output") {
         return _outputs[0]->GetAmountPointer();
     }

@@ -685,35 +685,35 @@ TEST(Utils, ParseDateFormatautohhmmException) {
 
 TEST(Utils, IncrementDateBy1Day) {
     double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 1, Day);
+    double newDate = IncrementDateBy(date, 1, TimeUnit::Day);
 
     EXPECT_EQ(newDate, GetMJD(2020, 1, 2));
 }
 
 TEST(Utils, IncrementDateBy5Days) {
     double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 5, Day);
+    double newDate = IncrementDateBy(date, 5, TimeUnit::Day);
 
     EXPECT_EQ(newDate, GetMJD(2020, 1, 6));
 }
 
 TEST(Utils, IncrementDateBy2Weeks) {
     double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Week);
+    double newDate = IncrementDateBy(date, 2, TimeUnit::Week);
 
     EXPECT_EQ(newDate, GetMJD(2020, 1, 15));
 }
 
 TEST(Utils, IncrementDateBy2Hours) {
     double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Hour);
+    double newDate = IncrementDateBy(date, 2, TimeUnit::Hour);
 
     EXPECT_DOUBLE_EQ(newDate, GetMJD(2020, 1, 1, 2));
 }
 
 TEST(Utils, IncrementDateBy2Minutes) {
     double date = GetMJD(2020, 1, 1);
-    double newDate = IncrementDateBy(date, 2, Minute);
+    double newDate = IncrementDateBy(date, 2, TimeUnit::Minute);
 
     EXPECT_DOUBLE_EQ(newDate, GetMJD(2020, 1, 1, 0, 2));
 }

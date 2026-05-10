@@ -18,30 +18,29 @@ Brick::Brick()
     _water = std::make_unique<WaterContainer>(this);
 }
 
-Brick* Brick::Factory(const BrickSettings& brickSettings) {
+std::unique_ptr<Brick> Brick::Factory(const BrickSettings& brickSettings) {
     BrickType type = BrickTypeFromString(brickSettings.type);
     if (type == BrickType::Unknown) {
         LogError("Brick type '{}' not recognized. {}", brickSettings.type, GetBrickTypeSuggestions());
         return nullptr;
     }
-    Brick* brick = Factory(type);
-    return brick;  // Already logged on failure inside enum factory if any
+    return Factory(type);
 }
 
-Brick* Brick::Factory(BrickType type) {
+std::unique_ptr<Brick> Brick::Factory(BrickType type) {
     switch (type) {
         case BrickType::Storage:
-            return new Storage();
+            return std::make_unique<Storage>();
         case BrickType::GenericLandCover:
-            return new GenericLandCover();
+            return std::make_unique<GenericLandCover>();
         case BrickType::Glacier:
-            return new Glacier();
+            return std::make_unique<Glacier>();
         case BrickType::Urban:
-            return new Urban();
+            return std::make_unique<Urban>();
         case BrickType::Vegetation:
-            return new Vegetation();
+            return std::make_unique<Vegetation>();
         case BrickType::Snowpack:
-            return new Snowpack();
+            return std::make_unique<Snowpack>();
         default:
             LogError("Brick type enum not recognized.");
             return nullptr;
@@ -96,12 +95,21 @@ void Brick::AttachFluxIn(Flux* flux) {
     _water->AttachFluxIn(flux);
 }
 
-bool Brick::HasParameter(const BrickSettings& brickSettings, const string& name) {
+void Brick::AttachFluxIn(std::unique_ptr<Flux> flux) {
+    assert(flux);
+    if (flux->GetType() != ContentType::Water) {
+        throw ModelConfigError(
+            std::format("The flux type '{}' should be water.", ContentTypeToString(flux->GetType())));
+    }
+    _water->AttachFluxInOwned(std::move(flux));
+}
+
+bool Brick::HasParameter(const BrickSettings& brickSettings, std::string_view name) {
     return std::any_of(brickSettings.parameters.begin(), brickSettings.parameters.end(),
                        [&name](const Parameter& parameter) { return parameter.GetName() == name; });
 }
 
-const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, const string& name) {
+const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name) {
     for (auto& parameter : brickSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());
@@ -194,7 +202,7 @@ int Brick::GetProcessConnectionCount() const {
     return counter;
 }
 
-double* Brick::GetBaseValuePointer(const string& name) {
+double* Brick::GetBaseValuePointer(std::string_view name) {
     if ((name == "water" || name == "water_content") && _water) {
         return _water->GetContentPointer();
     }
@@ -202,6 +210,6 @@ double* Brick::GetBaseValuePointer(const string& name) {
     return nullptr;
 }
 
-double* Brick::GetValuePointer(const string&) {
+double* Brick::GetValuePointer(std::string_view) {
     return nullptr;
 }

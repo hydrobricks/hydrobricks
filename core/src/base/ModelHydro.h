@@ -24,7 +24,7 @@ class ModelHydro {
      * @param basinSettings settings of the basin.
      * @return true if the initialization was successful.
      */
-    bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    ModelResult InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
     /**
      * Initialize the model.
@@ -34,7 +34,7 @@ class ModelHydro {
      * @param checkProcesses whether to check the processes during validation.
      * @return true if the initialization was successful.
      */
-    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
+    ModelResult Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
 
     /**
      * Update the model parameters.
@@ -63,14 +63,14 @@ class ModelHydro {
      *
      * @return true if the forcing data were loaded.
      */
-    [[nodiscard]] bool ForcingLoaded();
+    [[nodiscard]] bool ForcingLoaded() const;
 
     /**
      * Run the model.
      *
      * @return true if the model run was successful.
      */
-    [[nodiscard]] bool Run();
+    [[nodiscard]] ModelResult Run();
 
     /**
      * Reset the model.
@@ -102,35 +102,35 @@ class ModelHydro {
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge() const;
+    [[nodiscard]] double GetTotalOutletDischarge() const;
 
     /**
      * Get the total amount of water lost by evapotranspiration.
      *
      * @return total amount of water lost by evapotranspiration.
      */
-    double GetTotalET() const;
+    [[nodiscard]] double GetTotalET() const;
 
     /**
      * Get the total change in water storage.
      *
      * @return total change in water storage.
      */
-    double GetTotalWaterStorageChanges() const;
+    [[nodiscard]] double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total change in snow storage.
      *
      * @return total change in snow storage.
      */
-    double GetTotalSnowStorageChanges() const;
+    [[nodiscard]] double GetTotalSnowStorageChanges() const;
 
     /*
      * Get the total change in glacier storage.
      *
      * @return total change in glacier storage.
      */
-    double GetTotalGlacierStorageChanges() const;
+    [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
      * Add a time series to the model.
@@ -153,14 +153,14 @@ class ModelHydro {
      *
      * @return number of actions.
      */
-    int GetActionCount() const;
+    [[nodiscard]] int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemCount() const;
+    [[nodiscard]] int GetSporadicActionItemCount() const;
 
     /**
      * Create a time series and add it to the model.
@@ -195,13 +195,12 @@ class ModelHydro {
     }
 
     /**
-     * Set the sub basin.
+     * Set the sub basin (non-owning; caller retains ownership).
      *
-     * @param subBasin pointer to the sub basin (ownership transferred to unique_ptr).
+     * @param subBasin pointer to the sub basin.
      */
     void SetSubBasin(SubBasin* subBasin) {
-        delete _subBasin;
-        _subBasin = nullptr;
+        _ownedSubBasin.reset();
         _subBasin = subBasin;
     }
 
@@ -243,7 +242,8 @@ class ModelHydro {
 
   protected:
     Processor _processor;
-    SubBasin* _subBasin;  // owning, but not a unique pointer (can be null)
+    std::unique_ptr<SubBasin> _ownedSubBasin;  // owning: set only when ModelHydro creates the SubBasin
+    SubBasin* _subBasin;                       // non-owning view (points to _ownedSubBasin or an external SubBasin)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
@@ -251,43 +251,9 @@ class ModelHydro {
     std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
 
   private:
-    void BuildModelStructure(SettingsModel& modelSettings);
+    ModelResult InitializeTimeSeries();
 
-    void CreateSubBasinComponents(SettingsModel& modelSettings);
-
-    void CreateHydroUnitsComponents(SettingsModel& modelSettings);
-
-    void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
-
-    void UpdateSubBasinParameters(SettingsModel& modelSettings);
-
-    void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
-
-    void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
-
-    void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
-
-    void BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process);
-
-    void BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
-
-    void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildSubBasinSplittersFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void ConnectLoggerToValues(SettingsModel& modelSettings);
-
-    bool InitializeTimeSeries();
-
-    bool UpdateForcing();
+    ModelResult UpdateForcing();
 };
 
 #endif  // HYDROBRICKS_MODEL_HYDRO_H

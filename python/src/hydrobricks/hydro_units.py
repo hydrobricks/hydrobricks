@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -39,6 +40,8 @@ class HydroUnits:
         Dataframe containing the hydro units data.
     """
 
+    FRACTION_PREFIX: ClassVar[str] = "fraction-"
+
     def __init__(
         self,
         land_cover_types: list[str] | None = None,
@@ -71,10 +74,9 @@ class HydroUnits:
             land_cover_names = ["ground"]
         self.land_cover_types: list[str] = land_cover_types
         self.land_cover_names: list[str] = land_cover_names
-        self.prefix_fraction: str = "fraction-"
         land_cover_cols: list[tuple[str, str]] = []
         for item in land_cover_names:
-            land_cover_cols.append((f"{self.prefix_fraction}{item}", "fraction"))
+            land_cover_cols.append((f"{self.FRACTION_PREFIX}{item}", "fraction"))
         if data is not None:
             self._set_units_data(data)
         else:
@@ -125,13 +127,26 @@ class HydroUnits:
         NotImplementedError
             If column_fractions is provided (not yet implemented).
         """
+        # Validate parameter conflicts before touching the filesystem
+        if column_area is not None and columns_areas is not None:
+            raise DataError(
+                'The "column_area" and "columns_areas" cannot be '
+                "provided at the same time.",
+                data_type="hydro units",
+                reason="Ambiguous column specification",
+            )
+        if column_fractions is not None:
+            raise ConfigurationError(
+                'The "column_fractions" parameter is not yet implemented.'
+            )
+
         # Load and prepare CSV file
         file_content = pd.read_csv(path, header=[0, 1])
         self._check_column_names(file_content)
 
         # Validate column configuration
         self._validate_csv_columns(
-            file_content, column_elevation, column_area, columns_areas, column_fractions
+            file_content, column_elevation, column_area, columns_areas
         )
 
         # Load required columns
@@ -156,7 +171,6 @@ class HydroUnits:
         column_elevation: str | None,
         column_area: str | None,
         columns_areas: dict[str, str] | None,
-        column_fractions: dict[str, str] | None,
     ) -> None:
         """
         Validate CSV column configuration for loading hydro units.
@@ -171,15 +185,11 @@ class HydroUnits:
             Single area column name, if provided.
         columns_areas
             Dictionary of land-cover-specific area columns, if provided.
-        column_fractions
-            Dictionary of land cover fractions, if provided.
 
         Raises
         ------
         DataError
             If validation fails due to missing columns or conflicting specifications.
-        ConfigurationError
-            If column_fractions is provided (not yet implemented).
         """
         # Check for required ID column
         if "id" not in file_content.columns:
@@ -195,21 +205,6 @@ class HydroUnits:
                 'The "elevation" column is required in the file.',
                 data_type="hydro units",
                 reason="Missing required column",
-            )
-
-        # Validate area column configuration
-        if column_area is not None and columns_areas is not None:
-            raise DataError(
-                'The "column_area" and "columns_areas" cannot be '
-                "provided at the same time.",
-                data_type="hydro units",
-                reason="Ambiguous column specification",
-            )
-
-        # Check for unimplemented feature
-        if column_fractions is not None:
-            raise ConfigurationError(
-                'The "column_fractions" parameter is not yet implemented.'
             )
 
     def _load_id_column(self, file_content: pd.DataFrame) -> None:
@@ -293,7 +288,7 @@ class HydroUnits:
         self.add_property(("area", unit), vals)
 
         # Set ground land cover to 100%
-        idx = self.prefix_fraction + "ground"
+        idx = self.FRACTION_PREFIX + "ground"
         self.hydro_units[idx] = np.ones(len(self.hydro_units[("area", unit)]))
 
     def _load_land_cover_areas(
@@ -443,7 +438,7 @@ class HydroUnits:
 
         for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
             var_cover = nc.createVariable(cover_name, "float32", ("hydro_units",))
-            var_cover[:] = self.hydro_units[self.prefix_fraction + cover_name]
+            var_cover[:] = self.hydro_units[self.FRACTION_PREFIX + cover_name]
             var_cover.units = "fraction"
             var_cover.type = cover_type
 
@@ -535,11 +530,11 @@ class HydroUnits:
             (when multiple land cover types exist).
         """
         if len(self.land_cover_names) == 1:
-            self.hydro_units[self.prefix_fraction + self.land_cover_names[0]] = 1.0
+            self.hydro_units[self.FRACTION_PREFIX + self.land_cover_names[0]] = 1.0
             return
 
         for cover_name in self.land_cover_names:
-            field_name = self.prefix_fraction + cover_name
+            field_name = self.FRACTION_PREFIX + cover_name
             if self.hydro_units[field_name].isnull().values.any():
                 raise DataError(
                     f'The land cover "{cover_name}" contains NaN values.',
@@ -557,9 +552,9 @@ class HydroUnits:
         """
         # Set the land cover fractions of 'ground' to 1 and the rest to 0
         for cover_name in self.land_cover_names:
-            field_name = self.prefix_fraction + cover_name
+            field_name = self.FRACTION_PREFIX + cover_name
             self.hydro_units[(field_name, "fraction")] = 0.0
-        self.hydro_units[(self.prefix_fraction + "ground", "fraction")] = 1.0
+        self.hydro_units[(self.FRACTION_PREFIX + "ground", "fraction")] = 1.0
 
     def initialize_from_land_cover_change(
         self, land_cover_name: str, land_cover_change: pd.DataFrame
@@ -585,8 +580,8 @@ class HydroUnits:
             If computed land cover fraction is not in the range [0, 1].
         """
         # Land cover fraction column name
-        field_name = self.prefix_fraction + land_cover_name
-        ground_name = self.prefix_fraction + "ground"
+        field_name = self.FRACTION_PREFIX + land_cover_name
+        ground_name = self.FRACTION_PREFIX + "ground"
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
         for _, row in land_cover_change.iterrows():
@@ -627,7 +622,7 @@ class HydroUnits:
         for prop in self.hydro_units.columns.tolist():
             if prop[0] in ["id", "area", "elevation"]:
                 continue
-            if "fraction-" in prop[0]:
+            if self.FRACTION_PREFIX in prop[0]:
                 continue
             properties.append(prop[0])
 
@@ -652,7 +647,7 @@ class HydroUnits:
             for cover_type, cover_name in zip(
                 self.land_cover_types, self.land_cover_names
             ):
-                fraction = float(row[self.prefix_fraction + cover_name].values[0])
+                fraction = float(row[self.FRACTION_PREFIX + cover_name].values[0])
                 if np.isnan(fraction):
                     fraction = 0.0
                 assert 0 <= fraction <= 1
@@ -898,7 +893,7 @@ class HydroUnits:
         # Insert the results in the dataframe
         self.hydro_units[("area", area_unit)] = area
         for idx, cover_name in enumerate(self.land_cover_names):
-            field_name = self.prefix_fraction + cover_name
+            field_name = self.FRACTION_PREFIX + cover_name
             self.hydro_units[(field_name, "fraction")] = fractions[:, idx]
 
     def _set_units_data(self, data: pd.DataFrame) -> None:
@@ -927,7 +922,7 @@ class HydroUnits:
             data["id"] = range(1, 1 + len(data))
 
         self.hydro_units = data
-        idx = self.prefix_fraction + "ground"
+        idx = self.FRACTION_PREFIX + "ground"
         self.hydro_units[idx] = np.ones(len(self.hydro_units["area"]))
         self.populate_bounded_instance()
 

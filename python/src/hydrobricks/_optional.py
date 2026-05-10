@@ -34,6 +34,7 @@ Available flags:
     - HAS_PYET: PyEt library
     - HAS_PYPROJ: Pyproj library
     - HAS_PYSHEDS: Pysheds library
+    - HAS_SCIPY: SciPy library
     - HAS_XARRAY: xarray library
     - HAS_RIOXARRAY: rioxarray library
     - HAS_PYARROW: PyArrow library
@@ -41,6 +42,7 @@ Available flags:
 """
 
 import importlib.util
+import sys
 import warnings
 
 
@@ -62,6 +64,23 @@ def is_module_available(module_name):
     return importlib.util.find_spec(module_name) is not None
 
 
+# Python version compatibility: StrEnum
+if sys.version_info < (3, 11):
+    try:
+        from strenum import LowercaseStrEnum, StrEnum
+
+        StrEnumClass = LowercaseStrEnum
+    except ImportError:
+        raise ImportError(
+            "The 'strenum' package is required on Python < 3.11. "
+            "Install with: pip install strenum"
+        ) from None
+else:
+    from enum import StrEnum
+
+    StrEnumClass = StrEnum
+
+
 # Provide default placeholders so attributes are always present
 Dataset = None
 rasterio = None
@@ -72,6 +91,7 @@ pyet = None
 pyproj = None
 pysheds = None
 pyshedsGrid = None
+scipy = None
 xr = None
 rxr = None
 pyarrow = None
@@ -114,6 +134,10 @@ if HAS_PYSHEDS:
     pysheds = LazyImport("pysheds")
     from pysheds.grid import Grid as pyshedsGrid
 
+HAS_SCIPY = is_module_available("scipy")
+if HAS_SCIPY:
+    scipy = LazyImport("scipy")
+
 HAS_XARRAY = is_module_available("xarray")
 if HAS_XARRAY:
     xr = LazyImport("xarray")
@@ -134,6 +158,9 @@ __all__ = [
     # Utility functions
     "is_module_available",
     "LazyImport",
+    # Python version compatibility
+    "StrEnum",
+    "StrEnumClass",
     # Availability flags
     "HAS_NETCDF",
     "HAS_RASTERIO",
@@ -143,6 +170,7 @@ __all__ = [
     "HAS_PYET",
     "HAS_PYPROJ",
     "HAS_PYSHEDS",
+    "HAS_SCIPY",
     "HAS_XARRAY",
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
@@ -157,6 +185,7 @@ __all__ = [
     "pyproj",
     "pysheds",
     "pyshedsGrid",
+    "scipy",
     "xr",
     "rxr",
     "pyarrow",

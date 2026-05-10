@@ -15,15 +15,14 @@ SubBasin::~SubBasin() {
     // Unique_ptr members clean up owned objects automatically.
 }
 
-bool SubBasin::Initialize(SettingsBasin& basinSettings) {
+ModelResult SubBasin::Initialize(SettingsBasin& basinSettings) {
     try {
         BuildBasin(basinSettings);
     } catch (const std::exception& e) {
-        LogError("An exception occurred during basin initialization: {}.", e.what());
-        return false;
+        return std::unexpected(std::format("Basin initialization failed: {}", e.what()));
     }
 
-    return true;
+    return {};
 }
 
 void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
@@ -55,7 +54,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
     }
 }
 
-bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
+ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     try {
         int hydroUnitCount = basinSettings.GetHydroUnitCount();
         int landCoverCount = basinSettings.GetLandCoverCount();
@@ -81,11 +80,10 @@ bool SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             }
         }
     } catch (const std::exception& e) {
-        LogError("An exception occurred while assigning the fractions: {}.", e.what());
-        return false;
+        return std::unexpected(std::format("Fraction assignment failed: {}", e.what()));
     }
 
-    return true;
+    return {};
 }
 
 void SubBasin::Reset() {
@@ -211,12 +209,12 @@ Brick* SubBasin::GetBrick(size_t index) const {
     return _bricks[index].get();
 }
 
-bool SubBasin::HasBrick(const string& name) const {
-    return _brickMap.find(name) != _brickMap.end();
+bool SubBasin::HasBrick(std::string_view name) const {
+    return _brickMap.find(string(name)) != _brickMap.end();
 }
 
-Brick* SubBasin::GetBrick(const string& name) const {
-    auto it = _brickMap.find(name);
+Brick* SubBasin::GetBrick(std::string_view name) const {
+    auto it = _brickMap.find(string(name));
     if (it != _brickMap.end()) {
         return it->second;
     }
@@ -231,12 +229,12 @@ Splitter* SubBasin::GetSplitter(size_t index) const {
     return _splitters[index].get();
 }
 
-bool SubBasin::HasSplitter(const string& name) const {
-    return _splitterMap.find(name) != _splitterMap.end();
+bool SubBasin::HasSplitter(std::string_view name) const {
+    return _splitterMap.find(string(name)) != _splitterMap.end();
 }
 
-Splitter* SubBasin::GetSplitter(const string& name) const {
-    auto it = _splitterMap.find(name);
+Splitter* SubBasin::GetSplitter(std::string_view name) const {
+    auto it = _splitterMap.find(string(name));
     if (it != _splitterMap.end()) {
         return it->second;
     }
@@ -276,7 +274,7 @@ void SubBasin::AttachOutletFlux(Flux* flux) {
     _outletFluxes.push_back(flux);
 }
 
-double* SubBasin::GetValuePointer(const string& name) {
+double* SubBasin::GetValuePointer(std::string_view name) {
     if (name == "outlet") {
         return &_outletTotal;
     }

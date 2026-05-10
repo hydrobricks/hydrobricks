@@ -31,7 +31,7 @@ class Forcing {
      *
      * @return the value of the forcing.
      */
-    double GetValue();
+    double GetValue() const;
 
     /**
      * Check if the forcing is valid.

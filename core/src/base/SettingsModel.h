@@ -526,7 +526,7 @@ class SettingsModel {
      *
      * @return number of processes.
      */
-    int GetProcesseCount() const {
+    int GetProcessCount() const {
         assert(_selectedBrick);
         return static_cast<int>(_selectedBrick->processes.size());
     }
@@ -625,7 +625,7 @@ class SettingsModel {
      *
      * @return indices of the land cover bricks.
      */
-    vecInt GetLandCoverBricksIndices() const {
+    const vecInt& GetLandCoverBricksIndices() const {
         assert(_selectedStructure);
         return _selectedStructure->landCoverBricks;
     }

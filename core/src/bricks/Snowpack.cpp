@@ -122,7 +122,7 @@ vecDoublePt Snowpack::GetDynamicContentChanges() {
     return vars;
 }
 
-double* Snowpack::GetValuePointer(const string& name) {
+double* Snowpack::GetValuePointer(std::string_view name) {
     if (name == "snow" || name == "snow_content") {
         return _snow->GetContentPointer();
     }

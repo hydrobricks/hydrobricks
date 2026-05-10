@@ -1,5 +1,7 @@
 #include "Splitter.h"
 
+#include <functional>
+#include <unordered_map>
 #include <vector>
 
 #include "HydroUnit.h"
@@ -9,33 +11,54 @@
 
 Splitter::Splitter() {}
 
-static string GetValidSplitterTypes() {
-    static const vector<string> validTypes = {"snow_rain", "rain", "multi_fluxes"};
+namespace {
 
+using SplitterFactory = std::function<std::unique_ptr<Splitter>(const SplitterSettings&)>;
+
+// clang-format off
+const std::unordered_map<string, SplitterFactory>& GetSplitterRegistry() {
+    static const std::unordered_map<string, SplitterFactory> registry = {
+
+        {"snow_rain", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRain>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"rain", [](const SplitterSettings&) {
+            return std::make_unique<SplitterRain>();
+        }},
+
+        {"multi_fluxes", [](const SplitterSettings&) {
+            return std::make_unique<SplitterMultiFluxes>();
+        }},
+
+    };
+    return registry;
+}
+// clang-format on
+
+string GetValidSplitterTypes() {
+    const auto& registry = GetSplitterRegistry();
     string suggestions = "Valid splitter types: ";
-    for (size_t i = 0; i < validTypes.size(); ++i) {
-        suggestions += validTypes[i];
-        if (i < validTypes.size() - 1) {
-            suggestions += ", ";
-        }
+    bool first = true;
+    for (const auto& [key, factory] : registry) {
+        if (!first) suggestions += ", ";
+        suggestions += key;
+        first = false;
     }
     return suggestions;
 }
 
-Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
-    if (splitterSettings.type == "snow_rain") {
-        auto splitter = new SplitterSnowRain();
-        splitter->SetParameters(splitterSettings);
-        return splitter;
-    }
-    if (splitterSettings.type == "rain") {
-        return new SplitterRain();
-    }
-    if (splitterSettings.type == "multi_fluxes") {
-        return new SplitterMultiFluxes();
+}  // namespace
+
+std::unique_ptr<Splitter> Splitter::Factory(const SplitterSettings& splitterSettings) {
+    const auto& registry = GetSplitterRegistry();
+    auto it = registry.find(splitterSettings.type);
+    if (it != registry.end()) {
+        return it->second(splitterSettings);
     }
     LogError("Splitter type '{}' not recognized. {}", splitterSettings.type, GetValidSplitterTypes());
-
     return nullptr;
 }
 

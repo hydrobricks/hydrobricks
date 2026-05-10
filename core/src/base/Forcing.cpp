@@ -9,7 +9,7 @@ void Forcing::AttachTimeSeriesData(TimeSeriesData* timeSeriesData) {
     _timeSeriesData = timeSeriesData;
 }
 
-double Forcing::GetValue() {
+double Forcing::GetValue() const {
     assert(_timeSeriesData);
     return _timeSeriesData->GetCurrentValue();
 }

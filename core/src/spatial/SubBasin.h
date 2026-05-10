@@ -23,7 +23,7 @@ class SubBasin {
      * @param basinSettings The settings to initialize the sub-basin with.
      * @return True if the initialization was successful, false otherwise.
      */
-    [[nodiscard]] bool Initialize(SettingsBasin& basinSettings);
+    [[nodiscard]] ModelResult Initialize(SettingsBasin& basinSettings);
 
     /**
      * Build the basin with the given settings.
@@ -99,7 +99,7 @@ class SubBasin {
      * @param basinSettings The settings to assign the fractions with.
      * @return True if the assignment was successful, false otherwise.
      */
-    [[nodiscard]] bool AssignFractions(SettingsBasin& basinSettings);
+    [[nodiscard]] ModelResult AssignFractions(SettingsBasin& basinSettings);
 
     /**
      * Reset the sub-basin to its initial state.
@@ -152,7 +152,7 @@ class SubBasin {
      *
      * @return The number of hydro units.
      */
-    int GetHydroUnitCount() const;
+    [[nodiscard]] int GetHydroUnitCount() const;
 
     /**
      * Get a hydro unit by its index.
@@ -160,14 +160,14 @@ class SubBasin {
      * @param index The index of the hydro unit to get.
      * @return The hydro unit at the specified index.
      */
-    HydroUnit* GetHydroUnit(size_t index) const;
+    [[nodiscard]] HydroUnit* GetHydroUnit(size_t index) const;
 
     /**
      * Check if the sub-basin has any hydro units.
      *
      * @return True if the sub-basin has hydro units, false otherwise.
      */
-    bool HasHydroUnits() const {
+    [[nodiscard]] bool HasHydroUnits() const noexcept {
         return !_hydroUnits.empty();
     }
 
@@ -177,35 +177,35 @@ class SubBasin {
      * @param id The ID of the hydro unit to get.
      * @return The hydro unit with the specified ID.
      */
-    HydroUnit* GetHydroUnitById(int id) const;
+    [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
 
     /**
      * Get the IDs of all hydro units in the sub-basin.
      *
      * @return A vector of hydro unit IDs.
      */
-    vecInt GetHydroUnitIds() const;
+    [[nodiscard]] vecInt GetHydroUnitIds() const;
 
     /**
      * Get the areas of all hydro units in the sub-basin.
      *
      * @return A vector of hydro unit areas.
      */
-    vecDouble GetHydroUnitAreas() const;
+    [[nodiscard]] vecDouble GetHydroUnitAreas() const;
 
     /**
      * Get the number of bricks in the sub-basin.
      *
      * @return The number of bricks.
      */
-    int GetBrickCount() const;
+    [[nodiscard]] int GetBrickCount() const;
 
     /**
      * Get the number of splitters in the sub-basin.
      *
      * @return The number of splitters.
      */
-    int GetSplitterCount() const;
+    [[nodiscard]] int GetSplitterCount() const;
 
     /**
      * Get a brick by its index.
@@ -213,7 +213,7 @@ class SubBasin {
      * @param index The index of the brick to get.
      * @return The brick at the specified index.
      */
-    Brick* GetBrick(size_t index) const;
+    [[nodiscard]] Brick* GetBrick(size_t index) const;
 
     /**
      * Check if the sub-basin has a brick with a specific name.
@@ -221,7 +221,7 @@ class SubBasin {
      * @param name The name of the brick to check for.
      * @return True if the sub-basin has the brick, false otherwise.
      */
-    [[nodiscard]] bool HasBrick(const string& name) const;
+    [[nodiscard]] bool HasBrick(std::string_view name) const;
 
     /**
      * Get a brick by its name.
@@ -229,7 +229,7 @@ class SubBasin {
      * @param name The name of the brick to get.
      * @return The brick with the specified name.
      */
-    Brick* GetBrick(const string& name) const;
+    [[nodiscard]] Brick* GetBrick(std::string_view name) const;
 
     /**
      * Get a splitter by its index.
@@ -237,7 +237,7 @@ class SubBasin {
      * @param index The index of the splitter to get.
      * @return The splitter at the specified index.
      */
-    Splitter* GetSplitter(size_t index) const;
+    [[nodiscard]] Splitter* GetSplitter(size_t index) const;
 
     /**
      * Check if the sub-basin has a splitter with a specific name.
@@ -245,7 +245,7 @@ class SubBasin {
      * @param name The name of the splitter to check for.
      * @return True if the sub-basin has the splitter, false otherwise.
      */
-    [[nodiscard]] bool HasSplitter(const string& name) const;
+    [[nodiscard]] bool HasSplitter(std::string_view name) const;
 
     /**
      * Get a splitter by its name.
@@ -253,7 +253,7 @@ class SubBasin {
      * @param name The name of the splitter to get.
      * @return The splitter with the specified name.
      */
-    Splitter* GetSplitter(const string& name) const;
+    [[nodiscard]] Splitter* GetSplitter(std::string_view name) const;
 
     /**
      * Check if the sub-basin has an incoming flow.
@@ -289,7 +289,7 @@ class SubBasin {
      * @param name The name of the variable to get the pointer for.
      * @return A pointer to the variable's value.
      */
-    double* GetValuePointer(const string& name);
+    double* GetValuePointer(std::string_view name);
 
     /**
      * GCompute the outlet discharge for the sub-basin.

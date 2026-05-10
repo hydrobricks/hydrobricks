@@ -16,7 +16,7 @@ double TimeSeriesData::GetValueFor(double) {
     throw NotImplemented("TimeSeriesData::GetValueFor - Not yet implemented");
 }
 
-double TimeSeriesData::GetCurrentValue() {
+double TimeSeriesData::GetCurrentValue() const {
     throw NotImplemented("TimeSeriesData::GetCurrentValue - Not yet implemented");
 }
 
@@ -52,7 +52,7 @@ double TimeSeriesDataRegular::GetValueFor(double date) {
     return _values[_cursor];
 }
 
-double TimeSeriesDataRegular::GetCurrentValue() {
+double TimeSeriesDataRegular::GetCurrentValue() const {
     assert(_values.size() > _cursor);
     return _values[_cursor];
 }
@@ -77,13 +77,13 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
     double dt = date - _start;
 
     switch (_timeStepUnit) {
-        case Day:
+        case TimeUnit::Day:
             _cursor = static_cast<int>(dt);
             break;
-        case Hour:
+        case TimeUnit::Hour:
             _cursor = static_cast<int>(dt) * 24;
             break;
-        case Minute:
+        case TimeUnit::Minute:
             _cursor = static_cast<int>(dt) * 1440;
             break;
         default:
@@ -165,7 +165,7 @@ double TimeSeriesDataIrregular::GetValueFor(double) {
     throw NotImplemented("TimeSeriesDataIrregular::GetValueFor - Not yet implemented");
 }
 
-double TimeSeriesDataIrregular::GetCurrentValue() {
+double TimeSeriesDataIrregular::GetCurrentValue() const {
     assert(_values.size() > _cursor);
     return _values[_cursor];
 }

@@ -41,7 +41,7 @@ class Snowpack : public SurfaceComponent {
      *
      * @return A pointer to the snow container.
      */
-    WaterContainer* GetSnowContainer() const;
+    [[nodiscard]] WaterContainer* GetSnowContainer() const;
 
     /**
      * @copydoc Brick::Finalize()
@@ -56,7 +56,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(ContentType type) const override;
+    [[nodiscard]] double GetContent(ContentType type) const override;
 
     /**
      * @copydoc Brick::UpdateContent()
@@ -81,7 +81,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * Check if the snowpack has snow.

@@ -16,7 +16,7 @@ HydroUnitProperty::HydroUnitProperty(string name, string valueString, string uni
       _value(NAN_D),
       _valueString(std::move(valueString)) {}
 
-double HydroUnitProperty::GetValue(const string& unit) const {
+double HydroUnitProperty::GetValue(std::string_view unit) const {
     if (_unit == unit) {
         return _value;
     }

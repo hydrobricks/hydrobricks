@@ -5,12 +5,10 @@ TimeMachine::TimeMachine()
       _start(0),
       _end(0),
       _timeStep(0),
-      _timeStepUnit(Day),
+      _timeStepUnit(TimeUnit::Day),
       _timeStepInDays(0),
       _parametersUpdater(nullptr),
       _actionsManager(nullptr) {}
-
-double TimeMachine::_currentDateStatic = 0.0;
 
 void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit timeStepUnit) {
     _date = start;
@@ -18,7 +16,6 @@ void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit ti
     _end = end;
     _timeStep = timeStep;
     _timeStepUnit = timeStepUnit;
-    _currentDateStatic = _date;  // Sync static date
     UpdateTimeStepInDays();
 }
 
@@ -29,22 +26,20 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     _timeStep = settings.timeStep;
 
     if (settings.timeStepUnit == "day") {
-        _timeStepUnit = Day;
+        _timeStepUnit = TimeUnit::Day;
     } else if (settings.timeStepUnit == "hour") {
-        _timeStepUnit = Hour;
+        _timeStepUnit = TimeUnit::Hour;
     } else if (settings.timeStepUnit == "minute") {
-        _timeStepUnit = Minute;
+        _timeStepUnit = TimeUnit::Minute;
     } else {
         throw InputError("Time step unit unrecognized or not implemented.");
     }
 
     UpdateTimeStepInDays();
-    _currentDateStatic = _date;  // Sync static date
 }
 
 void TimeMachine::Reset() {
     _date = _start;
-    _currentDateStatic = _date;  // Sync static date
 }
 
 bool TimeMachine::IsOver() const {
@@ -54,7 +49,6 @@ bool TimeMachine::IsOver() const {
 void TimeMachine::IncrementTime() {
     assert(_timeStepInDays > 0);
     _date += _timeStepInDays;
-    _currentDateStatic = _date;  // Sync static date
 
     if (_parametersUpdater) {
         _parametersUpdater->DateUpdate(_date);
@@ -71,18 +65,18 @@ int TimeMachine::GetTimeStepCount() const {
 
 void TimeMachine::UpdateTimeStepInDays() {
     switch (_timeStepUnit) {
-        case Variable:
+        case TimeUnit::Variable:
             throw NotImplemented("TimeMachine::UpdateTimeStepInDays - Variable time step unit not yet supported");
-        case Week:
+        case TimeUnit::Week:
             _timeStepInDays = _timeStep * 7;
             break;
-        case Day:
+        case TimeUnit::Day:
             _timeStepInDays = _timeStep;
             break;
-        case Hour:
+        case TimeUnit::Hour:
             _timeStepInDays = _timeStep / 24.0;
             break;
-        case Minute:
+        case TimeUnit::Minute:
             _timeStepInDays = _timeStep / 1440.0;
             break;
         default:
@@ -90,9 +84,9 @@ void TimeMachine::UpdateTimeStepInDays() {
     }
 }
 
-int TimeMachine::GetCurrentDayOfYear() {
-    if (_currentDateStatic <= 0) return 1;
-    Time ts = GetTimeStructFromMJD(_currentDateStatic);
+int TimeMachine::GetCurrentDayOfYear() const {
+    if (_date <= 0) return 1;
+    Time ts = GetTimeStructFromMJD(_date);
     static const int cumMonthDays[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
     int monthIndex = ts.month - 1;  // 0-based
     if (monthIndex < 0 || monthIndex > 11) return 1;
@@ -133,7 +127,7 @@ bool TimeMachine::IsValid() const {
 
 void TimeMachine::Validate() const {
     if (!IsValid()) {
-        string msg = std::format("TimeMachine validation failed. Start: %f, End: %f, TimeStep: %d, TimeStepInDays: %f",
+        string msg = std::format("TimeMachine validation failed. Start: {}, End: {}, TimeStep: {}, TimeStepInDays: {}",
                                  _start, _end, _timeStep, _timeStepInDays);
         throw ModelConfigError(msg);
     }

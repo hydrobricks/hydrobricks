@@ -33,9 +33,10 @@ class FluxWeightedModel : public ::testing::Test {
         // Outlet
         _model.AddLoggingToItem("outlet");
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
     }
     void TearDown() override {
@@ -358,10 +359,10 @@ TEST(Fluxes, ToAtmosphereInstantaneous) {
     model.SelectHydroUnitBrick("ground");
     model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
-    auto petData = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    auto petData = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
     petData->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
 
-    auto tsPet = std::make_unique<TimeSeriesUniform>(PET);
+    auto tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
     tsPet->SetData(std::move(petData));
 
     SettingsBasin basinSettings;

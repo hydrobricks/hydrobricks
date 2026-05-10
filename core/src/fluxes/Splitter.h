@@ -22,7 +22,7 @@ class Splitter {
      * @param splitterSettings settings of the splitter containing the parameters.
      * @return a pointer to the splitter.
      */
-    static Splitter* Factory(const SplitterSettings& splitterSettings);
+    static std::unique_ptr<Splitter> Factory(const SplitterSettings& splitterSettings);
 
     /**
      * Check that everything is correctly defined.

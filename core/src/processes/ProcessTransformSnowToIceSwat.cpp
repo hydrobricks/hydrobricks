@@ -29,7 +29,8 @@ void ProcessTransformSnowToIceSwat::SetParameters(const ProcessSettings& process
 }
 
 vecDouble ProcessTransformSnowToIceSwat::GetRates() {
-    int doy = TimeMachine::GetCurrentDayOfYear();
+    assert(_timeMachine);
+    int doy = _timeMachine->GetCurrentDayOfYear();
     bool northHemisphere = !(*_northHemisphere == 0);
     int daysRef = (northHemisphere) ? 81 : 264;  // 81 = March 22, 264 = September 21
     auto coeff = static_cast<float>(*_basalAccCoeff * (1 + std::sin(2.0f * constants::pi * (doy - daysRef) / 365.0f)));

@@ -1,5 +1,7 @@
 #include "ProcessLateral.h"
 
+#include <charconv>
+
 #include "Brick.h"
 #include "FluxToBrick.h"
 #include "HydroUnit.h"
@@ -21,10 +23,12 @@ int ProcessLateral::GetConnectionCount() const {
     return static_cast<int>(_outputs.size());
 }
 
-double* ProcessLateral::GetValuePointer(const string& name) {
+double* ProcessLateral::GetValuePointer(std::string_view name) {
     // Parse the name to get the connection index (output_i).
     if (name.substr(0, 7) == "output_") {
-        int index = std::stoi(name.substr(7));
+        int index = 0;
+        auto tail = name.substr(7);
+        std::from_chars(tail.data(), tail.data() + tail.size(), index);
         if (index < 0 || index >= static_cast<int>(_outputs.size())) {
             LogError("Invalid output index: {}", index);
             return nullptr;

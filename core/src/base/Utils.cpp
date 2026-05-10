@@ -139,7 +139,7 @@ int Find(const double* start, const double* end, double value, double tolerance,
     return FindT<double>(start, end, value, tolerance, showWarning);
 }
 
-template <class T>
+template <std::totally_ordered T>
 int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) {
     assert(start);
     assert(end);
@@ -210,13 +210,13 @@ int FindT(const T* start, const T* end, T value, T tolerance, bool showWarning) 
 
 double IncrementDateBy(double date, int amount, TimeUnit unit) {
     switch (unit) {
-        case Week:
+        case TimeUnit::Week:
             return date + amount * 7;
-        case Day:
+        case TimeUnit::Day:
             return date + amount;
-        case Hour:
+        case TimeUnit::Hour:
             return date + amount / 24.0;
-        case Minute:
+        case TimeUnit::Minute:
             return date + amount / 1440.0;
         default:
             LogError("The provided time step unit is not allowed.");

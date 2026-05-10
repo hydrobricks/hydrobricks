@@ -83,7 +83,13 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<SubBasin>(m, "SubBasin")
         .def(py::init<>())
-        .def("init", &SubBasin::Initialize, "Initialize the basin.", "spatial_structure"_a);
+        .def(
+            "init",
+            [](SubBasin& s, SettingsBasin& bs) {
+                auto r = s.Initialize(bs);
+                if (!r) throw py::value_error(r.error());
+            },
+            "Initialize the basin.", "spatial_structure"_a);
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<const string&, float>())
@@ -125,8 +131,13 @@ PYBIND11_MODULE(_hydrobricks, m) {
 
     py::class_<ModelHydro>(m, "ModelHydro")
         .def(py::init<>())
-        .def("init_with_basin", &ModelHydro::InitializeWithBasin, "Initialize the model and create the sub basin.",
-             "model_settings"_a, "basin_settings"_a)
+        .def(
+            "init_with_basin",
+            [](ModelHydro& m, SettingsModel& ms, SettingsBasin& bs) {
+                auto r = m.InitializeWithBasin(ms, bs);
+                if (!r) throw py::value_error(r.error());
+            },
+            "Initialize the model and create the sub basin.", "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
         .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount,
@@ -141,7 +152,13 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "model_settings"_a)
         .def("forcing_loaded", &ModelHydro::ForcingLoaded, "Check if the forcing data were loaded.")
         .def("is_valid", &ModelHydro::IsValid, "Check if the model is correctly set up.")
-        .def("run", &ModelHydro::Run, "Run the model.")
+        .def(
+            "run",
+            [](ModelHydro& m) {
+                auto r = m.Run();
+                if (!r) throw py::value_error(r.error());
+            },
+            "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")

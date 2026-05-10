@@ -60,14 +60,16 @@ class SnowRedistributionModel : public ::testing::Test {
         _model.AddBrickProcess("outflow", "outflow:direct");
         _model.AddProcessOutput("outlet");
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 0.0});
-        _tsPrecip = std::make_unique<TimeSeriesUniform>(Precipitation);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(Temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
@@ -138,9 +140,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 
@@ -202,9 +204,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 
@@ -270,9 +272,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 

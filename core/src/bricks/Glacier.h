@@ -42,7 +42,7 @@ class Glacier : public LandCover {
      *
      * @return The ice container of the glacier.
      */
-    WaterContainer* GetIceContainer() const;
+    [[nodiscard]] WaterContainer* GetIceContainer() const;
 
     /**
      * @copydoc Brick::Finalize()
@@ -57,7 +57,7 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(ContentType type) const override;
+    [[nodiscard]] double GetContent(ContentType type) const override;
 
     /**
      * @copydoc Brick::UpdateContent()
@@ -82,7 +82,7 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * @copydoc LandCover::SurfaceComponentAdded()

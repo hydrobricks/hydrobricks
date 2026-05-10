@@ -42,7 +42,7 @@ endif (WIN32)
 # LINKING
 
 add_dependencies(hydrobricks-tests core)
-target_compile_features(hydrobricks-tests PUBLIC cxx_std_20)
+target_compile_features(hydrobricks-tests PUBLIC cxx_std_23)
 target_link_libraries(hydrobricks-tests core Eigen3::Eigen)
 target_compile_definitions(hydrobricks-tests PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(hydrobricks-tests GTest::gtest)

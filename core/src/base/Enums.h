@@ -17,7 +17,7 @@ enum {
 /**
  * Temporal units.
  */
-enum TimeUnit {
+enum class TimeUnit {
     Week,
     Day,
     Hour,
@@ -28,7 +28,7 @@ enum TimeUnit {
 /**
  * Types of forcing variables.
  */
-enum VariableType {
+enum class VariableType {
     Precipitation,
     Temperature,
     Radiation,

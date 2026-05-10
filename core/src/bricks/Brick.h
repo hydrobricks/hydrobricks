@@ -33,7 +33,7 @@ class Brick {
      * @param brickSettings settings of the brick.
      * @return the created brick.
      */
-    static Brick* Factory(const BrickSettings& brickSettings);
+    static std::unique_ptr<Brick> Factory(const BrickSettings& brickSettings);
 
     /**
      * Factory method to create a brick.
@@ -41,7 +41,7 @@ class Brick {
      * @param type type of the brick.
      * @return the created brick.
      */
-    static Brick* Factory(BrickType type);
+    static std::unique_ptr<Brick> Factory(BrickType type);
 
     /**
      * Check if the brick has a parameter with the provided name.
@@ -50,7 +50,7 @@ class Brick {
      * @param name name of the parameter to check.
      * @return true if the brick has a parameter with the provided name.
      */
-    static bool HasParameter(const BrickSettings& brickSettings, const string& name);
+    static bool HasParameter(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Get the pointer to the parameter value.
@@ -59,7 +59,7 @@ class Brick {
      * @param name name of the parameter.
      * @return pointer to the parameter value.
      */
-    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
+    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Assign the parameters to the brick element.
@@ -69,11 +69,19 @@ class Brick {
     virtual void SetParameters(const BrickSettings& brickSettings);
 
     /**
-     * Attach incoming flux.
+     * Attach incoming flux (non-owning; caller retains ownership).
      *
      * @param flux incoming flux (non-owning reference, owned by process)
      */
     virtual void AttachFluxIn(Flux* flux);
+
+    /**
+     * Attach incoming flux and take ownership of it.
+     * Used for forcing fluxes that are not owned by any process.
+     *
+     * @param flux incoming flux (ownership transferred)
+     */
+    virtual void AttachFluxIn(std::unique_ptr<Flux> flux);
 
     /**
      * Add a process to the brick.
@@ -192,7 +200,7 @@ class Brick {
      * @param type the type of content to get.
      * @return the content of the water container.
      */
-    virtual double GetContent(ContentType type) const;
+    [[nodiscard]] virtual double GetContent(ContentType type) const;
 
     /**
      * Update the content of the water container.
@@ -219,14 +227,14 @@ class Brick {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer() const;
+    [[nodiscard]] WaterContainer* GetWaterContainer() const;
 
     /**
      * Get the number of processes in the brick.
      *
      * @return number of processes.
      */
-    [[nodiscard]] size_t GetProcessCount() const {
+    [[nodiscard]] size_t GetProcessCount() const noexcept {
         return _processes.size();
     }
 
@@ -236,14 +244,14 @@ class Brick {
      * @param index index of the process.
      * @return pointer to the process.
      */
-    Process* GetProcess(size_t index) const;
+    [[nodiscard]] Process* GetProcess(size_t index) const;
 
     /**
      * Get the name of the brick.
      *
      * @return name of the brick.
      */
-    const string& GetName() const {
+    [[nodiscard]] const string& GetName() const noexcept {
         return _name;
     }
 
@@ -252,8 +260,8 @@ class Brick {
      *
      * @param name new name of the brick.
      */
-    void SetName(const string& name) {
-        _name = name;
+    void SetName(std::string_view name) {
+        _name = string(name);
     }
 
     /**
@@ -302,14 +310,14 @@ class Brick {
      *
      * @param name name of the container type (e.g., "water", "ice", or "snow").
      */
-    double* GetBaseValuePointer(const string& name);
+    double* GetBaseValuePointer(std::string_view name);
 
     /**
      * Get the pointer to the water container content.
      *
      * @param name name of the container type (e.g., "water", "ice", or "snow").
      */
-    virtual double* GetValuePointer(const string& name);
+    virtual double* GetValuePointer(std::string_view name);
 
   protected:
     string _name;

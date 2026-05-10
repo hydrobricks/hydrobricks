@@ -78,7 +78,7 @@ class Model(ABC):
 
     def __del__(self) -> None:
         """Clean up resources when model is deleted."""
-        self.cleanup()
+        self._cleanup()
 
     @property
     def name(self) -> str | None:
@@ -145,10 +145,9 @@ class Model(ABC):
             self.settings.set_timer(start_date, end_date, 1, "day")
 
             # Initialize the model (with sub basin creation)
-            if not self.model.init_with_basin(
+            self.model.init_with_basin(
                 self.settings.settings, spatial_structure.settings
-            ):
-                raise ModelError("Basin creation failed.", is_initialized=False)
+            )
 
             self._is_initialized = True
 
@@ -213,8 +212,7 @@ class Model(ABC):
             timer = Timer(text="Model simulation completed in {seconds:.2f} seconds")
             timer.start()
 
-            if not self.model.run():
-                raise ModelError("Model run failed.")
+            self.model.run()
 
             timer.stop()
 
@@ -225,15 +223,11 @@ class Model(ABC):
             logger.error("Configuration error during model run", exc_info=True)
             raise
         except (TypeError, ValueError) as e:
-            logger.error(
-                f"Invalid argument type or value in model run: {e}", exc_info=True
-            )
-            raise ConfigurationError(
-                f"Model run failed due to invalid input: {e}"
-            ) from e
+            logger.error(f"Model run failed: {e}", exc_info=True)
+            raise ModelError(f"Model run failed: {e}") from e
 
     @staticmethod
-    def cleanup() -> None:
+    def _cleanup() -> None:
         close_log()
 
     def initialize_state_variables(
@@ -261,6 +255,12 @@ class Model(ABC):
         forcing
             The forcing data.
         """
+        if not self._is_initialized:
+            raise ModelError(
+                "The model has not been initialized. "
+                "Please run setup() before setting forcing data.",
+                is_initialized=False,
+            )
         self.model.clear_time_series()
         time = forcing.data2D.time.to_numpy()
         time = date_as_mjd(time)

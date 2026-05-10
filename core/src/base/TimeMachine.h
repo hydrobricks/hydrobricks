@@ -51,14 +51,14 @@ class TimeMachine {
      *
      * @return number of time steps
      */
-    int GetTimeStepCount() const;
+    [[nodiscard]] int GetTimeStepCount() const;
 
     /**
      * Get the current date as a MJD.
      *
      * @return current date
      */
-    double GetDate() const {
+    [[nodiscard]] double GetDate() const noexcept {
         return _date;
     }
 
@@ -67,7 +67,7 @@ class TimeMachine {
      *
      * @return start date
      */
-    double GetStart() const {
+    [[nodiscard]] double GetStart() const noexcept {
         return _start;
     }
 
@@ -76,7 +76,7 @@ class TimeMachine {
      *
      * @return end date
      */
-    double GetEnd() const {
+    [[nodiscard]] double GetEnd() const noexcept {
         return _end;
     }
 
@@ -108,20 +108,11 @@ class TimeMachine {
     }
 
     /**
-     * Get the current date (MJD) from the global timer state.
-     *
-     * @return current date as MJD.
-     */
-    static double GetCurrentDate() {
-        return _currentDateStatic;
-    }
-
-    /**
-     * Get the current day of the year (1-366) from the static current date.
+     * Get the current day of the year (1-366) from the current date.
      *
      * @return current day of the year.
      */
-    static int GetCurrentDayOfYear();
+    [[nodiscard]] int GetCurrentDayOfYear() const;
 
     /**
      * Check if the time machine is valid.
@@ -148,7 +139,6 @@ class TimeMachine {
     double _timeStepInDays;
     ParametersUpdater* _parametersUpdater;  // non-owning reference
     ActionsManager* _actionsManager;        // non-owning reference
-    static double _currentDateStatic;       // Holds the globally accessible current date (MJD)
 
     /**
      * Update the time step in days.

@@ -23,7 +23,7 @@ int ProcessTransform::GetConnectionCount() const {
     return 1;
 }
 
-double* ProcessTransform::GetValuePointer(const string& name) {
+double* ProcessTransform::GetValuePointer(std::string_view name) {
     if (name == "output") {
         return _outputs[0]->GetAmountPointer();
     }

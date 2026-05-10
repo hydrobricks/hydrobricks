@@ -10,6 +10,7 @@
 
 class Brick;
 class HydroUnit;
+class TimeMachine;
 class WaterContainer;
 
 class Process {
@@ -25,7 +26,7 @@ class Process {
      * @param brick the related brick.
      * @return the created process.
      */
-    static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
+    static std::unique_ptr<Process> Factory(const ProcessSettings& processSettings, Brick* brick);
 
     /**
      * Register the parameters and the needed forcing for the process.
@@ -63,7 +64,7 @@ class Process {
      * @param name name of the parameter to check.
      * @return true if the process has a parameter with the provided name.
      */
-    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, const string& name);
+    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Get the value pointer of a parameter.
@@ -72,7 +73,7 @@ class Process {
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Set the properties of the hydro unit.
@@ -152,14 +153,14 @@ class Process {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionCount() const = 0;
+    [[nodiscard]] virtual int GetConnectionCount() const = 0;
 
     /**
      * Get the change rates of the process.
      *
      * @return vector of change rates.
      */
-    virtual vecDouble GetChangeRates();
+    [[nodiscard]] virtual vecDouble GetChangeRates();
 
     /**
      * Store the water corresponding to the change rates in the outgoing fluxes.
@@ -200,7 +201,7 @@ class Process {
      * @param name name of the element to get.
      * @return pointer to the value of the given element.
      */
-    virtual double* GetValuePointer(const string& name);
+    [[nodiscard]] virtual double* GetValuePointer(std::string_view name);
 
     /**
      * Get the name of the process.
@@ -218,6 +219,16 @@ class Process {
      */
     void SetName(const string& name) {
         _name = name;
+    }
+
+    /**
+     * Set the time machine (non-owning reference).
+     * Required by processes that depend on the current simulation date.
+     *
+     * @param timeMachine pointer to the time machine.
+     */
+    void SetTimeMachine(TimeMachine* timeMachine) {
+        _timeMachine = timeMachine;
     }
 
     /**
@@ -243,7 +254,7 @@ class Process {
      *
      * @return true if the process is a lateral process.
      */
-    [[nodiscard]] virtual bool IsLateralProcess() const {
+    [[nodiscard]] virtual bool IsLateralProcess() const noexcept {
         return false;
     }
 
@@ -252,7 +263,7 @@ class Process {
      *
      * @return true if the process has at least one output flux.
      */
-    [[nodiscard]] bool HasOutputFluxes() const {
+    [[nodiscard]] bool HasOutputFluxes() const noexcept {
         return !_outputs.empty();
     }
 
@@ -261,13 +272,14 @@ class Process {
      *
      * @return true if the process has a water container.
      */
-    [[nodiscard]] bool HasWaterContainer() const {
+    [[nodiscard]] bool HasWaterContainer() const noexcept {
         return _container != nullptr;
     }
 
   protected:
     string _name;
     WaterContainer* _container;                   // non-owning reference
+    TimeMachine* _timeMachine{nullptr};           // non-owning reference
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
 
     /**
@@ -275,14 +287,14 @@ class Process {
      *
      * @return sum of change rates from other processes.
      */
-    double GetSumChangeRatesOtherProcesses() const;
+    [[nodiscard]] double GetSumChangeRatesOtherProcesses() const;
 
     /**
      * Get the rates of the process.
      *
      * @return vector of rates.
      */
-    virtual vecDouble GetRates() = 0;
+    [[nodiscard]] virtual vecDouble GetRates() = 0;
 };
 
 #endif  // HYDROBRICKS_PROCESS_H

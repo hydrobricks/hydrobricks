@@ -27,14 +27,14 @@ static string GetValidSolverNames() {
     return suggestions;
 }
 
-Solver* Solver::Factory(const SolverSettings& solverSettings) {
-    using FactoryFunc = std::function<Solver*()>;
+std::unique_ptr<Solver> Solver::Factory(const SolverSettings& solverSettings) {
+    using FactoryFunc = std::function<std::unique_ptr<Solver>()>;
 
     static const std::unordered_map<string, FactoryFunc> factoryMap = {
-        {"rk4", []() { return new SolverRK4(); }},
-        {"runge_kutta", []() { return new SolverRK4(); }},
-        {"euler_explicit", []() { return new SolverEulerExplicit(); }},
-        {"heun_explicit", []() { return new SolverHeunExplicit(); }}};
+        {"rk4", []() { return std::make_unique<SolverRK4>(); }},
+        {"runge_kutta", []() { return std::make_unique<SolverRK4>(); }},
+        {"euler_explicit", []() { return std::make_unique<SolverEulerExplicit>(); }},
+        {"heun_explicit", []() { return std::make_unique<SolverHeunExplicit>(); }}};
 
     auto it = factoryMap.find(solverSettings.name);
     if (it != factoryMap.end()) {
@@ -53,10 +53,8 @@ void Solver::InitializeContainers() {
 
 void Solver::SaveStateVariables(int col) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
-        _stateVariableChanges(counter, col) = *value;
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        _stateVariableChanges(i, col) = *value;
     }
 }
 
@@ -111,26 +109,22 @@ void Solver::ApplyConstraintsFor(int col) {
 
 void Solver::ResetStateVariableChanges() {
     assert(_processor);
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
+    for (auto value : _processor->GetStateVariables()) {
         *value = 0;
     }
 }
 
 void Solver::SetStateVariablesToIteration(int col) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
-        *value = _stateVariableChanges(counter, col);
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        *value = _stateVariableChanges(i, col);
     }
 }
 
 void Solver::SetStateVariablesToAvgOf(int col1, int col2) {
     assert(_processor);
-    int counter = 0;
-    for (auto value : *(_processor->GetStateVariablesVectorPt())) {
-        *value = (_stateVariableChanges(counter, col1) + _stateVariableChanges(counter, col2)) / 2.0;
-        counter++;
+    for (auto [i, value] : std::views::enumerate(_processor->GetStateVariables())) {
+        *value = (_stateVariableChanges(i, col1) + _stateVariableChanges(i, col2)) / 2.0;
     }
 }
 

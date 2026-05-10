@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SOLVER_H
 #define HYDROBRICKS_SOLVER_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "SettingsModel.h"
 
@@ -26,7 +28,7 @@ class Solver {
      * @param solverSettings The solver settings.
      * @return A new generated solver.
      */
-    static Solver* Factory(const SolverSettings& solverSettings);
+    static std::unique_ptr<Solver> Factory(const SolverSettings& solverSettings);
 
     /**
      * Connect the solver to a processor.

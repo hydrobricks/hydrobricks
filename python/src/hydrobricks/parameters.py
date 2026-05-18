@@ -67,7 +67,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
-    "outflow:percolation": [
+    "percolation:constant": [
         ParamSpec(
             name="percolation_rate",
             unit="mm/d",

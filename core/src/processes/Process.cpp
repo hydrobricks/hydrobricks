@@ -20,8 +20,8 @@
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
+#include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRunoffSocont.h"
@@ -43,7 +43,7 @@ struct ProcessEntry {
 // Maps deprecated/short aliases to their canonical process type name.
 const std::unordered_map<string, string>& GetProcessAliases() {
     static const std::unordered_map<string, string> aliases = {
-        {"percolation", "outflow:percolation"},
+        {"outflow:percolation", "percolation:constant"},
         {"overflow", "outflow:overflow"},
         {"transform:snow_ice_constant", "transformation:snow_ice_constant"},
         {"transform:snow_ice_swat", "transformation:snow_ice_swat"},
@@ -68,11 +68,11 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowLinear::RegisterProcessParametersAndForcing
         }},
 
-        {"outflow:percolation", {
+        {"percolation:constant", {
             [](Brick* b) {
-                return std::make_unique<ProcessOutflowPercolation>(b->GetWaterContainer());
+                return std::make_unique<ProcessPercolationConstant>(b->GetWaterContainer());
             },
-            &ProcessOutflowPercolation::RegisterProcessParametersAndForcing
+            &ProcessPercolationConstant::RegisterProcessParametersAndForcing
         }},
 
         {"percolation:gr4j", {

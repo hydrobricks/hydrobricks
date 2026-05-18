@@ -7,9 +7,13 @@
 #include "Brick.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "ProcessETGR4J.h"
 #include "ProcessETSocont.h"
+#include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessInterceptionGR4J.h"
 #include "ProcessLateralSnowSlide.h"
+#include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
 #include "ProcessMeltTemperatureIndex.h"
@@ -18,6 +22,8 @@
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowPercolation.h"
 #include "ProcessOutflowRestDirect.h"
+#include "ProcessPercolationGR4J.h"
+#include "ProcessRoutingGR4J.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
@@ -56,43 +62,80 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
     static const std::unordered_map<string, ProcessEntry> registry = {
 
         {"outflow:linear", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowLinear>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowLinear>(b->GetWaterContainer());
+            },
             &ProcessOutflowLinear::RegisterProcessParametersAndForcing
         }},
 
         {"outflow:percolation", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowPercolation>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowPercolation>(b->GetWaterContainer());
+            },
             &ProcessOutflowPercolation::RegisterProcessParametersAndForcing
         }},
 
+        {"percolation:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessPercolationGR4J::RegisterProcessParametersAndForcing
+        }},
+
         {"outflow:direct", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer());
+            },
             &ProcessOutflowDirect::RegisterProcessParametersAndForcing
         }},
 
         {"outflow:rest_direct", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowRestDirect>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowRestDirect>(b->GetWaterContainer());
+            },
             &ProcessOutflowRestDirect::RegisterProcessParametersAndForcing
         }},
 
         {"outflow:overflow", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer());
+            },
             &ProcessOutflowOverflow::RegisterProcessParametersAndForcing
         }},
 
         {"runoff:socont", {
-            [](Brick* b) { return std::make_unique<ProcessRunoffSocont>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessRunoffSocont>(b->GetWaterContainer());
+            },
             &ProcessRunoffSocont::RegisterProcessParametersAndForcing
         }},
 
         {"infiltration:socont", {
-            [](Brick* b) { return std::make_unique<ProcessInfiltrationSocont>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationSocont>(b->GetWaterContainer());
+            },
             &ProcessInfiltrationSocont::RegisterProcessParametersAndForcing
         }},
 
+        {"infiltration:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationGR4J::RegisterProcessParametersAndForcing
+        }},
+
         {"et:socont", {
-            [](Brick* b) { return std::make_unique<ProcessETSocont>(b->GetWaterContainer()); },
+            [](Brick* b) {
+                return std::make_unique<ProcessETSocont>(b->GetWaterContainer());
+            },
             &ProcessETSocont::RegisterProcessParametersAndForcing
+        }},
+
+        {"et:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETGR4J>(b->GetWaterContainer());
+            },
+            &ProcessETGR4J::RegisterProcessParametersAndForcing
         }},
 
         {"melt:degree_day", {
@@ -137,6 +180,17 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing
         }},
 
+        {"melt:cemaneige", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltCemaNeige>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melt:cemaneige to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltCemaNeige::RegisterProcessParametersAndForcing
+        }},
+
         {"transformation:snow_ice_constant", {
             [](Brick* b) -> std::unique_ptr<Process> {
                 if (b->GetCategory() == BrickCategory::Snowpack) {
@@ -170,6 +224,20 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessLateralSnowSlide::RegisterProcessParametersAndForcing
+        }},
+
+        {"interception:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInterceptionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInterceptionGR4J::RegisterProcessParametersAndForcing
+        }},
+
+        {"routing:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingGR4J>(b->GetWaterContainer());
+            },
+            &ProcessRoutingGR4J::RegisterProcessParametersAndForcing
         }},
 
     };

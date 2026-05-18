@@ -40,7 +40,7 @@ class Process {
     /**
      * Reset all the fluxes connected to the process.
      */
-    void Reset();
+    virtual void Reset();
 
     /**
      * Check that everything is correctly defined.

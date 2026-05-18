@@ -117,6 +117,21 @@ bool GenerateStructureGR4J(SettingsModel& settings) {
     settings.AddBrickProcess("throughfall", "outflow:rest_direct", "ground_soil");
     settings.SetProcessOutputsAsInstantaneous();
 
+    // Ground soil (zero capacity): receives Pn, splits into production-store input and direct routing
+    settings.AddHydroUnitBrick("ground_soil", "storage");
+    settings.AddBrickProcess("production", "infiltration:gr4j", "production_store");
+    settings.AddBrickProcess("runoff", "outflow:rest_direct", "uh_input");
+
+    // Production store (capacity X1)
+    settings.AddHydroUnitBrick("production_store", "storage");
+    settings.AddBrickParameter("capacity", 350.0f);
+    settings.AddBrickProcess("et", "et:gr4j");
+    settings.AddBrickProcess("percolation", "percolation:gr4j", "uh_input");
+
+    // UH input buffer
+    settings.AddHydroUnitBrick("uh_input", "storage");
+    settings.AddBrickProcess("routing", "routing:gr4j", "outlet");
+
     settings.AddLoggingToItem("outlet");
 
     return true;

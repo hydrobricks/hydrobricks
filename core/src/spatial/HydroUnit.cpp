@@ -120,6 +120,12 @@ void HydroUnit::AddForcing(std::unique_ptr<Forcing> forcing) {
     _forcing.push_back(std::move(forcing));
 }
 
+void HydroUnit::ResetForcingUpdates() {
+    for (const auto& forcing : _forcing) {
+        forcing->ResetUpdate();
+    }
+}
+
 Forcing* HydroUnit::GetForcing(VariableType type) const {
     auto it = _forcingMap.find(type);
     if (it != _forcingMap.end()) {

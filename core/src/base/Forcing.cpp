@@ -11,7 +11,17 @@ void Forcing::AttachTimeSeriesData(TimeSeriesData* timeSeriesData) {
 
 double Forcing::GetValue() const {
     assert(_timeSeriesData);
+    if (_hasUpdatedValue) return _updatedValue;
     return _timeSeriesData->GetCurrentValue();
+}
+
+void Forcing::UpdateValue(double value) {
+    _updatedValue = value;
+    _hasUpdatedValue = true;
+}
+
+void Forcing::ResetUpdate() {
+    _hasUpdatedValue = false;
 }
 
 bool Forcing::IsValid() const {

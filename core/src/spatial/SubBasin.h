@@ -155,6 +155,11 @@ class SubBasin {
     [[nodiscard]] int GetHydroUnitCount() const;
 
     /**
+     * Reset all dynamic forcing overrides in all hydro units.
+     */
+    void ResetForcingUpdates();
+
+    /**
      * Get a hydro unit by its index.
      *
      * @param index The index of the hydro unit to get.

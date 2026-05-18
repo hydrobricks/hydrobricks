@@ -10,4 +10,6 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
                              int soilStorageNb = 1, const string& surfaceRunoff = "socont_runoff",
                              bool infiniteGlacierStorage = true);
 
+bool GenerateStructureGR4J(SettingsModel& settings);
+
 #endif  // HYDROBRICKS_HELPERS_H

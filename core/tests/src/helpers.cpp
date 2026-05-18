@@ -105,3 +105,19 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
 
     return true;
 }
+
+bool GenerateStructureGR4J(SettingsModel& settings) {
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+    settings.GenerateSnowpacks("melt:cemaneige");
+
+    // Ground: interception removes min(P, E); remainder flows instantaneously to ground_soil
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("interception", "interception:gr4j");
+    settings.AddBrickProcess("throughfall", "outflow:rest_direct", "ground_soil");
+    settings.SetProcessOutputsAsInstantaneous();
+
+    settings.AddLoggingToItem("outlet");
+
+    return true;
+}

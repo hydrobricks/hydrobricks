@@ -699,7 +699,8 @@ class Model(ABC):
         if "target" in process_data:
             target = process_data["target"]
         else:
-            if not process_data["kind"].startswith("et:"):
+            kind = process_data["kind"]
+            if not (kind.startswith("et:") or kind.startswith("interception:")):
                 raise ConfigurationError(
                     f"Brick {key} has a process ({process}) without a target.",
                     item_name="target",

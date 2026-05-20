@@ -72,19 +72,21 @@ vecDouble ProcessMeltCemaNeige::GetRates() {
     double Cn = 0.9 * (*_meanAnnualSnow);
     double SWE = _container->GetContentWithChanges();
 
-    // Update cold content
-    _coldContent += CTG * (T - Tmelt);
-    _coldContent = std::min(_coldContent, 0.0);
+    // Update thermal state: exponential smoothing of (T - Tmelt), clamped ≤ 0.
+    // _coldContent == 0 means the snow pack is fully "thawed" and melt can occur.
+    _coldContent = std::min(0.0, CTG * _coldContent + (1.0 - CTG) * (T - Tmelt));
 
-    if (T <= Tmelt) {
+    if (_coldContent < 0.0 || T <= Tmelt) {
         return {0};
     }
 
-    // Potential melt corrected by cold content
-    double potMelt = std::max(0.0, Kf * (T - Tmelt) - (-_coldContent));
+    // Potential melt (cold content fully dissipated)
+    double potMelt = Kf * (T - Tmelt);
 
-    // Scale by snow availability (avoids melt exceeding SWE)
-    double melt = potMelt * std::min(1.0, (Cn > 0) ? SWE / Cn : 1.0);
+    // Scale by snow-covered area fraction
+    double G_ratio = (Cn > 0) ? std::min(1.0, SWE / Cn) : 1.0;
+    // The fraction is corrected between 0.1 and 1 to avoid zero melt when the snowpack is very thin (based on RRMPG)
+    double melt = (0.9 * G_ratio + 0.1) * potMelt;
 
     return {melt};
 }

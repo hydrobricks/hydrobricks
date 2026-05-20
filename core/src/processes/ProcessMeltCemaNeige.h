@@ -9,11 +9,11 @@
  * CemaNeige snowmelt process (Valéry et al., 2014).
  *
  * Extends a simple degree-day approach with a cold content (thermal state)
- * correction that delays melt after cold periods:
+ * correction that delays melt after cold periods (Valéry et al., 2014):
  *
- *   G ← G + CTG × (T − Tmelt);  G ← min(G, 0)
- *   PotMelt = max(0, Kf × (T − Tmelt) − G)
- *   Melt = PotMelt × min(1, SWE / Cn)
+ *   eTG ← min(0, CTG × eTG_prev + (1 − CTG) × (T − Tmelt))
+ *   PotMelt = Kf × (T − Tmelt)  if eTG == 0 and T > Tmelt, else 0
+ *   Melt = (0.9 × min(1, SWE / Cn) + 0.1) × PotMelt
  *
  * Parameters:
  *   degree_day_factor (Kf)       [mm/°C/d]

@@ -16,8 +16,8 @@ ProcessRoutingGR4J::ProcessRoutingGR4J(WaterContainer* container)
 
 void ProcessRoutingGR4J::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("exchange_factor", 0.0f);
-    modelSettings->AddProcessParameter("routing_capacity", 60.0f);
-    modelSettings->AddProcessParameter("uh_base_time", 1.5f);
+    modelSettings->AddProcessParameter("routing_capacity", 90.0f);
+    modelSettings->AddProcessParameter("uh_base_time", 1.7f);
 }
 
 void ProcessRoutingGR4J::SetParameters(const ProcessSettings& processSettings) {

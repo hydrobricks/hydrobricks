@@ -9,6 +9,7 @@
 #include "SplitterRain.h"
 #include "SplitterSnowRainCemaNeige.h"
 #include "SplitterSnowRainLinear.h"
+#include "SplitterSnowRainThreshold.h"
 
 Splitter::Splitter() {}
 
@@ -28,6 +29,12 @@ const std::unordered_map<string, SplitterFactory>& GetSplitterRegistry() {
 
         {"snow_rain:cemaneige", [](const SplitterSettings& s) {
             auto splitter = std::make_unique<SplitterSnowRainCemaNeige>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"snow_rain:threshold", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainThreshold>();
             splitter->SetParameters(s);
             return splitter;
         }},

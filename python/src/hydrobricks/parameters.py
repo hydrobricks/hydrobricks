@@ -77,8 +77,20 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Single-threshold snow/rain transition
+    "transition:snow_rain:threshold": [
+        ParamSpec(
+            name="threshold",
+            unit="°C",
+            aliases=["prec_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Snow/rain transition (pseudo-process)
-    "transition:snow_rain": [
+    "transition:snow_rain:linear": [
         ParamSpec(
             name="transition_start",
             unit="°C",
@@ -95,6 +107,28 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0,
             max=4,
             default=2,
+            mandatory=False,
+        ),
+    ],
+    # CemaNeige snow/rain transition — params used only for HydroUnits < 1500 m;
+    # defaults match the hardcoded high-elevation interval [-1, 3] °C.
+    "transition:snow_rain:cemaneige": [
+        ParamSpec(
+            name="transition_start",
+            unit="°C",
+            aliases=["prec_t_start"],
+            min=-2,
+            max=2,
+            default=-1,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="transition_end",
+            unit="°C",
+            aliases=["prec_t_end"],
+            min=0,
+            max=4,
+            default=3,
             mandatory=False,
         ),
     ],

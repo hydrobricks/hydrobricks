@@ -72,6 +72,7 @@ class ModelSettings:
         land_cover_types: list[str],
         with_snow: bool = True,
         snow_melt_process: str = "melt:degree_day",
+        snow_rain_process: str | None = None,
         snow_ice_transformation: str | None = None,
         snow_redistribution: str | None = None,
     ) -> None:
@@ -88,6 +89,9 @@ class ModelSettings:
             Account for snow
         snow_melt_process
             Snow melt process
+        snow_rain_process
+            Rain/snow partitioning method (overrides the
+            default derived from snow_melt_process)
         snow_ice_transformation
             Snow and ice transformation method (optional)
         snow_redistribution
@@ -100,7 +104,13 @@ class ModelSettings:
             )
 
         # Precipitation
-        self.settings.generate_precipitation_splitters(with_snow)
+        if snow_rain_process is not None:
+            splitter_type = snow_rain_process
+        elif snow_melt_process == "melt:cemaneige":
+            splitter_type = "snow_rain:cemaneige"
+        else:
+            splitter_type = "snow_rain:linear"
+        self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
         # Add default ground land cover
         self.settings.add_land_cover_brick("ground", "generic_land_cover")

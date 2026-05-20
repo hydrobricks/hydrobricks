@@ -133,6 +133,10 @@ VariableType TimeSeries::MatchVariableType(const string& varName) {
         varType = VariableType::Precipitation;
     } else if (StringsMatch(varName, "temperature") || StringsMatch(varName, "t")) {
         varType = VariableType::Temperature;
+    } else if (StringsMatch(varName, "temperature_min") || StringsMatch(varName, "t_min")) {
+        varType = VariableType::TemperatureMin;
+    } else if (StringsMatch(varName, "temperature_max") || StringsMatch(varName, "t_max")) {
+        varType = VariableType::TemperatureMax;
     } else if (StringsMatch(varName, "solar_radiation") || StringsMatch(varName, "r_solar") ||
                StringsMatch(varName, "r")) {
         varType = VariableType::Radiation;

@@ -3,27 +3,41 @@
 
 #include <limits>
 
+#include "Forcing.h"
 #include "HydroUnit.h"
 #include "Includes.h"
-#include "SplitterSnowRainLinear.h"
+#include "Splitter.h"
 
 /**
  * CemaNeige rain/snow splitter (Valéry et al., 2014).
  *
- * Same linear temperature interpolation as SplitterSnowRainLinear, but the
- * temperature thresholds depend on HydroUnit mean elevation:
+ * Solid fraction formula:
+ *   fsolid = max(0, min(1, (Tmax - Tmean) / (Tmax - Tmin)))
  *
+ * Temperature interval depends on HydroUnit mean elevation:
  *   elevation >= 1500 m: Tmin = -1 °C, Tmax = 3 °C (hardcoded)
- *   elevation  < 1500 m: calibrated transition_start / transition_end parameters
+ *   elevation  < 1500 m: Tmin and Tmax are daily observed forcings
+ *
+ * No calibrated parameters — only forcing inputs.
  */
-class SplitterSnowRainCemaNeige : public SplitterSnowRainLinear {
+class SplitterSnowRainCemaNeige : public Splitter {
   public:
     explicit SplitterSnowRainCemaNeige();
 
     /**
-     * @copydoc Splitter::IsValid()
+     * @copydoc Splitter::SetParameters()
      */
-    [[nodiscard]] bool IsValid() const override;
+    void SetParameters(const SplitterSettings& splitterSettings) override;
+
+    /**
+     * @copydoc Splitter::AttachForcing()
+     */
+    void AttachForcing(Forcing* forcing) override;
+
+    /**
+     * @copydoc Splitter::GetValuePointer()
+     */
+    double* GetValuePointer(const string& name) override;
 
     /**
      * @copydoc Splitter::SetHydroUnitProperties()
@@ -31,12 +45,21 @@ class SplitterSnowRainCemaNeige : public SplitterSnowRainLinear {
     void SetHydroUnitProperties(HydroUnit* unit) override;
 
     /**
+     * @copydoc Splitter::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
      * @copydoc Splitter::Compute()
      */
     void Compute() override;
 
   protected:
-    double _elevation;  // mean elevation of the HydroUnit [m]
+    Forcing* _precipitation;
+    Forcing* _temperature;
+    Forcing* _temperatureMin;
+    Forcing* _temperatureMax;
+    double _elevation;
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_CEMANEIGE_H

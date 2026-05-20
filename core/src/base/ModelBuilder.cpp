@@ -119,6 +119,7 @@ void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             unit->AddSplitter(std::move(splitterPtr));
 
             BuildForcingConnections(splitterSettings, unit, splitter);
+            splitter->SetHydroUnitProperties(unit);
         }
 
         LinkSurfaceComponentsParents(modelSettings, unit);

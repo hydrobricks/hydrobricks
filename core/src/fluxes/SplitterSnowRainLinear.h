@@ -1,13 +1,13 @@
-#ifndef HYDROBRICKS_SPLITTER_SNOW_RAIN_H
-#define HYDROBRICKS_SPLITTER_SNOW_RAIN_H
+#ifndef HYDROBRICKS_SPLITTER_SNOW_RAIN_LINEAR_H
+#define HYDROBRICKS_SPLITTER_SNOW_RAIN_LINEAR_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "Splitter.h"
 
-class SplitterSnowRain : public Splitter {
+class SplitterSnowRainLinear : public Splitter {
   public:
-    explicit SplitterSnowRain();
+    explicit SplitterSnowRainLinear();
 
     /**
      * @copydoc Splitter::IsValid()
@@ -41,4 +41,4 @@ class SplitterSnowRain : public Splitter {
     const float* _transitionEnd;    // [°C]
 };
 
-#endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_H
+#endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_LINEAR_H

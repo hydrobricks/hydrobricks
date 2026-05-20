@@ -37,7 +37,7 @@ class SnowpackModel : public ::testing::Test {
         _model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+        _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
         _model.AddSplitterOutput("outlet");                       // rain
@@ -165,7 +165,7 @@ class SnowpackModelWithAspect : public ::testing::Test {
         _model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+        _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
         _model.AddSplitterOutput("outlet");                       // rain

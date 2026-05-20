@@ -418,12 +418,12 @@ void SettingsModel::AddSplitterLogging(const string& itemName) {
     _selectedSplitter->logItems.push_back(itemName);
 }
 
-void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
+void SettingsModel::GeneratePrecipitationSplitters(bool withSnow, const string& splitterType) {
     assert(_selectedStructure);
 
     if (withSnow) {
         // Rain/snow splitter
-        AddHydroUnitSplitter("snow_rain_transition", "snow_rain");
+        AddHydroUnitSplitter("snow_rain_transition", splitterType);
         AddSplitterForcing("precipitation");
         AddSplitterForcing("temperature");
         AddSplitterOutput("rain_splitter");

@@ -313,8 +313,9 @@ class SettingsModel {
      * Generate precipitation splitters (rain/snow).
      *
      * @param withSnow true if snow is included, false otherwise.
+     * @param splitterType type of the rain/snow splitter (default: "snow_rain:linear").
      */
-    void GeneratePrecipitationSplitters(bool withSnow);
+    void GeneratePrecipitationSplitters(bool withSnow, const string& splitterType = "snow_rain:linear");
 
     /**
      * Generate snowpacks.

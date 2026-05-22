@@ -224,6 +224,74 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # GR4J routing process (x2, x3, x4); user-facing aliases (X2/X3/X4) are added
+    # by GR4J._define_parameter_aliases() to avoid duplicate registration.
+    "routing:gr4j": [
+        ParamSpec(
+            name="exchange_factor",
+            unit="mm/d",
+            aliases=None,
+            min=-10,
+            max=5,
+            default=0.0,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="routing_capacity",
+            unit="mm",
+            aliases=None,
+            min=1,
+            max=500,
+            default=90.0,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="uh_base_time",
+            unit="d",
+            aliases=None,
+            min=0.5,
+            max=4,
+            default=1.7,
+            mandatory=True,
+        ),
+    ],
+    # CemaNeige snow melt process
+    "melt:cemaneige": [
+        ParamSpec(
+            name="degree_day_factor",
+            unit="mm/d/°C",
+            aliases=None,
+            min=1,
+            max=10,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="cold_content_factor",
+            unit="-",
+            aliases=None,
+            min=0,
+            max=1,
+            default=0.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=None,
+            min=0,
+            max=5,
+            default=0.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="mean_annual_snow",
+            unit="mm",
+            aliases=None,
+            min=0,
+            max=3000,
+            mandatory=True,
+        ),
+    ],
     # Snow redistribution processes
     "transport:snow_slide": [
         ParamSpec(

@@ -196,8 +196,10 @@ class ActionLandCoverChange(Action):
             If False, treats all glacier area uniformly. Default: False
         method
             Method to extract glacier cover changes:
+
             - 'vector': Vectorial extraction (more precise but slower)
             - 'raster': Raster extraction (faster but less precise)
+
             Default: 'vector'
         interpolate_yearly
             If True, interpolate changes to yearly time steps between provided dates.
@@ -207,6 +209,7 @@ class ActionLandCoverChange(Action):
         -------
         tuple[ActionLandCoverChange, list[pd.DataFrame]]
             A tuple containing:
+
             - ActionLandCoverChange object configured with extracted cover areas
             - List of DataFrames with cover areas. If with_debris is True:
               [glacier_ice, glacier_debris, ground]. If False: [glacier, ground].

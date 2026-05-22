@@ -25,6 +25,7 @@ if HAS_RASTERIO:
 class GlacierEvolutionDeltaH:
     """
     Class for glacier mass balance. It is based on the following papers:
+
     - Seibert, J., Vis, M. J. P., Kohn, I., Weiler, M., and Stahl, K.: Technical note:
       Representing glacier geometry changes in a semi-distributed hydrological model,
       Hydrol. Earth Syst. Sci., 22, 2211–2224,

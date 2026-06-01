@@ -70,7 +70,7 @@ class Splitter {
      *
      * @param unit the HydroUnit this splitter belongs to.
      */
-    virtual void SetHydroUnitProperties(HydroUnit* unit) {}
+    virtual void SetHydroUnitProperties(HydroUnit* /*unit*/) {}
 
     /**
      * Attach incoming flux.

@@ -20,7 +20,7 @@ void ProcessRoutingGR4J::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("routing_capacity", 90.0f);
     modelSettings->AddProcessParameter("uh_base_time", 1.7f);
     if (modelSettings->LogAll()) {
-        modelSettings->AddProcessLogging("water_content");
+        modelSettings->AddProcessLogging("internal_storage");
     }
 }
 
@@ -56,7 +56,7 @@ double* ProcessRoutingGR4J::GetValuePointer(std::string_view name) {
     if (name == "routing_store") {
         return &_r;
     }
-    if (name == "water_content") {
+    if (name == "internal_storage") {
         return &_processStorage;
     }
 

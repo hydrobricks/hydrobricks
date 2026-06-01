@@ -22,7 +22,7 @@ class ModelGR4JBasic : public ::testing::Test {
 
         auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
                                                               TimeUnit::Day);
-        precip->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 0.0, 0.0, 0.0, 0.0});
+        precip->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
         _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
@@ -93,7 +93,10 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2Zero) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 30.0;  // 5 mm/d × 6 days
+    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double q = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double s = logger->GetTotalWaterStorageChanges();
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -155,7 +158,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPET) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 30.0;  // 5 mm/d × 6 days
+    double totalPrecip = 50.0;  // 5 mm/d × 10 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -259,7 +262,7 @@ TEST_F(ModelGR4JBasic, LargeX1BalanceCloses) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 30.0;  // 5 mm/d × 6 days
+    double totalPrecip = 50.0;  // 5 mm/d × 10 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);

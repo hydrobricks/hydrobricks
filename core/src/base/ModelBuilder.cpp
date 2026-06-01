@@ -643,7 +643,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& logItem : processSettings.logItems) {
-                valPt = _subBasin->GetBrick(iBrickType)->GetProcess(iProcess)->GetValuePointer(logItem);
+                Process* process = _subBasin->GetBrick(iBrickType)->GetProcess(iProcess);
+                valPt = process->GetValuePointer(logItem);
                 if (valPt == nullptr) {
                     throw ShouldNotHappen(
                         std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin "
@@ -651,6 +652,9 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     logItem, iProcess, iBrickType));
                 }
                 _logger->SetSubBasinValuePointer(iLabel, valPt);
+                if (logItem == "output" && process->ToAtmosphere()) {
+                    _logger->AddSubBasinEtIndex(iLabel);
+                }
                 iLabel++;
             }
         }
@@ -717,10 +721,11 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
             const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
             for (const auto& logItem : processSettings.logItems) {
+                Process* process = nullptr;
                 for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
                     auto unit = _subBasin->GetHydroUnit(iUnit);
                     auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
-                    auto process = brick->GetProcess(iProcess);
+                    process = brick->GetProcess(iProcess);
                     valPt = process->GetValuePointer(logItem);
                     if (valPt == nullptr) {
                         throw ShouldNotHappen(
@@ -729,6 +734,9 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                         logItem, iUnit, iProcess, iBrickType));
                     }
                     _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+                }
+                if (logItem == "output" && process != nullptr && process->ToAtmosphere()) {
+                    _logger->AddHydroUnitEtIndex(iLabel);
                 }
                 iLabel++;
             }

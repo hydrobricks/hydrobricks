@@ -109,7 +109,6 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
 bool GenerateStructureGR4J(SettingsModel& settings) {
     settings.GeneratePrecipitationSplitters(false);
     settings.AddLandCoverBrick("ground", "generic_land_cover");
-    settings.GenerateSnowpacks("melt:cemaneige");
 
     // Ground: interception removes min(P, E); remainder flows instantaneously to ground_soil
     settings.SelectHydroUnitBrick("ground");

@@ -74,6 +74,9 @@ class ProcessRoutingGR4J : public ProcessOutflow {
     double _qr;
     double _qd;
 
+    // Cached total process-internal water storage for water balance logging
+    double _processStorage;
+
     /**
      * @copydoc Process::GetRates()
      *

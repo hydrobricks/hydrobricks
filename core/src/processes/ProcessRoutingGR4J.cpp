@@ -12,12 +12,16 @@ ProcessRoutingGR4J::ProcessRoutingGR4J(WaterContainer* container)
       _uhBaseTime(nullptr),
       _r(0.0),
       _qr(0.0),
-      _qd(0.0) {}
+      _qd(0.0),
+      _processStorage(0.0) {}
 
 void ProcessRoutingGR4J::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("exchange_factor", 0.0f);
     modelSettings->AddProcessParameter("routing_capacity", 90.0f);
     modelSettings->AddProcessParameter("uh_base_time", 1.7f);
+    if (modelSettings->LogAll()) {
+        modelSettings->AddProcessLogging("water_content");
+    }
 }
 
 void ProcessRoutingGR4J::SetParameters(const ProcessSettings& processSettings) {
@@ -36,6 +40,7 @@ void ProcessRoutingGR4J::Reset() {
     _r = 0.0;
     _qr = 0.0;
     _qd = 0.0;
+    _processStorage = 0.0;
 }
 
 double* ProcessRoutingGR4J::GetValuePointer(std::string_view name) {
@@ -50,6 +55,9 @@ double* ProcessRoutingGR4J::GetValuePointer(std::string_view name) {
     }
     if (name == "routing_store") {
         return &_r;
+    }
+    if (name == "water_content") {
+        return &_processStorage;
     }
 
     return nullptr;
@@ -147,6 +155,9 @@ void ProcessRoutingGR4J::Finalize() {
     _qr = _r * (1.0 - std::pow(1.0 + rr4, -0.25));
     _r -= _qr;
     _qd = std::max(0.0, _stuh2[0] + F);
+
+    _processStorage = _r + std::accumulate(_stuh1.begin(), _stuh1.end(), 0.0) +
+                      std::accumulate(_stuh2.begin(), _stuh2.end(), 0.0);
 }
 
 void ProcessRoutingGR4J::_recomputeUH() {

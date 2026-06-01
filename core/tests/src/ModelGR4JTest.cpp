@@ -93,7 +93,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2Zero) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double totalPrecip = 30.0;  // 5 mm/d × 6 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -155,7 +155,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPET) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double totalPrecip = 30.0;  // 5 mm/d × 6 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -259,7 +259,7 @@ TEST_F(ModelGR4JBasic, LargeX1BalanceCloses) {
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double totalPrecip = 30.0;  // 5 mm/d × 6 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);

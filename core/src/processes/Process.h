@@ -35,7 +35,7 @@ class Process {
      * @param processType type of process.
      * @return true if everything is correctly defined.
      */
-    [[nodiscard]] static bool RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType);
+    [[nodiscard]] static bool RegisterSettings(SettingsModel* modelSettings, const string& processType);
 
     /**
      * Reset all the fluxes connected to the process.

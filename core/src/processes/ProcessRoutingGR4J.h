@@ -30,9 +30,9 @@ class ProcessRoutingGR4J : public ProcessOutflow {
     ~ProcessRoutingGR4J() override = default;
 
     /**
-     * Register the process parameters and forcing in the settings model.
+     * Register the process settings (parameters, forcing, and logging defaults) in the settings model.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetParameters()

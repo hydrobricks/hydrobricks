@@ -9,7 +9,7 @@ ProcessETGR4J::ProcessETGR4J(WaterContainer* container)
     : ProcessET(container),
       _pet(nullptr) {}
 
-void ProcessETGR4J::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessETGR4J::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessForcing("pet");
 }
 

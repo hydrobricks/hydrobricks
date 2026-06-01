@@ -8,7 +8,7 @@
 ProcessPercolationGR4J::ProcessPercolationGR4J(WaterContainer* container)
     : ProcessOutflow(container) {}
 
-void ProcessPercolationGR4J::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessPercolationGR4J::RegisterProcessSettings(SettingsModel*) {
     // No parameters or forcing: X1 is read from the container's maximum capacity.
 }
 

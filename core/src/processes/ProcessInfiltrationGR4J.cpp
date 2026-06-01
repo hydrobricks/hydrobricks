@@ -7,7 +7,7 @@
 ProcessInfiltrationGR4J::ProcessInfiltrationGR4J(WaterContainer* container)
     : ProcessInfiltration(container) {}
 
-void ProcessInfiltrationGR4J::RegisterProcessParametersAndForcing(SettingsModel* /*modelSettings*/) {}
+void ProcessInfiltrationGR4J::RegisterProcessSettings(SettingsModel* /*modelSettings*/) {}
 
 vecDouble ProcessInfiltrationGR4J::GetRates() {
     double Pn = _container->GetContentWithChanges();  // net precipitation from ground_soil

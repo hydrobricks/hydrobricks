@@ -7,7 +7,7 @@ ProcessTransformSnowToIceConstant::ProcessTransformSnowToIceConstant(WaterContai
     : ProcessTransform(container),
       _rate(nullptr) {}
 
-void ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessTransformSnowToIceConstant::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("snow_ice_transformation_rate", 0.5f);
 }
 

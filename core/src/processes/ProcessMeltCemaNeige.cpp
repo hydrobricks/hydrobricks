@@ -14,7 +14,7 @@ ProcessMeltCemaNeige::ProcessMeltCemaNeige(WaterContainer* container)
       _meanAnnualSnow(nullptr),
       _coldContent(0.0) {}
 
-void ProcessMeltCemaNeige::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltCemaNeige::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor", 3.0f);
     modelSettings->AddProcessParameter("cold_content_factor", 0.0f);
     modelSettings->AddProcessParameter("melting_temperature", 0.0f);

@@ -10,7 +10,7 @@ ProcessTransformSnowToIceSwat::ProcessTransformSnowToIceSwat(WaterContainer* con
       _basalAccCoeff(nullptr),
       _northHemisphere(nullptr) {}
 
-void ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessTransformSnowToIceSwat::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("snow_ice_transformation_basal_acc_coeff", 0.0014f);
     modelSettings->AddProcessParameter("north_hemisphere", 1);
 }

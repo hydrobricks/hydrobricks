@@ -16,7 +16,7 @@ class ProcessOutflowDirect : public ProcessOutflow {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
   protected:
     /**

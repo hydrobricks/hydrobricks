@@ -6,7 +6,7 @@
 ProcessOutflowRestDirect::ProcessOutflowRestDirect(WaterContainer* container)
     : ProcessOutflow(container) {}
 
-void ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessOutflowRestDirect::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }
 

@@ -10,7 +10,7 @@ ProcessMeltDegreeDayAspect::ProcessMeltDegreeDayAspect(WaterContainer* container
       _degreeDayFactor(nullptr),
       _meltingTemperature(nullptr) {}
 
-void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltDegreeDayAspect::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor_n", 3);
     modelSettings->AddProcessParameter("degree_day_factor_s", 3);
     modelSettings->AddProcessParameter("degree_day_factor_ew", 3);

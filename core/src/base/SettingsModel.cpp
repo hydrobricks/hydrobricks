@@ -184,7 +184,7 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     }
 
     // Register the related parameters
-    if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
+    if (!Process::RegisterSettings(this, processSettings.type)) {
         throw ModelConfigError(
             std::format("Fail to register the parameters and forcing for the process '{}'.", processSettings.type));
     }

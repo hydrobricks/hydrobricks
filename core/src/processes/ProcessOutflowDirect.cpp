@@ -10,6 +10,6 @@ vecDouble ProcessOutflowDirect::GetRates() {
     return {_container->GetContentWithChanges()};
 }
 
-void ProcessOutflowDirect::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessOutflowDirect::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }

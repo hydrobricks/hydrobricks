@@ -7,7 +7,7 @@ ProcessInterceptionGR4J::ProcessInterceptionGR4J(WaterContainer* container)
     : ProcessET(container),
       _pet(nullptr) {}
 
-void ProcessInterceptionGR4J::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessInterceptionGR4J::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessForcing("pet");
 }
 

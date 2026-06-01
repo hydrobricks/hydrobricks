@@ -20,7 +20,7 @@ bool ProcessLateralSnowSlide::IsValid() const {
     return true;
 }
 
-void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessLateralSnowSlide::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("coeff", 3178.4f);
     modelSettings->AddProcessParameter("exp", -1.998f);
     modelSettings->AddProcessParameter("min_slope", 10.0f);

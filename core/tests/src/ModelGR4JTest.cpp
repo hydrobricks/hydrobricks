@@ -12,31 +12,23 @@ class ModelGR4JBasic : public ::testing::Test {
     SettingsModel _model;
     std::unique_ptr<TimeSeriesUniform> _tsPrecip;
     std::unique_ptr<TimeSeriesUniform> _tsPet;
-    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetLogAll();
         _model.SetSolver("heun_explicit");
-        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+        _model.SetTimer("2020-01-01", "2020-01-15", 1, "day");
         GenerateStructureGR4J(_model);
 
-        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 15), 1,
                                                               TimeUnit::Day);
-        precip->SetValues({5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0});
+        precip->SetValues({0.0, 0.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
         _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
         _tsPrecip->SetData(std::move(precip));
 
-        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
-        pet->SetValues({3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0});
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 15), 1, TimeUnit::Day);
+        pet->SetValues({1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
         _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
         _tsPet->SetData(std::move(pet));
-
-        // T=10°C ensures all precipitation falls as rain (above CemaNeige rain/snow threshold)
-        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
-                                                                   TimeUnit::Day);
-        temperature->SetValues({10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0});
-        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
-        _tsTemp->SetData(std::move(temperature));
     }
 };
 
@@ -67,7 +59,6 @@ TEST_F(ModelGR4JBasic, ModelRunsCorrectly) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -87,16 +78,12 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2Zero) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
-    double q = logger->GetTotalOutletDischarge();
-    double et = logger->GetTotalET();
-    double s = logger->GetTotalWaterStorageChanges();
+    double totalPrecip = 350.0;  // 50 mm/d × 7 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -114,15 +101,14 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPrecip) {
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+    auto precipValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 15), 1,
                                                                 TimeUnit::Day);
-    precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    precipValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
     tsPrecip->SetData(std::move(precipValues));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -145,20 +131,19 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPET) {
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
-    auto petValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
-    petValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    auto petValues = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 15), 1, TimeUnit::Day);
+    petValues->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
     auto tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
     tsPet->SetData(std::move(petValues));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double totalPrecip = 350.0;  // 50 mm/d × 7 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -182,7 +167,6 @@ TEST_F(ModelGR4JBasic, PositiveExchangeRunsSuccessfully) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -207,7 +191,6 @@ TEST_F(ModelGR4JBasic, NegativeExchangeDischargeNonNegative) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -232,7 +215,6 @@ TEST_F(ModelGR4JBasic, SmallX4Works) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -256,13 +238,12 @@ TEST_F(ModelGR4JBasic, LargeX1BalanceCloses) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
 
     Logger* logger = model.GetLogger();
-    double totalPrecip = 50.0;  // 5 mm/d × 10 days
+    double totalPrecip = 350.0;  // 50 mm/d × 7 days
     double balance = logger->GetTotalOutletDischarge() + logger->GetTotalET() + logger->GetTotalWaterStorageChanges() -
                      totalPrecip;
     EXPECT_NEAR(balance, 0.0, 0.0000001);
@@ -286,9 +267,44 @@ TEST_F(ModelGR4JBasic, SmallX3Works) {
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
-    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
     EXPECT_GE(model.GetLogger()->GetOutletDischarge().minCoeff(), 0.0);
+}
+
+TEST_F(ModelGR4JBasic, GivesSameResultsAsReference) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SelectHydroUnitBrick("production_store");
+    _model.SetBrickParameterValue("capacity", 300.0f);  // X1
+    _model.SelectHydroUnitBrick("uh_input");
+    _model.SelectProcess("routing");
+    _model.SetProcessParameterValue("exchange_factor", 0.0f);     // X2
+    _model.SetProcessParameterValue("routing_capacity", 100.0f);  // X3
+    _model.SetProcessParameterValue("uh_base_time", 2.0f);        // X4
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Reference outlet discharge (mm) from a reference GR4J implementation.
+    vecDouble expected = {0.000000, 0.000000,  0.003814, 0.043580, 0.203829, 0.548403, 1.074379, 2.015970,
+                          5.228185, 11.837592, 7.648482, 4.872998, 3.672856, 3.060546, 2.629808};
+    axd q = model.GetLogger()->GetOutletDischarge();
+    ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
+    for (int i = 0; i < q.size(); ++i) {
+        EXPECT_NEAR(q[i], expected[i], 0.0000005) << "at time step " << i;
+    }
 }

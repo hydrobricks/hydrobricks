@@ -25,6 +25,11 @@ class GR4J(Model):
 
     Options
     -------
+    discrete : bool
+        Build method for the production store and routing. True (default) computes
+        them directly, reproducing the exact discrete GR4J equations. False
+        integrates them with the ODE solver; provided for comparison, it differs
+        from the reference GR4J (continuous integration is not the exact discrete map).
     snow_melt_process : str or None
         Snowmelt method: None (no snow), 'melt:cemaneige', or 'melt:degree_day'.
     snow_redistribution : str or None
@@ -35,6 +40,7 @@ class GR4J(Model):
         super().__init__(name=name, **kwargs)
 
         # Default options
+        self.options["discrete"] = True
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
@@ -67,13 +73,23 @@ class GR4J(Model):
         )
 
     def _define_structure(self) -> None:
-        """Define the GR4J model structure with all bricks and processes."""
+        """Define the GR4J model structure with all bricks and processes.
+
+        Two equivalent formulations are available via the 'discrete' option:
+          - discrete=True (default): the production store and routing are computed
+            directly (no ODE solver), reproducing the exact discrete GR4J equations.
+          - discrete=False: the production store and routing are integrated by the
+            ODE solver. Provided for comparison; it differs from the reference GR4J
+            because continuous integration is not the exact discrete map.
+        """
+        discrete = self.options["discrete"]
+
         # ------------------------------------------------------------------ #
         # Ground land cover
         # ------------------------------------------------------------------ #
-        # P–E neutralization: sends min(P, E) to atmosphere.  The remainder
-        # (Pn) is passed instantaneously to ground_soil so that the solver
-        # for that brick always sees net precipitation, not raw P.
+        # P–E neutralization: interception sends min(P, E) to atmosphere. The net
+        # precipitation Pn is passed instantaneously onward (to the production store
+        # in the discrete formulation, or to ground_soil in the solver-based one).
         # This mirrors the GR4J paper: "an interception storage of zero capacity".
         self.structure["ground"] = {
             "attach_to": "hydro_unit",
@@ -83,15 +99,66 @@ class GR4J(Model):
                     "kind": "interception:gr4j",
                 },
                 "throughfall": {
-                    "kind": "outflow:rest_direct",
-                    "target": "ground_soil",
+                    "kind": "outflow:rest",
+                    "target": "production_store" if discrete else "ground_soil",
                     "instantaneous": True,
                 },
             },
         }
 
-        # Zero-capacity pass-through: receives Pn from ground, splits into
-        # production-store infiltration (Ps) and direct routing (Pn − Ps).
+        if discrete:
+            self._define_structure_discrete()
+        else:
+            self._define_structure_solver()
+
+    def _define_structure_discrete(self) -> None:
+        """Discrete (exact) GR4J: production store and routing computed directly."""
+        # ------------------------------------------------------------------ #
+        # Production store (capacity X1)
+        # ------------------------------------------------------------------ #
+        # A single discrete process applies the exact per-step update
+        # (infiltration Ps, percolation Perc) and routes PR = (Pn − Ps) + Perc to
+        # the unit hydrograph input, while the et process draws the evaporation Es
+        # to the atmosphere. The brick is computed directly (no ODE solver).
+        self.structure["production_store"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "parameters": {"capacity": 350},
+            "computed_directly": True,
+            "processes": {
+                "production": {
+                    "kind": "production:gr4j",
+                    "target": "uh_input",
+                },
+                "et": {
+                    "kind": "et:gr4j",
+                },
+            },
+        }
+
+        # ------------------------------------------------------------------ #
+        # UH input buffer (accumulates PR = Pn − Ps + Perc each timestep)
+        # ------------------------------------------------------------------ #
+        self.structure["uh_input"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "computed_directly": True,
+            "processes": {
+                "routing": {
+                    "kind": "routing:gr4j",
+                    "target": "outlet",
+                },
+            },
+        }
+
+    def _define_structure_solver(self) -> None:
+        """Solver-based GR4J (for comparison): bricks integrated by the ODE solver."""
+        # ------------------------------------------------------------------ #
+        # Ground soil (zero-capacity pass-through)
+        # ------------------------------------------------------------------ #
+        # Splits Pn into infiltration (Ps → production store) and the direct routing
+        # branch (Pn − Ps → UH input). runoff:outflow:rest is the complement of
+        # infiltration and must be declared after it.
         self.structure["ground_soil"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
@@ -101,32 +168,32 @@ class GR4J(Model):
                     "target": "production_store",
                 },
                 "runoff": {
-                    "kind": "outflow:rest_direct",
+                    "kind": "outflow:rest",
                     "target": "uh_input",
                 },
             },
         }
 
         # ------------------------------------------------------------------ #
-        # Production store (capacity X1)
+        # Production store (capacity X1): percolation and ET integrated by the solver
         # ------------------------------------------------------------------ #
         self.structure["production_store"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
             "parameters": {"capacity": 350},
             "processes": {
-                "et": {
-                    "kind": "et:gr4j",
-                },
                 "percolation": {
                     "kind": "percolation:gr4j",
                     "target": "uh_input",
+                },
+                "et": {
+                    "kind": "et:gr4j",
                 },
             },
         }
 
         # ------------------------------------------------------------------ #
-        # UH input buffer (accumulates PR = Pn − Ps + Perc each timestep)
+        # UH input buffer
         # ------------------------------------------------------------------ #
         self.structure["uh_input"] = {
             "attach_to": "hydro_unit",
@@ -172,6 +239,17 @@ class GR4J(Model):
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         """Set GR4J-specific configuration options."""
+        if "discrete" in kwargs:
+            val = kwargs["discrete"]
+            if not isinstance(val, bool):
+                raise ConfigurationError(
+                    f"The option 'discrete' must be a boolean (got '{val}').",
+                    item_name="discrete",
+                    item_value=val,
+                    reason="Invalid option value",
+                )
+            self.options["discrete"] = val
+
         if "snow_melt_process" in kwargs:
             allowed = (None, "melt:cemaneige", "melt:degree_day")
             val = kwargs["snow_melt_process"]

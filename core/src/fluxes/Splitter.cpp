@@ -7,7 +7,9 @@
 #include "HydroUnit.h"
 #include "SplitterMultiFluxes.h"
 #include "SplitterRain.h"
-#include "SplitterSnowRain.h"
+#include "SplitterSnowRainCemaNeige.h"
+#include "SplitterSnowRainLinear.h"
+#include "SplitterSnowRainThreshold.h"
 
 Splitter::Splitter() {}
 
@@ -19,8 +21,20 @@ using SplitterFactory = std::function<std::unique_ptr<Splitter>(const SplitterSe
 const std::unordered_map<string, SplitterFactory>& GetSplitterRegistry() {
     static const std::unordered_map<string, SplitterFactory> registry = {
 
-        {"snow_rain", [](const SplitterSettings& s) {
-            auto splitter = std::make_unique<SplitterSnowRain>();
+        {"snow_rain:threshold", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainThreshold>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"snow_rain:linear", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainLinear>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"snow_rain:cemaneige", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainCemaNeige>();
             splitter->SetParameters(s);
             return splitter;
         }},

@@ -6,7 +6,7 @@
 ProcessInfiltrationSocont::ProcessInfiltrationSocont(WaterContainer* container)
     : ProcessInfiltration(container) {}
 
-void ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessInfiltrationSocont::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }
 

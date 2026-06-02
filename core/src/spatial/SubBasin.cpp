@@ -154,6 +154,12 @@ void SubBasin::AddHydroUnit(std::unique_ptr<HydroUnit> unit) {
     _hydroUnits.push_back(std::move(unit));
 }
 
+void SubBasin::ResetForcingUpdates() {
+    for (const auto& unit : _hydroUnits) {
+        unit->ResetForcingUpdates();
+    }
+}
+
 int SubBasin::GetHydroUnitCount() const {
     return static_cast<int>(_hydroUnits.size());
 }

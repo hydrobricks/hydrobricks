@@ -85,10 +85,10 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f, 0.0000001);
 }
 
 TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
@@ -150,10 +150,10 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0f);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
 }
 
 class ActionsInModel2LandCovers : public ::testing::Test {
@@ -235,15 +235,15 @@ TEST_F(ActionsInModel2LandCovers, LandCoverChangeWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.1f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(1)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.4f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.5f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.2f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(2)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.3f);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.1, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.4, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.2, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.3, 0.0000001);
 
     Logger* logger = model.GetLogger();
 
@@ -349,6 +349,6 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent(ContentType::Snow), 0.0f);
-    EXPECT_FLOAT_EQ(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent(ContentType::Ice), 10100.0f);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent(ContentType::Snow), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent(ContentType::Ice), 10100.0, 0.0000001);
 }

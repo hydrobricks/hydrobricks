@@ -47,6 +47,7 @@ class ParamSpec:
 # -----------------------------------------------------------------------------
 
 PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
+    # Simple linear reservoir
     "outflow:linear": [
         ParamSpec(
             name="response_factor",
@@ -57,6 +58,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Socont quick flow
     "runoff:socont": [
         ParamSpec(
             name="beta",
@@ -67,7 +69,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
-    "outflow:percolation": [
+    # Constant percolation
+    "percolation:constant": [
         ParamSpec(
             name="percolation_rate",
             unit="mm/d",
@@ -77,8 +80,20 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Single-threshold snow/rain transition
+    "transition:snow_rain:threshold": [
+        ParamSpec(
+            name="threshold",
+            unit="°C",
+            aliases=["prec_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Snow/rain transition (pseudo-process)
-    "transition:snow_rain": [
+    "transition:snow_rain:linear": [
         ParamSpec(
             name="transition_start",
             unit="°C",
@@ -98,7 +113,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
-    # Melt processes (snow + glacier unified specs)
+    # Classic degree-day melt (snow + glacier unified specs)
     "melt:degree_day": [
         ParamSpec(
             name="degree_day_factor",
@@ -106,7 +121,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             aliases=None,
             min=2,
             max=20,
-            mandatory=True,  # (snow 2-12, glacier 5-20)
+            mandatory=True,
         ),
         ParamSpec(
             name="melting_temperature",
@@ -118,6 +133,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Aspect-based degree-day melt
     "melt:degree_day_aspect": [
         ParamSpec(
             name="degree_day_factor_n",
@@ -153,6 +169,44 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # CemaNeige snow melt process
+    "melt:cemaneige": [
+        ParamSpec(
+            name="degree_day_factor",
+            unit="mm/d/°C",
+            aliases=None,
+            min=1,
+            max=10,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="cold_content_factor",
+            unit="-",
+            aliases=None,
+            min=0,
+            max=1,
+            default=0.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=None,
+            min=0,
+            max=5,
+            default=0.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="mean_annual_snow",
+            unit="mm",
+            aliases=None,
+            min=0,
+            max=3000,
+            mandatory=True,
+        ),
+    ],
+    # Temperature-index melt (Hock, 1999)
     "melt:temperature_index": [
         ParamSpec(
             name="melt_factor",
@@ -180,7 +234,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
-    # Snow/ice transformation processes (dynamic aliases per glacier snowpack)
+    # Snow/ice constant transformation (dynamic aliases per glacier snowpack)
     "transform:snow_ice_constant": [
         ParamSpec(
             name="snow_ice_transformation_rate",
@@ -192,6 +246,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         ),
     ],
+    # Snow/ice transformation based on SWAT
     "transform:snow_ice_swat": [
         ParamSpec(
             name="snow_ice_transformation_basal_acc_coeff",
@@ -210,6 +265,37 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             max=1,
             default=1,
             mandatory=False,
+        ),
+    ],
+    # GR4J routing process (x2, x3, x4); user-facing aliases (X2/X3/X4) are added
+    # by GR4J._define_parameter_aliases() to avoid duplicate registration.
+    "routing:gr4j": [
+        ParamSpec(
+            name="exchange_factor",
+            unit="mm/d",
+            aliases=None,
+            min=-10,
+            max=5,
+            default=0.0,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="routing_capacity",
+            unit="mm",
+            aliases=None,
+            min=1,
+            max=500,
+            default=90.0,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="uh_base_time",
+            unit="d",
+            aliases=None,
+            min=0.5,
+            max=4,
+            default=1.7,
+            mandatory=True,
         ),
     ],
     # Snow redistribution processes
@@ -448,7 +534,11 @@ class ParameterSet:
         if not isinstance(aliases, list):
             aliases = [aliases]
         index = self._get_parameter_index(parameter_name)
-        self.parameters.loc[index, "aliases"] += aliases
+        current = self.parameters.at[index, "aliases"]
+        if current is None:
+            self.parameters.at[index, "aliases"] = aliases
+        else:
+            self.parameters.at[index, "aliases"] = current + aliases
 
     def change_range(self, parameter: str, min_val: float, max_val: float) -> None:
         """
@@ -1014,14 +1104,20 @@ class ParameterSet:
         skip = {
             # No parameters
             "infiltration:socont",
-            "outflow:rest_direct",
+            "outflow:rest",
             "outflow:direct",
             "et:socont",
             "overflow",
+            "interception:gr4j",
+            "infiltration:gr4j",
+            "production:gr4j",
+            "et:gr4j",
+            "percolation:gr4j",
             # Defined elsewhere (glacier/snow generation logic)
             "melt:degree_day",
             "melt:degree_day_aspect",
             "melt:temperature_index",
+            "melt:cemaneige",
         }
 
         for _, process in brick["processes"].items():
@@ -1236,8 +1332,19 @@ class ParameterSet:
         """
         if "snow_melt_process" in options or "with_snow" in options:
             # Snow/rain transition specs (pseudo-process)
-            for spec in PROCESS_PARAM_SPECS["transition:snow_rain"]:
-                self._register(component="snow_rain_transition", spec=spec)
+            srp = options.get("snow_rain_process")
+            smp = options.get("snow_melt_process")
+            if srp is None and smp is None:
+                return  # no snow configured at all
+            if srp == "snow_rain:threshold":
+                transition_key = "transition:snow_rain:threshold"
+            elif srp == "snow_rain:cemaneige" or smp == "melt:cemaneige":
+                transition_key = None  # no calibrated params — uses Tmin/Tmax forcings
+            else:
+                transition_key = "transition:snow_rain:linear"
+            if transition_key is not None:
+                for spec in PROCESS_PARAM_SPECS[transition_key]:
+                    self._register(component="snow_rain_transition", spec=spec)
 
             if "snow_melt_process" in options:
                 smp = options["snow_melt_process"]
@@ -1262,6 +1369,13 @@ class ParameterSet:
                             "melt_factor": ["melt_factor", "mf"],
                             "radiation_coefficient": ["r_snow"],
                             "melting_temperature": ["melt_t_snow"],
+                        }
+                    elif smp == "melt:cemaneige":
+                        snow_alias_map = {
+                            "degree_day_factor": ["Kf", "kf"],
+                            "cold_content_factor": ["CTG", "ctg"],
+                            "melting_temperature": ["Tmelt", "tmelt"],
+                            "mean_annual_snow": ["Cn", "cn"],
                         }
                     for spec in PROCESS_PARAM_SPECS[smp]:
                         component = "type:snowpack"

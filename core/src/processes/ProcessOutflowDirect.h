@@ -16,7 +16,15 @@ class ProcessOutflowDirect : public ProcessOutflow {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
+
+    /**
+     * @copydoc Process::IsValid()
+     *
+     * A direct outflow drains the whole container content, so it is incompatible with any sibling
+     * process drawing from the same container.
+     */
+    [[nodiscard]] bool IsValid() const override;
 
   protected:
     /**

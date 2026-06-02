@@ -22,6 +22,8 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     _hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     _hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     _hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
+    _subBasinEtIndices.clear();
+    _hydroUnitEtIndices.clear();
     if (_recordFractions) {
         _hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
         _hydroUnitFractions = vecAxxd(_hydroUnitFractionLabels.size(),
@@ -202,7 +204,25 @@ double Logger::GetTotalOutletDischarge() const {
 }
 
 double Logger::GetTotalET() const {
-    return GetTotalHydroUnits("et:output", true);
+    // ET fluxes are identified by the to-atmosphere tag recorded during model building,
+    // not by label matching: process names (e.g. "interception") need not contain "et".
+    double sum = 0;
+
+    // Sub-basin ET: already represents the whole basin, no area weighting.
+    for (int i : _subBasinEtIndices) {
+        sum += _subBasinValues[i].sum();
+    }
+
+    // Hydro unit ET: area-weighted basin average (land-cover fraction already in the flux amount).
+    if (!_hydroUnitEtIndices.empty()) {
+        axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+        double areasSum = _hydroUnitAreas.sum();
+        for (int i : _hydroUnitEtIndices) {
+            sum += (_hydroUnitValues[i] * areas).sum() / areasSum;
+        }
+    }
+
+    return sum;
 }
 
 double Logger::GetSubBasinInitialStorageState(const string& tag) const {

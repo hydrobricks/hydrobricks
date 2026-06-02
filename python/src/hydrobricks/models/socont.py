@@ -103,7 +103,7 @@ class Socont(Model):
                     "kind": "infiltration:socont",
                     "target": "slow_reservoir",
                 },
-                "runoff": {"kind": "outflow:rest_direct", "target": "surface_runoff"},
+                "runoff": {"kind": "outflow:rest", "target": "surface_runoff"},
             },
         }
 
@@ -122,7 +122,7 @@ class Socont(Model):
         if self.options["soil_storage_nb"] == 2:
             logger.info("Using 2 soil storages.")
             self.structure["slow_reservoir"]["processes"]["percolation"] = {
-                "kind": "outflow:percolation",
+                "kind": "percolation:constant",
                 "target": "slow_reservoir_2",
             }
             self.structure["slow_reservoir_2"] = {

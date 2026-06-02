@@ -52,6 +52,7 @@ struct BrickSettings {
     vector<Parameter> parameters;
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
+    bool computedDirectly = false;  // if true, the brick is solved explicitly (no ODE solver)
 };
 
 struct ModelStructure {
@@ -144,6 +145,13 @@ class SettingsModel {
      * @param type type of the parameter.
      */
     void SetBrickParameterValue(const string& name, float value, const std::string& type = "constant");
+
+    /**
+     * Mark the selected brick as computed directly (explicitly, without the ODE solver).
+     * Used for fully explicit formulations such as the GR4J production store and routing,
+     * where processes apply an exact discrete update each time step.
+     */
+    void SetCurrentBrickComputedDirectly();
 
     /**
      * Check if the selected brick has a parameter.
@@ -313,8 +321,9 @@ class SettingsModel {
      * Generate precipitation splitters (rain/snow).
      *
      * @param withSnow true if snow is included, false otherwise.
+     * @param splitterType type of the rain/snow splitter (default: "snow_rain:linear").
      */
-    void GeneratePrecipitationSplitters(bool withSnow);
+    void GeneratePrecipitationSplitters(bool withSnow, const string& splitterType = "snow_rain:linear");
 
     /**
      * Generate snowpacks.

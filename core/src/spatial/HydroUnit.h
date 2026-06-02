@@ -116,6 +116,11 @@ class HydroUnit {
     [[nodiscard]] Forcing* GetForcing(VariableType type) const;
 
     /**
+     * Reset all dynamic forcing overrides set during the current timestep.
+     */
+    void ResetForcingUpdates();
+
+    /**
      * Add a lateral connection to the hydro unit.
      *
      * @param receiver The hydro unit that receives the lateral connection.

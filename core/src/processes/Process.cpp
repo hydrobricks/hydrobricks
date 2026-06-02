@@ -7,17 +7,24 @@
 #include "Brick.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "ProcessETGR4J.h"
 #include "ProcessETSocont.h"
+#include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessInterceptionGR4J.h"
 #include "ProcessLateralSnowSlide.h"
+#include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
 #include "ProcessMeltTemperatureIndex.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "ProcessOutflowPercolation.h"
-#include "ProcessOutflowRestDirect.h"
+#include "ProcessOutflowRest.h"
+#include "ProcessPercolationConstant.h"
+#include "ProcessPercolationGR4J.h"
+#include "ProcessProductionGR4J.h"
+#include "ProcessRoutingGR4J.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
@@ -37,7 +44,7 @@ struct ProcessEntry {
 // Maps deprecated/short aliases to their canonical process type name.
 const std::unordered_map<string, string>& GetProcessAliases() {
     static const std::unordered_map<string, string> aliases = {
-        {"percolation", "outflow:percolation"},
+        {"outflow:percolation", "percolation:constant"},
         {"overflow", "outflow:overflow"},
         {"transform:snow_ice_constant", "transformation:snow_ice_constant"},
         {"transform:snow_ice_swat", "transformation:snow_ice_swat"},
@@ -56,43 +63,87 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
     static const std::unordered_map<string, ProcessEntry> registry = {
 
         {"outflow:linear", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowLinear>(b->GetWaterContainer()); },
-            &ProcessOutflowLinear::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowLinear>(b->GetWaterContainer());
+            },
+            &ProcessOutflowLinear::RegisterProcessSettings
         }},
 
-        {"outflow:percolation", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowPercolation>(b->GetWaterContainer()); },
-            &ProcessOutflowPercolation::RegisterProcessParametersAndForcing
+        {"percolation:constant", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationConstant>(b->GetWaterContainer());
+            },
+            &ProcessPercolationConstant::RegisterProcessSettings
+        }},
+
+        {"percolation:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessPercolationGR4J::RegisterProcessSettings
         }},
 
         {"outflow:direct", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer()); },
-            &ProcessOutflowDirect::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer());
+            },
+            &ProcessOutflowDirect::RegisterProcessSettings
         }},
 
-        {"outflow:rest_direct", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowRestDirect>(b->GetWaterContainer()); },
-            &ProcessOutflowRestDirect::RegisterProcessParametersAndForcing
+        {"outflow:rest", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowRest>(b->GetWaterContainer());
+            },
+            &ProcessOutflowRest::RegisterProcessSettings
         }},
 
         {"outflow:overflow", {
-            [](Brick* b) { return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer()); },
-            &ProcessOutflowOverflow::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer());
+            },
+            &ProcessOutflowOverflow::RegisterProcessSettings
         }},
 
         {"runoff:socont", {
-            [](Brick* b) { return std::make_unique<ProcessRunoffSocont>(b->GetWaterContainer()); },
-            &ProcessRunoffSocont::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessRunoffSocont>(b->GetWaterContainer());
+            },
+            &ProcessRunoffSocont::RegisterProcessSettings
         }},
 
         {"infiltration:socont", {
-            [](Brick* b) { return std::make_unique<ProcessInfiltrationSocont>(b->GetWaterContainer()); },
-            &ProcessInfiltrationSocont::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationSocont>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationSocont::RegisterProcessSettings
+        }},
+
+        {"infiltration:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationGR4J::RegisterProcessSettings
+        }},
+
+        {"production:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessProductionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessProductionGR4J::RegisterProcessSettings
         }},
 
         {"et:socont", {
-            [](Brick* b) { return std::make_unique<ProcessETSocont>(b->GetWaterContainer()); },
-            &ProcessETSocont::RegisterProcessParametersAndForcing
+            [](Brick* b) {
+                return std::make_unique<ProcessETSocont>(b->GetWaterContainer());
+            },
+            &ProcessETSocont::RegisterProcessSettings
+        }},
+
+        {"et:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETGR4J>(b->GetWaterContainer());
+            },
+            &ProcessETGR4J::RegisterProcessSettings
         }},
 
         {"melt:degree_day", {
@@ -106,7 +157,7 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(
                     std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessMeltDegreeDay::RegisterProcessParametersAndForcing
+            &ProcessMeltDegreeDay::RegisterProcessSettings
         }},
 
         {"melt:degree_day_aspect", {
@@ -120,7 +171,7 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(
                     std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing
+            &ProcessMeltDegreeDayAspect::RegisterProcessSettings
         }},
 
         {"melt:temperature_index", {
@@ -134,7 +185,18 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(
                     std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing
+            &ProcessMeltTemperatureIndex::RegisterProcessSettings
+        }},
+
+        {"melt:cemaneige", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltCemaNeige>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melt:cemaneige to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltCemaNeige::RegisterProcessSettings
         }},
 
         {"transformation:snow_ice_constant", {
@@ -146,7 +208,7 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(std::format(
                     "Trying to apply transformation processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing
+            &ProcessTransformSnowToIceConstant::RegisterProcessSettings
         }},
 
         {"transformation:snow_ice_swat", {
@@ -158,7 +220,7 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(std::format(
                     "Trying to apply transformation processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessTransformSnowToIceSwat::RegisterProcessParametersAndForcing
+            &ProcessTransformSnowToIceSwat::RegisterProcessSettings
         }},
 
         {"transport:snow_slide", {
@@ -169,7 +231,21 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 throw ModelConfigError(
                     std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
             },
-            &ProcessLateralSnowSlide::RegisterProcessParametersAndForcing
+            &ProcessLateralSnowSlide::RegisterProcessSettings
+        }},
+
+        {"interception:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInterceptionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInterceptionGR4J::RegisterProcessSettings
+        }},
+
+        {"routing:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingGR4J>(b->GetWaterContainer());
+            },
+            &ProcessRoutingGR4J::RegisterProcessSettings
         }},
 
     };
@@ -201,15 +277,15 @@ std::unique_ptr<Process> Process::Factory(const ProcessSettings& processSettings
         std::format("Process type '{}' not recognized (Factory). {}", processSettings.type, GetValidProcessTypes()));
 }
 
-bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
+bool Process::RegisterSettings(SettingsModel* modelSettings, const string& processType) {
     const auto& registry = GetProcessRegistry();
     auto it = registry.find(ResolveAlias(processType));
     if (it != registry.end()) {
         it->second.registerFn(modelSettings);
         return true;
     }
-    throw ModelConfigError(std::format("Process type '{}' not recognized (RegisterParametersAndForcing). {}",
-                                       processType, GetValidProcessTypes()));
+    throw ModelConfigError(
+        std::format("Process type '{}' not recognized (RegisterSettings). {}", processType, GetValidProcessTypes()));
 }
 
 void Process::Reset() {

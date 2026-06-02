@@ -1,22 +1,22 @@
-#ifndef HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
-#define HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
+#ifndef HYDROBRICKS_PROCESS_PERCOLATION_CONSTANT_H
+#define HYDROBRICKS_PROCESS_PERCOLATION_CONSTANT_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
-class ProcessOutflowPercolation : public ProcessOutflow {
+class ProcessPercolationConstant : public ProcessOutflow {
   public:
-    explicit ProcessOutflowPercolation(WaterContainer* container);
+    explicit ProcessPercolationConstant(WaterContainer* container);
 
-    ~ProcessOutflowPercolation() override = default;
+    ~ProcessPercolationConstant() override = default;
 
     /**
      * Register the process parameters and forcing in the settings model.
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetParameters()
@@ -32,4 +32,4 @@ class ProcessOutflowPercolation : public ProcessOutflow {
     vecDouble GetRates() override;
 };
 
-#endif  // HYDROBRICKS_PROCESS_OUTFLOW_PERCOLATION_H
+#endif  // HYDROBRICKS_PROCESS_PERCOLATION_CONSTANT_H

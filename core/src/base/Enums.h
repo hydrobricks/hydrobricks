@@ -31,6 +31,8 @@ enum class TimeUnit {
 enum class VariableType {
     Precipitation,
     Temperature,
+    TemperatureMin,
+    TemperatureMax,
     Radiation,
     PET,
     Custom1,

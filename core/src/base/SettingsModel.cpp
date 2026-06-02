@@ -124,6 +124,11 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
         std::format("SettingsModel::SetBrickParameterValue - Parameter '{}' not found after type check", name));
 }
 
+void SettingsModel::SetCurrentBrickComputedDirectly() {
+    assert(_selectedBrick);
+    _selectedBrick->computedDirectly = true;
+}
+
 bool SettingsModel::BrickHasParameter(const string& name) {
     assert(_selectedBrick);
     for (auto& parameter : _selectedBrick->parameters) {
@@ -184,7 +189,7 @@ void SettingsModel::AddBrickProcess(const string& name, const string& type, cons
     }
 
     // Register the related parameters
-    if (!Process::RegisterParametersAndForcing(this, processSettings.type)) {
+    if (!Process::RegisterSettings(this, processSettings.type)) {
         throw ModelConfigError(
             std::format("Fail to register the parameters and forcing for the process '{}'.", processSettings.type));
     }
@@ -237,12 +242,16 @@ void SettingsModel::AddProcessForcing(const string& name) {
         _selectedProcess->forcing.push_back(VariableType::PET);
     } else if (name == "temperature") {
         _selectedProcess->forcing.push_back(VariableType::Temperature);
+    } else if (name == "temperature_min") {
+        _selectedProcess->forcing.push_back(VariableType::TemperatureMin);
+    } else if (name == "temperature_max") {
+        _selectedProcess->forcing.push_back(VariableType::TemperatureMax);
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedProcess->forcing.push_back(VariableType::Radiation);
     } else {
         throw InputError(
             std::format("The provided forcing '{}' is not yet supported. Valid forcing types: precipitation, pet, "
-                        "temperature, solar_radiation (or r_solar)",
+                        "temperature, temperature_min, temperature_max, solar_radiation (or r_solar)",
                         name));
     }
 }
@@ -341,12 +350,16 @@ void SettingsModel::AddSplitterForcing(const string& name) {
         _selectedSplitter->forcing.push_back(VariableType::Precipitation);
     } else if (name == "temperature") {
         _selectedSplitter->forcing.push_back(VariableType::Temperature);
+    } else if (name == "temperature_min") {
+        _selectedSplitter->forcing.push_back(VariableType::TemperatureMin);
+    } else if (name == "temperature_max") {
+        _selectedSplitter->forcing.push_back(VariableType::TemperatureMax);
     } else if (name == "solar_radiation" || name == "r_solar") {
         _selectedSplitter->forcing.push_back(VariableType::Radiation);
     } else {
         throw InputError(
             std::format("The provided forcing '{}' is not yet supported. Valid forcing types: precipitation, "
-                        "temperature, solar_radiation (or r_solar)",
+                        "temperature, temperature_min, temperature_max, solar_radiation (or r_solar)",
                         name));
     }
 }
@@ -418,18 +431,25 @@ void SettingsModel::AddSplitterLogging(const string& itemName) {
     _selectedSplitter->logItems.push_back(itemName);
 }
 
-void SettingsModel::GeneratePrecipitationSplitters(bool withSnow) {
+void SettingsModel::GeneratePrecipitationSplitters(bool withSnow, const string& splitterType) {
     assert(_selectedStructure);
 
     if (withSnow) {
         // Rain/snow splitter
-        AddHydroUnitSplitter("snow_rain_transition", "snow_rain");
+        AddHydroUnitSplitter("snow_rain_transition", splitterType);
         AddSplitterForcing("precipitation");
         AddSplitterForcing("temperature");
         AddSplitterOutput("rain_splitter");
         AddSplitterOutput("snow_splitter", ContentType::Snow);
-        AddSplitterParameter("transition_start", 0.0f);
-        AddSplitterParameter("transition_end", 2.0f);
+        if (splitterType == "snow_rain:threshold") {
+            AddSplitterParameter("threshold", 0.0f);
+        } else if (splitterType == "snow_rain:cemaneige") {
+            AddSplitterForcing("temperature_min");
+            AddSplitterForcing("temperature_max");
+        } else {
+            AddSplitterParameter("transition_start", 0.0f);
+            AddSplitterParameter("transition_end", 2.0f);
+        }
 
         // Splitter to land covers
         AddHydroUnitSplitter("snow_splitter", "multi_fluxes");

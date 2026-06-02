@@ -254,5 +254,7 @@ ModelResult ModelHydro::UpdateForcing() {
         }
     }
 
+    _subBasin->ResetForcingUpdates();
+
     return {};
 }

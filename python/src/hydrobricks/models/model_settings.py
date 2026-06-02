@@ -72,6 +72,7 @@ class ModelSettings:
         land_cover_types: list[str],
         with_snow: bool = True,
         snow_melt_process: str = "melt:degree_day",
+        snow_rain_process: str | None = None,
         snow_ice_transformation: str | None = None,
         snow_redistribution: str | None = None,
     ) -> None:
@@ -88,6 +89,9 @@ class ModelSettings:
             Account for snow
         snow_melt_process
             Snow melt process
+        snow_rain_process
+            Rain/snow partitioning method (overrides the
+            default derived from snow_melt_process)
         snow_ice_transformation
             Snow and ice transformation method (optional)
         snow_redistribution
@@ -100,7 +104,13 @@ class ModelSettings:
             )
 
         # Precipitation
-        self.settings.generate_precipitation_splitters(with_snow)
+        if snow_rain_process is not None:
+            splitter_type = snow_rain_process
+        elif snow_melt_process == "melt:cemaneige":
+            splitter_type = "snow_rain:cemaneige"
+        else:
+            splitter_type = "snow_rain:linear"
+        self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
         # Add default ground land cover
         self.settings.add_land_cover_brick("ground", "generic_land_cover")
@@ -195,7 +205,7 @@ class ModelSettings:
         self.settings.add_brick_process(name, kind, target, log)
 
         # Define output as static
-        if kind in ["outflow:direct", "outflow:rest_direct"]:
+        if kind in ["outflow:direct", "outflow:rest"]:
             self.settings.set_process_outputs_as_static()
 
         # Define output as instantaneous
@@ -218,6 +228,14 @@ class ModelSettings:
             Type of the brick parameter (for now has to be 'constant')
         """
         self.settings.add_brick_parameter(name, float(value), kind)
+
+    def set_current_brick_computed_directly(self) -> None:
+        """
+        Mark the selected brick as computed directly (explicitly, without the ODE
+        solver). Used for fully explicit formulations such as the GR4J production
+        store and routing, where processes apply an exact discrete update each step.
+        """
+        self.settings.set_current_brick_computed_directly()
 
     def add_process_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"

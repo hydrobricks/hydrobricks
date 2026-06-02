@@ -6,7 +6,7 @@
 ProcessTransform::ProcessTransform(WaterContainer* container)
     : Process(container) {}
 
-void ProcessTransform::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessTransform::RegisterProcessSettings(SettingsModel*) {
     // No forcing or parameters
 }
 

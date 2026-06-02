@@ -159,16 +159,18 @@ class Catchment:
 
         Examples
         --------
-        # Using as context manager (recommended)
-        with Catchment(outline='boundary.shp') as catchment:
-            catchment.extract_dem('dem.tif')
+        Using as context manager (recommended):
 
-        # Manual cleanup
-        catchment = Catchment(outline='boundary.shp')
-        try:
-            catchment.extract_dem('dem.tif')
-        finally:
-            catchment.close()
+        >>> with Catchment(outline='boundary.shp') as catchment:
+        ...     catchment.extract_dem('dem.tif')
+
+        Manual cleanup:
+
+        >>> catchment = Catchment(outline='boundary.shp')
+        >>> try:
+        ...     catchment.extract_dem('dem.tif')
+        ... finally:
+        ...     catchment.close()
         """
         self._close_dem()
         self._close_attribute_memfiles()

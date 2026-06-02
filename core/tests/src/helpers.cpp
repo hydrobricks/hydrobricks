@@ -64,7 +64,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     // Infiltration and overflow
     settings.SelectHydroUnitBrick("ground");
     settings.AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
-    settings.AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
+    settings.AddBrickProcess("runoff", "outflow:rest", "surface_runoff");
     settings.SetProcessOutputsAsStatic();
 
     // Add other bricks
@@ -80,7 +80,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
         settings.AddBrickParameter("capacity", 200.0f);
         settings.AddBrickProcess("et", "et:socont");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-        settings.AddBrickProcess("percolation", "outflow:percolation", "slow_reservoir_2");
+        settings.AddBrickProcess("percolation", "percolation:constant", "slow_reservoir_2");
         settings.AddBrickProcess("overflow", "overflow", "outlet");
         settings.AddHydroUnitBrick("slow_reservoir_2", "storage");
         settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
@@ -99,6 +99,63 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     } else {
         LogError("The surface runoff option {} is not recognised in Socont.", surfaceRunoff);
         return false;
+    }
+
+    settings.AddLoggingToItem("outlet");
+
+    return true;
+}
+
+bool GenerateStructureGR4J(SettingsModel& settings, bool discrete) {
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+
+    if (discrete) {
+        LogMessage("Using the discrete version of GR4J (no solver; similar to original).");
+    } else {
+        LogMessage("Using the solver-based version of GR4J (differs from original version).");
+    }
+
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("interception", "interception:gr4j");
+    if (discrete) {
+        // Ground: interception removes min(P, E); the net precipitation Pn flows to the production store.
+        settings.AddBrickProcess("throughfall", "outflow:rest", "production_store");
+    } else {
+        // Ground: interception removes min(P, E); remainder flows instantaneously to ground_soil
+        settings.AddBrickProcess("throughfall", "outflow:rest", "ground_soil");
+    }
+    settings.SetProcessOutputsAsInstantaneous();
+
+    if (!discrete) {
+        // Ground soil (zero capacity): receives Pn, splits into production-store input (Ps) and the
+        // direct routing branch (Pn - Ps). outflow:rest takes what infiltration leaves; it must be
+        // declared after the infiltration process.
+        settings.AddHydroUnitBrick("ground_soil", "storage");
+        settings.AddBrickProcess("production", "infiltration:gr4j", "production_store");
+        settings.AddBrickProcess("runoff", "outflow:rest", "uh_input");
+    }
+
+    // Production store (capacity X1)
+    settings.AddHydroUnitBrick("production_store", "storage");
+    settings.AddBrickParameter("capacity", 350.0f);
+    if (discrete) {
+        // The production process applies the exact discrete GR4J step (infiltration, percolation) and routes
+        // PR = (Pn - Ps) + Perc to the unit hydrograph input.
+        settings.AddBrickProcess("production", "production:gr4j", "uh_input");
+    } else {
+        settings.AddBrickProcess("percolation", "percolation:gr4j", "uh_input");
+    }
+    settings.AddBrickProcess("et", "et:gr4j");
+    if (discrete) {
+        settings.SetCurrentBrickComputedDirectly();
+    }
+
+    // UH input buffer
+    settings.AddHydroUnitBrick("uh_input", "storage");
+    settings.AddBrickProcess("routing", "routing:gr4j", "outlet");
+    if (discrete) {
+        settings.SetCurrentBrickComputedDirectly();
     }
 
     settings.AddLoggingToItem("outlet");

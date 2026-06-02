@@ -1,27 +1,27 @@
-#include "SplitterSnowRain.h"
+#include "SplitterSnowRainLinear.h"
 
-SplitterSnowRain::SplitterSnowRain()
+SplitterSnowRainLinear::SplitterSnowRainLinear()
     : Splitter(),
       _precipitation(nullptr),
       _temperature(nullptr),
       _transitionStart(nullptr),
       _transitionEnd(nullptr) {}
 
-bool SplitterSnowRain::IsValid() const {
+bool SplitterSnowRainLinear::IsValid() const {
     if (_outputs.size() != 2) {
-        LogError("SplitterSnowRain should have 2 outputs.");
+        LogError("SplitterSnowRainLinear should have 2 outputs.");
         return false;
     }
 
     return true;
 }
 
-void SplitterSnowRain::SetParameters(const SplitterSettings& splitterSettings) {
+void SplitterSnowRainLinear::SetParameters(const SplitterSettings& splitterSettings) {
     _transitionStart = GetParameterValuePointer(splitterSettings, "transition_start");
     _transitionEnd = GetParameterValuePointer(splitterSettings, "transition_end");
 }
 
-void SplitterSnowRain::AttachForcing(Forcing* forcing) {
+void SplitterSnowRainLinear::AttachForcing(Forcing* forcing) {
     if (forcing->GetType() == VariableType::Precipitation) {
         _precipitation = forcing;
     } else if (forcing->GetType() == VariableType::Temperature) {
@@ -31,7 +31,7 @@ void SplitterSnowRain::AttachForcing(Forcing* forcing) {
     }
 }
 
-double* SplitterSnowRain::GetValuePointer(const string& name) {
+double* SplitterSnowRainLinear::GetValuePointer(const string& name) {
     if (name == "rain") {
         return _outputs[0]->GetAmountPointer();
     }
@@ -42,7 +42,7 @@ double* SplitterSnowRain::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-void SplitterSnowRain::Compute() {
+void SplitterSnowRainLinear::Compute() {
     if (_temperature->GetValue() <= *_transitionStart) {
         _outputs[0]->UpdateFlux(0);
         _outputs[1]->UpdateFlux(_precipitation->GetValue());

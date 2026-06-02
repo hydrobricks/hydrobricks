@@ -1,13 +1,22 @@
-#ifndef HYDROBRICKS_SPLITTER_SNOW_RAIN_H
-#define HYDROBRICKS_SPLITTER_SNOW_RAIN_H
+#ifndef HYDROBRICKS_SPLITTER_SNOW_RAIN_THRESHOLD_H
+#define HYDROBRICKS_SPLITTER_SNOW_RAIN_THRESHOLD_H
 
 #include "Forcing.h"
 #include "Includes.h"
 #include "Splitter.h"
 
-class SplitterSnowRain : public Splitter {
+/**
+ * Rain/snow splitter using a single temperature threshold.
+ *
+ * All precipitation is snow when T <= threshold, all rain when T > threshold.
+ * No intermediate blended zone.
+ *
+ * Parameters:
+ *   threshold [°C]  temperature at and below which all precipitation is solid
+ */
+class SplitterSnowRainThreshold : public Splitter {
   public:
-    explicit SplitterSnowRain();
+    explicit SplitterSnowRainThreshold();
 
     /**
      * @copydoc Splitter::IsValid()
@@ -37,8 +46,7 @@ class SplitterSnowRain : public Splitter {
   protected:
     Forcing* _precipitation;
     Forcing* _temperature;
-    const float* _transitionStart;  // [°C]
-    const float* _transitionEnd;    // [°C]
+    const float* _threshold;  // [°C]
 };
 
-#endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_H
+#endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_THRESHOLD_H

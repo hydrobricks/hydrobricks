@@ -332,6 +332,7 @@ class Forcing:
         **kwargs
             Keyword arguments defining the correction operation.
             Required keys:
+
             - variable : str
                 Name of the variable to correct.
             - method : str
@@ -360,6 +361,7 @@ class Forcing:
             Name of the variable to spatialize.
         method : str
             Name of the method to use. Can be:
+
             * constant: the same value will be used
             * additive_elevation_gradient: use of an additive elevation gradient that
               is either constant or changes for every month.

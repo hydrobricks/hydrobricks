@@ -76,7 +76,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -113,7 +113,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -150,7 +150,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -229,7 +229,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -268,7 +268,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -307,7 +307,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -401,7 +401,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
@@ -439,7 +439,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
@@ -477,7 +477,7 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));

@@ -11,7 +11,7 @@ ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* contain
       _meltingTemperature(nullptr),
       _radiationCoefficient(nullptr) {}
 
-void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltTemperatureIndex::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("melt_factor", 3.0f);
     modelSettings->AddProcessParameter("melting_temperature", 0.0f);
     modelSettings->AddProcessParameter("radiation_coefficient", 0.0007f);

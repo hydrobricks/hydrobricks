@@ -171,9 +171,5 @@ void Solver::Finalize() const {
             continue;
         }
         brick->Finalize();
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            process->Finalize();
-        }
     }
 }

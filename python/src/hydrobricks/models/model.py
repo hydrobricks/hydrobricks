@@ -589,6 +589,10 @@ class Model(ABC):
             # Select or add the brick
             self._set_structure_brick(brick, key)
 
+            # Mark the brick as computed directly (explicit, no ODE solver) if requested
+            if brick.get("computed_directly", False):
+                self.settings.set_current_brick_computed_directly()
+
             # Add brick parameters if any
             if "parameters" in brick:
                 for param, value in brick["parameters"].items():
@@ -699,7 +703,8 @@ class Model(ABC):
         if "target" in process_data:
             target = process_data["target"]
         else:
-            if not process_data["kind"].startswith("et:"):
+            kind = process_data["kind"]
+            if not (kind.startswith("et:") or kind.startswith("interception:")):
                 raise ConfigurationError(
                     f"Brick {key} has a process ({process}) without a target.",
                     item_name="target",

@@ -44,7 +44,7 @@ TEST_F(Splitters, SnowRain) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
-    _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+    _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
     _model.AddSplitterForcing("precipitation");
     _model.AddSplitterForcing("temperature");
     _model.AddSplitterOutput("outlet");  // rain

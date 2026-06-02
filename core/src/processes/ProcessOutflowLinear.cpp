@@ -7,7 +7,7 @@ ProcessOutflowLinear::ProcessOutflowLinear(WaterContainer* container)
     : ProcessOutflow(container),
       _responseFactor(nullptr) {}
 
-void ProcessOutflowLinear::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessOutflowLinear::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("response_factor", 0.2f);
 }
 

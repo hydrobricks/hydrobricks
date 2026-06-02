@@ -65,6 +65,14 @@ class Splitter {
     }
 
     /**
+     * Set HydroUnit properties (e.g. elevation) needed by spatially-aware splitters.
+     * Default is a no-op; override in subclasses that require spatial data.
+     *
+     * @param unit the HydroUnit this splitter belongs to.
+     */
+    virtual void SetHydroUnitProperties(HydroUnit* /*unit*/) {}
+
+    /**
      * Attach incoming flux.
      *
      * @param flux incoming flux

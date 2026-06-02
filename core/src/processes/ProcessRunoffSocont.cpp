@@ -12,7 +12,7 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
       _areaUnit(0),
       _exponent(5.0 / 3.0) {}
 
-void ProcessRunoffSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessRunoffSocont::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("beta", 500.0f);
 }
 

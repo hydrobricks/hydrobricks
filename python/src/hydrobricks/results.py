@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from hydrobricks import xr
@@ -52,7 +54,7 @@ class Results:
         if hasattr(self, "results") and self.results is not None:
             self.results.close()
 
-    def __enter__(self) -> "Results":
+    def __enter__(self) -> Results:
         """Context manager entry."""
         return self
 

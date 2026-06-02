@@ -276,6 +276,24 @@ class Logger {
         _recordFractions = true;
     }
 
+    /**
+     * Tag a sub-basin log label index as an evapotranspiration (to-atmosphere) flux.
+     *
+     * @param iLabel index of the sub-basin label.
+     */
+    void AddSubBasinEtIndex(int iLabel) {
+        _subBasinEtIndices.push_back(iLabel);
+    }
+
+    /**
+     * Tag a hydro unit log label index as an evapotranspiration (to-atmosphere) flux.
+     *
+     * @param iLabel index of the hydro unit label.
+     */
+    void AddHydroUnitEtIndex(int iLabel) {
+        _hydroUnitEtIndices.push_back(iLabel);
+    }
+
   protected:
     int _cursor;
     axd _time;
@@ -293,6 +311,8 @@ class Logger {
     vecStr _hydroUnitFractionLabels;
     vecAxxd _hydroUnitFractions;
     vector<vecDoublePt> _hydroUnitFractionsPt;
+    vecInt _subBasinEtIndices;   // indices into _subBasinValues that are ET (to-atmosphere) fluxes
+    vecInt _hydroUnitEtIndices;  // indices into _hydroUnitValues that are ET (to-atmosphere) fluxes
 };
 
 #endif  // HYDROBRICKS_LOGGER_H

@@ -128,6 +128,16 @@ class Brick {
     }
 
     /**
+     * Set whether the brick must be handled by the ODE solver. Set to false for
+     * bricks whose processes apply an exact explicit update each time step.
+     *
+     * @param needsSolver true if the brick needs the solver.
+     */
+    void SetNeedsSolver(bool needsSolver) {
+        _needsSolver = needsSolver;
+    }
+
+    /**
      * Get the category of the brick.
      *
      * @return the category of the brick.

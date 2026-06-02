@@ -64,7 +64,7 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     // Infiltration and overflow
     settings.SelectHydroUnitBrick("ground");
     settings.AddBrickProcess("infiltration", "infiltration:socont", "slow_reservoir");
-    settings.AddBrickProcess("runoff", "outflow:rest_direct", "surface_runoff");
+    settings.AddBrickProcess("runoff", "outflow:rest", "surface_runoff");
     settings.SetProcessOutputsAsStatic();
 
     // Add other bricks
@@ -120,18 +120,20 @@ bool GenerateStructureGR4J(SettingsModel& settings, bool discrete) {
     settings.AddBrickProcess("interception", "interception:gr4j");
     if (discrete) {
         // Ground: interception removes min(P, E); the net precipitation Pn flows to the production store.
-        settings.AddBrickProcess("throughfall", "outflow:direct", "production_store");
+        settings.AddBrickProcess("throughfall", "outflow:rest", "production_store");
     } else {
         // Ground: interception removes min(P, E); remainder flows instantaneously to ground_soil
-        settings.AddBrickProcess("throughfall", "outflow:rest_direct", "ground_soil");
+        settings.AddBrickProcess("throughfall", "outflow:rest", "ground_soil");
     }
     settings.SetProcessOutputsAsInstantaneous();
 
     if (!discrete) {
-        // Ground soil (zero capacity): receives Pn, splits into production-store input and direct routing
+        // Ground soil (zero capacity): receives Pn, splits into production-store input (Ps) and the
+        // direct routing branch (Pn - Ps). outflow:rest takes what infiltration leaves; it must be
+        // declared after the infiltration process.
         settings.AddHydroUnitBrick("ground_soil", "storage");
         settings.AddBrickProcess("production", "infiltration:gr4j", "production_store");
-        settings.AddBrickProcess("runoff", "outflow:rest_direct", "uh_input");
+        settings.AddBrickProcess("runoff", "outflow:rest", "uh_input");
     }
 
     // Production store (capacity X1)

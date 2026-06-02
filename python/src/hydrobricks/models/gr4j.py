@@ -142,7 +142,7 @@ class GR4J(Model):
     def _define_parameter_aliases(self) -> None:
         """Define user-friendly parameter aliases for the GR4J model."""
         self.parameter_aliases = {
-            "production_store:capacity": "X1",
+            "production_store:capacity": ["X1", "x1"],
             "uh_input:exchange_factor": ["X2", "x2"],
             "uh_input:routing_capacity": ["X3", "x3"],
             "uh_input:uh_base_time": ["X4", "x4"],

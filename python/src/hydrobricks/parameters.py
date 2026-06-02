@@ -1104,7 +1104,7 @@ class ParameterSet:
         skip = {
             # No parameters
             "infiltration:socont",
-            "outflow:rest_direct",
+            "outflow:rest",
             "outflow:direct",
             "et:socont",
             "overflow",

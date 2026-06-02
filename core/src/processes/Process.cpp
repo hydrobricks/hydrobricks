@@ -20,7 +20,7 @@
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "ProcessOutflowRestDirect.h"
+#include "ProcessOutflowRest.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
 #include "ProcessProductionGR4J.h"
@@ -90,11 +90,11 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowDirect::RegisterProcessSettings
         }},
 
-        {"outflow:rest_direct", {
+        {"outflow:rest", {
             [](Brick* b) {
-                return std::make_unique<ProcessOutflowRestDirect>(b->GetWaterContainer());
+                return std::make_unique<ProcessOutflowRest>(b->GetWaterContainer());
             },
-            &ProcessOutflowRestDirect::RegisterProcessSettings
+            &ProcessOutflowRest::RegisterProcessSettings
         }},
 
         {"outflow:overflow", {

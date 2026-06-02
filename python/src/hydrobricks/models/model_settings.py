@@ -205,7 +205,7 @@ class ModelSettings:
         self.settings.add_brick_process(name, kind, target, log)
 
         # Define output as static
-        if kind in ["outflow:direct", "outflow:rest_direct"]:
+        if kind in ["outflow:direct", "outflow:rest"]:
             self.settings.set_process_outputs_as_static()
 
         # Define output as instantaneous

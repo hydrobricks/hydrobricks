@@ -103,7 +103,7 @@ class Socont(Model):
                     "kind": "infiltration:socont",
                     "target": "slow_reservoir",
                 },
-                "runoff": {"kind": "outflow:rest_direct", "target": "surface_runoff"},
+                "runoff": {"kind": "outflow:rest", "target": "surface_runoff"},
             },
         }
 

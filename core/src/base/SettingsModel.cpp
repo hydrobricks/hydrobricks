@@ -124,6 +124,11 @@ void SettingsModel::SetBrickParameterValue(const string& name, float value, cons
         std::format("SettingsModel::SetBrickParameterValue - Parameter '{}' not found after type check", name));
 }
 
+void SettingsModel::SetCurrentBrickComputedDirectly() {
+    assert(_selectedBrick);
+    _selectedBrick->computedDirectly = true;
+}
+
 bool SettingsModel::BrickHasParameter(const string& name) {
     assert(_selectedBrick);
     for (auto& parameter : _selectedBrick->parameters) {

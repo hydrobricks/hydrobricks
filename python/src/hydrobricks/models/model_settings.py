@@ -229,6 +229,14 @@ class ModelSettings:
         """
         self.settings.add_brick_parameter(name, float(value), kind)
 
+    def set_current_brick_computed_directly(self) -> None:
+        """
+        Mark the selected brick as computed directly (explicitly, without the ODE
+        solver). Used for fully explicit formulations such as the GR4J production
+        store and routing, where processes apply an exact discrete update each step.
+        """
+        self.settings.set_current_brick_computed_directly()
+
     def add_process_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"
     ) -> None:

@@ -23,6 +23,7 @@
 #include "ProcessOutflowRestDirect.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
+#include "ProcessProductionGR4J.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
@@ -122,6 +123,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessInfiltrationGR4J>(b->GetWaterContainer());
             },
             &ProcessInfiltrationGR4J::RegisterProcessSettings
+        }},
+
+        {"production:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessProductionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessProductionGR4J::RegisterProcessSettings
         }},
 
         {"et:socont", {

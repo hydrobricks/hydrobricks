@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "Brick.h"
+#include "TimeMachine.h"
 #include "WaterContainer.h"
 
 ProcessRoutingGR4J::ProcessRoutingGR4J(WaterContainer* container)
@@ -109,6 +110,20 @@ vecDouble ProcessRoutingGR4J::GetRates() {
     }
     _qr = r_pred * (1.0 - std::pow(1.0 + rr4, -0.25));
     _qd = std::max(0.0, uh2_out + F);
+
+    // Groundwater exchange adds water to the routing store and the direct branch, but that
+    // water never entered through the inflow PR. Inject the net exchange into the container so
+    // the discharge it produces (positive X2) is backed by real water and is not capped by the
+    // container's non-negativity constraint. The clamped contributions match the committed state
+    // computed in Finalize. Evaluated once per step (the brick is computed directly).
+    if (_timeMachine != nullptr) {
+        double exchangeToStore = r_pred - (_r + uh1_out);  // F applied to the routing store (clamped)
+        double exchangeToDirect = _qd - uh2_out;           // F applied to the direct branch (clamped)
+        double netExchange = exchangeToStore + exchangeToDirect;
+        if (netExchange != 0.0) {
+            _container->AddAmountToStaticContentChange(netExchange * (*_timeMachine->GetTimeStepPointer()));
+        }
+    }
 
     return {_qr + _qd};
 }

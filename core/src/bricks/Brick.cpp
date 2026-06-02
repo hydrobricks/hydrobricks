@@ -129,6 +129,12 @@ Process* Brick::GetProcess(size_t index) const {
 
 void Brick::Finalize() {
     _water->Finalize();
+
+    // Finalize processes that maintain explicit internal state across the time step
+    // (e.g. the GR4J routing unit hydrograph buffers when the brick is computed directly).
+    for (int i = 0; i < GetProcessCount(); ++i) {
+        GetProcess(i)->Finalize();
+    }
 }
 
 void Brick::SetInitialState(double value, ContentType type) {

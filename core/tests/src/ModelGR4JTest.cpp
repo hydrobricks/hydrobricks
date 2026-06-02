@@ -17,7 +17,6 @@ class ModelGR4JBasic : public ::testing::Test {
         _model.SetLogAll();
         _model.SetSolver("heun_explicit");
         _model.SetTimer("2020-01-01", "2020-01-15", 1, "day");
-        GenerateStructureGR4J(_model);
 
         auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 15), 1,
                                                               TimeUnit::Day);
@@ -40,6 +39,7 @@ TEST_F(ModelGR4JBasic, ModelBuildsCorrectly) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -53,6 +53,7 @@ TEST_F(ModelGR4JBasic, ModelRunsCorrectly) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -72,6 +73,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2Zero) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -97,6 +99,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPrecip) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -127,6 +130,7 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPET) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -157,6 +161,7 @@ TEST_F(ModelGR4JBasic, PositiveExchangeRunsSuccessfully) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", 1.0f);
@@ -181,6 +186,7 @@ TEST_F(ModelGR4JBasic, NegativeExchangeDischargeNonNegative) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", -5.0f);
@@ -205,6 +211,7 @@ TEST_F(ModelGR4JBasic, SmallX4Works) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("uh_base_time", 0.51f);
@@ -229,6 +236,7 @@ TEST_F(ModelGR4JBasic, LargeX1BalanceCloses) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("production_store");
     _model.SetBrickParameterValue("capacity", 1000.0f);
 
@@ -257,6 +265,7 @@ TEST_F(ModelGR4JBasic, SmallX3Works) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("routing_capacity", 1.0f);
@@ -273,7 +282,7 @@ TEST_F(ModelGR4JBasic, SmallX3Works) {
     EXPECT_GE(model.GetLogger()->GetOutletDischarge().minCoeff(), 0.0);
 }
 
-TEST_F(ModelGR4JBasic, GivesSameResultsAsReference) {
+TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNoExchange) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
@@ -281,6 +290,44 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReference) {
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
+    GenerateStructureGR4J(_model);
+    _model.SelectHydroUnitBrick("production_store");
+    _model.SetBrickParameterValue("capacity", 300.0f);  // X1
+    _model.SelectHydroUnitBrick("uh_input");
+    _model.SelectProcess("routing");
+    _model.SetProcessParameterValue("exchange_factor", 0.0f);     // X2
+    _model.SetProcessParameterValue("routing_capacity", 100.0f);  // X3
+    _model.SetProcessParameterValue("uh_base_time", 2.0f);        // X4
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Reference outlet discharge (mm) from a reference GR4J implementation.
+    vecDouble expected = {0.000000, 0.000000,  0.003814, 0.043580, 0.203829, 0.548403, 1.074379, 2.015970,
+                          5.228185, 11.837592, 7.648482, 4.872998, 3.672856, 3.060546, 2.629808};
+    axd q = model.GetLogger()->GetOutletDischarge();
+    ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
+    for (int i = 0; i < q.size(); ++i) {
+        EXPECT_NEAR(q[i], expected[i], 0.0000005) << "at time step " << i;
+    }
+}
+
+TEST_F(ModelGR4JBasic, SolverGetsCloseToReferenceNoExchange) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    GenerateStructureGR4J(_model, false);
     _model.SelectHydroUnitBrick("production_store");
     _model.SetBrickParameterValue("capacity", 300.0f);  // X1
     _model.SelectHydroUnitBrick("uh_input");

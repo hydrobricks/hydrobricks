@@ -1,8 +1,6 @@
 #include "ProcessETGR4J.h"
 
-#include <cmath>
-
-#include "Brick.h"
+#include "FormulasGR4J.h"
 #include "WaterContainer.h"
 
 ProcessETGR4J::ProcessETGR4J(WaterContainer* container)
@@ -45,11 +43,13 @@ vecDouble ProcessETGR4J::GetRates() {
         return {0};
     }
 
-    double S = _container->GetContentWithChanges();
-    double Sr = S / X1;
-    double WS = std::min(En / X1, 13.0);  // 13: value at which tanh(WS) is close to 1 (num. stability cap)
-    double TWS = std::tanh(WS);
-    double Es = S * (2.0 - Sr) * TWS / (1.0 + (1.0 - Sr) * TWS);
+    // Evaporation is drawn from the store after this step's infiltration, using
+    // the start-of-step level so the value is identical at every solver stage.
+    // (Pn and En are mutually exclusive, so Ps is zero whenever En > 0; computing
+    // it keeps the production and ET processes consistent in all cases.)
+    double S0 = _container->GetContentWithoutChanges();
+    double Pn = _container->GetContentWithChanges() - _container->GetContentWithDynamicChanges();
+    double S1 = S0 + gr4j::Infiltration(S0, Pn, X1);
 
-    return {Es};
+    return {gr4j::Evaporation(S1, En, X1)};
 }

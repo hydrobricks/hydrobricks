@@ -1,8 +1,7 @@
 #include "ProcessPercolationGR4J.h"
 
-#include <cmath>
-
 #include "Brick.h"
+#include "FormulasGR4J.h"
 #include "WaterContainer.h"
 
 ProcessPercolationGR4J::ProcessPercolationGR4J(WaterContainer* container)
@@ -18,10 +17,5 @@ vecDouble ProcessPercolationGR4J::GetRates() {
         return {0};
     }
 
-    double S = _container->GetContentWithChanges();
-    double ratio = S / X1;
-    // Perc = S × (1 − (1 + (4/9 * S/X1)⁴)^(−1/4)) = S × (1 − (1 + (S/X1)⁴ / 25.62890625)^(−1/4))
-    double Perc = S * (1.0 - std::pow(1.0 + (ratio * ratio * ratio * ratio) / 25.62890625, -0.25));
-
-    return {Perc};
+    return {gr4j::Percolation(_container->GetContentWithChanges(), X1)};
 }

@@ -141,6 +141,9 @@ void ModelBuilder::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit*
     Brick* brick = brickPtr.get();
     brick->SetName(brickSettings.name);
     brick->SetParameters(brickSettings);
+    if (brickSettings.computedDirectly) {
+        brick->SetNeedsSolver(false);
+    }
     unit->AddBrick(std::move(brickPtr));
 
     BuildForcingConnections(brickSettings, unit, brick);

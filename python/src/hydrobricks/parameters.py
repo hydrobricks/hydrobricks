@@ -1110,6 +1110,7 @@ class ParameterSet:
             "overflow",
             "interception:gr4j",
             "infiltration:gr4j",
+            "production:gr4j",
             "et:gr4j",
             "percolation:gr4j",
             # Defined elsewhere (glacier/snow generation logic)

@@ -589,6 +589,10 @@ class Model(ABC):
             # Select or add the brick
             self._set_structure_brick(brick, key)
 
+            # Mark the brick as computed directly (explicit, no ODE solver) if requested
+            if brick.get("computed_directly", False):
+                self.settings.set_current_brick_computed_directly()
+
             # Add brick parameters if any
             if "parameters" in brick:
                 for param, value in brick["parameters"].items():

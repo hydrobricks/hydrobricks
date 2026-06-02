@@ -355,3 +355,77 @@ TEST_F(ModelGR4JBasic, SolverGetsCloseToReferenceNoExchange) {
         EXPECT_NEAR(q[i], expected[i], 0.0000005) << "at time step " << i;
     }
 }
+
+TEST_F(ModelGR4JBasic, GivesSameResultsAsReferencePosExchange) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    GenerateStructureGR4J(_model);
+    _model.SelectHydroUnitBrick("production_store");
+    _model.SetBrickParameterValue("capacity", 200.0f);  // X1
+    _model.SelectHydroUnitBrick("uh_input");
+    _model.SelectProcess("routing");
+    _model.SetProcessParameterValue("exchange_factor", 2.0f);    // X2
+    _model.SetProcessParameterValue("routing_capacity", 90.0f);  // X3
+    _model.SetProcessParameterValue("uh_base_time", 1.7f);       // X4
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Reference outlet discharge (mm) from a reference GR4J implementation.
+    vecDouble expected = {0.000000,  0.000000,  0.012725,  0.136420, 0.573964, 1.373628, 3.260256, 11.690935,
+                          29.438060, 33.338379, 14.274200, 8.309123, 6.095194, 4.869705, 4.080997};
+    axd q = model.GetLogger()->GetOutletDischarge();
+    ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
+    for (int i = 0; i < q.size(); ++i) {
+        EXPECT_NEAR(q[i], expected[i], 0.0000006) << "at time step " << i;
+    }
+}
+
+TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNegExchange) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    GenerateStructureGR4J(_model);
+    _model.SelectHydroUnitBrick("production_store");
+    _model.SetBrickParameterValue("capacity", 200.0f);  // X1
+    _model.SelectHydroUnitBrick("uh_input");
+    _model.SelectProcess("routing");
+    _model.SetProcessParameterValue("exchange_factor", -3.0f);   // X2
+    _model.SetProcessParameterValue("routing_capacity", 90.0f);  // X3
+    _model.SetProcessParameterValue("uh_base_time", 1.7f);       // X4
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Reference outlet discharge (mm) from a reference GR4J implementation.
+    vecDouble expected = {0.000000,  0.000000,  0.012725, 0.136420, 0.573950, 1.371315, 3.193552, 10.875901,
+                          25.635053, 26.849073, 9.237705, 5.488689, 3.862539, 2.968519, 2.407908};
+    axd q = model.GetLogger()->GetOutletDischarge();
+    ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
+    for (int i = 0; i < q.size(); ++i) {
+        EXPECT_NEAR(q[i], expected[i], 0.0000007) << "at time step " << i;
+    }
+}

@@ -219,6 +219,70 @@ def test_gr4j_parameter_aliases_resolve():
         assert parameters.has(alias), f"alias {alias!r} not found"
 
 
+def test_gr4j_x1_transform_attached_and_used():
+    import math
+
+    pytest.importorskip("spotpy")
+    parameters = models.GR4J().generate_parameters()
+
+    # The real value goes to C++; the transformed value is log of it.
+    parameters.set_values({"X1": 100})
+    assert parameters.get("X1") == 100
+    assert parameters.get_transformed("X1") == pytest.approx(math.log(100))
+
+    # X1 uses airGR log/exp, so its default lower bound is raised to a positive value.
+    parameters.allow_changing = ["X1"]
+    spotpy_params = parameters.get_for_spotpy()
+    assert spotpy_params[0].minbound == pytest.approx(math.log(1.0), abs=1e-3)
+    assert spotpy_params[0].maxbound == pytest.approx(math.log(3000.0), abs=1e-3)
+
+
+def test_gr4j_transforms_round_trip():
+    """X2 (asinh), X3 (log) and X4 (GR4J spreadsheet) map real <-> transformed."""
+    import math
+
+    parameters = models.GR4J().generate_parameters()
+    parameters.set_values({"X2": -2.0, "X3": 100.0, "X4": 1.7})
+
+    # Real values are preserved (what goes to C++).
+    assert parameters.get("X2") == -2.0
+    assert parameters.get("X3") == 100.0
+    assert parameters.get("X4") == 1.7
+
+    # Transformed values follow the parameter mappings.
+    assert parameters.get_transformed("X2") == pytest.approx(math.asinh(-2.0))
+    assert parameters.get_transformed("X3") == pytest.approx(math.log(100.0))
+    assert parameters.get_transformed("X4") == pytest.approx(math.log(1.7 - 0.5))
+
+    # Setting a transformed value back-transforms to the expected real value.
+    parameters.set_values({"X2": math.asinh(3.0)}, transformed=True)
+    assert parameters.get("X2") == pytest.approx(3.0)
+    parameters.set_values({"X3": math.log(250.0)}, transformed=True)
+    assert parameters.get("X3") == pytest.approx(250.0)
+    # X4 real = exp(t) + 0.5; t = log(2.5 - 0.5) -> back to 2.5.
+    parameters.set_values({"X4": math.log(2.5 - 0.5)}, transformed=True)
+    assert parameters.get("X4") == pytest.approx(2.5)
+
+
+def test_gr4j_transformed_spotpy_bounds():
+    import math
+
+    pytest.importorskip("spotpy")
+    parameters = models.GR4J().generate_parameters()
+    parameters.allow_changing = ["X2", "X3", "X4"]
+    sp = {p.name: p for p in parameters.get_for_spotpy()}
+
+    # X2 in [-10, 5] -> asinh bounds (monotonic increasing).
+    assert sp["X2"].minbound == pytest.approx(math.asinh(-10.0), abs=1e-3)
+    assert sp["X2"].maxbound == pytest.approx(math.asinh(5.0), abs=1e-3)
+    # X3 in [1, 500] -> log bounds.
+    assert sp["X3"].minbound == pytest.approx(math.log(1.0), abs=1e-3)
+    assert sp["X3"].maxbound == pytest.approx(math.log(500.0), abs=1e-3)
+    # X4 in [0.51, 4] (lower bound raised for the log) -> log(X4 - 0.5) bounds.
+    assert sp["X4"].minbound == pytest.approx(math.log(0.51 - 0.5), abs=1e-3)
+    assert sp["X4"].maxbound == pytest.approx(math.log(4.0 - 0.5), abs=1e-3)
+
+
 # ---------------------------------------------------------------------------
 # B — Water balance
 # ---------------------------------------------------------------------------

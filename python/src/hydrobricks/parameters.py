@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Hashable
+from typing import Callable, Hashable
 
 import numpy as np
 import pandas as pd
@@ -39,6 +39,23 @@ class ParamSpec:
             "default": self.default,
             "mandatory": self.mandatory,
         }
+
+
+@dataclass(frozen=True)
+class ParameterTransform:
+    """Bijective transform between a parameter's real and transformed values.
+
+    The *real* value is what the C++ engine uses (and what is stored in the
+    parameter set). The *transformed* value is an alternative representation used
+    either for optimisation (e.g. ``log`` of a capacity, so the optimizer searches
+    a better-behaved space) or to express a parameter in its original literature
+    formulation when that differs from our internal implementation.
+
+    Both functions must be monotonic so that range bounds map consistently.
+    """
+
+    to_transformed: Callable[[float], float]  # real -> transformed
+    to_real: Callable[[float], float]  # transformed -> real
 
 
 # -----------------------------------------------------------------------------
@@ -422,6 +439,7 @@ class ParameterSet:
                 "default",
                 "mandatory",
                 "prior",
+                "transform",
             ]
         )
         self.constraints: list[list[str]] = []
@@ -511,6 +529,7 @@ class ParameterSet:
                 "default": default,
                 "mandatory": mandatory,
                 "prior": None,
+                "transform": None,
             }
         )
 
@@ -540,22 +559,75 @@ class ParameterSet:
         else:
             self.parameters.at[index, "aliases"] = current + aliases
 
-    def change_range(self, parameter: str, min_val: float, max_val: float) -> None:
+    def change_range(
+        self,
+        parameter: str,
+        min_val: float | None = None,
+        max_val: float | None = None,
+    ) -> None:
         """
         Change the value range of a parameter.
+
+        Only the bounds that are provided are changed; passing ``None`` (the
+        default) leaves that bound untouched. This allows raising a lower bound
+        without having to restate the maximum.
 
         Parameters
         ----------
         parameter
             Name (or alias) of the parameter
         min_val
-            New minimum value
+            New minimum value, or None to keep the current minimum.
         max_val
-            New maximum value
+            New maximum value, or None to keep the current maximum.
         """
         index = self._get_parameter_index(parameter)
-        self.parameters.loc[index, "min"] = min_val
-        self.parameters.loc[index, "max"] = max_val
+        if min_val is not None:
+            self.parameters.loc[index, "min"] = min_val
+        if max_val is not None:
+            self.parameters.loc[index, "max"] = max_val
+
+    def set_transform(
+        self,
+        parameter: str,
+        to_transformed: Callable[[float], float],
+        to_real: Callable[[float], float],
+    ) -> None:
+        """
+        Attach a transform between the real and transformed values of a parameter.
+
+        The real value (used by the C++ engine and stored in the parameter set) and
+        the transformed value (used for optimisation or to express the parameter in
+        its original formulation) are related by the two provided functions. Either
+        representation can be set; the other is derived. Both functions must be
+        monotonic.
+
+        Parameters
+        ----------
+        parameter
+            Name (or alias) of the parameter.
+        to_transformed
+            Function mapping the real value to the transformed value.
+        to_real
+            Function mapping the transformed value back to the real value.
+
+        Raises
+        ------
+        ConfigurationError
+            If the parameter is list-valued (transforms are not supported for lists).
+        """
+        index = self._get_parameter_index(parameter)
+        if isinstance(self.parameters.loc[index, "min"], list) or isinstance(
+            self.parameters.loc[index, "value"], list
+        ):
+            raise ConfigurationError(
+                "Transforms on list-valued parameters are not supported.",
+                item_name=parameter,
+                reason="Unsupported parameter type",
+            )
+        self.parameters.at[index, "transform"] = ParameterTransform(
+            to_transformed, to_real
+        )
 
     def set_prior(self, parameter: str, prior: spotpy.parameter) -> None:
         """
@@ -720,7 +792,11 @@ class ParameterSet:
         return True
 
     def set_values(
-        self, values: dict, check_range: bool = True, allow_adapt: bool = False
+        self,
+        values: dict,
+        check_range: bool = True,
+        allow_adapt: bool = False,
+        transformed: bool = False,
     ) -> None:
         """
         Set the parameter values.
@@ -736,10 +812,19 @@ class ParameterSet:
         allow_adapt
             Allow the parameter values to be adapted to enforce defined constraints
             (e.g.: min, max).
+        transformed
+            If True, the provided values are in transformed space and are mapped back
+            to the real value (using each parameter's transform) before being stored.
+            Parameters without a transform are treated as real values. The range check
+            and storage always operate on the real value.
         """
         for key in values:
             index = self._get_parameter_index(key)
             value = values[key]
+            if transformed:
+                transform = self._get_transform(index)
+                if transform is not None:
+                    value = transform.to_real(value)
             if check_range:
                 value = self._check_value_range(
                     index, key, value, allow_adapt=allow_adapt
@@ -779,6 +864,28 @@ class ParameterSet:
         """
         index = self._get_parameter_index(name)
         return self.parameters.loc[index, "value"]
+
+    def get_transformed(self, name: str) -> float:
+        """
+        Get the transformed value of a parameter by name.
+
+        Returns the parameter value mapped through its transform (if any). If the
+        parameter has no transform, the real value is returned unchanged.
+
+        Parameters
+        ----------
+        name
+            The name of the parameter.
+
+        Returns
+        -------
+        float
+            The transformed parameter value.
+        """
+        index = self._get_parameter_index(name)
+        value = self.parameters.loc[index, "value"]
+        transform = self._get_transform(index)
+        return value if transform is None else transform.to_transformed(value)
 
     def are_valid(self) -> bool:
         """
@@ -999,12 +1106,19 @@ class ParameterSet:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
             if param["prior"] and not np.isnan(param["prior"]):
+                # A supplied prior is assumed to already be in optimizer space.
                 spotpy_params.append(param["prior"])
             else:
-                spotpy_params.append(
-                    spotpy.parameter.Uniform(
-                        param_name, low=param["min"], high=param["max"]
+                low, high = param["min"], param["max"]
+                transform = self._get_transform(index)
+                if transform is not None:
+                    # The optimizer searches in transformed space; map the real
+                    # bounds through the transform (sorted to handle decreasing maps).
+                    low, high = sorted(
+                        [transform.to_transformed(low), transform.to_transformed(high)]
                     )
+                spotpy_params.append(
+                    spotpy.parameter.Uniform(param_name, low=low, high=high)
                 )
 
         return spotpy_params
@@ -1628,6 +1742,27 @@ class ParameterSet:
                         )
 
         return value
+
+    def _get_transform(self, index: int | Hashable) -> ParameterTransform | None:
+        """
+        Return the transform attached to a parameter, or None.
+
+        The ``transform`` cell may be missing (filled as NaN by concat for rows that
+        omit the key, e.g. data parameters) rather than None, so membership is checked
+        by type rather than identity.
+
+        Parameters
+        ----------
+        index
+            Index of the parameter in the DataFrame.
+
+        Returns
+        -------
+        ParameterTransform | None
+            The transform if one is set, otherwise None.
+        """
+        transform = self.parameters.loc[index, "transform"]
+        return transform if isinstance(transform, ParameterTransform) else None
 
     def _get_parameter_index(
         self, name: str, raise_exception: bool = True

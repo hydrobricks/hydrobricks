@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
@@ -53,6 +54,7 @@ class GR4J(Model):
             self._generate_structure()
             self._define_parameter_aliases()
             self._define_parameter_constraints()
+            self._define_parameter_transforms()
 
         except RuntimeError as err:
             raise ModelError(f"GR4J model initialization raised an exception: {err}")
@@ -236,6 +238,47 @@ class GR4J(Model):
         """Define parameter constraints for the GR4J model."""
         # X4 must be positive (enforced by the routing process)
         self.parameter_constraints = []
+
+    def _define_parameter_transforms(self) -> None:
+        """Define real <-> transformed parameter mappings for the GR4J model.
+
+        Some parameters calibrate better when the optimizer searches a transformed
+        space while the model keeps the real value. Each entry maps a parameter
+        (by ``component:name`` or alias) to a ``(to_transformed, to_real)`` pair of
+        monotonic callables. The real value is always what is sent to the C++ engine.
+
+        X1, X2 and X3 follow the airGR ``TransfoParam_GR4J`` transforms (Coron et
+        al., 2017): X1/X3 in log space, X2 via the inverse hyperbolic sine (it spans
+        negative to positive exchange). X4 uses the original GR4J spreadsheet
+        transform, real = exp(t) + 0.5 (inverse log(X4 - 0.5)), which is log-like and
+        enforces the physical floor X4 > 0.5.
+
+        Both X1 and X4 use a log that is undefined at their default lower bounds
+        (X1 at 0, X4 at 0.5), so those lower bounds are raised via ``parameter_ranges``
+        (X4 to 0.51, the minimum useful unit-hydrograph length). Only the lower bound
+        is overridden; the upper bound keeps flowing from the parameter specs.
+        """
+        self.parameter_ranges = {
+            # X1's log transform needs X1 > 0; raise the lower bound (spec min is 0).
+            "production_store:capacity": (1.0, None),
+            # X4's log(X4 - 0.5) transform needs X4 > 0.5; raise the lower bound to
+            # the minimum useful UH length (spec min is 0.5).
+            "uh_input:uh_base_time": (0.51, None),
+        }
+        self.parameter_transforms = {
+            # X1 (production store capacity): log space (X1 > 0, see parameter_ranges).
+            "production_store:capacity": (math.log, math.exp),
+            # X2 (groundwater exchange): inverse hyperbolic sine (handles sign).
+            "uh_input:exchange_factor": (math.asinh, math.sinh),
+            # X3 (routing store capacity): log space (X3 > 0).
+            "uh_input:routing_capacity": (math.log, math.exp),
+            # X4 (unit hydrograph time base): original GR4J spreadsheet transform,
+            # real = exp(t) + 0.5 (inverse log(X4 - 0.5)); needs X4 > 0.5.
+            "uh_input:uh_base_time": (
+                lambda x4: math.log(x4 - 0.5),  # real -> transformed
+                lambda t: math.exp(t) + 0.5,  # transformed -> real
+            ),
+        }
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         """Set GR4J-specific configuration options."""

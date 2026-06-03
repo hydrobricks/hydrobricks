@@ -1,3 +1,4 @@
+import math
 import os.path
 import tempfile
 from pathlib import Path
@@ -513,6 +514,101 @@ def test_define_constraints_removed(parameter_set_constraints: hb.ParameterSet):
     assert len(parameter_set_constraints.constraints) == 2
     parameter_set_constraints.remove_constraint("k1", "<", "k2")
     assert len(parameter_set_constraints.constraints) == 1
+
+
+@pytest.fixture
+def parameter_set_with_transform():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="production_store",
+        name="capacity",
+        unit="mm",
+        aliases=["X1"],
+        min_val=1,
+        max_val=1000,
+        mandatory=True,
+    )
+    parameter_set.set_transform("X1", math.log, math.exp)
+    return parameter_set
+
+
+def test_set_transform_real_to_transformed_round_trip(parameter_set_with_transform):
+    ps = parameter_set_with_transform
+    ps.set_values({"X1": 100})
+    assert ps.get("X1") == 100
+    assert ps.get_transformed("X1") == pytest.approx(math.log(100))
+
+
+def test_set_transform_transformed_input_back_transformed(parameter_set_with_transform):
+    ps = parameter_set_with_transform
+    ps.set_values({"X1": math.log(100)}, transformed=True)
+    assert ps.get("X1") == pytest.approx(100)
+    assert ps.get_transformed("X1") == pytest.approx(math.log(100))
+
+
+def test_set_transform_transformed_input_out_of_real_range(
+    parameter_set_with_transform,
+):
+    ps = parameter_set_with_transform
+    # exp(10) ~ 22026 > max (1000), so the back-transformed real value is out of range.
+    with pytest.raises(hb.ConfigurationError):
+        ps.set_values({"X1": 10}, transformed=True)
+
+
+def test_set_values_transformed_without_transform_is_identity():
+    ps = hb.ParameterSet()
+    ps.define_parameter(
+        component="snowpack",
+        name="degree_day_factor",
+        aliases=["a_snow"],
+        min_val=0,
+        max_val=10,
+    )
+    ps.set_values({"a_snow": 3}, transformed=True)
+    assert ps.get("a_snow") == 3
+    assert ps.get_transformed("a_snow") == 3
+
+
+def test_get_for_spotpy_uses_transformed_bounds(parameter_set_with_transform):
+    pytest.importorskip("spotpy")
+    ps = parameter_set_with_transform
+    ps.allow_changing = ["X1"]
+    spotpy_params = ps.get_for_spotpy()
+    assert len(spotpy_params) == 1
+    param = spotpy_params[0]
+    # spotpy adds a tiny step offset to minbound, so use an absolute tolerance.
+    assert param.minbound == pytest.approx(math.log(1), abs=1e-3)
+    assert param.maxbound == pytest.approx(math.log(1000), abs=1e-3)
+
+
+def test_set_transform_on_list_parameter_raises():
+    ps = hb.ParameterSet()
+    ps.define_parameter(
+        component="snowpack",
+        name="degree_day_factor",
+        aliases=["a_snow"],
+        min_val=[0, 1],
+        max_val=[2, 3],
+    )
+    with pytest.raises(hb.ConfigurationError):
+        ps.set_transform("a_snow", math.log, math.exp)
+
+
+def test_range_and_constraints_use_real_values_with_transform():
+    ps = hb.ParameterSet()
+    ps.define_parameter(
+        component="reservoir", name="k1", aliases=["k1"], min_val=1, max_val=1000
+    )
+    ps.define_parameter(
+        component="reservoir", name="k2", aliases=["k2"], min_val=1, max_val=1000
+    )
+    ps.set_transform("k1", math.log, math.exp)
+    ps.define_constraint("k1", "<", "k2")
+    ps.set_values({"k1": 10, "k2": 100})
+    assert ps.range_satisfied()
+    assert ps.constraints_satisfied()
+    ps.set_values({"k1": 200, "k2": 100})
+    assert not ps.constraints_satisfied()
 
 
 def test_validate_process_param_specs():

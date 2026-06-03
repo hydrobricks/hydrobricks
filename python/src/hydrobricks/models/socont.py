@@ -31,6 +31,7 @@ class Socont(Model):
             self._generate_structure()
             self._define_parameter_aliases()
             self._define_parameter_constraints()
+            self._define_parameter_transforms()
 
         except RuntimeError as err:
             raise ModelError(f"Socont model initialization raised an exception: {err}")

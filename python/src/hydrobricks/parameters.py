@@ -156,7 +156,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="degree_day_factor_n",
             unit="mm/d/°C",
             aliases=None,
-            min=0,
+            min=1,
             max=20,
             mandatory=True,  # (snow 0-12, glacier 1-20)
         ),
@@ -164,7 +164,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="degree_day_factor_s",
             unit="mm/d/°C",
             aliases=None,
-            min=2,
+            min=1,
             max=20,
             mandatory=True,  # (snow 2-12, glacier 5-20)
         ),
@@ -172,7 +172,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="degree_day_factor_ew",
             unit="mm/d/°C",
             aliases=None,
-            min=2,
+            min=1,
             max=20,
             mandatory=True,  # (snow 2-12, glacier 5-20)
         ),

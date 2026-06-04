@@ -197,6 +197,18 @@ class Socont(Model):
             ["k_slow_2", "<", "k_slow_1"],
         ]
 
+    def _define_parameter_transforms(self) -> None:
+        """Define real <-> transformed parameter mappings for the Socont model.
+
+        Use this to express a parameter in its original literature formulation when
+        that differs from our internal implementation: the user supplies/optimizes the
+        transformed (original-formulation) value, and ``to_real`` converts it to the
+        internal value sent to the C++ engine. Each entry maps a parameter (by
+        ``component:name`` or alias) to a ``(to_transformed, to_real)`` pair of
+        monotonic callables.
+        """
+        self.parameter_transforms = dict()
+
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         """
         Set Socont-specific configuration options.

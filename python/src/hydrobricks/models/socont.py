@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
@@ -206,8 +207,32 @@ class Socont(Model):
         internal value sent to the C++ engine. Each entry maps a parameter (by
         ``component:name`` or alias) to a ``(to_transformed, to_real)`` pair of
         monotonic callables.
+
+        Reference SOCONT (Schaefli et al., 2005; ``socontplusV2_6.m``) calibrates
+        the slow-reservoir outflow as ``lk = log(k)`` with ``k`` in ``[1/h]``, since
+        its numerical scheme runs in hours (qb = k * s, DT = 24 h). Our internal
+        ``response_factor`` is instead a rate in ``[1/d]``; at the daily step the two
+        rate constants are related by ``k[1/d] = 24 * k[1/h]``. Optimizing in the
+        reference's log space also behaves far better, as the response factor spans
+        several orders of magnitude. The transform therefore exposes ``lk`` as the
+        transformed (optimizer / literature) value and maps it back to the internal
+        ``[1/d]`` rate. The capacity ``A`` [mm] and the quickflow ``beta``
+        [m^(4/3)/s] are defined identically to our internals, so they need no
+        transform. The second soil layer (``slow_reservoir_2``) is a hydrobricks
+        extension with no reference counterpart; the same convention is applied for
+        a consistent user-facing parameterization (and is skipped automatically when
+        a single soil storage is used).
         """
-        self.parameter_transforms = dict()
+        self.parameter_transforms = {
+            "slow_reservoir:response_factor": (
+                lambda rf: math.log(rf / 24.0),  # real [1/d] -> lk = log(k[1/h])
+                lambda lk: 24.0 * math.exp(lk),  # lk -> real [1/d]
+            ),
+            "slow_reservoir_2:response_factor": (
+                lambda rf: math.log(rf / 24.0),
+                lambda lk: 24.0 * math.exp(lk),
+            ),
+        }
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         """

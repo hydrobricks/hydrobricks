@@ -59,6 +59,14 @@ class ProcessRoutingGR6J : public ProcessOutflow {
      */
     double* GetValuePointer(std::string_view name) override;
 
+    /**
+     * @copydoc Process::GetChangeRates()
+     *
+     * Overridden to bypass the empty-container short-circuit: the bottomless exponential store
+     * discharges even when the container is empty.
+     */
+    [[nodiscard]] vecDouble GetChangeRates() override;
+
   protected:
     const float* _exchangeFactor;     // X2 [mm/d]
     const float* _routingCapacity;    // X3 [mm]

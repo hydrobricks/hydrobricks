@@ -5,10 +5,9 @@
 #include <numeric>
 
 #include "Brick.h"
-#include "FormulasGR6J.h"
-#include "TimeMachine.h"
-#include "UnitHydrographGR.h"
 #include "WaterContainer.h"
+#include "helpers/GR6JFormulas.h"
+#include "helpers/GRUnitHydrograph.h"
 
 ProcessRoutingGR6J::ProcessRoutingGR6J(WaterContainer* container)
     : ProcessOutflow(container),
@@ -22,7 +21,12 @@ ProcessRoutingGR6J::ProcessRoutingGR6J(WaterContainer* container)
       _qr(0.0),
       _qrexp(0.0),
       _qd(0.0),
-      _processStorage(0.0) {}
+      _processStorage(0.0) {
+    // The exponential store is bottomless: its level (and hence the uh_input container content that
+    // mirrors the routing storage) can be negative. Allow the container to hold negative content so
+    // the exponential-store baseflow is emitted in full and the water balance stays consistent.
+    _container->SetAllowNegativeContent(true);
+}
 
 void ProcessRoutingGR6J::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("exchange_factor", 0.0f);
@@ -84,6 +88,13 @@ double* ProcessRoutingGR6J::GetValuePointer(std::string_view name) {
     return nullptr;
 }
 
+vecDouble ProcessRoutingGR6J::GetChangeRates() {
+    // Bypass the base-class empty-container short-circuit: the exponential store is bottomless and
+    // discharges even when the container is empty (its baseflow at level 0 is X6*ln(2) > 0, and it
+    // keeps discharging as it goes negative). The discharge is computed directly from the stores.
+    return GetRates();
+}
+
 vecDouble ProcessRoutingGR6J::GetRates() {
     if (_uhBaseTime == nullptr || _routingCapacity == nullptr || _exchangeFactor == nullptr ||
         _exchangeThreshold == nullptr || _expStoreCoeff == nullptr) {
@@ -133,21 +144,11 @@ vecDouble ProcessRoutingGR6J::GetRates() {
     // Direct branch: receives UH2 output.
     _qd = std::max(0.0, uh2_out + F);
 
-    // Groundwater exchange adds water to the stores and the direct branch, but that water never
-    // entered through the inflow PR. Inject the net exchange that actually entered (clamped
-    // contributions) into the container so the discharge it produces is backed by real water and
-    // is not capped by the container's non-negativity constraint. Evaluated once per step (the
-    // brick is computed directly); the clamped contributions match the committed state in Finalize.
-    if (_timeMachine != nullptr) {
-        double exchangeToStore = r_pred - (_r + 0.6 * uh1_out);      // F into the power store (clamped)
-        double exchangeToExp = rexp_pred - (_rexp + 0.4 * uh1_out);  // F into the exponential store (unclamped)
-        double exchangeToDirect = _qd - uh2_out;                     // F into the direct branch (clamped)
-        double netExchange = exchangeToStore + exchangeToExp + exchangeToDirect;
-        if (netExchange != 0.0) {
-            _container->AddAmountToStaticContentChange(netExchange * (*_timeMachine->GetTimeStepPointer()));
-        }
-    }
-
+    // The discharge is emitted in full even when the container is empty: the exponential store is
+    // bottomless and its baseflow (plus carried-over store releases) draws the uh_input container
+    // negative, which is allowed (see SetAllowNegativeContent in the constructor). The container
+    // content then mirrors the routing storage — including the negative exponential-store level — so
+    // both the discharge and the water balance stay consistent with the airGR GR6J formulation.
     return {std::max(0.0, _qr + _qrexp + _qd)};
 }
 

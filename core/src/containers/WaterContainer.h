@@ -121,6 +121,29 @@ class WaterContainer {
     }
 
     /**
+     * Allow the water content to go negative (no non-negativity constraint).
+     *
+     * Required by routing processes that hold a bottomless store whose level can
+     * be negative (e.g. the GR6J exponential store). The container content then
+     * tracks the full routing storage, including the negative excursion, so the
+     * discharge and the water balance stay consistent.
+     *
+     * @param allow true to allow negative content.
+     */
+    void SetAllowNegativeContent(bool allow = true) {
+        _allowNegativeContent = allow;
+    }
+
+    /**
+     * Check if the water container may hold negative content.
+     *
+     * @return true if negative content is allowed.
+     */
+    [[nodiscard]] bool AllowsNegativeContent() const {
+        return _allowNegativeContent;
+    }
+
+    /**
      * Get the water content of the current object.
      *
      * @return water content [mm]
@@ -320,6 +343,7 @@ class WaterContainer {
     double _initialState;          // [mm]
     const float* _capacity;        // non-owning reference
     bool _infiniteStorage;
+    bool _allowNegativeContent;
     Brick* _parent;                                        // non-owning reference
     Process* _overflow;                                    // non-owning reference
     vector<Flux*> _inputs;                                 // non-owning references

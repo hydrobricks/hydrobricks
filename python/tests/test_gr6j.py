@@ -45,44 +45,61 @@ _CPP_PRECIP = [
 ]
 _CPP_PET = [1.0] * len(_CPP_PRECIP)
 
-# Expected outlet discharge (mm), copied verbatim from the C++ ModelGR6JTest
-# reference tests. Same core + forcing + parameters → identical results.
-# No exchange: X1=300, X2=0, X3=100, X4=2, X5=0, X6=4.
-_CPP_EXPECTED_NO_EXCHANGE = [
-    0.0,
-    0.0,
-    0.431462,
+# Reference outlet discharge (mm) from the airGR RunModel_GR6J implementation
+# (Pushpalatha et al., 2011), with X1=300, X3=100, X4=2, X5=0.3, X6=4 and the
+# shared forcing; initial state S=0, R=0, Rexp=0. The three cases differ only by
+# the groundwater exchange coefficient X2. hydrobricks shares the same compute
+# core in C++ and Python, so both must reproduce these to ~1e-5.
+_AIRGR_NO_EXCHANGE = [  # X2 = 0
+    2.772589,
+    1.621860,
+    1.161424,
     1.005298,
     1.249373,
-    2.151581,
-    4.214920,
-    7.687065,
-    11.521524,
+    2.151582,
+    4.214921,
+    7.687066,
+    11.521525,
     12.829463,
     5.323870,
     3.072099,
-    2.322169,
+    2.322168,
     2.032455,
     1.833531,
 ]
-# With exchange (threshold X5 + exponential store X6): X1=300, X2=1, X3=100,
-# X4=2, X5=0.3, X6=4.
-_CPP_EXPECTED_WITH_EXCHANGE = [
-    0.0,
-    0.0,
-    0.431462,
-    0.810386,
-    0.853761,
-    1.566997,
-    3.492688,
-    7.048112,
-    11.249934,
-    12.861459,
-    5.571977,
-    3.351331,
-    2.626826,
-    2.358549,
-    2.177806,
+_AIRGR_POS_EXCHANGE = [  # X2 = 2
+    2.483828,
+    1.340565,
+    0.882276,
+    0.676503,
+    0.686399,
+    1.028097,
+    2.754801,
+    6.301642,
+    10.888971,
+    12.851495,
+    5.795915,
+    3.611188,
+    2.918015,
+    2.678096,
+    2.523144,
+]
+_AIRGR_NEG_EXCHANGE = [  # X2 = -2
+    3.683828,
+    2.523956,
+    2.055770,
+    1.908026,
+    2.217910,
+    3.269898,
+    5.447277,
+    8.589649,
+    11.827181,
+    12.701670,
+    4.808356,
+    2.631865,
+    2.088443,
+    1.754517,
+    1.522078,
 ]
 
 
@@ -251,44 +268,40 @@ def test_gr6j_water_balance_closes(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# C — Reference verification (shared with core/tests/src/ModelGR6JTest.cpp)
+# C — airGR ground-truth verification (X1=300, X3=100, X4=2, X5=0.3, X6=4)
+# Shared with core/tests/src/ModelGR6JTest.cpp.
 # ---------------------------------------------------------------------------
 
 
-def test_gr6j_reference_no_exchange(tmp_path):
-    """X2=0: pure GR6J routing — must match the C++ reference exactly."""
+def _q_airgr(tmp_path, X2: float) -> np.ndarray:
     meteo = _meteo_csv_series(tmp_path, _CPP_PRECIP, _CPP_PET)
     model, _ = _run_model(
         tmp_path,
         meteo,
         len(_CPP_PRECIP),
         X1=300,
-        X2=0.0,
-        X3=100,
-        X4=2.0,
-        X5=0.0,
-        X6=4.0,
-    )
-    q = model.get_outlet_discharge()
-    np.testing.assert_allclose(q, _CPP_EXPECTED_NO_EXCHANGE, atol=5e-6)
-
-
-def test_gr6j_reference_with_exchange(tmp_path):
-    """X2=1, X5=0.3, X6=4: threshold exchange + exponential store — matches C++."""
-    meteo = _meteo_csv_series(tmp_path, _CPP_PRECIP, _CPP_PET)
-    model, _ = _run_model(
-        tmp_path,
-        meteo,
-        len(_CPP_PRECIP),
-        X1=300,
-        X2=1.0,
+        X2=X2,
         X3=100,
         X4=2.0,
         X5=0.3,
         X6=4.0,
     )
-    q = model.get_outlet_discharge()
-    np.testing.assert_allclose(q, _CPP_EXPECTED_WITH_EXCHANGE, atol=5e-6)
+    return model.get_outlet_discharge()
+
+
+def test_gr6j_matches_airgr_no_exchange(tmp_path):
+    """X2=0: must reproduce the airGR RunModel_GR6J discharge."""
+    np.testing.assert_allclose(_q_airgr(tmp_path, 0.0), _AIRGR_NO_EXCHANGE, atol=1e-5)
+
+
+def test_gr6j_matches_airgr_positive_exchange(tmp_path):
+    """X2=2: threshold exchange + exponential store — matches airGR."""
+    np.testing.assert_allclose(_q_airgr(tmp_path, 2.0), _AIRGR_POS_EXCHANGE, atol=1e-5)
+
+
+def test_gr6j_matches_airgr_negative_exchange(tmp_path):
+    """X2=-2: net groundwater loss — matches airGR."""
+    np.testing.assert_allclose(_q_airgr(tmp_path, -2.0), _AIRGR_NEG_EXCHANGE, atol=1e-5)
 
 
 # ---------------------------------------------------------------------------

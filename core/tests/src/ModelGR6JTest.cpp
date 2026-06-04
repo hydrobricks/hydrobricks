@@ -316,29 +316,42 @@ void RunGR6J(SettingsModel& model, float X1, float X2, float X3, float X4, float
 }
 }  // namespace
 
-TEST_F(ModelGR6JBasic, GivesSameResultsAsReferenceNoExchange) {
+// Reference outlet discharge (mm) from the airGR RunModel_GR6J implementation
+// (Pushpalatha et al., 2011), with X1=300, X3=100, X4=2, X5=0.3, X6=4 and the
+// fixture forcing; initial state S=0, R=0, Rexp=0. The three cases differ only by
+// the groundwater exchange coefficient X2.
+TEST_F(ModelGR6JBasic, GivesSameResultsAsAirGRNoExchange) {
     axd q;
-    RunGR6J(_model, 300.0f, 0.0f, 100.0f, 2.0f, 0.0f, 4.0f, std::move(_tsPrecip), std::move(_tsPet), q);
+    RunGR6J(_model, 300.0f, 0.0f, 100.0f, 2.0f, 0.3f, 4.0f, std::move(_tsPrecip), std::move(_tsPet), q);
 
-    // Reference outlet discharge (mm): X1=300, X2=0, X3=100, X4=2, X5=0, X6=4.
-    vecDouble expected = {0.000000,  0.000000,  0.431462, 1.005298, 1.249373, 2.151581, 4.214920, 7.687065,
-                          11.521524, 12.829463, 5.323870, 3.072099, 2.322169, 2.032455, 1.833531};
+    vecDouble expected = {2.772589,  1.621860,  1.161424, 1.005298, 1.249373, 2.151582, 4.214921, 7.687066,
+                          11.521525, 12.829463, 5.323870, 3.072099, 2.322168, 2.032455, 1.833531};
     ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
     for (int i = 0; i < q.size(); ++i) {
-        EXPECT_NEAR(q[i], expected[i], 0.0000005) << "at time step " << i;
+        EXPECT_NEAR(q[i], expected[i], 1e-5) << "at time step " << i;
     }
 }
 
-TEST_F(ModelGR6JBasic, GivesSameResultsAsReferenceWithExchange) {
+TEST_F(ModelGR6JBasic, GivesSameResultsAsAirGRPositiveExchange) {
     axd q;
-    RunGR6J(_model, 300.0f, 1.0f, 100.0f, 2.0f, 0.3f, 4.0f, std::move(_tsPrecip), std::move(_tsPet), q);
+    RunGR6J(_model, 300.0f, 2.0f, 100.0f, 2.0f, 0.3f, 4.0f, std::move(_tsPrecip), std::move(_tsPet), q);
 
-    // Reference outlet discharge (mm): X1=300, X2=1, X3=100, X4=2, X5=0.3, X6=4.
-    // Exercises the threshold exchange (X5) and the exponential store (X6).
-    vecDouble expected = {0.000000,  0.000000,  0.431462, 0.810386, 0.853761, 1.566997, 3.492688, 7.048112,
-                          11.249934, 12.861459, 5.571977, 3.351331, 2.626826, 2.358549, 2.177806};
+    vecDouble expected = {2.483828,  1.340565,  0.882276, 0.676503, 0.686399, 1.028097, 2.754801, 6.301642,
+                          10.888971, 12.851495, 5.795915, 3.611188, 2.918015, 2.678096, 2.523144};
     ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
     for (int i = 0; i < q.size(); ++i) {
-        EXPECT_NEAR(q[i], expected[i], 0.0000005) << "at time step " << i;
+        EXPECT_NEAR(q[i], expected[i], 1e-5) << "at time step " << i;
+    }
+}
+
+TEST_F(ModelGR6JBasic, GivesSameResultsAsAirGRNegativeExchange) {
+    axd q;
+    RunGR6J(_model, 300.0f, -2.0f, 100.0f, 2.0f, 0.3f, 4.0f, std::move(_tsPrecip), std::move(_tsPet), q);
+
+    vecDouble expected = {3.683828,  2.523956,  2.055770, 1.908026, 2.217910, 3.269898, 5.447277, 8.589649,
+                          11.827181, 12.701670, 4.808356, 2.631865, 2.088443, 1.754517, 1.522078};
+    ASSERT_EQ(q.size(), static_cast<int>(expected.size()));
+    for (int i = 0; i < q.size(); ++i) {
+        EXPECT_NEAR(q[i], expected[i], 1e-5) << "at time step " << i;
     }
 }

@@ -89,12 +89,6 @@ class GR6J(GR4J):
     def _define_parameter_aliases(self) -> None:
         """Define user-friendly parameter aliases for the GR6J model (X1-X6)."""
         super()._define_parameter_aliases()
-        self.parameter_aliases.update(
-            {
-                "uh_input:exchange_threshold": ["X5", "x5"],
-                "uh_input:exp_store_coeff": ["X6", "x6"],
-            }
-        )
 
     def _define_parameter_transforms(self) -> None:
         """Define real <-> transformed parameter mappings for the GR6J model.

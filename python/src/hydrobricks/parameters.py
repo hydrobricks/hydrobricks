@@ -284,13 +284,12 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
-    # GR4J routing process (x2, x3, x4); user-facing aliases (X2/X3/X4) are added
-    # by GR4J._define_parameter_aliases() to avoid duplicate registration.
+    # GR4J routing process (x2, x3, x4).
     "routing:gr4j": [
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=None,
+            aliases=["X2", "x2"],
             min=-10,
             max=5,
             default=0.0,
@@ -299,7 +298,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=None,
+            aliases=["X3", "x3"],
             min=1,
             max=500,
             default=90.0,
@@ -308,20 +307,19 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=None,
+            aliases=["X4", "x4"],
             min=0.5,
             max=4,
             default=1.7,
             mandatory=True,
         ),
     ],
-    # GR6J routing process (x2, x3, x4, x5, x6); user-facing aliases (X2..X6) are
-    # added by GR6J._define_parameter_aliases() to avoid duplicate registration.
+    # GR6J routing process (x2, x3, x4, x5, x6).
     "routing:gr6j": [
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=None,
+            aliases=["X2", "x2"],
             min=-10,
             max=5,
             default=0.0,
@@ -330,7 +328,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=None,
+            aliases=["X3", "x3"],
             min=1,
             max=500,
             default=90.0,
@@ -339,7 +337,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=None,
+            aliases=["X4", "x4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -348,16 +346,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_threshold",
             unit="-",
-            aliases=None,
-            min=-4,
-            max=4,
+            aliases=["X5", "x5"],
+            min=0,
+            max=1,
             default=0.0,
             mandatory=True,
         ),
         ParamSpec(
             name="exp_store_coeff",
             unit="mm",
-            aliases=None,
+            aliases=["X6", "x6"],
             min=0.05,
             max=20,
             default=4.0,

@@ -25,6 +25,7 @@
 #include "ProcessPercolationGR4J.h"
 #include "ProcessProductionGR4J.h"
 #include "ProcessRoutingGR4J.h"
+#include "ProcessRoutingGR6J.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
@@ -246,6 +247,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessRoutingGR4J>(b->GetWaterContainer());
             },
             &ProcessRoutingGR4J::RegisterProcessSettings
+        }},
+
+        {"routing:gr6j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingGR6J>(b->GetWaterContainer());
+            },
+            &ProcessRoutingGR6J::RegisterProcessSettings
         }},
 
     };

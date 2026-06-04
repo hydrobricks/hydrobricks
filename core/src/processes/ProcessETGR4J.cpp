@@ -1,7 +1,7 @@
 #include "ProcessETGR4J.h"
 
-#include "FormulasGR4J.h"
 #include "WaterContainer.h"
+#include "helpers/GR4JFormulas.h"
 
 ProcessETGR4J::ProcessETGR4J(WaterContainer* container)
     : ProcessET(container),

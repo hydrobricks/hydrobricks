@@ -7,9 +7,16 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks import rasterio, rxr, xrs
 from hydrobricks._exceptions import ConfigurationError, DependencyError
-from hydrobricks._optional import HAS_PYARROW, HAS_RASTERIO, HAS_SHAPELY, HAS_XRSPATIAL
+from hydrobricks._optional import (
+    HAS_PYARROW,
+    HAS_RASTERIO,
+    HAS_SHAPELY,
+    HAS_XRSPATIAL,
+    rasterio,
+    rxr,
+    xrs,
+)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment

@@ -114,7 +114,7 @@ ref_kge = obs.compute_reference_metric("kge_2012")
 print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
 
 # Plot
-hb.plotting.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
+hb.Plotter.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
 
 # Dump all outputs
 socont.dump_outputs(str(working_dir))
@@ -126,20 +126,20 @@ results = hb.Results(str(working_dir) + "/results.nc")
 results.list_hydro_units_components()
 
 # Plot the snow water equivalent on a map
-hb.plotting.plot_map_hydro_unit_value(
+hb.Plotter.plot_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow",
+    "ground_snowpack:snow_content",
     "1981-01-20",
     dem_path=DEM_RASTER,
     max_val=300,
 )
 
 # Create an animated map of the snow water equivalent
-hb.plotting.create_animated_map_hydro_unit_value(
+hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow",
+    "ground_snowpack:snow_content",
     "1990-01-01",
     "1990-03-20",
     save_path=str(working_dir),
@@ -148,7 +148,7 @@ hb.plotting.create_animated_map_hydro_unit_value(
 )
 
 # Create an animated map of the slow reservoir 2 content
-hb.plotting.create_animated_map_hydro_unit_value(
+hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
     "slow_reservoir_2:content",

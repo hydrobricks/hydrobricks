@@ -1,7 +1,7 @@
 #include "ProcessProductionGR4J.h"
 
-#include "FormulasGR4J.h"
 #include "WaterContainer.h"
+#include "helpers/GR4JFormulas.h"
 
 ProcessProductionGR4J::ProcessProductionGR4J(WaterContainer* container)
     : ProcessOutflow(container),

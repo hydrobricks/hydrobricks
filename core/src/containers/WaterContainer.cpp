@@ -10,6 +10,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _initialState(0),
       _capacity(nullptr),
       _infiniteStorage(false),
+      _allowNegativeContent(false),
       _parent(brick),
       _overflow(nullptr) {}
 
@@ -114,8 +115,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     double change = inputs - outputs;
     double content = GetContentWithDynamicChanges();
 
-    // Avoid negative content
-    if (change < 0 && content + inputsStatic + change * timeStep < 0) {
+    // Avoid negative content (unless the container is allowed to go negative, e.g. a bottomless
+    // routing store whose level can be negative).
+    if (!_allowNegativeContent && change < 0 && content + inputsStatic + change * timeStep < 0) {
         double diff = (content + inputsStatic + change * timeStep) / timeStep;
         // Limit the different rates proportionally
         for (auto rate : outgoingRates) {
@@ -190,6 +192,9 @@ void WaterContainer::Finalize() {
     _content += _contentChangeDynamic + _contentChangeStatic;
     _contentChangeDynamic = 0;
     _contentChangeStatic = 0;
+    if (_allowNegativeContent) {
+        return;
+    }
     assert(GreaterThanOrEqual(_content, 0, PRECISION));
     if (LessThan(_content, 0, PRECISION)) {
         LogError("Water container {} has negative content ({}).", GetParentBrick()->GetName(), _content);

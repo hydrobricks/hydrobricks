@@ -1,8 +1,8 @@
 #include "ProcessPercolationGR4J.h"
 
 #include "Brick.h"
-#include "FormulasGR4J.h"
 #include "WaterContainer.h"
+#include "helpers/GR4JFormulas.h"
 
 ProcessPercolationGR4J::ProcessPercolationGR4J(WaterContainer* container)
     : ProcessOutflow(container) {}

@@ -1,7 +1,7 @@
 #include "ProcessInfiltrationGR4J.h"
 
-#include "FormulasGR4J.h"
 #include "WaterContainer.h"
+#include "helpers/GR4JFormulas.h"
 
 ProcessInfiltrationGR4J::ProcessInfiltrationGR4J(WaterContainer* container)
     : ProcessInfiltration(container) {}

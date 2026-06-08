@@ -70,6 +70,8 @@ class Model(ABC):
         self.structure: dict[str, Any] = dict()
         self.parameter_aliases: dict[str, str] = dict()
         self.parameter_constraints: list[tuple[str, ...]] = []
+        self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
+        self.parameter_ranges: dict[str, tuple[float, float]] = dict()
 
         # Setting base settings
         self.settings: ModelSettings = ModelSettings(
@@ -434,6 +436,16 @@ class Model(ABC):
             if ps.has(alias_key):
                 ps.add_aliases(alias_key, alias_value)
 
+        # Apply range overrides after aliases so keys may be aliases or names.
+        for key, (min_val, max_val) in self.parameter_ranges.items():
+            if ps.has(key):
+                ps.change_range(key, min_val, max_val)
+
+        # Apply transforms after aliases so keys may be aliases or "component:name".
+        for key, (to_transformed, to_real) in self.parameter_transforms.items():
+            if ps.has(key):
+                ps.set_transform(key, to_transformed, to_real)
+
         for constraint in self.parameter_constraints:
             ps.define_constraint(*constraint)
 
@@ -453,6 +465,10 @@ class Model(ABC):
             f"the child class (named {self.name}).",
             reason="Abstract method not implemented",
         )
+
+    def _define_parameter_transforms(self) -> None:
+        """Define parameter transforms (real <-> transformed). Override if needed."""
+        self.parameter_transforms = dict()
 
     def _set_options(self, kwargs: dict[str, Any]) -> None:
         """

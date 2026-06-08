@@ -162,3 +162,49 @@ bool GenerateStructureGR4J(SettingsModel& settings, bool discrete) {
 
     return true;
 }
+
+bool GenerateStructureGR6J(SettingsModel& settings, bool discrete) {
+    // GR6J shares the GR4J production store, interception, throughfall and ET; only the routing
+    // process differs (routing:gr6j adds the threshold exchange and the exponential store).
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("interception", "interception:gr4j");
+    if (discrete) {
+        settings.AddBrickProcess("throughfall", "outflow:rest", "production_store");
+    } else {
+        settings.AddBrickProcess("throughfall", "outflow:rest", "ground_soil");
+    }
+    settings.SetProcessOutputsAsInstantaneous();
+
+    if (!discrete) {
+        settings.AddHydroUnitBrick("ground_soil", "storage");
+        settings.AddBrickProcess("production", "infiltration:gr4j", "production_store");
+        settings.AddBrickProcess("runoff", "outflow:rest", "uh_input");
+    }
+
+    // Production store (capacity X1)
+    settings.AddHydroUnitBrick("production_store", "storage");
+    settings.AddBrickParameter("capacity", 350.0f);
+    if (discrete) {
+        settings.AddBrickProcess("production", "production:gr4j", "uh_input");
+    } else {
+        settings.AddBrickProcess("percolation", "percolation:gr4j", "uh_input");
+    }
+    settings.AddBrickProcess("et", "et:gr4j");
+    if (discrete) {
+        settings.SetCurrentBrickComputedDirectly();
+    }
+
+    // UH input buffer routed by the GR6J routing process
+    settings.AddHydroUnitBrick("uh_input", "storage");
+    settings.AddBrickProcess("routing", "routing:gr6j", "outlet");
+    if (discrete) {
+        settings.SetCurrentBrickComputedDirectly();
+    }
+
+    settings.AddLoggingToItem("outlet");
+
+    return true;
+}

@@ -83,7 +83,6 @@ vecDouble ProcessRoutingGR4J::GetRates() {
     // Ground (direct brick) sets its outflow before the solver runs;
     // production_store (solver brick) updates its outflow in ApplyProcesses.
     double PR = _container->SumIncomingFluxes();
-
     double prhu1 = 0.9 * PR;
     double prhu2 = 0.1 * PR;
 

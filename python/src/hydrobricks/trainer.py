@@ -401,7 +401,8 @@ class SpotpySetup:
             values = [row[0] for row in x]
             params = self.params
             param_values = dict(zip(names, values))
-            params.set_values(param_values, check_range=False)
+            # Spotpy samples are in transformed (optimizer) space; back-transform.
+            params.set_values(param_values, check_range=False, transformed=True)
 
             if params.constraints_satisfied() and params.range_satisfied():
                 break
@@ -429,7 +430,8 @@ class SpotpySetup:
         params = self.params
         param_values = dict(zip(x.name, x.random))
         logger.debug(f"Setting {len(param_values)} parameter values for simulation")
-        params.set_values(param_values)
+        # Spotpy samples are in transformed (optimizer) space; back-transform.
+        params.set_values(param_values, transformed=True)
 
         if not params.constraints_satisfied():
             logger.debug("Parameter constraints not satisfied, skipping simulation")

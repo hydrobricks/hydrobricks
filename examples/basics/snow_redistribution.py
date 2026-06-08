@@ -117,7 +117,7 @@ for with_snow_redistribution in [True, False]:
     forcing.spatialize_from_station_data(
         variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
     )
-    forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=46.6)
+    forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
 
     # Obs data
     obs = hb.Observations()

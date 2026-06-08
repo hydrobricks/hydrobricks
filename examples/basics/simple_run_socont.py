@@ -74,7 +74,7 @@ forcing.correct_station_data(variable="precipitation", correction_factor=0.75)
 forcing.spatialize_from_station_data(
     variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
 )
-forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=47.3)
+forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=47.3)
 
 # Obs data
 obs = hb.Observations()
@@ -107,11 +107,11 @@ kge_2012 = socont.eval("kge_2012", obs_ts)
 
 print(f"NSE = {nse:.3f}, KGE = {kge_2012:.3f}")
 
-# Compute reference metric
+# Compute benchmark metrics
 ref_nse = obs.compute_reference_metric("nse")
 ref_kge = obs.compute_reference_metric("kge_2012")
 
-print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
+print(f"Benchmark: NSE = {ref_nse:.3f}, KGE = {ref_kge:.3f}")
 
 # Plot
 hb.Plotter.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)

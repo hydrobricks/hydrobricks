@@ -7,12 +7,11 @@ from typing import Callable, Hashable
 import numpy as np
 import pandas as pd
 
-from hydrobricks import spotpy
 from hydrobricks._exceptions import (
     ConfigurationError,
     DependencyError,
 )
-from hydrobricks._optional import HAS_SPOTPY
+from hydrobricks._optional import HAS_SPOTPY, spotpy
 from hydrobricks._utils import dump_config_file
 
 

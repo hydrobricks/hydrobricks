@@ -7,10 +7,9 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 
-from hydrobricks import Dataset
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._hydrobricks import SettingsBasin
-from hydrobricks._optional import HAS_NETCDF
+from hydrobricks._optional import HAS_NETCDF, Dataset
 from hydrobricks._units import (
     Unit,
     convert_unit_df,

@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from hydrobricks import gpd, rasterio
 from hydrobricks._constants import ICE_WE
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
-from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY, gpd, rasterio
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment

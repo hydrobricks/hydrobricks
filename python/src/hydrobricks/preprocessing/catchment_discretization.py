@@ -5,9 +5,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks import rasterio
 from hydrobricks._exceptions import ConfigurationError, DependencyError, ModelError
-from hydrobricks._optional import HAS_PYPROJ
+from hydrobricks._optional import HAS_PYPROJ, rasterio
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment

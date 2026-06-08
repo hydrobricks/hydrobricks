@@ -9,9 +9,17 @@ from typing import Any, Callable, TypeVar
 import numpy as np
 import pandas as pd
 
-from hydrobricks import gpd, pyproj, rasterio, shapely
 from hydrobricks._exceptions import ConfigurationError, DataError
-from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._optional import (
+    HAS_GEOPANDAS,
+    HAS_PYPROJ,
+    HAS_RASTERIO,
+    HAS_SHAPELY,
+    gpd,
+    pyproj,
+    rasterio,
+    shapely,
+)
 from hydrobricks._utils import compute_area
 from hydrobricks.hydro_units import HydroUnits
 

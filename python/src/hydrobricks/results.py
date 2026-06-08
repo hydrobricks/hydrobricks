@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from hydrobricks import xr
 from hydrobricks._exceptions import DependencyError
-from hydrobricks._optional import HAS_XARRAY
+from hydrobricks._optional import HAS_XARRAY, xr
 
 
 class Results:

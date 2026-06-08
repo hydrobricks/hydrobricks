@@ -7,10 +7,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from hydrobricks import gpd
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
-from hydrobricks._optional import HAS_GEOPANDAS, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_RASTERIO, HAS_SHAPELY, gpd
 from hydrobricks._units import Unit, convert_unit
 from hydrobricks._utils import compute_area, date_as_mjd
 from hydrobricks.actions import Action

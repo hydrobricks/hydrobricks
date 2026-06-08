@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from hydrobricks import pyshedsGrid
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
-from hydrobricks._optional import HAS_PYSHEDS, HAS_SCIPY
+from hydrobricks._optional import HAS_PYSHEDS, HAS_SCIPY, pyshedsGrid
 
 if HAS_SCIPY:
     from scipy import ndimage

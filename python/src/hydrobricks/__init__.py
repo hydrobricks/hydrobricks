@@ -1,3 +1,4 @@
+import hydrobricks.plotting as plotting
 from hydrobricks._exceptions import (
     ConfigurationError,
     DataError,
@@ -68,6 +69,7 @@ __all__ = (
     "Results",
     "Model",
     "evaluate",
+    "plotting",
     # Logging functions
     "init",
     "init_log",

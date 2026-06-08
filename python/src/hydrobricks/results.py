@@ -168,7 +168,7 @@ class Results:
         KeyError
             If date selection fails or dates are not in the time series.
         """
-        i_component = self.labels_distributed.index(component)
+        i_component, _ = self._resolve_component_label(component)
 
         if start_date is None:
             return self.results.hydro_units_values[i_component].to_numpy()
@@ -313,3 +313,37 @@ class Results:
             If dates are not found in the results time coordinates.
         """
         return self.results.time.sel(time=slice(start_date, end_date)).to_numpy()
+
+    def _get_distributed_labels(self) -> list[str]:
+        """Return distributed labels as a normalized list of strings."""
+        if self.labels_distributed is None:
+            return []
+        if isinstance(self.labels_distributed, str):
+            return [self.labels_distributed]
+        return [str(label) for label in self.labels_distributed]
+
+    def _resolve_component_label(self, component: str) -> tuple[int, str]:
+        """Resolve component name to index, with support for unique suffix matches."""
+        labels = self._get_distributed_labels()
+
+        if component in labels:
+            return labels.index(component), component
+
+        # Accept shortened names such as "slow_reservoir_2:content" when labels are
+        # fully qualified (e.g. "ground_slow_reservoir_2:content").
+        suffix_matches = [label for label in labels if label.endswith(component)]
+        if len(suffix_matches) == 1:
+            resolved = suffix_matches[0]
+            return labels.index(resolved), resolved
+
+        if len(suffix_matches) > 1:
+            raise ValueError(
+                f"Component '{component}' is ambiguous. "
+                f"Matching labels: {suffix_matches}."
+            )
+
+        available = ", ".join(labels)
+        raise ValueError(
+            f"Component '{component}' not found in distributed results. "
+            f"Available components: {available}."
+        )

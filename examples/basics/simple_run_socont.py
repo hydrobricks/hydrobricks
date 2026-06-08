@@ -147,13 +147,14 @@ hb.Plotter.create_animated_map_hydro_unit_value(
     max_val=300,
 )
 
-# Create an animated map of the slow reservoir 2 content
+# Create an animated map of the slow reservoir 2 water content
 hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "slow_reservoir_2:content",
+    "slow_reservoir_2:water_content",
     "2020-01-20",
     "2020-03-20",
     save_path=str(working_dir),
     dem_path=DEM_RASTER,
+    max_val=10,
 )

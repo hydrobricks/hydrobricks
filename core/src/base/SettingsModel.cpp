@@ -507,6 +507,20 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
     }
 }
 
+void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
+    assert(_selectedStructure);
+
+    for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string snowpackName = brickSettings.name + "_snowpack";
+        SelectHydroUnitBrickByName(snowpackName);
+
+        // The refreezing process lives on the snowpack water container and sends
+        // the refrozen water back to the snow container of the same brick.
+        AddBrickProcess("refreeze", refreezingProcess, snowpackName + ":snow");
+    }
+}
+
 void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess) {
     assert(_selectedStructure);
 

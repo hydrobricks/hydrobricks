@@ -33,6 +33,26 @@ class ProcessMeltDegreeDay : public ProcessMelt {
      */
     void AttachForcing(Forcing* forcing) override;
 
+    /**
+     * Get the degree-day factor value.
+     *
+     * @return The degree-day factor [mm/d/°C].
+     */
+    [[nodiscard]] double GetDegreeDayFactor() const {
+        assert(_degreeDayFactor);
+        return *_degreeDayFactor;
+    }
+
+    /**
+     * Get the melting temperature value.
+     *
+     * @return The melting temperature [°C].
+     */
+    [[nodiscard]] double GetMeltingTemperature() const {
+        assert(_meltingTemperature);
+        return *_meltingTemperature;
+    }
+
   protected:
     Forcing* _temperature;  // non-owning reference
     const float* _degreeDayFactor;

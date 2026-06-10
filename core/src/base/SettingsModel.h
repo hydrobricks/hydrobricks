@@ -357,6 +357,14 @@ class SettingsModel {
     void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
 
     /**
+     * Add a refreezing process to all snowpacks (water container to snow container).
+     * Requires snowpacks generated with water retention.
+     *
+     * @param refreezingProcess name of the refreezing process.
+     */
+    void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
+
+    /**
      * Select a structure by its ID.
      *
      * @param id ID of the structure.

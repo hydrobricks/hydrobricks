@@ -75,6 +75,8 @@ class ModelSettings:
         snow_rain_process: str | None = None,
         snow_ice_transformation: str | None = None,
         snow_redistribution: str | None = None,
+        snow_water_retention_process: str | None = None,
+        snow_refreezing_process: str | None = None,
     ) -> None:
         """
         Generate basic elements
@@ -96,6 +98,14 @@ class ModelSettings:
             Snow and ice transformation method (optional)
         snow_redistribution
             Snow redistribution method (optional)
+        snow_water_retention_process
+            Outflow process of the snowpack liquid water storage (optional). When
+            provided, the snowpacks are generated with liquid water retention: the
+            melt water is kept in the snowpack water container and released by the
+            given process (e.g. 'outflow:snow_holding').
+        snow_refreezing_process
+            Refreezing process of the retained liquid water (optional; requires
+            snow_water_retention_process). E.g. 'refreeze:degree_day'.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -122,7 +132,21 @@ class ModelSettings:
 
         # Snowpack
         if with_snow:
-            self.settings.generate_snowpacks(snow_melt_process)
+            if snow_refreezing_process and not snow_water_retention_process:
+                raise ConfigurationError(
+                    "Snow refreezing requires a snow water retention process.",
+                    item_name="snow_refreezing_process",
+                    item_value=snow_refreezing_process,
+                    reason="Missing snow water retention process",
+                )
+            if snow_water_retention_process:
+                self.settings.generate_snowpacks_with_water_retention(
+                    snow_melt_process, snow_water_retention_process
+                )
+                if snow_refreezing_process:
+                    self.settings.add_snowpack_refreezing(snow_refreezing_process)
+            else:
+                self.settings.generate_snowpacks(snow_melt_process)
             if snow_ice_transformation:
                 self.settings.add_snow_ice_transformation(snow_ice_transformation)
             if snow_redistribution:

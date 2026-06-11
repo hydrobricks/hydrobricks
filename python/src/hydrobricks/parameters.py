@@ -283,6 +283,98 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # HBV soil moisture recharge split (beta function)
+    "infiltration:hbv": [
+        ParamSpec(
+            name="beta",
+            unit="-",
+            aliases=["beta"],
+            min=1,
+            max=6,
+            default=2.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV actual evapotranspiration (limit LP as a fraction of FC)
+    "et:hbv": [
+        ParamSpec(
+            name="lp",
+            unit="-",
+            aliases=["lp"],
+            min=0.3,
+            max=1,
+            default=0.9,
+            mandatory=True,
+        ),
+    ],
+    # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
+    "runoff:hbv": [
+        ParamSpec(
+            name="response_factor",
+            unit="mm^(-alpha)/d",
+            aliases=["k_uz"],
+            min=0.0001,
+            max=1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="alpha",
+            unit="-",
+            aliases=["alpha"],
+            min=0,
+            max=3,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV-96 capillary transport (upper zone -> soil moisture)
+    "capillary:hbv": [
+        ParamSpec(
+            name="max_capillary_flux",
+            unit="mm/d",
+            aliases=["cflux"],
+            min=0,
+            max=3,
+            default=0.0,
+            mandatory=False,
+        ),
+    ],
+    # HBV triangular unit hydrograph (MAXBAS)
+    "routing:hbv": [
+        ParamSpec(
+            name="maxbas",
+            unit="d",
+            aliases=["maxbas"],
+            min=1,
+            max=10,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # Snowpack liquid water refreezing (degree-day; HBV)
+    "refreeze:degree_day": [
+        ParamSpec(
+            name="refreezing_factor",
+            unit="-",
+            aliases=["cfr"],
+            min=0,
+            max=0.1,
+            default=0.05,
+            mandatory=False,
+        ),
+    ],
+    # Snowpack liquid water holding capacity (HBV)
+    "outflow:snow_holding": [
+        ParamSpec(
+            name="water_holding_capacity",
+            unit="-",
+            aliases=["cwh", "whc"],
+            min=0,
+            max=0.2,
+            default=0.1,
+            mandatory=False,
+        ),
+    ],
     # GR4J routing process (x2, x3, x4).
     "routing:gr4j": [
         ParamSpec(
@@ -1554,6 +1646,24 @@ class ParameterSet:
                         item_value=smp,
                         reason="Unknown process",
                     )
+
+            # Snowpack liquid water retention and refreezing (e.g., HBV)
+            for option_key in [
+                "snow_water_retention_process",
+                "snow_refreezing_process",
+            ]:
+                process = options.get(option_key)
+                if process is None:
+                    continue
+                if process not in PROCESS_PARAM_SPECS:
+                    raise ConfigurationError(
+                        f"The {option_key} option {process} is not recognised.",
+                        item_name=option_key,
+                        item_value=process,
+                        reason="Unknown process",
+                    )
+                for spec in PROCESS_PARAM_SPECS[process]:
+                    self._register(component="type:snowpack", spec=spec)
 
             # Snow/ice transformation
             if "snow_ice_transformation" in options:

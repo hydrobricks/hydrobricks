@@ -516,8 +516,12 @@ void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
         SelectHydroUnitBrickByName(snowpackName);
 
         // The refreezing process lives on the snowpack water container and sends
-        // the refrozen water back to the snow container of the same brick.
+        // the refrozen water back to the snow container of the same brick. The
+        // output is instantaneous (as the melt) so the transfer is fully booked
+        // within the time step (a regular flux would leave the amount in flight
+        // until the next step).
         AddBrickProcess("refreeze", refreezingProcess, snowpackName + ":snow");
+        SetProcessOutputsAsInstantaneous();
     }
 }
 

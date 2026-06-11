@@ -5,6 +5,15 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+/**
+ * Direct outflow: releases the entire container content within the timestep.
+ *
+ *   outflow = max(0, S)
+ *
+ * Because it claims the whole content, it cannot share a container with another
+ * process drawing from it (IsValid() rejects that); use outflow:rest for shared
+ * storages.
+ */
 class ProcessOutflowDirect : public ProcessOutflow {
   public:
     explicit ProcessOutflowDirect(WaterContainer* container);

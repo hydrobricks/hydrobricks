@@ -5,6 +5,13 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+/**
+ * Linear reservoir outflow.
+ *
+ *   outflow = k × S
+ *
+ * k is the response factor [1/d] and S the storage content.
+ */
 class ProcessOutflowLinear : public ProcessOutflow {
   public:
     explicit ProcessOutflowLinear(WaterContainer* container);

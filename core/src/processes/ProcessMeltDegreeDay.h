@@ -5,6 +5,15 @@
 #include "Includes.h"
 #include "ProcessMelt.h"
 
+/**
+ * Degree-day snow/ice melt.
+ *
+ * Melt is proportional to the air temperature excess above the melting temperature:
+ *   M = cfmax × (T − TT)    for T ≥ TT, else 0
+ *
+ * cfmax is the degree-day factor [mm/d/°C] and TT the melting temperature [°C].
+ * Requires temperature forcing; no melt when the container is empty.
+ */
 class ProcessMeltDegreeDay : public ProcessMelt {
   public:
     explicit ProcessMeltDegreeDay(WaterContainer* container);

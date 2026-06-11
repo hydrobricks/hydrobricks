@@ -208,3 +208,55 @@ bool GenerateStructureGR6J(SettingsModel& settings, bool discrete) {
 
     return true;
 }
+
+bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow, bool rainOnSnowpack) {
+    // Precipitation (linear rain/snow transition, as the HBV-96 interval TT ± TTI/2)
+    settings.GeneratePrecipitationSplitters(withSnow);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+
+    if (withSnow) {
+        // Snowpacks with liquid water retention (CWH) and refreezing (CFR). As in the
+        // original HBV snow routine, the rain falls on the snowpack: it is retained in
+        // the liquid water storage (and can refreeze) and only the excess over the
+        // holding capacity reaches the ground.
+        settings.GenerateSnowpacksWithWaterRetention("melt:degree_day", "outflow:snow_holding", rainOnSnowpack);
+        settings.AddSnowpackRefreezing("refreeze:degree_day");
+    }
+
+    // Beta-function split between the soil moisture and the upper zone. The recharge
+    // (outflow:rest) is the complement of the infiltration and must be declared after it.
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("infiltration", "infiltration:hbv", "soil_moisture");
+    settings.AddBrickProcess("recharge", "outflow:rest", "upper_zone");
+    settings.SetProcessOutputsAsStatic();
+
+    // The brick declaration order matters: the solver applies the bricks in order, so
+    // every brick-to-brick flux must flow towards a later brick to be received within
+    // the same iteration (hence the soil moisture is declared after the upper zone,
+    // which feeds it through the capillary transport).
+
+    // Upper zone: capillary transport, constant percolation and non-linear runoff
+    settings.AddHydroUnitBrick("upper_zone", "storage");
+    settings.AddBrickProcess("capillary", "capillary:hbv", "soil_moisture");
+    settings.AddBrickProcess("percolation", "percolation:constant", "lower_zone");
+    settings.AddBrickProcess("runoff", "runoff:hbv", "routing");
+
+    // Lower zone: linear reservoir
+    settings.AddHydroUnitBrick("lower_zone", "storage");
+    settings.AddBrickProcess("outflow", "outflow:linear", "routing");
+
+    // Soil moisture storage (capacity FC). The overflow is a numerical safety only
+    // (the infiltration and the capillary flux both vanish at FC).
+    settings.AddHydroUnitBrick("soil_moisture", "storage");
+    settings.AddBrickParameter("capacity", 250.0f);
+    settings.AddBrickProcess("et", "et:hbv");
+    settings.AddBrickProcess("overflow", "overflow", "routing");
+
+    // Transformation function: triangular unit hydrograph (MAXBAS)
+    settings.AddHydroUnitBrick("routing", "storage");
+    settings.AddBrickProcess("routing", "routing:hbv", "outlet");
+
+    settings.AddLoggingToItem("outlet");
+
+    return true;
+}

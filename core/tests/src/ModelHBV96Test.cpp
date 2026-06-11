@@ -321,11 +321,11 @@ TEST_F(ModelHBV96, RainOnColdSnowpackIsRetained) {
     EXPECT_NEAR(logger->GetTotalOutletDischarge(), 0.0, 0.0000001);
 }
 
-TEST_F(ModelHBV96, RainOnSnowpackDoesNotAlterRainOnlySimulations) {
+TEST_F(ModelHBV96, RainToSnowpackDoesNotAlterRainOnlySimulations) {
     // Without snow cover, the rain routed through the snowpack liquid water storage
     // must reach the ground within the same time step: the discharge must be
-    // identical with and without the rain-on-snowpack routing.
-    auto runModel = [](bool rainOnSnowpack) {
+    // identical with and without the rain-to-snowpack routing.
+    auto runModel = [](bool rainToSnowpack) {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
         basinSettings.AddLandCover("ground", "", 1.0);
@@ -337,7 +337,7 @@ TEST_F(ModelHBV96, RainOnSnowpackDoesNotAlterRainOnlySimulations) {
         settingsModel.SetLogAll();
         settingsModel.SetSolver("heun_explicit");
         settingsModel.SetTimer("2020-01-01", "2020-01-15", 1, "day");
-        GenerateStructureHBV96(settingsModel, true, rainOnSnowpack);
+        GenerateStructureHBV96(settingsModel, true, rainToSnowpack);
 
         ModelHydro model(&subBasin);
         EXPECT_TRUE(model.Initialize(settingsModel, basinSettings));
@@ -368,12 +368,12 @@ TEST_F(ModelHBV96, RainOnSnowpackDoesNotAlterRainOnlySimulations) {
         return model.GetLogger()->GetOutletDischarge();
     };
 
-    axd qRainOnSnowpack = runModel(true);
+    axd qRainToSnowpack = runModel(true);
     axd qRainOnGround = runModel(false);
 
-    ASSERT_EQ(qRainOnSnowpack.size(), qRainOnGround.size());
-    for (int i = 0; i < qRainOnSnowpack.size(); ++i) {
-        EXPECT_NEAR(qRainOnSnowpack[i], qRainOnGround[i], 0.0000001);
+    ASSERT_EQ(qRainToSnowpack.size(), qRainOnGround.size());
+    for (int i = 0; i < qRainToSnowpack.size(); ++i) {
+        EXPECT_NEAR(qRainToSnowpack[i], qRainOnGround[i], 0.0000001);
     }
 }
 

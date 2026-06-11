@@ -77,7 +77,7 @@ class ModelSettings:
         snow_redistribution: str | None = None,
         snow_water_retention_process: str | None = None,
         snow_refreezing_process: str | None = None,
-        rain_on_snowpack: bool = False,
+        rain_to_snowpack: bool = False,
     ) -> None:
         """
         Generate basic elements
@@ -107,7 +107,7 @@ class ModelSettings:
         snow_refreezing_process
             Refreezing process of the retained liquid water (optional; requires
             snow_water_retention_process). E.g. 'refreeze:degree_day'.
-        rain_on_snowpack
+        rain_to_snowpack
             Route the rain to the snowpack liquid water storage instead of the
             land cover (requires snow_water_retention_process).
             The rain is retained in the snowpack (up to the holding capacity)
@@ -146,19 +146,19 @@ class ModelSettings:
                     item_value=snow_refreezing_process,
                     reason="Missing snow water retention process",
                 )
-            if rain_on_snowpack and not snow_water_retention_process:
+            if rain_to_snowpack and not snow_water_retention_process:
                 raise ConfigurationError(
                     "Routing the rain to the snowpacks requires a snow water "
                     "retention process.",
-                    item_name="rain_on_snowpack",
-                    item_value=rain_on_snowpack,
+                    item_name="rain_to_snowpack",
+                    item_value=rain_to_snowpack,
                     reason="Missing snow water retention process",
                 )
             if snow_water_retention_process:
                 self.settings.generate_snowpacks_with_water_retention(
                     snow_melt_process,
                     snow_water_retention_process,
-                    rain_on_snowpack,
+                    rain_to_snowpack,
                 )
                 if snow_refreezing_process:
                     self.settings.add_snowpack_refreezing(snow_refreezing_process)

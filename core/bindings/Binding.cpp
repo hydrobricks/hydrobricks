@@ -59,7 +59,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
         .def("generate_snowpacks_with_water_retention", &SettingsModel::GenerateSnowpacksWithWaterRetention,
              "Generate the snowpack with liquid water retention.", "snow_melt_process"_a, "outflow_process"_a,
-             "rain_on_snowpack"_a = false)
+             "rain_to_snowpack"_a = false)
         .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
              "Add a refreezing process to the snowpacks (requires water retention).",
              "refreezing_process"_a = "refreeze:degree_day")

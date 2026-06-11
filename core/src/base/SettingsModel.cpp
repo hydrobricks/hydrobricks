@@ -522,7 +522,7 @@ void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
 }
 
 void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
-                                                        bool rainOnSnowpack) {
+                                                        bool rainToSnowpack) {
     assert(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
@@ -538,6 +538,14 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
 
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(brickName);
+
+        if (rainToSnowpack) {
+            // Route the rain to the snowpack liquid water storage instead of the land cover.
+            // The outflow process releases the excess over the holding capacity to the land
+            // cover (everything, when there is no snow).
+            SelectHydroUnitSplitter("rain_splitter");
+            ChangeSplitterOutputTarget(brickName, brickName + "_snowpack");
+        }
     }
 }
 

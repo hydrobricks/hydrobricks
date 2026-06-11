@@ -175,7 +175,7 @@ def test_hbv96_without_snow_water_retention():
     model = models.HBV96(
         snow_water_retention_process=None,
         snow_refreezing_process=None,
-        rain_on_snowpack=False,
+        rain_to_snowpack=False,
     )
     parameters = model.generate_parameters()
     assert not parameters.has("cwh")
@@ -184,14 +184,14 @@ def test_hbv96_without_snow_water_retention():
 
 def test_hbv96_refreezing_requires_water_retention():
     with pytest.raises(hb.ConfigurationError):
-        models.HBV96(snow_water_retention_process=None, rain_on_snowpack=False)
+        models.HBV96(snow_water_retention_process=None, rain_to_snowpack=False)
 
 
-def test_hbv96_rain_on_snowpack_is_default():
-    assert models.HBV96().options["rain_on_snowpack"] is True
+def test_hbv96_rain_to_snowpack_is_default():
+    assert models.HBV96().options["rain_to_snowpack"] is True
 
 
-def test_hbv96_rain_on_snowpack_requires_water_retention():
+def test_hbv96_rain_to_snowpack_requires_water_retention():
     with pytest.raises(hb.ConfigurationError):
         models.HBV96(snow_water_retention_process=None, snow_refreezing_process=None)
 
@@ -227,13 +227,13 @@ def test_hbv96_water_balance_closes_without_snow_retention(tmp_path):
         record_all=True,
         snow_water_retention_process=None,
         snow_refreezing_process=None,
-        rain_on_snowpack=False,
+        rain_to_snowpack=False,
     )
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
-def test_hbv96_water_balance_closes_without_rain_on_snowpack(tmp_path):
-    model, forcing = _run(tmp_path, record_all=True, rain_on_snowpack=False)
+def test_hbv96_water_balance_closes_without_rain_to_snowpack(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True, rain_to_snowpack=False)
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
@@ -279,7 +279,7 @@ def test_hbv96_rain_on_cold_snowpack_is_retained(tmp_path):
     """Rain falling on a cold snowpack must be retained in the liquid water
     storage (and refreeze) instead of reaching the ground directly."""
 
-    def _total_q(rain_on_snowpack: bool) -> float:
+    def _total_q(rain_to_snowpack: bool) -> float:
         # 25 cold days build the snowpack, then 5 days at 1 °C: half of the
         # precipitation falls as rain on a snowpack that does not melt (tt=2).
         # The holding capacity (cwh × SWE = 25 mm) exceeds the rain (15 mm).
@@ -291,7 +291,7 @@ def test_hbv96_rain_on_cold_snowpack_is_retained(tmp_path):
             meteo,
             n_days,
             params={"tt": 2.0, "fc": 30.0},
-            rain_on_snowpack=rain_on_snowpack,
+            rain_to_snowpack=rain_to_snowpack,
             record_all=True,
         )
         assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)

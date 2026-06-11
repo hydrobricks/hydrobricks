@@ -14,6 +14,6 @@ bool GenerateStructureGR4J(SettingsModel& settings, bool discrete = true);
 
 bool GenerateStructureGR6J(SettingsModel& settings, bool discrete = true);
 
-bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow = true, bool rainOnSnowpack = true);
+bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow = true, bool rainToSnowpack = true);
 
 #endif  // HYDROBRICKS_HELPERS_H

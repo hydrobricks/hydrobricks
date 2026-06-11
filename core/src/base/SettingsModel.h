@@ -353,8 +353,13 @@ class SettingsModel {
      *
      * @param snowMeltProcess name of the snow melt process.
      * @param outflowProcess name of the outflow process.
+     * @param rainToSnowpack route the rain to the snowpack liquid water storage instead of the land cover
+     *                       (as in the original HBV snow routine). The rain is then retained in the snowpack
+     *                       (up to the holding capacity) and exposed to refreezing; when there is no snow,
+     *                       the outflow process releases it to the land cover within the same time step.
      */
-    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
+    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
+                                             bool rainToSnowpack = false);
 
     /**
      * Add a refreezing process to all snowpacks (water container to snow container).

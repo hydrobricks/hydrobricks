@@ -209,7 +209,7 @@ bool GenerateStructureGR6J(SettingsModel& settings, bool discrete) {
     return true;
 }
 
-bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow, bool rainOnSnowpack) {
+bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow, bool rainToSnowpack) {
     // Precipitation (linear rain/snow transition, as the HBV-96 interval TT ± TTI/2)
     settings.GeneratePrecipitationSplitters(withSnow);
     settings.AddLandCoverBrick("ground", "generic_land_cover");
@@ -219,7 +219,7 @@ bool GenerateStructureHBV96(SettingsModel& settings, bool withSnow, bool rainOnS
         // original HBV snow routine, the rain falls on the snowpack: it is retained in
         // the liquid water storage (and can refreeze) and only the excess over the
         // holding capacity reaches the ground.
-        settings.GenerateSnowpacksWithWaterRetention("melt:degree_day", "outflow:snow_holding", rainOnSnowpack);
+        settings.GenerateSnowpacksWithWaterRetention("melt:degree_day", "outflow:snow_holding", rainToSnowpack);
         settings.AddSnowpackRefreezing("refreeze:degree_day");
     }
 

@@ -637,7 +637,7 @@ class Model(ABC):
         snow_redistribution = None
         snow_water_retention_process = None
         snow_refreezing_process = None
-        rain_on_snowpack = False
+        rain_to_snowpack = False
 
         if "with_snow" in self.options:
             with_snow = self.options["with_snow"]
@@ -652,8 +652,8 @@ class Model(ABC):
             snow_water_retention_process = self.options["snow_water_retention_process"]
         if "snow_refreezing_process" in self.options:
             snow_refreezing_process = self.options["snow_refreezing_process"]
-        if "rain_on_snowpack" in self.options:
-            rain_on_snowpack = self.options["rain_on_snowpack"]
+        if "rain_to_snowpack" in self.options:
+            rain_to_snowpack = self.options["rain_to_snowpack"]
 
         self.settings.generate_base_structure(
             self.land_cover_names,
@@ -664,7 +664,7 @@ class Model(ABC):
             snow_redistribution=snow_redistribution,
             snow_water_retention_process=snow_water_retention_process,
             snow_refreezing_process=snow_refreezing_process,
-            rain_on_snowpack=rain_on_snowpack,
+            rain_to_snowpack=rain_to_snowpack,
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:

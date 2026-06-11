@@ -84,7 +84,7 @@ class HBV96(HBV):
         super()._define_parameter_aliases()
         self.parameter_aliases.update(
             {
-                "upper_zone:percolation_rate": ["perc", "PERC"],
+                "upper_zone:percolation_rate": ["perc"],
                 "lower_zone:response_factor": ["k_lz", "k4"],
             }
         )

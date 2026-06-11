@@ -320,7 +320,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="alpha",
             unit="-",
-            aliases=["alpha"],
+            aliases=["alpha", "alfa"],
             min=0,
             max=3,
             default=1.0,
@@ -1807,9 +1807,15 @@ class ParameterSet:
         if aliases is None:
             return
 
-        existing_aliases = self.parameters.explode("aliases")["aliases"].tolist()
+        # Aliases must be unique case-insensitively, as the parameter lookup is
+        # case-insensitive.
+        existing_aliases = [
+            alias.lower()
+            for alias in self.parameters.explode("aliases")["aliases"].tolist()
+            if isinstance(alias, str)
+        ]
         for alias in aliases:
-            if alias in existing_aliases:
+            if alias.lower() in existing_aliases:
                 raise ConfigurationError(
                     f'The alias "{alias}" already exists. It must be unique.',
                     item_name=alias,
@@ -1945,11 +1951,13 @@ class ParameterSet:
         ConfigurationError
             If the parameter is not found and raise_exception is True.
         """
+        # The matching is case-insensitive (e.g. 'PERC' and 'perc' are equivalent).
+        name_lower = name.lower()
         for index, row in self.parameters.iterrows():
             if (
                 row["aliases"] is not None
-                and name in row["aliases"]
-                or name == row["component"] + ":" + row["name"]
+                and name_lower in (alias.lower() for alias in row["aliases"])
+                or name_lower == (row["component"] + ":" + row["name"]).lower()
             ):
                 return index
 

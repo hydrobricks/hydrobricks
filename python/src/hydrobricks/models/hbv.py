@@ -157,9 +157,9 @@ class HBV(Model):
         refreezing coefficient) and cwh/whc (snowpack water holding capacity).
         """
         self.parameter_aliases = {
-            "soil_moisture:capacity": ["fc", "FC"],
-            "type:snowpack:degree_day_factor": ["cfmax", "CFMAX"],
-            "type:snowpack:melting_temperature": ["tt", "TT"],
+            "soil_moisture:capacity": ["fc"],
+            "type:snowpack:degree_day_factor": ["cfmax"],
+            "type:snowpack:melting_temperature": ["tt"],
         }
 
     def _define_parameter_constraints(self) -> None:

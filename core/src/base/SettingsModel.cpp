@@ -373,6 +373,20 @@ void SettingsModel::AddSplitterOutput(const string& target, const ContentType fl
     _selectedSplitter->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget) {
+    assert(_selectedSplitter);
+
+    for (auto& output : _selectedSplitter->outputs) {
+        if (output.target == currentTarget) {
+            output.target = newTarget;
+            return;
+        }
+    }
+
+    throw ModelConfigError(
+        std::format("The splitter {} has no output targeting {}.", _selectedSplitter->name, currentTarget));
+}
+
 void SettingsModel::AddLoggingToItem(const string& itemName) {
     assert(_selectedStructure);
     if (std::find(_selectedStructure->logItems.begin(), _selectedStructure->logItems.end(), itemName) !=

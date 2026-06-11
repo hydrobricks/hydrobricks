@@ -276,6 +276,14 @@ class SettingsModel {
     void AddSplitterOutput(const string& target, const ContentType fluxType = ContentType::Water);
 
     /**
+     * Change the target of an existing output of the selected splitter.
+     *
+     * @param currentTarget current target of the output.
+     * @param newTarget new target of the output.
+     */
+    void ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget);
+
+    /**
      * Add logging to a given item.
      *
      * @param itemName name of the item to log.

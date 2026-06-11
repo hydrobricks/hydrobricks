@@ -276,6 +276,14 @@ class SettingsModel {
     void AddSplitterOutput(const string& target, const ContentType fluxType = ContentType::Water);
 
     /**
+     * Change the target of an existing output of the selected splitter.
+     *
+     * @param currentTarget current target of the output.
+     * @param newTarget new target of the output.
+     */
+    void ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget);
+
+    /**
      * Add logging to a given item.
      *
      * @param itemName name of the item to log.
@@ -353,8 +361,21 @@ class SettingsModel {
      *
      * @param snowMeltProcess name of the snow melt process.
      * @param outflowProcess name of the outflow process.
+     * @param rainToSnowpack route the rain to the snowpack liquid water storage instead of the land cover
+     *                       (as in the original HBV snow routine). The rain is then retained in the snowpack
+     *                       (up to the holding capacity) and exposed to refreezing; when there is no snow,
+     *                       the outflow process releases it to the land cover within the same time step.
      */
-    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
+    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
+                                             bool rainToSnowpack = false);
+
+    /**
+     * Add a refreezing process to all snowpacks (water container to snow container).
+     * Requires snowpacks generated with water retention.
+     *
+     * @param refreezingProcess name of the refreezing process.
+     */
+    void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
 
     /**
      * Select a structure by its ID.

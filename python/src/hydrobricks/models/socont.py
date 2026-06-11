@@ -11,7 +11,68 @@ logger = logging.getLogger(__name__)
 
 
 class Socont(Model):
-    """Socont model implementation"""
+    """SOCONT glacio-hydrological model (Schaefli et al., 2005).
+
+    SOCONT (SOil CONTribution) is a conceptual model for high-mountain
+    catchments. Each hydro unit splits precipitation into rain and snow; snow and
+    glacier ice melt by a degree-day routine. On the ground land cover the
+    incoming water is split by the Socont infiltration function between a slow
+    (baseflow) reservoir and the quick surface runoff:
+
+      - slow reservoir (capacity A): linear baseflow outflow, LP-free Socont
+        evapotranspiration and a capacity overflow to the outlet; an optional
+        second soil layer (``soil_storage_nb=2``) is fed by a constant percolation,
+      - surface runoff: the infiltration excess, transformed either by a
+        kinematic-wave overland flow (``socont_runoff``) or a linear storage.
+
+    On glacierized areas, rain + snowmelt and ice melt are collected in two
+    sub-basin linear storages that drain directly to the outlet (the glacier ice
+    is treated as an infinite storage by default).
+
+    The model is integrated by the ODE solver, so the results are a continuous
+    approximation of the original discrete SOCONT formulation.
+
+    Parameters (literature names as aliases)
+    ----------------------------------------
+    a_snow : float
+        Snow melt degree-day factor [mm/d/°C].
+    a_ice : float
+        Glacier ice melt degree-day factor [mm/d/°C] (must be > a_snow).
+    A : float
+        Slow (soil) reservoir storage capacity [mm].
+    k_slow (k_slow_1) : float
+        Slow reservoir baseflow response factor [1/d].
+    k_slow_2 : float
+        Second soil-layer response factor [1/d] (only with soil_storage_nb=2;
+        must be < k_slow_1 and < k_quick).
+    beta : float
+        Quick-flow (surface runoff) coefficient [m^(4/3)/s] of the kinematic-wave
+        overland flow (surface_runoff='socont_runoff').
+    k_quick : float
+        Surface runoff response factor [1/d] when a linear storage is used instead
+        (surface_runoff='linear_storage'); must be > k_slow_1.
+    k_snow : float
+        Response factor of the glacierized-area rain + snowmelt storage [1/d].
+    k_ice : float
+        Response factor of the glacierized-area ice melt storage [1/d].
+
+    Options
+    -------
+    soil_storage_nb : int
+        Number of slow soil reservoirs, 1 (default) or 2. With 2, a constant
+        percolation feeds a second linear soil layer.
+    surface_runoff : str
+        Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
+        or 'linear_storage'.
+    snow_melt_process : str
+        Snowmelt method (default: 'melt:degree_day').
+    snow_ice_transformation : str or None
+        Snow-to-ice transformation on the glacier (default: None).
+    snow_redistribution : str or None
+        Optional snow redistribution process (e.g. 'transport:snow_slide').
+    glacier_infinite_storage : bool
+        Treat the glacier ice as an infinite storage (default: True).
+    """
 
     def __init__(self, name: str = "socont", **kwargs: Any) -> None:
         super().__init__(name=name, **kwargs)

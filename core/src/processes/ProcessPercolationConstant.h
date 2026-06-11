@@ -5,6 +5,14 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+/**
+ * Constant-rate percolation.
+ *
+ *   outflow = perc    [mm/d]
+ *
+ * A fixed percolation rate, constrained by the available content via the
+ * container. Used e.g. for the HBV-96 percolation from the upper to the lower zone.
+ */
 class ProcessPercolationConstant : public ProcessOutflow {
   public:
     explicit ProcessPercolationConstant(WaterContainer* container);

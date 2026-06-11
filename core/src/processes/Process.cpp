@@ -7,9 +7,12 @@
 #include "Brick.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "ProcessCapillaryHBV.h"
 #include "ProcessETGR4J.h"
+#include "ProcessETHBV.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
+#include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessInterceptionGR4J.h"
 #include "ProcessLateralSnowSlide.h"
@@ -21,11 +24,15 @@
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
+#include "ProcessOutflowSnowHolding.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
 #include "ProcessProductionGR4J.h"
+#include "ProcessRefreezeDegreeDay.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRoutingGR6J.h"
+#include "ProcessRoutingHBV.h"
+#include "ProcessRunoffHBV.h"
 #include "ProcessRunoffSocont.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
@@ -126,6 +133,48 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessInfiltrationGR4J::RegisterProcessSettings
         }},
 
+        {"infiltration:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationHBV>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationHBV::RegisterProcessSettings
+        }},
+
+        {"runoff:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRunoffHBV>(b->GetWaterContainer());
+            },
+            &ProcessRunoffHBV::RegisterProcessSettings
+        }},
+
+        {"capillary:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessCapillaryHBV>(b->GetWaterContainer());
+            },
+            &ProcessCapillaryHBV::RegisterProcessSettings
+        }},
+
+        {"routing:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingHBV>(b->GetWaterContainer());
+            },
+            &ProcessRoutingHBV::RegisterProcessSettings
+        }},
+
+        {"outflow:snow_holding", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSnowHolding>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSnowHolding::RegisterProcessSettings
+        }},
+
+        {"refreeze:degree_day", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRefreezeDegreeDay>(b->GetWaterContainer());
+            },
+            &ProcessRefreezeDegreeDay::RegisterProcessSettings
+        }},
+
         {"production:gr4j", {
             [](Brick* b) {
                 return std::make_unique<ProcessProductionGR4J>(b->GetWaterContainer());
@@ -145,6 +194,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessETGR4J>(b->GetWaterContainer());
             },
             &ProcessETGR4J::RegisterProcessSettings
+        }},
+
+        {"et:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETHBV>(b->GetWaterContainer());
+            },
+            &ProcessETHBV::RegisterProcessSettings
         }},
 
         {"melt:degree_day", {

@@ -13,6 +13,17 @@
 #include "Includes.h"
 #include "ProcessTransform.h"
 
+/**
+ * Seasonal snow-to-ice transformation (Luo et al., 2013).
+ *
+ * Converts snow to ice proportionally to the snow content, with a basal
+ * accumulation coefficient that varies seasonally through the year:
+ *   transformation = c(doy) × SWE,   c(doy) = b × (1 + sin(2π (doy − doy_ref)/365))
+ *
+ * b is the basal accumulation coefficient and doy_ref the seasonal reference day
+ * (March 22 in the northern hemisphere, September 21 in the southern), so the
+ * transformation peaks around the summer solstice.
+ */
 class ProcessTransformSnowToIceSwat : public ProcessTransform {
   public:
     explicit ProcessTransformSnowToIceSwat(WaterContainer* container);

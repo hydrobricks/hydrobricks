@@ -373,6 +373,20 @@ void SettingsModel::AddSplitterOutput(const string& target, const ContentType fl
     _selectedSplitter->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget) {
+    assert(_selectedSplitter);
+
+    for (auto& output : _selectedSplitter->outputs) {
+        if (output.target == currentTarget) {
+            output.target = newTarget;
+            return;
+        }
+    }
+
+    throw ModelConfigError(
+        std::format("The splitter {} has no output targeting {}.", _selectedSplitter->name, currentTarget));
+}
+
 void SettingsModel::AddLoggingToItem(const string& itemName) {
     assert(_selectedStructure);
     if (std::find(_selectedStructure->logItems.begin(), _selectedStructure->logItems.end(), itemName) !=
@@ -507,7 +521,26 @@ void SettingsModel::AddSnowRedistribution(const string& redistributionProcess, b
     }
 }
 
-void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess) {
+void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
+    assert(_selectedStructure);
+
+    for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        string snowpackName = brickSettings.name + "_snowpack";
+        SelectHydroUnitBrickByName(snowpackName);
+
+        // The refreezing process lives on the snowpack water container and sends
+        // the refrozen water back to the snow container of the same brick. The
+        // output is instantaneous (as the melt) so the transfer is fully booked
+        // within the time step (a regular flux would leave the amount in flight
+        // until the next step).
+        AddBrickProcess("refreeze", refreezingProcess, snowpackName + ":snow");
+        SetProcessOutputsAsInstantaneous();
+    }
+}
+
+void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
+                                                        bool rainToSnowpack) {
     assert(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
@@ -523,6 +556,14 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
 
         AddBrickProcess("meltwater", outflowProcess);
         AddProcessOutput(brickName);
+
+        if (rainToSnowpack) {
+            // Route the rain to the snowpack liquid water storage instead of the land cover.
+            // The outflow process releases the excess over the holding capacity to the land
+            // cover (everything, when there is no snow).
+            SelectHydroUnitSplitter("rain_splitter");
+            ChangeSplitterOutputTarget(brickName, brickName + "_snowpack");
+        }
     }
 }
 

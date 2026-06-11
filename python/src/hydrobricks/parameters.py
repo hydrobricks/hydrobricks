@@ -283,12 +283,104 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # HBV soil moisture recharge split (beta function)
+    "infiltration:hbv": [
+        ParamSpec(
+            name="beta",
+            unit="-",
+            aliases=["beta"],
+            min=1,
+            max=6,
+            default=2.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV actual evapotranspiration (limit LP as a fraction of FC)
+    "et:hbv": [
+        ParamSpec(
+            name="lp",
+            unit="-",
+            aliases=["lp"],
+            min=0.3,
+            max=1,
+            default=0.9,
+            mandatory=True,
+        ),
+    ],
+    # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
+    "runoff:hbv": [
+        ParamSpec(
+            name="response_factor",
+            unit="mm^(-alpha)/d",
+            aliases=["k_uz"],
+            min=0.0001,
+            max=1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="alpha",
+            unit="-",
+            aliases=["alpha", "alfa"],
+            min=0,
+            max=3,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV-96 capillary transport (upper zone -> soil moisture)
+    "capillary:hbv": [
+        ParamSpec(
+            name="max_capillary_flux",
+            unit="mm/d",
+            aliases=["cflux"],
+            min=0,
+            max=3,
+            default=0.0,
+            mandatory=False,
+        ),
+    ],
+    # HBV triangular unit hydrograph (MAXBAS)
+    "routing:hbv": [
+        ParamSpec(
+            name="maxbas",
+            unit="d",
+            aliases=["maxbas"],
+            min=1,
+            max=10,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # Snowpack liquid water refreezing (degree-day; HBV)
+    "refreeze:degree_day": [
+        ParamSpec(
+            name="refreezing_factor",
+            unit="-",
+            aliases=["cfr"],
+            min=0,
+            max=0.1,
+            default=0.05,
+            mandatory=False,
+        ),
+    ],
+    # Snowpack liquid water holding capacity (HBV)
+    "outflow:snow_holding": [
+        ParamSpec(
+            name="water_holding_capacity",
+            unit="-",
+            aliases=["cwh", "whc"],
+            min=0,
+            max=0.2,
+            default=0.1,
+            mandatory=False,
+        ),
+    ],
     # GR4J routing process (x2, x3, x4).
     "routing:gr4j": [
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -297,7 +389,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -306,7 +398,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -318,7 +410,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -327,7 +419,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -336,7 +428,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -345,7 +437,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_threshold",
             unit="-",
-            aliases=["X5", "x5"],
+            aliases=["X5"],
             min=-2,
             max=2,
             default=0.0,
@@ -354,7 +446,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exp_store_coeff",
             unit="mm",
-            aliases=["X6", "x6"],
+            aliases=["X6"],
             min=0.05,
             max=20,
             default=4.0,
@@ -1532,10 +1624,10 @@ class ParameterSet:
                         }
                     elif smp == "melt:cemaneige":
                         snow_alias_map = {
-                            "degree_day_factor": ["Kf", "kf"],
-                            "cold_content_factor": ["CTG", "ctg"],
-                            "melting_temperature": ["Tmelt", "tmelt"],
-                            "mean_annual_snow": ["Cn", "cn"],
+                            "degree_day_factor": ["Kf"],
+                            "cold_content_factor": ["CTG"],
+                            "melting_temperature": ["Tmelt"],
+                            "mean_annual_snow": ["Cn"],
                         }
                     for spec in PROCESS_PARAM_SPECS[smp]:
                         component = "type:snowpack"
@@ -1554,6 +1646,24 @@ class ParameterSet:
                         item_value=smp,
                         reason="Unknown process",
                     )
+
+            # Snowpack liquid water retention and refreezing (e.g., HBV)
+            for option_key in [
+                "snow_water_retention_process",
+                "snow_refreezing_process",
+            ]:
+                process = options.get(option_key)
+                if process is None:
+                    continue
+                if process not in PROCESS_PARAM_SPECS:
+                    raise ConfigurationError(
+                        f"The {option_key} option {process} is not recognised.",
+                        item_name=option_key,
+                        item_value=process,
+                        reason="Unknown process",
+                    )
+                for spec in PROCESS_PARAM_SPECS[process]:
+                    self._register(component="type:snowpack", spec=spec)
 
             # Snow/ice transformation
             if "snow_ice_transformation" in options:
@@ -1697,9 +1807,15 @@ class ParameterSet:
         if aliases is None:
             return
 
-        existing_aliases = self.parameters.explode("aliases")["aliases"].tolist()
+        # Aliases must be unique case-insensitively, as the parameter lookup is
+        # case-insensitive.
+        existing_aliases = [
+            alias.lower()
+            for alias in self.parameters.explode("aliases")["aliases"].tolist()
+            if isinstance(alias, str)
+        ]
         for alias in aliases:
-            if alias in existing_aliases:
+            if alias.lower() in existing_aliases:
                 raise ConfigurationError(
                     f'The alias "{alias}" already exists. It must be unique.',
                     item_name=alias,
@@ -1835,11 +1951,13 @@ class ParameterSet:
         ConfigurationError
             If the parameter is not found and raise_exception is True.
         """
+        # The matching is case-insensitive (e.g. 'PERC' and 'perc' are equivalent).
+        name_lower = name.lower()
         for index, row in self.parameters.iterrows():
             if (
                 row["aliases"] is not None
-                and name in row["aliases"]
-                or name == row["component"] + ":" + row["name"]
+                and name_lower in (alias.lower() for alias in row["aliases"])
+                or name_lower == (row["component"] + ":" + row["name"]).lower()
             ):
                 return index
 

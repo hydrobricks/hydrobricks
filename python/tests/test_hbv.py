@@ -164,11 +164,21 @@ def test_hbv96_generate_parameters_contains_literature_names():
         "cflux",
         "k_uz",
         "alpha",
+        "alfa",  # SMHI spelling
         "perc",
         "k_lz",
+        "k4",  # SMHI lower zone recession coefficient
         "maxbas",
     ):
         assert parameters.has(name), f"parameter {name!r} not found"
+
+
+def test_hbv96_parameter_lookup_is_case_insensitive():
+    parameters = models.HBV96().generate_parameters()
+    parameters.set_values({"FC": 200.0, "PERC": 0.5, "ALFA": 1.0})
+    assert parameters.get("fc") == 200.0
+    assert parameters.get("perc") == 0.5
+    assert parameters.get("upper_zone:alpha") == 1.0
 
 
 def test_hbv96_without_snow_water_retention():

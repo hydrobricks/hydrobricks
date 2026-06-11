@@ -380,7 +380,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -389,7 +389,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -398,7 +398,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -410,7 +410,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -419,7 +419,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -428,7 +428,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -437,7 +437,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_threshold",
             unit="-",
-            aliases=["X5", "x5"],
+            aliases=["X5"],
             min=-2,
             max=2,
             default=0.0,
@@ -446,7 +446,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exp_store_coeff",
             unit="mm",
-            aliases=["X6", "x6"],
+            aliases=["X6"],
             min=0.05,
             max=20,
             default=4.0,
@@ -1624,10 +1624,10 @@ class ParameterSet:
                         }
                     elif smp == "melt:cemaneige":
                         snow_alias_map = {
-                            "degree_day_factor": ["Kf", "kf"],
-                            "cold_content_factor": ["CTG", "ctg"],
-                            "melting_temperature": ["Tmelt", "tmelt"],
-                            "mean_annual_snow": ["Cn", "cn"],
+                            "degree_day_factor": ["Kf"],
+                            "cold_content_factor": ["CTG"],
+                            "melting_temperature": ["Tmelt"],
+                            "mean_annual_snow": ["Cn"],
                         }
                     for spec in PROCESS_PARAM_SPECS[smp]:
                         component = "type:snowpack"

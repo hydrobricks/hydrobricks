@@ -214,24 +214,24 @@ class GR4J(Model):
     def _define_parameter_aliases(self) -> None:
         """Define user-friendly parameter aliases for the GR4J model."""
         self.parameter_aliases = {
-            "production_store:capacity": ["X1", "x1"]
+            "production_store:capacity": ["X1"]
             # Others were already defined in parameter specs.
         }
 
         if self.options["snow_melt_process"] == "melt:cemaneige":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:degree_day_factor": ["Kf", "kf"],
-                    "ground_snowpack:cold_content_factor": ["CTG", "ctg"],
-                    "ground_snowpack:melting_temperature": ["Tmelt", "tmelt"],
-                    "ground_snowpack:mean_annual_snow": ["Cn", "cn"],
+                    "ground_snowpack:degree_day_factor": ["Kf"],
+                    "ground_snowpack:cold_content_factor": ["CTG"],
+                    "ground_snowpack:melting_temperature": ["Tmelt"],
+                    "ground_snowpack:mean_annual_snow": ["Cn"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:degree_day":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:degree_day_factor": ["a_snow", "kf"],
-                    "ground_snowpack:melting_temperature": ["Tmelt", "tmelt"],
+                    "ground_snowpack:degree_day_factor": ["a_snow", "Kf"],
+                    "ground_snowpack:melting_temperature": ["Tmelt"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:degree_day_aspect":
@@ -240,14 +240,14 @@ class GR4J(Model):
                     "ground_snowpack:degree_day_factor_n": ["a_snow_n", "kf_n"],
                     "ground_snowpack:degree_day_factor_s": ["a_snow_s", "kf_s"],
                     "ground_snowpack:degree_day_factor_ew": ["a_snow_ew", "kf_ew"],
-                    "ground_snowpack:melting_temperature": ["Tmelt", "tmelt"],
+                    "ground_snowpack:melting_temperature": ["Tmelt"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:temperature_index":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:melt_factor": ["a_snow", "kf"],
-                    "ground_snowpack:melting_temperature": ["Tmelt", "tmelt"],
+                    "ground_snowpack:melt_factor": ["a_snow", "Kf"],
+                    "ground_snowpack:melting_temperature": ["Tmelt"],
                 }
             )
 

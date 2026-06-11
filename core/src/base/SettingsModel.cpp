@@ -521,7 +521,8 @@ void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
     }
 }
 
-void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess) {
+void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
+                                                        bool rainOnSnowpack) {
     assert(_selectedStructure);
 
     for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {

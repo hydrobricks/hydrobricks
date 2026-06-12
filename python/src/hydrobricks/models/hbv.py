@@ -20,6 +20,10 @@ class HBV(Model):
     routine differs between versions and must be provided by the subclasses through
     ``_define_response_structure()`` (e.g. the non-linear upper zone of HBV-96).
 
+    Precipitation undercatch can be corrected with the rainfall and snowfall
+    correction factors ``rfcf`` and ``sfcf`` (both default 1.0), applied to the
+    rain and snow components at the snow/rain splitter.
+
     The model is integrated by the ODE solver (as Socont), so the results are a
     continuous approximation of the original discrete HBV formulations.
 

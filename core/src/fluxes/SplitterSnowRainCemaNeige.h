@@ -60,6 +60,8 @@ class SplitterSnowRainCemaNeige : public Splitter {
     Forcing* _temperatureMin;
     Forcing* _temperatureMax;
     double _elevation;
+    const float* _rainCorrectionFactor;  // [-] multiplies the rain output
+    const float* _snowCorrectionFactor;  // [-] multiplies the snow output
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_CEMANEIGE_H

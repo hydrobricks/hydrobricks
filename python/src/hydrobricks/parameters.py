@@ -129,6 +129,40 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Precipitation correction factors (HBV RFCF/SFCF) applied at the snow/rain
+    # splitter. Default 1.0 = no correction; optional (not mandatory).
+    "correction:snow_rain": [
+        ParamSpec(
+            name="rain_correction_factor",
+            unit="-",
+            aliases=["rfcf", "rcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_correction_factor",
+            unit="-",
+            aliases=["sfcf", "scf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # Rainfall correction factor for no-snow models (rain-only splitter).
+    "correction:rain": [
+        ParamSpec(
+            name="rain_correction_factor",
+            unit="-",
+            aliases=["rfcf", "rcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
     # Classic degree-day melt (snow + glacier unified specs)
     "melt:degree_day": [
         ParamSpec(
@@ -1311,6 +1345,7 @@ class ParameterSet:
         """
         # General parameters
         self._generate_snow_parameters(options, land_cover_types, land_cover_names)
+        self._generate_precipitation_correction_parameters(options)
 
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
@@ -1563,6 +1598,33 @@ class ParameterSet:
                 self.define_constraint(
                     "r_snow", "<", alias_map["radiation_coefficient"][0]
                 )
+
+    def _generate_precipitation_correction_parameters(self, options: dict) -> None:
+        """Register the optional precipitation correction factors.
+
+        The correction factors (HBV RFCF/SFCF) live on the precipitation splitter
+        and default to 1.0 (no correction). The relevant splitter depends on
+        whether the model has snow: the snow/rain splitter ('snow_rain_transition')
+        carries both the rain and snow factors, whereas the rain-only splitter
+        ('rain', used by no-snow models) carries only the rain factor. This mirrors
+        the splitter generation in SettingsModel::GeneratePrecipitationSplitters.
+
+        Parameters
+        ----------
+        options
+            Model options dictionary (uses 'snow_melt_process'/'snow_rain_process'
+            to decide whether snow is configured).
+        """
+        srp = options.get("snow_rain_process")
+        smp = options.get("snow_melt_process")
+        with_snow = srp is not None or smp is not None
+
+        if with_snow:
+            for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
+                self._register(component="snow_rain_transition", spec=spec)
+        else:
+            for spec in PROCESS_PARAM_SPECS["correction:rain"]:
+                self._register(component="rain", spec=spec)
 
     def _generate_snow_parameters(
         self, options: dict, land_cover_types: list[str], land_cover_names: list[str]

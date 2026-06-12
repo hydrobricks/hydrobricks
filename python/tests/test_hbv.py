@@ -315,3 +315,45 @@ def test_hbv96_alpha_zero_behaves_linearly(tmp_path):
     """With alpha=0 the upper zone is a linear reservoir; the run must succeed."""
     model, forcing = _run(tmp_path, params={"alpha": 0.0}, record_all=True)
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# D — Precipitation correction factors (RFCF / SFCF)
+# ---------------------------------------------------------------------------
+
+
+def test_hbv96_generate_parameters_contains_correction_factors():
+    parameters = models.HBV96().generate_parameters()
+    for name in ("rfcf", "rcf", "sfcf", "scf"):
+        assert parameters.has(name), f"parameter {name!r} not found"
+
+
+def _subdir(tmp_path: Path, name: str) -> Path:
+    """Create and return a fresh subdirectory (each model run needs its own)."""
+    d = tmp_path / name
+    d.mkdir()
+    return d
+
+
+def test_hbv96_snowfall_correction_increases_discharge(tmp_path):
+    """SFCF > 1 corrects snow gauge undercatch: more snow accumulates, later melts
+    and raises the total discharge (the default 1.0 leaves precipitation unchanged)."""
+    base, _ = _run(_subdir(tmp_path, "base"))
+    corrected, _ = _run(_subdir(tmp_path, "sfcf"), params={"sfcf": 1.5})
+    assert corrected.get_total_outlet_discharge() > base.get_total_outlet_discharge()
+
+
+def test_hbv96_rainfall_correction_increases_discharge(tmp_path):
+    """RFCF > 1 corrects rain gauge undercatch and raises the total discharge."""
+    base, _ = _run(_subdir(tmp_path, "base"))
+    corrected, _ = _run(_subdir(tmp_path, "rfcf"), params={"rfcf": 1.3})
+    assert corrected.get_total_outlet_discharge() > base.get_total_outlet_discharge()
+
+
+def test_hbv96_unit_correction_factors_are_neutral(tmp_path):
+    """Explicit factors of 1.0 reproduce the default (no correction) run exactly."""
+    default, _ = _run(_subdir(tmp_path, "default"))
+    explicit, _ = _run(_subdir(tmp_path, "explicit"), params={"rfcf": 1.0, "sfcf": 1.0})
+    assert explicit.get_total_outlet_discharge() == pytest.approx(
+        default.get_total_outlet_discharge(), rel=1e-9
+    )

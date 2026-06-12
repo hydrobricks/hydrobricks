@@ -35,7 +35,8 @@ class SplitterRain : public Splitter {
     void Compute() override;
 
   protected:
-    Forcing* _precipitation;  // non-owning reference
+    Forcing* _precipitation;             // non-owning reference
+    const float* _rainCorrectionFactor;  // [-] multiplies the rain output
 };
 
 #endif  // HYDROBRICKS_SPLITTER_RAIN_H

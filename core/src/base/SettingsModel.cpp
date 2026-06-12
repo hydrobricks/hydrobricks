@@ -465,6 +465,10 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow, const string& 
             AddSplitterParameter("transition_end", 2.0f);
         }
 
+        // Optional precipitation correction factors (HBV RFCF/SFCF); 1.0 = no correction
+        AddSplitterParameter("rain_correction_factor", 1.0f);
+        AddSplitterParameter("snow_correction_factor", 1.0f);
+
         // Splitter to land covers
         AddHydroUnitSplitter("snow_splitter", "multi_fluxes");
         AddHydroUnitSplitter("rain_splitter", "multi_fluxes");
@@ -473,6 +477,9 @@ void SettingsModel::GeneratePrecipitationSplitters(bool withSnow, const string& 
         AddHydroUnitSplitter("rain", "rain");
         AddSplitterForcing("precipitation");
         AddSplitterOutput("rain_splitter");
+
+        // Optional precipitation correction factor; 1.0 = no correction
+        AddSplitterParameter("rain_correction_factor", 1.0f);
 
         // Splitter to land covers
         AddHydroUnitSplitter("rain_splitter", "multi_fluxes");

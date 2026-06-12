@@ -87,6 +87,17 @@ const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitter
     throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
+const float* Splitter::GetParameterValuePointerOrUnit(const SplitterSettings& splitterSettings, const string& name) {
+    for (const auto& parameter : splitterSettings.parameters) {
+        if (parameter.GetName() == name) {
+            assert(parameter.GetValuePointer());
+            return parameter.GetValuePointer();
+        }
+    }
+
+    return &_unitValue;
+}
+
 void Splitter::Validate() const {
     if (!IsValid()) {
         throw ModelConfigError("Splitter validation failed. Check that all required properties are correctly defined.");

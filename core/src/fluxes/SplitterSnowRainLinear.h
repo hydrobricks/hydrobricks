@@ -37,8 +37,10 @@ class SplitterSnowRainLinear : public Splitter {
   protected:
     Forcing* _precipitation;
     Forcing* _temperature;
-    const float* _transitionStart;  // [°C]
-    const float* _transitionEnd;    // [°C]
+    const float* _transitionStart;       // [°C]
+    const float* _transitionEnd;         // [°C]
+    const float* _rainCorrectionFactor;  // [-] multiplies the rain output
+    const float* _snowCorrectionFactor;  // [-] multiplies the snow output
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_LINEAR_H

@@ -5,7 +5,9 @@ SplitterSnowRainLinear::SplitterSnowRainLinear()
       _precipitation(nullptr),
       _temperature(nullptr),
       _transitionStart(nullptr),
-      _transitionEnd(nullptr) {}
+      _transitionEnd(nullptr),
+      _rainCorrectionFactor(nullptr),
+      _snowCorrectionFactor(nullptr) {}
 
 bool SplitterSnowRainLinear::IsValid() const {
     if (_outputs.size() != 2) {
@@ -19,6 +21,8 @@ bool SplitterSnowRainLinear::IsValid() const {
 void SplitterSnowRainLinear::SetParameters(const SplitterSettings& splitterSettings) {
     _transitionStart = GetParameterValuePointer(splitterSettings, "transition_start");
     _transitionEnd = GetParameterValuePointer(splitterSettings, "transition_end");
+    _rainCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "rain_correction_factor");
+    _snowCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "snow_correction_factor");
 }
 
 void SplitterSnowRainLinear::AttachForcing(Forcing* forcing) {
@@ -43,15 +47,18 @@ double* SplitterSnowRainLinear::GetValuePointer(const string& name) {
 }
 
 void SplitterSnowRainLinear::Compute() {
+    double precip = _precipitation->GetValue();
+    double rcf = *_rainCorrectionFactor;
+    double scf = *_snowCorrectionFactor;
     if (_temperature->GetValue() <= *_transitionStart) {
         _outputs[0]->UpdateFlux(0);
-        _outputs[1]->UpdateFlux(_precipitation->GetValue());
+        _outputs[1]->UpdateFlux(precip * scf);
     } else if (_temperature->GetValue() >= *_transitionEnd) {
-        _outputs[0]->UpdateFlux(_precipitation->GetValue());
+        _outputs[0]->UpdateFlux(precip * rcf);
         _outputs[1]->UpdateFlux(0);
     } else {
         double rainFraction = (_temperature->GetValue() - *_transitionStart) / (*_transitionEnd - *_transitionStart);
-        _outputs[0]->UpdateFlux(_precipitation->GetValue() * rainFraction);
-        _outputs[1]->UpdateFlux(_precipitation->GetValue() * (1 - rainFraction));
+        _outputs[0]->UpdateFlux(precip * rainFraction * rcf);
+        _outputs[1]->UpdateFlux(precip * (1 - rainFraction) * scf);
     }
 }

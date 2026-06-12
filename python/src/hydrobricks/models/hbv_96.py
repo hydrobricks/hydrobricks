@@ -26,6 +26,10 @@ class HBV96(HBV):
     ----------------------------------------
     tt : float
         Threshold/melting temperature [°C].
+    rfcf : float
+        Rainfall correction factor [-] (default 1.0; corrects rain gauge undercatch).
+    sfcf : float
+        Snowfall correction factor [-] (default 1.0; corrects snow gauge undercatch).
     cfmax : float
         Snow melt degree-day factor [mm/d/°C].
     cfr : float

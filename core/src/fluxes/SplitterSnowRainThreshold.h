@@ -46,7 +46,9 @@ class SplitterSnowRainThreshold : public Splitter {
   protected:
     Forcing* _precipitation;
     Forcing* _temperature;
-    const float* _threshold;  // [°C]
+    const float* _threshold;             // [°C]
+    const float* _rainCorrectionFactor;  // [-] multiplies the rain output
+    const float* _snowCorrectionFactor;  // [-] multiplies the snow output
 };
 
 #endif  // HYDROBRICKS_SPLITTER_SNOW_RAIN_THRESHOLD_H

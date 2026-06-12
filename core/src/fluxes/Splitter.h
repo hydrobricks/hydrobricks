@@ -56,6 +56,18 @@ class Splitter {
     const float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
 
     /**
+     * Get the value pointer of an optional parameter, or a unit (1.0) value if absent.
+     *
+     * Used for parameters that default to a neutral value (e.g. precipitation
+     * correction factors) so that splitter setups omitting them stay valid.
+     *
+     * @param splitterSettings settings of the splitter containing the parameters.
+     * @param name name of the parameter.
+     * @return pointer to the value of the parameter, or to a 1.0 fallback if not found.
+     */
+    const float* GetParameterValuePointerOrUnit(const SplitterSettings& splitterSettings, const string& name);
+
+    /**
      * Attach forcing.
      *
      * @param forcing incoming forcing
@@ -126,6 +138,7 @@ class Splitter {
     string _name;
     vector<Flux*> _inputs;                        // non-owning: owned by processes
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
+    const float _unitValue = 1.0f;                // fallback for absent optional parameters
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

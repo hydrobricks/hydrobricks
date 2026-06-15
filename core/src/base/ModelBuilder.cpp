@@ -75,6 +75,7 @@ void ModelBuilder::CreateSubBasinComponents(SettingsModel& modelSettings) {
         auto splitterPtr = Splitter::Factory(splitterSettings);
         Splitter* splitter = splitterPtr.get();
         splitter->SetName(splitterSettings.name);
+        splitter->SetParameters(splitterSettings);
         _subBasin->AddSplitter(std::move(splitterPtr));
     }
 
@@ -116,6 +117,7 @@ void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             auto splitterPtr = Splitter::Factory(splitterSettings);
             Splitter* splitter = splitterPtr.get();
             splitter->SetName(splitterSettings.name);
+            splitter->SetParameters(splitterSettings);
             unit->AddSplitter(std::move(splitterPtr));
 
             BuildForcingConnections(splitterSettings, unit, splitter);

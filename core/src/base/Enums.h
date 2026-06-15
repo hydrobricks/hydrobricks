@@ -62,8 +62,6 @@ enum class BrickType {
     Storage,
     GenericLandCover,
     Glacier,
-    Urban,
-    Vegetation,
     Snowpack,
     Unknown
 };

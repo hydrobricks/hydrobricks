@@ -7,8 +7,6 @@
 #include "HydroUnit.h"
 #include "Snowpack.h"
 #include "Storage.h"
-#include "Urban.h"
-#include "Vegetation.h"
 
 Brick::Brick()
     : _needsSolver(true),
@@ -35,10 +33,6 @@ std::unique_ptr<Brick> Brick::Factory(BrickType type) {
             return std::make_unique<GenericLandCover>();
         case BrickType::Glacier:
             return std::make_unique<Glacier>();
-        case BrickType::Urban:
-            return std::make_unique<Urban>();
-        case BrickType::Vegetation:
-            return std::make_unique<Vegetation>();
         case BrickType::Snowpack:
             return std::make_unique<Snowpack>();
         default:

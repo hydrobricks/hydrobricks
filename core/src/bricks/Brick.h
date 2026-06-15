@@ -15,9 +15,7 @@
 enum class BrickCategory {
     Snowpack,          ///< Snowpack brick
     Glacier,           ///< Glacier brick
-    Urban,             ///< Urban land cover
-    Vegetation,        ///< Vegetation land cover
-    GenericLandCover,  ///< Generic land cover
+    GenericLandCover,  ///< Generic land cover (covers all user-defined land cover types)
     Unknown            ///< Unknown or unspecified brick type
 };
 

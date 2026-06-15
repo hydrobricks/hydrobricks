@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "BrickTypes.h"
 #include "ContentTypes.h"
 #include "Parameter.h"
 #include "Process.h"
@@ -851,9 +852,24 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
     } else if (component.find("type:") != string::npos) {
         string type = component.substr(component.find(':') + 1);
 
-        // Set the parameter for all bricks of the given type - hydro units
+        // 'type:land_cover' is a meta-type matching every land-cover brick (generic
+        // land covers and glaciers), so a parameter can be set for all land covers
+        // at once regardless of their specific type. Otherwise the exact type string
+        // is matched.
+        auto typeMatches = [&type](const string& brickType) {
+            if (brickType == type) {
+                return true;
+            }
+            if (type == "land_cover") {
+                BrickType bt = BrickTypeFromString(brickType);
+                return bt == BrickType::GenericLandCover || bt == BrickType::Glacier;
+            }
+            return false;
+        };
+
+        // Set the parameter for all matching bricks - hydro units
         for (auto& brick : _selectedStructure->hydroUnitBricks) {
-            if (brick.type == type) {
+            if (typeMatches(brick.type)) {
                 SelectHydroUnitBrick(brick.name);
                 if (BrickHasParameter(name)) {
                     SetBrickParameterValue(name, value);
@@ -864,9 +880,9 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
             }
         }
 
-        // Set the parameter for all bricks of the given type - subbasins
+        // Set the parameter for all matching bricks - subbasins
         for (auto& brick : _selectedStructure->subBasinBricks) {
-            if (brick.type == type) {
+            if (typeMatches(brick.type)) {
                 SelectHydroUnitBrick(brick.name);
                 if (BrickHasParameter(name)) {
                     SetBrickParameterValue(name, value);

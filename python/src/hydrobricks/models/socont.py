@@ -217,27 +217,30 @@ class Socont(Model):
             "processes": {"runoff": {"kind": surface_runoff_kind, "target": "outlet"}},
         }
 
-    def _define_additional_structures(
+    def _define_structure_variants(
         self,
     ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
-        """Emit a glacier-free structure variant when glaciers are present.
+        """Make the glacier-free structure the base, adding a with-glacier variant.
 
-        Units with no glacier are auto-assigned to this variant and therefore carry
-        no glacier land-cover brick at all (instead of a zero-area one). The glacier
-        sub-basin storages are catchment-level and remain defined by the primary
-        structure, so they are shared. If no glacier is configured, there is a single
+        When glaciers are present, the primary (base) structure is glacier-free, so
+        units with no glacier carry no glacier land-cover brick at all (instead of a
+        zero-area one). A with-glacier variant is added and used by glacier units. The
+        glacier sub-basin storages are catchment-level (one per catchment, not per
+        unit), so they stay in the base structure that builds the sub-basin and are
+        shared by both variants. If no glacier is configured, there is a single
         structure.
         """
+        full = (self.land_cover_names, self.land_cover_types, self.structure)
         if "glacier" not in self.land_cover_types:
-            return []
+            return [full]
 
         glacier_names = {
             name
             for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
             if cover_type == "glacier"
         }
-        # Land covers and structure with the glacier covers (and their sub-basin
-        # storages) removed.
+        # Glacier-free base: drop the glacier land covers only (the catchment-level
+        # glacier sub-basin storages are kept so they are built and shared).
         ground_names = [
             name
             for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
@@ -248,17 +251,14 @@ class Socont(Model):
             for cover_type in self.land_cover_types
             if cover_type != "glacier"
         ]
-        glacier_sub_basin = {
-            "glacier_area_rain_snowmelt_storage",
-            "glacier_area_icemelt_storage",
-        }
         ground_structure = {
             key: brick
             for key, brick in self.structure.items()
-            if key not in glacier_names and key not in glacier_sub_basin
+            if key not in glacier_names
         }
 
-        return [(ground_names, ground_types, ground_structure)]
+        # Base (glacier-free) first, then the with-glacier variant.
+        return [(ground_names, ground_types, ground_structure), full]
 
     def _define_parameter_aliases(self) -> None:
         """

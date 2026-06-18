@@ -596,18 +596,15 @@ class Model(ABC):
         RuntimeError
             If structure creation fails.
         """
-        # Primary structure variant.
-        self._generate_one_structure()
-
-        # Additional structure variants (e.g. a glacier-free variant for units with no
-        # glacier). Each becomes a separate structure; units are auto-assigned to the
-        # variant matching their land covers, so absent covers carry no brick at all.
-        for (
-            land_cover_names,
-            land_cover_types,
-            structure,
-        ) in self._define_additional_structures():
-            self.settings.add_structure()
+        # Structure variants, in order: the first is the primary (structure 1), which
+        # also defines the catchment-level sub-basin components. Units are auto-assigned
+        # (in the C++ core) to the variant matching their land covers, so a unit lacking
+        # a cover carries no zero-area brick for it. Most models have a single variant.
+        for i, (land_cover_names, land_cover_types, structure) in enumerate(
+            self._define_structure_variants()
+        ):
+            if i > 0:
+                self.settings.add_structure()
             saved = (self.land_cover_names, self.land_cover_types, self.structure)
             self.land_cover_names = land_cover_names
             self.land_cover_types = land_cover_types
@@ -644,19 +641,21 @@ class Model(ABC):
 
         self.settings.add_logging_to("outlet")
 
-    def _define_additional_structures(
+    def _define_structure_variants(
         self,
     ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
-        """Define extra structure variants beyond the primary one.
+        """Define the ordered structure variants of the model.
 
-        Each entry is a (land_cover_names, land_cover_types, structure) tuple that is
-        emitted as a separate model structure. Units are auto-assigned (in the C++
-        core) to the variant whose land-cover set matches their present land covers,
-        so a unit lacking a cover carries no zero-area brick for it. The default is no
-        extra variants (single structure). Models override this (e.g. Socont emits a
-        glacier-free variant so non-glacier units drop the glacier brick).
+        Each entry is a (land_cover_names, land_cover_types, structure) tuple emitted
+        as a separate model structure. The **first** is the primary (structure 1) and
+        defines the catchment-level sub-basin components; the rest are alternative
+        variants. Units are auto-assigned (in the C++ core) to the variant whose
+        land-cover set matches their present land covers, so a unit lacking a cover
+        carries no zero-area brick for it. The default is a single variant (the model's
+        own structure). Models override this (e.g. Socont makes the glacier-free
+        variant the base and adds a with-glacier variant).
         """
-        return []
+        return [(self.land_cover_names, self.land_cover_types, self.structure)]
 
     def _set_structure_basics(self) -> None:
         """

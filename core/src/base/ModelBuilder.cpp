@@ -1,5 +1,7 @@
 #include "ModelBuilder.h"
 
+#include <algorithm>
+#include <limits>
 #include <map>
 #include <set>
 
@@ -57,15 +59,39 @@ void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, Setti
             }
         }
 
-        // Use the variant whose land-cover set matches exactly; fall back to the
-        // primary structure (1) when no variant matches.
-        int matchedId = 1;
+        // Prefer the variant whose land-cover set matches the unit's covers exactly.
+        int matchedId = -1;
         for (int id = 1; id <= structureCount; ++id) {
             if (structureCovers[id] == present) {
                 matchedId = id;
                 break;
             }
         }
+
+        // No exact match: use the smallest variant whose covers are a superset of the
+        // unit's present covers (so the unit keeps all its covers, with at most a few
+        // zero-area extras rather than a missing one). Fall back to the largest variant
+        // if none is a superset.
+        if (matchedId < 0) {
+            int smallestSuperset = -1;
+            size_t supersetSize = std::numeric_limits<size_t>::max();
+            int largest = 1;
+            size_t largestSize = 0;
+            for (int id = 1; id <= structureCount; ++id) {
+                const std::set<string>& covers = structureCovers[id];
+                if (covers.size() > largestSize) {
+                    largest = id;
+                    largestSize = covers.size();
+                }
+                bool isSuperset = std::includes(covers.begin(), covers.end(), present.begin(), present.end());
+                if (isSuperset && covers.size() < supersetSize) {
+                    smallestSuperset = id;
+                    supersetSize = covers.size();
+                }
+            }
+            matchedId = (smallestSuperset >= 0) ? smallestSuperset : largest;
+        }
+
         _subBasin->GetHydroUnit(iUnit)->SetStructureId(matchedId);
     }
 }

@@ -10,6 +10,7 @@
 #include "ProcessCapillaryHBV.h"
 #include "ProcessETGR4J.h"
 #include "ProcessETHBV.h"
+#include "ProcessETOpenWater.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
@@ -201,6 +202,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessETHBV>(b->GetWaterContainer());
             },
             &ProcessETHBV::RegisterProcessSettings
+        }},
+
+        {"et:open_water", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWater::RegisterProcessSettings
         }},
 
         {"melt:degree_day", {

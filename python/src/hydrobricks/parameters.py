@@ -1394,6 +1394,7 @@ class ParameterSet:
             "outflow:rest",
             "outflow:direct",
             "et:socont",
+            "et:open_water",
             "overflow",
             "interception:gr4j",
             "infiltration:gr4j",

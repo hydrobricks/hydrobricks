@@ -25,6 +25,8 @@ class ActionGlacierEvolutionDeltaH : public Action {
 
     /**
      * Initialize the action.
+     *
+     * @return true if the initialization was successful.
      */
     [[nodiscard]] bool Init() override;
 

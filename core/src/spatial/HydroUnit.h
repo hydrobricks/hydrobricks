@@ -296,6 +296,7 @@ class HydroUnit {
      *
      * @param name The name of the land cover to change.
      * @param fraction The new area fraction of the land cover.
+     * @return True on success; false if the fraction is outside [0, 1] or the land cover was not found.
      */
     bool ChangeLandCoverAreaFraction(std::string_view name, double fraction);
 

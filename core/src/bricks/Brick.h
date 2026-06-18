@@ -314,16 +314,20 @@ class Brick {
     int GetProcessConnectionCount() const;
 
     /**
-     * Get the pointer to the water container content.
+     * Get the pointer to the content of the brick's base water container.
      *
-     * @param name name of the container type (e.g., "water", "ice", or "snow").
+     * @param name name of the value (e.g., "water" or "water_content").
+     * @return pointer to the water container content, or nullptr if the name is not recognized.
      */
     double* GetBaseValuePointer(std::string_view name);
 
     /**
-     * Get the pointer to the water container content.
+     * Get the pointer to a state value specific to this brick type. The base implementation
+     * returns nullptr; land cover bricks override it to expose their own container (e.g. the
+     * snow content for a snowpack or the ice content for a glacier).
      *
-     * @param name name of the container type (e.g., "water", "ice", or "snow").
+     * @param name name of the value (e.g., "snow", "ice").
+     * @return pointer to the value, or nullptr if the name is not recognized.
      */
     virtual double* GetValuePointer(std::string_view name);
 

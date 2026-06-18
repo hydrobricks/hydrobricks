@@ -304,7 +304,7 @@ class SubBasin {
     double* GetValuePointer(std::string_view name);
 
     /**
-     * GCompute the outlet discharge for the sub-basin.
+     * Compute the outlet discharge for the sub-basin.
      *
      * @return True if the computation was successful, false otherwise.
      */

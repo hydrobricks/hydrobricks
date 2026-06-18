@@ -22,6 +22,7 @@ class ResultWriter {
      * @param path Directory path where the output file will be created.
      * @param time Time series vector.
      * @param hydroUnitIds Vector of hydro unit IDs.
+     * @param hydroUnitStructureIds Vector of the model-structure variant ID used by each hydro unit.
      * @param hydroUnitAreas Vector of hydro unit areas.
      * @param subBasinLabels Labels for sub-basin aggregated values.
      * @param subBasinValues Vector of sub-basin value arrays.

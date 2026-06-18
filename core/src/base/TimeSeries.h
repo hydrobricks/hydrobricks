@@ -18,6 +18,7 @@ class TimeSeries {
      *
      * @param path path to the netCDF file.
      * @param vecTimeSeries vector to store the parsed time series.
+     * @return true if the file was parsed successfully.
      */
     [[nodiscard]] static bool Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries);
 

@@ -30,9 +30,38 @@ class ModelBuilder {
      */
     void AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
+    /**
+     * Build the full model structure. The sub-basin components are built from the
+     * primary structure (1), then each hydro unit builds the structure variant it was
+     * assigned by AssignHydroUnitStructures.
+     *
+     * @param modelSettings the model settings (defines the structure variants).
+     */
     void BuildModelStructure(SettingsModel& modelSettings);
+
+    /**
+     * Update the parameters of the sub-basin bricks, their processes and the sub-basin
+     * splitters from the (primary) structure settings, without rebuilding the model.
+     *
+     * @param modelSettings the model settings holding the updated parameter values.
+     */
     void UpdateSubBasinParameters(SettingsModel& modelSettings);
+
+    /**
+     * Update the parameters of every hydro unit's bricks, processes and splitters
+     * without rebuilding the model. Each unit's assigned structure variant is selected
+     * so the updated values match the components that unit was built with.
+     *
+     * @param modelSettings the model settings holding the updated parameter values.
+     */
     void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
+
+    /**
+     * Connect the logger entries to the corresponding value pointers in the sub-basin
+     * and hydro unit components, so logged items are recorded during the simulation.
+     *
+     * @param modelSettings the model settings (defines the items to log).
+     */
     void ConnectLoggerToValues(SettingsModel& modelSettings);
 
   private:

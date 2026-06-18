@@ -200,6 +200,16 @@ vecDouble SubBasin::GetHydroUnitAreas() const {
     return areas;
 }
 
+vecInt SubBasin::GetHydroUnitStructureIds() const {
+    vecInt ids;
+    ids.reserve(_hydroUnits.size());
+    for (const auto& unit : _hydroUnits) {
+        ids.push_back(unit->GetStructureId());
+    }
+
+    return ids;
+}
+
 int SubBasin::GetBrickCount() const {
     return static_cast<int>(_bricks.size());
 }

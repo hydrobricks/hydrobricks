@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <memory>
 
+#include "FileNetcdf.h"
 #include "HydroUnit.h"
 #include "Logger.h"
 #include "ModelHydro.h"
@@ -29,6 +31,7 @@ TEST(MultiStructure, HeterogeneousUnitsBuildAndLogPerStructure) {
     settings.AddLandCoverBrick("ground", "generic_land_cover");
     settings.SelectHydroUnitBrick("ground");
     settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+    settings.AddLoggingToItem("outlet");  // log the catchment outlet (primary structure)
 
     // Structure 2: same land cover, plus an extra (isolated) storage brick whose
     // log label does not exist in structure 1.
@@ -98,4 +101,26 @@ TEST(MultiStructure, HeterogeneousUnitsBuildAndLogPerStructure) {
         EXPECT_FALSE(std::isnan(values[iGround](t, 0)));
         EXPECT_FALSE(std::isnan(values[iGround](t, 1)));
     }
+
+    // Aggregation must be NaN-safe despite the omitted cells: totals stay finite and
+    // the water balance closes (the extra storage of unit 1 has no inflow).
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double waterStorage = logger->GetTotalWaterStorageChanges();
+    EXPECT_FALSE(std::isnan(discharge));
+    EXPECT_FALSE(std::isnan(et));
+    EXPECT_FALSE(std::isnan(waterStorage));
+    const double precipDepth = 30.0;  // catchment-average precipitation depth [mm]
+    EXPECT_NEAR(discharge + et + waterStorage - precipDepth, 0.0, 1e-6)
+        << "discharge=" << discharge << " et=" << et << " storage=" << waterStorage;
+
+    // The per-unit structure id must be written to the NetCDF output.
+    string outDir = std::filesystem::temp_directory_path().string();
+    ASSERT_TRUE(model.DumpOutputs(outDir));
+    FileNetcdf file;
+    ASSERT_TRUE(file.OpenReadOnly((std::filesystem::path(outDir) / "results.nc").string()));
+    vecInt structureIds = file.GetVarInt1D("hydro_units_structure_ids", 2);
+    ASSERT_EQ(structureIds.size(), 2);
+    EXPECT_EQ(structureIds[0], 1);
+    EXPECT_EQ(structureIds[1], 2);
 }

@@ -303,6 +303,7 @@ class Logger {
     vecAxd _subBasinValues;
     vecDoublePt _subBasinValuesPt;
     vecInt _hydroUnitIds;
+    vecInt _hydroUnitStructureIds;
     axd _hydroUnitAreas;
     vecStr _hydroUnitLabels;
     vecAxd _hydroUnitInitialValues;

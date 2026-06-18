@@ -1,6 +1,17 @@
 #include "Logger.h"
 
+#include <cmath>
+
 #include "ResultWriter.h"
+
+namespace {
+// Omitted (unit, label) cells are NaN (a label absent from a unit's structure
+// variant). For water-balance totals such a unit contributes nothing, so NaN is
+// treated as 0 while the full catchment area stays the denominator.
+double NanToZero(double v) {
+    return std::isnan(v) ? 0.0 : v;
+}
+}  // namespace
 
 Logger::Logger()
     : _cursor(0),
@@ -17,6 +28,7 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     _subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
     _subBasinValuesPt.resize(subBasinLabels.size());
     _hydroUnitIds = hydroUnitIds;
+    _hydroUnitStructureIds = subBasin->GetHydroUnitStructureIds();
     _hydroUnitAreas = Eigen::Map<axd>(hydroUnitAreas.data(), hydroUnitAreas.size());
     _hydroUnitLabels = hydroUnitLabels;
     _hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
@@ -115,8 +127,9 @@ bool Logger::DumpOutputs(const string& path) {
     // Delegate output writing to ResultWriter
     ResultWriter writer;
 
-    return writer.WriteNetCDF(path, _time, _hydroUnitIds, _hydroUnitAreas, _subBasinLabels, _subBasinValues,
-                              _hydroUnitLabels, _hydroUnitValues, _hydroUnitFractionLabels, _hydroUnitFractions);
+    return writer.WriteNetCDF(path, _time, _hydroUnitIds, _hydroUnitStructureIds, _hydroUnitAreas, _subBasinLabels,
+                              _subBasinValues, _hydroUnitLabels, _hydroUnitValues, _hydroUnitFractionLabels,
+                              _hydroUnitFractions);
 }
 
 axd Logger::GetOutletDischarge() const {
@@ -182,7 +195,7 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) c
                     break;
                 }
             }
-            axxd values = fraction * _hydroUnitValues[i];
+            axxd values = fraction * _hydroUnitValues[i].unaryExpr(&NanToZero);
             sum += (values * areas).sum() / areasSum;
         }
     } else {
@@ -193,12 +206,12 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) c
             double areasSum = _hydroUnitAreas.sum();
 
             for (int i : indices) {
-                axxd values = _hydroUnitValues[i];
+                axxd values = _hydroUnitValues[i].unaryExpr(&NanToZero);
                 sum += (values * areas).sum() / areasSum;
             }
         } else {
             for (int i : indices) {
-                sum += _hydroUnitValues[i].sum();
+                sum += _hydroUnitValues[i].unaryExpr(&NanToZero).sum();
             }
         }
     }
@@ -225,7 +238,7 @@ double Logger::GetTotalET() const {
         axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
         double areasSum = _hydroUnitAreas.sum();
         for (int i : _hydroUnitEtIndices) {
-            sum += (_hydroUnitValues[i] * areas).sum() / areasSum;
+            sum += (_hydroUnitValues[i].unaryExpr(&NanToZero) * areas).sum() / areasSum;
         }
     }
 
@@ -266,7 +279,7 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
                 break;
             }
         }
-        axd values = _hydroUnitInitialValues[i];
+        axd values = _hydroUnitInitialValues[i].unaryExpr(&NanToZero);
         values *= fraction;
         sum += (values * _hydroUnitAreas).sum() / _hydroUnitAreas.sum();
     }
@@ -288,7 +301,7 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
                 break;
             }
         }
-        axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all);
+        axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
         values *= fraction;
         sum += (values * _hydroUnitAreas).sum() / _hydroUnitAreas.sum();
     }

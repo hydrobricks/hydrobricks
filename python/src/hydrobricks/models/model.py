@@ -596,6 +596,29 @@ class Model(ABC):
         RuntimeError
             If structure creation fails.
         """
+        # Primary structure variant.
+        self._generate_one_structure()
+
+        # Additional structure variants (e.g. a glacier-free variant for units with no
+        # glacier). Each becomes a separate structure; units are auto-assigned to the
+        # variant matching their land covers, so absent covers carry no brick at all.
+        for (
+            land_cover_names,
+            land_cover_types,
+            structure,
+        ) in self._define_additional_structures():
+            self.settings.add_structure()
+            saved = (self.land_cover_names, self.land_cover_types, self.structure)
+            self.land_cover_names = land_cover_names
+            self.land_cover_types = land_cover_types
+            self.structure = structure
+            try:
+                self._generate_one_structure()
+            finally:
+                self.land_cover_names, self.land_cover_types, self.structure = saved
+
+    def _generate_one_structure(self) -> None:
+        """Generate one structure variant from the current land covers and structure."""
         # Generate basic elements
         self._set_structure_basics()
 
@@ -620,6 +643,20 @@ class Model(ABC):
                     self._set_structure_process(key, process, process_data)
 
         self.settings.add_logging_to("outlet")
+
+    def _define_additional_structures(
+        self,
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Define extra structure variants beyond the primary one.
+
+        Each entry is a (land_cover_names, land_cover_types, structure) tuple that is
+        emitted as a separate model structure. Units are auto-assigned (in the C++
+        core) to the variant whose land-cover set matches their present land covers,
+        so a unit lacking a cover carries no zero-area brick for it. The default is no
+        extra variants (single structure). Models override this (e.g. Socont emits a
+        glacier-free variant so non-glacier units drop the glacier brick).
+        """
+        return []
 
     def _set_structure_basics(self) -> None:
         """

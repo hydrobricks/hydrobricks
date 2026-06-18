@@ -217,6 +217,49 @@ class Socont(Model):
             "processes": {"runoff": {"kind": surface_runoff_kind, "target": "outlet"}},
         }
 
+    def _define_additional_structures(
+        self,
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Emit a glacier-free structure variant when glaciers are present.
+
+        Units with no glacier are auto-assigned to this variant and therefore carry
+        no glacier land-cover brick at all (instead of a zero-area one). The glacier
+        sub-basin storages are catchment-level and remain defined by the primary
+        structure, so they are shared. If no glacier is configured, there is a single
+        structure.
+        """
+        if "glacier" not in self.land_cover_types:
+            return []
+
+        glacier_names = {
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "glacier"
+        }
+        # Land covers and structure with the glacier covers (and their sub-basin
+        # storages) removed.
+        ground_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "glacier"
+        ]
+        ground_types = [
+            cover_type
+            for cover_type in self.land_cover_types
+            if cover_type != "glacier"
+        ]
+        glacier_sub_basin = {
+            "glacier_area_rain_snowmelt_storage",
+            "glacier_area_icemelt_storage",
+        }
+        ground_structure = {
+            key: brick
+            for key, brick in self.structure.items()
+            if key not in glacier_names and key not in glacier_sub_basin
+        }
+
+        return [(ground_names, ground_types, ground_structure)]
+
     def _define_parameter_aliases(self) -> None:
         """
         Define parameter name aliases for the Socont model.

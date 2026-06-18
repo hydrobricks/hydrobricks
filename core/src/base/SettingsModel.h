@@ -788,6 +788,13 @@ class SettingsModel {
     void Validate() const;
 
   protected:
+    /**
+     * Try to set a parameter value within the currently selected structure only.
+     * Returns true if the component was found (or, for a 'type:' component, handled)
+     * in that structure; false otherwise. No logging on miss.
+     */
+    bool SetParameterValueInSelectedStructure(const string& component, const string& name, float value);
+
     bool _logAll;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;

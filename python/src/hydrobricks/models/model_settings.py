@@ -306,6 +306,20 @@ class ModelSettings:
         """
         self.settings.add_logging_to(item)
 
+    def add_structure(self) -> int:
+        """
+        Add a new (empty) model-structure variant and select it.
+
+        Subsequent structure-building calls populate the newly selected structure.
+        Units are auto-assigned (in the core) to the variant matching their land
+        covers.
+
+        Returns
+        -------
+        The id of the newly created structure.
+        """
+        return self.settings.add_structure()
+
     def set_process_outputs_as_instantaneous(self) -> None:
         """Set all process outputs as instantaneous"""
         self.settings.set_process_outputs_as_instantaneous()

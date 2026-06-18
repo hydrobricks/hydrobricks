@@ -886,6 +886,30 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         return true;
     }
 
+    // Apply to every structure variant that contains the component (a parameter may
+    // live in several variants, e.g. the shared subsurface, or in only one, e.g. a
+    // glacier brick present only in the glacier variant).
+    int previousId = _selectedStructure->id;
+    bool foundAny = false;
+    for (auto& modelStructure : _modelStructures) {
+        _selectedStructure = &modelStructure;
+        _selectedBrick = nullptr;
+        _selectedProcess = nullptr;
+        _selectedSplitter = nullptr;
+        if (SetParameterValueInSelectedStructure(component, name, value)) {
+            foundAny = true;
+        }
+    }
+    SelectStructure(previousId);
+
+    if (!foundAny) {
+        LogError("Cannot find the component '{}'.", component);
+    }
+
+    return foundAny;
+}
+
+bool SettingsModel::SetParameterValueInSelectedStructure(const string& component, const string& name, float value) {
     // Get target object
     if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
         if (BrickHasParameter(name)) {
@@ -943,7 +967,8 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         }
 
     } else {
-        LogError("Cannot find the component '{}'.", component);
+        // Not found in this structure variant (the caller tries every variant and
+        // logs once if none match).
         return false;
     }
 

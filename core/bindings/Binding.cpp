@@ -33,6 +33,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
         .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
+        .def("add_structure", &SettingsModel::AddStructure,
+             "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)

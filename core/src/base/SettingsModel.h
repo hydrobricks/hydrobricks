@@ -670,11 +670,18 @@ class SettingsModel {
     }
 
     /**
-     * Get the names of the land cover bricks.
+     * Get the names of the land cover bricks (union across all structure variants).
      *
      * @return names of the land cover bricks.
      */
     vecStr GetLandCoverBricksNames() const;
+
+    /**
+     * Get the land cover brick names of the currently selected structure only.
+     *
+     * @return land cover brick names of the selected structure.
+     */
+    vecStr GetSelectedStructureLandCoverNames() const;
 
     /**
      * Get the sub basin brick settings by index.

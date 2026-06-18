@@ -4,6 +4,7 @@
 #include "Includes.h"
 
 class SettingsModel;
+class SettingsBasin;
 class SubBasin;
 class HydroUnit;
 class Brick;
@@ -18,6 +19,16 @@ struct SplitterSettings;
 class ModelBuilder {
   public:
     ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger);
+
+    /**
+     * Assign each hydro unit the structure variant whose land-cover set matches the
+     * unit's present land covers (fraction > 0). No-op when a single structure is
+     * defined. Must run before BuildModelStructure so units build their variant.
+     *
+     * @param modelSettings the model settings (defines the structure variants).
+     * @param basinSettings the basin settings (per-unit land covers and fractions).
+     */
+    void AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
     void BuildModelStructure(SettingsModel& modelSettings);
     void UpdateSubBasinParameters(SettingsModel& modelSettings);

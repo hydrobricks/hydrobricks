@@ -803,6 +803,17 @@ vecStr SettingsModel::GetLandCoverBricksNames() const {
     return names;
 }
 
+vecStr SettingsModel::GetSelectedStructureLandCoverNames() const {
+    assert(_selectedStructure);
+
+    vecStr names;
+    for (int index : _selectedStructure->landCoverBricks) {
+        names.push_back(_selectedStructure->hydroUnitBricks[index].name);
+    }
+
+    return names;
+}
+
 vecStr SettingsModel::GetSubBasinLogLabels() const {
     assert(_selectedStructure);
 

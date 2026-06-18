@@ -21,6 +21,11 @@ ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, Settin
     if (auto r = _subBasin->Initialize(basinSettings); !r) {
         return r;
     }
+
+    // Assign each unit its structure variant from its land covers before building.
+    ModelBuilder builder(_subBasin, &_timer, &_logger);
+    builder.AssignHydroUnitStructures(modelSettings, basinSettings);
+
     return Initialize(modelSettings, basinSettings);
 }
 

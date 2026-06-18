@@ -57,16 +57,24 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
 ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
     try {
         int hydroUnitCount = basinSettings.GetHydroUnitCount();
-        int landCoverCount = basinSettings.GetLandCoverCount();
-        int surfaceComponentCount = basinSettings.GetSurfaceComponentCount();
 
         for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
+            // Per-unit counts: units may carry different land covers (structure variants).
+            int landCoverCount = basinSettings.GetLandCoverCount();
+            int surfaceComponentCount = basinSettings.GetSurfaceComponentCount();
+
             for (int iElement = 0; iElement < landCoverCount; ++iElement) {
                 LandCoverSettings elementSettings = basinSettings.GetLandCoverSettings(iElement);
 
-                auto brick = dynamic_cast<LandCover*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                // The unit's structure variant may not include this land cover (e.g. a
+                // non-glacier unit on a glacier-free structure); skip it then.
+                auto* genericBrick = _hydroUnits[iUnit]->TryGetBrick(elementSettings.name);
+                if (genericBrick == nullptr) {
+                    continue;
+                }
+                auto brick = dynamic_cast<LandCover*>(genericBrick);
                 assert(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }
@@ -74,7 +82,11 @@ ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < surfaceComponentCount; ++iElement) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
-                auto brick = dynamic_cast<SurfaceComponent*>(_hydroUnits[iUnit]->GetBrick(elementSettings.name));
+                auto* genericBrick = _hydroUnits[iUnit]->TryGetBrick(elementSettings.name);
+                if (genericBrick == nullptr) {
+                    continue;
+                }
+                auto brick = dynamic_cast<SurfaceComponent*>(genericBrick);
                 assert(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
             }

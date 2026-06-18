@@ -10,6 +10,7 @@
 #include "ModelHydro.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
+#include "SubBasin.h"
 #include "TimeSeriesUniform.h"
 #include "Utils.h"
 
@@ -123,4 +124,54 @@ TEST(MultiStructure, HeterogeneousUnitsBuildAndLogPerStructure) {
     ASSERT_EQ(structureIds.size(), 2);
     EXPECT_EQ(structureIds[0], 1);
     EXPECT_EQ(structureIds[1], 2);
+}
+
+/**
+ * Structure variants are auto-assigned from the land covers each unit actually has:
+ * a unit with an extra cover uses the full variant (and carries that cover's brick),
+ * a unit without it uses the reduced variant (and does not carry the brick at all).
+ */
+TEST(MultiStructure, StructureAutoAssignedFromLandCovers) {
+    SettingsModel settings;
+    settings.SetSolver("heun_explicit");
+    settings.SetTimer("2020-01-01", "2020-01-05", 1, "day");
+
+    // Structure 1 (full): two land covers.
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+    settings.AddLandCoverBrick("forest", "generic_land_cover");
+    settings.SelectHydroUnitBrick("forest");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+    // Structure 2 (reduced): ground only.
+    settings.AddStructure();
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+    // Unit 0 has both covers; unit 1 has only ground.
+    SettingsBasin basin;
+    basin.AddHydroUnit(1, 100);
+    basin.AddLandCover("ground", "generic_land_cover", 0.6);
+    basin.AddLandCover("forest", "generic_land_cover", 0.4);
+    basin.AddHydroUnit(2, 100);
+    basin.AddLandCover("ground", "generic_land_cover", 1.0);
+
+    // InitializeWithBasin builds the SubBasin and auto-assigns structures from covers.
+    ModelHydro model;
+    auto initResult = model.InitializeWithBasin(settings, basin);
+    ASSERT_TRUE(initResult.has_value()) << "Initialize failed: " << initResult.error();
+    SubBasin* subBasin = model.GetSubBasin();
+
+    // Units matched the variant that fits their land covers.
+    EXPECT_EQ(subBasin->GetHydroUnit(0)->GetStructureId(), 1);
+    EXPECT_EQ(subBasin->GetHydroUnit(1)->GetStructureId(), 2);
+
+    // The 'forest' brick exists only where forest is present (no zero-area brick).
+    EXPECT_TRUE(subBasin->GetHydroUnit(0)->HasBrick("forest"));
+    EXPECT_FALSE(subBasin->GetHydroUnit(1)->HasBrick("forest"));
+    EXPECT_TRUE(subBasin->GetHydroUnit(1)->HasBrick("ground"));
 }

@@ -15,6 +15,7 @@
 #include "Logger.h"
 #include "Process.h"
 #include "ProcessLateral.h"
+#include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "Splitter.h"
 #include "SubBasin.h"
@@ -28,6 +29,45 @@ ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logge
     assert(subBasin);
     assert(timer);
     assert(logger);
+}
+
+void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    int structureCount = modelSettings.GetStructureCount();
+    if (structureCount <= 1) {
+        return;  // single structure: every unit keeps the default id 1
+    }
+
+    // Land-cover name set of each structure variant (ids are 1..structureCount).
+    vector<std::set<string>> structureCovers(structureCount + 1);
+    for (int id = 1; id <= structureCount; ++id) {
+        modelSettings.SelectStructure(id);
+        vecStr covers = modelSettings.GetSelectedStructureLandCoverNames();
+        structureCovers[id] = std::set<string>(covers.begin(), covers.end());
+    }
+
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        basinSettings.SelectUnit(iUnit);
+
+        // Land covers actually present in this unit (non-zero fraction).
+        std::set<string> present;
+        for (int iLC = 0; iLC < basinSettings.GetLandCoverCount(); ++iLC) {
+            LandCoverSettings lc = basinSettings.GetLandCoverSettings(iLC);
+            if (!NearlyZero(lc.fraction, PRECISION)) {
+                present.insert(lc.name);
+            }
+        }
+
+        // Use the variant whose land-cover set matches exactly; fall back to the
+        // primary structure (1) when no variant matches.
+        int matchedId = 1;
+        for (int id = 1; id <= structureCount; ++id) {
+            if (structureCovers[id] == present) {
+                matchedId = id;
+                break;
+            }
+        }
+        _subBasin->GetHydroUnit(iUnit)->SetStructureId(matchedId);
+    }
 }
 
 void ModelBuilder::BuildModelStructure(SettingsModel& modelSettings) {

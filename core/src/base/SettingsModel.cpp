@@ -1,5 +1,7 @@
 #include "SettingsModel.h"
 
+#include <algorithm>
+#include <set>
 #include <sstream>
 
 #include "BrickTypes.h"
@@ -575,6 +577,23 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
     }
 }
 
+int SettingsModel::AddStructure() {
+    int newId = 1;
+    for (const auto& modelStructure : _modelStructures) {
+        newId = std::max(newId, modelStructure.id + 1);
+    }
+
+    ModelStructure structure;
+    structure.id = newId;
+    _modelStructures.push_back(structure);
+    _selectedStructure = &_modelStructures.back();
+    _selectedBrick = nullptr;
+    _selectedProcess = nullptr;
+    _selectedSplitter = nullptr;
+
+    return newId;
+}
+
 bool SettingsModel::SelectStructure(int id) {
     for (auto& modelStructure : _modelStructures) {
         if (modelStructure.id == id) {
@@ -593,7 +612,6 @@ bool SettingsModel::SelectStructure(int id) {
 
 void SettingsModel::SelectHydroUnitBrick(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedBrick = &_selectedStructure->hydroUnitBricks[index];
     _selectedProcess = nullptr;
@@ -601,7 +619,6 @@ void SettingsModel::SelectHydroUnitBrick(int index) {
 
 void SettingsModel::SelectSubBasinBrick(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedBrick = &_selectedStructure->subBasinBricks[index];
     _selectedProcess = nullptr;
@@ -686,14 +703,12 @@ void SettingsModel::SelectProcessWithParameter(const string& name) {
 
 void SettingsModel::SelectHydroUnitSplitter(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[index];
 }
 
 void SettingsModel::SelectSubBasinSplitter(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedSplitter = &_selectedStructure->subBasinSplitters[index];
 }
@@ -736,24 +751,32 @@ void SettingsModel::SelectSubBasinSplitter(const string& name) {
 
 vecStr SettingsModel::GetHydroUnitLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
+    // Union of the hydro-unit log labels across all structure variants, in
+    // first-seen order. Labels shared by several structures (e.g. the common
+    // subsurface) appear once; a unit that lacks a label simply logs NaN for it.
     vecStr logNames;
+    std::set<string> seen;
+    auto add = [&logNames, &seen](const string& name) {
+        if (seen.insert(name).second) {
+            logNames.push_back(name);
+        }
+    };
 
     for (auto& modelStructure : _modelStructures) {
         for (auto& brick : modelStructure.hydroUnitBricks) {
             for (const auto& label : brick.logItems) {
-                logNames.push_back(brick.name + ":" + label);
+                add(brick.name + ":" + label);
             }
             for (auto& process : brick.processes) {
                 for (const auto& label : process.logItems) {
-                    logNames.push_back(brick.name + ":" + process.name + ":" + label);
+                    add(brick.name + ":" + process.name + ":" + label);
                 }
             }
         }
         for (auto& splitter : modelStructure.hydroUnitSplitters) {
             for (const auto& label : splitter.logItems) {
-                logNames.push_back(splitter.name + ":" + label);
+                add(splitter.name + ":" + label);
             }
         }
     }
@@ -763,9 +786,18 @@ vecStr SettingsModel::GetHydroUnitLogLabels() const {
 
 vecStr SettingsModel::GetLandCoverBricksNames() const {
     assert(_selectedStructure);
+
+    // Union of the land-cover brick names across all structure variants
+    // (first-seen order), so fraction logging covers every land cover.
     vecStr names;
-    for (int index : _selectedStructure->landCoverBricks) {
-        names.push_back(_selectedStructure->hydroUnitBricks[index].name);
+    std::set<string> seen;
+    for (auto& modelStructure : _modelStructures) {
+        for (int index : modelStructure.landCoverBricks) {
+            const string& name = modelStructure.hydroUnitBricks[index].name;
+            if (seen.insert(name).second) {
+                names.push_back(name);
+            }
+        }
     }
 
     return names;
@@ -773,30 +805,37 @@ vecStr SettingsModel::GetLandCoverBricksNames() const {
 
 vecStr SettingsModel::GetSubBasinLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
+    // Union of the sub-basin log labels across structure variants (first-seen
+    // order). The sub-basin is catchment-level and normally shared, so this is
+    // typically a single structure's worth of labels.
     vecStr logNames;
+    std::set<string> seen;
+    auto add = [&logNames, &seen](const string& name) {
+        if (seen.insert(name).second) {
+            logNames.push_back(name);
+        }
+    };
 
     for (auto& modelStructure : _modelStructures) {
         for (auto& brick : modelStructure.subBasinBricks) {
             for (const auto& label : brick.logItems) {
-                logNames.push_back(brick.name + ":" + label);
+                add(brick.name + ":" + label);
             }
             for (auto& process : brick.processes) {
                 for (const auto& label : process.logItems) {
-                    logNames.push_back(brick.name + ":" + process.name + ":" + label);
+                    add(brick.name + ":" + process.name + ":" + label);
                 }
             }
         }
         for (auto& splitter : modelStructure.subBasinSplitters) {
             for (const auto& label : splitter.logItems) {
-                logNames.push_back(splitter.name + ":" + label);
+                add(splitter.name + ":" + label);
             }
         }
-    }
-
-    for (const auto& label : _selectedStructure->logItems) {
-        logNames.push_back(label);
+        for (const auto& label : modelStructure.logItems) {
+            add(label);
+        }
     }
 
     return logNames;
@@ -804,7 +843,6 @@ vecStr SettingsModel::GetSubBasinLogLabels() const {
 
 vecStr SettingsModel::GetSubBasinGenericLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     vecStr logNames;
 

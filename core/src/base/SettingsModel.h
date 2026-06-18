@@ -378,6 +378,15 @@ class SettingsModel {
     void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
 
     /**
+     * Add a new (empty) model-structure variant and select it. Hydro units can be
+     * assigned to it via HydroUnit::SetStructureId(). Subsequent generate/add calls
+     * populate the newly selected structure.
+     *
+     * @return the ID of the newly created structure.
+     */
+    int AddStructure();
+
+    /**
      * Select a structure by its ID.
      *
      * @param id ID of the structure.

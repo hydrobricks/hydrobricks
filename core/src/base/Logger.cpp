@@ -69,8 +69,11 @@ void Logger::SaveInitialValues() {
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            assert(_hydroUnitValuesPt[iUnitVal][iUnit]);
-            _hydroUnitInitialValues[iUnitVal](iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            // A label absent from a unit's structure variant is left unconnected
+            // (NaN); skip it so the initial value stays NaN.
+            if (_hydroUnitValuesPt[iUnitVal][iUnit] != nullptr) {
+                _hydroUnitInitialValues[iUnitVal](iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            }
         }
     }
 }
@@ -85,16 +88,20 @@ void Logger::Record() {
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            assert(_hydroUnitValuesPt[iUnitVal][iUnit]);
-            _hydroUnitValues[iUnitVal](_cursor, iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            // Unconnected (unit, label) pairs — a label not in this unit's structure
+            // variant — stay NaN (omitted).
+            if (_hydroUnitValuesPt[iUnitVal][iUnit] != nullptr) {
+                _hydroUnitValues[iUnitVal](_cursor, iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            }
         }
     }
 
     if (_recordFractions) {
         for (int iUnitVal = 0; iUnitVal < _hydroUnitFractionsPt.size(); ++iUnitVal) {
             for (int iUnit = 0; iUnit < _hydroUnitFractions[iUnitVal].cols(); ++iUnit) {
-                assert(_hydroUnitFractionsPt[iUnitVal][iUnit]);
-                _hydroUnitFractions[iUnitVal](_cursor, iUnit) = *_hydroUnitFractionsPt[iUnitVal][iUnit];
+                if (_hydroUnitFractionsPt[iUnitVal][iUnit] != nullptr) {
+                    _hydroUnitFractions[iUnitVal](_cursor, iUnit) = *_hydroUnitFractionsPt[iUnitVal][iUnit];
+                }
             }
         }
     }

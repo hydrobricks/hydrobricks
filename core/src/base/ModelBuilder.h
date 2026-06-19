@@ -75,6 +75,7 @@ class ModelBuilder {
     void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
     void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
     void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
+    std::vector<Brick*> FindLandCoversFeeding(const string& targetName, HydroUnit* unit, SettingsModel& modelSettings);
     void BuildForcingConnections(const BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
     void BuildForcingConnections(const ProcessSettings& processSettings, HydroUnit* unit, Process* process);
     void BuildForcingConnections(const SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);

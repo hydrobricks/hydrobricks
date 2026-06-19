@@ -121,9 +121,6 @@ class HBV(Model):
             self._soil_names = {
                 name: f"{name}_soil_moisture" for name in self.land_cover_names
             }
-        # Capillary return target (single soil until the area-weighted fan-out lands;
-        # exact for the default cflux=0 and for a single soil-bearing cover).
-        self._primary_soil_name = self._soil_names[self.land_cover_names[0]]
         multi_cover = len(self.land_cover_names) > 1
 
         # Beta-function split of rain and snowpack outflow per land cover. The

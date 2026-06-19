@@ -68,7 +68,7 @@ class HBV96(HBV):
             "processes": {
                 "capillary": {
                     "kind": "capillary:hbv",
-                    "target": self._primary_soil_name,
+                    "targets": list(dict.fromkeys(self._soil_names.values())),
                 },
                 "percolation": {
                     "kind": "percolation:constant",

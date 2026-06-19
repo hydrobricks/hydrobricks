@@ -250,6 +250,26 @@ class Process {
     }
 
     /**
+     * Check if the process links several target bricks (instead of a single one).
+     *
+     * @return true if the process links several target bricks.
+     */
+    [[nodiscard]] virtual bool LinksMultipleTargets() const {
+        return false;
+    }
+
+    /**
+     * Add a target brick together with the bricks whose area fractions weight the
+     * flux toward it (used by processes that fan out to several targets).
+     *
+     * @param target the target brick.
+     * @param weightSources the bricks (land covers) whose area fractions weight the flux.
+     */
+    virtual void AddTargetBrickWithWeights(Brick*, const std::vector<Brick*>&) {
+        throw ShouldNotHappen("Process::AddTargetBrickWithWeights - Should not be called (virtual)");
+    }
+
+    /**
      * Check if the process is a lateral process.
      *
      * @return true if the process is a lateral process.

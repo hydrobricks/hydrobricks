@@ -255,6 +255,17 @@ class ModelSettings:
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
 
+    def add_process_output(self, target: str) -> None:
+        """
+        Add an extra output target to the most recently added process.
+
+        Parameters
+        ----------
+        target
+            Target brick of the additional output.
+        """
+        self.settings.add_process_output(target)
+
     def add_brick_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"
     ) -> None:

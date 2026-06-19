@@ -335,19 +335,60 @@ void ModelBuilder::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettin
             Process* process = brick->GetProcess(iProcess);
 
             if (process->NeedsTargetBrickLinking()) {
-                if (processSettings.outputs.size() != 1) {
-                    throw ModelConfigError("There can only be a single process output for brick linking.");
-                }
-                Brick* targetBrick = nullptr;
-                if (unit->HasBrick(processSettings.outputs[0].target)) {
-                    targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                if (process->LinksMultipleTargets()) {
+                    for (const auto& output : processSettings.outputs) {
+                        Brick* targetBrick = nullptr;
+                        if (unit->HasBrick(output.target)) {
+                            targetBrick = unit->GetBrick(output.target);
+                        } else {
+                            targetBrick = _subBasin->GetBrick(output.target);
+                        }
+                        process->AddTargetBrickWithWeights(targetBrick,
+                                                           FindLandCoversFeeding(output.target, unit, modelSettings));
+                    }
                 } else {
-                    targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                    if (processSettings.outputs.size() != 1) {
+                        throw ModelConfigError("There can only be a single process output for brick linking.");
+                    }
+                    Brick* targetBrick = nullptr;
+                    if (unit->HasBrick(processSettings.outputs[0].target)) {
+                        targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                    } else {
+                        targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                    }
+                    process->SetTargetBrick(targetBrick);
                 }
-                process->SetTargetBrick(targetBrick);
             }
         }
     }
+}
+
+std::vector<Brick*> ModelBuilder::FindLandCoversFeeding(const string& targetName, HydroUnit* unit,
+                                                        SettingsModel& modelSettings) {
+    // Find the land cover bricks whose processes send water to the given target
+    // brick (e.g. the soil moisture store). Their area fractions weight the
+    // capillary flux fanned back to that target. Uses the currently selected
+    // structure (set per unit by the caller).
+    std::vector<Brick*> covers;
+    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+        if (!unit->HasBrick(brickSettings.name)) {
+            continue;
+        }
+        Brick* brick = unit->GetBrick(brickSettings.name);
+        if (!brick->CanHaveAreaFraction()) {
+            continue;  // only land covers carry an area fraction
+        }
+        for (const auto& process : brickSettings.processes) {
+            for (const auto& output : process.outputs) {
+                if (output.target == targetName) {
+                    covers.push_back(brick);
+                }
+            }
+        }
+    }
+
+    return covers;
 }
 
 void ModelBuilder::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {

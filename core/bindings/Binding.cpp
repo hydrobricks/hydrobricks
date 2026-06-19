@@ -47,6 +47,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "name"_a)
         .def("add_brick_process", &SettingsModel::AddBrickProcess, "Add a process to a brick.", "name"_a, "kind"_a,
              "target"_a = "", "log"_a = false)
+        .def(
+            "add_process_output",
+            [](SettingsModel& settings, const string& target) { settings.AddProcessOutput(target); },
+            "Add an output target to the selected process.", "target"_a)
         .def("add_process_parameter", &SettingsModel::AddProcessParameter, "Add a process parameter.", "name"_a,
              "value"_a, "kind"_a = "constant")
         .def("add_process_forcing", &SettingsModel::AddProcessForcing, "Add a process forcing.", "name"_a)

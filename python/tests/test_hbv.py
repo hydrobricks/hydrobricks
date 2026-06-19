@@ -476,6 +476,15 @@ def test_hbv96_shared_soil_water_balance_closes(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
+def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
+    """An active capillary flux (cflux > 0) fans out to each per-class soil
+    (area-weighted) and the water balance still closes."""
+    params = dict(_PARAMS_2COVER_PERCLASS)
+    params["cflux"] = 1.0
+    model, forcing = _run_2cover(tmp_path, share_soil=False, params=params)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
 def test_hbv96_single_cover_keeps_legacy_aliases():
     """A single land cover (the default) keeps the bare fc/lp/beta aliases and the
     'soil_moisture' store name, unchanged from before per-class soils."""

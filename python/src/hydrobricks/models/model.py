@@ -763,9 +763,13 @@ class Model(ABC):
         if "log" in process_data:
             log = process_data["log"]
 
-        target = ""
-        if "target" in process_data:
-            target = process_data["target"]
+        # A process may target a single brick ('target') or fan out to several
+        # bricks ('targets', a list — e.g. the HBV-96 capillary to per-class soils).
+        targets: list[str] = []
+        if "targets" in process_data:
+            targets = list(process_data["targets"])
+        elif "target" in process_data:
+            targets = [process_data["target"]]
         else:
             kind = process_data["kind"]
             if not (kind.startswith("et:") or kind.startswith("interception:")):
@@ -775,9 +779,16 @@ class Model(ABC):
                     reason="Missing required target",
                 )
 
+        first_target = targets[0] if targets else ""
         self.settings.add_brick_process(
-            process, process_data["kind"], target, log=log, instantaneous=instantaneous
+            process,
+            process_data["kind"],
+            first_target,
+            log=log,
+            instantaneous=instantaneous,
         )
+        for extra_target in targets[1:]:
+            self.settings.add_process_output(extra_target)
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """

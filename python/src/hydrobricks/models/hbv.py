@@ -51,6 +51,14 @@ class HBV(Model):
         which matches the HBV-96 linear transition over TT ± TTI/2).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    share_soil : bool
+        Share a single soil moisture storage across all land covers (default:
+        False, i.e. each land cover has its own soil moisture store, as in the
+        original HBV land-use formulation). With several land covers and per-class
+        soils, the soil/recharge parameters (fc, lp, beta) become cover-specific
+        and are exposed with a per-cover suffix (e.g. ``fc_forest``); with a single
+        land cover (or when sharing) the bare aliases (``fc``, ``lp``, ``beta``)
+        are kept.
     """
 
     @abstractmethod
@@ -64,6 +72,7 @@ class HBV(Model):
         self.options["rain_to_snowpack"] = True
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
+        self.options["share_soil"] = False
         self.allowed_land_cover_types = ["ground"]
 
         self._set_options(kwargs)
@@ -84,49 +93,78 @@ class HBV(Model):
     def _define_structure(self) -> None:
         """Define the structure elements shared by the HBV versions.
 
-        - Ground land cover: splits the incoming water (rain + snowpack outflow)
-          between the soil moisture storage and the response routine using the
-          HBV beta function (recharge = in × (SM/FC)^beta).
+        - Land covers: each splits the incoming water (rain + snowpack outflow)
+          between its soil moisture storage and the response routine using the HBV
+          beta function (recharge = in × (SM/FC)^beta).
         - Response routine: defined by the subclass (``_define_response_structure``).
           Its bricks must route their outflows to the 'routing' brick.
         - Soil moisture storage (capacity FC): evapotranspiration limited by LP;
-          overflow safety to the routing brick.
+          overflow safety to the routing brick. One per land cover (original HBV
+          land-use formulation), or a single shared store when ``share_soil`` is
+          set.
         - Routing: triangular unit hydrograph (MAXBAS) to the outlet.
 
         The brick declaration order matters: the solver applies the bricks in
         order, so every brick-to-brick flux must flow towards a later brick to be
-        received within the same iteration (hence the soil moisture is declared
-        after the response routine, which may feed it through a capillary flux).
+        received within the same iteration (hence the soil moisture stores are
+        declared after the response routine, which may feed them through a
+        capillary flux, and the routing is declared last).
         """
-        # Beta-function split of rain and snowpack outflow. The recharge
-        # (outflow:rest) is the complement of the infiltration and must be
+        # Soil naming: a single shared store when requested or with one land cover,
+        # otherwise one soil moisture store per land cover.
+        self._shared_soil = (
+            bool(self.options.get("share_soil")) or len(self.land_cover_names) == 1
+        )
+        if self._shared_soil:
+            self._soil_names = {name: "soil_moisture" for name in self.land_cover_names}
+        else:
+            self._soil_names = {
+                name: f"{name}_soil_moisture" for name in self.land_cover_names
+            }
+        # Capillary return target (single soil until the area-weighted fan-out lands;
+        # exact for the default cflux=0 and for a single soil-bearing cover).
+        self._primary_soil_name = self._soil_names[self.land_cover_names[0]]
+        multi_cover = len(self.land_cover_names) > 1
+
+        # Beta-function split of rain and snowpack outflow per land cover. The
+        # recharge (outflow:rest) is the complement of the infiltration and must be
         # declared after it.
-        self.structure["ground"] = {
-            "attach_to": "hydro_unit",
-            "kind": "land_cover",
-            "processes": {
-                "infiltration": {
-                    "kind": "infiltration:hbv",
-                    "target": "soil_moisture",
+        for cover_name in self.land_cover_names:
+            brick = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "processes": {
+                    "infiltration": {
+                        "kind": "infiltration:hbv",
+                        "target": self._soil_names[cover_name],
+                    },
+                    "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
                 },
-                "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
-            },
-        }
+            }
+            if multi_cover:
+                brick["alias_suffix"] = f"_{cover_name}"
+            self.structure[cover_name] = brick
 
         # Response routine (version-specific)
         self._define_response_structure()
 
-        # Soil moisture storage (capacity FC). The overflow is a numerical safety
+        # Soil moisture storage(s) (capacity FC). The overflow is a numerical safety
         # only (the infiltration and the capillary flux both vanish at FC).
-        self.structure["soil_moisture"] = {
-            "attach_to": "hydro_unit",
-            "kind": "storage",
-            "parameters": {"capacity": 250},
-            "processes": {
-                "et": {"kind": "et:hbv"},
-                "overflow": {"kind": "overflow", "target": "routing"},
-            },
-        }
+        for cover_name, soil_name in self._soil_names.items():
+            if soil_name in self.structure:
+                continue  # shared store already declared
+            soil = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "parameters": {"capacity": 250},
+                "processes": {
+                    "et": {"kind": "et:hbv"},
+                    "overflow": {"kind": "overflow", "target": "routing"},
+                },
+            }
+            if not self._shared_soil and multi_cover:
+                soil["alias_suffix"] = f"_{cover_name}"
+            self.structure[soil_name] = soil
 
         # Transformation function (triangular unit hydrograph)
         self.structure["routing"] = {
@@ -153,18 +191,25 @@ class HBV(Model):
     def _define_parameter_aliases(self) -> None:
         """Define common HBV parameter aliases (literature names).
 
-        - fc: Soil moisture storage capacity (FC).
+        - fc: Soil moisture storage capacity (FC). With per-class soils, one alias
+          per cover (e.g. ``fc_forest``); shared/single soil keeps the bare ``fc``.
         - cfmax: Snow melt degree-day factor (CFMAX).
         - tt: Snow melt threshold temperature (TT).
 
         The process parameter specs already provide lp, beta, maxbas, cfr (snow
-        refreezing coefficient) and cwh/whc (snowpack water holding capacity).
+        refreezing coefficient) and cwh/whc (snowpack water holding capacity); with
+        per-class soils these likewise carry a per-cover suffix (lp_<cover>,
+        beta_<cover>).
         """
         self.parameter_aliases = {
-            "soil_moisture:capacity": ["fc"],
             "type:snowpack:degree_day_factor": ["cfmax"],
             "type:snowpack:melting_temperature": ["tt"],
         }
+        if self._shared_soil:
+            self.parameter_aliases["soil_moisture:capacity"] = ["fc"]
+        else:
+            for cover_name, soil_name in self._soil_names.items():
+                self.parameter_aliases[f"{soil_name}:capacity"] = [f"fc_{cover_name}"]
 
     def _define_parameter_constraints(self) -> None:
         """Define parameter constraints (none required for HBV)."""

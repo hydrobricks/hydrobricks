@@ -129,12 +129,14 @@ class ModelSettings:
             splitter_type = "snow_rain:linear"
         self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
-        # Add default ground land cover
-        self.settings.add_land_cover_brick("ground", "generic_land_cover")
-
-        # Add other specific land covers
+        # Add the land covers, each by its own name: a generic ("ground"-type)
+        # cover maps to the generic_land_cover brick, while special covers (e.g.
+        # glacier) keep their type. Several generic covers can coexist (e.g. open
+        # and forest), each getting its own snowpack and soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type not in ["ground", "generic_land_cover"]:
+            if cover_type in ["ground", "generic_land_cover"]:
+                self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
+            else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
 
         # Snowpack

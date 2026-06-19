@@ -66,7 +66,10 @@ class HBV96(HBV):
             "attach_to": "hydro_unit",
             "kind": "storage",
             "processes": {
-                "capillary": {"kind": "capillary:hbv", "target": "soil_moisture"},
+                "capillary": {
+                    "kind": "capillary:hbv",
+                    "target": self._primary_soil_name,
+                },
                 "percolation": {
                     "kind": "percolation:constant",
                     "target": "lower_zone",

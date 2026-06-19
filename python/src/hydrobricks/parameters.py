@@ -1355,7 +1355,13 @@ class ParameterSet:
             self._generate_brick_parameters(key, brick)
             self._generate_process_parameters(key, brick)
 
-    def _register(self, component: str, spec: ParamSpec, **overrides: dict) -> None:
+    def _register(
+        self,
+        component: str,
+        spec: ParamSpec,
+        alias_suffix: str = "",
+        **overrides: dict,
+    ) -> None:
         """Register a parameter based on a ParamSpec.
 
         Parameters
@@ -1364,6 +1370,11 @@ class ParameterSet:
             Component name used in define_parameter.
         spec: ParamSpec
             The static specification.
+        alias_suffix: str
+            Suffix appended to every alias of the spec (e.g. '_forest'). Used when
+            the same process/brick parameter exists on several land covers, so the
+            literature aliases (beta, lp, ...) stay unique per cover. Empty by
+            default (single occurrence keeps the bare alias).
         overrides: dict
             Any field accepted by define_parameter to override spec values.
         """
@@ -1372,6 +1383,8 @@ class ParameterSet:
         for key, val in overrides.items():
             if key in kwargs:
                 kwargs[key] = val
+        if alias_suffix and kwargs.get("aliases"):
+            kwargs["aliases"] = [alias + alias_suffix for alias in kwargs["aliases"]]
         self.define_parameter(component=component, **kwargs)
 
     def _generate_process_parameters(self, key: str, brick: dict) -> None:
@@ -1387,6 +1400,8 @@ class ParameterSet:
         """
         if "processes" not in brick:
             return
+
+        alias_suffix = brick.get("alias_suffix", "")
 
         skip = {
             # No parameters
@@ -1414,7 +1429,7 @@ class ParameterSet:
                 continue
             if kind in PROCESS_PARAM_SPECS:
                 for spec in PROCESS_PARAM_SPECS[kind]:
-                    self._register(component=key, spec=spec)
+                    self._register(component=key, spec=spec, alias_suffix=alias_suffix)
             else:
                 raise ConfigurationError(
                     f"The process {kind} is not recognised in parameters generation.",
@@ -1436,13 +1451,18 @@ class ParameterSet:
         if "parameters" not in brick:
             return
 
+        alias_suffix = brick.get("alias_suffix", "")
         skip = {"no_melt_when_snow_cover", "infinite_storage"}
 
         for param_name, _ in brick["parameters"].items():
             if param_name in skip:
                 continue
             if param_name in BRICK_PARAM_SPECS:
-                self._register(component=key, spec=BRICK_PARAM_SPECS[param_name])
+                self._register(
+                    component=key,
+                    spec=BRICK_PARAM_SPECS[param_name],
+                    alias_suffix=alias_suffix,
+                )
             else:
                 raise ConfigurationError(
                     f"Parameter {param_name} is not recognised in params generation.",

@@ -357,3 +357,131 @@ def test_hbv96_unit_correction_factors_are_neutral(tmp_path):
     assert explicit.get_total_outlet_discharge() == pytest.approx(
         default.get_total_outlet_discharge(), rel=1e-9
     )
+
+
+# ---------------------------------------------------------------------------
+# E — Multiple land covers and per-class soil moisture
+# ---------------------------------------------------------------------------
+
+_COVERS = (["open", "forest"], ["ground", "ground"])
+
+_PARAMS_2COVER_SHARED = {
+    "cfmax": 3.0,
+    "tt": 0.0,
+    "k_uz": 0.1,
+    "alpha": 1.0,
+    "perc": 0.5,
+    "k_lz": 0.01,
+    "maxbas": 1.0,
+    "fc": 200.0,
+    "lp": 0.9,
+    "beta_open": 2.0,
+    "beta_forest": 3.0,
+}
+
+_PARAMS_2COVER_PERCLASS = {
+    "cfmax": 3.0,
+    "tt": 0.0,
+    "k_uz": 0.1,
+    "alpha": 1.0,
+    "perc": 0.5,
+    "k_lz": 0.01,
+    "maxbas": 1.0,
+    "fc_open": 200.0,
+    "fc_forest": 250.0,
+    "lp_open": 0.9,
+    "lp_forest": 0.8,
+    "beta_open": 2.0,
+    "beta_forest": 3.0,
+}
+
+
+def _run_2cover(tmp_path, *, share_soil, params, P=5.0, PET=1.5, n_days=_N_2Y) -> tuple:
+    """Build and run an HBV-96 model with two 'ground' land covers (open, forest)."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=_COVERS[1], land_cover_names=_COVERS[0]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n" "-,m,m^2,m^2\n" "1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.HBV96(
+        land_cover_names=_COVERS[0],
+        land_cover_types=_COVERS[1],
+        share_soil=share_soil,
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(params)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_hbv96_per_class_soil_exposes_per_cover_aliases():
+    """With several covers and per-class soils, the soil/recharge aliases become
+    cover-specific (fc_<cover>, lp_<cover>, beta_<cover>); the bare names are gone."""
+    parameters = models.HBV96(
+        land_cover_names=_COVERS[0], land_cover_types=_COVERS[1]
+    ).generate_parameters()
+    for name in (
+        "fc_open",
+        "fc_forest",
+        "lp_open",
+        "lp_forest",
+        "beta_open",
+        "beta_forest",
+    ):
+        assert parameters.has(name), f"parameter {name!r} not found"
+    for name in ("fc", "lp", "beta"):
+        assert not parameters.has(name), f"unexpected bare alias {name!r}"
+
+
+def test_hbv96_shared_soil_keeps_bare_soil_aliases():
+    """With share_soil the single store keeps fc/lp; beta stays per-cover (it lives
+    on each land cover's infiltration process)."""
+    parameters = models.HBV96(
+        land_cover_names=_COVERS[0], land_cover_types=_COVERS[1], share_soil=True
+    ).generate_parameters()
+    for name in ("fc", "lp", "beta_open", "beta_forest"):
+        assert parameters.has(name), f"parameter {name!r} not found"
+    assert not parameters.has("beta")
+
+
+def test_hbv96_per_class_soil_water_balance_closes(tmp_path):
+    model, forcing = _run_2cover(
+        tmp_path, share_soil=False, params=_PARAMS_2COVER_PERCLASS
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_shared_soil_water_balance_closes(tmp_path):
+    model, forcing = _run_2cover(
+        tmp_path, share_soil=True, params=_PARAMS_2COVER_SHARED
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_single_cover_keeps_legacy_aliases():
+    """A single land cover (the default) keeps the bare fc/lp/beta aliases and the
+    'soil_moisture' store name, unchanged from before per-class soils."""
+    model = models.HBV96()
+    assert model._shared_soil is True
+    assert "soil_moisture" in model.structure
+    parameters = model.generate_parameters()
+    for name in ("fc", "lp", "beta"):
+        assert parameters.has(name)

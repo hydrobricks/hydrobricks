@@ -26,6 +26,7 @@
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
 #include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
 #include "ProcessProductionGR4J.h"
@@ -167,6 +168,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessOutflowSnowHolding>(b->GetWaterContainer());
             },
             &ProcessOutflowSnowHolding::RegisterProcessSettings
+        }},
+
+        {"outflow:threshold", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
+            },
+            &ProcessOutflowThreshold::RegisterProcessSettings
         }},
 
         {"refreeze:degree_day", {

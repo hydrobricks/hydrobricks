@@ -5,6 +5,7 @@
 #include "GenericLandCover.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "InterceptionStorage.h"
 #include "Snowpack.h"
 #include "Storage.h"
 
@@ -35,6 +36,8 @@ std::unique_ptr<Brick> Brick::Factory(BrickType type) {
             return std::make_unique<Glacier>();
         case BrickType::Snowpack:
             return std::make_unique<Snowpack>();
+        case BrickType::InterceptionStorage:
+            return std::make_unique<InterceptionStorage>();
         default:
             LogError("Brick type enum not recognized.");
             return nullptr;

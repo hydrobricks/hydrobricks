@@ -8,10 +8,9 @@
 /**
  * Open-water (potential) evaporation.
  *
- * Evaporates at the full potential rate; the water container caps the actual loss at
- * the available content, so evaporation simply proceeds at PET until the store is
- * empty:
- *   Ea = PET
+ * Evaporates at the potential rate, capped at the available content over the time step
+ * so the store cannot go negative:
+ *   Ea = min(PET, content / dt)
  *
  * Used for open water (lakes) and for the canopy evaporation of a forest interception
  * store. Requires PET forcing.

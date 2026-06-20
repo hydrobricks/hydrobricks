@@ -1,5 +1,8 @@
 #include "ProcessETOpenWater.h"
 
+#include <algorithm>
+
+#include "TimeMachine.h"
 #include "WaterContainer.h"
 
 ProcessETOpenWater::ProcessETOpenWater(WaterContainer* container)
@@ -31,6 +34,19 @@ void ProcessETOpenWater::AttachForcing(Forcing* forcing) {
 }
 
 vecDouble ProcessETOpenWater::GetRates() {
-    // Potential rate; the water container limits the actual loss to the content.
-    return {_pet->GetValue()};
+    // Evaporate at the potential rate, but never more than the available content over the
+    // time step, so the store cannot go negative. (The container's constraints also cap
+    // outflows, but in the explicit/direct computation path the static inflows are folded
+    // into the content before the cap is evaluated, so the cap alone can let a small store
+    // overshoot; capping here makes the process robust on both paths.)
+    double rate = _pet->GetValue();
+    if (_timeMachine != nullptr) {
+        double timeStepInDays = *_timeMachine->GetTimeStepPointer();
+        if (timeStepInDays > 0) {
+            double maxRate = _container->GetContentWithChanges() / timeStepInDays;
+            rate = std::min(rate, std::max(0.0, maxRate));
+        }
+    }
+
+    return {rate};
 }

@@ -6,9 +6,13 @@
 
 BrickType BrickTypeFromString(const string& typeStr) {
     static const std::unordered_map<string, BrickType> typeMap = {
-        {"storage", BrickType::Storage},         {"generic_land_cover", BrickType::GenericLandCover},
-        {"ground", BrickType::GenericLandCover}, {"generic", BrickType::GenericLandCover},
-        {"glacier", BrickType::Glacier},         {"snowpack", BrickType::Snowpack}};
+        {"storage", BrickType::Storage},
+        {"generic_land_cover", BrickType::GenericLandCover},
+        {"ground", BrickType::GenericLandCover},
+        {"generic", BrickType::GenericLandCover},
+        {"glacier", BrickType::Glacier},
+        {"snowpack", BrickType::Snowpack},
+        {"interception_storage", BrickType::InterceptionStorage}};
 
     auto it = typeMap.find(typeStr);
     if (it != typeMap.end()) {
@@ -18,9 +22,8 @@ BrickType BrickTypeFromString(const string& typeStr) {
 }
 
 vector<string> GetValidBrickTypes() {
-    static const vector<string> validTypes = {"storage", "generic_land_cover",
-                                              "ground",  "generic",  // Synonyms for GenericLandCover
-                                              "glacier", "snowpack"};
+    static const vector<string> validTypes = {"storage",  "generic_land_cover",  "ground", "generic", "glacier",
+                                              "snowpack", "interception_storage"};
     return validTypes;
 }
 

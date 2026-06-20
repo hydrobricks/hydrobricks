@@ -284,6 +284,28 @@ class SettingsModel {
     void ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget);
 
     /**
+     * Change the target of an existing output of the selected splitter if such an output
+     * exists (no-op otherwise). Used when some covers may already have been redirected.
+     *
+     * @param currentTarget current target of the output.
+     * @param newTarget new target of the output.
+     * @return true if an output was changed.
+     */
+    bool ChangeSplitterOutputTargetIfFound(const string& currentTarget, const string& newTarget);
+
+    /**
+     * Generate a canopy interception store on the rain path of a land cover, upstream of
+     * its snowpack: the cover's rain is routed into the canopy (capacity = interception
+     * capacity), which evaporates at the potential rate and releases the excess as
+     * throughfall to the given target. Must be called before the snowpacks so the canopy
+     * (a surface component) is declared/computed before the snowpack it feeds.
+     *
+     * @param coverName the land cover bearing the canopy.
+     * @param throughfallTarget the brick receiving the throughfall (e.g. the snowpack).
+     */
+    void GenerateCanopyInterception(const string& coverName, const string& throughfallTarget);
+
+    /**
      * Add logging to a given item.
      *
      * @param itemName name of the item to log.

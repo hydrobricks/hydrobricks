@@ -129,15 +129,32 @@ class ModelSettings:
             splitter_type = "snow_rain:linear"
         self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
-        # Add the land covers, each by its own name: a generic ("ground"-type)
-        # cover maps to the generic_land_cover brick, while special covers (e.g.
-        # glacier) keep their type. Several generic covers can coexist (e.g. open
-        # and forest), each getting its own snowpack and soil routine.
+        # Add the land covers, each by its own name: generic-behaviour covers (incl.
+        # forest, which is generic plus a canopy) map to the generic_land_cover brick,
+        # while special covers (e.g. glacier) keep their type. Several generic covers
+        # can coexist (e.g. open and forest), each getting its own snowpack and
+        # soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type in ["ground", "generic_land_cover"]:
+            if cover_type in ["ground", "generic_land_cover", "forest"]:
                 self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
+
+        # Forest canopy interception, on the rain path upstream of the snowpack.
+        # Generated before the snowpacks so the canopy (a surface component) is
+        # declared/computed before the snowpack it feeds; the throughfall rejoins the
+        # original rain target (the snowpack when the rain is routed to it,
+        # otherwise the land cover).
+        rain_to_snowpack_active = with_snow and rain_to_snowpack
+        for cover_type, cover_name in zip(land_cover_types, land_cover_names):
+            if cover_type == "forest":
+                if rain_to_snowpack_active:
+                    throughfall_target = f"{cover_name}_snowpack"
+                else:
+                    throughfall_target = cover_name
+                self.settings.generate_canopy_interception(
+                    cover_name, throughfall_target
+                )
 
         # Snowpack
         if with_snow:

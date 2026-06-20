@@ -485,6 +485,96 @@ def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
+def _run_open_forest(
+    tmp_path, *, forest_frac, params, ic=None, P=5.0, PET=2.0, n_days=_N_2Y
+) -> tuple:
+    """Run HBV-96 with an open ('ground') and a forest cover (the latter
+    intercepting)."""
+    open_frac = 1.0 - forest_frac
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["ground", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    area = 1_000_000
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n"
+        "-,m,m^2,m^2\n"
+        f"1,1000,{open_frac * area:.0f},{forest_frac * area:.0f}\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.HBV96(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["ground", "forest"],
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(params)
+    if ic is not None:
+        values["ic"] = ic
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+_PARAMS_OPEN_FOREST = {
+    "cfmax": 3.0,
+    "tt": 0.0,
+    "k_uz": 0.1,
+    "alpha": 1.0,
+    "perc": 0.5,
+    "k_lz": 0.01,
+    "maxbas": 1.0,
+    "fc_open": 200.0,
+    "fc_forest": 200.0,
+    "lp_open": 0.9,
+    "lp_forest": 0.9,
+    "beta_open": 2.0,
+    "beta_forest": 2.0,
+}
+
+
+def test_hbv96_forest_exposes_interception_capacity_alias():
+    parameters = models.HBV96(
+        land_cover_names=["open", "forest"], land_cover_types=["ground", "forest"]
+    ).generate_parameters()
+    assert parameters.has("ic"), "interception capacity alias 'ic' not found"
+
+
+def test_hbv96_forest_interception_water_balance_closes(tmp_path):
+    """The canopy (a per-cover surface component) intercepts rain, evaporates at PET
+    and passes the rest as throughfall; the catchment balance must close (forest
+    fraction < 1 exercises the area-weighting of the canopy storage and ET)."""
+    model, forcing = _run_open_forest(
+        _subdir(tmp_path, "fb"), forest_frac=0.4, params=_PARAMS_OPEN_FOREST, ic=3.0
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_forest_interception_reduces_discharge(tmp_path):
+    """A larger interception capacity evaporates more rain, lowering total discharge."""
+    low, _ = _run_open_forest(
+        _subdir(tmp_path, "low"), forest_frac=0.4, params=_PARAMS_OPEN_FOREST, ic=0.0
+    )
+    high, _ = _run_open_forest(
+        _subdir(tmp_path, "high"), forest_frac=0.4, params=_PARAMS_OPEN_FOREST, ic=5.0
+    )
+    assert high.get_total_outlet_discharge() < low.get_total_outlet_discharge()
+
+
 def test_hbv96_single_cover_keeps_legacy_aliases():
     """A single land cover (the default) keeps the bare fc/lp/beta aliases and the
     'soil_moisture' store name, unchanged from before per-class soils."""

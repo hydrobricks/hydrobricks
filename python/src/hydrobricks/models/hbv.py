@@ -73,7 +73,7 @@ class HBV(Model):
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
         self.options["share_soil"] = False
-        self.allowed_land_cover_types = ["ground"]
+        self.allowed_land_cover_types = ["ground", "forest"]
 
         self._set_options(kwargs)
 

@@ -1350,6 +1350,9 @@ class ParameterSet:
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
 
+        # Parameters for the forest canopies (interception capacity)
+        self._generate_canopy_parameters(land_cover_types, land_cover_names)
+
         # Parameters for the different bricks
         for key, brick in structure.items():
             self._generate_brick_parameters(key, brick)
@@ -1386,6 +1389,41 @@ class ParameterSet:
         if alias_suffix and kwargs.get("aliases"):
             kwargs["aliases"] = [alias + alias_suffix for alias in kwargs["aliases"]]
         self.define_parameter(component=component, **kwargs)
+
+    def _generate_canopy_parameters(
+        self, land_cover_types: list, land_cover_names: list
+    ) -> None:
+        """Register the interception capacity of each forest canopy.
+
+        The canopy bricks (``<cover>_canopy``) are created in the C++ base structure
+        (like the snowpacks), so their capacity is registered here rather than from
+        the model structure dict. The literature alias is ``ic`` (interception
+        capacity), suffixed per cover (``ic_<cover>``) when several forests coexist.
+
+        Parameters
+        ----------
+        land_cover_types
+            The land cover types.
+        land_cover_names
+            The land cover names.
+        """
+        forest_covers = [
+            name
+            for cover_type, name in zip(land_cover_types, land_cover_names)
+            if cover_type == "forest"
+        ]
+        multi = len(forest_covers) > 1
+        for cover_name in forest_covers:
+            self._register(
+                component=f"{cover_name}_canopy",
+                spec=BRICK_PARAM_SPECS["capacity"],
+                alias_suffix=f"_{cover_name}" if multi else "",
+                aliases=["ic"],
+                min_val=0.0,
+                max_val=10.0,
+                default=2.0,
+                mandatory=False,
+            )
 
     def _generate_process_parameters(self, key: str, brick: dict) -> None:
         """

@@ -390,6 +390,38 @@ void SettingsModel::ChangeSplitterOutputTarget(const string& currentTarget, cons
         std::format("The splitter {} has no output targeting {}.", _selectedSplitter->name, currentTarget));
 }
 
+bool SettingsModel::ChangeSplitterOutputTargetIfFound(const string& currentTarget, const string& newTarget) {
+    assert(_selectedSplitter);
+
+    for (auto& output : _selectedSplitter->outputs) {
+        if (output.target == currentTarget) {
+            output.target = newTarget;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget) {
+    assert(_selectedStructure);
+
+    // Canopy storage as a surface component of the cover: it is therefore computed in the
+    // direct (pre-solver) pass before the snowpack it feeds, and the logger weights its
+    // storage/ET by the cover fraction (by name). The throughfall (the water above the
+    // interception capacity) is released first, then the retained water evaporates at the
+    // potential rate. The capacity is enforced by the throughfall process (no maximum capacity
+    // on the container), which is robust on the direct computation path.
+    AddSurfaceComponentBrick(coverName + "_canopy", "interception_storage");
+    SetSurfaceComponentParent(coverName);
+    AddBrickProcess("throughfall", "outflow:threshold", throughfallTarget);
+    AddBrickProcess("interception_et", "et:open_water");
+
+    // Route the cover's rain through the canopy (upstream of the snowpack).
+    SelectHydroUnitSplitter("rain_splitter");
+    ChangeSplitterOutputTarget(coverName, coverName + "_canopy");
+}
+
 void SettingsModel::AddLoggingToItem(const string& itemName) {
     assert(_selectedStructure);
     if (std::find(_selectedStructure->logItems.begin(), _selectedStructure->logItems.end(), itemName) !=
@@ -570,9 +602,11 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
         if (rainToSnowpack) {
             // Route the rain to the snowpack liquid water storage instead of the land cover.
             // The outflow process releases the excess over the holding capacity to the land
-            // cover (everything, when there is no snow).
+            // cover (everything, when there is no snow). A cover with a canopy has already
+            // redirected its rain to the canopy (whose throughfall reaches the snowpack), so
+            // only the covers still feeding the cover directly are redirected here.
             SelectHydroUnitSplitter("rain_splitter");
-            ChangeSplitterOutputTarget(brickName, brickName + "_snowpack");
+            ChangeSplitterOutputTargetIfFound(brickName, brickName + "_snowpack");
         }
     }
 }

@@ -233,16 +233,35 @@ double Logger::GetTotalET() const {
         sum += _subBasinValues[i].sum();
     }
 
-    // Hydro unit ET: area-weighted basin average (land-cover fraction already in the flux amount).
+    // Hydro unit ET: area-weighted basin average. ET on a full-unit brick (e.g. the soil
+    // moisture) carries no land-cover fraction; ET on a per-cover surface component (e.g. a
+    // forest canopy) must be weighted by that cover's (time-varying) fraction so it scales
+    // to the basin like the matching storage change does.
     if (!_hydroUnitEtIndices.empty()) {
         axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
         double areasSum = _hydroUnitAreas.sum();
         for (int i : _hydroUnitEtIndices) {
-            sum += (_hydroUnitValues[i].unaryExpr(&NanToZero) * areas).sum() / areasSum;
+            axxd values = _hydroUnitValues[i].unaryExpr(&NanToZero);
+            int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+            if (fractionIndex >= 0) {
+                values *= _hydroUnitFractions[fractionIndex];
+            }
+            sum += (values * areas).sum() / areasSum;
         }
     }
 
     return sum;
+}
+
+int Logger::GetFractionIndexForComponent(const string& componentName) const {
+    for (int j = 0; j < static_cast<int>(_hydroUnitFractionLabels.size()); ++j) {
+        const string& fractionLabel = _hydroUnitFractionLabels[j];
+        if (componentName.starts_with(fractionLabel + ":") || componentName.starts_with(fractionLabel + "_snowpack:") ||
+            componentName.starts_with(fractionLabel + "_canopy:")) {
+            return j;
+        }
+    }
+    return -1;
 }
 
 double Logger::GetSubBasinInitialStorageState(const string& tag) const {
@@ -270,14 +289,9 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
     double sum = 0;
     for (int i : indices) {
         axd fraction = axd::Ones(_hydroUnitInitialValues[i].size());
-        string componentName = _hydroUnitLabels[i];
-        for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
-            string fractionLabel = _hydroUnitFractionLabels[j];
-            if (componentName.starts_with(fractionLabel + ":") ||
-                componentName.starts_with(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](0, Eigen::placeholders::all);
-                break;
-            }
+        int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+        if (fractionIndex >= 0) {
+            fraction = _hydroUnitFractions[fractionIndex](0, Eigen::placeholders::all);
         }
         axd values = _hydroUnitInitialValues[i].unaryExpr(&NanToZero);
         values *= fraction;
@@ -292,14 +306,9 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
     double sum = 0;
     for (int i : indices) {
         axd fraction = axd::Ones(_hydroUnitValues[i].cols());
-        string componentName = _hydroUnitLabels[i];
-        for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
-            string fractionLabel = _hydroUnitFractionLabels[j];
-            if (componentName.starts_with(fractionLabel + ":") ||
-                componentName.starts_with(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](Eigen::placeholders::last, Eigen::placeholders::all);
-                break;
-            }
+        int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+        if (fractionIndex >= 0) {
+            fraction = _hydroUnitFractions[fractionIndex](Eigen::placeholders::last, Eigen::placeholders::all);
         }
         axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
         values *= fraction;

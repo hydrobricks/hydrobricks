@@ -152,6 +152,19 @@ class Logger {
     [[nodiscard]] double GetSubBasinFinalStorageState(const string& tag) const;
 
     /**
+     * Find the land-cover fraction series that weights a logged hydro-unit component
+     * to a basin (area) average. A component is matched to its land cover by name: the
+     * land cover itself (``<cover>:``) or one of its surface components
+     * (``<cover>_snowpack:``, ``<cover>_canopy:``). Returns the index into
+     * ``_hydroUnitFractions`` or -1 if the component is not tied to a land cover (then
+     * a fraction of one applies, i.e. it spans the whole unit).
+     *
+     * @param componentName the logged component label (e.g. "forest_canopy:water_content").
+     * @return the fraction index, or -1 if none.
+     */
+    [[nodiscard]] int GetFractionIndexForComponent(const string& componentName) const;
+
+    /**
      * Get the initial storage state of a hydro unit for a given tag.
      *
      * @param tag tag to search for.

@@ -244,7 +244,9 @@ double Logger::GetTotalET() const {
             axxd values = _hydroUnitValues[i].unaryExpr(&NanToZero);
             int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
             if (fractionIndex >= 0) {
-                values *= _hydroUnitFractions[fractionIndex];
+                // A cover absent from a unit has a NaN fraction there; zero it so the
+                // already-zeroed value contributes nothing (NaN * 0 would be NaN).
+                values *= _hydroUnitFractions[fractionIndex].unaryExpr(&NanToZero);
             }
             sum += (values * areas).sum() / areasSum;
         }
@@ -291,7 +293,8 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
         axd fraction = axd::Ones(_hydroUnitInitialValues[i].size());
         int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
         if (fractionIndex >= 0) {
-            fraction = _hydroUnitFractions[fractionIndex](0, Eigen::placeholders::all);
+            // A cover absent from a unit has a NaN fraction there; zero it (NaN * 0 = NaN).
+            fraction = _hydroUnitFractions[fractionIndex](0, Eigen::placeholders::all).unaryExpr(&NanToZero);
         }
         axd values = _hydroUnitInitialValues[i].unaryExpr(&NanToZero);
         values *= fraction;
@@ -308,7 +311,9 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
         axd fraction = axd::Ones(_hydroUnitValues[i].cols());
         int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
         if (fractionIndex >= 0) {
-            fraction = _hydroUnitFractions[fractionIndex](Eigen::placeholders::last, Eigen::placeholders::all);
+            // A cover absent from a unit has a NaN fraction there; zero it (NaN * 0 = NaN).
+            fraction = _hydroUnitFractions[fractionIndex](Eigen::placeholders::last, Eigen::placeholders::all)
+                           .unaryExpr(&NanToZero);
         }
         axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
         values *= fraction;

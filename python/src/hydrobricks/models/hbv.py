@@ -73,7 +73,7 @@ class HBV(Model):
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
         self.options["share_soil"] = False
-        self.allowed_land_cover_types = ["ground", "forest"]
+        self.allowed_land_cover_types = ["ground", "forest", "lake"]
 
         self._set_options(kwargs)
 
@@ -109,24 +109,48 @@ class HBV(Model):
         received within the same iteration (hence the soil moisture stores are
         declared after the response routine, which may feed them through a
         capillary flux, and the routing is declared last).
+
+        Lakes are an exclusive open-water cover with no soil/snow routine: they are
+        excluded from the soil routine here and handled as a separate structure
+        variant (see ``_define_structure_variants``). The lake bricks are still added
+        to this (superset) structure so their parameters are generated; the base
+        variant excludes them and the lake variant uses only them.
         """
-        # Soil naming: a single shared store when requested or with one land cover,
-        # otherwise one soil moisture store per land cover.
+        # Separate the soil-bearing covers (open, forest, ...) from the lakes.
+        soil_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "lake"
+        ]
+        self._lake_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "lake"
+        ]
+        if not soil_cover_names:
+            raise ConfigurationError(
+                "The HBV model requires at least one non-lake land cover.",
+                item_name="land_cover_types",
+                reason="Only lake covers provided",
+            )
+
+        # Soil naming: a single shared store when requested or with one soil cover,
+        # otherwise one soil moisture store per soil cover.
         self._shared_soil = (
-            bool(self.options.get("share_soil")) or len(self.land_cover_names) == 1
+            bool(self.options.get("share_soil")) or len(soil_cover_names) == 1
         )
         if self._shared_soil:
-            self._soil_names = {name: "soil_moisture" for name in self.land_cover_names}
+            self._soil_names = {name: "soil_moisture" for name in soil_cover_names}
         else:
             self._soil_names = {
-                name: f"{name}_soil_moisture" for name in self.land_cover_names
+                name: f"{name}_soil_moisture" for name in soil_cover_names
             }
-        multi_cover = len(self.land_cover_names) > 1
+        multi_cover = len(soil_cover_names) > 1
 
-        # Beta-function split of rain and snowpack outflow per land cover. The
+        # Beta-function split of rain and snowpack outflow per soil cover. The
         # recharge (outflow:rest) is the complement of the infiltration and must be
         # declared after it.
-        for cover_name in self.land_cover_names:
+        for cover_name in soil_cover_names:
             brick = {
                 "attach_to": "hydro_unit",
                 "kind": "land_cover",
@@ -172,6 +196,88 @@ class HBV(Model):
             },
         }
 
+        # Lake covers: an exclusive open-water cover with no soil/snow. All precip
+        # enters a lake storage directly; it evaporates at the potential rate and drains
+        # through a linear outflow to the outlet. The lake land cover is a pass-through
+        # (instantaneous direct outflow) into the storage, mirroring the Socont glacier
+        # land-cover → sub-basin-storage pattern. These bricks live in the lake
+        # structure variant only (see ``_define_structure_variants``).
+        for lake_name in self._lake_cover_names:
+            self.structure[lake_name] = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "processes": {
+                    "outflow": {
+                        "kind": "outflow:direct",
+                        "target": f"{lake_name}_storage",
+                        "instantaneous": True,
+                    },
+                },
+            }
+            self.structure[f"{lake_name}_storage"] = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "processes": {
+                    "et": {"kind": "et:open_water"},
+                    "outflow": {"kind": "outflow:linear", "target": "outlet"},
+                },
+            }
+
+    def _define_structure_variants(
+        self,
+    ) -> list[tuple]:
+        """Make the lake-free structure the base, adding a lake variant when needed.
+
+        Lakes are an exclusive cover that replaces the whole subsurface of a unit, so
+        a lake unit uses a dedicated structure variant: no snow (all precipitation goes
+        directly into the open water) and just the lake storage draining to the outlet,
+        with none of the soil/response/routing bricks. Units with no lake use the base
+        (lake-free) variant. When no lake is configured there is a single variant.
+        """
+        if not self._lake_cover_names:
+            return [(self.land_cover_names, self.land_cover_types, self.structure)]
+
+        lake_brick_keys = set(self._lake_cover_names) | {
+            f"{name}_storage" for name in self._lake_cover_names
+        }
+
+        # Base (lake-free) variant: all non-lake covers and bricks.
+        base_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "lake"
+        ]
+        base_types = [
+            cover_type for cover_type in self.land_cover_types if cover_type != "lake"
+        ]
+        base_structure = {
+            key: brick
+            for key, brick in self.structure.items()
+            if key not in lake_brick_keys
+        }
+
+        # Lake variant: only the lake covers and their storages, with no snow (all
+        # precipitation enters the open water directly).
+        lake_names = list(self._lake_cover_names)
+        lake_types = ["lake"] * len(lake_names)
+        lake_structure = {
+            key: brick
+            for key, brick in self.structure.items()
+            if key in lake_brick_keys
+        }
+        lake_options = {
+            "with_snow": False,
+            "snow_melt_process": None,
+            "snow_water_retention_process": None,
+            "snow_refreezing_process": None,
+            "rain_to_snowpack": False,
+        }
+
+        return [
+            (base_names, base_types, base_structure),
+            (lake_names, lake_types, lake_structure, lake_options),
+        ]
+
     @abstractmethod
     def _define_response_structure(self) -> None:
         """Define the version-specific response routine bricks.
@@ -207,6 +313,12 @@ class HBV(Model):
         else:
             for cover_name, soil_name in self._soil_names.items():
                 self.parameter_aliases[f"{soil_name}:capacity"] = [f"fc_{cover_name}"]
+
+        # Lake (open water) linear outflow response factor.
+        single_lake = len(self._lake_cover_names) == 1
+        for lake_name in self._lake_cover_names:
+            alias = "k_lake" if single_lake else f"k_lake_{lake_name}"
+            self.parameter_aliases[f"{lake_name}_storage:response_factor"] = [alias]
 
     def _define_parameter_constraints(self) -> None:
         """Define parameter constraints (none required for HBV)."""

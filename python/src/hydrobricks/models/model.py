@@ -600,19 +600,40 @@ class Model(ABC):
         # also defines the catchment-level sub-basin components. Units are auto-assigned
         # (in the C++ core) to the variant matching their land covers, so a unit lacking
         # a cover carries no zero-area brick for it. Most models have a single variant.
-        for i, (land_cover_names, land_cover_types, structure) in enumerate(
-            self._define_structure_variants()
-        ):
+        # A variant may optionally carry a 4th element: an options override (a dict
+        # merged over self.options for that variant only, e.g. {"with_snow": False} for
+        # a lake variant whose precipitation goes directly into open water).
+        for i, variant in enumerate(self._define_structure_variants()):
+            if len(variant) == 4:
+                land_cover_names, land_cover_types, structure, options_override = (
+                    variant
+                )
+            else:
+                land_cover_names, land_cover_types, structure = variant
+                options_override = None
+
             if i > 0:
                 self.settings.add_structure()
-            saved = (self.land_cover_names, self.land_cover_types, self.structure)
+            saved = (
+                self.land_cover_names,
+                self.land_cover_types,
+                self.structure,
+                self.options,
+            )
             self.land_cover_names = land_cover_names
             self.land_cover_types = land_cover_types
             self.structure = structure
+            if options_override:
+                self.options = {**self.options, **options_override}
             try:
                 self._generate_one_structure()
             finally:
-                self.land_cover_names, self.land_cover_types, self.structure = saved
+                (
+                    self.land_cover_names,
+                    self.land_cover_types,
+                    self.structure,
+                    self.options,
+                ) = saved
 
     def _generate_one_structure(self) -> None:
         """Generate one structure variant from the current land covers and structure."""
@@ -654,6 +675,12 @@ class Model(ABC):
         carries no zero-area brick for it. The default is a single variant (the model's
         own structure). Models override this (e.g. Socont makes the glacier-free
         variant the base and adds a with-glacier variant).
+
+        An entry may optionally be a 4-tuple
+        ``(names, types, structure, options_override)`` where ``options_override`` is a
+        dict merged over ``self.options`` while that variant is generated (e.g.
+        ``{"with_snow": False}`` for an HBV lake variant, whose precipitation goes
+        directly into open water with no snowpack).
         """
         return [(self.land_cover_names, self.land_cover_types, self.structure)]
 
@@ -675,10 +702,7 @@ class Model(ABC):
         snow_refreezing_process = None
         rain_to_snowpack = False
 
-        if "with_snow" in self.options:
-            with_snow = self.options["with_snow"]
-        if "snow_melt_process" in self.options:
-            with_snow = True
+        if self.options.get("snow_melt_process") is not None:
             snow_melt_process = self.options["snow_melt_process"]
         if "snow_ice_transformation" in self.options:
             snow_ice_transformation = self.options["snow_ice_transformation"]
@@ -690,6 +714,11 @@ class Model(ABC):
             snow_refreezing_process = self.options["snow_refreezing_process"]
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
+        # with_snow is on by default; an explicit option overrides it last, so it wins
+        # over the presence of a snow melt process (e.g. a lake variant sets it False
+        # to send all precipitation directly into open water, with no snowpack).
+        if "with_snow" in self.options:
+            with_snow = self.options["with_snow"]
 
         self.settings.generate_base_structure(
             self.land_cover_names,

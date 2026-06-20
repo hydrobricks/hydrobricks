@@ -584,3 +584,102 @@ def test_hbv96_single_cover_keeps_legacy_aliases():
     parameters = model.generate_parameters()
     for name in ("fc", "lp", "beta"):
         assert parameters.has(name)
+
+
+# ---------------------------------------------------------------------------
+# F — Lake (exclusive open-water cover)
+# ---------------------------------------------------------------------------
+
+_PARAMS_GROUND_LAKE = {
+    "cfmax": 3.0,
+    "tt": 0.0,
+    "fc": 200.0,
+    "lp": 0.9,
+    "beta": 2.0,
+    "k_uz": 0.1,
+    "alpha": 1.0,
+    "perc": 0.5,
+    "k_lz": 0.01,
+    "maxbas": 1.0,
+    "k_lake": 0.2,
+}
+
+
+def _run_ground_lake(tmp_path, *, P=5.0, PET=1.5, n_days=_N_2Y, params=None) -> tuple:
+    """Run HBV-96 on a 2-unit catchment: one all-ground unit and one all-lake unit
+    (lakes are exclusive). Returns (model, forcing, results)."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["ground", "lake"], land_cover_names=["ground", "lake"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_ground,area_lake\n"
+        "-,m,m^2,m^2\n"
+        "1,1000,1000000,0\n"
+        "2,1000,0,500000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"ground": "area_ground", "lake": "area_lake"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.HBV96(
+        land_cover_names=["ground", "lake"],
+        land_cover_types=["ground", "lake"],
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(params or _PARAMS_GROUND_LAKE)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    out = tmp_path / "out"
+    out.mkdir()
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    model.dump_outputs(str(out))
+    results = hb.Results(str(out / "results.nc"))
+    return model, forcing, results
+
+
+def test_hbv96_lake_exposes_outflow_alias():
+    parameters = models.HBV96(
+        land_cover_names=["ground", "lake"], land_cover_types=["ground", "lake"]
+    ).generate_parameters()
+    assert parameters.has("k_lake"), "lake outflow alias 'k_lake' not found"
+
+
+def test_hbv96_lake_water_balance_closes(tmp_path):
+    """A lake unit takes all precipitation directly into open water, evaporates at PET
+    and drains through a linear outflow; the catchment balance must close."""
+    model, forcing, _ = _run_ground_lake(tmp_path)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_lake_unit_carries_no_snowpack(tmp_path):
+    """The lake structure variant has no snowpack: the lake unit's snowpack state is
+    omitted (NaN), while the ground unit carries one."""
+    _, _, results = _run_ground_lake(tmp_path, PET=0.5)
+    structure_ids = results.get_hydro_units_structure_ids()
+    # Two variants are in use (base/ground and lake).
+    assert len(set(structure_ids.tolist())) == 2
+    swe = results.get_hydro_units_values("ground_snowpack:snow_content")
+    # The ground unit (index 0) has snowpack state; the lake unit (index 1) does not.
+    assert not bool(np.all(np.isnan(swe[0, :])))
+    assert bool(np.all(np.isnan(swe[1, :])))
+
+
+def test_hbv96_lake_evaporates_at_potential_rate(tmp_path):
+    """Open-water evaporation removes water at the potential rate: with PET above the
+    precipitation, a lake unit's contribution should be ET-limited (lower discharge
+    than with no evaporation)."""
+    wet, forcing_wet, _ = _run_ground_lake(_subdir(tmp_path, "a"), P=5.0, PET=0.0)
+    dry, forcing_dry, _ = _run_ground_lake(_subdir(tmp_path, "b"), P=5.0, PET=4.0)
+    assert dry.get_total_outlet_discharge() < wet.get_total_outlet_discharge()
+    assert _balance(dry, forcing_dry) == pytest.approx(0, abs=1e-6)

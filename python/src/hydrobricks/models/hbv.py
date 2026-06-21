@@ -59,6 +59,17 @@ class HBV(Model):
         and are exposed with a per-cover suffix (e.g. ``fc_forest``); with a single
         land cover (or when sharing) the bare aliases (``fc``, ``lp``, ``beta``)
         are kept.
+    glacier_infinite_storage : bool
+        Treat the glacier ice as an infinite storage (default: True), as in Socont.
+
+    Land-use classes
+    ----------------
+    Besides the default soil-bearing ``ground`` cover, HBV supports the HBV land-use
+    classes as land covers: ``forest`` (canopy interception on the rain path),
+    ``lake`` (exclusive open-water cover: all precipitation direct, open-water
+    evaporation, linear outflow — its own no-snow structure variant) and ``glacier``
+    (Socont-style: glacier-area rain + snowmelt and ice melt feed two linear
+    sub-basin reservoirs draining to the outlet, with a glacier-free base variant).
     """
 
     @abstractmethod
@@ -73,7 +84,8 @@ class HBV(Model):
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
         self.options["share_soil"] = False
-        self.allowed_land_cover_types = ["ground", "forest", "lake"]
+        self.options["glacier_infinite_storage"] = True
+        self.allowed_land_cover_types = ["ground", "forest", "lake", "glacier"]
 
         self._set_options(kwargs)
 
@@ -112,26 +124,36 @@ class HBV(Model):
 
         Lakes are an exclusive open-water cover with no soil/snow routine: they are
         excluded from the soil routine here and handled as a separate structure
-        variant (see ``_define_structure_variants``). The lake bricks are still added
-        to this (superset) structure so their parameters are generated; the base
-        variant excludes them and the lake variant uses only them.
+        variant (see ``_define_structure_variants``). Glaciers (Socont-style) drain
+        to catchment-level linear reservoirs, bypassing the soil routine, and add a
+        with-glacier structure variant on top of a glacier-free base. The lake and
+        glacier bricks are still added to this (superset) structure so their
+        parameters are generated; the variants select the relevant subsets.
         """
-        # Separate the soil-bearing covers (open, forest, ...) from the lakes.
-        soil_cover_names = [
-            name
-            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
-            if cover_type != "lake"
-        ]
+        # Separate the cover categories: lakes (exclusive open water), glaciers
+        # (Socont-style, drain to sub-basin reservoirs) and the soil-bearing covers
+        # (ground, forest, ...) that go through the soil/response/routing routine.
         self._lake_cover_names = [
             name
             for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
             if cover_type == "lake"
         ]
+        self._glacier_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "glacier"
+        ]
+        soil_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type not in ("lake", "glacier")
+        ]
         if not soil_cover_names:
             raise ConfigurationError(
-                "The HBV model requires at least one non-lake land cover.",
+                "The HBV model requires at least one soil-bearing land cover "
+                "(ground or forest).",
                 item_name="land_cover_types",
-                reason="Only lake covers provided",
+                reason="Only lake/glacier covers provided",
             )
 
         # Soil naming: a single shared store when requested or with one soil cover,
@@ -196,6 +218,50 @@ class HBV(Model):
             },
         }
 
+        # Glacier covers (Socont-style): the glacierized area sends its rain + snowmelt
+        # and its ice melt to two catchment-level linear reservoirs draining directly to
+        # the outlet, bypassing the soil routine. The snow on the glacier still melts
+        # through its (generated) snowpack; ice melt is suppressed while snow covers it
+        # (no_melt_when_snow_cover). The two reservoirs are shared by all glacier
+        # covers.
+        glacier_melt_process = self.options["snow_melt_process"]
+        for glacier_name in self._glacier_cover_names:
+            self.structure[glacier_name] = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "parameters": {
+                    "no_melt_when_snow_cover": True,
+                    "infinite_storage": self.options["glacier_infinite_storage"],
+                },
+                "processes": {
+                    "outflow_rain_snowmelt": {
+                        "kind": "outflow:direct",
+                        "target": "glacier_area_rain_snowmelt_storage",
+                        "instantaneous": True,
+                    },
+                    "melt": {
+                        "kind": glacier_melt_process,
+                        "target": "glacier_area_icemelt_storage",
+                        "instantaneous": True,
+                    },
+                },
+            }
+        if self._glacier_cover_names:
+            self.structure["glacier_area_rain_snowmelt_storage"] = {
+                "attach_to": "sub_basin",
+                "kind": "storage",
+                "processes": {
+                    "outflow": {"kind": "outflow:linear", "target": "outlet"},
+                },
+            }
+            self.structure["glacier_area_icemelt_storage"] = {
+                "attach_to": "sub_basin",
+                "kind": "storage",
+                "processes": {
+                    "outflow": {"kind": "outflow:linear", "target": "outlet"},
+                },
+            }
+
         # Lake covers: an exclusive open-water cover with no soil/snow. All precip
         # enters a lake storage directly; it evaporates at the potential rate and drains
         # through a linear outflow to the outlet. The lake land cover is a pass-through
@@ -226,57 +292,81 @@ class HBV(Model):
     def _define_structure_variants(
         self,
     ) -> list[tuple]:
-        """Make the lake-free structure the base, adding a lake variant when needed.
+        """Build the structure variants for the land-use classes.
 
-        Lakes are an exclusive cover that replaces the whole subsurface of a unit, so
-        a lake unit uses a dedicated structure variant: no snow (all precipitation goes
-        directly into the open water) and just the lake storage draining to the outlet,
-        with none of the soil/response/routing bricks. Units with no lake use the base
-        (lake-free) variant. When no lake is configured there is a single variant.
+        The primary (structure 1) is the glacier- and lake-free **base**: the soil
+        covers (ground, forest) with the soil/response/routing routine, plus the
+        catchment-level glacier reservoirs (kept here so the sub-basin, built from
+        structure 1, owns them and they are shared by all units). Optional variants:
+
+        - a **with-glacier** variant (when a glacier cover is present) adding the
+          glacier land covers on top of the base, used by glacierized units while
+          glacier-free units use the base (as in Socont);
+        - a **lake** variant (when a lake cover is present): only the lake storage,
+          with no snow (all precipitation enters the open water directly).
+
+        Units are auto-assigned (in the C++ core) to the variant matching their
+        present covers. With neither glacier nor lake there is a single variant.
         """
-        if not self._lake_cover_names:
-            return [(self.land_cover_names, self.land_cover_types, self.structure)]
-
         lake_brick_keys = set(self._lake_cover_names) | {
             f"{name}_storage" for name in self._lake_cover_names
         }
+        glacier_land_cover_keys = set(self._glacier_cover_names)
 
-        # Base (lake-free) variant: all non-lake covers and bricks.
-        base_names = [
-            name
-            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
-            if cover_type != "lake"
-        ]
-        base_types = [
-            cover_type for cover_type in self.land_cover_types if cover_type != "lake"
-        ]
+        def names_types(predicate):
+            names = [
+                name
+                for name, cover_type in zip(
+                    self.land_cover_names, self.land_cover_types
+                )
+                if predicate(cover_type)
+            ]
+            types = [
+                cover_type
+                for cover_type in self.land_cover_types
+                if predicate(cover_type)
+            ]
+            return names, types
+
+        # Base: soil covers only (no glacier land covers, no lake bricks). The glacier
+        # sub-basin reservoirs stay in the base so the sub-basin owns and shares them.
+        base_names, base_types = names_types(lambda t: t not in ("lake", "glacier"))
         base_structure = {
             key: brick
             for key, brick in self.structure.items()
-            if key not in lake_brick_keys
+            if key not in lake_brick_keys and key not in glacier_land_cover_keys
         }
+        variants: list[tuple] = [(base_names, base_types, base_structure)]
 
-        # Lake variant: only the lake covers and their storages, with no snow (all
-        # precipitation enters the open water directly).
-        lake_names = list(self._lake_cover_names)
-        lake_types = ["lake"] * len(lake_names)
-        lake_structure = {
-            key: brick
-            for key, brick in self.structure.items()
-            if key in lake_brick_keys
-        }
-        lake_options = {
-            "with_snow": False,
-            "snow_melt_process": None,
-            "snow_water_retention_process": None,
-            "snow_refreezing_process": None,
-            "rain_to_snowpack": False,
-        }
+        # With-glacier variant: soil + glacier covers (everything except the lakes).
+        if self._glacier_cover_names:
+            glacier_names, glacier_types = names_types(lambda t: t != "lake")
+            glacier_structure = {
+                key: brick
+                for key, brick in self.structure.items()
+                if key not in lake_brick_keys
+            }
+            variants.append((glacier_names, glacier_types, glacier_structure))
 
-        return [
-            (base_names, base_types, base_structure),
-            (lake_names, lake_types, lake_structure, lake_options),
-        ]
+        # Lake variant: only the lake bricks, with no snow.
+        if self._lake_cover_names:
+            lake_names = list(self._lake_cover_names)
+            lake_types = ["lake"] * len(lake_names)
+            lake_structure = {
+                key: brick
+                for key, brick in self.structure.items()
+                if key in lake_brick_keys
+            }
+            lake_options = {
+                "with_snow": False,
+                "snow_melt_process": None,
+                "snow_water_retention_process": None,
+                "snow_refreezing_process": None,
+                "rain_to_snowpack": False,
+            }
+            variants.append((lake_names, lake_types, lake_structure, lake_options))
+
+        return variants
 
     @abstractmethod
     def _define_response_structure(self) -> None:
@@ -319,6 +409,15 @@ class HBV(Model):
         for lake_name in self._lake_cover_names:
             alias = "k_lake" if single_lake else f"k_lake_{lake_name}"
             self.parameter_aliases[f"{lake_name}_storage:response_factor"] = [alias]
+
+        # Glacier-area reservoir response factors (Socont names).
+        if self._glacier_cover_names:
+            self.parameter_aliases[
+                "glacier_area_rain_snowmelt_storage:response_factor"
+            ] = ["k_snow"]
+            self.parameter_aliases["glacier_area_icemelt_storage:response_factor"] = [
+                "k_ice"
+            ]
 
     def _define_parameter_constraints(self) -> None:
         """Define parameter constraints (none required for HBV)."""

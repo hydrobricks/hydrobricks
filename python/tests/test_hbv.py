@@ -683,3 +683,122 @@ def test_hbv96_lake_evaporates_at_potential_rate(tmp_path):
     dry, forcing_dry, _ = _run_ground_lake(_subdir(tmp_path, "b"), P=5.0, PET=4.0)
     assert dry.get_total_outlet_discharge() < wet.get_total_outlet_discharge()
     assert _balance(dry, forcing_dry) == pytest.approx(0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# G — Glacier (Socont-style)
+# ---------------------------------------------------------------------------
+
+_PARAMS_GROUND_GLACIER = {
+    "cfmax": 3.0,
+    "a_ice": 6.0,
+    "tt": 0.0,
+    "fc": 200.0,
+    "lp": 0.9,
+    "beta": 2.0,
+    "k_uz": 0.1,
+    "alpha": 1.0,
+    "perc": 0.5,
+    "k_lz": 0.01,
+    "maxbas": 1.0,
+    "k_snow": 0.2,
+    "k_ice": 0.3,
+}
+
+
+def _run_ground_glacier(
+    tmp_path, *, P=5.0, PET=1.5, n_days=_N_2Y, params=None, infinite_storage=False
+) -> tuple:
+    """Run HBV-96 on a 2-unit catchment: an all-ground unit and a ground+glacier unit.
+    Returns (model, forcing, results). The glacier ice storage is finite by default so
+    the simple water balance closes (an infinite ice store is an unaccounted source)."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["ground", "glacier"], land_cover_names=["ground", "glacier"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_ground,area_glacier\n"
+        "-,m,m^2,m^2\n"
+        "1,1000,1000000,0\n"
+        "2,2500,300000,700000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"ground": "area_ground", "glacier": "area_glacier"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.HBV96(
+        land_cover_names=["ground", "glacier"],
+        land_cover_types=["ground", "glacier"],
+        record_all=True,
+        glacier_infinite_storage=infinite_storage,
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(params or _PARAMS_GROUND_GLACIER)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    out = tmp_path / "out"
+    out.mkdir()
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    model.dump_outputs(str(out))
+    results = hb.Results(str(out / "results.nc"))
+    return model, forcing, results
+
+
+def test_hbv96_glacier_exposes_aliases():
+    parameters = models.HBV96(
+        land_cover_names=["ground", "glacier"],
+        land_cover_types=["ground", "glacier"],
+    ).generate_parameters()
+    for name in ("a_ice", "k_snow", "k_ice"):
+        assert parameters.has(name), f"glacier alias {name!r} not found"
+
+
+def test_hbv96_glacier_a_snow_lt_a_ice_constraint():
+    parameters = models.HBV96(
+        land_cover_names=["ground", "glacier"],
+        land_cover_types=["ground", "glacier"],
+    ).generate_parameters()
+    # a_snow (cfmax) > a_ice must violate the constraint.
+    parameters.set_values(dict(_PARAMS_GROUND_GLACIER, cfmax=8.0, a_ice=4.0))
+    assert not parameters.constraints_satisfied()
+
+
+def test_hbv96_glacier_water_balance_closes(tmp_path):
+    """Glacier-area rain + snowmelt feed a linear reservoir draining to the outlet; with
+    a finite ice store (no unaccounted melt source) the catchment balance must close."""
+    model, forcing, _ = _run_ground_glacier(tmp_path)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_glacier_brick_absent_where_no_glacier(tmp_path):
+    """The glacier-free base variant is used by the all-ground unit (no glacier brick),
+    while the ground+glacier unit uses the with-glacier variant. Two variants are in
+    use, and the glacier brick exists exactly where the glacier cover is present."""
+    _, _, results = _run_ground_glacier(tmp_path)
+    structure_ids = results.get_hydro_units_structure_ids()
+    assert len(set(structure_ids.tolist())) == 2
+    glacier_areas = results.get_land_cover_areas("glacier")
+    glacier_state = results.get_hydro_units_values("glacier:water_content")
+    for i in range(len(results.hydro_units_ids)):
+        has_glacier = not bool(np.all(np.isnan(glacier_areas[i, :])))
+        brick_present = not bool(np.all(np.isnan(glacier_state[i, :])))
+        assert has_glacier == brick_present
+
+
+def test_hbv96_glacier_infinite_storage_adds_discharge(tmp_path):
+    """An infinite ice store lets the glacier melt ice on top of the precipitation it
+    receives, so it yields more discharge than a finite (depletable) store."""
+    finite, _, _ = _run_ground_glacier(_subdir(tmp_path, "fin"), infinite_storage=False)
+    infinite, _, _ = _run_ground_glacier(
+        _subdir(tmp_path, "inf"), infinite_storage=True
+    )
+    assert infinite.get_total_outlet_discharge() > finite.get_total_outlet_discharge()

@@ -38,6 +38,30 @@ def test_hydro_units_creation_with_land_covers():
     )
 
 
+def test_hydro_units_default_cover_is_open():
+    assert hb.HydroUnits().land_cover_names == ["open"]
+    assert hb.HydroUnits().land_cover_types == ["open"]
+
+
+def test_generic_cover_name_resolution():
+    """The generic (residual) soil cover defaults to 'open' but recognises the 'ground'
+    alias for backward compatibility, and is found alongside a glacier cover."""
+    assert hb.HydroUnits().get_generic_cover_name() == "open"
+    assert (
+        hb.HydroUnits(
+            land_cover_types=["open", "glacier"], land_cover_names=["open", "glacier"]
+        ).get_generic_cover_name()
+        == "open"
+    )
+    assert (
+        hb.HydroUnits(
+            land_cover_types=["ground", "glacier"],
+            land_cover_names=["ground", "glacier"],
+        ).get_generic_cover_name()
+        == "ground"
+    )
+
+
 def test_hydro_units_creation_with_land_covers_mismatch():
     with pytest.raises(hb.DataError):
         hb.HydroUnits(

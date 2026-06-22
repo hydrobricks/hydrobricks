@@ -25,18 +25,18 @@ class HydroUnits:
     Parameters
     ----------
     land_cover_types
-        List of land cover types. Default: ['ground']
+        List of land cover types. Default: ['open']
     land_cover_names
-        List of land cover names. Default: ['ground']
+        List of land cover names. Default: ['open']
     data
         DataFrame containing the hydro units data.
 
     Attributes
     ----------
     land_cover_types : list[str]
-        List of land cover types. Default: ['ground']
+        List of land cover types. Default: ['open']
     land_cover_names : list[str]
-        List of land cover names. Default: ['ground']
+        List of land cover names. Default: ['open']
     hydro_units : pd.DataFrame
         Dataframe containing the hydro units data.
     """
@@ -521,7 +521,7 @@ class HydroUnits:
         Check that the land cover fractions are not empty.
 
         Validates that all land cover fractions have been defined.
-        If there is a single land cover type (e.g. 'ground'),
+        If there is a single land cover type (e.g. 'open'),
         automatically sets it to 1.0 for all hydro units.
 
         Raises
@@ -547,15 +547,34 @@ class HydroUnits:
         """
         Initialize land cover fractions with default values.
 
-        Sets the land cover fractions of 'ground' to 1.0 and all other land cover
-        types to 0.0 for all hydro units. Used as a starting point before applying
-        specific land cover changes.
+        Sets the generic soil land cover fraction ('open', or its 'ground' alias) to
+        1.0 and all other land cover types to 0.0 for all hydro units. Used as a
+        starting point before applying specific land cover changes.
         """
-        # Set the land cover fractions of 'ground' to 1 and the rest to 0
+        # Set the generic soil cover fraction to 1 and the rest to 0
         for cover_name in self.land_cover_names:
             field_name = self.FRACTION_PREFIX + cover_name
             self.hydro_units[(field_name, "fraction")] = 0.0
-        self.hydro_units[(self.FRACTION_PREFIX + "ground", "fraction")] = 1.0
+        generic = self.FRACTION_PREFIX + self.get_generic_cover_name()
+        self.hydro_units[(generic, "fraction")] = 1.0
+
+    #: Generic (soil-bearing) land cover aliases. 'open' is the canonical name; the
+    #: others are accepted for backward compatibility. The generic cover absorbs the
+    #: residual area when other land cover fractions change.
+    GENERIC_COVER_ALIASES = ("open", "ground", "generic", "generic_land_cover")
+
+    def get_generic_cover_name(self) -> str:
+        """Return the generic soil land cover name (the one that absorbs residual area).
+
+        Picks the land cover whose name or type is a generic alias ('open', 'ground',
+        ...). Falls back to the first land cover if none is explicitly generic.
+        """
+        for name, cover_type in zip(self.land_cover_names, self.land_cover_types):
+            if name in self.GENERIC_COVER_ALIASES or (
+                cover_type in self.GENERIC_COVER_ALIASES
+            ):
+                return name
+        return self.land_cover_names[0]
 
     def initialize_from_land_cover_change(
         self, land_cover_name: str, land_cover_change: pd.DataFrame
@@ -565,8 +584,8 @@ class HydroUnits:
         change dataframe.
 
         Updates the land cover fractions for specified hydro units based on a
-        land cover change dataframe. Automatically adjusts the 'ground' land cover
-        fraction to maintain conservation.
+        land cover change dataframe. Automatically adjusts the generic soil land cover
+        fraction ('open', or its 'ground' alias) to maintain conservation.
 
         Parameters
         ----------
@@ -582,7 +601,7 @@ class HydroUnits:
         """
         # Land cover fraction column name
         field_name = self.FRACTION_PREFIX + land_cover_name
-        ground_name = self.FRACTION_PREFIX + "ground"
+        ground_name = self.FRACTION_PREFIX + self.get_generic_cover_name()
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
         for _, row in land_cover_change.iterrows():
@@ -923,7 +942,7 @@ class HydroUnits:
             data["id"] = range(1, 1 + len(data))
 
         self.hydro_units = data
-        idx = self.FRACTION_PREFIX + "ground"
+        idx = self.FRACTION_PREFIX + self.get_generic_cover_name()
         self.hydro_units[idx] = np.ones(len(self.hydro_units["area"]))
         self.populate_bounded_instance()
 

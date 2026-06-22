@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - NaN-safe aggregation of per–hydro-unit values across heterogeneous structures
   (area weighting of storage changes and ET when a cover is absent from a unit).
+- The generic soil cover that absorbs residual area (land cover evolution / single-area
+  loading) is now resolved from `open`/`ground`/`generic` aliases instead of a hardcoded
+  `ground`, so it works with the new `open` default (C++ `HydroUnit` and Python
+  `HydroUnits`).
 
 
 ## 0.8.7 - 2026-05-10

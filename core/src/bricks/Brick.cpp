@@ -5,10 +5,9 @@
 #include "GenericLandCover.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "InterceptionStorage.h"
 #include "Snowpack.h"
 #include "Storage.h"
-#include "Urban.h"
-#include "Vegetation.h"
 
 Brick::Brick()
     : _needsSolver(true),
@@ -35,12 +34,10 @@ std::unique_ptr<Brick> Brick::Factory(BrickType type) {
             return std::make_unique<GenericLandCover>();
         case BrickType::Glacier:
             return std::make_unique<Glacier>();
-        case BrickType::Urban:
-            return std::make_unique<Urban>();
-        case BrickType::Vegetation:
-            return std::make_unique<Vegetation>();
         case BrickType::Snowpack:
             return std::make_unique<Snowpack>();
+        case BrickType::InterceptionStorage:
+            return std::make_unique<InterceptionStorage>();
         default:
             LogError("Brick type enum not recognized.");
             return nullptr;

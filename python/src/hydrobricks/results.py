@@ -133,6 +133,21 @@ class Results:
 
         return hydro_units_areas * lc_fraction
 
+    def get_hydro_units_structure_ids(self) -> np.ndarray:
+        """
+        Get the model-structure id used by each hydro unit.
+
+        Units sharing the same subsurface use the same structure; an exclusive land
+        cover (e.g. a lake) places a unit on a different structure variant. Useful to
+        identify which units a given (possibly NaN-omitted) component applies to.
+
+        Returns
+        -------
+        np.ndarray
+            Structure id per hydro unit (1D array, defaults to 1).
+        """
+        return self.results.hydro_units_structure_ids.to_numpy()
+
     def get_hydro_units_values(
         self, component: str, start_date: str | None = None, end_date: str | None = None
     ) -> np.ndarray:
@@ -230,7 +245,7 @@ class Results:
         values = self.get_hydro_units_values(component, start_date, end_date)
         lc_areas = self.get_land_cover_areas(land_cover)
 
-        return (values * lc_areas).sum(axis=1) / lc_areas.sum(axis=1)
+        return self._area_weighted_nanmean(values, lc_areas, axis=1)
 
     def get_mean_swe(
         self, start_date: str | None = None, end_date: str | None = None
@@ -283,8 +298,7 @@ class Results:
         lc_swe = lc_swe.reshape(-1, lc_swe.shape[2])
         lc_areas = lc_areas.reshape(-1, lc_areas.shape[2])
 
-        total_areas = lc_areas.sum(axis=0)
-        mean_swe = (lc_swe * lc_areas).sum(axis=0) / total_areas
+        mean_swe = self._area_weighted_nanmean(lc_swe, lc_areas, axis=0)
 
         return mean_swe
 
@@ -313,6 +327,24 @@ class Results:
             If dates are not found in the results time coordinates.
         """
         return self.results.time.sel(time=slice(start_date, end_date)).to_numpy()
+
+    @staticmethod
+    def _area_weighted_nanmean(
+        values: np.ndarray, areas: np.ndarray, axis: int
+    ) -> np.ndarray:
+        """Area-weighted mean that ignores omitted (NaN) cells.
+
+        With per-hydro-unit structures, a component or land cover absent from a
+        unit's structure variant is stored as NaN. Such a cell must not contribute
+        to the mean (and must not dilute the weight denominator), so its weight is
+        set to zero. NaN in either ``values`` or ``areas`` is treated as absent.
+        Reduces to a plain area-weighted mean when there are no NaN cells.
+        """
+        weights = np.where(np.isnan(values) | np.isnan(areas), 0.0, areas)
+        numerator = np.nansum(values * weights, axis=axis)
+        denominator = weights.sum(axis=axis)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return numerator / denominator
 
     def _get_distributed_labels(self) -> list[str]:
         """Return distributed labels as a normalized list of strings."""

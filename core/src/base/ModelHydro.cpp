@@ -21,6 +21,11 @@ ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, Settin
     if (auto r = _subBasin->Initialize(basinSettings); !r) {
         return r;
     }
+
+    // Assign each unit its structure variant from its land covers before building.
+    ModelBuilder builder(_subBasin, &_timer, &_logger);
+    builder.AssignHydroUnitStructures(modelSettings, basinSettings);
+
     return Initialize(modelSettings, basinSettings);
 }
 
@@ -61,11 +66,8 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
 }
 
 void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
-    if (modelSettings.GetStructureCount() > 1) {
-        throw NotImplemented(std::format("ModelHydro::UpdateParameters - Multiple structures ({}) not yet supported",
-                                         modelSettings.GetStructureCount()));
-    }
-
+    // Sub-basin parameters come from the primary structure (1); hydro-unit
+    // parameters are updated per unit against each unit's structure variant.
     modelSettings.SelectStructure(1);
 
     ModelBuilder builder(_subBasin, &_timer, &_logger);

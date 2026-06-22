@@ -1,7 +1,10 @@
 #include "SettingsModel.h"
 
+#include <algorithm>
+#include <set>
 #include <sstream>
 
+#include "BrickTypes.h"
 #include "ContentTypes.h"
 #include "Parameter.h"
 #include "Process.h"
@@ -387,6 +390,38 @@ void SettingsModel::ChangeSplitterOutputTarget(const string& currentTarget, cons
         std::format("The splitter {} has no output targeting {}.", _selectedSplitter->name, currentTarget));
 }
 
+bool SettingsModel::ChangeSplitterOutputTargetIfFound(const string& currentTarget, const string& newTarget) {
+    assert(_selectedSplitter);
+
+    for (auto& output : _selectedSplitter->outputs) {
+        if (output.target == currentTarget) {
+            output.target = newTarget;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget) {
+    assert(_selectedStructure);
+
+    // Canopy storage as a surface component of the cover: it is therefore computed in the
+    // direct (pre-solver) pass before the snowpack it feeds, and the logger weights its
+    // storage/ET by the cover fraction (by name). The throughfall (the water above the
+    // interception capacity) is released first, then the retained water evaporates at the
+    // potential rate. The capacity is enforced by the throughfall process (no maximum capacity
+    // on the container), which is robust on the direct computation path.
+    AddSurfaceComponentBrick(coverName + "_canopy", "interception_storage");
+    SetSurfaceComponentParent(coverName);
+    AddBrickProcess("throughfall", "outflow:threshold", throughfallTarget);
+    AddBrickProcess("interception_et", "et:open_water");
+
+    // Route the cover's rain through the canopy (upstream of the snowpack).
+    SelectHydroUnitSplitter("rain_splitter");
+    ChangeSplitterOutputTarget(coverName, coverName + "_canopy");
+}
+
 void SettingsModel::AddLoggingToItem(const string& itemName) {
     assert(_selectedStructure);
     if (std::find(_selectedStructure->logItems.begin(), _selectedStructure->logItems.end(), itemName) !=
@@ -567,11 +602,30 @@ void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltPr
         if (rainToSnowpack) {
             // Route the rain to the snowpack liquid water storage instead of the land cover.
             // The outflow process releases the excess over the holding capacity to the land
-            // cover (everything, when there is no snow).
+            // cover (everything, when there is no snow). A cover with a canopy has already
+            // redirected its rain to the canopy (whose throughfall reaches the snowpack), so
+            // only the covers still feeding the cover directly are redirected here.
             SelectHydroUnitSplitter("rain_splitter");
-            ChangeSplitterOutputTarget(brickName, brickName + "_snowpack");
+            ChangeSplitterOutputTargetIfFound(brickName, brickName + "_snowpack");
         }
     }
+}
+
+int SettingsModel::AddStructure() {
+    int newId = 1;
+    for (const auto& modelStructure : _modelStructures) {
+        newId = std::max(newId, modelStructure.id + 1);
+    }
+
+    ModelStructure structure;
+    structure.id = newId;
+    _modelStructures.push_back(structure);
+    _selectedStructure = &_modelStructures.back();
+    _selectedBrick = nullptr;
+    _selectedProcess = nullptr;
+    _selectedSplitter = nullptr;
+
+    return newId;
 }
 
 bool SettingsModel::SelectStructure(int id) {
@@ -592,7 +646,6 @@ bool SettingsModel::SelectStructure(int id) {
 
 void SettingsModel::SelectHydroUnitBrick(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedBrick = &_selectedStructure->hydroUnitBricks[index];
     _selectedProcess = nullptr;
@@ -600,7 +653,6 @@ void SettingsModel::SelectHydroUnitBrick(int index) {
 
 void SettingsModel::SelectSubBasinBrick(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedBrick = &_selectedStructure->subBasinBricks[index];
     _selectedProcess = nullptr;
@@ -685,14 +737,12 @@ void SettingsModel::SelectProcessWithParameter(const string& name) {
 
 void SettingsModel::SelectHydroUnitSplitter(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[index];
 }
 
 void SettingsModel::SelectSubBasinSplitter(int index) {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     _selectedSplitter = &_selectedStructure->subBasinSplitters[index];
 }
@@ -735,24 +785,32 @@ void SettingsModel::SelectSubBasinSplitter(const string& name) {
 
 vecStr SettingsModel::GetHydroUnitLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
+    // Union of the hydro-unit log labels across all structure variants, in
+    // first-seen order. Labels shared by several structures (e.g. the common
+    // subsurface) appear once; a unit that lacks a label simply logs NaN for it.
     vecStr logNames;
+    std::set<string> seen;
+    auto add = [&logNames, &seen](const string& name) {
+        if (seen.insert(name).second) {
+            logNames.push_back(name);
+        }
+    };
 
     for (auto& modelStructure : _modelStructures) {
         for (auto& brick : modelStructure.hydroUnitBricks) {
             for (const auto& label : brick.logItems) {
-                logNames.push_back(brick.name + ":" + label);
+                add(brick.name + ":" + label);
             }
             for (auto& process : brick.processes) {
                 for (const auto& label : process.logItems) {
-                    logNames.push_back(brick.name + ":" + process.name + ":" + label);
+                    add(brick.name + ":" + process.name + ":" + label);
                 }
             }
         }
         for (auto& splitter : modelStructure.hydroUnitSplitters) {
             for (const auto& label : splitter.logItems) {
-                logNames.push_back(splitter.name + ":" + label);
+                add(splitter.name + ":" + label);
             }
         }
     }
@@ -762,6 +820,26 @@ vecStr SettingsModel::GetHydroUnitLogLabels() const {
 
 vecStr SettingsModel::GetLandCoverBricksNames() const {
     assert(_selectedStructure);
+
+    // Union of the land-cover brick names across all structure variants
+    // (first-seen order), so fraction logging covers every land cover.
+    vecStr names;
+    std::set<string> seen;
+    for (auto& modelStructure : _modelStructures) {
+        for (int index : modelStructure.landCoverBricks) {
+            const string& name = modelStructure.hydroUnitBricks[index].name;
+            if (seen.insert(name).second) {
+                names.push_back(name);
+            }
+        }
+    }
+
+    return names;
+}
+
+vecStr SettingsModel::GetSelectedStructureLandCoverNames() const {
+    assert(_selectedStructure);
+
     vecStr names;
     for (int index : _selectedStructure->landCoverBricks) {
         names.push_back(_selectedStructure->hydroUnitBricks[index].name);
@@ -772,30 +850,37 @@ vecStr SettingsModel::GetLandCoverBricksNames() const {
 
 vecStr SettingsModel::GetSubBasinLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
+    // Union of the sub-basin log labels across structure variants (first-seen
+    // order). The sub-basin is catchment-level and normally shared, so this is
+    // typically a single structure's worth of labels.
     vecStr logNames;
+    std::set<string> seen;
+    auto add = [&logNames, &seen](const string& name) {
+        if (seen.insert(name).second) {
+            logNames.push_back(name);
+        }
+    };
 
     for (auto& modelStructure : _modelStructures) {
         for (auto& brick : modelStructure.subBasinBricks) {
             for (const auto& label : brick.logItems) {
-                logNames.push_back(brick.name + ":" + label);
+                add(brick.name + ":" + label);
             }
             for (auto& process : brick.processes) {
                 for (const auto& label : process.logItems) {
-                    logNames.push_back(brick.name + ":" + process.name + ":" + label);
+                    add(brick.name + ":" + process.name + ":" + label);
                 }
             }
         }
         for (auto& splitter : modelStructure.subBasinSplitters) {
             for (const auto& label : splitter.logItems) {
-                logNames.push_back(splitter.name + ":" + label);
+                add(splitter.name + ":" + label);
             }
         }
-    }
-
-    for (const auto& label : _selectedStructure->logItems) {
-        logNames.push_back(label);
+        for (const auto& label : modelStructure.logItems) {
+            add(label);
+        }
     }
 
     return logNames;
@@ -803,7 +888,6 @@ vecStr SettingsModel::GetSubBasinLogLabels() const {
 
 vecStr SettingsModel::GetSubBasinGenericLogLabels() const {
     assert(_selectedStructure);
-    assert(_modelStructures.size() == 1);
 
     vecStr logNames;
 
@@ -836,6 +920,30 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         return true;
     }
 
+    // Apply to every structure variant that contains the component (a parameter may
+    // live in several variants, e.g. the shared subsurface, or in only one, e.g. a
+    // glacier brick present only in the glacier variant).
+    int previousId = _selectedStructure->id;
+    bool foundAny = false;
+    for (auto& modelStructure : _modelStructures) {
+        _selectedStructure = &modelStructure;
+        _selectedBrick = nullptr;
+        _selectedProcess = nullptr;
+        _selectedSplitter = nullptr;
+        if (SetParameterValueInSelectedStructure(component, name, value)) {
+            foundAny = true;
+        }
+    }
+    SelectStructure(previousId);
+
+    if (!foundAny) {
+        LogError("Cannot find the component '{}'.", component);
+    }
+
+    return foundAny;
+}
+
+bool SettingsModel::SetParameterValueInSelectedStructure(const string& component, const string& name, float value) {
     // Get target object
     if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
         if (BrickHasParameter(name)) {
@@ -851,9 +959,24 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
     } else if (component.find("type:") != string::npos) {
         string type = component.substr(component.find(':') + 1);
 
-        // Set the parameter for all bricks of the given type - hydro units
+        // 'type:land_cover' is a meta-type matching every land-cover brick (generic
+        // land covers and glaciers), so a parameter can be set for all land covers
+        // at once regardless of their specific type. Otherwise the exact type string
+        // is matched.
+        auto typeMatches = [&type](const string& brickType) {
+            if (brickType == type) {
+                return true;
+            }
+            if (type == "land_cover") {
+                BrickType bt = BrickTypeFromString(brickType);
+                return bt == BrickType::GenericLandCover || bt == BrickType::Glacier;
+            }
+            return false;
+        };
+
+        // Set the parameter for all matching bricks - hydro units
         for (auto& brick : _selectedStructure->hydroUnitBricks) {
-            if (brick.type == type) {
+            if (typeMatches(brick.type)) {
                 SelectHydroUnitBrick(brick.name);
                 if (BrickHasParameter(name)) {
                     SetBrickParameterValue(name, value);
@@ -864,9 +987,9 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
             }
         }
 
-        // Set the parameter for all bricks of the given type - subbasins
+        // Set the parameter for all matching bricks - subbasins
         for (auto& brick : _selectedStructure->subBasinBricks) {
-            if (brick.type == type) {
+            if (typeMatches(brick.type)) {
                 SelectHydroUnitBrick(brick.name);
                 if (BrickHasParameter(name)) {
                     SetBrickParameterValue(name, value);
@@ -878,7 +1001,8 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         }
 
     } else {
-        LogError("Cannot find the component '{}'.", component);
+        // Not found in this structure variant (the caller tries every variant and
+        // logs once if none match).
         return false;
     }
 

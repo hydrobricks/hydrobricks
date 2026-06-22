@@ -5,6 +5,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Added
+
+- HBV land-use classes as land covers: `forest` (rain interception in a canopy store),
+  `lake` (exclusive open-water cover: all precipitation direct, open-water evaporation,
+  linear outflow, via a dedicated no-snow structure variant) and `glacier` (Socont-style).
+- Per-class soil moisture stores in HBV (one per land cover), with a `share_soil` option
+  to use a single shared store. Soil/recharge parameters are exposed per cover
+  (`fc_<cover>`, `lp_<cover>`, `beta_<cover>`) when several soil covers are present.
+- Open-water evaporation process (`et:open_water`) and a threshold outflow process
+  (`outflow:threshold`).
+- Pluggable glacier modules: a `glacier_module` option (default `"gsm"`, the Glacier
+  Sub-Model of GSM-Socont) selecting the glacier formulation, shared by Socont and HBV.
+  New `hydrobricks.modules` package (`Module` base + `GlacierModule`/`GSM`).
+- HBV-96 capillary flux can fan out to several per-class soil stores (area-weighted).
+- HBV evapotranspiration correction factor (`cevpf`, default 1) on `et:hbv`, scaling the
+  potential evaporation per land cover (e.g. a higher evaporation over forests via
+  `cevpf_forest`).
+- Per–hydro-unit structure variants: a unit uses only the structure matching its land
+  covers (e.g. glacier-free units carry no glacier bricks); the per-unit structure id is
+  written to the results NetCDF.
+
+### Changed
+
+- The default land cover is now `open` (the HBV "open areas" class) instead of `ground`,
+  in `HydroUnits` and the models. `ground` (and `generic`/`generic_land_cover`) are kept
+  as accepted aliases for backward compatibility, but default-run output labels change
+  from `ground:*` to `open:*`. `HBV` no longer lists `ground` in its allowed cover types
+  (still accepted via the alias).
+- Land-cover taxonomy: the near-empty `Vegetation`/`Urban` classes were removed (C++).
+
+### Fixed
+
+- NaN-safe aggregation of per–hydro-unit values across heterogeneous structures
+  (area weighting of storage changes and ET when a cover is absent from a unit).
+- The generic soil cover that absorbs residual area (land cover evolution / single-area
+  loading) is now resolved from `open`/`ground`/`generic` aliases instead of a hardcoded
+  `ground`, so it works with the new `open` default (C++ `HydroUnit` and Python
+  `HydroUnits`).
+
+
 ## 0.8.7 - 2026-05-10
 
 ### Breaking changes

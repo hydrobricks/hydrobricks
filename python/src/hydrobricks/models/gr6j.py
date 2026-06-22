@@ -65,7 +65,7 @@ class GR6J(GR4J):
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
-        self.allowed_land_cover_types = ["ground"]
+        self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)
 

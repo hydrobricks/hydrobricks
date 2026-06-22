@@ -108,6 +108,7 @@ class Splitter {
      * Get the pointer to an output value.
      *
      * @param name name of the output value.
+     * @return pointer to the output value.
      */
     virtual double* GetValuePointer(const string& name) = 0;
 

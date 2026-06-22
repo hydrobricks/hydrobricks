@@ -6,7 +6,8 @@
 #include "FileNetcdf.h"
 
 bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt& hydroUnitIds,
-                               const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecAxd& subBasinValues,
+                               const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas,
+                               const vecStr& subBasinLabels, const vecAxd& subBasinValues,
                                const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                                const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
     if (!std::filesystem::is_directory(path)) {
@@ -45,6 +46,10 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         varId = file.DefVarInt("hydro_units_ids", {dimIdUnit});
         file.PutVar(varId, hydroUnitIds);
         file.PutAttText("long_name", "hydrological units ids", varId);
+
+        varId = file.DefVarInt("hydro_units_structure_ids", {dimIdUnit});
+        file.PutVar(varId, hydroUnitStructureIds);
+        file.PutAttText("long_name", "model structure id used by each hydrological unit", varId);
 
         varId = file.DefVarDouble("hydro_units_areas", {dimIdUnit});
         file.PutVar(varId, hydroUnitAreas);

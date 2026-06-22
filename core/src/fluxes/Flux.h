@@ -65,9 +65,9 @@ class Flux {
     }
 
     /**
-     * Get the amount of water outgoing the flux.
+     * Get a pointer to the water amount of the flux.
      *
-     * @return the amount of water outgoing the flux
+     * @return a pointer to the water amount of the flux.
      */
     double* GetAmountPointer() {
         return &_amount;

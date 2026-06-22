@@ -10,6 +10,7 @@
 #include "ProcessCapillaryHBV.h"
 #include "ProcessETGR4J.h"
 #include "ProcessETHBV.h"
+#include "ProcessETOpenWater.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
@@ -25,6 +26,7 @@
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
 #include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
 #include "ProcessProductionGR4J.h"
@@ -168,6 +170,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowSnowHolding::RegisterProcessSettings
         }},
 
+        {"outflow:threshold", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
+            },
+            &ProcessOutflowThreshold::RegisterProcessSettings
+        }},
+
         {"refreeze:degree_day", {
             [](Brick* b) {
                 return std::make_unique<ProcessRefreezeDegreeDay>(b->GetWaterContainer());
@@ -201,6 +210,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessETHBV>(b->GetWaterContainer());
             },
             &ProcessETHBV::RegisterProcessSettings
+        }},
+
+        {"et:open_water", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWater::RegisterProcessSettings
         }},
 
         {"melt:degree_day", {

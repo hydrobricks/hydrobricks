@@ -48,7 +48,7 @@ class GR4J(Model):
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
-        self.allowed_land_cover_types = ["ground"]
+        self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)
 
@@ -89,14 +89,21 @@ class GR4J(Model):
         """
         discrete = self.options["discrete"]
 
+        # The (single) land cover name follows the configured land cover, defaulting to
+        # 'open'; an explicit 'ground' is still accepted (backward compatibility). The
+        # soil store is named after it (``<cover>_soil``).
+        cover = self.land_cover_names[0]
+        self._cover_name = cover
+        soil = f"{cover}_soil"
+
         # ------------------------------------------------------------------ #
-        # Ground land cover
+        # Land cover (open areas)
         # ------------------------------------------------------------------ #
         # P–E neutralization: interception sends min(P, E) to atmosphere. The net
         # precipitation Pn is passed instantaneously onward (to the production store
-        # in the discrete formulation, or to ground_soil in the solver-based one).
+        # in the discrete formulation, or to the soil store in the solver-based one).
         # This mirrors the GR4J paper: "an interception storage of zero capacity".
-        self.structure["ground"] = {
+        self.structure[cover] = {
             "attach_to": "hydro_unit",
             "kind": "land_cover",
             "processes": {
@@ -105,7 +112,7 @@ class GR4J(Model):
                 },
                 "throughfall": {
                     "kind": "outflow:rest",
-                    "target": "production_store" if discrete else "ground_soil",
+                    "target": "production_store" if discrete else soil,
                     "instantaneous": True,
                 },
             },
@@ -164,7 +171,7 @@ class GR4J(Model):
         # Splits Pn into infiltration (Ps → production store) and the direct routing
         # branch (Pn − Ps → UH input). runoff:outflow:rest is the complement of
         # infiltration and must be declared after it.
-        self.structure["ground_soil"] = {
+        self.structure[f"{self._cover_name}_soil"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
             "processes": {
@@ -218,36 +225,37 @@ class GR4J(Model):
             # Others were already defined in parameter specs.
         }
 
+        sp = f"{self._cover_name}_snowpack"
         if self.options["snow_melt_process"] == "melt:cemaneige":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:degree_day_factor": ["Kf"],
-                    "ground_snowpack:cold_content_factor": ["CTG"],
-                    "ground_snowpack:melting_temperature": ["Tmelt"],
-                    "ground_snowpack:mean_annual_snow": ["Cn"],
+                    f"{sp}:degree_day_factor": ["Kf"],
+                    f"{sp}:cold_content_factor": ["CTG"],
+                    f"{sp}:melting_temperature": ["Tmelt"],
+                    f"{sp}:mean_annual_snow": ["Cn"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:degree_day":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:degree_day_factor": ["a_snow", "Kf"],
-                    "ground_snowpack:melting_temperature": ["Tmelt"],
+                    f"{sp}:degree_day_factor": ["a_snow", "Kf"],
+                    f"{sp}:melting_temperature": ["Tmelt"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:degree_day_aspect":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:degree_day_factor_n": ["a_snow_n", "kf_n"],
-                    "ground_snowpack:degree_day_factor_s": ["a_snow_s", "kf_s"],
-                    "ground_snowpack:degree_day_factor_ew": ["a_snow_ew", "kf_ew"],
-                    "ground_snowpack:melting_temperature": ["Tmelt"],
+                    f"{sp}:degree_day_factor_n": ["a_snow_n", "kf_n"],
+                    f"{sp}:degree_day_factor_s": ["a_snow_s", "kf_s"],
+                    f"{sp}:degree_day_factor_ew": ["a_snow_ew", "kf_ew"],
+                    f"{sp}:melting_temperature": ["Tmelt"],
                 }
             )
         elif self.options["snow_melt_process"] == "melt:temperature_index":
             self.parameter_aliases.update(
                 {
-                    "ground_snowpack:melt_factor": ["a_snow", "Kf"],
-                    "ground_snowpack:melting_temperature": ["Tmelt"],
+                    f"{sp}:melt_factor": ["a_snow", "Kf"],
+                    f"{sp}:melting_temperature": ["Tmelt"],
                 }
             )
 

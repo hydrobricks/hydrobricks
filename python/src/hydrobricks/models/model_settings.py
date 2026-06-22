@@ -129,13 +129,32 @@ class ModelSettings:
             splitter_type = "snow_rain:linear"
         self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
-        # Add default ground land cover
-        self.settings.add_land_cover_brick("ground", "generic_land_cover")
-
-        # Add other specific land covers
+        # Add the land covers, each by its own name: generic-behaviour covers (incl.
+        # forest, which is generic plus a canopy) map to the generic_land_cover brick,
+        # while special covers (e.g. glacier) keep their type. Several generic covers
+        # can coexist (e.g. open and forest), each getting its own snowpack and
+        # soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type not in ["ground", "generic_land_cover"]:
+            if cover_type in ["ground", "generic_land_cover", "open", "forest", "lake"]:
+                self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
+            else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
+
+        # Forest canopy interception, on the rain path upstream of the snowpack.
+        # Generated before the snowpacks so the canopy (a surface component) is
+        # declared/computed before the snowpack it feeds; the throughfall rejoins the
+        # original rain target (the snowpack when the rain is routed to it,
+        # otherwise the land cover).
+        rain_to_snowpack_active = with_snow and rain_to_snowpack
+        for cover_type, cover_name in zip(land_cover_types, land_cover_names):
+            if cover_type == "forest":
+                if rain_to_snowpack_active:
+                    throughfall_target = f"{cover_name}_snowpack"
+                else:
+                    throughfall_target = cover_name
+                self.settings.generate_canopy_interception(
+                    cover_name, throughfall_target
+                )
 
         # Snowpack
         if with_snow:
@@ -253,6 +272,17 @@ class ModelSettings:
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
 
+    def add_process_output(self, target: str) -> None:
+        """
+        Add an extra output target to the most recently added process.
+
+        Parameters
+        ----------
+        target
+            Target brick of the additional output.
+        """
+        self.settings.add_process_output(target)
+
     def add_brick_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"
     ) -> None:
@@ -305,6 +335,20 @@ class ModelSettings:
             Name of the item
         """
         self.settings.add_logging_to(item)
+
+    def add_structure(self) -> int:
+        """
+        Add a new (empty) model-structure variant and select it.
+
+        Subsequent structure-building calls populate the newly selected structure.
+        Units are auto-assigned (in the core) to the variant matching their land
+        covers.
+
+        Returns
+        -------
+        The id of the newly created structure.
+        """
+        return self.settings.add_structure()
 
     def set_process_outputs_as_instantaneous(self) -> None:
         """Set all process outputs as instantaneous"""

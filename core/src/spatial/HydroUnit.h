@@ -296,6 +296,7 @@ class HydroUnit {
      *
      * @param name The name of the land cover to change.
      * @param fraction The new area fraction of the land cover.
+     * @return True on success; false if the fraction is outside [0, 1] or the land cover was not found.
      */
     bool ChangeLandCoverAreaFraction(std::string_view name, double fraction);
 
@@ -343,6 +344,26 @@ class HydroUnit {
     }
 
     /**
+     * Set the model-structure ID used by this hydro unit. Units sharing the same
+     * subsurface use the same structure; an exclusive land cover (e.g. a lake) can
+     * place a unit on a different structure variant. Defaults to 1.
+     *
+     * @param structureId The model-structure ID to use when building this unit.
+     */
+    void SetStructureId(int structureId) {
+        _structureId = structureId;
+    }
+
+    /**
+     * Get the model-structure ID used by this hydro unit.
+     *
+     * @return The model-structure ID (defaults to 1).
+     */
+    [[nodiscard]] int GetStructureId() const {
+        return _structureId;
+    }
+
+    /**
      * Get the lateral connections of the hydro unit.
      *
      * @return A vector of lateral connections associated with the hydro unit.
@@ -352,6 +373,7 @@ class HydroUnit {
   protected:
     Types _type;
     int _id;
+    int _structureId = 1;                                                          // model-structure variant used
     double _area;                                                                  // [m²]
     std::vector<std::unique_ptr<HydroUnitProperty>> _properties;                   // owning
     std::vector<std::unique_ptr<HydroUnitLateralConnection>> _lateralConnections;  // owning

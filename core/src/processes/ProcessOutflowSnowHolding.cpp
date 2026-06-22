@@ -42,12 +42,18 @@ vecDouble ProcessOutflowSnowHolding::GetRates() {
     }
 
     double swe = snowpack->GetSnowContainer()->GetContentWithChanges();
+    // The snowpack can retain liquid water up to a fraction (water_holding_capacity) of the SWE.
+    // Anything above that is the excess that must drain out (an absolute amount, in mm).
     double excess = _container->GetContentWithChanges() - (*_waterHoldingCapacity) * swe;
     if (excess <= 0) {
         return {0};
     }
 
-    // Release the excess within the timestep
+    // GetRates() must return a *rate* (amount per unit time), not an absolute amount: the solver
+    // multiplies the rate by the timestep when integrating (see WaterContainer::ApplyConstraints,
+    // where content is updated as content + rate * timeStep). Dividing the excess by the timestep
+    // therefore drains exactly the excess over one step, regardless of the timestep length.
+    // The 1.0 fallback covers the case where no time machine is wired up (e.g. unit tests).
     double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
 
     return {excess / timeStep};

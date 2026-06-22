@@ -457,22 +457,19 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
         _model.SelectHydroUnitBrick("glacier_ice");
         _model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
         _model.AddProcessLogging("output");
-        _model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        _model.AddBrickProcess("rainwater", "outflow:rest", "outlet", true);
         _model.AddBrickParameter("no_melt_when_snow_cover", true);
         _model.AddBrickParameter("infinite_storage", 1.0);
         _model.SelectHydroUnitBrick("glacier_debris");
         _model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
         _model.AddProcessLogging("output");
-        _model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        _model.AddBrickProcess("rainwater", "outflow:rest", "outlet", true);
         _model.AddBrickParameter("no_melt_when_snow_cover", true);
         _model.AddBrickParameter("infinite_storage", 1.0);
 
-        // Route to the outlet
+        // Route the rest (rain) to the outlet. The glaciers drain via their
+        // 'rainwater' (outflow:rest) process, so only the ground needs an outflow here.
         _model.SelectHydroUnitBrick("ground");
-        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        _model.SelectHydroUnitBrick("glacier_ice");
-        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        _model.SelectHydroUnitBrick("glacier_debris");
         _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         _model.AddLoggingToItem("outlet");

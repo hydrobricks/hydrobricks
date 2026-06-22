@@ -277,15 +277,15 @@ bool HydroUnit::ChangeLandCoverAreaFraction(std::string_view name, double fracti
 }
 
 bool HydroUnit::FixLandCoverFractionsTotal() {
-    // Try to find ground or generic land cover using the map
+    // Find the generic (soil) land cover that absorbs the area changes. 'open' is the
+    // canonical name; 'ground'/'generic'/'generic_land_cover' are accepted aliases kept
+    // for backward compatibility.
     LandCover* ground = nullptr;
-    auto groundIt = _landCoverMap.find("ground");
-    if (groundIt != _landCoverMap.end()) {
-        ground = groundIt->second;
-    } else {
-        auto genericIt = _landCoverMap.find("generic");
-        if (genericIt != _landCoverMap.end()) {
-            ground = genericIt->second;
+    for (const auto& name : {"open", "ground", "generic", "generic_land_cover"}) {
+        auto it = _landCoverMap.find(name);
+        if (it != _landCoverMap.end()) {
+            ground = it->second;
+            break;
         }
     }
 
@@ -297,12 +297,12 @@ bool HydroUnit::FixLandCoverFractionsTotal() {
     if (!NearlyEqual(total, 1.0, EPSILON_D)) {
         double diff = total - 1.0;
         if (ground == nullptr) {
-            LogError("No ground (generic) land cover found. Cannot fix the land cover fractions.");
+            LogError("No generic soil (open) land cover found. Cannot fix the land cover fractions.");
             return false;
         }
         if (LessThan(ground->GetAreaFraction(), diff, EPSILON_D)) {
             LogError(
-                "The ground (generic) land cover (%.20g) is not large enough to compensate "
+                "The generic soil (open) land cover (%.20g) is not large enough to compensate "
                 "the area fractions (%.20g) with error margin (%.20g)."
                 "(i.e. the sum of the other land cover fractions is too large).",
                 ground->GetAreaFraction(), diff, EPSILON_D);

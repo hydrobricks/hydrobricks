@@ -6,7 +6,7 @@ from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.models import Model
-from hydrobricks.modules.glacier import get_glacier_module
+from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class Socont(Model):
             If surface runoff option is not recognized.
         """
         # Glacier-related bricks, delegated to the (pluggable) glacier module.
-        self._glacier_module = get_glacier_module(self.options["glacier_module"])
+        self._glacier_module = GlacierModule.get_module(self.options["glacier_module"])
         glacier_names = [
             cover_name
             for cover_type, cover_name in zip(

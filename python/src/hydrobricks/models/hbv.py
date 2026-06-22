@@ -6,7 +6,7 @@ from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.models.model import Model
-from hydrobricks.modules.glacier import get_glacier_module
+from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class HBV(Model):
         # catchment-level reservoirs draining to the outlet, bypassing the soil routine.
         # The snow on the glacier still melts through its (generated) snowpack; ice melt
         # is suppressed while snow covers it.
-        self._glacier_module = get_glacier_module(self.options["glacier_module"])
+        self._glacier_module = GlacierModule.get_module(self.options["glacier_module"])
         self._glacier_module.add_bricks(
             self.structure,
             self._glacier_cover_names,

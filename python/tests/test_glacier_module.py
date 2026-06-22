@@ -13,7 +13,7 @@ import pytest
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.modules.glacier import GSM, GlacierModule, get_glacier_module
+from hydrobricks.modules.glacier import GSM, GlacierModule
 
 _GLACIER_COVERS = dict(
     land_cover_names=["ground", "glacier"],
@@ -27,17 +27,31 @@ _GLACIER_COVERS = dict(
 
 
 def test_get_glacier_module_by_name():
-    assert isinstance(get_glacier_module("gsm"), GSM)
+    assert isinstance(GlacierModule.get_module("gsm"), GSM)
 
 
 def test_get_glacier_module_passes_through_instance():
     module = GSM()
-    assert get_glacier_module(module) is module
+    assert GlacierModule.get_module(module) is module
 
 
 def test_get_glacier_module_unknown_raises():
     with pytest.raises(hb.ConfigurationError):
-        get_glacier_module("does_not_exist")
+        GlacierModule.get_module("does_not_exist")
+
+
+def test_register_decorator_adds_to_category_registry():
+    """The shared ``Module.register`` decorator registers a concrete module under a
+    name in its category; ``get_module`` then resolves it by that name."""
+
+    @GlacierModule.register("_test_dummy")
+    class _Dummy(GSM):
+        pass
+
+    try:
+        assert isinstance(GlacierModule.get_module("_test_dummy"), _Dummy)
+    finally:
+        GlacierModule._registry.pop("_test_dummy", None)
 
 
 def test_invalid_glacier_module_on_model_raises():

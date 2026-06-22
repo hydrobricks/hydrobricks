@@ -5,6 +5,7 @@ structure without changing the model itself (e.g. the glacier formulation). They
 selected by a model option (a registry name) or supplied as an instance.
 """
 
-from hydrobricks.modules.glacier import GSM, GlacierModule, get_glacier_module
+from hydrobricks.modules.base import Module
+from hydrobricks.modules.glacier import GSM, GlacierModule
 
-__all__ = ("GlacierModule", "GSM", "get_glacier_module")
+__all__ = ("Module", "GlacierModule", "GSM")

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
-from hydrobricks._exceptions import ConfigurationError
+from hydrobricks.modules.base import Module
 
 
-class GlacierModule(ABC):
+class GlacierModule(Module):
     """Pluggable glacier formulation for the hydrological models.
 
     A glacier module owns everything glacier-specific so that the same formulation
@@ -22,7 +22,13 @@ class GlacierModule(ABC):
     derived generically by ``ParameterSet`` from the ``melt`` process placed on the
     glacier land cover, so a module only needs to expose its own extra aliases (such
     as the response factors of its reservoirs).
+
+    Resolve a glacier module with ``GlacierModule.get_module(name_or_instance)`` and
+    register a new one with the ``@GlacierModule.register("name")`` decorator.
     """
+
+    _registry: dict[str, type[GlacierModule]] = {}
+    _category = "glacier module"
 
     @abstractmethod
     def add_bricks(
@@ -63,6 +69,7 @@ class GlacierModule(ABC):
         """Return the glacier-specific parameter aliases (e.g. reservoir factors)."""
 
 
+@GlacierModule.register("gsm")
 class GSM(GlacierModule):
     """Glacier Sub-Model (GSM), as in GSM-SOCONT (Schaefli et al., 2005).
 
@@ -135,42 +142,3 @@ class GSM(GlacierModule):
             f"{self.RAIN_SNOWMELT_STORAGE}:response_factor": ["k_snow"],
             f"{self.ICEMELT_STORAGE}:response_factor": ["k_ice"],
         }
-
-
-# Registry of the available glacier modules, keyed by name (mirroring the string
-# process kinds used elsewhere). Users select one with the ``glacier_module`` option.
-_GLACIER_MODULES: dict[str, type[GlacierModule]] = {
-    "gsm": GSM,
-}
-
-
-def get_glacier_module(module: str | GlacierModule) -> GlacierModule:
-    """Resolve a glacier module from a registry name or a module instance.
-
-    Parameters
-    ----------
-    module
-        Either a registered module name (e.g. ``'gsm'``) or a ``GlacierModule``
-        instance (for custom user-defined formulations).
-
-    Returns
-    -------
-    GlacierModule
-        The resolved glacier module instance.
-
-    Raises
-    ------
-    ConfigurationError
-        If the name is not a registered glacier module.
-    """
-    if isinstance(module, GlacierModule):
-        return module
-    if module in _GLACIER_MODULES:
-        return _GLACIER_MODULES[module]()
-    raise ConfigurationError(
-        f"The glacier module '{module}' is not recognised. "
-        f"Available modules: {', '.join(sorted(_GLACIER_MODULES))}.",
-        item_name="glacier_module",
-        item_value=module,
-        reason="Unknown glacier module",
-    )

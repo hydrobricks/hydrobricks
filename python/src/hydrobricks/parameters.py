@@ -340,6 +340,15 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             default=0.9,
             mandatory=True,
         ),
+        ParamSpec(
+            name="et_correction_factor",
+            unit="-",
+            aliases=["cevpf", "etcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
     ],
     # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
     "runoff:hbv": [

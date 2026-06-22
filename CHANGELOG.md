@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Sub-Model of GSM-Socont) selecting the glacier formulation, shared by Socont and HBV.
   New `hydrobricks.modules` package (`Module` base + `GlacierModule`/`GSM`).
 - HBV-96 capillary flux can fan out to several per-class soil stores (area-weighted).
+- HBV evapotranspiration correction factor (`cevpf`, default 1) on `et:hbv`, scaling the
+  potential evaporation per land cover (e.g. a higher evaporation over forests via
+  `cevpf_forest`).
 - Per–hydro-unit structure variants: a unit uses only the structure matching its land
   covers (e.g. glacier-free units carry no glacier bricks); the per-unit structure id is
   written to the results NetCDF.

@@ -169,6 +169,7 @@ def test_hbv96_generate_parameters_contains_literature_names():
         "k_lz",
         "k4",  # SMHI lower zone recession coefficient
         "maxbas",
+        "cevpf",  # ET correction factor
     ):
         assert parameters.has(name), f"parameter {name!r} not found"
 
@@ -357,6 +358,42 @@ def test_hbv96_unit_correction_factors_are_neutral(tmp_path):
     assert explicit.get_total_outlet_discharge() == pytest.approx(
         default.get_total_outlet_discharge(), rel=1e-9
     )
+
+
+# ---------------------------------------------------------------------------
+# D2 — ET correction factor (cevpf)
+# ---------------------------------------------------------------------------
+
+
+def test_hbv96_et_correction_factor_increases_et(tmp_path):
+    """A larger ET correction factor (cevpf > 1) raises evapotranspiration and lowers
+    total discharge; the water balance still closes."""
+    base, _ = _run(_subdir(tmp_path, "base"), record_all=True)
+    corrected, forcing = _run(
+        _subdir(tmp_path, "cevpf"), params={"cevpf": 1.5}, record_all=True
+    )
+    assert corrected.get_total_et() > base.get_total_et()
+    assert corrected.get_total_outlet_discharge() < base.get_total_outlet_discharge()
+    assert _balance(corrected, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_unit_et_correction_factor_is_neutral(tmp_path):
+    """An explicit cevpf of 1.0 reproduces the default (no correction) run."""
+    default, _ = _run(_subdir(tmp_path, "default"))
+    explicit, _ = _run(_subdir(tmp_path, "explicit"), params={"cevpf": 1.0})
+    assert explicit.get_total_outlet_discharge() == pytest.approx(
+        default.get_total_outlet_discharge(), rel=1e-9
+    )
+
+
+def test_hbv96_per_cover_et_correction_alias():
+    """With per-class soils, the ET correction factor is exposed per cover
+    (cevpf_<cover>), so e.g. forests can evaporate more than open areas."""
+    parameters = models.HBV96(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    ).generate_parameters()
+    for name in ("cevpf_open", "cevpf_forest"):
+        assert parameters.has(name), f"parameter {name!r} not found"
 
 
 # ---------------------------------------------------------------------------

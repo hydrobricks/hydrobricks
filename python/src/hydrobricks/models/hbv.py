@@ -91,7 +91,7 @@ class HBV(Model):
         self.options["share_soil"] = False
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
-        self.allowed_land_cover_types = ["ground", "forest", "lake", "glacier"]
+        self.allowed_land_cover_types = ["open", "forest", "lake", "glacier"]
 
         self._set_options(kwargs)
 

@@ -135,7 +135,7 @@ class ModelSettings:
         # can coexist (e.g. open and forest), each getting its own snowpack and
         # soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type in ["ground", "generic_land_cover", "forest", "lake"]:
+            if cover_type in ["ground", "generic_land_cover", "open", "forest", "lake"]:
                 self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)

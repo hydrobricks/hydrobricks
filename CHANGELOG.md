@@ -27,8 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Land-cover taxonomy: `ground` maps to the generic land cover; the near-empty
-  `Vegetation`/`Urban` classes were removed (C++).
+- The default land cover is now `open` (the HBV "open areas" class) instead of `ground`,
+  in `HydroUnits` and the models. `ground` (and `generic`/`generic_land_cover`) are kept
+  as accepted aliases for backward compatibility, but default-run output labels change
+  from `ground:*` to `open:*`. `HBV` no longer lists `ground` in its allowed cover types
+  (still accepted via the alias).
+- Land-cover taxonomy: the near-empty `Vegetation`/`Urban` classes were removed (C++).
 
 ### Fixed
 

@@ -55,9 +55,9 @@ class HydroUnits:
         Parameters
         ----------
         land_cover_types
-            List of land cover type identifiers. If None, defaults to ['ground'].
+            List of land cover type identifiers. If None, defaults to ['open'].
         land_cover_names
-            List of land cover display names. If None, defaults to ['ground'].
+            List of land cover display names. If None, defaults to ['open'].
         data
             Pre-existing DataFrame with hydro units data.
             If None, creates empty DataFrame.
@@ -70,9 +70,9 @@ class HydroUnits:
         self.settings = SettingsBasin()
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
-            land_cover_types = ["ground"]
+            land_cover_types = ["open"]
         if not land_cover_names:
-            land_cover_names = ["ground"]
+            land_cover_names = ["open"]
         self.land_cover_types: list[str] = land_cover_types
         self.land_cover_names: list[str] = land_cover_names
         land_cover_cols: list[tuple[str, str]] = []
@@ -266,7 +266,7 @@ class HydroUnits:
         self, file_content: pd.DataFrame, column_area: str | None
     ) -> None:
         """
-        Load a single area column and set ground land cover to 100%.
+        Load a single area column and set the (single) land cover to 100%.
 
         Parameters
         ----------
@@ -288,8 +288,8 @@ class HydroUnits:
 
         self.add_property(("area", unit), vals)
 
-        # Set ground land cover to 100%
-        idx = self.FRACTION_PREFIX + "ground"
+        # Set the single land cover to 100% (defaults to the 'open' cover).
+        idx = self.FRACTION_PREFIX + self.land_cover_names[0]
         self.hydro_units[idx] = np.ones(len(self.hydro_units[("area", unit)]))
 
     def _load_land_cover_areas(

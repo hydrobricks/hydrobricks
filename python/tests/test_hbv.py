@@ -586,6 +586,62 @@ def test_hbv96_single_cover_keeps_legacy_aliases():
         assert parameters.has(name)
 
 
+def test_hbv96_default_cover_is_open():
+    """HBV defaults to an 'open' land cover (the HBV 'open areas' class)."""
+    model = models.HBV96()
+    assert model.land_cover_names == ["open"]
+    assert model.land_cover_types == ["open"]
+
+
+def test_hbv96_open_cover_type_is_generic_alias():
+    """The 'open' land cover type is an alias of the generic (ground) cover: it is a
+    soil-bearing cover with the usual soil parameters."""
+    model = models.HBV96(land_cover_names=["open"], land_cover_types=["open"])
+    assert model._shared_soil is True
+    assert "soil_moisture" in model.structure
+    parameters = model.generate_parameters()
+    for name in ("fc", "lp", "beta"):
+        assert parameters.has(name)
+
+
+def test_hbv96_ground_cover_still_accepted():
+    """'ground' is kept as a backward-compatible alias: an explicit 'ground' cover is
+    accepted (HBV's allowed list no longer lists it) and builds a generic soil cover."""
+    model = models.HBV96(land_cover_names=["ground"], land_cover_types=["ground"])
+    assert "ground" not in model.allowed_land_cover_types  # dropped from the list
+    assert "soil_moisture" in model.structure
+    parameters = model.generate_parameters()
+    for name in ("fc", "lp", "beta"):
+        assert parameters.has(name)
+
+
+def test_hbv96_open_cover_water_balance_closes(tmp_path):
+    """An 'open' single-cover catchment runs and closes the water balance, exactly like
+    the default 'ground' cover."""
+    hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text("id,elevation,area_open\n-,m,m^2\n1,1000,1000000\n")
+    hydro_units.load_from_csv(
+        hu_csv, column_elevation="elevation", columns_areas={"open": "area_open"}
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, _N_2Y, 5.0, 1.5))
+
+    model = models.HBV96(
+        land_cover_names=["open"], land_cover_types=["open"], record_all=True
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(_DEFAULT_PARAMS)
+    end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
 # ---------------------------------------------------------------------------
 # F — Lake (exclusive open-water cover)
 # ---------------------------------------------------------------------------

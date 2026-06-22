@@ -90,7 +90,7 @@ class Socont(Model):
         self.options["snow_redistribution"] = None
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
-        self.allowed_land_cover_types = ["ground", "glacier"]
+        self.allowed_land_cover_types = ["open", "glacier"]
 
         self._set_options(kwargs)
 
@@ -138,8 +138,20 @@ class Socont(Model):
             options=self.options,
         )
 
-        # Infiltration and overflow
-        self.structure["ground"] = {
+        # Infiltration and overflow on the soil (open areas) land cover. The cover
+        # name follows the (single) non-glacier land cover, defaulting to 'open'; an
+        # explicit 'ground' is still accepted (kept for backward compatibility).
+        soil_cover_name = next(
+            (
+                name
+                for name, cover_type in zip(
+                    self.land_cover_names, self.land_cover_types
+                )
+                if cover_type != "glacier"
+            ),
+            "open",
+        )
+        self.structure[soil_cover_name] = {
             "attach_to": "hydro_unit",
             "kind": "land_cover",
             "processes": {

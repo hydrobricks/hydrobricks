@@ -61,10 +61,11 @@ dev = [
 packages = [
     "hydrobricks",
     "hydrobricks.models",
+    "hydrobricks.modules",
     "hydrobricks.actions",
     "hydrobricks.preprocessing"
 ]
-package-dir = {"hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.actions" = "python/src/hydrobricks/actions", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing"}
+package-dir = {"hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.modules" = "python/src/hydrobricks/modules", "hydrobricks.actions" = "python/src/hydrobricks/actions", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing"}
 
 [build-system]
 requires = [

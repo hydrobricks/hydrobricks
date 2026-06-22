@@ -68,6 +68,10 @@ class Model(ABC):
 
         # Structure
         self.structure: dict[str, Any] = dict()
+        # Optional glacier formulation (set by models that support glaciers, from the
+        # 'glacier_module' option). Used to build the glacier bricks, the glacier-free
+        # vs with-glacier structure variants, and the glacier parameter aliases.
+        self._glacier_module: Any = None
         self.parameter_aliases: dict[str, str] = dict()
         self.parameter_constraints: list[tuple[str, ...]] = []
         self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
@@ -683,6 +687,47 @@ class Model(ABC):
         directly into open water with no snowpack).
         """
         return [(self.land_cover_names, self.land_cover_types, self.structure)]
+
+    def _split_glacier_variants(
+        self,
+        names: list[str],
+        types: list[str],
+        structure: dict[str, Any],
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Split a structure that may contain glacier covers into glacier variants.
+
+        Returns a glacier-free **base** variant (the glacier land covers dropped) plus
+        a **with-glacier** variant (all covers), so glacier-free units carry no glacier
+        brick while glacierized units do. The catchment-level glacier reservoirs added
+        by the glacier module are kept in the base, so the sub-basin (built from the
+        primary structure) owns and shares them. Returns the single input variant when
+        there is no glacier cover or no glacier module is set.
+
+        Models that support glaciers call this from ``_define_structure_variants`` (the
+        glacier handling is thus shared, with the formulation pluggable via the glacier
+        module).
+        """
+        glacier_names = [
+            name for name, cover_type in zip(names, types) if cover_type == "glacier"
+        ]
+        if not glacier_names or self._glacier_module is None:
+            return [(names, types, structure)]
+
+        land_cover_keys = self._glacier_module.land_cover_keys(glacier_names)
+        base_names = [
+            name for name, cover_type in zip(names, types) if cover_type != "glacier"
+        ]
+        base_types = [cover_type for cover_type in types if cover_type != "glacier"]
+        base_structure = {
+            key: brick for key, brick in structure.items() if key not in land_cover_keys
+        }
+
+        # Glacier-free base first (primary, builds the shared sub-basin), then the
+        # with-glacier variant.
+        return [
+            (base_names, base_types, base_structure),
+            (names, types, structure),
+        ]
 
     def _set_structure_basics(self) -> None:
         """

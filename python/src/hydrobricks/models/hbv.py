@@ -6,6 +6,7 @@ from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.models.model import Model
+from hydrobricks.modules.glacier import get_glacier_module
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,10 @@ class HBV(Model):
         are kept.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True), as in Socont.
+    glacier_module : str
+        Glacier formulation to plug in (default: 'gsm', the Glacier Sub-Model of
+        GSM-SOCONT: two linear reservoirs for the glacierized-area rain + snowmelt
+        and ice melt).
 
     Land-use classes
     ----------------
@@ -85,6 +90,7 @@ class HBV(Model):
         self.options["snow_redistribution"] = None
         self.options["share_soil"] = False
         self.options["glacier_infinite_storage"] = True
+        self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["ground", "forest", "lake", "glacier"]
 
         self._set_options(kwargs)
@@ -218,49 +224,18 @@ class HBV(Model):
             },
         }
 
-        # Glacier covers (Socont-style): the glacierized area sends its rain + snowmelt
-        # and its ice melt to two catchment-level linear reservoirs draining directly to
-        # the outlet, bypassing the soil routine. The snow on the glacier still melts
-        # through its (generated) snowpack; ice melt is suppressed while snow covers it
-        # (no_melt_when_snow_cover). The two reservoirs are shared by all glacier
-        # covers.
-        glacier_melt_process = self.options["snow_melt_process"]
-        for glacier_name in self._glacier_cover_names:
-            self.structure[glacier_name] = {
-                "attach_to": "hydro_unit",
-                "kind": "land_cover",
-                "parameters": {
-                    "no_melt_when_snow_cover": True,
-                    "infinite_storage": self.options["glacier_infinite_storage"],
-                },
-                "processes": {
-                    "outflow_rain_snowmelt": {
-                        "kind": "outflow:direct",
-                        "target": "glacier_area_rain_snowmelt_storage",
-                        "instantaneous": True,
-                    },
-                    "melt": {
-                        "kind": glacier_melt_process,
-                        "target": "glacier_area_icemelt_storage",
-                        "instantaneous": True,
-                    },
-                },
-            }
-        if self._glacier_cover_names:
-            self.structure["glacier_area_rain_snowmelt_storage"] = {
-                "attach_to": "sub_basin",
-                "kind": "storage",
-                "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": "outlet"},
-                },
-            }
-            self.structure["glacier_area_icemelt_storage"] = {
-                "attach_to": "sub_basin",
-                "kind": "storage",
-                "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": "outlet"},
-                },
-            }
+        # Glacier covers (Socont-style by default): delegated to the pluggable glacier
+        # module. The glacierized area sends its rain + snowmelt and its ice melt to
+        # catchment-level reservoirs draining to the outlet, bypassing the soil routine.
+        # The snow on the glacier still melts through its (generated) snowpack; ice melt
+        # is suppressed while snow covers it.
+        self._glacier_module = get_glacier_module(self.options["glacier_module"])
+        self._glacier_module.add_bricks(
+            self.structure,
+            self._glacier_cover_names,
+            melt_process=self.options["snow_melt_process"],
+            options=self.options,
+        )
 
         # Lake covers: an exclusive open-water cover with no soil/snow. All precip
         # enters a lake storage directly; it evaporates at the potential rate and drains
@@ -306,49 +281,36 @@ class HBV(Model):
           with no snow (all precipitation enters the open water directly).
 
         Units are auto-assigned (in the C++ core) to the variant matching their
-        present covers. With neither glacier nor lake there is a single variant.
+        present covers. With neither glacier nor lake there is a single variant. The
+        glacier split (and the glacier formulation) is the shared, pluggable glacier
+        module; the lake variant is HBV-specific.
         """
         lake_brick_keys = set(self._lake_cover_names) | {
             f"{name}_storage" for name in self._lake_cover_names
         }
-        glacier_land_cover_keys = set(self._glacier_cover_names)
 
-        def names_types(predicate):
-            names = [
-                name
-                for name, cover_type in zip(
-                    self.land_cover_names, self.land_cover_types
-                )
-                if predicate(cover_type)
-            ]
-            types = [
-                cover_type
-                for cover_type in self.land_cover_types
-                if predicate(cover_type)
-            ]
-            return names, types
-
-        # Base: soil covers only (no glacier land covers, no lake bricks). The glacier
-        # sub-basin reservoirs stay in the base so the sub-basin owns and shares them.
-        base_names, base_types = names_types(lambda t: t not in ("lake", "glacier"))
-        base_structure = {
+        # The non-lake covers/bricks (soil covers, plus the glacier covers and the
+        # glacier reservoirs the module added). The shared glacier helper splits this
+        # into a glacier-free base and a with-glacier variant.
+        non_lake_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "lake"
+        ]
+        non_lake_types = [
+            cover_type for cover_type in self.land_cover_types if cover_type != "lake"
+        ]
+        non_lake_structure = {
             key: brick
             for key, brick in self.structure.items()
-            if key not in lake_brick_keys and key not in glacier_land_cover_keys
+            if key not in lake_brick_keys
         }
-        variants: list[tuple] = [(base_names, base_types, base_structure)]
+        variants: list[tuple] = self._split_glacier_variants(
+            non_lake_names, non_lake_types, non_lake_structure
+        )
 
-        # With-glacier variant: soil + glacier covers (everything except the lakes).
-        if self._glacier_cover_names:
-            glacier_names, glacier_types = names_types(lambda t: t != "lake")
-            glacier_structure = {
-                key: brick
-                for key, brick in self.structure.items()
-                if key not in lake_brick_keys
-            }
-            variants.append((glacier_names, glacier_types, glacier_structure))
-
-        # Lake variant: only the lake bricks, with no snow.
+        # Lake variant: only the lake bricks, with no snow (all precipitation enters
+        # the open water directly).
         if self._lake_cover_names:
             lake_names = list(self._lake_cover_names)
             lake_types = ["lake"] * len(lake_names)
@@ -410,14 +372,11 @@ class HBV(Model):
             alias = "k_lake" if single_lake else f"k_lake_{lake_name}"
             self.parameter_aliases[f"{lake_name}_storage:response_factor"] = [alias]
 
-        # Glacier-area reservoir response factors (Socont names).
-        if self._glacier_cover_names:
-            self.parameter_aliases[
-                "glacier_area_rain_snowmelt_storage:response_factor"
-            ] = ["k_snow"]
-            self.parameter_aliases["glacier_area_icemelt_storage:response_factor"] = [
-                "k_ice"
-            ]
+        # Glacier-area reservoir response factors, from the (pluggable) glacier module.
+        if self._glacier_module is not None:
+            self.parameter_aliases.update(
+                self._glacier_module.parameter_aliases(self._glacier_cover_names)
+            )
 
     def _define_parameter_constraints(self) -> None:
         """Define parameter constraints (none required for HBV)."""

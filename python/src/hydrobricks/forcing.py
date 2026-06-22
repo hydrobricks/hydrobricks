@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from cftime import num2date
 
-from hydrobricks import Dataset, pyet
 from hydrobricks._constants import TO_RAD
 from hydrobricks._exceptions import (
     ConfigurationError,
@@ -17,7 +16,7 @@ from hydrobricks._exceptions import (
     DependencyError,
     ForcingError,
 )
-from hydrobricks._optional import HAS_NETCDF, HAS_PYET, StrEnumClass
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET, Dataset, StrEnumClass, pyet
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 

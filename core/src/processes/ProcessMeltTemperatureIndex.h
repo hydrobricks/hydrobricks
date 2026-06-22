@@ -5,6 +5,15 @@
 #include "Includes.h"
 #include "ProcessMelt.h"
 
+/**
+ * Enhanced temperature-index melt with a radiation term (Hock, 1999).
+ *
+ * Adds a solar-radiation contribution to the degree-day melt:
+ *   M = (T − TT) × (MF + r × I)    for T ≥ TT, else 0
+ *
+ * MF is the melt factor, r the radiation coefficient and I the incoming solar
+ * radiation. Requires temperature and solar_radiation forcings.
+ */
 class ProcessMeltTemperatureIndex : public ProcessMelt {
   public:
     explicit ProcessMeltTemperatureIndex(WaterContainer* container);

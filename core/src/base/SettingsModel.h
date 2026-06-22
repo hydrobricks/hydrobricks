@@ -276,6 +276,36 @@ class SettingsModel {
     void AddSplitterOutput(const string& target, const ContentType fluxType = ContentType::Water);
 
     /**
+     * Change the target of an existing output of the selected splitter.
+     *
+     * @param currentTarget current target of the output.
+     * @param newTarget new target of the output.
+     */
+    void ChangeSplitterOutputTarget(const string& currentTarget, const string& newTarget);
+
+    /**
+     * Change the target of an existing output of the selected splitter if such an output
+     * exists (no-op otherwise). Used when some covers may already have been redirected.
+     *
+     * @param currentTarget current target of the output.
+     * @param newTarget new target of the output.
+     * @return true if an output was changed.
+     */
+    bool ChangeSplitterOutputTargetIfFound(const string& currentTarget, const string& newTarget);
+
+    /**
+     * Generate a canopy interception store on the rain path of a land cover, upstream of
+     * its snowpack: the cover's rain is routed into the canopy (capacity = interception
+     * capacity), which evaporates at the potential rate and releases the excess as
+     * throughfall to the given target. Must be called before the snowpacks so the canopy
+     * (a surface component) is declared/computed before the snowpack it feeds.
+     *
+     * @param coverName the land cover bearing the canopy.
+     * @param throughfallTarget the brick receiving the throughfall (e.g. the snowpack).
+     */
+    void GenerateCanopyInterception(const string& coverName, const string& throughfallTarget);
+
+    /**
      * Add logging to a given item.
      *
      * @param itemName name of the item to log.
@@ -353,8 +383,30 @@ class SettingsModel {
      *
      * @param snowMeltProcess name of the snow melt process.
      * @param outflowProcess name of the outflow process.
+     * @param rainToSnowpack route the rain to the snowpack liquid water storage instead of the land cover
+     *                       (as in the original HBV snow routine). The rain is then retained in the snowpack
+     *                       (up to the holding capacity) and exposed to refreezing; when there is no snow,
+     *                       the outflow process releases it to the land cover within the same time step.
      */
-    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess);
+    void GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
+                                             bool rainToSnowpack = false);
+
+    /**
+     * Add a refreezing process to all snowpacks (water container to snow container).
+     * Requires snowpacks generated with water retention.
+     *
+     * @param refreezingProcess name of the refreezing process.
+     */
+    void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
+
+    /**
+     * Add a new (empty) model-structure variant and select it. Hydro units can be
+     * assigned to it via HydroUnit::SetStructureId(). Subsequent generate/add calls
+     * populate the newly selected structure.
+     *
+     * @return the ID of the newly created structure.
+     */
+    int AddStructure();
 
     /**
      * Select a structure by its ID.
@@ -640,11 +692,18 @@ class SettingsModel {
     }
 
     /**
-     * Get the names of the land cover bricks.
+     * Get the names of the land cover bricks (union across all structure variants).
      *
      * @return names of the land cover bricks.
      */
     vecStr GetLandCoverBricksNames() const;
+
+    /**
+     * Get the land cover brick names of the currently selected structure only.
+     *
+     * @return land cover brick names of the selected structure.
+     */
+    vecStr GetSelectedStructureLandCoverNames() const;
 
     /**
      * Get the sub basin brick settings by index.
@@ -751,6 +810,13 @@ class SettingsModel {
     void Validate() const;
 
   protected:
+    /**
+     * Try to set a parameter value within the currently selected structure only.
+     * Returns true if the component was found (or, for a 'type:' component, handled)
+     * in that structure; false otherwise. No logging on miss.
+     */
+    bool SetParameterValueInSelectedStructure(const string& component, const string& name, float value);
+
     bool _logAll;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;

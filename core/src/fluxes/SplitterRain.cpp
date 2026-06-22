@@ -2,7 +2,8 @@
 
 SplitterRain::SplitterRain()
     : Splitter(),
-      _precipitation(nullptr) {}
+      _precipitation(nullptr),
+      _rainCorrectionFactor(nullptr) {}
 
 bool SplitterRain::IsValid() const {
     if (_outputs.size() != 1) {
@@ -13,8 +14,8 @@ bool SplitterRain::IsValid() const {
     return true;
 }
 
-void SplitterRain::SetParameters(const SplitterSettings&) {
-    //
+void SplitterRain::SetParameters(const SplitterSettings& splitterSettings) {
+    _rainCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "rain_correction_factor");
 }
 
 void SplitterRain::AttachForcing(Forcing* forcing) {
@@ -34,5 +35,5 @@ double* SplitterRain::GetValuePointer(const string& name) {
 }
 
 void SplitterRain::Compute() {
-    _outputs[0]->UpdateFlux(_precipitation->GetValue());
+    _outputs[0]->UpdateFlux(_precipitation->GetValue() * *_rainCorrectionFactor);
 }

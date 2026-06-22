@@ -105,7 +105,7 @@ class ModelSetupHelper:
             )
 
         if use_pyet:
-            forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=lat)
+            forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=lat)
         else:
             forcing.spatialize_from_station_data(variable="pet", method="constant")
 

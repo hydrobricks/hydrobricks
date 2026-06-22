@@ -5,6 +5,16 @@
 #include "Includes.h"
 #include "ProcessInfiltration.h"
 
+/**
+ * Socont infiltration into the soil storage.
+ *
+ * Splits the incoming water according to the filling ratio of the target soil
+ * storage (capacity S_max):
+ *   infiltration = in × (1 − (S/S_max)^2)
+ *
+ * The complement, in × (S/S_max)^2, is the surface runoff and must be routed by a
+ * subsequent outflow:rest process. With no target capacity the infiltration is zero.
+ */
 class ProcessInfiltrationSocont : public ProcessInfiltration {
   public:
     explicit ProcessInfiltrationSocont(WaterContainer* container);

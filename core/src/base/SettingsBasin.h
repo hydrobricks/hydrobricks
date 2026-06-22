@@ -110,6 +110,9 @@ class SettingsBasin {
 
     /**
      * Parse a NetCDF file to get the hydro unit settings.
+     *
+     * @param path path to the NetCDF file.
+     * @return true if the file was parsed successfully.
      */
     bool Parse(const string& path);
 

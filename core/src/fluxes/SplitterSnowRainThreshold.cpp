@@ -4,7 +4,9 @@ SplitterSnowRainThreshold::SplitterSnowRainThreshold()
     : Splitter(),
       _precipitation(nullptr),
       _temperature(nullptr),
-      _threshold(nullptr) {}
+      _threshold(nullptr),
+      _rainCorrectionFactor(nullptr),
+      _snowCorrectionFactor(nullptr) {}
 
 bool SplitterSnowRainThreshold::IsValid() const {
     if (_outputs.size() != 2) {
@@ -16,6 +18,8 @@ bool SplitterSnowRainThreshold::IsValid() const {
 
 void SplitterSnowRainThreshold::SetParameters(const SplitterSettings& splitterSettings) {
     _threshold = GetParameterValuePointer(splitterSettings, "threshold");
+    _rainCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "rain_correction_factor");
+    _snowCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "snow_correction_factor");
 }
 
 void SplitterSnowRainThreshold::AttachForcing(Forcing* forcing) {
@@ -39,11 +43,12 @@ double* SplitterSnowRainThreshold::GetValuePointer(const string& name) {
 }
 
 void SplitterSnowRainThreshold::Compute() {
+    double precip = _precipitation->GetValue();
     if (_temperature->GetValue() <= *_threshold) {
         _outputs[0]->UpdateFlux(0);
-        _outputs[1]->UpdateFlux(_precipitation->GetValue());
+        _outputs[1]->UpdateFlux(precip * *_snowCorrectionFactor);
     } else {
-        _outputs[0]->UpdateFlux(_precipitation->GetValue());
+        _outputs[0]->UpdateFlux(precip * *_rainCorrectionFactor);
         _outputs[1]->UpdateFlux(0);
     }
 }

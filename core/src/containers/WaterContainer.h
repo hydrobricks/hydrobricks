@@ -279,6 +279,8 @@ class WaterContainer {
 
     /**
      * Check if the water content is accessible.
+     *
+     * @return true if the content (including pending changes) is greater than zero.
      */
     virtual bool ContentAccessible() const;
 

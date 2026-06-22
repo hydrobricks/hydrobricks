@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.models as models
-import hydrobricks.plotting.plot_results as plotting
 
 logging.basicConfig(
     level=logging.INFO,
@@ -118,7 +117,7 @@ for with_snow_redistribution in [True, False]:
     forcing.spatialize_from_station_data(
         variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
     )
-    forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=46.6)
+    forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
 
     # Obs data
     obs = hb.Observations()
@@ -158,7 +157,7 @@ for with_snow_redistribution in [True, False]:
     plt.show()
 
     # Plot the snow water equivalent on a map
-    plotting.plot_map_hydro_unit_value(
+    hb.Plotter.plot_map_hydro_unit_value(
         results,
         CATCHMENT_RASTER,
         "ground_snowpack:snow_content",
@@ -170,7 +169,7 @@ for with_snow_redistribution in [True, False]:
     plt.close()
 
     # Create an animated map of the snow water equivalent
-    plotting.create_animated_map_hydro_unit_value(
+    hb.Plotter.create_animated_map_hydro_unit_value(
         results,
         CATCHMENT_RASTER,
         "ground_snowpack:snow_content",

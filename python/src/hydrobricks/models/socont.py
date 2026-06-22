@@ -6,12 +6,78 @@ from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.models import Model
+from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)
 
 
 class Socont(Model):
-    """Socont model implementation"""
+    """SOCONT glacio-hydrological model (Schaefli et al., 2005).
+
+    SOCONT (SOil CONTribution) is a conceptual model for high-mountain
+    catchments. Each hydro unit splits precipitation into rain and snow; snow and
+    glacier ice melt by a degree-day routine. On the ground land cover the
+    incoming water is split by the Socont infiltration function between a slow
+    (baseflow) reservoir and the quick surface runoff:
+
+      - slow reservoir (capacity A): linear baseflow outflow, LP-free Socont
+        evapotranspiration and a capacity overflow to the outlet; an optional
+        second soil layer (``soil_storage_nb=2``) is fed by a constant percolation,
+      - surface runoff: the infiltration excess, transformed either by a
+        kinematic-wave overland flow (``socont_runoff``) or a linear storage.
+
+    On glacierized areas, rain + snowmelt and ice melt are collected in two
+    sub-basin linear storages that drain directly to the outlet (the glacier ice
+    is treated as an infinite storage by default).
+
+    The model is integrated by the ODE solver, so the results are a continuous
+    approximation of the original discrete SOCONT formulation.
+
+    Parameters (literature names as aliases)
+    ----------------------------------------
+    a_snow : float
+        Snow melt degree-day factor [mm/d/°C].
+    a_ice : float
+        Glacier ice melt degree-day factor [mm/d/°C] (must be > a_snow).
+    A : float
+        Slow (soil) reservoir storage capacity [mm].
+    k_slow (k_slow_1) : float
+        Slow reservoir baseflow response factor [1/d].
+    k_slow_2 : float
+        Second soil-layer response factor [1/d] (only with soil_storage_nb=2;
+        must be < k_slow_1 and < k_quick).
+    beta : float
+        Quick-flow (surface runoff) coefficient [m^(4/3)/s] of the kinematic-wave
+        overland flow (surface_runoff='socont_runoff').
+    k_quick : float
+        Surface runoff response factor [1/d] when a linear storage is used instead
+        (surface_runoff='linear_storage'); must be > k_slow_1.
+    k_snow : float
+        Response factor of the glacierized-area rain + snowmelt storage [1/d].
+    k_ice : float
+        Response factor of the glacierized-area ice melt storage [1/d].
+
+    Options
+    -------
+    soil_storage_nb : int
+        Number of slow soil reservoirs, 1 (default) or 2. With 2, a constant
+        percolation feeds a second linear soil layer.
+    surface_runoff : str
+        Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
+        or 'linear_storage'.
+    snow_melt_process : str
+        Snowmelt method (default: 'melt:degree_day').
+    snow_ice_transformation : str or None
+        Snow-to-ice transformation on the glacier (default: None).
+    snow_redistribution : str or None
+        Optional snow redistribution process (e.g. 'transport:snow_slide').
+    glacier_infinite_storage : bool
+        Treat the glacier ice as an infinite storage (default: True).
+    glacier_module : str
+        Glacier formulation to plug in (default: 'gsm', the Glacier Sub-Model of
+        GSM-SOCONT: two linear reservoirs for the glacierized-area rain + snowmelt
+        and ice melt).
+    """
 
     def __init__(self, name: str = "socont", **kwargs: Any) -> None:
         super().__init__(name=name, **kwargs)
@@ -23,7 +89,8 @@ class Socont(Model):
         self.options["snow_ice_transformation"] = None
         self.options["snow_redistribution"] = None
         self.options["glacier_infinite_storage"] = True
-        self.allowed_land_cover_types = ["ground", "glacier"]
+        self.options["glacier_module"] = "gsm"
+        self.allowed_land_cover_types = ["open", "glacier"]
 
         self._set_options(kwargs)
 
@@ -55,49 +122,36 @@ class Socont(Model):
         RuntimeError
             If surface runoff option is not recognized.
         """
-        # Add surface-related processes
-        for cover_type, cover_name in zip(self.land_cover_types, self.land_cover_names):
-            if cover_type == "glacier":
-                self.structure[cover_name] = {
-                    "attach_to": "hydro_unit",
-                    "kind": "land_cover",
-                    "parameters": {
-                        "no_melt_when_snow_cover": True,
-                        "infinite_storage": self.options["glacier_infinite_storage"],
-                    },
-                    "processes": {
-                        "outflow_rain_snowmelt": {
-                            "kind": "outflow:direct",
-                            "target": "glacier_area_rain_snowmelt_storage",
-                            "instantaneous": True,
-                        },
-                        "melt": {
-                            "kind": self.options["snow_melt_process"],
-                            "target": "glacier_area_icemelt_storage",
-                            "instantaneous": True,
-                        },
-                    },
-                }
+        # Glacier-related bricks, delegated to the (pluggable) glacier module.
+        self._glacier_module = GlacierModule.get_module(self.options["glacier_module"])
+        glacier_names = [
+            cover_name
+            for cover_type, cover_name in zip(
+                self.land_cover_types, self.land_cover_names
+            )
+            if cover_type == "glacier"
+        ]
+        self._glacier_module.add_bricks(
+            self.structure,
+            glacier_names,
+            melt_process=self.options["snow_melt_process"],
+            options=self.options,
+        )
 
-        if "glacier" in self.land_cover_types:
-            # Basin storages for contributions from the glacierized area
-            self.structure["glacier_area_rain_snowmelt_storage"] = {
-                "attach_to": "sub_basin",
-                "kind": "storage",
-                "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": "outlet"}
-                },
-            }
-            self.structure["glacier_area_icemelt_storage"] = {
-                "attach_to": "sub_basin",
-                "kind": "storage",
-                "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": "outlet"}
-                },
-            }
-
-        # Infiltration and overflow
-        self.structure["ground"] = {
+        # Infiltration and overflow on the soil (open areas) land cover. The cover
+        # name follows the (single) non-glacier land cover, defaulting to 'open'; an
+        # explicit 'ground' is still accepted (kept for backward compatibility).
+        soil_cover_name = next(
+            (
+                name
+                for name, cover_type in zip(
+                    self.land_cover_names, self.land_cover_types
+                )
+                if cover_type != "glacier"
+            ),
+            "open",
+        )
+        self.structure[soil_cover_name] = {
             "attach_to": "hydro_unit",
             "kind": "land_cover",
             "processes": {
@@ -156,6 +210,22 @@ class Socont(Model):
             "processes": {"runoff": {"kind": surface_runoff_kind, "target": "outlet"}},
         }
 
+    def _define_structure_variants(
+        self,
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Make the glacier-free structure the base, adding a with-glacier variant.
+
+        When glaciers are present, the primary (base) structure is glacier-free, so
+        units with no glacier carry no glacier land-cover brick at all (instead of a
+        zero-area one); a with-glacier variant is used by glacier units. The glacier
+        reservoirs are catchment-level, so they stay in the base (which builds the
+        sub-basin) and are shared by both variants. The split (and the glacier
+        formulation) is handled by the shared, pluggable glacier module.
+        """
+        return self._split_glacier_variants(
+            self.land_cover_names, self.land_cover_types, self.structure
+        )
+
     def _define_parameter_aliases(self) -> None:
         """
         Define parameter name aliases for the Socont model.
@@ -174,10 +244,19 @@ class Socont(Model):
             "slow_reservoir:capacity": "A",
             "slow_reservoir:response_factor": ["k_slow", "k_slow_1", "k_slow1"],
             "slow_reservoir_2:response_factor": ["k_slow_2", "k_slow2"],
-            "glacier_area_rain_snowmelt_storage:response_factor": "k_snow",
-            "glacier_area_icemelt_storage:response_factor": "k_ice",
             "surface_runoff:response_factor": "k_quick",
         }
+        # Glacier reservoir response factors (k_snow, k_ice) come from the glacier
+        # module so the formulation stays self-contained and swappable.
+        glacier_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "glacier"
+        ]
+        if self._glacier_module is not None:
+            self.parameter_aliases.update(
+                self._glacier_module.parameter_aliases(glacier_names)
+            )
 
     def _define_parameter_constraints(self) -> None:
         """

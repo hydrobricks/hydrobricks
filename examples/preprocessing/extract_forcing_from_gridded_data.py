@@ -66,7 +66,7 @@ forcing.spatialize_from_gridded_data(
     dim_y="N",
     raster_hydro_units=working_dir / "unit_ids.tif",
 )
-forcing.compute_pet(method="Hamon", use=["t", "lat"])
+forcing.compute_pet(method="Oudin", use=["t", "lat"])
 
 # Save forcing to a netcdf file
 forcing.save_as(working_dir / "forcing.nc")

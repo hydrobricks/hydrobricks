@@ -75,6 +75,9 @@ class ModelSettings:
         snow_rain_process: str | None = None,
         snow_ice_transformation: str | None = None,
         snow_redistribution: str | None = None,
+        snow_water_retention_process: str | None = None,
+        snow_refreezing_process: str | None = None,
+        rain_to_snowpack: bool = False,
     ) -> None:
         """
         Generate basic elements
@@ -96,6 +99,20 @@ class ModelSettings:
             Snow and ice transformation method (optional)
         snow_redistribution
             Snow redistribution method (optional)
+        snow_water_retention_process
+            Outflow process of the snowpack liquid water storage (optional). When
+            provided, the snowpacks are generated with liquid water retention: the
+            melt water is kept in the snowpack water container and released by the
+            given process (e.g. 'outflow:snow_holding').
+        snow_refreezing_process
+            Refreezing process of the retained liquid water (optional; requires
+            snow_water_retention_process). E.g. 'refreeze:degree_day'.
+        rain_to_snowpack
+            Route the rain to the snowpack liquid water storage instead of the
+            land cover (requires snow_water_retention_process).
+            The rain is retained in the snowpack (up to the holding capacity)
+            and exposed to refreezing; without snow, it reaches the land cover
+            within the same time step.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -112,17 +129,60 @@ class ModelSettings:
             splitter_type = "snow_rain:linear"
         self.settings.generate_precipitation_splitters(with_snow, splitter_type)
 
-        # Add default ground land cover
-        self.settings.add_land_cover_brick("ground", "generic_land_cover")
-
-        # Add other specific land covers
+        # Add the land covers, each by its own name: generic-behaviour covers (incl.
+        # forest, which is generic plus a canopy) map to the generic_land_cover brick,
+        # while special covers (e.g. glacier) keep their type. Several generic covers
+        # can coexist (e.g. open and forest), each getting its own snowpack and
+        # soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type not in ["ground", "generic_land_cover"]:
+            if cover_type in ["ground", "generic_land_cover", "open", "forest", "lake"]:
+                self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
+            else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
+
+        # Forest canopy interception, on the rain path upstream of the snowpack.
+        # Generated before the snowpacks so the canopy (a surface component) is
+        # declared/computed before the snowpack it feeds; the throughfall rejoins the
+        # original rain target (the snowpack when the rain is routed to it,
+        # otherwise the land cover).
+        rain_to_snowpack_active = with_snow and rain_to_snowpack
+        for cover_type, cover_name in zip(land_cover_types, land_cover_names):
+            if cover_type == "forest":
+                if rain_to_snowpack_active:
+                    throughfall_target = f"{cover_name}_snowpack"
+                else:
+                    throughfall_target = cover_name
+                self.settings.generate_canopy_interception(
+                    cover_name, throughfall_target
+                )
 
         # Snowpack
         if with_snow:
-            self.settings.generate_snowpacks(snow_melt_process)
+            if snow_refreezing_process and not snow_water_retention_process:
+                raise ConfigurationError(
+                    "Snow refreezing requires a snow water retention process.",
+                    item_name="snow_refreezing_process",
+                    item_value=snow_refreezing_process,
+                    reason="Missing snow water retention process",
+                )
+            if rain_to_snowpack and not snow_water_retention_process:
+                raise ConfigurationError(
+                    "Routing the rain to the snowpacks requires a snow water "
+                    "retention process.",
+                    item_name="rain_to_snowpack",
+                    item_value=rain_to_snowpack,
+                    reason="Missing snow water retention process",
+                )
+            if snow_water_retention_process:
+                self.settings.generate_snowpacks_with_water_retention(
+                    snow_melt_process,
+                    snow_water_retention_process,
+                    rain_to_snowpack,
+                )
+                if snow_refreezing_process:
+                    self.settings.add_snowpack_refreezing(snow_refreezing_process)
+            else:
+                self.settings.generate_snowpacks(snow_melt_process)
             if snow_ice_transformation:
                 self.settings.add_snow_ice_transformation(snow_ice_transformation)
             if snow_redistribution:
@@ -212,6 +272,17 @@ class ModelSettings:
         if instantaneous:
             self.settings.set_process_outputs_as_instantaneous()
 
+    def add_process_output(self, target: str) -> None:
+        """
+        Add an extra output target to the most recently added process.
+
+        Parameters
+        ----------
+        target
+            Target brick of the additional output.
+        """
+        self.settings.add_process_output(target)
+
     def add_brick_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"
     ) -> None:
@@ -264,6 +335,20 @@ class ModelSettings:
             Name of the item
         """
         self.settings.add_logging_to(item)
+
+    def add_structure(self) -> int:
+        """
+        Add a new (empty) model-structure variant and select it.
+
+        Subsequent structure-building calls populate the newly selected structure.
+        Units are auto-assigned (in the core) to the variant matching their land
+        covers.
+
+        Returns
+        -------
+        The id of the newly created structure.
+        """
+        return self.settings.add_structure()
 
     def set_process_outputs_as_instantaneous(self) -> None:
         """Set all process outputs as instantaneous"""

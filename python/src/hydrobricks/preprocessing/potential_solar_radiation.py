@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks import rasterio, rxr, xr
 from hydrobricks._constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,
@@ -28,7 +27,7 @@ from hydrobricks._exceptions import (
     DependencyError,
     ModelError,
 )
-from hydrobricks._optional import HAS_RASTERIO, HAS_XARRAY
+from hydrobricks._optional import HAS_RASTERIO, HAS_XARRAY, rasterio, rxr, xr
 
 logger = logging.getLogger(__name__)
 

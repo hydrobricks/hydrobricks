@@ -33,6 +33,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def(py::init<>())
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
         .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
+        .def("add_structure", &SettingsModel::AddStructure,
+             "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
@@ -45,6 +47,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "name"_a)
         .def("add_brick_process", &SettingsModel::AddBrickProcess, "Add a process to a brick.", "name"_a, "kind"_a,
              "target"_a = "", "log"_a = false)
+        .def(
+            "add_process_output",
+            [](SettingsModel& settings, const string& target) { settings.AddProcessOutput(target); },
+            "Add an output target to the selected process.", "target"_a)
         .def("add_process_parameter", &SettingsModel::AddProcessParameter, "Add a process parameter.", "name"_a,
              "value"_a, "kind"_a = "constant")
         .def("add_process_forcing", &SettingsModel::AddProcessForcing, "Add a process forcing.", "name"_a)
@@ -57,6 +63,14 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true, "splitter_type"_a = "snow_rain:linear")
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
+        .def("generate_snowpacks_with_water_retention", &SettingsModel::GenerateSnowpacksWithWaterRetention,
+             "Generate the snowpack with liquid water retention.", "snow_melt_process"_a, "outflow_process"_a,
+             "rain_to_snowpack"_a = false)
+        .def("generate_canopy_interception", &SettingsModel::GenerateCanopyInterception,
+             "Generate a canopy interception store on a cover's rain path.", "cover_name"_a, "throughfall_target"_a)
+        .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
+             "Add a refreezing process to the snowpacks (requires water retention).",
+             "refreezing_process"_a = "refreeze:degree_day")
         .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",

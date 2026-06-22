@@ -43,6 +43,7 @@ from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model import Model
 from hydrobricks.observations import Observations
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.plotter import Plotter
 from hydrobricks.results import Results
 from hydrobricks.time_series import TimeSeries
 from hydrobricks.trainer import evaluate
@@ -67,6 +68,7 @@ __all__ = (
     "Catchment",
     "Results",
     "Model",
+    "Plotter",
     "evaluate",
     # Logging functions
     "init",

@@ -7,12 +7,11 @@ from typing import Callable, Hashable
 import numpy as np
 import pandas as pd
 
-from hydrobricks import spotpy
 from hydrobricks._exceptions import (
     ConfigurationError,
     DependencyError,
 )
-from hydrobricks._optional import HAS_SPOTPY
+from hydrobricks._optional import HAS_SPOTPY, spotpy
 from hydrobricks._utils import dump_config_file
 
 
@@ -127,6 +126,40 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0,
             max=4,
             default=2,
+            mandatory=False,
+        ),
+    ],
+    # Precipitation correction factors (HBV RFCF/SFCF) applied at the snow/rain
+    # splitter. Default 1.0 = no correction; optional (not mandatory).
+    "correction:snow_rain": [
+        ParamSpec(
+            name="rain_correction_factor",
+            unit="-",
+            aliases=["rfcf", "rcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_correction_factor",
+            unit="-",
+            aliases=["sfcf", "scf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # Rainfall correction factor for no-snow models (rain-only splitter).
+    "correction:rain": [
+        ParamSpec(
+            name="rain_correction_factor",
+            unit="-",
+            aliases=["rfcf", "rcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
             mandatory=False,
         ),
     ],
@@ -284,12 +317,113 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # HBV soil moisture recharge split (beta function)
+    "infiltration:hbv": [
+        ParamSpec(
+            name="beta",
+            unit="-",
+            aliases=["beta"],
+            min=1,
+            max=6,
+            default=2.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV actual evapotranspiration (limit LP as a fraction of FC)
+    "et:hbv": [
+        ParamSpec(
+            name="lp",
+            unit="-",
+            aliases=["lp"],
+            min=0.3,
+            max=1,
+            default=0.9,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="et_correction_factor",
+            unit="-",
+            aliases=["cevpf", "etcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
+    "runoff:hbv": [
+        ParamSpec(
+            name="response_factor",
+            unit="mm^(-alpha)/d",
+            aliases=["k_uz"],
+            min=0.0001,
+            max=1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="alpha",
+            unit="-",
+            aliases=["alpha", "alfa"],
+            min=0,
+            max=3,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # HBV-96 capillary transport (upper zone -> soil moisture)
+    "capillary:hbv": [
+        ParamSpec(
+            name="max_capillary_flux",
+            unit="mm/d",
+            aliases=["cflux"],
+            min=0,
+            max=3,
+            default=0.0,
+            mandatory=False,
+        ),
+    ],
+    # HBV triangular unit hydrograph (MAXBAS)
+    "routing:hbv": [
+        ParamSpec(
+            name="maxbas",
+            unit="d",
+            aliases=["maxbas"],
+            min=1,
+            max=10,
+            default=1.0,
+            mandatory=True,
+        ),
+    ],
+    # Snowpack liquid water refreezing (degree-day; HBV)
+    "refreeze:degree_day": [
+        ParamSpec(
+            name="refreezing_factor",
+            unit="-",
+            aliases=["cfr"],
+            min=0,
+            max=0.1,
+            default=0.05,
+            mandatory=False,
+        ),
+    ],
+    # Snowpack liquid water holding capacity (HBV)
+    "outflow:snow_holding": [
+        ParamSpec(
+            name="water_holding_capacity",
+            unit="-",
+            aliases=["cwh", "whc"],
+            min=0,
+            max=0.2,
+            default=0.1,
+            mandatory=False,
+        ),
+    ],
     # GR4J routing process (x2, x3, x4).
     "routing:gr4j": [
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -298,7 +432,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -307,7 +441,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -319,7 +453,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_factor",
             unit="mm/d",
-            aliases=["X2", "x2"],
+            aliases=["X2"],
             min=-10,
             max=5,
             default=0.0,
@@ -328,7 +462,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="routing_capacity",
             unit="mm",
-            aliases=["X3", "x3"],
+            aliases=["X3"],
             min=1,
             max=500,
             default=90.0,
@@ -337,7 +471,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="uh_base_time",
             unit="d",
-            aliases=["X4", "x4"],
+            aliases=["X4"],
             min=0.5,
             max=4,
             default=1.7,
@@ -346,7 +480,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exchange_threshold",
             unit="-",
-            aliases=["X5", "x5"],
+            aliases=["X5"],
             min=-2,
             max=2,
             default=0.0,
@@ -355,7 +489,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="exp_store_coeff",
             unit="mm",
-            aliases=["X6", "x6"],
+            aliases=["X6"],
             min=0.05,
             max=20,
             default=4.0,
@@ -1220,16 +1354,26 @@ class ParameterSet:
         """
         # General parameters
         self._generate_snow_parameters(options, land_cover_types, land_cover_names)
+        self._generate_precipitation_correction_parameters(options)
 
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
+
+        # Parameters for the forest canopies (interception capacity)
+        self._generate_canopy_parameters(land_cover_types, land_cover_names)
 
         # Parameters for the different bricks
         for key, brick in structure.items():
             self._generate_brick_parameters(key, brick)
             self._generate_process_parameters(key, brick)
 
-    def _register(self, component: str, spec: ParamSpec, **overrides: dict) -> None:
+    def _register(
+        self,
+        component: str,
+        spec: ParamSpec,
+        alias_suffix: str = "",
+        **overrides: dict,
+    ) -> None:
         """Register a parameter based on a ParamSpec.
 
         Parameters
@@ -1238,6 +1382,11 @@ class ParameterSet:
             Component name used in define_parameter.
         spec: ParamSpec
             The static specification.
+        alias_suffix: str
+            Suffix appended to every alias of the spec (e.g. '_forest'). Used when
+            the same process/brick parameter exists on several land covers, so the
+            literature aliases (beta, lp, ...) stay unique per cover. Empty by
+            default (single occurrence keeps the bare alias).
         overrides: dict
             Any field accepted by define_parameter to override spec values.
         """
@@ -1246,7 +1395,44 @@ class ParameterSet:
         for key, val in overrides.items():
             if key in kwargs:
                 kwargs[key] = val
+        if alias_suffix and kwargs.get("aliases"):
+            kwargs["aliases"] = [alias + alias_suffix for alias in kwargs["aliases"]]
         self.define_parameter(component=component, **kwargs)
+
+    def _generate_canopy_parameters(
+        self, land_cover_types: list, land_cover_names: list
+    ) -> None:
+        """Register the interception capacity of each forest canopy.
+
+        The canopy bricks (``<cover>_canopy``) are created in the C++ base structure
+        (like the snowpacks), so their capacity is registered here rather than from
+        the model structure dict. The literature alias is ``ic`` (interception
+        capacity), suffixed per cover (``ic_<cover>``) when several forests coexist.
+
+        Parameters
+        ----------
+        land_cover_types
+            The land cover types.
+        land_cover_names
+            The land cover names.
+        """
+        forest_covers = [
+            name
+            for cover_type, name in zip(land_cover_types, land_cover_names)
+            if cover_type == "forest"
+        ]
+        multi = len(forest_covers) > 1
+        for cover_name in forest_covers:
+            self._register(
+                component=f"{cover_name}_canopy",
+                spec=BRICK_PARAM_SPECS["capacity"],
+                alias_suffix=f"_{cover_name}" if multi else "",
+                aliases=["ic"],
+                min_val=0.0,
+                max_val=10.0,
+                default=2.0,
+                mandatory=False,
+            )
 
     def _generate_process_parameters(self, key: str, brick: dict) -> None:
         """
@@ -1262,12 +1448,15 @@ class ParameterSet:
         if "processes" not in brick:
             return
 
+        alias_suffix = brick.get("alias_suffix", "")
+
         skip = {
             # No parameters
             "infiltration:socont",
             "outflow:rest",
             "outflow:direct",
             "et:socont",
+            "et:open_water",
             "overflow",
             "interception:gr4j",
             "infiltration:gr4j",
@@ -1287,7 +1476,7 @@ class ParameterSet:
                 continue
             if kind in PROCESS_PARAM_SPECS:
                 for spec in PROCESS_PARAM_SPECS[kind]:
-                    self._register(component=key, spec=spec)
+                    self._register(component=key, spec=spec, alias_suffix=alias_suffix)
             else:
                 raise ConfigurationError(
                     f"The process {kind} is not recognised in parameters generation.",
@@ -1309,13 +1498,18 @@ class ParameterSet:
         if "parameters" not in brick:
             return
 
+        alias_suffix = brick.get("alias_suffix", "")
         skip = {"no_melt_when_snow_cover", "infinite_storage"}
 
         for param_name, _ in brick["parameters"].items():
             if param_name in skip:
                 continue
             if param_name in BRICK_PARAM_SPECS:
-                self._register(component=key, spec=BRICK_PARAM_SPECS[param_name])
+                self._register(
+                    component=key,
+                    spec=BRICK_PARAM_SPECS[param_name],
+                    alias_suffix=alias_suffix,
+                )
             else:
                 raise ConfigurationError(
                     f"Parameter {param_name} is not recognised in params generation.",
@@ -1473,6 +1667,33 @@ class ParameterSet:
                     "r_snow", "<", alias_map["radiation_coefficient"][0]
                 )
 
+    def _generate_precipitation_correction_parameters(self, options: dict) -> None:
+        """Register the optional precipitation correction factors.
+
+        The correction factors (HBV RFCF/SFCF) live on the precipitation splitter
+        and default to 1.0 (no correction). The relevant splitter depends on
+        whether the model has snow: the snow/rain splitter ('snow_rain_transition')
+        carries both the rain and snow factors, whereas the rain-only splitter
+        ('rain', used by no-snow models) carries only the rain factor. This mirrors
+        the splitter generation in SettingsModel::GeneratePrecipitationSplitters.
+
+        Parameters
+        ----------
+        options
+            Model options dictionary (uses 'snow_melt_process'/'snow_rain_process'
+            to decide whether snow is configured).
+        """
+        srp = options.get("snow_rain_process")
+        smp = options.get("snow_melt_process")
+        with_snow = srp is not None or smp is not None
+
+        if with_snow:
+            for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
+                self._register(component="snow_rain_transition", spec=spec)
+        else:
+            for spec in PROCESS_PARAM_SPECS["correction:rain"]:
+                self._register(component="rain", spec=spec)
+
     def _generate_snow_parameters(
         self, options: dict, land_cover_types: list[str], land_cover_names: list[str]
     ) -> None:
@@ -1533,10 +1754,10 @@ class ParameterSet:
                         }
                     elif smp == "melt:cemaneige":
                         snow_alias_map = {
-                            "degree_day_factor": ["Kf", "kf"],
-                            "cold_content_factor": ["CTG", "ctg"],
-                            "melting_temperature": ["Tmelt", "tmelt"],
-                            "mean_annual_snow": ["Cn", "cn"],
+                            "degree_day_factor": ["Kf"],
+                            "cold_content_factor": ["CTG"],
+                            "melting_temperature": ["Tmelt"],
+                            "mean_annual_snow": ["Cn"],
                         }
                     for spec in PROCESS_PARAM_SPECS[smp]:
                         component = "type:snowpack"
@@ -1555,6 +1776,24 @@ class ParameterSet:
                         item_value=smp,
                         reason="Unknown process",
                     )
+
+            # Snowpack liquid water retention and refreezing (e.g., HBV)
+            for option_key in [
+                "snow_water_retention_process",
+                "snow_refreezing_process",
+            ]:
+                process = options.get(option_key)
+                if process is None:
+                    continue
+                if process not in PROCESS_PARAM_SPECS:
+                    raise ConfigurationError(
+                        f"The {option_key} option {process} is not recognised.",
+                        item_name=option_key,
+                        item_value=process,
+                        reason="Unknown process",
+                    )
+                for spec in PROCESS_PARAM_SPECS[process]:
+                    self._register(component="type:snowpack", spec=spec)
 
             # Snow/ice transformation
             if "snow_ice_transformation" in options:
@@ -1698,9 +1937,15 @@ class ParameterSet:
         if aliases is None:
             return
 
-        existing_aliases = self.parameters.explode("aliases")["aliases"].tolist()
+        # Aliases must be unique case-insensitively, as the parameter lookup is
+        # case-insensitive.
+        existing_aliases = [
+            alias.lower()
+            for alias in self.parameters.explode("aliases")["aliases"].tolist()
+            if isinstance(alias, str)
+        ]
         for alias in aliases:
-            if alias in existing_aliases:
+            if alias.lower() in existing_aliases:
                 raise ConfigurationError(
                     f'The alias "{alias}" already exists. It must be unique.',
                     item_name=alias,
@@ -1836,11 +2081,13 @@ class ParameterSet:
         ConfigurationError
             If the parameter is not found and raise_exception is True.
         """
+        # The matching is case-insensitive (e.g. 'PERC' and 'perc' are equivalent).
+        name_lower = name.lower()
         for index, row in self.parameters.iterrows():
             if (
                 row["aliases"] is not None
-                and name in row["aliases"]
-                or name == row["component"] + ":" + row["name"]
+                and name_lower in (alias.lower() for alias in row["aliases"])
+                or name_lower == (row["component"] + ":" + row["name"]).lower()
             ):
                 return index
 

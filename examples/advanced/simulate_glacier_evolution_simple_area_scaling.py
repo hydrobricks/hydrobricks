@@ -116,7 +116,7 @@ forcing.spatialize_from_station_data(
 forcing.spatialize_from_station_data(
     variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
 )
-forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=47.3)
+forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=47.3)
 
 # Model setup
 socont.setup(

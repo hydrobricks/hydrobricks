@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
-from hydrobricks import spotpy
 from hydrobricks._exceptions import ConfigurationError, DataError, ModelError
+from hydrobricks._optional import spotpy
 
 logger = logging.getLogger(__name__)
 

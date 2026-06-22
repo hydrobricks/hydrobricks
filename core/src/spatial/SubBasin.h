@@ -199,6 +199,13 @@ class SubBasin {
     [[nodiscard]] vecDouble GetHydroUnitAreas() const;
 
     /**
+     * Get the model-structure ID of each hydro unit in the sub-basin.
+     *
+     * @return A vector of hydro unit structure IDs (defaults to 1).
+     */
+    [[nodiscard]] vecInt GetHydroUnitStructureIds() const;
+
+    /**
      * Get the number of bricks in the sub-basin.
      *
      * @return The number of bricks.
@@ -297,7 +304,7 @@ class SubBasin {
     double* GetValuePointer(std::string_view name);
 
     /**
-     * GCompute the outlet discharge for the sub-basin.
+     * Compute the outlet discharge for the sub-basin.
      *
      * @return True if the computation was successful, false otherwise.
      */

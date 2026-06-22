@@ -1,7 +1,9 @@
+import datetime
 import os.path
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import hydrobricks as hb
@@ -23,6 +25,109 @@ SITTER_DISCHARGE = TEST_FILES_DIR / "ch_sitter_appenzell" / "discharge.csv"
 def test_socont_creation():
     model = models.Socont()
     assert model.name == "socont"
+
+
+def test_socont_glacier_brick_absent_where_no_glacier(tmp_path):
+    """Units with no glacier use a glacier-free structure variant and therefore
+    carry no glacier brick at all (logged as NaN), while glacier units do."""
+    # Mixed catchment: bands 1 and 3 have no glacier; bands 2 and 4 do.
+    hu_csv = tmp_path / "hu.csv"
+    hu_csv.write_text(
+        "id,elevation,area_ground,area_glacier\n"
+        "-,m,km2,km2\n"
+        "1,2000,2.0,0.0\n"
+        "2,2500,1.0,1.0\n"
+        "3,3000,2.0,0.0\n"
+        "4,3500,0.5,1.5\n"
+    )
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["ground", "glacier"],
+        land_cover_names=["ground", "glacier"],
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"ground": "area_ground", "glacier": "area_glacier"},
+    )
+
+    socont = models.Socont(
+        surface_runoff="linear_storage",
+        record_all=True,
+        land_cover_names=["ground", "glacier"],
+        land_cover_types=["ground", "glacier"],
+    )
+    parameters = socont.generate_parameters()
+    parameters.set_values(
+        {
+            "a_snow": 3,
+            "a_ice": 5,
+            "A": 200,
+            "k_slow": 0.001,
+            "k_quick": 0.05,
+            "k_snow": 0.1,
+            "k_ice": 0.2,
+        }
+    )
+    parameters.add_data_parameter("precip_correction_factor", 1)
+    parameters.add_data_parameter("precip_gradient", 0.05)
+    parameters.add_data_parameter("temp_gradients", -0.6)
+
+    # Synthetic uniform forcing over a short period.
+    meteo = tmp_path / "meteo.csv"
+    lines = ["date,precip(mm/day),temp(C),pet(mm/day)"]
+    start = datetime.date(2020, 1, 1)
+    for i in range(40):
+        d = start + datetime.timedelta(days=i)
+        lines.append(f"{d.strftime('%d/%m/%Y')},5.0,3.0,1.0")
+    meteo.write_text("\n".join(lines) + "\n")
+
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        meteo,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "temperature": "temp(C)",
+            "pet": "pet(mm/day)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=2500, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=2500, gradient=0.0
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    socont.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date="2020-01-01",
+        end_date="2020-02-09",
+    )
+    socont.run(parameters=parameters, forcing=forcing)
+    socont.dump_outputs(str(out))
+
+    results = hb.Results(str(out / "results.nc"))
+    structure_ids = results.get_hydro_units_structure_ids()
+    glacier_areas = results.get_land_cover_areas("glacier")  # (units, time)
+    glacier_state = results.get_hydro_units_values(
+        "glacier:water_content"
+    )  # (units, time)
+    n_units = len(results.hydro_units_ids)
+
+    # Two structure variants are in use (with-glacier and glacier-free).
+    assert len(set(structure_ids.tolist())) == 2
+
+    # The glacier brick exists exactly where glacier is present; elsewhere it is
+    # omitted (NaN), not a zero-area brick.
+    for i in range(n_units):
+        has_glacier = not bool(np.all(np.isnan(glacier_areas[i, :])))
+        brick_present = not bool(np.all(np.isnan(glacier_state[i, :])))
+        assert has_glacier == brick_present
 
 
 def test_socont_creation_with_soil_storage_nb():

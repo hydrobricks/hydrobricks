@@ -15,6 +15,17 @@
 
 class FluxToBrick;
 
+/**
+ * Gravitational snow redistribution (SnowSlide; Bernhardt & Schulz, 2010).
+ *
+ * Moves snow exceeding a slope-dependent holding capacity to downslope hydro
+ * units. The holding threshold (as a snow depth) decreases with the slope:
+ *   D_hold = coeff × slope^exp    (clamped to [min_snow_holding_depth, max_snow_depth])
+ *
+ * The excess SWE (depth above D_hold, converted back to SWE) is distributed over
+ * the connected outputs by their weights and target area fractions, capped at
+ * 1000 mm and skipped where the target snowpack is already over-accumulated.
+ */
 class ProcessLateralSnowSlide : public ProcessLateral {
   public:
     explicit ProcessLateralSnowSlide(WaterContainer* container);

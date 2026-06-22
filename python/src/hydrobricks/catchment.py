@@ -9,9 +9,17 @@ from typing import Any, Callable, TypeVar
 import numpy as np
 import pandas as pd
 
-from hydrobricks import gpd, pyproj, rasterio, shapely
 from hydrobricks._exceptions import ConfigurationError, DataError
-from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY
+from hydrobricks._optional import (
+    HAS_GEOPANDAS,
+    HAS_PYPROJ,
+    HAS_RASTERIO,
+    HAS_SHAPELY,
+    gpd,
+    pyproj,
+    rasterio,
+    shapely,
+)
 from hydrobricks._utils import compute_area
 from hydrobricks.hydro_units import HydroUnits
 
@@ -803,11 +811,12 @@ class Catchment:
                 reason="Not initialized",
             )
 
-        if land_cover_name == "ground":
+        if land_cover_name in ("open", "ground", "generic", "generic_land_cover"):
             raise ConfigurationError(
-                "You should not initialize the 'ground' land cover type.",
+                f"You should not initialize the generic soil ('{land_cover_name}') "
+                f"land cover type; it absorbs the residual area automatically.",
                 item_name="land_cover_name",
-                item_value="ground",
+                item_value=land_cover_name,
                 reason="Invalid land cover type",
             )
 

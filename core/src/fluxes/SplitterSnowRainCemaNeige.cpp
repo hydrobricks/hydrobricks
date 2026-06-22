@@ -7,10 +7,15 @@ SplitterSnowRainCemaNeige::SplitterSnowRainCemaNeige()
       _temperature(nullptr),
       _temperatureMin(nullptr),
       _temperatureMax(nullptr),
-      _elevation(std::numeric_limits<double>::quiet_NaN()) {}
+      _elevation(std::numeric_limits<double>::quiet_NaN()),
+      _rainCorrectionFactor(nullptr),
+      _snowCorrectionFactor(nullptr) {}
 
-void SplitterSnowRainCemaNeige::SetParameters(const SplitterSettings&) {
-    // No calibrated parameters — temperature bounds come from forcings or are hardcoded.
+void SplitterSnowRainCemaNeige::SetParameters(const SplitterSettings& splitterSettings) {
+    // No calibrated transition parameters — temperature bounds come from forcings or
+    // are hardcoded. Only the optional precipitation correction factors are read.
+    _rainCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "rain_correction_factor");
+    _snowCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "snow_correction_factor");
 }
 
 void SplitterSnowRainCemaNeige::AttachForcing(Forcing* forcing) {
@@ -107,6 +112,6 @@ void SplitterSnowRainCemaNeige::Compute() {
     }
 
     double P = _precipitation->GetValue();
-    _outputs[0]->UpdateFlux(P * (1.0 - fsolid));  // rain
-    _outputs[1]->UpdateFlux(P * fsolid);          // snow
+    _outputs[0]->UpdateFlux(P * (1.0 - fsolid) * *_rainCorrectionFactor);  // rain
+    _outputs[1]->UpdateFlux(P * fsolid * *_snowCorrectionFactor);          // snow
 }

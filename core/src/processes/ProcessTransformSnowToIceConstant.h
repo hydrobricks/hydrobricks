@@ -5,6 +5,14 @@
 #include "Includes.h"
 #include "ProcessTransform.h"
 
+/**
+ * Constant-rate snow-to-ice transformation.
+ *
+ *   transformation = rate    [mm/d]
+ *
+ * Converts snow to ice at a fixed rate on a glacier brick, constrained by the
+ * available snow content via the container.
+ */
 class ProcessTransformSnowToIceConstant : public ProcessTransform {
   public:
     explicit ProcessTransformSnowToIceConstant(WaterContainer* container);

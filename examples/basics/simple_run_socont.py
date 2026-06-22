@@ -74,7 +74,7 @@ forcing.correct_station_data(variable="precipitation", correction_factor=0.75)
 forcing.spatialize_from_station_data(
     variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
 )
-forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=47.3)
+forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=47.3)
 
 # Obs data
 obs = hb.Observations()
@@ -107,14 +107,14 @@ kge_2012 = socont.eval("kge_2012", obs_ts)
 
 print(f"NSE = {nse:.3f}, KGE = {kge_2012:.3f}")
 
-# Compute reference metric
+# Compute benchmark metrics
 ref_nse = obs.compute_reference_metric("nse")
 ref_kge = obs.compute_reference_metric("kge_2012")
 
-print(f"ref NSE = {ref_nse:.3f}, ref KGE = {ref_kge:.3f}")
+print(f"Benchmark: NSE = {ref_nse:.3f}, KGE = {ref_kge:.3f}")
 
 # Plot
-hb.plotting.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
+hb.Plotter.plot_hydrograph(obs_ts, sim_ts, obs.time, year=2020)
 
 # Dump all outputs
 socont.dump_outputs(str(working_dir))
@@ -126,20 +126,20 @@ results = hb.Results(str(working_dir) + "/results.nc")
 results.list_hydro_units_components()
 
 # Plot the snow water equivalent on a map
-hb.plotting.plot_map_hydro_unit_value(
+hb.Plotter.plot_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow",
+    "ground_snowpack:snow_content",
     "1981-01-20",
     dem_path=DEM_RASTER,
     max_val=300,
 )
 
 # Create an animated map of the snow water equivalent
-hb.plotting.create_animated_map_hydro_unit_value(
+hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow",
+    "ground_snowpack:snow_content",
     "1990-01-01",
     "1990-03-20",
     save_path=str(working_dir),
@@ -147,13 +147,14 @@ hb.plotting.create_animated_map_hydro_unit_value(
     max_val=300,
 )
 
-# Create an animated map of the slow reservoir 2 content
-hb.plotting.create_animated_map_hydro_unit_value(
+# Create an animated map of the slow reservoir 2 water content
+hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "slow_reservoir_2:content",
+    "slow_reservoir_2:water_content",
     "2020-01-20",
     "2020-03-20",
     save_path=str(working_dir),
     dem_path=DEM_RASTER,
+    max_val=10,
 )

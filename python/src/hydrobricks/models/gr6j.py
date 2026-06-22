@@ -47,7 +47,10 @@ class GR6J(GR4J):
         them directly, reproducing the exact discrete equations. False integrates
         them with the ODE solver (provided for comparison).
     snow_melt_process : str or None
-        Snowmelt method: None (no snow), 'melt:cemaneige', or 'melt:degree_day'.
+        Snowmelt method: None (no snow), 'melt:degree_day',
+        'melt:degree_day_aspect', 'melt:temperature_index', or 'melt:cemaneige'.
+        'melt:temperature_index' requires a 'solar_radiation' forcing, and
+        'melt:degree_day_aspect' an 'aspect_class' hydro unit property.
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
     """
@@ -62,7 +65,7 @@ class GR6J(GR4J):
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
-        self.allowed_land_cover_types = ["ground"]
+        self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)
 

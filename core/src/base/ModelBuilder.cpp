@@ -1,5 +1,10 @@
 #include "ModelBuilder.h"
 
+#include <algorithm>
+#include <limits>
+#include <map>
+#include <set>
+
 #include "FluxForcing.h"
 #include "FluxSimple.h"
 #include "FluxToAtmosphere.h"
@@ -12,6 +17,7 @@
 #include "Logger.h"
 #include "Process.h"
 #include "ProcessLateral.h"
+#include "SettingsBasin.h"
 #include "SettingsModel.h"
 #include "Splitter.h"
 #include "SubBasin.h"
@@ -27,13 +33,72 @@ ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logge
     assert(logger);
 }
 
-void ModelBuilder::BuildModelStructure(SettingsModel& modelSettings) {
-    if (modelSettings.GetStructureCount() > 1) {
-        throw NotImplemented(
-            std::format("ModelBuilder::BuildModelStructure - Multiple structures ({}) not yet supported",
-                        modelSettings.GetStructureCount()));
+void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    int structureCount = modelSettings.GetStructureCount();
+    if (structureCount <= 1) {
+        return;  // single structure: every unit keeps the default id 1
     }
 
+    // Land-cover name set of each structure variant (ids are 1..structureCount).
+    vector<std::set<string>> structureCovers(structureCount + 1);
+    for (int id = 1; id <= structureCount; ++id) {
+        modelSettings.SelectStructure(id);
+        vecStr covers = modelSettings.GetSelectedStructureLandCoverNames();
+        structureCovers[id] = std::set<string>(covers.begin(), covers.end());
+    }
+
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        basinSettings.SelectUnit(iUnit);
+
+        // Land covers actually present in this unit (non-zero fraction).
+        std::set<string> present;
+        for (int iLC = 0; iLC < basinSettings.GetLandCoverCount(); ++iLC) {
+            LandCoverSettings lc = basinSettings.GetLandCoverSettings(iLC);
+            if (!NearlyZero(lc.fraction, PRECISION)) {
+                present.insert(lc.name);
+            }
+        }
+
+        // Prefer the variant whose land-cover set matches the unit's covers exactly.
+        int matchedId = -1;
+        for (int id = 1; id <= structureCount; ++id) {
+            if (structureCovers[id] == present) {
+                matchedId = id;
+                break;
+            }
+        }
+
+        // No exact match: use the smallest variant whose covers are a superset of the
+        // unit's present covers (so the unit keeps all its covers, with at most a few
+        // zero-area extras rather than a missing one). Fall back to the largest variant
+        // if none is a superset.
+        if (matchedId < 0) {
+            int smallestSuperset = -1;
+            size_t supersetSize = std::numeric_limits<size_t>::max();
+            int largest = 1;
+            size_t largestSize = 0;
+            for (int id = 1; id <= structureCount; ++id) {
+                const std::set<string>& covers = structureCovers[id];
+                if (covers.size() > largestSize) {
+                    largest = id;
+                    largestSize = covers.size();
+                }
+                bool isSuperset = std::includes(covers.begin(), covers.end(), present.begin(), present.end());
+                if (isSuperset && covers.size() < supersetSize) {
+                    smallestSuperset = id;
+                    supersetSize = covers.size();
+                }
+            }
+            matchedId = (smallestSuperset >= 0) ? smallestSuperset : largest;
+        }
+
+        _subBasin->GetHydroUnit(iUnit)->SetStructureId(matchedId);
+    }
+}
+
+void ModelBuilder::BuildModelStructure(SettingsModel& modelSettings) {
+    // The sub-basin is catchment-level and built from the primary structure (1);
+    // each hydro unit then builds its own assigned structure variant.
     modelSettings.SelectStructure(1);
 
     CreateSubBasinComponents(modelSettings);
@@ -75,6 +140,7 @@ void ModelBuilder::CreateSubBasinComponents(SettingsModel& modelSettings) {
         auto splitterPtr = Splitter::Factory(splitterSettings);
         Splitter* splitter = splitterPtr.get();
         splitter->SetName(splitterSettings.name);
+        splitter->SetParameters(splitterSettings);
         _subBasin->AddSplitter(std::move(splitterPtr));
     }
 
@@ -84,12 +150,15 @@ void ModelBuilder::CreateSubBasinComponents(SettingsModel& modelSettings) {
 }
 
 void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
-    vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
-    vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
     int hydroUnitCount = _subBasin->GetHydroUnitCount();
 
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+
+        // Each unit builds its assigned structure variant (defaults to structure 1).
+        modelSettings.SelectStructure(unit->GetStructureId());
+        vecInt surfaceCompIndices = modelSettings.GetSurfaceComponentBricksIndices();
+        vecInt landCoversIndices = modelSettings.GetLandCoverBricksIndices();
 
         for (int iBrick : surfaceCompIndices) {
             CreateHydroUnitBrick(modelSettings, unit, iBrick);
@@ -116,6 +185,7 @@ void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
             auto splitterPtr = Splitter::Factory(splitterSettings);
             Splitter* splitter = splitterPtr.get();
             splitter->SetName(splitterSettings.name);
+            splitter->SetParameters(splitterSettings);
             unit->AddSplitter(std::move(splitterPtr));
 
             BuildForcingConnections(splitterSettings, unit, splitter);
@@ -127,6 +197,7 @@ void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
 
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        modelSettings.SelectStructure(unit->GetStructureId());
         LinkHydroUnitProcessesTargetBricks(modelSettings, unit);
         BuildHydroUnitBricksFluxes(modelSettings, unit);
         BuildHydroUnitSplittersFluxes(modelSettings, unit);
@@ -195,6 +266,9 @@ void ModelBuilder::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
     for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
         HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
 
+        // Match the structure variant this unit was built with (defaults to 1).
+        modelSettings.SelectStructure(unit->GetStructureId());
+
         for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
@@ -261,19 +335,60 @@ void ModelBuilder::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettin
             Process* process = brick->GetProcess(iProcess);
 
             if (process->NeedsTargetBrickLinking()) {
-                if (processSettings.outputs.size() != 1) {
-                    throw ModelConfigError("There can only be a single process output for brick linking.");
-                }
-                Brick* targetBrick = nullptr;
-                if (unit->HasBrick(processSettings.outputs[0].target)) {
-                    targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                if (process->LinksMultipleTargets()) {
+                    for (const auto& output : processSettings.outputs) {
+                        Brick* targetBrick = nullptr;
+                        if (unit->HasBrick(output.target)) {
+                            targetBrick = unit->GetBrick(output.target);
+                        } else {
+                            targetBrick = _subBasin->GetBrick(output.target);
+                        }
+                        process->AddTargetBrickWithWeights(targetBrick,
+                                                           FindLandCoversFeeding(output.target, unit, modelSettings));
+                    }
                 } else {
-                    targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                    if (processSettings.outputs.size() != 1) {
+                        throw ModelConfigError("There can only be a single process output for brick linking.");
+                    }
+                    Brick* targetBrick = nullptr;
+                    if (unit->HasBrick(processSettings.outputs[0].target)) {
+                        targetBrick = unit->GetBrick(processSettings.outputs[0].target);
+                    } else {
+                        targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
+                    }
+                    process->SetTargetBrick(targetBrick);
                 }
-                process->SetTargetBrick(targetBrick);
             }
         }
     }
+}
+
+std::vector<Brick*> ModelBuilder::FindLandCoversFeeding(const string& targetName, HydroUnit* unit,
+                                                        SettingsModel& modelSettings) {
+    // Find the land cover bricks whose processes send water to the given target
+    // brick (e.g. the soil moisture store). Their area fractions weight the
+    // capillary flux fanned back to that target. Uses the currently selected
+    // structure (set per unit by the caller).
+    std::vector<Brick*> covers;
+    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+        if (!unit->HasBrick(brickSettings.name)) {
+            continue;
+        }
+        Brick* brick = unit->GetBrick(brickSettings.name);
+        if (!brick->CanHaveAreaFraction()) {
+            continue;  // only land covers carry an area fraction
+        }
+        for (const auto& process : brickSettings.processes) {
+            for (const auto& output : process.outputs) {
+                if (output.target == targetName) {
+                    covers.push_back(brick);
+                }
+            }
+        }
+    }
+
+    return covers;
 }
 
 void ModelBuilder::BuildSubBasinBricksFluxes(SettingsModel& modelSettings) {
@@ -612,15 +727,11 @@ void ModelBuilder::BuildForcingConnections(const SplitterSettings& splitterSetti
 }
 
 void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
-    if (modelSettings.GetStructureCount() > 1) {
-        throw NotImplemented(
-            std::format("ModelBuilder::ConnectLoggerToValues - Multiple structures ({}) not yet supported",
-                        modelSettings.GetStructureCount()));
-    }
-
     double* valPt = nullptr;
 
-    // Sub basin values
+    // Sub basin values. The sub-basin is catchment-level and built from the primary
+    // structure (1); select it so the positional indices below match its labels.
+    modelSettings.SelectStructure(1);
     int iLabel = 0;
 
     for (int iBrickType = 0; iBrickType < modelSettings.GetSubBasinBrickCount(); ++iBrickType) {
@@ -692,90 +803,92 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
         iLabel++;
     }
 
-    // Hydro unit values
-    iLabel = 0;
+    // Hydro unit values. Labels are the union across structure variants; each unit
+    // connects only the labels its own structure provides (others stay NaN). The
+    // value pointers are therefore keyed by label string, not by position.
+    vecStr hydroUnitLabels = modelSettings.GetHydroUnitLogLabels();
+    std::map<string, int> labelIndex;
+    for (int i = 0; i < static_cast<int>(hydroUnitLabels.size()); ++i) {
+        labelIndex[hydroUnitLabels[i]] = i;
+    }
+    std::set<int> etIndicesSeen;  // an ET label must be registered once, not once per unit
 
-    for (int iBrickType = 0; iBrickType < modelSettings.GetHydroUnitBrickCount(); ++iBrickType) {
-        modelSettings.SelectHydroUnitBrick(iBrickType);
-        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        auto unit = _subBasin->GetHydroUnit(iUnit);
+        modelSettings.SelectStructure(unit->GetStructureId());
 
-        for (const auto& logItem : brickSettings.logItems) {
-            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-                auto unit = _subBasin->GetHydroUnit(iUnit);
-                auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
+        for (int iBrickType = 0; iBrickType < modelSettings.GetHydroUnitBrickCount(); ++iBrickType) {
+            modelSettings.SelectHydroUnitBrick(iBrickType);
+            const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+            Brick* brick = unit->GetBrick(brickSettings.name);
+
+            for (const auto& logItem : brickSettings.logItems) {
                 valPt = brick->GetBaseValuePointer(logItem);
                 if (valPt == nullptr) {
-                    valPt = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name)
-                                ->GetValuePointer(logItem);
+                    valPt = brick->GetValuePointer(logItem);
                 }
                 if (valPt == nullptr) {
                     throw ShouldNotHappen(
                         std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro unit "
                                     "{} brick {}",
-                                    logItem, iUnit, iBrickType));
+                                    logItem, iUnit, brickSettings.name));
                 }
-                _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+                _logger->SetHydroUnitValuePointer(iUnit, labelIndex.at(brickSettings.name + ":" + logItem), valPt);
             }
-            iLabel++;
-        }
 
-        for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
-            modelSettings.SelectProcess(iProcess);
-            const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
+            for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
+                modelSettings.SelectProcess(iProcess);
+                const ProcessSettings& processSettings = modelSettings.GetProcessSettings(iProcess);
 
-            for (const auto& logItem : processSettings.logItems) {
-                Process* process = nullptr;
-                for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-                    auto unit = _subBasin->GetHydroUnit(iUnit);
-                    auto brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrickType).name);
-                    process = brick->GetProcess(iProcess);
+                for (const auto& logItem : processSettings.logItems) {
+                    Process* process = brick->GetProcess(iProcess);
                     valPt = process->GetValuePointer(logItem);
                     if (valPt == nullptr) {
                         throw ShouldNotHappen(
                             std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro "
                                         "unit {} process {} of brick {}",
-                                        logItem, iUnit, iProcess, iBrickType));
+                                        logItem, iUnit, processSettings.name, brickSettings.name));
                     }
-                    _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
+                    int idx = labelIndex.at(brickSettings.name + ":" + processSettings.name + ":" + logItem);
+                    _logger->SetHydroUnitValuePointer(iUnit, idx, valPt);
+                    if (logItem == "output" && process->ToAtmosphere() && etIndicesSeen.insert(idx).second) {
+                        _logger->AddHydroUnitEtIndex(idx);
+                    }
                 }
-                if (logItem == "output" && process != nullptr && process->ToAtmosphere()) {
-                    _logger->AddHydroUnitEtIndex(iLabel);
-                }
-                iLabel++;
             }
         }
-    }
 
-    // Splitter values
-    for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
-        modelSettings.SelectHydroUnitSplitter(iSplitter);
-        const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
+        for (int iSplitter = 0; iSplitter < modelSettings.GetHydroUnitSplitterCount(); ++iSplitter) {
+            modelSettings.SelectHydroUnitSplitter(iSplitter);
+            const SplitterSettings& splitterSettings = modelSettings.GetHydroUnitSplitterSettings(iSplitter);
 
-        for (const auto& logItem : splitterSettings.logItems) {
-            for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-                HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+            for (const auto& logItem : splitterSettings.logItems) {
                 valPt = unit->GetSplitter(iSplitter)->GetValuePointer(logItem);
                 if (valPt == nullptr) {
                     throw ShouldNotHappen(
                         std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in hydro unit "
                                     "{} splitter {}",
-                                    logItem, iUnit, iSplitter));
+                                    logItem, iUnit, splitterSettings.name));
                 }
-                _logger->SetHydroUnitValuePointer(iUnit, iLabel, valPt);
-                iLabel++;
+                _logger->SetHydroUnitValuePointer(iUnit, labelIndex.at(splitterSettings.name + ":" + logItem), valPt);
             }
         }
     }
 
-    // Fractions
-    iLabel = 0;
+    // Fractions. Same per-unit, union-keyed approach as the hydro-unit values.
+    vecStr fractionLabels = modelSettings.GetLandCoverBricksNames();
+    std::map<string, int> fractionIndex;
+    for (int i = 0; i < static_cast<int>(fractionLabels.size()); ++i) {
+        fractionIndex[fractionLabels[i]] = i;
+    }
 
-    for (int iBrickType : modelSettings.GetLandCoverBricksIndices()) {
-        modelSettings.SelectHydroUnitBrick(iBrickType);
-        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        auto unit = _subBasin->GetHydroUnit(iUnit);
+        modelSettings.SelectStructure(unit->GetStructureId());
 
-        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-            HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        for (int iBrickType : modelSettings.GetLandCoverBricksIndices()) {
+            modelSettings.SelectHydroUnitBrick(iBrickType);
+            const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrickType);
             LandCover* brick = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.name));
             valPt = brick->GetAreaFractionPointer();
 
@@ -785,8 +898,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                 "cover brick '{}' in unit {}",
                                 brickSettings.name, iUnit));
             }
-            _logger->SetHydroUnitFractionPointer(iUnit, iLabel, valPt);
+            _logger->SetHydroUnitFractionPointer(iUnit, fractionIndex.at(brickSettings.name), valPt);
         }
-        iLabel++;
     }
 }

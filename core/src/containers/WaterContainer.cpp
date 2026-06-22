@@ -55,6 +55,12 @@ void WaterContainer::AddAmountToStaticContentChange(double change) {
 void WaterContainer::ApplyConstraints(double timeStep) {
     if (_infiniteStorage) return;
 
+    // Change rates are quantities per unit time: the content update integrates them over the
+    // timestep as content + rate * timeStep (see below). Processes that need to move an absolute
+    // amount in one step must therefore divide that amount by the timestep when reporting their
+    // rate (e.g. ProcessOutflowSnowHolding). Here we clamp those rates so the content stays within
+    // bounds (no negative content, and below the maximum capacity) over the timestep.
+
     // Get outgoing change rates
     vecDoublePt outgoingRates;
     double outputs = 0;

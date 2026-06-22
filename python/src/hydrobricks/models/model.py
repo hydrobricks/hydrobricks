@@ -23,6 +23,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Generic (soil-bearing) land cover aliases. ``open`` is the canonical name (the HBV
+# "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
+# aliases for backward compatibility.
+GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+
 
 class Model(ABC):
     """Base abstract class for hydrological models"""
@@ -60,14 +65,18 @@ class Model(ABC):
         self.options: dict[str, Any] = dict()
         self.solver: str = "heun_explicit"
         self.record_all: bool = False
-        self.land_cover_types: list[str] = ["ground"]
-        self.land_cover_names: list[str] = ["ground"]
-        self.allowed_land_cover_types: list[str] = ["ground"]
+        self.land_cover_types: list[str] = ["open"]
+        self.land_cover_names: list[str] = ["open"]
+        self.allowed_land_cover_types: list[str] = ["open"]
 
         self._set_basic_options(kwargs)
 
         # Structure
         self.structure: dict[str, Any] = dict()
+        # Optional glacier formulation (set by models that support glaciers, from the
+        # 'glacier_module' option). Used to build the glacier bricks, the glacier-free
+        # vs with-glacier structure variants, and the glacier parameter aliases.
+        self._glacier_module: Any = None
         self.parameter_aliases: dict[str, str] = dict()
         self.parameter_constraints: list[tuple[str, ...]] = []
         self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
@@ -517,11 +526,19 @@ class Model(ABC):
                 reason="Mismatched array sizes",
             )
 
-        # Check allowed land cover types: ground, glacier
+        # Check the allowed land cover types. The generic cover aliases (ground,
+        # generic, ...) are accepted wherever the canonical generic cover (open) is
+        # allowed, so older 'ground'-based configurations keep working.
+        allowed = set(self.allowed_land_cover_types)
+        allows_generic = bool(allowed & GENERIC_COVER_ALIASES)
         for cover_type in self.land_cover_types:
-            if cover_type not in self.allowed_land_cover_types:
+            accepted = cover_type in allowed or (
+                allows_generic and cover_type in GENERIC_COVER_ALIASES
+            )
+            if not accepted:
                 raise ConfigurationError(
-                    f"The land cover {cover_type} is not used in Socont",
+                    f"The land cover type '{cover_type}' is not supported by "
+                    f"{type(self).__name__}.",
                     item_name="land_cover_types",
                     item_value=cover_type,
                     reason="Invalid land cover type",
@@ -596,6 +613,47 @@ class Model(ABC):
         RuntimeError
             If structure creation fails.
         """
+        # Structure variants, in order: the first is the primary (structure 1), which
+        # also defines the catchment-level sub-basin components. Units are auto-assigned
+        # (in the C++ core) to the variant matching their land covers, so a unit lacking
+        # a cover carries no zero-area brick for it. Most models have a single variant.
+        # A variant may optionally carry a 4th element: an options override (a dict
+        # merged over self.options for that variant only, e.g. {"with_snow": False} for
+        # a lake variant whose precipitation goes directly into open water).
+        for i, variant in enumerate(self._define_structure_variants()):
+            if len(variant) == 4:
+                land_cover_names, land_cover_types, structure, options_override = (
+                    variant
+                )
+            else:
+                land_cover_names, land_cover_types, structure = variant
+                options_override = None
+
+            if i > 0:
+                self.settings.add_structure()
+            saved = (
+                self.land_cover_names,
+                self.land_cover_types,
+                self.structure,
+                self.options,
+            )
+            self.land_cover_names = land_cover_names
+            self.land_cover_types = land_cover_types
+            self.structure = structure
+            if options_override:
+                self.options = {**self.options, **options_override}
+            try:
+                self._generate_one_structure()
+            finally:
+                (
+                    self.land_cover_names,
+                    self.land_cover_types,
+                    self.structure,
+                    self.options,
+                ) = saved
+
+    def _generate_one_structure(self) -> None:
+        """Generate one structure variant from the current land covers and structure."""
         # Generate basic elements
         self._set_structure_basics()
 
@@ -621,6 +679,69 @@ class Model(ABC):
 
         self.settings.add_logging_to("outlet")
 
+    def _define_structure_variants(
+        self,
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Define the ordered structure variants of the model.
+
+        Each entry is a (land_cover_names, land_cover_types, structure) tuple emitted
+        as a separate model structure. The **first** is the primary (structure 1) and
+        defines the catchment-level sub-basin components; the rest are alternative
+        variants. Units are auto-assigned (in the C++ core) to the variant whose
+        land-cover set matches their present land covers, so a unit lacking a cover
+        carries no zero-area brick for it. The default is a single variant (the model's
+        own structure). Models override this (e.g. Socont makes the glacier-free
+        variant the base and adds a with-glacier variant).
+
+        An entry may optionally be a 4-tuple
+        ``(names, types, structure, options_override)`` where ``options_override`` is a
+        dict merged over ``self.options`` while that variant is generated (e.g.
+        ``{"with_snow": False}`` for an HBV lake variant, whose precipitation goes
+        directly into open water with no snowpack).
+        """
+        return [(self.land_cover_names, self.land_cover_types, self.structure)]
+
+    def _split_glacier_variants(
+        self,
+        names: list[str],
+        types: list[str],
+        structure: dict[str, Any],
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Split a structure that may contain glacier covers into glacier variants.
+
+        Returns a glacier-free **base** variant (the glacier land covers dropped) plus
+        a **with-glacier** variant (all covers), so glacier-free units carry no glacier
+        brick while glacierized units do. The catchment-level glacier reservoirs added
+        by the glacier module are kept in the base, so the sub-basin (built from the
+        primary structure) owns and shares them. Returns the single input variant when
+        there is no glacier cover or no glacier module is set.
+
+        Models that support glaciers call this from ``_define_structure_variants`` (the
+        glacier handling is thus shared, with the formulation pluggable via the glacier
+        module).
+        """
+        glacier_names = [
+            name for name, cover_type in zip(names, types) if cover_type == "glacier"
+        ]
+        if not glacier_names or self._glacier_module is None:
+            return [(names, types, structure)]
+
+        land_cover_keys = self._glacier_module.land_cover_keys(glacier_names)
+        base_names = [
+            name for name, cover_type in zip(names, types) if cover_type != "glacier"
+        ]
+        base_types = [cover_type for cover_type in types if cover_type != "glacier"]
+        base_structure = {
+            key: brick for key, brick in structure.items() if key not in land_cover_keys
+        }
+
+        # Glacier-free base first (primary, builds the shared sub-basin), then the
+        # with-glacier variant.
+        return [
+            (base_names, base_types, base_structure),
+            (names, types, structure),
+        ]
+
     def _set_structure_basics(self) -> None:
         """
         Generate basic model structure elements.
@@ -635,16 +756,27 @@ class Model(ABC):
         snow_melt_process = "melt:degree_day"
         snow_ice_transformation = None
         snow_redistribution = None
+        snow_water_retention_process = None
+        snow_refreezing_process = None
+        rain_to_snowpack = False
 
-        if "with_snow" in self.options:
-            with_snow = self.options["with_snow"]
-        if "snow_melt_process" in self.options:
-            with_snow = True
+        if self.options.get("snow_melt_process") is not None:
             snow_melt_process = self.options["snow_melt_process"]
         if "snow_ice_transformation" in self.options:
             snow_ice_transformation = self.options["snow_ice_transformation"]
         if "snow_redistribution" in self.options:
             snow_redistribution = self.options["snow_redistribution"]
+        if "snow_water_retention_process" in self.options:
+            snow_water_retention_process = self.options["snow_water_retention_process"]
+        if "snow_refreezing_process" in self.options:
+            snow_refreezing_process = self.options["snow_refreezing_process"]
+        if "rain_to_snowpack" in self.options:
+            rain_to_snowpack = self.options["rain_to_snowpack"]
+        # with_snow is on by default; an explicit option overrides it last, so it wins
+        # over the presence of a snow melt process (e.g. a lake variant sets it False
+        # to send all precipitation directly into open water, with no snowpack).
+        if "with_snow" in self.options:
+            with_snow = self.options["with_snow"]
 
         self.settings.generate_base_structure(
             self.land_cover_names,
@@ -653,6 +785,9 @@ class Model(ABC):
             snow_melt_process=snow_melt_process,
             snow_ice_transformation=snow_ice_transformation,
             snow_redistribution=snow_redistribution,
+            snow_water_retention_process=snow_water_retention_process,
+            snow_refreezing_process=snow_refreezing_process,
+            rain_to_snowpack=rain_to_snowpack,
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:
@@ -715,9 +850,13 @@ class Model(ABC):
         if "log" in process_data:
             log = process_data["log"]
 
-        target = ""
-        if "target" in process_data:
-            target = process_data["target"]
+        # A process may target a single brick ('target') or fan out to several
+        # bricks ('targets', a list — e.g. the HBV-96 capillary to per-class soils).
+        targets: list[str] = []
+        if "targets" in process_data:
+            targets = list(process_data["targets"])
+        elif "target" in process_data:
+            targets = [process_data["target"]]
         else:
             kind = process_data["kind"]
             if not (kind.startswith("et:") or kind.startswith("interception:")):
@@ -727,9 +866,16 @@ class Model(ABC):
                     reason="Missing required target",
                 )
 
+        first_target = targets[0] if targets else ""
         self.settings.add_brick_process(
-            process, process_data["kind"], target, log=log, instantaneous=instantaneous
+            process,
+            process_data["kind"],
+            first_target,
+            log=log,
+            instantaneous=instantaneous,
         )
+        for extra_target in targets[1:]:
+            self.settings.add_process_output(extra_target)
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """

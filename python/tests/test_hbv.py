@@ -523,10 +523,18 @@ def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
 
 
 def _run_open_forest(
-    tmp_path, *, forest_frac, params, ic=None, P=5.0, PET=2.0, n_days=_N_2Y
+    tmp_path,
+    *,
+    forest_frac,
+    params,
+    ic=None,
+    interception=True,
+    P=5.0,
+    PET=2.0,
+    n_days=_N_2Y,
 ) -> tuple:
-    """Run HBV-96 with an open ('ground') and a forest cover (the latter
-    intercepting)."""
+    """Run HBV-96 with an open ('ground') and a forest cover (the latter optionally
+    intercepting rain in a canopy)."""
     open_frac = 1.0 - forest_frac
     hydro_units = hb.HydroUnits(
         land_cover_types=["ground", "forest"], land_cover_names=["open", "forest"]
@@ -548,6 +556,7 @@ def _run_open_forest(
     model = models.HBV96(
         land_cover_names=["open", "forest"],
         land_cover_types=["ground", "forest"],
+        forest_interception=interception,
         record_all=True,
     )
     parameters = model.generate_parameters()
@@ -584,9 +593,21 @@ _PARAMS_OPEN_FOREST = {
 }
 
 
+def test_hbv96_forest_interception_is_off_by_default():
+    """Forest interception is opt-in: by default a forest cover exposes no canopy
+    interception capacity parameter (no canopy is generated)."""
+    assert models.HBV96().options["forest_interception"] is False
+    parameters = models.HBV96(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    ).generate_parameters()
+    assert not parameters.has("ic")
+
+
 def test_hbv96_forest_exposes_interception_capacity_alias():
     parameters = models.HBV96(
-        land_cover_names=["open", "forest"], land_cover_types=["ground", "forest"]
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        forest_interception=True,
     ).generate_parameters()
     assert parameters.has("ic"), "interception capacity alias 'ic' not found"
 
@@ -610,6 +631,18 @@ def test_hbv96_forest_interception_reduces_discharge(tmp_path):
         _subdir(tmp_path, "high"), forest_frac=0.4, params=_PARAMS_OPEN_FOREST, ic=5.0
     )
     assert high.get_total_outlet_discharge() < low.get_total_outlet_discharge()
+
+
+def test_hbv96_forest_without_interception_runs_and_balances(tmp_path):
+    """With interception disabled (the default), a forest cover behaves like a generic
+    soil cover: the model runs and the water balance closes."""
+    model, forcing = _run_open_forest(
+        _subdir(tmp_path, "noint"),
+        forest_frac=0.4,
+        params=_PARAMS_OPEN_FOREST,
+        interception=False,
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
 def test_hbv96_single_cover_keeps_legacy_aliases():

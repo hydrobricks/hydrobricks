@@ -788,6 +788,7 @@ class Model(ABC):
             snow_water_retention_process=snow_water_retention_process,
             snow_refreezing_process=snow_refreezing_process,
             rain_to_snowpack=rain_to_snowpack,
+            forest_interception=self.options.get("forest_interception", False),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:

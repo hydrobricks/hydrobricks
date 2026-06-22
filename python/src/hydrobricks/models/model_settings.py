@@ -78,6 +78,7 @@ class ModelSettings:
         snow_water_retention_process: str | None = None,
         snow_refreezing_process: str | None = None,
         rain_to_snowpack: bool = False,
+        forest_interception: bool = False,
     ) -> None:
         """
         Generate basic elements
@@ -113,6 +114,9 @@ class ModelSettings:
             The rain is retained in the snowpack (up to the holding capacity)
             and exposed to refreezing; without snow, it reaches the land cover
             within the same time step.
+        forest_interception
+            Add a canopy interception store on each ``forest`` land cover (default
+            False). When False, forest covers behave like a generic soil cover.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -140,21 +144,23 @@ class ModelSettings:
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
 
-        # Forest canopy interception, on the rain path upstream of the snowpack.
-        # Generated before the snowpacks so the canopy (a surface component) is
-        # declared/computed before the snowpack it feeds; the throughfall rejoins the
-        # original rain target (the snowpack when the rain is routed to it,
-        # otherwise the land cover).
-        rain_to_snowpack_active = with_snow and rain_to_snowpack
-        for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type == "forest":
-                if rain_to_snowpack_active:
-                    throughfall_target = f"{cover_name}_snowpack"
-                else:
-                    throughfall_target = cover_name
-                self.settings.generate_canopy_interception(
-                    cover_name, throughfall_target
-                )
+        # Forest canopy interception (opt-in), on the rain path upstream of the
+        # snowpack. Generated before the snowpacks so the canopy (a surface component)
+        # is declared/computed before the snowpack it feeds; the throughfall rejoins the
+        # original rain target (the snowpack when the rain is routed to it, otherwise
+        # the land cover). When disabled, forest covers behave like a generic soil cover
+        # and interception can be accounter for through ET correction.
+        if forest_interception:
+            rain_to_snowpack_active = with_snow and rain_to_snowpack
+            for cover_type, cover_name in zip(land_cover_types, land_cover_names):
+                if cover_type == "forest":
+                    if rain_to_snowpack_active:
+                        throughfall_target = f"{cover_name}_snowpack"
+                    else:
+                        throughfall_target = cover_name
+                    self.settings.generate_canopy_interception(
+                        cover_name, throughfall_target
+                    )
 
         # Snowpack
         if with_snow:

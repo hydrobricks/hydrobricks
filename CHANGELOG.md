@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- HBV land-use classes as land covers: `forest` (rain interception in a canopy store),
-  `lake` (exclusive open-water cover: all precipitation direct, open-water evaporation,
-  linear outflow, via a dedicated no-snow structure variant) and `glacier` (Socont-style).
+- HBV land-use classes as land covers: `forest` (optional rain interception in a canopy
+  store, opt-in via `forest_interception=True`, off by default), `lake` (exclusive
+  open-water cover: all precipitation direct, open-water evaporation, linear outflow, via
+  a dedicated no-snow structure variant) and `glacier` (Socont-style).
 - Per-class soil moisture stores in HBV (one per land cover), with a `share_soil` option
   to use a single shared store. Soil/recharge parameters are exposed per cover
   (`fc_<cover>`, `lp_<cover>`, `beta_<cover>`) when several soil covers are present.

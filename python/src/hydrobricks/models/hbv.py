@@ -60,6 +60,11 @@ class HBV(Model):
         and are exposed with a per-cover suffix (e.g. ``fc_forest``); with a single
         land cover (or when sharing) the bare aliases (``fc``, ``lp``, ``beta``)
         are kept.
+    forest_interception : bool
+        Add a canopy interception store on each ``forest`` land cover (default:
+        False). When enabled, the canopy intercepts rain (capacity ``ic``),
+        evaporates at the potential rate and passes the excess as throughfall; when
+        disabled, a ``forest`` cover behaves like a generic soil cover.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True), as in Socont.
     glacier_module : str
@@ -69,9 +74,10 @@ class HBV(Model):
 
     Land-use classes
     ----------------
-    Besides the default soil-bearing ``ground`` cover, HBV supports the HBV land-use
-    classes as land covers: ``forest`` (canopy interception on the rain path),
-    ``lake`` (exclusive open-water cover: all precipitation direct, open-water
+    Besides the default soil-bearing ``open`` cover, HBV supports the HBV land-use
+    classes as land covers: ``forest`` (an optional canopy interception on the rain
+    path, enabled with ``forest_interception=True``), ``lake`` (exclusive open-water
+    cover: all precipitation direct, open-water
     evaporation, linear outflow — its own no-snow structure variant) and ``glacier``
     (Socont-style: glacier-area rain + snowmelt and ice melt feed two linear
     sub-basin reservoirs draining to the outlet, with a glacier-free base variant).
@@ -89,6 +95,7 @@ class HBV(Model):
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
         self.options["share_soil"] = False
+        self.options["forest_interception"] = False
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["open", "forest", "lake", "glacier"]

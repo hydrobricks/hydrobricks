@@ -1359,8 +1359,10 @@ class ParameterSet:
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
 
-        # Parameters for the forest canopies (interception capacity)
-        self._generate_canopy_parameters(land_cover_types, land_cover_names)
+        # Parameters for the forest canopies (interception capacity), only when the
+        # canopy interception is enabled (the canopy bricks are then generated).
+        if options.get("forest_interception", False):
+            self._generate_canopy_parameters(land_cover_types, land_cover_names)
 
         # Parameters for the different bricks
         for key, brick in structure.items():

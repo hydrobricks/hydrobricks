@@ -18,38 +18,39 @@ classifiers = [
 ]
 dependencies = [
     "cftime",
-    "numpy<=2.3.5",
+    "numpy<2.4",
     "HydroErr",
     "pandas",
     "pyyaml",
-    "StrEnum",
-    "dask",
-    "dask-expr"
+    "StrEnum; python_version < '3.11'"
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest>=6.0",
-    "cftime",
-    "HydroErr",
-    "numpy<=2.3.5",
-    "pandas",
-    "pyyaml",
-    "StrEnum",
+all = [
     "dask",
-    "dask-expr",
+    "datashader==0.19.0",
     "geopandas",
+    "graphviz",
+    "matplotlib",
     "netCDF4",
+    "pyarrow",
     "pyet",
+    "pyproj",
+    "pysheds",
     "rasterio",
     "rioxarray",
+    "scipy",
     "shapely",
+    "spotpy",
     "xarray",
-    "pyarrow",
-    "xarray-spatial",
-    "pysheds"
+    "xarray-spatial"
+]
+test = [
+    "hydrobricks[all]",
+    "pytest>=6.0"
 ]
 dev = [
+    "hydrobricks[all]",
     "pre-commit>=3.4.0"
 ]
 

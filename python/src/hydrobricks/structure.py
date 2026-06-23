@@ -269,11 +269,18 @@ class StructureGraph:
 
         return yaml.safe_dump(self.to_dict(), sort_keys=False)
 
-    def to_dot(self, legend: bool = True) -> str:
-        """Return the graph as a Graphviz DOT string (no dependency required)."""
+    def to_dot(
+        self, legend: bool = True, nodesep: float = 0.5, ranksep: float = 0.7
+    ) -> str:
+        """Return the graph as a Graphviz DOT string (no dependency required).
+
+        ``nodesep`` / ``ranksep`` set the Graphviz spacing (inches) between nodes in a
+        rank and between ranks; larger values give the diagram more breathing room.
+        """
         lines = [
             "digraph model_structure {",
             "    rankdir=TB;",
+            f"    nodesep={nodesep}; ranksep={ranksep};",
             "    node [shape=box];",
         ]
         for node in self.nodes:
@@ -470,6 +477,8 @@ class StructureGraph:
         fmt: str = "png",
         view: bool = False,
         legend: bool = True,
+        nodesep: float = 0.5,
+        ranksep: float = 0.7,
     ):
         """Render the structure as a directed graph with Graphviz.
 
@@ -484,6 +493,9 @@ class StructureGraph:
             Open the rendered file with the default viewer.
         legend
             Add a legend describing the node and flux styles (default True).
+        nodesep, ranksep
+            Graphviz spacing (inches) between nodes in a rank and between ranks;
+            larger values give the diagram more breathing room.
 
         Returns
         -------
@@ -505,7 +517,7 @@ class StructureGraph:
             )
 
         dot = graphviz.Digraph("model_structure", format=fmt)
-        dot.attr(rankdir="TB")
+        dot.attr(rankdir="TB", nodesep=str(nodesep), ranksep=str(ranksep))
         dot.attr("node", shape="box")
         for node in self.nodes:
             dot.node(node.name, **self._gv_node_kwargs(node))

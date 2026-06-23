@@ -502,6 +502,8 @@ class Model(ABC):
         fmt: str = "png",
         view: bool = False,
         legend: bool = True,
+        nodesep: float = 0.5,
+        ranksep: float = 0.7,
         structure_id: int = 1,
     ):
         """Plot the model structure as a directed graph (requires ``graphviz``).
@@ -517,6 +519,9 @@ class Model(ABC):
             Open the rendered file with the default viewer.
         legend
             Add a legend describing the node and flux styles (default True).
+        nodesep, ranksep
+            Graphviz spacing (inches) between nodes in a rank and between ranks;
+            larger values give the diagram more breathing room.
         structure_id
             The structure variant to plot (default 1, the primary).
 
@@ -525,7 +530,12 @@ class Model(ABC):
         The ``graphviz.Digraph`` object.
         """
         return self.get_structure_graph(structure_id).plot(
-            path=path, fmt=fmt, view=view, legend=legend
+            path=path,
+            fmt=fmt,
+            view=view,
+            legend=legend,
+            nodesep=nodesep,
+            ranksep=ranksep,
         )
 
     @abstractmethod

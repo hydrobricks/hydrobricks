@@ -40,6 +40,7 @@ COLOR_FORCING = "#e69138"  # orange
 COLOR_SNOW = "#6fa8dc"  # blue
 COLOR_ICE = "#9fc5e8"  # light blue
 COLOR_FLUX = "#000000"  # black (default flux)
+COLOR_SUB_BASIN_BG = "#e8eef5"  # soft blue-grey: background of the basin-level group
 
 
 @dataclass
@@ -284,7 +285,20 @@ class StructureGraph:
             "    node [shape=box];",
         ]
         for node in self.nodes:
-            lines.append(f'    "{node.name}" [{self._dot_node_attrs(node)}];')
+            if node.level != "sub_basin":
+                lines.append(f'    "{node.name}" [{self._dot_node_attrs(node)}];')
+        # Group the basin-level (catchment) stores in their own labelled box.
+        sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
+        if sub_basin:
+            lines.append("    subgraph cluster_sub_basin {")
+            lines.append('        label="Sub-basin (catchment level)";')
+            lines.append(
+                f'        style="filled"; fillcolor="{COLOR_SUB_BASIN_BG}"; '
+                f'color="{COLOR_SUB_BASIN_BG}"; fontcolor="#555555";'
+            )
+            for node in sub_basin:
+                lines.append(f'        "{node.name}" [{self._dot_node_attrs(node)}];')
+            lines.append("    }")
         for edge in self.edges:
             lines.append(
                 f'    "{edge.source}" -> "{edge.target}" '
@@ -520,7 +534,21 @@ class StructureGraph:
         dot.attr(rankdir="TB", nodesep=str(nodesep), ranksep=str(ranksep))
         dot.attr("node", shape="box")
         for node in self.nodes:
-            dot.node(node.name, **self._gv_node_kwargs(node))
+            if node.level != "sub_basin":
+                dot.node(node.name, **self._gv_node_kwargs(node))
+        # Group the basin-level (catchment) stores in their own labelled box.
+        sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
+        if sub_basin:
+            with dot.subgraph(name="cluster_sub_basin") as c:
+                c.attr(
+                    label="Sub-basin (catchment level)",
+                    style="filled",
+                    fillcolor=COLOR_SUB_BASIN_BG,
+                    color=COLOR_SUB_BASIN_BG,
+                    fontcolor="#555555",
+                )
+                for node in sub_basin:
+                    c.node(node.name, **self._gv_node_kwargs(node))
         for edge in self.edges:
             dot.edge(edge.source, edge.target, **self._gv_edge_kwargs(edge))
 

@@ -144,6 +144,25 @@ def test_structure_graph_dot_legend():
     assert "__legend__" not in graph.to_dot(legend=False)
 
 
+def test_structure_graph_dot_groups_sub_basin_stores():
+    """Basin-level stores are grouped in a labelled cluster, distinct from the
+    hydro-unit components; a model with no sub-basin store has no such cluster."""
+    with_glacier = models.HBV96(
+        land_cover_names=["open", "glacier"], land_cover_types=["open", "glacier"]
+    ).get_structure_graph(structure_id=2)
+    dot = with_glacier.to_dot()
+    assert "cluster_sub_basin" in dot
+    assert "Sub-basin (catchment level)" in dot
+    # The glacier reservoirs are the basin-level stores.
+    assert any(
+        n.name == "glacier_area_icemelt_storage" and n.level == "sub_basin"
+        for n in with_glacier.nodes
+    )
+
+    # A plain HBV (no glacier) has no sub-basin store, hence no cluster.
+    assert "cluster_sub_basin" not in models.HBV96().get_structure_graph().to_dot()
+
+
 # ---------------------------------------------------------------------------
 # Textual summary
 # ---------------------------------------------------------------------------

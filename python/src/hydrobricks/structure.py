@@ -280,14 +280,16 @@ class StructureGraph:
         """
         lines = [
             "digraph model_structure {",
-            "    rankdir=TB;",
+            '    rankdir=TB; bgcolor="white"; fontname="Helvetica";',
             f"    nodesep={nodesep}; ranksep={ranksep};",
-            "    node [shape=box];",
+            '    node [shape=box, fontname="Helvetica", fontsize=11];',
+            '    edge [fontname="Helvetica", fontsize=10, fontcolor="#333333", '
+            'arrowsize=0.8, color="#333333"];',
         ]
         for node in self.nodes:
             if node.level != "sub_basin":
                 lines.append(f'    "{node.name}" [{self._dot_node_attrs(node)}];')
-        # Group the basin-level (catchment) stores in their own labelled box.
+        # Group the basin-level (catchment) stores in their own shaded region.
         sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
         if sub_basin:
             lines.append("    subgraph cluster_sub_basin {")
@@ -389,9 +391,14 @@ class StructureGraph:
         if node.role in styles:
             style = styles[node.role]
         elif node.is_land_cover:
-            style = f'style=filled, fillcolor="{COLOR_LAND_COVER}"'
+            style = (
+                f'style="rounded,filled", fillcolor="{COLOR_LAND_COVER}", '
+                f'color="#888888"'
+            )
         else:
-            style = f'style=filled, fillcolor="{COLOR_BRICK}"'
+            style = (
+                f'style="rounded,filled", fillcolor="{COLOR_BRICK}", color="#888888"'
+            )
         label = node.name if not node.kind else f"{node.name}\\n({node.kind})"
         return f'label="{label}", {style}'
 
@@ -531,12 +538,26 @@ class StructureGraph:
             )
 
         dot = graphviz.Digraph("model_structure", format=fmt)
-        dot.attr(rankdir="TB", nodesep=str(nodesep), ranksep=str(ranksep))
-        dot.attr("node", shape="box")
+        dot.attr(
+            rankdir="TB",
+            nodesep=str(nodesep),
+            ranksep=str(ranksep),
+            fontname="Helvetica",
+            bgcolor="white",
+        )
+        dot.attr("node", shape="box", fontname="Helvetica", fontsize="11")
+        dot.attr(
+            "edge",
+            fontname="Helvetica",
+            fontsize="10",
+            fontcolor="#333333",
+            arrowsize="0.8",
+            color="#333333",
+        )
         for node in self.nodes:
             if node.level != "sub_basin":
                 dot.node(node.name, **self._gv_node_kwargs(node))
-        # Group the basin-level (catchment) stores in their own labelled box.
+        # Group the basin-level (catchment) stores in their own shaded region.
         sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
         if sub_basin:
             with dot.subgraph(name="cluster_sub_basin") as c:
@@ -574,9 +595,10 @@ class StructureGraph:
         elif node.role == "splitter":
             kwargs.update(shape="diamond", style="filled", fillcolor=COLOR_SPLITTER)
         elif node.is_land_cover:
-            kwargs.update(style="filled", fillcolor=COLOR_LAND_COVER)
+            kwargs.update(style="rounded,filled", fillcolor=COLOR_LAND_COVER)
         else:
-            kwargs.update(style="filled", fillcolor=COLOR_BRICK)
+            kwargs.update(style="rounded,filled", fillcolor=COLOR_BRICK)
+        kwargs.setdefault("color", "#888888")
         return kwargs
 
     @staticmethod

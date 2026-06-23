@@ -461,7 +461,9 @@ class Model(ABC):
 
         return ps
 
-    def get_structure_graph(self, structure_id: int = 1) -> StructureGraph:
+    def get_structure_graph(
+        self, structure_id: int = 1, with_forcing: bool = True
+    ) -> StructureGraph:
         """
         Build the model structure graph (bricks, processes, fluxes, splitters).
 
@@ -475,6 +477,9 @@ class Model(ABC):
         structure_id
             The structure variant to inspect (default 1, the primary). Models with
             glacier/lake covers define several variants.
+        with_forcing
+            Include the meteorological forcing inputs (precipitation, temperature,
+            pet) as source nodes. Set to False for a less cluttered graph.
 
         Returns
         -------
@@ -486,6 +491,7 @@ class Model(ABC):
             structure_id=structure_id,
             model_name=type(self).__name__,
             solver=self.solver,
+            with_forcing=with_forcing,
         )
 
     def summary(self, structure_id: int = 1) -> str:
@@ -502,6 +508,7 @@ class Model(ABC):
         fmt: str = "png",
         view: bool = False,
         legend: bool = True,
+        with_forcing: bool = True,
         nodesep: float = 0.5,
         ranksep: float = 0.7,
         structure_id: int = 1,
@@ -519,6 +526,9 @@ class Model(ABC):
             Open the rendered file with the default viewer.
         legend
             Add a legend describing the node and flux styles (default True).
+        with_forcing
+            Include the meteorological forcing inputs (precipitation, temperature,
+            pet). Set to False for a less cluttered diagram.
         nodesep, ranksep
             Graphviz spacing (inches) between nodes in a rank and between ranks;
             larger values give the diagram more breathing room.
@@ -529,7 +539,7 @@ class Model(ABC):
         -------
         The ``graphviz.Digraph`` object.
         """
-        return self.get_structure_graph(structure_id).plot(
+        return self.get_structure_graph(structure_id, with_forcing=with_forcing).plot(
             path=path,
             fmt=fmt,
             view=view,

@@ -501,6 +501,7 @@ class Model(ABC):
         path: str | None = None,
         fmt: str = "png",
         view: bool = False,
+        legend: bool = True,
         structure_id: int = 1,
     ):
         """Plot the model structure as a directed graph (requires ``graphviz``).
@@ -514,6 +515,8 @@ class Model(ABC):
             Output format (e.g. 'png', 'pdf', 'svg').
         view
             Open the rendered file with the default viewer.
+        legend
+            Add a legend describing the node and flux styles (default True).
         structure_id
             The structure variant to plot (default 1, the primary).
 
@@ -522,7 +525,7 @@ class Model(ABC):
         The ``graphviz.Digraph`` object.
         """
         return self.get_structure_graph(structure_id).plot(
-            path=path, fmt=fmt, view=view
+            path=path, fmt=fmt, view=view, legend=legend
         )
 
     @abstractmethod

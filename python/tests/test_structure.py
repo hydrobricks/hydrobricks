@@ -128,6 +128,22 @@ def test_structure_graph_to_dot_is_valid_string():
     assert '"routing" -> "outlet"' in dot
 
 
+def test_structure_graph_dot_legend():
+    graph = models.HBV96(
+        land_cover_names=["open", "forest", "glacier"],
+        land_cover_types=["open", "forest", "glacier"],
+    ).get_structure_graph(structure_id=2)
+    dot = graph.to_dot()  # legend on by default
+    assert "__legend__" in dot
+    assert "Legend" in dot
+    # The legend only lists categories present in the graph.
+    assert "Land cover" in dot
+    assert "Outlet" in dot
+    assert "Atmosphere" in dot
+    # Disabling the legend removes it.
+    assert "__legend__" not in graph.to_dot(legend=False)
+
+
 # ---------------------------------------------------------------------------
 # Textual summary
 # ---------------------------------------------------------------------------

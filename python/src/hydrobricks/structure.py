@@ -29,6 +29,18 @@ ATMOSPHERE = "atmosphere"
 # declare no output, which are treated as atmosphere sinks too).
 _ATMOSPHERE_KINDS = ("et:", "interception:")
 
+# Colors used both for the graph styling and the legend (kept in one place so they stay
+# in sync).
+COLOR_LAND_COVER = "#b6d7a8"  # green
+COLOR_BRICK = "#f5f5f5"  # light grey
+COLOR_SPLITTER = "#fff2cc"  # yellow
+COLOR_ATMO = "#cfe2f3"  # light blue
+COLOR_OUTLET = "#d9ead3"  # pale green
+COLOR_FORCING = "#e69138"  # orange
+COLOR_SNOW = "#6fa8dc"  # blue
+COLOR_ICE = "#9fc5e8"  # light blue
+COLOR_FLUX = "#000000"  # black (default flux)
+
 
 @dataclass
 class Node:
@@ -257,7 +269,7 @@ class StructureGraph:
 
         return yaml.safe_dump(self.to_dict(), sort_keys=False)
 
-    def to_dot(self) -> str:
+    def to_dot(self, legend: bool = True) -> str:
         """Return the graph as a Graphviz DOT string (no dependency required)."""
         lines = [
             "digraph model_structure {",
@@ -271,36 +283,107 @@ class StructureGraph:
                 f'    "{edge.source}" -> "{edge.target}" '
                 f"[{self._dot_edge_attrs(edge)}];"
             )
+        if legend:
+            label = self._legend_label()
+            if label:
+                lines.append(f'    "__legend__" [shape=plaintext, label={label}];')
         lines.append("}")
         return "\n".join(lines)
+
+    def _legend_label(self) -> str | None:
+        """Build an HTML-like Graphviz label for a legend, restricted to the node and
+        flux categories actually present in this graph. Returns None if empty."""
+        roles = {n.role for n in self.nodes}
+        has_land_cover = any(n.is_land_cover for n in self.nodes)
+        flux_types = {e.flux_type for e in self.edges if e.kind != "forcing"}
+        has_forcing = any(e.kind == "forcing" for e in self.edges)
+        has_instant = any(e.instantaneous for e in self.edges if e.kind != "forcing")
+
+        def swatch_row(color: str, text: str) -> str:
+            cell = (
+                f'<TD FIXEDSIZE="TRUE" WIDTH="24" HEIGHT="14" BGCOLOR="{color}"></TD>'
+            )
+            return f'<TR>{cell}<TD ALIGN="LEFT">{text}</TD></TR>'
+
+        def line_cell(color: str, dashed: bool) -> str:
+            if dashed:
+                seg = (
+                    f'<TD FIXEDSIZE="TRUE" WIDTH="6" HEIGHT="3" BGCOLOR="{color}"></TD>'
+                )
+                gap = '<TD FIXEDSIZE="TRUE" WIDTH="4" HEIGHT="3"></TD>'
+                inner = seg + gap + seg + gap + seg
+            else:
+                inner = (
+                    f'<TD FIXEDSIZE="TRUE" WIDTH="30" HEIGHT="3" '
+                    f'BGCOLOR="{color}"></TD>'
+                )
+            return (
+                '<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0">'
+                f"<TR>{inner}</TR></TABLE>"
+            )
+
+        def line_row(color: str, dashed: bool, text: str) -> str:
+            return (
+                f"<TR><TD>{line_cell(color, dashed)}</TD>"
+                f'<TD ALIGN="LEFT">{text}</TD></TR>'
+            )
+
+        rows = ['<TR><TD COLSPAN="2"><B>Legend</B></TD></TR>']
+        if has_land_cover:
+            rows.append(swatch_row(COLOR_LAND_COVER, "Land cover"))
+        rows.append(swatch_row(COLOR_BRICK, "Storage / brick"))
+        if "splitter" in roles:
+            rows.append(swatch_row(COLOR_SPLITTER, "Splitter"))
+        if "atmosphere" in roles:
+            rows.append(swatch_row(COLOR_ATMO, "Atmosphere (ET)"))
+        if "outlet" in roles:
+            rows.append(swatch_row(COLOR_OUTLET, "Outlet"))
+        rows.append(line_row(COLOR_FLUX, False, "Flux (labelled with the process)"))
+        if has_forcing:
+            rows.append(line_row(COLOR_FORCING, True, "Forcing input"))
+        if "snow" in flux_types:
+            rows.append(line_row(COLOR_SNOW, False, "Snow flux"))
+        if "ice" in flux_types:
+            rows.append(line_row(COLOR_ICE, False, "Ice flux"))
+        if has_instant:
+            rows.append(line_row(COLOR_FLUX, True, "Instantaneous flux"))
+
+        if len(rows) <= 1:
+            return None
+        table = (
+            '<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">'
+            + "".join(rows)
+            + "</TABLE>"
+        )
+        return f"<{table}>"
 
     @staticmethod
     def _dot_node_attrs(node: Node) -> str:
         styles = {
-            "forcing": 'shape=plaintext, fontcolor="#1f6feb"',
-            "outlet": 'shape=doublecircle, style=filled, fillcolor="#cfe8cf"',
-            "atmosphere": 'shape=ellipse, style=filled, fillcolor="#eeeeee"',
-            "splitter": 'shape=diamond, style=filled, fillcolor="#fff2cc"',
+            "forcing": f'shape=plaintext, fontcolor="{COLOR_FORCING}"',
+            "outlet": f'shape=doublecircle, style=filled, fillcolor="{COLOR_OUTLET}"',
+            "atmosphere": f'shape=ellipse, style=filled, fillcolor="{COLOR_ATMO}"',
+            "splitter": f'shape=diamond, style=filled, fillcolor="{COLOR_SPLITTER}"',
         }
         if node.role in styles:
             style = styles[node.role]
         elif node.is_land_cover:
-            style = 'style=filled, fillcolor="#dae8fc"'
+            style = f'style=filled, fillcolor="{COLOR_LAND_COVER}"'
         else:
-            style = 'style=filled, fillcolor="#f5f5f5"'
+            style = f'style=filled, fillcolor="{COLOR_BRICK}"'
         label = node.name if not node.kind else f"{node.name}\\n({node.kind})"
         return f'label="{label}", {style}'
 
     @staticmethod
     def _dot_edge_attrs(edge: Edge) -> str:
         if edge.kind == "forcing":
-            return 'style=dashed, color="#1f6feb", arrowhead=open'
+            return f'style=dashed, color="{COLOR_FORCING}", arrowhead=open'
         label = edge.process or ""
         attrs = f'label="{label}"'
         if edge.flux_type == "snow":
-            attrs += ', color="#6fa8dc"'
+            attrs += f', color="{COLOR_SNOW}"'
         elif edge.flux_type == "ice":
-            attrs += ', color="#9fc5e8"'
+            attrs += f', color="{COLOR_ICE}"'
         if edge.instantaneous:
             attrs += ", style=dashed"
         return attrs
@@ -386,6 +469,7 @@ class StructureGraph:
         path: str | None = None,
         fmt: str = "png",
         view: bool = False,
+        legend: bool = True,
     ):
         """Render the structure as a directed graph with Graphviz.
 
@@ -398,6 +482,8 @@ class StructureGraph:
             Output format (e.g. 'png', 'pdf', 'svg').
         view
             Open the rendered file with the default viewer.
+        legend
+            Add a legend describing the node and flux styles (default True).
 
         Returns
         -------
@@ -426,6 +512,11 @@ class StructureGraph:
         for edge in self.edges:
             dot.edge(edge.source, edge.target, **self._gv_edge_kwargs(edge))
 
+        if legend:
+            label = self._legend_label()
+            if label:
+                dot.node("__legend__", label=label, shape="plaintext")
+
         if path is not None:
             dot.render(path, view=view, cleanup=True)
         return dot
@@ -435,28 +526,28 @@ class StructureGraph:
         label = node.name if not node.kind else f"{node.name}\n({node.kind})"
         kwargs: dict[str, str] = {"label": label}
         if node.role == "forcing":
-            kwargs.update(shape="plaintext", fontcolor="#1f6feb")
+            kwargs.update(shape="plaintext", fontcolor=COLOR_FORCING)
         elif node.role == "outlet":
-            kwargs.update(shape="doublecircle", style="filled", fillcolor="#cfe8cf")
+            kwargs.update(shape="doublecircle", style="filled", fillcolor=COLOR_OUTLET)
         elif node.role == "atmosphere":
-            kwargs.update(shape="ellipse", style="filled", fillcolor="#eeeeee")
+            kwargs.update(shape="ellipse", style="filled", fillcolor=COLOR_ATMO)
         elif node.role == "splitter":
-            kwargs.update(shape="diamond", style="filled", fillcolor="#fff2cc")
+            kwargs.update(shape="diamond", style="filled", fillcolor=COLOR_SPLITTER)
         elif node.is_land_cover:
-            kwargs.update(style="filled", fillcolor="#dae8fc")
+            kwargs.update(style="filled", fillcolor=COLOR_LAND_COVER)
         else:
-            kwargs.update(style="filled", fillcolor="#f5f5f5")
+            kwargs.update(style="filled", fillcolor=COLOR_BRICK)
         return kwargs
 
     @staticmethod
     def _gv_edge_kwargs(edge: Edge) -> dict[str, str]:
         if edge.kind == "forcing":
-            return {"style": "dashed", "color": "#1f6feb", "arrowhead": "open"}
+            return {"style": "dashed", "color": COLOR_FORCING, "arrowhead": "open"}
         kwargs: dict[str, str] = {"label": edge.process or ""}
         if edge.flux_type == "snow":
-            kwargs["color"] = "#6fa8dc"
+            kwargs["color"] = COLOR_SNOW
         elif edge.flux_type == "ice":
-            kwargs["color"] = "#9fc5e8"
+            kwargs["color"] = COLOR_ICE
         if edge.instantaneous:
             kwargs["style"] = "dashed"
         return kwargs

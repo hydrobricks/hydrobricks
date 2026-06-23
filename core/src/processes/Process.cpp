@@ -8,9 +8,12 @@
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "ProcessCapillaryHBV.h"
+#include "ProcessETExponential.h"
 #include "ProcessETGR4J.h"
 #include "ProcessETHBV.h"
+#include "ProcessETLinear.h"
 #include "ProcessETOpenWater.h"
+#include "ProcessETPowerLaw.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
@@ -217,6 +220,27 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
             },
             &ProcessETOpenWater::RegisterProcessSettings
+        }},
+
+        {"et:linear", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETLinear>(b->GetWaterContainer());
+            },
+            &ProcessETLinear::RegisterProcessSettings
+        }},
+
+        {"et:power_law", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETPowerLaw>(b->GetWaterContainer());
+            },
+            &ProcessETPowerLaw::RegisterProcessSettings
+        }},
+
+        {"et:exponential", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETExponential>(b->GetWaterContainer());
+            },
+            &ProcessETExponential::RegisterProcessSettings
         }},
 
         {"melt:degree_day", {

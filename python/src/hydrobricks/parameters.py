@@ -350,6 +350,30 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Power-law actual evapotranspiration (Ea = PET * (S/Smax)^exponent)
+    "et:power_law": [
+        ParamSpec(
+            name="exponent",
+            unit="-",
+            aliases=["et_beta"],
+            min=0.2,
+            max=3.0,
+            default=0.5,
+            mandatory=True,
+        ),
+    ],
+    # Exponential ET (Ea = PET * (1 - exp(-alpha * S/Smax)))
+    "et:exponential": [
+        ParamSpec(
+            name="alpha",
+            unit="-",
+            aliases=["et_alpha"],
+            min=0.5,
+            max=10.0,
+            default=2.0,
+            mandatory=True,
+        ),
+    ],
     # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
     "runoff:hbv": [
         ParamSpec(
@@ -1459,6 +1483,7 @@ class ParameterSet:
             "outflow:direct",
             "et:socont",
             "et:open_water",
+            "et:linear",
             "overflow",
             "interception:gr4j",
             "infiltration:gr4j",

@@ -511,6 +511,7 @@ class Model(ABC):
         with_forcing: bool = True,
         nodesep: float = 0.5,
         ranksep: float = 0.7,
+        dpi: int = 200,
         structure_id: int = 1,
     ):
         """Plot the model structure as a directed graph (requires ``graphviz``).
@@ -521,7 +522,8 @@ class Model(ABC):
             Output file path without extension; if None, the graph object is returned
             without writing a file.
         fmt
-            Output format (e.g. 'png', 'pdf', 'svg').
+            Output format (e.g. 'png', 'pdf', 'svg'). Vector formats ('pdf', 'svg')
+            are resolution-independent and give the sharpest result.
         view
             Open the rendered file with the default viewer.
         legend
@@ -532,6 +534,9 @@ class Model(ABC):
         nodesep, ranksep
             Graphviz spacing (inches) between nodes in a rank and between ranks;
             larger values give the diagram more breathing room.
+        dpi
+            Raster (e.g. PNG) resolution in dots per inch; raise it for a crisper
+            image. Ignored for vector formats.
         structure_id
             The structure variant to plot (default 1, the primary).
 
@@ -546,6 +551,7 @@ class Model(ABC):
             legend=legend,
             nodesep=nodesep,
             ranksep=ranksep,
+            dpi=dpi,
         )
 
     @abstractmethod

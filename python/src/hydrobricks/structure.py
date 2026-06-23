@@ -271,18 +271,24 @@ class StructureGraph:
         return yaml.safe_dump(self.to_dict(), sort_keys=False)
 
     def to_dot(
-        self, legend: bool = True, nodesep: float = 0.5, ranksep: float = 0.7
+        self,
+        legend: bool = True,
+        nodesep: float = 0.5,
+        ranksep: float = 0.7,
+        dpi: int = 200,
     ) -> str:
         """Return the graph as a Graphviz DOT string (no dependency required).
 
         ``nodesep`` / ``ranksep`` set the Graphviz spacing (inches) between nodes in a
         rank and between ranks; larger values give the diagram more breathing room.
+        ``dpi`` sets the raster (e.g. PNG) resolution; it is ignored for vector formats.
         """
         lines = [
             "digraph model_structure {",
-            '    rankdir=TB; bgcolor="white"; fontname="Helvetica";',
+            f'    rankdir=TB; bgcolor="white"; fontname="Helvetica"; dpi={dpi};',
             f"    nodesep={nodesep}; ranksep={ranksep};",
-            '    node [shape=box, fontname="Helvetica", fontsize=11];',
+            '    node [shape=box, fontname="Helvetica", fontsize=11, '
+            'margin="0.18,0.10"];',
             '    edge [fontname="Helvetica", fontsize=10, fontcolor="#333333", '
             'arrowsize=0.8, color="#333333"];',
         ]
@@ -500,6 +506,7 @@ class StructureGraph:
         legend: bool = True,
         nodesep: float = 0.5,
         ranksep: float = 0.7,
+        dpi: int = 200,
     ):
         """Render the structure as a directed graph with Graphviz.
 
@@ -509,7 +516,8 @@ class StructureGraph:
             Output file path without extension (e.g. ``'structure'``). If None, the
             rendered graph object is returned without writing a file.
         fmt
-            Output format (e.g. 'png', 'pdf', 'svg').
+            Output format (e.g. 'png', 'pdf', 'svg'). Vector formats ('pdf', 'svg')
+            are resolution-independent and give the sharpest result.
         view
             Open the rendered file with the default viewer.
         legend
@@ -517,6 +525,9 @@ class StructureGraph:
         nodesep, ranksep
             Graphviz spacing (inches) between nodes in a rank and between ranks;
             larger values give the diagram more breathing room.
+        dpi
+            Raster (e.g. PNG) resolution in dots per inch; raise it for a crisper
+            image. Ignored for vector formats.
 
         Returns
         -------
@@ -544,8 +555,15 @@ class StructureGraph:
             ranksep=str(ranksep),
             fontname="Helvetica",
             bgcolor="white",
+            dpi=str(dpi),
         )
-        dot.attr("node", shape="box", fontname="Helvetica", fontsize="11")
+        dot.attr(
+            "node",
+            shape="box",
+            fontname="Helvetica",
+            fontsize="11",
+            margin="0.18,0.10",
+        )
         dot.attr(
             "edge",
             fontname="Helvetica",

@@ -82,12 +82,30 @@ print(f"\nStructure exported (json / yaml / dot) to: {working_dir}")
 # --------------------------------------------------------------------------- #
 # 4. A rendered diagram (optional — requires the `graphviz` package)
 # --------------------------------------------------------------------------- #
+# plot_structure() / plot() / to_dot() expose several display options:
+#   - with_forcing: include the meteo forcing inputs (default True); set False for a
+#       less cluttered diagram (just the water structure).
+#   - legend:       draw the legend (default True).
+#   - dpi:          PNG resolution (default 150); raise it for a crisper image.
+#   - fmt:          'png', 'pdf' or 'svg' ('pdf'/'svg' are vector = sharpest).
+#   - nodesep / ranksep: spacing between nodes and between ranks.
+#   - structure_id: which structure variant to draw.
 if hb.HAS_GRAPHVIZ:
-    out = hbv.plot_structure(
-        str(working_dir / "hbv_structure"), fmt="png", structure_id=2
+    # The full diagram (with forcing), as a higher-resolution PNG.
+    hbv.plot_structure(
+        str(working_dir / "hbv_structure"),
+        fmt="png",
+        dpi=200,
+        structure_id=2,
     )
-    print(f"Structure diagram rendered to: {working_dir / 'hbv_structure.png'}")
-    del out
+    # A cleaner variant without the forcing inputs, as a vector PDF.
+    hbv.plot_structure(
+        str(working_dir / "hbv_structure_clean"),
+        fmt="pdf",
+        with_forcing=False,
+        structure_id=2,
+    )
+    print(f"\nStructure diagrams rendered to: {working_dir}")
 else:
     print(
         "\n'graphviz' not installed: skipping plot_structure(). "

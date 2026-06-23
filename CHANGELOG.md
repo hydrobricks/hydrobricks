@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Water balance is now conserved when a land cover area fraction changes (land-cover
+  change and glacier-evolution actions). The water, snow and canopy content stored on
+  the land that changes hands is transferred between the changed cover and the generic
+  cover that absorbs the area difference, instead of leaving the depth (mm) unchanged
+  over a different area, which silently created or destroyed water (C++ `HydroUnit`).
 - NaN-safe aggregation of per–hydro-unit values across heterogeneous structures
   (area weighting of storage changes and ET when a cover is absent from a unit).
 - The generic soil cover that absorbs residual area (land cover evolution / single-area

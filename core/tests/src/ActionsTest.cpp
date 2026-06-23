@@ -91,6 +91,50 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f, 0.0000001);
 }
 
+TEST_F(ActionsInModel, LandCoverChangeConservesWaterBalance) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    // Change the land cover area while snow is on the ground (day 3) and again later
+    // (day 6). The ground cover area changes in both directions, which used to break
+    // the water balance because the stored water/snow was not moved with the land.
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 3), 1, "glacier", 70);
+    action.AddChange(GetMJD(2020, 1, 6), 1, "glacier", 30);
+    EXPECT_TRUE(model.AddAction(&action));
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Full water balance: precipitation = discharge + ET + storage changes (water,
+    // snow and ice). No water may be created or destroyed by the area changes.
+    double precip = 80;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double waterStorage = logger->GetTotalWaterStorageChanges();
+    double snowStorage = logger->GetTotalSnowStorageChanges();
+    double iceStorage = logger->GetTotalGlacierStorageChanges();
+
+    double balance = discharge + et + waterStorage + snowStorage + iceStorage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 1e-5);
+}
+
 TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     // Change the model settings to cover a larger time period
     _model.SetTimer("2000-01-01", "2020-12-31", 1, "day");

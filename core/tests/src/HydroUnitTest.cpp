@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 
+#include "GenericLandCover.h"
+#include "Glacier.h"
 #include "HydroUnit.h"
 #include "LandCover.h"
+#include "Snowpack.h"
 
 TEST(HydroUnit, BuildsCorrectly) {
     HydroUnit unit(100, HydroUnit::Lumped);
@@ -187,6 +190,92 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionValidatesInvariants) {
     EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.4));
 
     EXPECT_TRUE(unit.IsValid(false));
+}
+
+TEST(HydroUnit, ChangeLandCoverAreaFractionConservesWaterAndIce) {
+    HydroUnit unit(100, HydroUnit::Lumped);
+
+    auto ground = std::make_unique<GenericLandCover>();
+    ground->SetName("ground");
+    ground->SetAreaFraction(0.6);
+    ground->UpdateContent(30.0, ContentType::Water);
+    unit.AddBrick(std::move(ground));
+
+    auto glacier = std::make_unique<Glacier>();
+    glacier->SetName("glacier");
+    glacier->SetAreaFraction(0.4);
+    glacier->UpdateContent(10.0, ContentType::Water);
+    glacier->UpdateContent(5000.0, ContentType::Ice);
+    unit.AddBrick(std::move(glacier));
+
+    auto waterVolume = [&unit]() {
+        LandCover* g = unit.GetLandCover("ground");
+        LandCover* gl = unit.GetLandCover("glacier");
+        return g->GetContent(ContentType::Water) * g->GetAreaFraction() +
+               gl->GetContent(ContentType::Water) * gl->GetAreaFraction();
+    };
+    auto iceVolume = [&unit]() {
+        LandCover* gl = unit.GetLandCover("glacier");
+        return gl->GetContent(ContentType::Ice) * gl->GetAreaFraction();
+    };
+
+    double waterBefore = waterVolume();
+    double iceBefore = iceVolume();
+
+    // Grow the glacier (the ground shrinks): no ice is removed by the area change, so
+    // both the water and the ice volumes are conserved (the ice is spread thinner).
+    EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.7));
+    EXPECT_NEAR(waterVolume(), waterBefore, 1e-8);
+    EXPECT_NEAR(iceVolume(), iceBefore, 1e-8);
+
+    // Shrink the glacier back (the ground grows): the water is still conserved.
+    EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("glacier", 0.4));
+    EXPECT_NEAR(waterVolume(), waterBefore, 1e-8);
+}
+
+TEST(HydroUnit, ChangeLandCoverAreaFractionConservesSnow) {
+    HydroUnit unit(100, HydroUnit::Lumped);
+
+    auto ground = std::make_unique<GenericLandCover>();
+    ground->SetName("ground");
+    ground->SetAreaFraction(0.6);
+    LandCover* groundPtr = ground.get();
+    unit.AddBrick(std::move(ground));
+
+    auto forest = std::make_unique<GenericLandCover>();
+    forest->SetName("forest");
+    forest->SetAreaFraction(0.4);
+    LandCover* forestPtr = forest.get();
+    unit.AddBrick(std::move(forest));
+
+    auto groundSnow = std::make_unique<Snowpack>();
+    groundSnow->SetName("ground_snowpack");
+    groundSnow->SetParent(groundPtr);
+    groundSnow->UpdateContent(100.0, ContentType::Snow);
+    unit.AddBrick(std::move(groundSnow));
+
+    auto forestSnow = std::make_unique<Snowpack>();
+    forestSnow->SetName("forest_snowpack");
+    forestSnow->SetParent(forestPtr);
+    forestSnow->UpdateContent(200.0, ContentType::Snow);
+    unit.AddBrick(std::move(forestSnow));
+
+    auto snowVolume = [&unit]() {
+        return unit.GetBrick("ground_snowpack")->GetContent(ContentType::Snow) *
+                   unit.GetLandCover("ground")->GetAreaFraction() +
+               unit.GetBrick("forest_snowpack")->GetContent(ContentType::Snow) *
+                   unit.GetLandCover("forest")->GetAreaFraction();
+    };
+
+    double snowBefore = snowVolume();
+
+    // The snow stored on each cover's snowpack follows the land as the cover area
+    // changes, so the total snow volume is conserved in both directions.
+    EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("forest", 0.7));
+    EXPECT_NEAR(snowVolume(), snowBefore, 1e-8);
+
+    EXPECT_TRUE(unit.ChangeLandCoverAreaFraction("forest", 0.1));
+    EXPECT_NEAR(snowVolume(), snowBefore, 1e-8);
 }
 
 TEST(HydroUnit, ChangeLandCoverAreaFractionToZero) {

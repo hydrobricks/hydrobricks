@@ -2,11 +2,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <set>
+
 #include "Action.h"
 #include "ActionGlacierEvolutionAreaScaling.h"
 #include "ActionGlacierEvolutionDeltaH.h"
 #include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
+#include "ContentTypes.h"
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
@@ -18,6 +21,145 @@
 
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+namespace {
+
+// Read-only export of the model structure (bricks, processes, fluxes, splitters) as plain
+// Python objects, used by the Python StructureGraph (model.get_structure_graph()).
+
+std::string VariableTypeToStr(VariableType type) {
+    switch (type) {
+        case VariableType::Precipitation:
+            return "precipitation";
+        case VariableType::Temperature:
+            return "temperature";
+        case VariableType::TemperatureMin:
+            return "temperature_min";
+        case VariableType::TemperatureMax:
+            return "temperature_max";
+        case VariableType::Radiation:
+            return "solar_radiation";
+        case VariableType::PET:
+            return "pet";
+        case VariableType::Custom1:
+            return "custom_1";
+        case VariableType::Custom2:
+            return "custom_2";
+        case VariableType::Custom3:
+            return "custom_3";
+    }
+    return "unknown";
+}
+
+py::list ForcingToList(const vector<VariableType>& forcing) {
+    py::list list;
+    for (auto type : forcing) {
+        list.append(VariableTypeToStr(type));
+    }
+    return list;
+}
+
+py::list OutputsToList(const vector<OutputSettings>& outputs) {
+    py::list list;
+    for (const auto& output : outputs) {
+        py::dict d;
+        d["target"] = output.target;
+        d["flux_type"] = ContentTypeToString(output.fluxType);
+        d["instantaneous"] = output.isInstantaneous;
+        d["static"] = output.isStatic;
+        list.append(d);
+    }
+    return list;
+}
+
+py::list ProcessesToList(const vector<ProcessSettings>& processes) {
+    py::list list;
+    for (const auto& process : processes) {
+        py::dict d;
+        d["name"] = process.name;
+        d["kind"] = process.type;
+        d["forcing"] = ForcingToList(process.forcing);
+        d["outputs"] = OutputsToList(process.outputs);
+        list.append(d);
+    }
+    return list;
+}
+
+py::dict BrickToDict(const BrickSettings& brick, const string& attach, bool isLandCover, bool isSurfaceComponent) {
+    py::dict d;
+    d["name"] = brick.name;
+    d["kind"] = brick.type;
+    d["parent"] = brick.parent.empty() ? py::none() : py::cast(brick.parent);
+    d["attach"] = attach;
+    d["computed_directly"] = brick.computedDirectly;
+    d["is_land_cover"] = isLandCover;
+    d["is_surface_component"] = isSurfaceComponent;
+    d["forcing"] = ForcingToList(brick.forcing);
+    d["processes"] = ProcessesToList(brick.processes);
+    return d;
+}
+
+py::list SplittersToList(SettingsModel& settings, bool subBasin) {
+    py::list list;
+    int count = subBasin ? settings.GetSubBasinSplitterCount() : settings.GetHydroUnitSplitterCount();
+    for (int i = 0; i < count; ++i) {
+        const SplitterSettings& s = subBasin ? settings.GetSubBasinSplitterSettings(i)
+                                             : settings.GetHydroUnitSplitterSettings(i);
+        py::dict d;
+        d["name"] = s.name;
+        d["kind"] = s.type;
+        d["attach"] = subBasin ? "sub_basin" : "hydro_unit";
+        d["forcing"] = ForcingToList(s.forcing);
+        d["outputs"] = OutputsToList(s.outputs);
+        list.append(d);
+    }
+    return list;
+}
+
+py::list ExportStructure(SettingsModel& settings) {
+    py::list structures;
+    int structureCount = settings.GetStructureCount();
+    for (int id = 1; id <= structureCount; ++id) {
+        settings.SelectStructure(id);
+
+        std::set<int> landCoverIdx;
+        for (int i : settings.GetLandCoverBricksIndices()) {
+            landCoverIdx.insert(i);
+        }
+        std::set<int> surfaceIdx;
+        for (int i : settings.GetSurfaceComponentBricksIndices()) {
+            surfaceIdx.insert(i);
+        }
+
+        py::list hydroUnitBricks;
+        for (int i = 0; i < settings.GetHydroUnitBrickCount(); ++i) {
+            hydroUnitBricks.append(BrickToDict(settings.GetHydroUnitBrickSettings(i), "hydro_unit",
+                                               landCoverIdx.count(i) > 0, surfaceIdx.count(i) > 0));
+        }
+
+        py::list subBasinBricks;
+        for (int i = 0; i < settings.GetSubBasinBrickCount(); ++i) {
+            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "sub_basin", false, false));
+        }
+
+        py::dict structure;
+        structure["id"] = id;
+        structure["hydro_unit_bricks"] = hydroUnitBricks;
+        structure["sub_basin_bricks"] = subBasinBricks;
+        structure["hydro_unit_splitters"] = SplittersToList(settings, false);
+        structure["sub_basin_splitters"] = SplittersToList(settings, true);
+        structures.append(structure);
+    }
+
+    // Restore the primary structure selection (selection has side effects).
+    if (structureCount >= 1) {
+        settings.SelectStructure(1);
+    }
+
+    return structures;
+}
+
+}  // namespace
 
 PYBIND11_MODULE(_hydrobricks, m) {
     m.doc() = "hydrobricks Python interface";
@@ -78,7 +220,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
-             "Set the process outputs as static.");
+             "Set the process outputs as static.")
+        .def(
+            "get_structure", [](SettingsModel& settings) { return ExportStructure(settings); },
+            "Export the model structure (bricks, processes, fluxes, splitters) as a list of "
+            "structure-variant dicts, for inspection/visualization.");
 
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())

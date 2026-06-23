@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Model structure inspection: `model.get_structure_graph()` returns a `StructureGraph`
+  (bricks, processes, fluxes, splitters — the complete structure incl. snow routine,
+  splitters, forest canopy and glacier reservoirs), with `to_dict`/`to_json`/`to_yaml`/
+  `to_dot` serialization, a textual `model.summary()` / `model.print_structure()`, and a
+  Graphviz `model.plot_structure()` (optional `graphviz` dependency). Each flux edge is
+  labelled with the process that withdraws the water.
 - HBV land-use classes as land covers: `forest` (optional rain interception in a canopy
   store, opt-in via `forest_interception=True`, off by default), `lake` (exclusive
   open-water cover: all precipitation direct, open-water evaporation, linear outflow, via

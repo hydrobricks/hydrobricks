@@ -10,6 +10,7 @@ from hydrobricks._exceptions import (
 # Import optional dependency management
 from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_GEOPANDAS,
+    HAS_GRAPHVIZ,
     HAS_NETCDF,
     HAS_PYARROW,
     HAS_PYET,
@@ -24,6 +25,7 @@ from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_XRSPATIAL,
     Dataset,
     gpd,
+    graphviz,
     pyarrow,
     pyet,
     pyproj,
@@ -45,6 +47,7 @@ from hydrobricks.observations import Observations
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.plotter import Plotter
 from hydrobricks.results import Results
+from hydrobricks.structure import StructureGraph
 from hydrobricks.time_series import TimeSeries
 from hydrobricks.trainer import evaluate
 
@@ -69,6 +72,7 @@ __all__ = (
     "Results",
     "Model",
     "Plotter",
+    "StructureGraph",
     "evaluate",
     # Logging functions
     "init",
@@ -91,10 +95,12 @@ __all__ = (
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
+    "HAS_GRAPHVIZ",
     # Lazy-loaded optional modules
     "Dataset",
     "rasterio",
     "gpd",
+    "graphviz",
     "shapely",
     "spotpy",
     "pyet",

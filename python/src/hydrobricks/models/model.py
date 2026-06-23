@@ -16,6 +16,7 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.structure import StructureGraph
 from hydrobricks.trainer import evaluate
 
 if TYPE_CHECKING:
@@ -459,6 +460,70 @@ class Model(ABC):
             ps.define_constraint(*constraint)
 
         return ps
+
+    def get_structure_graph(self, structure_id: int = 1) -> StructureGraph:
+        """
+        Build the model structure graph (bricks, processes, fluxes, splitters).
+
+        The graph reflects the complete structure (including the snow routine, the
+        precipitation splitters, the forest canopy and the glacier reservoirs), is
+        available right after model construction (no setup/run needed), and can be
+        serialized, summarized and plotted.
+
+        Parameters
+        ----------
+        structure_id
+            The structure variant to inspect (default 1, the primary). Models with
+            glacier/lake covers define several variants.
+
+        Returns
+        -------
+        StructureGraph
+            The structure graph object.
+        """
+        return StructureGraph.from_settings(
+            self.settings.get_structure(),
+            structure_id=structure_id,
+            model_name=type(self).__name__,
+            solver=self.solver,
+        )
+
+    def summary(self, structure_id: int = 1) -> str:
+        """Return a compact textual summary of the model structure."""
+        return self.get_structure_graph(structure_id).to_text()
+
+    def print_structure(self, structure_id: int = 1) -> None:
+        """Print a compact textual summary of the model structure."""
+        print(self.summary(structure_id))
+
+    def plot_structure(
+        self,
+        path: str | None = None,
+        fmt: str = "png",
+        view: bool = False,
+        structure_id: int = 1,
+    ):
+        """Plot the model structure as a directed graph (requires ``graphviz``).
+
+        Parameters
+        ----------
+        path
+            Output file path without extension; if None, the graph object is returned
+            without writing a file.
+        fmt
+            Output format (e.g. 'png', 'pdf', 'svg').
+        view
+            Open the rendered file with the default viewer.
+        structure_id
+            The structure variant to plot (default 1, the primary).
+
+        Returns
+        -------
+        The ``graphviz.Digraph`` object.
+        """
+        return self.get_structure_graph(structure_id).plot(
+            path=path, fmt=fmt, view=view
+        )
 
     @abstractmethod
     def _define_structure(self) -> None:

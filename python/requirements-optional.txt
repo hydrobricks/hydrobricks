@@ -2,6 +2,7 @@ dask
 dask-expr
 datashader==0.19.0
 geopandas
+graphviz
 matplotlib
 netCDF4
 pyarrow

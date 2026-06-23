@@ -66,6 +66,17 @@ class ModelSettings:
         """
         return self.settings.set_parameter_value(component, name, float(value))
 
+    def get_structure(self) -> list:
+        """
+        Export the model structure (bricks, processes, fluxes, splitters).
+
+        Returns
+        -------
+        A list of structure-variant dicts (see SettingsModel.get_structure in the C++
+        bindings); used to build the model structure graph.
+        """
+        return self.settings.get_structure()
+
     def generate_base_structure(
         self,
         land_cover_names: list[str],

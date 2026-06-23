@@ -96,6 +96,7 @@ xr = None
 rxr = None
 pyarrow = None
 xrs = None
+graphviz = None
 
 # Check availability and setup lazy imports
 HAS_NETCDF = is_module_available("netCDF4")
@@ -154,6 +155,10 @@ HAS_XRSPATIAL = is_module_available("xrspatial")
 if HAS_XRSPATIAL:
     xrs = LazyImport("xrspatial")
 
+HAS_GRAPHVIZ = is_module_available("graphviz")
+if HAS_GRAPHVIZ:
+    graphviz = LazyImport("graphviz")
+
 __all__ = [
     # Utility functions
     "is_module_available",
@@ -175,6 +180,7 @@ __all__ = [
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
+    "HAS_GRAPHVIZ",
     # Lazy-loaded modules
     "Dataset",
     "rasterio",
@@ -190,4 +196,5 @@ __all__ = [
     "rxr",
     "pyarrow",
     "xrs",
+    "graphviz",
 ]

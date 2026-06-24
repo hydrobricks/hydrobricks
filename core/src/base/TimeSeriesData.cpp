@@ -1,5 +1,7 @@
 #include "TimeSeriesData.h"
 
+#include <utility>
+
 /*
  * TimeSeriesData
  */
@@ -7,8 +9,8 @@
 TimeSeriesData::TimeSeriesData()
     : _cursor(0) {}
 
-bool TimeSeriesData::SetValues(const vecDouble& values) {
-    _values = values;
+bool TimeSeriesData::SetValues(vecDouble values) {
+    _values = std::move(values);
     return true;
 }
 
@@ -35,7 +37,7 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeS
       _timeStep(timeStep),
       _timeStepUnit(timeStepUnit) {}
 
-bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
+bool TimeSeriesDataRegular::SetValues(vecDouble values) {
     double calcEnd = IncrementDateBy(_start, _timeStep * static_cast<int>(values.size() - 1), _timeStepUnit);
     if (calcEnd != _end) {
         LogError("The size of the time series data does not match the time properties.");
@@ -43,7 +45,7 @@ bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
         return false;
     }
 
-    _values = values;
+    _values = std::move(values);
     return true;
 }
 
@@ -151,13 +153,13 @@ TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble& dates)
     : TimeSeriesData(),
       _dates(dates) {}
 
-bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
+bool TimeSeriesDataIrregular::SetValues(vecDouble values) {
     if (_dates.size() != values.size()) {
         LogError("The size of the time series data does not match the dates array.");
         return false;
     }
 
-    _values = values;
+    _values = std::move(values);
     return true;
 }
 

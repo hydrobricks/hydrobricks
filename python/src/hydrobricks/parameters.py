@@ -134,7 +134,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
-            aliases=["rfcf", "rcf"],
+            aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -143,7 +143,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="snow_correction_factor",
             unit="-",
-            aliases=["sfcf", "scf"],
+            aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -155,7 +155,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
-            aliases=["rfcf", "rcf"],
+            aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -342,7 +342,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="et_correction_factor",
             unit="-",
-            aliases=["cevpf", "etcf"],
+            aliases=["et_correction_factor", "et_corr_factor", "cevpf", "etcf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -1718,6 +1718,12 @@ class ParameterSet:
         if with_snow:
             for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
                 self._register(component="snow_rain_transition", spec=spec)
+            # Snow undercatch is usually at least as large as rain undercatch, so the
+            # snow factor should not fall below the rain factor. Applies to every
+            # snow-bearing model (only the snow/rain splitter carries both factors).
+            self.define_constraint(
+                "rain_correction_factor", "<=", "snow_correction_factor"
+            )
         else:
             for spec in PROCESS_PARAM_SPECS["correction:rain"]:
                 self._register(component="rain", spec=spec)

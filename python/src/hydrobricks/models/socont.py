@@ -268,6 +268,9 @@ class Socont(Model):
         - k_slow_2 < k_quick: Second soil layer slower than quick flow
         - k_slow_2 < k_slow_1: Second soil layer slower than first layer
 
+        The snow/rain correction factor constraint (rain <= snow) is defined
+        generically for every snow-bearing model in ParameterSet.
+
         These constraints ensure the model behaves physically.
         """
         self.parameter_constraints = [

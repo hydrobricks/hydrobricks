@@ -33,7 +33,8 @@ parameters.allow_changing = [
     "k_slow_1",
     "percol",
     "k_slow_2",
-    "precip_corr_factor",
+    "rain_corr_factor",
+    "snow_corr_factor",
 ]
 
 # Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)

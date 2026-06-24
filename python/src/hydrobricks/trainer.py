@@ -649,14 +649,14 @@ class SpotpySetup:
         params.set_values(param_values, check_range=False, transformed=True)
 
         if not params.constraints_satisfied():
-            logger.warning(
+            logger.debug(
                 "Skipped run: parameter constraints not satisfied (%s)",
                 _format_params(x),
             )
             return None
 
         if not params.range_satisfied():
-            logger.warning(
+            logger.debug(
                 "Skipped run: parameter(s) out of range (%s)",
                 _format_params(x),
             )

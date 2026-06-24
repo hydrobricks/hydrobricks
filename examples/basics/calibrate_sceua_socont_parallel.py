@@ -39,7 +39,8 @@ def build():
         "k_slow_1",
         "percol",
         "k_slow_2",
-        "precip_corr_factor",
+        "rain_corr_factor",
+        "snow_corr_factor",
     ]
 
     return socont, parameters, forcing, obs

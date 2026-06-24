@@ -14,20 +14,13 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
-# Parameters varied during the Monte Carlo analysis.
-ALLOW_CHANGING = [
-    "a_snow",
-    "k_quick",
-    "A",
-    "k_slow_1",
-    "percol",
-    "k_slow_2",
-    "precip_corr_factor",
-]
 
+def build():
+    """Build everything the calibration needs: model, parameters, forcing, obs.
 
-def build_all():
-    """Build the model, parameters, forcing, and observations from the test data."""
+    For parallel runs this factory is shipped to each worker process to rebuild
+    the model there, so it must be a module-level function (not a lambda/closure).
+    """
     helper = ModelSetupHelper(
         "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
     )
@@ -39,7 +32,15 @@ def build_all():
     socont, parameters = helper.get_model_and_params_socont()
 
     # Select the parameters to optimize/analyze
-    parameters.allow_changing = ALLOW_CHANGING
+    parameters.allow_changing = [
+        "a_snow",
+        "k_quick",
+        "A",
+        "k_slow_1",
+        "percol",
+        "k_slow_2",
+        "precip_corr_factor",
+    ]
 
     # Set a specific prior distribution instead of the default (Uniform)
     parameters.set_prior("a_snow", spotpy.parameter.Normal(mean=4, stddev=2))
@@ -47,39 +48,18 @@ def build_all():
     return socont, parameters, forcing, obs
 
 
-def build_models():
-    """Picklable factory that rebuilds (model, forcing, obs) inside each worker.
-
-    Must be a module-level function so SPOTPY's ``parallel='mpc'`` backend can
-    pickle it and ship it to the worker processes.
-    """
-    socont, _, forcing, obs = build_all()
-    return socont, forcing, obs
-
-
 if __name__ == "__main__":
-    # Build once in the main process to obtain the (picklable) parameters used by
-    # the sampler. The heavy, C++-backed model/forcing are rebuilt per worker via
-    # the factory, so the SpotpySetup itself stays picklable.
-    _, parameters, _, _ = build_all()
-
-    # Setup SPOTPY via the factory so the calibration can run in parallel.
-    spot_setup = trainer.SpotpySetup.from_factory(
-        build_models,
-        parameters,
+    # A single call builds the (picklable) setup and runs the sampler. Set
+    # parallel='mpc' to spread the independent Monte Carlo runs across CPU cores
+    # (requires the 'pathos' package); use parallel='seq' for a single process.
+    # Independent samplers such as 'mc'/'lhs' scale near-linearly with the cores.
+    # Use n_workers to cap the number of processes (default: all cores).
+    sampler = trainer.calibrate_from_factory(
+        build,
+        "mc",
+        10000,
         warmup=365,
         obj_func=spotpy.objectivefunctions.nashsutcliffe,
-    )
-
-    # Select number of runs and run spotpy. Set parallel='mpc' to spread the
-    # independent Monte Carlo runs across all CPU cores (requires the 'pathos'
-    # package); use parallel='seq' for a single-process run. Independent samplers
-    # such as 'mc'/'lhs' scale near-linearly with the number of cores.
-    nb_runs = 10000
-    sampler = trainer.calibrate(
-        spot_setup,
-        "mc",
-        nb_runs,
         dbname="spotpy_socont_sitter_MC",
         dbformat="csv",
         parallel="mpc",

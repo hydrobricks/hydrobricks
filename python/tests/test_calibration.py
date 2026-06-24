@@ -267,3 +267,50 @@ def test_calibrate_n_workers_validation():
 
     with pytest.raises(ConfigurationError):
         trainer.calibrate(spot_setup, "mc", repetitions=2, dbformat="ram", n_workers=0)
+
+
+def build_full():
+    """Module-level factory returning (model, parameters, forcing, obs)."""
+    socont, forcing, obs = build_setup_objects()
+    params = build_params()
+    return socont, params, forcing, obs
+
+
+def test_calibrate_from_factory_sequential():
+    """The one-call factory interface runs a sequential calibration end-to-end."""
+    sampler = trainer.calibrate_from_factory(
+        build_full,
+        "mc",
+        5,
+        warmup=WARMUP,
+        obj_func="nse",
+        dbformat="ram",
+        parallel="seq",
+        save_sim=False,
+    )
+    assert len(sampler.getdata()) >= 1
+
+
+def test_calibrate_from_factory_parallel_mpc():
+    """The one-call factory interface runs a multiprocessing calibration."""
+    pytest.importorskip("pathos")
+    sampler = trainer.calibrate_from_factory(
+        build_full,
+        "mc",
+        6,
+        warmup=WARMUP,
+        obj_func="nse",
+        dbformat="ram",
+        parallel="mpc",
+        save_sim=False,
+        n_workers=2,
+    )
+    assert len(sampler.getdata()) >= 1
+
+
+def test_calibrate_from_factory_requires_4tuple():
+    """A factory that omits the parameters raises a clear configuration error."""
+    with pytest.raises(ConfigurationError):
+        trainer.calibrate_from_factory(
+            build_setup_objects, "mc", 2, dbformat="ram", parallel="seq"
+        )

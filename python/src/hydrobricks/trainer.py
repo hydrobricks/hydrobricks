@@ -190,13 +190,19 @@ class SpotpySetup:
                 is_initialized=False,
             )
         result = self._setup_factory()
-        if not isinstance(result, tuple) or len(result) != 3:
+        # Accept either (model, forcing, obs) or (model, parameters, forcing, obs);
+        # the parameters are ignored here (this instance already holds them).
+        if not isinstance(result, tuple) or len(result) not in (3, 4):
             raise ConfigurationError(
-                "setup_factory must return a (model, forcing, obs) tuple.",
+                "setup_factory must return a (model, forcing, obs) or "
+                "(model, parameters, forcing, obs) tuple.",
                 item_name="setup_factory",
                 reason="Invalid factory return value",
             )
-        model, forcing, obs = result
+        if len(result) == 4:
+            model, _, forcing, obs = result
+        else:
+            model, forcing, obs = result
         self._build_from_objects(model, forcing, obs)
 
     def __getstate__(self) -> dict:
@@ -753,6 +759,101 @@ def calibrate(
     sampler.sample(repetitions)
 
     return sampler
+
+
+def calibrate_from_factory(
+    setup_factory: Callable[[], tuple],
+    algorithm: str,
+    repetitions: int,
+    allow_changing: list[str] | None = None,
+    warmup: int = 365,
+    obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+    invert_obj_func: bool = False,
+    dump_outputs: bool = False,
+    dump_forcing: bool = False,
+    dump_dir: str = "",
+    dbname: str | None = None,
+    dbformat: str = "ram",
+    parallel: str = "seq",
+    save_sim: bool = True,
+    n_workers: int | None = None,
+    **algorithm_kwargs: Any,
+) -> Any:
+    """
+    Build a calibration setup from a single factory and run it (parallel-ready).
+
+    This is the simplest way to run a calibration, including in parallel: provide
+    one factory that builds everything, and this function assembles the
+    (picklable) :class:`SpotpySetup` and runs the sampler. It removes the
+    boilerplate of extracting the parameters, calling
+    :meth:`SpotpySetup.from_factory`, and then :func:`calibrate` separately.
+
+    For ``parallel='mpc'``/``'mpi'`` the factory is shipped to each worker process
+    to rebuild the model there, so it must be a top-level (module-level) function
+    — not a lambda or closure — and the call must be guarded by
+    ``if __name__ == '__main__':`` (required on platforms that spawn workers, such
+    as Windows).
+
+    Parameters
+    ----------
+    setup_factory
+        Callable taking no arguments and returning a
+        ``(model, parameters, forcing, obs)`` tuple. Called once in the main
+        process (to obtain the parameters and build the local setup) and once in
+        each worker (to rebuild the model). Must be picklable for parallel runs.
+    algorithm
+        Name of the SPOTPY algorithm (e.g. ``'mc'``, ``'lhs'``, ``'sceua'``).
+    repetitions
+        Number of repetitions passed to ``sampler.sample()``.
+    allow_changing
+        Optional list of parameter names/aliases to calibrate. If given, it
+        overrides any ``parameters.allow_changing`` set inside the factory.
+    warmup, obj_func, invert_obj_func, dump_outputs, dump_forcing, dump_dir
+        Forwarded to :class:`SpotpySetup`.
+    dbname, dbformat, parallel, save_sim, n_workers, **algorithm_kwargs
+        Forwarded to :func:`calibrate`.
+
+    Returns
+    -------
+    The SPOTPY sampler instance (call ``sampler.getdata()`` for results).
+    """
+    built = setup_factory()
+    if not isinstance(built, tuple) or len(built) != 4:
+        raise ConfigurationError(
+            "setup_factory must return a (model, parameters, forcing, obs) tuple.",
+            item_name="setup_factory",
+            reason="Invalid factory return value",
+        )
+    model, params, forcing, obs = built
+    if allow_changing is not None:
+        params.allow_changing = allow_changing
+
+    spot_setup = SpotpySetup.from_factory(
+        setup_factory,
+        params,
+        warmup=warmup,
+        obj_func=obj_func,
+        invert_obj_func=invert_obj_func,
+        dump_outputs=dump_outputs,
+        dump_forcing=dump_forcing,
+        dump_dir=dump_dir,
+    )
+    # Reuse the objects already built in this (main) process to avoid building
+    # them twice here; workers rebuild via the factory after unpickling (the
+    # heavy objects are dropped by SpotpySetup.__getstate__).
+    spot_setup._build_from_objects(model, forcing, obs)
+
+    return calibrate(
+        spot_setup,
+        algorithm,
+        repetitions,
+        dbname=dbname,
+        dbformat=dbformat,
+        parallel=parallel,
+        save_sim=save_sim,
+        n_workers=n_workers,
+        **algorithm_kwargs,
+    )
 
 
 def evaluate(simulation: np.array, observation: np.array, metric: str) -> float:

@@ -201,6 +201,13 @@ void WaterContainer::Finalize() {
     if (_allowNegativeContent) {
         return;
     }
+    // Snap floating-point round-off residuals to exactly zero. When a store empties,
+    // summing nearly-equal in/out fluxes leaves a tiny value (e.g. ±1e-16) that would
+    // otherwise show up in the outputs as a tiny, sometimes negative, content.
+    if (NearlyZero(_content, PRECISION)) {
+        _content = 0;
+        return;
+    }
     assert(GreaterThanOrEqual(_content, 0, PRECISION));
     if (LessThan(_content, 0, PRECISION)) {
         LogError("Water container {} has negative content ({}).", GetParentBrick()->GetName(), _content);

@@ -3,13 +3,14 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, DataError, ModelError
-from hydrobricks._optional import spotpy
+from hydrobricks._optional import HAS_PATHOS, spotpy
 
 logger = logging.getLogger(__name__)
 
@@ -25,30 +26,46 @@ class SpotpySetup:
 
     def __init__(
         self,
-        model: Model | list[Model],
-        params: ParameterSet,
-        forcing: Forcing | list[Forcing],
-        obs: Observations | list[Observations],
+        model: Model | list[Model] | None = None,
+        params: ParameterSet | None = None,
+        forcing: Forcing | list[Forcing] | None = None,
+        obs: Observations | list[Observations] | None = None,
         warmup: int = 365,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
         invert_obj_func: bool = False,
         dump_outputs: bool = False,
         dump_forcing: bool = False,
         dump_dir: str = "",
+        setup_factory: Callable[[], tuple] | None = None,
     ) -> None:
         """
         Initialize SPOTPY setup for model calibration.
+
+        For parallel calibration (SPOTPY ``parallel='mpc'``/``'mpi'``), the setup
+        object is pickled and shipped to worker processes. The C++-backed model,
+        forcing, and observation objects cannot be pickled, so use the
+        ``setup_factory`` argument (or :meth:`from_factory`) to provide a picklable
+        callable that rebuilds them inside each worker. See :meth:`from_factory`.
 
         Parameters
         ----------
         model
             Single Model instance or list of Model instances for ensemble calibration.
+            Leave as None when using ``setup_factory``.
         params
             ParameterSet defining the model parameters to calibrate.
         forcing
             Single Forcing instance or list of Forcing instances (one per model).
+            Leave as None when using ``setup_factory``.
         obs
             Single Observations instance or list for observed data (one per model).
+            Leave as None when using ``setup_factory``.
+        setup_factory
+            Optional picklable callable taking no arguments and returning a
+            ``(model, forcing, obs)`` tuple (each a single instance or a list).
+            When provided, the heavy objects are built lazily (once per process),
+            making the setup picklable for parallel calibration. Must be a
+            top-level/module-level function so it can be pickled.
         warmup
             Number of days for model warmup period (skipped in evaluation).
             Default: 365
@@ -74,14 +91,17 @@ class SpotpySetup:
         DataError
             If observation data is invalid or missing.
         """
-        # Validate and normalize inputs
-        self.model = self._normalize_model_list(model)
-        self.params = params
-        self.forcing = self._normalize_forcing_list(forcing)
-        self.obs = self._normalize_observations_list(obs)
+        if params is None:
+            raise ConfigurationError(
+                "Parameters cannot be None.",
+                item_name="params",
+                reason="Required parameter missing",
+            )
 
-        # Validate ensemble sizes match
-        self._validate_ensemble_sizes()
+        # Lightweight configuration is set up in every process (and after unpickling
+        # in workers), so it must not depend on the heavy C++-backed objects.
+        self.params = params
+        self._setup_factory = setup_factory
 
         # Validate and set configuration parameters
         self._validate_and_set_parameters(
@@ -92,11 +112,112 @@ class SpotpySetup:
         self.params_spotpy = params.get_for_spotpy()
         self.random_forcing = params.needs_random_forcing()
 
+        # Validate objective function
+        self._validate_and_set_objective_function(obj_func)
+
+        # Heavy objects: either provided eagerly, or built lazily by the factory
+        # (the latter keeps the setup picklable for parallel calibration).
+        self.model = None
+        self.forcing = None
+        self.obs = None
+        self._built = False
+        if setup_factory is None:
+            self._build_from_objects(model, forcing, obs)
+
+    @classmethod
+    def from_factory(
+        cls,
+        setup_factory: Callable[[], tuple],
+        params: ParameterSet,
+        **kwargs: Any,
+    ) -> SpotpySetup:
+        """
+        Create a picklable setup for parallel calibration.
+
+        The ``setup_factory`` is called once in each worker process to (re)build
+        the model, forcing, and observations; the result is cached and reused
+        across that worker's evaluations. This avoids pickling the C++-backed
+        objects, which is required for SPOTPY ``parallel='mpc'``/``'mpi'`` (and
+        in particular on Windows, where workers are spawned, not forked).
+
+        Parameters
+        ----------
+        setup_factory
+            Picklable callable taking no arguments and returning a
+            ``(model, forcing, obs)`` tuple (each a single instance or a list).
+            Must be a top-level/module-level function (lambdas and closures
+            cannot be pickled by the standard backends).
+        params
+            ParameterSet defining the model parameters to calibrate. Must itself
+            be picklable (plain hydrobricks ParameterSet instances are).
+        **kwargs
+            Forwarded to :class:`SpotpySetup` (``warmup``, ``obj_func``,
+            ``invert_obj_func``, ``dump_outputs``, ``dump_forcing``, ``dump_dir``).
+
+        Returns
+        -------
+        SpotpySetup
+            A setup that builds its models lazily and can be pickled to workers.
+        """
+        return cls(params=params, setup_factory=setup_factory, **kwargs)
+
+    def _build_from_objects(
+        self,
+        model: Model | list[Model] | None,
+        forcing: Forcing | list[Forcing] | None,
+        obs: Observations | list[Observations] | None,
+    ) -> None:
+        """Normalize, validate, and wire up the concrete model/forcing/obs objects."""
+        self.model = self._normalize_model_list(model)
+        self.forcing = self._normalize_forcing_list(forcing)
+        self.obs = self._normalize_observations_list(obs)
+
+        # Validate ensemble sizes match
+        self._validate_ensemble_sizes()
+
         # Setup forcing and models
         self._setup_forcing_and_models()
 
-        # Validate objective function
-        self._validate_and_set_objective_function(obj_func)
+        self._built = True
+
+    def _ensure_built(self) -> None:
+        """Build the heavy objects on first use (e.g. lazily inside a worker)."""
+        if self._built:
+            return
+        if self._setup_factory is None:
+            raise ModelError(
+                "SpotpySetup has no models and no setup_factory to build them.",
+                is_initialized=False,
+            )
+        result = self._setup_factory()
+        if not isinstance(result, tuple) or len(result) != 3:
+            raise ConfigurationError(
+                "setup_factory must return a (model, forcing, obs) tuple.",
+                item_name="setup_factory",
+                reason="Invalid factory return value",
+            )
+        model, forcing, obs = result
+        self._build_from_objects(model, forcing, obs)
+
+    def __getstate__(self) -> dict:
+        """Return picklable state, dropping the C++-backed objects for workers."""
+        if self._setup_factory is None:
+            raise TypeError(
+                "This SpotpySetup was built from concrete model objects, which "
+                "cannot be pickled for parallel calibration. Build it with "
+                "SpotpySetup.from_factory(...) (or pass setup_factory=...) so the "
+                "models can be rebuilt in each worker process."
+            )
+        state = self.__dict__.copy()
+        # Each worker rebuilds these via the factory on first use.
+        state["model"] = None
+        state["forcing"] = None
+        state["obs"] = None
+        state["_built"] = False
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
 
     def _normalize_model_list(self, model: Model | list[Model]) -> list[Model]:
         """
@@ -427,6 +548,7 @@ class SpotpySetup:
             List of simulated discharge time series (one per model), or None
             if simulation failed or constraints were violated.
         """
+        self._ensure_built()
         params = self.params
         param_values = dict(zip(x.name, x.random))
         logger.debug(f"Setting {len(param_values)} parameter values for simulation")
@@ -463,8 +585,11 @@ class SpotpySetup:
 
             if self.dump_outputs or self.dump_forcing:
                 now = datetime.now()
-                date_time = now.strftime("%Y-%m-%d_%H%M%S")
-                path = os.path.join(self.dump_dir, date_time)
+                # Include the PID and a random suffix so concurrent workers (and
+                # rapid successive runs) never collide on the same output folder.
+                date_time = now.strftime("%Y-%m-%d_%H%M%S_%f")
+                unique = f"{date_time}_{os.getpid()}_{uuid.uuid4().hex[:8]}"
+                path = os.path.join(self.dump_dir, unique)
                 os.makedirs(path, exist_ok=True)
                 if self.dump_outputs:
                     logger.debug(f"    Dumping outputs to {path}")
@@ -477,6 +602,7 @@ class SpotpySetup:
         return all_sim
 
     def evaluation(self) -> list[np.ndarray]:
+        self._ensure_built()
         all_obs = []
         for obs in self.obs:
             all_obs.append(obs[self.warmup :])
@@ -521,6 +647,112 @@ class SpotpySetup:
 
         # Return the mean of the objective function
         return np.mean(all_like)
+
+
+def calibrate(
+    spot_setup: SpotpySetup,
+    algorithm: str,
+    repetitions: int,
+    dbname: str | None = None,
+    dbformat: str = "ram",
+    parallel: str = "seq",
+    save_sim: bool = True,
+    n_workers: int | None = None,
+    **algorithm_kwargs: Any,
+) -> Any:
+    """
+    Run a SPOTPY calibration, optionally across multiple processes.
+
+    Thin convenience wrapper around the SPOTPY algorithm classes that validates
+    the requested parallel backend before sampling. For ``parallel='mpc'`` the
+    ``spot_setup`` must have been built with :meth:`SpotpySetup.from_factory` so
+    that models can be rebuilt in each worker process.
+
+    Parameters
+    ----------
+    spot_setup
+        The configured :class:`SpotpySetup`.
+    algorithm
+        Name of the SPOTPY algorithm (e.g. ``'mc'``, ``'lhs'``, ``'sceua'``,
+        ``'dream'``), resolved from ``spotpy.algorithms``.
+    repetitions
+        Number of repetitions passed to ``sampler.sample()``.
+    dbname
+        SPOTPY database name (passed through to the algorithm).
+    dbformat
+        SPOTPY database format (``'ram'``, ``'csv'``, ...). Default: ``'ram'``.
+    parallel
+        SPOTPY parallel backend: ``'seq'`` (default), ``'mpc'`` (multiprocessing,
+        requires the ``pathos`` package), ``'mpi'`` (requires ``mpi4py``), or
+        ``'umpc'``. Note that not all algorithms parallelize well: independent
+        samplers (``mc``, ``lhs``, ``rope``) and ``dream`` benefit most, whereas
+        SCE-UA is largely sequential.
+    save_sim
+        Whether SPOTPY stores the simulated series. Default: True.
+    n_workers
+        Number of worker processes for ``parallel='mpc'``/``'umpc'``. Defaults to
+        None, i.e. all logical CPUs. Ignored for ``'seq'`` and ``'mpi'`` (the MPI
+        process count is set by the MPI launcher, e.g. ``mpiexec -n``).
+    **algorithm_kwargs
+        Extra keyword arguments forwarded to the SPOTPY algorithm constructor.
+
+    Returns
+    -------
+    The SPOTPY sampler instance (call ``sampler.getdata()`` for results).
+    """
+    if parallel in ("mpc", "umpc") and not HAS_PATHOS:
+        raise ConfigurationError(
+            "parallel='mpc' requires the 'pathos' package. "
+            "Install it with: pip install pathos",
+            item_name="parallel",
+            item_value=parallel,
+            reason="Missing optional dependency",
+        )
+    if parallel != "seq" and spot_setup._setup_factory is None:
+        raise ConfigurationError(
+            "Parallel calibration requires a SpotpySetup built via "
+            "SpotpySetup.from_factory(...) so models can be rebuilt in worker "
+            "processes.",
+            item_name="spot_setup",
+            reason="Setup is not picklable for parallel runs",
+        )
+
+    if n_workers is not None:
+        if not isinstance(n_workers, int) or n_workers < 1:
+            raise ConfigurationError(
+                f"n_workers must be a positive integer, got {n_workers}.",
+                item_name="n_workers",
+                item_value=n_workers,
+                reason="Invalid worker count",
+            )
+        if parallel in ("mpc", "umpc"):
+            # SPOTPY's multiprocessing backends read the pool size from a module-level
+            # global, set before the pool is created in sampler.sample(). The two
+            # backends use separate globals, so set whichever applies.
+            import spotpy.parallel.mproc as _mproc
+            import spotpy.parallel.umproc as _umproc
+
+            _mproc.process_count = n_workers
+            _umproc.process_count = n_workers
+        else:
+            logger.warning(
+                "n_workers is ignored for parallel='%s' (only applies to "
+                "'mpc'/'umpc').",
+                parallel,
+            )
+
+    algorithm_cls = getattr(spotpy.algorithms, algorithm)
+    sampler = algorithm_cls(
+        spot_setup,
+        dbname=dbname,
+        dbformat=dbformat,
+        parallel=parallel,
+        save_sim=save_sim,
+        **algorithm_kwargs,
+    )
+    sampler.sample(repetitions)
+
+    return sampler
 
 
 def evaluate(simulation: np.array, observation: np.array, metric: str) -> float:

@@ -320,7 +320,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
                 auto r = m.Run();
                 if (!r) throw py::value_error(r.error());
             },
-            "Run the model.")
+            // Run() is pure C++ and touches no Python state, so the GIL can be released for the
+            // whole simulation. This lets independent model instances run concurrently from Python
+            // threads (e.g. multi-catchment ensembles) and enables in-process parallel calibration.
+            py::call_guard<py::gil_scoped_release>(), "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")

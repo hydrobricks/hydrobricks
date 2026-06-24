@@ -31,6 +31,7 @@ Available flags:
     - HAS_GEOPANDAS: GeoPandas library
     - HAS_SHAPELY: Shapely library
     - HAS_SPOTPY: SPOTPY library
+    - HAS_PATHOS: Pathos library (multiprocessing backend for SPOTPY 'mpc')
     - HAS_PYET: PyEt library
     - HAS_PYPROJ: Pyproj library
     - HAS_PYSHEDS: Pysheds library
@@ -122,6 +123,9 @@ HAS_SPOTPY = is_module_available("spotpy")
 if HAS_SPOTPY:
     spotpy = LazyImport("spotpy")
 
+# Pathos provides the multiprocessing pool used by SPOTPY's parallel='mpc' backend.
+HAS_PATHOS = is_module_available("pathos")
+
 HAS_PYET = is_module_available("pyet")
 if HAS_PYET:
     pyet = LazyImport("pyet")
@@ -172,6 +176,7 @@ __all__ = [
     "HAS_GEOPANDAS",
     "HAS_SHAPELY",
     "HAS_SPOTPY",
+    "HAS_PATHOS",
     "HAS_PYET",
     "HAS_PYPROJ",
     "HAS_PYSHEDS",

@@ -4,7 +4,6 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Hashable
 
-import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import (
@@ -1310,7 +1309,9 @@ class ParameterSet:
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
-            if param["prior"] and not np.isnan(param["prior"]):
+            # The prior is either unset (NaN) or a spotpy parameter object; pd.isna
+            # handles both (np.isnan would raise on the object).
+            if not pd.isna(param["prior"]):
                 # A supplied prior is assumed to already be in optimizer space.
                 spotpy_params.append(param["prior"])
             else:

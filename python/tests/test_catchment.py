@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path
 import shutil
@@ -9,6 +10,8 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
+
+logger = logging.getLogger(__name__)
 
 FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -277,7 +280,7 @@ def test_radiation_calculation_resolution():
     try:
         shutil.rmtree(working_dir)
     except Exception:
-        print("Failed to clean up.")
+        logger.debug("Failed to clean up temporary directory %s", working_dir)
 
 
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")

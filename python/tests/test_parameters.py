@@ -623,3 +623,37 @@ def test_validate_process_param_specs_duplicate_detection():
     }
     with pytest.raises(hb.ConfigurationError):
         validate_process_param_specs(bad_specs)
+
+
+def test_get_for_spotpy_with_and_without_prior():
+    # Parameters without a prior become Uniform; a parameter with a set prior keeps
+    # that prior object (regression: the NaN check must not call np.isnan on it).
+    spotpy = pytest.importorskip("spotpy")
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="snowpack",
+        name="degree_day_factor",
+        unit="mm/d",
+        aliases=["a_snow"],
+        min_val=0,
+        max_val=10,
+    )
+    parameter_set.define_parameter(
+        component="surface_runoff",
+        name="response_factor",
+        unit="1/d",
+        aliases=["k_quick"],
+        min_val=0.05,
+        max_val=0.5,
+    )
+    parameter_set.allow_changing = ["a_snow", "k_quick"]
+
+    # Without any prior: all Uniform.
+    spotpy_params = parameter_set.get_for_spotpy()
+    assert all(isinstance(p, spotpy.parameter.Uniform) for p in spotpy_params)
+
+    # With a prior on a_snow: that one keeps the supplied prior object.
+    parameter_set.set_prior("a_snow", spotpy.parameter.Normal(mean=4, stddev=2))
+    spotpy_params = parameter_set.get_for_spotpy()
+    assert isinstance(spotpy_params[0], spotpy.parameter.Normal)
+    assert isinstance(spotpy_params[1], spotpy.parameter.Uniform)

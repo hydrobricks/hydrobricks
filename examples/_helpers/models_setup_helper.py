@@ -1,3 +1,4 @@
+import logging
 import os.path
 import shutil
 import tempfile
@@ -6,6 +7,8 @@ from pathlib import Path
 
 import hydrobricks as hb
 import hydrobricks.models as models
+
+logger = logging.getLogger(__name__)
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -42,11 +45,18 @@ class ModelSetupHelper:
         self.temp_gradients = None
 
     def __del__(self):
-        # Cleanup
+        # Release the hydrobricks log file handle first, otherwise the working
+        # directory cannot be removed on Windows (logging then continues to the
+        # console only, and the later close_log() on model deletion is a no-op).
+        try:
+            hb.close_log()
+        except Exception:
+            pass
+        # Best-effort cleanup of the temporary working directory.
         try:
             shutil.rmtree(self.working_dir)
         except Exception:
-            print("Failed to clean up.")
+            logger.debug("Failed to clean up temporary directory %s", self.working_dir)
 
     def get_catchment_dir(self):
         return TEST_FILES_DIR / self.catchment_name

@@ -5,6 +5,7 @@ geopandas
 graphviz
 matplotlib
 netCDF4
+pathos
 pyarrow
 pyet
 pyproj

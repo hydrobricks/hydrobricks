@@ -222,6 +222,9 @@ class Model(ABC):
 
             logger.debug("Starting model simulation")
             timer = Timer(text="Model simulation completed in {seconds:.2f} seconds")
+            # Route the per-run timing to debug so it does not flood the output
+            # during calibration (thousands of runs); visible with debug logging.
+            timer.logger = logger.debug
             timer.start()
 
             self.model.run()

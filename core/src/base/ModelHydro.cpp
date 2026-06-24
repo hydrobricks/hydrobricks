@@ -96,7 +96,9 @@ ModelResult ModelHydro::Run() {
 
     _logger.SaveInitialValues();
 
-    LogMessage("Simulation starting.");
+    // Per-run lifecycle messages are debug-level: at Message level they would
+    // flood the output during calibration (thousands of runs).
+    LogDebug("Simulation starting.");
 
     while (!_timer.IsOver()) {
         if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
@@ -111,7 +113,7 @@ ModelResult ModelHydro::Run() {
         }
     }
 
-    LogMessage("Simulation completed.");
+    LogDebug("Simulation completed.");
 
     return {};
 }

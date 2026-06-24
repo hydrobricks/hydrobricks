@@ -14,6 +14,63 @@ from hydrobricks._optional import HAS_PATHOS, spotpy
 
 logger = logging.getLogger(__name__)
 
+# Process-scoped cache of the heavy, C++-backed objects (model, forcing, obs)
+# built by a setup_factory. In parallel calibration SPOTPY pickles the work
+# function (which carries the SpotpySetup) and ships it to workers *per task*, so
+# every evaluation unpickles a fresh setup with `_built=False`. Without this
+# cache each evaluation would rebuild the whole model from scratch. It is keyed by
+# a per-calibration build token shared by all of a run's tasks, so the first task
+# in a worker builds the objects and every later task in that process reuses them.
+_BUILT_CACHE: dict = {}
+
+
+def _format_params(params: Any) -> str:
+    """Format a SPOTPY parameter set as compact ``name=value`` pairs.
+
+    Accepts either a SPOTPY parameter object (with ``.name``/``.random``) or the
+    ``(values, names)`` tuple SPOTPY passes to ``objectivefunction``.
+    """
+    if params is None:
+        return "n/a"
+    try:
+        names = list(params.name)
+        values = list(params.random)
+    except AttributeError:
+        try:
+            values, names = list(params[0]), list(params[1])
+        except Exception:
+            return str(params)
+    return ", ".join(f"{n}={float(v):.4g}" for n, v in zip(names, values))
+
+
+def _enable_mpc_progress() -> None:
+    """Make SPOTPY's ``mpc`` backend report progress while it runs.
+
+    SPOTPY prints its progress line ("... of ..., min objf=..., time remaining:
+    ...") from the main process inside the sampler's ``postprocessing`` loop, as
+    it consumes results coming back from the worker pool. The ``mpc`` backend
+    (``spotpy.parallel.mproc.ForEach``) collects every result with a *blocking*
+    ``pool.map`` before yielding any of them, so that loop only runs once all
+    repetitions have finished — i.e. the progress line never appears live, only
+    in a burst at the very end.
+
+    Switching to ``pool.imap`` (still ordered, but lazy) yields each result as
+    soon as it is ready, so the main process prints progress incrementally, just
+    like a sequential run. The patch is idempotent and leaves the unordered
+    ``umpc`` backend (which already uses the lazy ``uimap``) untouched.
+    """
+    import spotpy.parallel.mproc as _mproc
+
+    if getattr(_mproc.ForEach, "_hb_imap_progress", False):
+        return
+
+    def __call__(self, jobs):  # noqa: N807 (match SPOTPY's method name)
+        yield from self.pool.imap(self.f, jobs)
+
+    _mproc.ForEach.__call__ = __call__
+    _mproc.ForEach._hb_imap_progress = True
+
+
 if TYPE_CHECKING:
     from hydrobricks.forcing import Forcing
     from hydrobricks.models.model import Model
@@ -102,6 +159,10 @@ class SpotpySetup:
         # in workers), so it must not depend on the heavy C++-backed objects.
         self.params = params
         self._setup_factory = setup_factory
+        # Identifies this calibration's heavy objects in the process-scoped build
+        # cache. It is pickled with the setup, so every worker task of this run
+        # shares it and reuses the same model instead of rebuilding it each time.
+        self._build_token = uuid.uuid4().hex
 
         # Validate and set configuration parameters
         self._validate_and_set_parameters(
@@ -181,7 +242,16 @@ class SpotpySetup:
         self._built = True
 
     def _ensure_built(self) -> None:
-        """Build the heavy objects on first use (e.g. lazily inside a worker)."""
+        """Build the heavy objects on first use, reusing them across the worker.
+
+        In parallel calibration SPOTPY pickles the work function (which carries
+        this setup) and ships it to workers *per task*, so each evaluation
+        unpickles a fresh setup with ``_built=False``. Rebuilding the C++
+        model/forcing/obs every time would dominate the run time, so the built
+        objects are cached at process scope (see :data:`_BUILT_CACHE`) and keyed
+        by a per-calibration token shared by all tasks. The first task in a worker
+        builds them; every later task in that process reuses them.
+        """
         if self._built:
             return
         if self._setup_factory is None:
@@ -189,6 +259,14 @@ class SpotpySetup:
                 "SpotpySetup has no models and no setup_factory to build them.",
                 is_initialized=False,
             )
+
+        # Reuse objects already built by an earlier task in this worker process.
+        cached = _BUILT_CACHE.get(self._build_token)
+        if cached is not None:
+            self.model, self.forcing, self.obs = cached
+            self._built = True
+            return
+
         result = self._setup_factory()
         # Accept either (model, forcing, obs) or (model, parameters, forcing, obs);
         # the parameters are ignored here (this instance already holds them).
@@ -204,6 +282,12 @@ class SpotpySetup:
         else:
             model, forcing, obs = result
         self._build_from_objects(model, forcing, obs)
+
+        # Cache for the other evaluations this worker will handle. Only the
+        # current calibration is kept (a worker processes one run at a time), so
+        # the cache cannot grow or hand back another run's stale objects.
+        _BUILT_CACHE.clear()
+        _BUILT_CACHE[self._build_token] = (self.model, self.forcing, self.obs)
 
     def __getstate__(self) -> dict:
         """Return picklable state, dropping the C++-backed objects for workers."""
@@ -559,14 +643,23 @@ class SpotpySetup:
         param_values = dict(zip(x.name, x.random))
         logger.debug(f"Setting {len(param_values)} parameter values for simulation")
         # Spotpy samples are in transformed (optimizer) space; back-transform.
-        params.set_values(param_values, transformed=True)
+        # Skip range checking here so an out-of-range draw (e.g. from an unbounded
+        # prior) is rejected cleanly below rather than raising and crashing the
+        # sampler.
+        params.set_values(param_values, check_range=False, transformed=True)
 
         if not params.constraints_satisfied():
-            logger.debug("Parameter constraints not satisfied, skipping simulation")
+            logger.warning(
+                "Skipped run: parameter constraints not satisfied (%s)",
+                _format_params(x),
+            )
             return None
 
         if not params.range_satisfied():
-            logger.debug("Parameter ranges not satisfied, skipping simulation")
+            logger.warning(
+                "Skipped run: parameter(s) out of range (%s)",
+                _format_params(x),
+            )
             return None
 
         logger.debug(f"Running {len(self.model)} model(s)")
@@ -574,16 +667,30 @@ class SpotpySetup:
         for model_idx, (model, forcing) in enumerate(zip(self.model, self.forcing)):
             logger.debug(f"  Model {model_idx}: running simulation")
 
-            if self.random_forcing:
-                logger.debug("    Applying random forcing operations")
-                forcing.apply_operations(params, apply_to_all=False)
-                model.run(parameters=params, forcing=forcing)
-            else:
-                model.run(parameters=params)
+            try:
+                if self.random_forcing:
+                    logger.debug("    Applying random forcing operations")
+                    forcing.apply_operations(params, apply_to_all=False)
+                    model.run(parameters=params, forcing=forcing)
+                else:
+                    model.run(parameters=params)
+                sim = model.get_outlet_discharge()
+            except Exception as e:
+                # One bad parameter set must not abort the whole calibration.
+                logger.warning(
+                    "Skipped run: model %d failed (%s): %s",
+                    model_idx,
+                    _format_params(x),
+                    e,
+                )
+                return None
 
-            sim = model.get_outlet_discharge()
             if sim.size == 0:
-                logger.warning(f"  Model {model_idx}: no outlet discharge data")
+                logger.warning(
+                    "Skipped run: model %d produced no discharge (%s)",
+                    model_idx,
+                    _format_params(x),
+                )
                 return None
 
             logger.debug(f"  Model {model_idx}: extracted {len(sim)} discharge values")
@@ -622,7 +729,12 @@ class SpotpySetup:
         params: spotpy.parameter | None = None,
     ) -> float:
         if simulation is None:
-            logger.error(f"Simulation results empty (params: {params}).")
+            # The reason (constraints / range / no discharge) is already logged by
+            # simulation(); here the set is just scored as worst so the optimizer
+            # discards it. Keep this at debug to avoid duplicate noise.
+            logger.debug(
+                "Scoring rejected parameter set as worst (%s).", _format_params(params)
+            )
             if self.invert_obj_func:
                 return np.inf
             return -np.inf
@@ -630,12 +742,17 @@ class SpotpySetup:
         all_like = []
         for sim, obs in zip(simulation, evaluation):
             if sim is None or sim.size == 0:
-                logger.error(f"Simulation results empty (params: {params}).")
+                logger.debug(
+                    "Scoring empty simulation as worst (%s).", _format_params(params)
+                )
                 like = -np.inf
             elif len(sim) != len(obs):
-                logger.error(
-                    f"Length of simulation and observation do not match "
-                    f"(params: {params})."
+                logger.warning(
+                    "Simulation and observation lengths differ "
+                    "(sim=%d, obs=%d, params: %s).",
+                    len(sim),
+                    len(obs),
+                    _format_params(params),
                 )
                 like = -np.inf
             else:
@@ -722,6 +839,11 @@ def calibrate(
             item_name="spot_setup",
             reason="Setup is not picklable for parallel runs",
         )
+
+    if parallel == "mpc":
+        # SPOTPY's mpc backend blocks on pool.map and only reports progress once
+        # everything is done; stream results so progress prints live (see helper).
+        _enable_mpc_progress()
 
     if n_workers is not None:
         if not isinstance(n_workers, int) or n_workers < 1:

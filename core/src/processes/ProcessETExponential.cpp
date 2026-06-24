@@ -44,8 +44,8 @@ void ProcessETExponential::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETExponential::GetRates() {
+const vecDouble& ProcessETExponential::GetRates() {
     assert(_container->HasMaximumCapacity());
     double ratio = _container->GetTargetFillingRatio();
-    return {_pet->GetValue() * (1.0 - exp(-static_cast<double>(*_alpha) * ratio))};
+    return StoreRates({_pet->GetValue() * (1.0 - exp(-static_cast<double>(*_alpha) * ratio))});
 }

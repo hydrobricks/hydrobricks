@@ -67,7 +67,7 @@ class ProcessRoutingHBV : public ProcessOutflow {
      * which would zero the rates at later solver stages and halve the delivery.
      * The container constraints still prevent any negative content.
      */
-    [[nodiscard]] vecDouble GetChangeRates() override {
+    [[nodiscard]] const vecDouble& GetChangeRates() override {
         return GetRates();
     }
 
@@ -96,7 +96,7 @@ class ProcessRoutingHBV : public ProcessOutflow {
      * Read-only: computes the scheduled delivery from the current schedule state
      * without modifying it. Schedule advancement happens in Finalize().
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
     /**
      * Recompute the UH ordinates and resize the buffer based on the current maxbas.

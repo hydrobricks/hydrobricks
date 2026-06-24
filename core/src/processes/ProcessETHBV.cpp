@@ -50,15 +50,15 @@ void ProcessETHBV::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETHBV::GetRates() {
+const vecDouble& ProcessETHBV::GetRates() {
     assert(_container->HasMaximumCapacity());
     double pet = static_cast<double>(*_etCorrectionFactor) * _pet->GetValue();
     double threshold = static_cast<double>(*_lp) * _container->GetMaximumCapacity();
     if (threshold <= 0) {
-        return {pet};
+        return StoreRates({pet});
     }
 
     double ratio = std::min(1.0, _container->GetContentWithChanges() / threshold);
 
-    return {pet * ratio};
+    return StoreRates({pet * ratio});
 }

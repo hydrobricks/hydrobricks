@@ -14,8 +14,8 @@ void ProcessOutflowOverflow::SetParameters(const ProcessSettings& processSetting
     Process::SetParameters(processSettings);
 }
 
-vecDouble ProcessOutflowOverflow::GetRates() {
-    return {0};
+const vecDouble& ProcessOutflowOverflow::GetRates() {
+    return StoreRates({0});
 }
 
 void ProcessOutflowOverflow::StoreInOutgoingFlux(double* rate, int index) {

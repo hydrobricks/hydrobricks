@@ -427,11 +427,10 @@ const float* Process::GetParameterValuePointer(const ProcessSettings& processSet
     throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
-vecDouble Process::GetChangeRates() {
+const vecDouble& Process::GetChangeRates() {
     if (LessThanOrEqual(_container->GetContentWithChanges(), 0, PRECISION)) {
-        vecDouble res(GetConnectionCount());
-        std::fill(res.begin(), res.end(), 0);
-        return res;
+        _changeRates.assign(GetConnectionCount(), 0.0);
+        return _changeRates;
     }
 
     return GetRates();

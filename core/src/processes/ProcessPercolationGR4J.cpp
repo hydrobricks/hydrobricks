@@ -11,11 +11,11 @@ void ProcessPercolationGR4J::RegisterProcessSettings(SettingsModel*) {
     // No parameters or forcing: X1 is read from the container's maximum capacity.
 }
 
-vecDouble ProcessPercolationGR4J::GetRates() {
+const vecDouble& ProcessPercolationGR4J::GetRates() {
     double X1 = _container->GetMaximumCapacity();
     if (X1 <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
-    return {gr4j::Percolation(_container->GetContentWithChanges(), X1)};
+    return StoreRates({gr4j::Percolation(_container->GetContentWithChanges(), X1)});
 }

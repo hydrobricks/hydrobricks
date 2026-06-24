@@ -64,9 +64,9 @@ double* ProcessRoutingGR4J::GetValuePointer(std::string_view name) {
     return nullptr;
 }
 
-vecDouble ProcessRoutingGR4J::GetRates() {
+const vecDouble& ProcessRoutingGR4J::GetRates() {
     if (_uhBaseTime == nullptr || _routingCapacity == nullptr || _exchangeFactor == nullptr) {
-        return {0};
+        return StoreRates({0});
     }
 
     double X2 = *_exchangeFactor;
@@ -124,7 +124,7 @@ vecDouble ProcessRoutingGR4J::GetRates() {
         }
     }
 
-    return {_qr + _qd};
+    return StoreRates({_qr + _qd});
 }
 
 void ProcessRoutingGR4J::Finalize() {

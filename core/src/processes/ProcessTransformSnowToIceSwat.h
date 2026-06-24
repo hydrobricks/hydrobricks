@@ -49,7 +49,7 @@ class ProcessTransformSnowToIceSwat : public ProcessTransform {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICESWAT_H

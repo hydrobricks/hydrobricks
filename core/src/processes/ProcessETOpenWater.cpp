@@ -33,7 +33,7 @@ void ProcessETOpenWater::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETOpenWater::GetRates() {
+const vecDouble& ProcessETOpenWater::GetRates() {
     // Evaporate at the potential rate, but never more than the available content over the
     // time step, so the store cannot go negative. (The container's constraints also cap
     // outflows, but in the explicit/direct computation path the static inflows are folded
@@ -48,5 +48,5 @@ vecDouble ProcessETOpenWater::GetRates() {
         }
     }
 
-    return {rate};
+    return StoreRates({rate});
 }

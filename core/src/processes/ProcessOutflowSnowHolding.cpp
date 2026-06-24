@@ -35,10 +35,10 @@ void ProcessOutflowSnowHolding::SetParameters(const ProcessSettings& processSett
     _waterHoldingCapacity = GetParameterValuePointer(processSettings, "water_holding_capacity");
 }
 
-vecDouble ProcessOutflowSnowHolding::GetRates() {
+const vecDouble& ProcessOutflowSnowHolding::GetRates() {
     auto snowpack = dynamic_cast<Snowpack*>(_container->GetParentBrick());
     if (snowpack == nullptr) {
-        return {0};
+        return StoreRates({0});
     }
 
     double swe = snowpack->GetSnowContainer()->GetContentWithChanges();
@@ -46,7 +46,7 @@ vecDouble ProcessOutflowSnowHolding::GetRates() {
     // Anything above that is the excess that must drain out (an absolute amount, in mm).
     double excess = _container->GetContentWithChanges() - (*_waterHoldingCapacity) * swe;
     if (excess <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     // GetRates() must return a *rate* (amount per unit time), not an absolute amount: the solver
@@ -56,5 +56,5 @@ vecDouble ProcessOutflowSnowHolding::GetRates() {
     // The 1.0 fallback covers the case where no time machine is wired up (e.g. unit tests).
     double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
 
-    return {excess / timeStep};
+    return StoreRates({excess / timeStep});
 }

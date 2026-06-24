@@ -158,9 +158,12 @@ class Process {
     /**
      * Get the change rates of the process.
      *
+     * The returned reference points to a reusable per-process buffer that is
+     * overwritten on the next call; consume it before calling again.
+     *
      * @return vector of change rates.
      */
-    [[nodiscard]] virtual vecDouble GetChangeRates();
+    [[nodiscard]] virtual const vecDouble& GetChangeRates();
 
     /**
      * Store the water corresponding to the change rates in the outgoing fluxes.
@@ -301,6 +304,21 @@ class Process {
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
+    vecDouble _changeRates;                       // reusable buffer for the change rates (avoids per-call allocation)
+
+    /**
+     * Store change rates in the reusable buffer and return a reference to it.
+     *
+     * Reuses the buffer's capacity (no heap allocation after the first call),
+     * which matters because this is on the per-timestep solver hot path.
+     *
+     * @param rates the change rates to store.
+     * @return reference to the reusable buffer holding the rates.
+     */
+    const vecDouble& StoreRates(std::initializer_list<double> rates) {
+        _changeRates.assign(rates);
+        return _changeRates;
+    }
 
     /**
      * Get the sum of change rates from other processes.
@@ -312,9 +330,13 @@ class Process {
     /**
      * Get the rates of the process.
      *
-     * @return vector of rates.
+     * Implementations must store their result via StoreRates() (or directly in
+     * the _changeRates buffer) and return the reference, to avoid allocating on
+     * the hot path.
+     *
+     * @return reference to the reusable buffer holding the rates.
      */
-    [[nodiscard]] virtual vecDouble GetRates() = 0;
+    [[nodiscard]] virtual const vecDouble& GetRates() = 0;
 };
 
 #endif  // HYDROBRICKS_PROCESS_H

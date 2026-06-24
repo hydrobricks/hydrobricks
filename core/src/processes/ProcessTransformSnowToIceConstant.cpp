@@ -20,6 +20,6 @@ void ProcessTransformSnowToIceConstant::SetParameters(const ProcessSettings& pro
     }
 }
 
-vecDouble ProcessTransformSnowToIceConstant::GetRates() {
-    return {*_rate};
+const vecDouble& ProcessTransformSnowToIceConstant::GetRates() {
+    return StoreRates({*_rate});
 }

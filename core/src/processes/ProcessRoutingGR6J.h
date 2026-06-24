@@ -65,7 +65,7 @@ class ProcessRoutingGR6J : public ProcessOutflow {
      * Overridden to bypass the empty-container short-circuit: the bottomless exponential store
      * discharges even when the container is empty.
      */
-    [[nodiscard]] vecDouble GetChangeRates() override;
+    [[nodiscard]] const vecDouble& GetChangeRates() override;
 
   protected:
     const float* _exchangeFactor;     // X2 [mm/d]
@@ -100,7 +100,7 @@ class ProcessRoutingGR6J : public ProcessOutflow {
      * Read-only: computes Q from current buffer/store state without modifying it.
      * State advancement happens in Finalize() exactly once per timestep.
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
     /**
      * Recompute UH ordinates and resize buffers based on current X4.

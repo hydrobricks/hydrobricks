@@ -155,8 +155,9 @@ void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepIn
     for (int i = 0; i < brick->GetProcessCount(); ++i) {
         auto process = brick->GetProcess(i);
 
-        // Get the change rates (per day) independently of the time step and constraints
-        vecDouble rates = process->GetChangeRates();
+        // Get the change rates (per day) independently of the time step and constraints.
+        // Reference into the process's reusable buffer; consumed within this iteration.
+        const vecDouble& rates = process->GetChangeRates();
 
         int iRateCopy = iRate;
         for (double rate : rates) {

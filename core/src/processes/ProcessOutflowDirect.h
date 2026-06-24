@@ -39,7 +39,7 @@ class ProcessOutflowDirect : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_OUTFLOW_DIRECT_H

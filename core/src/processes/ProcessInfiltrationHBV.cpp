@@ -30,14 +30,14 @@ void ProcessInfiltrationHBV::SetParameters(const ProcessSettings& processSetting
     _beta = GetParameterValuePointer(processSettings, "beta");
 }
 
-vecDouble ProcessInfiltrationHBV::GetRates() {
+const vecDouble& ProcessInfiltrationHBV::GetRates() {
     double in = _container->GetContentWithChanges();  // rain + snowpack outflow on the land cover
     double fc = GetTargetCapacity();                  // soil moisture capacity (FC)
     if (in <= 0 || fc <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     double ratio = std::clamp(GetTargetFillingRatio(), 0.0, 1.0);
 
-    return {in * (1.0 - std::pow(ratio, static_cast<double>(*_beta)))};
+    return StoreRates({in * (1.0 - std::pow(ratio, static_cast<double>(*_beta)))});
 }

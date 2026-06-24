@@ -20,6 +20,6 @@ void ProcessPercolationConstant::SetParameters(const ProcessSettings& processSet
     }
 }
 
-vecDouble ProcessPercolationConstant::GetRates() {
-    return {*_rate};
+const vecDouble& ProcessPercolationConstant::GetRates() {
+    return StoreRates({*_rate});
 }

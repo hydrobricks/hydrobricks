@@ -44,7 +44,7 @@ void ProcessETPowerLaw::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETPowerLaw::GetRates() {
+const vecDouble& ProcessETPowerLaw::GetRates() {
     assert(_container->HasMaximumCapacity());
-    return {_pet->GetValue() * pow(_container->GetTargetFillingRatio(), static_cast<double>(*_exponent))};
+    return StoreRates({_pet->GetValue() * pow(_container->GetTargetFillingRatio(), static_cast<double>(*_exponent))});
 }

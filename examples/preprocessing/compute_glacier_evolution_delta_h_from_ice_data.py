@@ -48,8 +48,8 @@ working_dir.mkdir(parents=True, exist_ok=True)
 # Prepare catchment data
 catchment = hb.Catchment(
     CATCHMENT_OUTLINE,
-    land_cover_types=["ground", "glacier"],
-    land_cover_names=["ground", "glacier"],
+    land_cover_types=["open", "glacier"],
+    land_cover_names=["open", "glacier"],
 )
 catchment.extract_dem(CATCHMENT_DEM)
 

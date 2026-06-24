@@ -1,5 +1,6 @@
 import logging
 import warnings
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -60,10 +61,10 @@ class Plotter:
     @staticmethod
     def plot_map_hydro_unit_value(
         results: Results,
-        unit_ids_raster_path: str,
+        unit_ids_raster_path: str | Path,
         component: str,
         date: str,
-        dem_path: str | None = None,
+        dem_path: str | Path | None = None,
         min_val: int = 0,
         max_val: int | None = None,
         figsize: tuple[int, int] = (6.4, 4.8),
@@ -134,12 +135,12 @@ class Plotter:
     @staticmethod
     def create_animated_map_hydro_unit_value(
         results: Results,
-        unit_ids_raster_path: str,
+        unit_ids_raster_path: str | Path,
         component: str,
         start_date: str,
         end_date: str,
-        save_path: str,
-        dem_path: str | None = None,
+        save_path: str | Path,
+        dem_path: str | Path | None = None,
         min_val: int = 0,
         max_val: int | None = None,
         fps: int = 5,
@@ -281,7 +282,7 @@ class Plotter:
         return new_cmap
 
     @staticmethod
-    def _load_units_ids_raster(unit_ids_raster_path: str) -> np.ndarray:
+    def _load_units_ids_raster(unit_ids_raster_path: str | Path) -> np.ndarray:
         """
         Load hydro unit IDs from a raster file.
 
@@ -314,7 +315,7 @@ class Plotter:
         return unit_ids_raster.to_numpy()
 
     @staticmethod
-    def _load_dem(dem_path: str) -> np.ndarray:
+    def _load_dem(dem_path: str | Path) -> np.ndarray:
         """
         Load digital elevation model (DEM) from a raster file.
 

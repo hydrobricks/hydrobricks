@@ -40,8 +40,8 @@ working_dir.mkdir(parents=True, exist_ok=True)
 # Prepare catchment data
 catchment = hb.Catchment(
     CATCHMENT_OUTLINE,
-    land_cover_types=["ground", "glacier"],
-    land_cover_names=["ground", "glacier"],
+    land_cover_types=["open", "glacier"],
+    land_cover_names=["open", "glacier"],
 )
 catchment.extract_dem(CATCHMENT_DEM)
 
@@ -79,8 +79,8 @@ socont = models.Socont(
     glacier_infinite_storage=0,
     snow_ice_transformation="transform:snow_ice_swat",
     snow_redistribution="transport:snow_slide",
-    land_cover_types=["ground", "glacier"],
-    land_cover_names=["ground", "glacier"],
+    land_cover_types=["open", "glacier"],
+    land_cover_names=["open", "glacier"],
 )
 
 # Parameters
@@ -170,7 +170,7 @@ plt.tight_layout()
 plt.show()
 
 # Plot the SWE on the non glacier parts
-swe = results.get_hydro_units_values(component="ground_snowpack:snow_content")
+swe = results.get_hydro_units_values(component="open_snowpack:snow_content")
 for i in range(swe.shape[0]):
     plt.plot(results.results.time, swe[i, :], alpha=0.6)
 plt.title("Non glacier SWE evolution per hydro unit")

@@ -149,7 +149,7 @@ for with_snow_redistribution in [True, False]:
     results.list_hydro_units_components()
 
     # Plot the SWE
-    swe = results.get_hydro_units_values(component="ground_snowpack:snow_content")
+    swe = results.get_hydro_units_values(component="open_snowpack:snow_content")
     for i in range(swe.shape[0]):
         plt.plot(results.results.time, swe[i, :], alpha=0.6)
     plt.title("Non glacier SWE evolution per hydro unit")
@@ -160,7 +160,7 @@ for with_snow_redistribution in [True, False]:
     hb.Plotter.plot_map_hydro_unit_value(
         results,
         CATCHMENT_RASTER,
-        "ground_snowpack:snow_content",
+        "open_snowpack:snow_content",
         "2020-12-31",
         dem_path=DEM_RASTER,
         figsize=(5, 6),
@@ -172,7 +172,7 @@ for with_snow_redistribution in [True, False]:
     hb.Plotter.create_animated_map_hydro_unit_value(
         results,
         CATCHMENT_RASTER,
-        "ground_snowpack:snow_content",
+        "open_snowpack:snow_content",
         "1990-01-01",
         "1990-03-20",
         save_path=str(working_dir),

@@ -32,6 +32,7 @@ DEM_RASTER = TEST_FILES_DIR / "ch_sitter_appenzell" / "dem.tif"
 
 working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
 working_dir.mkdir(parents=True, exist_ok=True)
+print(f"Working directory: {working_dir}")
 
 # Model structure
 socont = models.Socont(
@@ -129,7 +130,7 @@ results.list_hydro_units_components()
 hb.Plotter.plot_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow_content",
+    "open_snowpack:snow_content",
     "1981-01-20",
     dem_path=DEM_RASTER,
     max_val=300,
@@ -139,7 +140,7 @@ hb.Plotter.plot_map_hydro_unit_value(
 hb.Plotter.create_animated_map_hydro_unit_value(
     results,
     CATCHMENT_RASTER,
-    "ground_snowpack:snow_content",
+    "open_snowpack:snow_content",
     "1990-01-01",
     "1990-03-20",
     save_path=str(working_dir),

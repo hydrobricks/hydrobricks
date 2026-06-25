@@ -258,7 +258,10 @@ def test_radiation_calculation_with_cast_shadows():
         diff = ref_radiation - calc_radiation
         average_diff = np.mean(diff)
 
-        assert abs(average_diff) < 0.1  # Different from the previous test
+        # The reference raster predates the correction of the Earth-Sun distance
+        # ratio (true anomaly) in _calculate_radiation_hock_equation, which shifts
+        # the annual mean by ~0.19 W/m². Tolerance relaxed accordingly.
+        assert abs(average_diff) < 0.25  # Different from the previous test
 
 
 def test_radiation_calculation_resolution():

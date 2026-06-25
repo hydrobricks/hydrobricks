@@ -305,7 +305,12 @@ class GlacierEvolutionAreaScaling:
         # Compute the melt
         for i_unit in np.arange(len(self.hydro_unit_ids)):
             change = mass_change[i_unit]
-            melt = change / self.areas_pc[increment - 1, i_unit]
+            unit_area_pc = self.areas_pc[increment - 1, i_unit]
+            # A fully melted unit has no area left: nothing more to melt, and
+            # dividing by zero would yield Inf/NaN and trip the assert below.
+            if unit_area_pc == 0:
+                continue
+            melt = change / unit_area_pc
 
             # Update the glacier water equivalent of the pixels
             px_values = self.px_ice_we[increment, i_unit]

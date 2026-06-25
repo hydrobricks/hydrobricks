@@ -728,6 +728,14 @@ class GlacierEvolutionDeltaH:
             self.b_coeff = 0.60
             self.c_coeff = 0.09
             self.gamma_coeff = 2
+        else:
+            # A non-positive area leaves the coefficients as NaN, which would
+            # silently propagate through the whole lookup table.
+            raise DataError(
+                "No glacier area available to set the delta-h parametrization.",
+                data_type="glacier",
+                reason=f"Non-positive glacier area ({glacier_area_km2} km2)",
+            )
 
     def _compute_delta_h(self, increment: int, nb_increments: int, observed_dh: None):
         """
@@ -867,7 +875,12 @@ class GlacierEvolutionDeltaH:
                 # Scale the excess melt to area of the positive parts
                 pos_areas = self.areas_pc_parts[increment - 1, band_mask]
                 pos_areas = pos_areas[self.we_parts[increment, band_mask] > 0]
-                melt = excess_melt_parts_tot / np.sum(pos_areas)
+                pos_areas_sum = np.sum(pos_areas)
+                # No glacier-covered part left to absorb the excess melt: stop
+                # redistributing to avoid a division by zero (NaN/Inf).
+                if pos_areas_sum == 0:
+                    break
+                melt = excess_melt_parts_tot / pos_areas_sum
 
         # This excess melt is taken into account in Step 2.
         self.excess_melt_we = -np.sum(excess_melt * self.areas_pc_bands[increment - 1])

@@ -273,15 +273,17 @@ class CatchmentDiscretization:
         res_radiation_max = []
 
         combinations = list(itertools.product(*criteria_dict.values()))
-        combinations_keys = criteria_dict.keys()
+        combinations_keys = list(criteria_dict.keys())
+        # Position of each criterion within a combination tuple (computed once).
+        criterion_positions = {name: pos for pos, name in enumerate(combinations_keys)}
 
         unit_id = 1
-        for i, criteria in enumerate(combinations):
+        for combination in combinations:
             mask_unit = np.ones(self.catchment.dem_data.shape, dtype=bool)
             # Mask nan values
             mask_unit[np.isnan(self.catchment.dem_data)] = False
 
-            for criterion_name, criterion in zip(combinations_keys, criteria):
+            for criterion_name, criterion in zip(combinations_keys, combination):
                 if criterion_name == "elevation":
                     mask_elev = np.logical_and(
                         self.catchment.dem_data >= criterion[0],
@@ -348,29 +350,25 @@ class CatchmentDiscretization:
 
             # Set the mean elevation of the unit if elevation is a criterion
             if "elevation" in criteria_dict.keys():
-                i = list(combinations_keys).index("elevation")
-                elevations = criteria[i]
+                elevations = combination[criterion_positions["elevation"]]
                 res_elevation.append(round(float(np.mean(elevations)), 2))
                 res_elevation_min.append(round(float(elevations[0]), 2))
                 res_elevation_max.append(round(float(elevations[1]), 2))
 
             # Set the mean slope of the unit if slope is a criterion
             if "slope" in criteria_dict.keys():
-                i = list(combinations_keys).index("slope")
-                slopes = criteria[i]
+                slopes = combination[criterion_positions["slope"]]
                 res_slope.append(round(float(np.mean(slopes)), 2))
                 res_slope_min.append(round(float(slopes[0]), 2))
                 res_slope_max.append(round(float(slopes[1]), 2))
 
             # Get the aspect class if aspect is a criterion
             if "aspect" in criteria_dict.keys():
-                i = list(combinations_keys).index("aspect")
-                res_aspect_class.append(criteria[i])
+                res_aspect_class.append(combination[criterion_positions["aspect"]])
 
             # Get the radiation class if radiation is a criterion
             if "radiation" in criteria_dict.keys():
-                i = list(combinations_keys).index("radiation")
-                radiations = criteria[i]
+                radiations = combination[criterion_positions["radiation"]]
                 res_radiation.append(round(float(np.mean(radiations)), 2))
                 res_radiation_min.append(round(float(radiations[0]), 2))
                 res_radiation_max.append(round(float(radiations[1]), 2))

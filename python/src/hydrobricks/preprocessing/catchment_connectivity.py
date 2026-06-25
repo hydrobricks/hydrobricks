@@ -380,6 +380,27 @@ class CatchmentConnectivity:
         flow_dir
             2D array of flow direction codes (D8 algorithm: 1,2,4,8,16,32,64,128).
         """
+        # Map each unit id to its (mutable) connectivity dict for O(1) lookups.
+        # The dicts are shared with the DataFrame, so mutating them updates df
+        # in place and avoids a full-DataFrame scan per cell.
+        connect_by_id = dict(
+            zip(df[("id", "-")].values, df[("connectivity", "-")].values)
+        )
+
+        # D8 flow direction codes mapped to (row, col) offsets:
+        # [N,  NE,  E, SE, S, SW, W, NW]
+        # [64, 128, 1, 2,  4, 8, 16, 32]
+        d8_offsets = {
+            1: (0, 1),
+            2: (1, 1),
+            4: (1, 0),
+            8: (1, -1),
+            16: (0, -1),
+            32: (-1, -1),
+            64: (-1, 0),
+            128: (-1, 1),
+        }
+
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
@@ -393,32 +414,15 @@ class CatchmentConnectivity:
                 if flow_dir_cell <= 0:
                     continue
 
-                # Get the unit id of the cell to which the current cell flows
-                # Flow directions:
-                # [N,  NE,  E, SE, S, SW, W, NW]
-                # [64, 128, 1, 2,  4, 8, 16, 32]
-                if flow_dir_cell == 1:
-                    i_next, j_next = i, j + 1
-                elif flow_dir_cell == 2:
-                    i_next, j_next = i + 1, j + 1
-                elif flow_dir_cell == 4:
-                    i_next, j_next = i + 1, j
-                elif flow_dir_cell == 8:
-                    i_next, j_next = i + 1, j - 1
-                elif flow_dir_cell == 16:
-                    i_next, j_next = i, j - 1
-                elif flow_dir_cell == 32:
-                    i_next, j_next = i - 1, j - 1
-                elif flow_dir_cell == 64:
-                    i_next, j_next = i - 1, j
-                elif flow_dir_cell == 128:
-                    i_next, j_next = i - 1, j + 1
-                else:
+                # Get the cell to which the current cell flows
+                offset = d8_offsets.get(int(flow_dir_cell))
+                if offset is None:
                     raise DataError(
                         "Unknown flow direction.",
                         data_type="flow direction",
                         reason="Invalid flow direction value",
                     )
+                i_next, j_next = i + offset[0], j + offset[1]
 
                 if (
                     i_next < 0
@@ -434,9 +438,7 @@ class CatchmentConnectivity:
                     continue
 
                 # If the current cell flows to a different unit, add a connection
-                connect = df.loc[df[("id", "-")] == unit_id, ("connectivity", "-")]
-                connect = connect.values[0]
-                if unit_id_next not in connect:
-                    connect[unit_id_next] = 0
-                connect[unit_id_next] += float(flow_acc[i, j])
-                df.loc[df[("id", "-")] == unit_id, ("connectivity", "-")] = [connect]
+                connect = connect_by_id[unit_id]
+                connect[unit_id_next] = connect.get(unit_id_next, 0) + float(
+                    flow_acc[i, j]
+                )

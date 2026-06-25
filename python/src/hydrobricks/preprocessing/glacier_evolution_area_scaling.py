@@ -44,8 +44,7 @@ class GlacierEvolutionAreaScaling:
         self, catchment: Catchment, ice_thickness: str | Path, nb_increments: int = 200
     ) -> None:
         """
-        Extract the initial ice thickness to be used in compute_lookup_table()
-        for the glacier mass balance calculation.
+        Compute the glacier area and volume evolution lookup tables.
 
         Computes glacier area and volume evolution lookup tables based on incremental
         melting using a simple volume-area scaling approach. Results stored in
@@ -211,20 +210,14 @@ class GlacierEvolutionAreaScaling:
         glacier_patches = self._get_glacier_patches(catchment, glaciers_mask)
 
         # Create the dataframe for the glacier data
-        glacier_df = None
-        for unit_id, area in glacier_patches:
-            new_row = pd.DataFrame(
-                [[unit_id, area, 0.0]],
-                columns=[
-                    ("hydro_unit_id", "-"),
-                    ("glacier_area", "m2"),
-                    ("glacier_thickness", "m"),
-                ],
-            )
-            if glacier_df is None:
-                glacier_df = new_row
-            else:
-                glacier_df = pd.concat([glacier_df, new_row], ignore_index=True)
+        glacier_df = pd.DataFrame(
+            [[unit_id, area, 0.0] for unit_id, area in glacier_patches],
+            columns=[
+                ("hydro_unit_id", "-"),
+                ("glacier_area", "m2"),
+                ("glacier_thickness", "m"),
+            ],
+        )
 
         self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
@@ -370,10 +363,9 @@ class GlacierEvolutionAreaScaling:
         """
         Update lookup tables with glacier area and volume for each increment.
 
-        Aggregates glacier areas and volumes across hydro units based on elevation
-        bands. Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled)
-        areas for all respective elevation bands which are covered by glaciers
-        (i.e. glacier water equivalent ≥ 0) for each elevation zone."
+        Aggregates the glacier area and volume per hydro unit (one column per
+        hydro unit) across all melt increments, in this simple volume-area
+        scaling approach (no elevation-band sub-discretization).
         """
         # Update elevation zone areas
         for i, hydro_unit_id in enumerate(np.unique(self.hydro_unit_ids)):

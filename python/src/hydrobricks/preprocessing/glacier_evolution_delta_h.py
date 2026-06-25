@@ -181,22 +181,16 @@ class GlacierEvolutionDeltaH:
         ice_thickness_diff = ice_thickness_new - ice_thickness_old
 
         # Create the dataframe for the glacier change data
-        change_df = None
-        for band_id in band_ids:
-            new_row = pd.DataFrame(
-                [[band_id, elevations[band_id - 1], 0.0, 0.0, 0.0]],
-                columns=[
-                    ("band_id", "-"),
-                    ("elevation", "m"),
-                    ("glacier_thickness_old", "m"),
-                    ("glacier_thickness_new", "m"),
-                    ("glacier_thickness_diff", "m"),
-                ],
-            )
-            if change_df is None:
-                change_df = new_row
-            else:
-                change_df = pd.concat([change_df, new_row], ignore_index=True)
+        change_df = pd.DataFrame(
+            [[band_id, elevations[band_id - 1], 0.0, 0.0, 0.0] for band_id in band_ids],
+            columns=[
+                ("band_id", "-"),
+                ("elevation", "m"),
+                ("glacier_thickness_old", "m"),
+                ("glacier_thickness_new", "m"),
+                ("glacier_thickness_diff", "m"),
+            ],
+        )
 
         # Update the dataframe with the ice thickness
         for idx, row in change_df.iterrows():
@@ -361,22 +355,19 @@ class GlacierEvolutionDeltaH:
         )
 
         # Create the dataframe for the glacier data
-        glacier_df = None
-        for band_id, unit_id, area in glacier_patches:
-            new_row = pd.DataFrame(
-                [[band_id, elevations[band_id - 1], area, 0.0, unit_id]],
-                columns=[
-                    ("band_id", "-"),
-                    ("elevation", "m"),
-                    ("glacier_area", "m2"),
-                    ("glacier_thickness", "m"),
-                    ("hydro_unit_id", "-"),
-                ],
-            )
-            if glacier_df is None:
-                glacier_df = new_row
-            else:
-                glacier_df = pd.concat([glacier_df, new_row], ignore_index=True)
+        glacier_df = pd.DataFrame(
+            [
+                [band_id, elevations[band_id - 1], area, 0.0, unit_id]
+                for band_id, unit_id, area in glacier_patches
+            ],
+            columns=[
+                ("band_id", "-"),
+                ("elevation", "m"),
+                ("glacier_area", "m2"),
+                ("glacier_thickness", "m"),
+                ("hydro_unit_id", "-"),
+            ],
+        )
 
         # Extract the ice thickness from a TIF file created either from geophysical
         # measurements or calculated based on an inversion of surface topography
@@ -485,10 +476,16 @@ class GlacierEvolutionDeltaH:
             - 'previous': Use the glacier width from the previous iteration.
             Ignored if pixel_based_approach is True.
         """
-        assert (
-            self.hydro_units is not None
-        ), "Hydro units are not defined. Please load them first."
-        assert self.catchment_area is not None, "Catchment area is not defined."
+        if self.hydro_units is None:
+            raise ConfigurationError(
+                "Hydro units are not defined. Please load them first.",
+                reason="Missing hydro units",
+            )
+        if self.catchment_area is None:
+            raise ConfigurationError(
+                "Catchment area is not defined.",
+                reason="Missing catchment area",
+            )
 
         if glacier_profile_csv is not None and glacier_df is not None:
             raise DataError(
@@ -502,9 +499,13 @@ class GlacierEvolutionDeltaH:
             self.glacier_df = pd.read_csv(glacier_profile_csv, header=[0, 1])
         elif glacier_df is not None:
             self.glacier_df = glacier_df
-        assert (
-            self.glacier_df is not None
-        ), "Glacier data is not defined. Please provide a CSV file or a DataFrame."
+        if self.glacier_df is None:
+            raise DataError(
+                "Glacier data is not defined. "
+                "Please provide a CSV file or a DataFrame.",
+                data_type="glacier",
+                reason="Missing glacier data",
+            )
 
         if self.pixel_based_approach and catchment is None:
             raise ConfigurationError(

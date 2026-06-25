@@ -240,6 +240,53 @@ class ModelHydro {
         return &_actionsManager;
     }
 
+    /**
+     * Get the recorded hydro unit value series for a given component label, read from the
+     * in-memory logger (no file dump). Requires the component to have been recorded
+     * (e.g. with record_all enabled).
+     *
+     * @param label the recorded component label (e.g. "glacier:melt:output").
+     * @return the recorded series as a 2D array (time steps x hydro units).
+     */
+    [[nodiscard]] axxd GetHydroUnitValues(const string& label) const;
+
+    /**
+     * Get the recorded land-cover fraction series for a given fraction label (land cover name),
+     * read from the in-memory logger. Fractions are recorded only when record_all is enabled.
+     *
+     * @param label the land cover name (e.g. "glacier").
+     * @return the recorded fraction series as a 2D array (time steps x hydro units).
+     */
+    [[nodiscard]] axxd GetHydroUnitFractions(const string& label) const;
+
+    /**
+     * Get the labels of the recorded hydro unit components.
+     *
+     * @return vector of recorded component labels.
+     */
+    [[nodiscard]] vecStr GetRecordedHydroUnitLabels() const;
+
+    /**
+     * Get the labels of the recorded land-cover fractions.
+     *
+     * @return vector of recorded fraction labels (land cover names).
+     */
+    [[nodiscard]] vecStr GetRecordedHydroUnitFractionLabels() const;
+
+    /**
+     * Get the ids of the hydro units in the recorded order.
+     *
+     * @return vector of hydro unit ids.
+     */
+    [[nodiscard]] vecInt GetHydroUnitIds() const;
+
+    /**
+     * Get the areas of the hydro units in the recorded order.
+     *
+     * @return array of hydro unit areas.
+     */
+    [[nodiscard]] axd GetHydroUnitAreas() const;
+
   protected:
     Processor _processor;
     std::unique_ptr<SubBasin> _ownedSubBasin;  // owning: set only when ModelHydro creates the SubBasin

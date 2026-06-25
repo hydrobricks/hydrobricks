@@ -120,7 +120,7 @@ for with_snow_redistribution in [True, False]:
     forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
 
     # Obs data
-    obs = hb.Observations()
+    obs = hb.DischargeObservations()
     obs.load_from_csv(
         CATCHMENT_DISCHARGE,
         column_time="Date",

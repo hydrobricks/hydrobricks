@@ -1,0 +1,347 @@
+"""Calibrate a glacio-hydrological model on discharge AND glacier mass balance.
+
+On glacierized catchments the observed glacier mass balance (here GLAMOS data for
+the Rhonegletscher) is a strong, independent constraint on the snow/ice melt
+parameters. This example calibrates a SOCONT model on the Rhone @ Gletsch
+catchment using both the observed discharge and the observed glacier mass
+balance, and shows the three ways the mass balance can be used.
+
+Simulated mass balance
+----------------------
+hydrobricks computes the **glaciological (surface) mass balance**, i.e.
+accumulation minus ablation at the glacier surface — exactly what the GLAMOS
+glaciological method measures. Per glacier hydro unit and observation period::
+
+    B = ΔS - Σ ice_melt           (S = glacier snowpack water equivalent)
+
+This flux-based balance excludes ice dynamics, so it matches the GLAMOS
+*glaciological* product both for the whole glacier and per elevation band (a
+state-difference balance would instead mix in the delta-h redistribution and
+become a *geodetic* per-band balance). It works with the default infinite ice
+storage, which is what we use here: the glacier geometry stays fixed, which is
+appropriate for calibrating melt parameters and lets the model be re-run cleanly
+thousands of times. Per-band values are normalized by the model's own glacier
+area. See ``hydrobricks/evaluation/glacier_mass_balance.py`` for the full rationale.
+
+Three ways to use the mass balance
+----------------------------------
+The mass balance is passed to ``SpotpySetup`` as an ``extra_observations`` signal.
+Each signal carries its own ``mode`` (``'objective'`` or ``'constraint'``), and the
+objective terms combine via the setup-level ``combine`` argument:
+
+- objective + ``combine='weighted'``: a single score combining discharge and
+  mass-balance skill.
+- objective + ``combine='pareto'``: a ``[discharge, mass-balance]`` objective
+  vector for a multi-objective sampler (SPOTPY's NSGAII).
+- ``mode='constraint'``: a behavioural pass/fail filter — runs whose mass balance
+  is off by more than the signal's ``tolerance`` are rejected; discharge stays the
+  objective.
+
+Note: this script runs several calibrations of a glacierized model and can take
+a while. ``CALIBRATION_MAX_REP`` is kept small for a quick look; raise it (and
+consider the parallel helpers, see ``calibrate_sceua_socont_parallel.py``) for a
+real calibration.
+"""
+
+import logging
+import os.path
+import sys
+import tempfile
+import uuid
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import spotpy
+
+import hydrobricks as hb
+import hydrobricks.models as models
+import hydrobricks.trainer as trainer
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
+
+# Configuration
+START_DATE = "2009-01-01"
+END_DATE = "2020-12-31"
+REF_ELEVATION = 2702  # Reference altitude of the meteorological station [m]
+WARMUP = 365
+CALIBRATION_MAX_REP = 300  # Increase for a real calibration
+
+# Paths
+CATCHMENT_DIR = Path(
+    os.path.dirname(os.path.realpath(__file__)),
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
+    "ch_rhone_gletsch",
+)
+GLACIER_DIR = CATCHMENT_DIR / "glaciers"
+CATCHMENT_OUTLINE = CATCHMENT_DIR / "outline.shp"
+CATCHMENT_DEM = CATCHMENT_DIR / "dem.tif"
+GLACIER_ICE_THICKNESS = GLACIER_DIR / "ice_thickness.tif"
+GLACIER_MB_WHOLE = GLACIER_DIR / "massbalance_fixdate.csv"
+CATCHMENT_METEO = CATCHMENT_DIR / "meteo.csv"
+CATCHMENT_DISCHARGE = CATCHMENT_DIR / "discharge.csv"
+
+working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+working_dir.mkdir(parents=True, exist_ok=True)
+print(f"Working directory: {working_dir}")
+
+# ---------------------------------------------------------------------------
+# 1. Catchment, hydro units and initial glacier cover
+# ---------------------------------------------------------------------------
+# Discretize into elevation bands and initialize the glacier fraction of each
+# unit from the ice-thickness raster (a static glacier; the geometry is kept
+# fixed while we calibrate the melt parameters).
+print("Setting up the catchment and the initial glacier cover...")
+catchment = hb.Catchment(
+    CATCHMENT_OUTLINE,
+    land_cover_types=["open", "glacier"],
+    land_cover_names=["open", "glacier"],
+)
+catchment.extract_dem(CATCHMENT_DEM)
+catchment.create_elevation_bands(method="equal_intervals", distance=100)
+
+glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
+glacier_df = glacier_evolution.compute_initial_ice_thickness(
+    catchment, ice_thickness=GLACIER_ICE_THICKNESS
+)
+# Sum the glacier area of each hydro unit and set it as the initial glacier cover.
+glacier_areas = (
+    pd.DataFrame(
+        {
+            "hydro_unit": glacier_df[("hydro_unit_id", "-")].to_numpy(),
+            "area": glacier_df[("glacier_area", "m2")].to_numpy(),
+        }
+    )
+    .groupby("hydro_unit", as_index=False)["area"]
+    .sum()
+)
+catchment.initialize_area_from_land_cover_change("glacier", glacier_areas)
+hydro_units = catchment.hydro_units
+
+# ---------------------------------------------------------------------------
+# 2. Observations: discharge and glacier mass balance
+# ---------------------------------------------------------------------------
+obs = hb.DischargeObservations()
+obs.load_from_csv(
+    CATCHMENT_DISCHARGE,
+    column_time="Date",
+    time_format="%d/%m/%Y",
+    content={"discharge": "Discharge (mm/d)"},
+)
+# Restrict the discharge to the simulation period so it matches the simulated one.
+sel = np.asarray(
+    (obs.time >= pd.Timestamp(START_DATE)) & (obs.time <= pd.Timestamp(END_DATE))
+)
+obs.data = [d[sel] for d in obs.data]
+obs.time = obs.time[sel].reset_index(drop=True)
+
+# Observed glacier mass balance (GLAMOS): whole-glacier annual, winter and summer
+# balances. The observation periods come from the per-row dates in the file.
+glacier_mb = hb.GlacierMassBalanceObservations.from_glamos(
+    GLACIER_MB_WHOLE,
+    kind="whole",
+    glacier_id="B43-03",
+    balance_types=("annual", "winter", "summer"),
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+print(f"Loaded {len(glacier_mb)} glacier mass-balance observations.")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def build_model():
+    """Build and set up the (static-glacier) SOCONT model.
+
+    ``record_all=True`` is required so the glacier snowpack and ice melt are
+    recorded and the simulated mass balance can be read from memory.
+    """
+    model = models.Socont(
+        soil_storage_nb=2,
+        surface_runoff="linear_storage",
+        record_all=True,
+        land_cover_types=["open", "glacier"],
+        land_cover_names=["open", "glacier"],
+    )
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(working_dir),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    return model
+
+
+def build_forcing():
+    """Build the forcing for the shared hydro units."""
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        CATCHMENT_METEO,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"precipitation": "precip(mm/day)", "temperature": "temp(C)"},
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=REF_ELEVATION, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=REF_ELEVATION, gradient=0.05
+    )
+    forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
+    return forcing
+
+
+def build_parameters():
+    """Parameters with sensible defaults; the melt parameters are calibrated."""
+    parameters = build_model().generate_parameters()
+    parameters.set_values(
+        {
+            "A": 458,
+            "a_snow": 4,
+            "a_ice": 8,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            "k_snow": 0.1,
+            "k_ice": 0.5,
+        }
+    )
+    parameters.allow_changing = ["a_snow", "a_ice", "k_snow", "k_ice"]
+    return parameters
+
+
+# ---------------------------------------------------------------------------
+# 3. Calibrate, comparing the three glacier mass-balance modes
+# ---------------------------------------------------------------------------
+# Each calibration scores the discharge with the 2012 KGE (inverted for the
+# minimizer). The 'weighted' and 'constraint' modes use SCE-UA (single score);
+# the 'pareto' mode uses NSGAII (a [discharge, mass balance] objective vector).
+model = build_model()
+forcing = build_forcing()
+parameters = build_parameters()
+
+# The mass-balance signal carries its own metric/weight/mode; here it is an
+# 'objective' term (used by the weighted and pareto combinations below).
+glacier_mb.metric = "nse"
+glacier_mb.weight = 1.0
+glacier_mb.mode = "objective"
+
+print("\n=== combine='weighted': single score combining discharge and mass balance ===")
+spot_setup = trainer.SpotpySetup(
+    model,
+    parameters,
+    forcing,
+    obs,
+    warmup=WARMUP,
+    obj_func="kge_2012",
+    invert_obj_func=True,
+    extra_observations=[glacier_mb],
+    combine="weighted",
+    discharge_weight=1.0,
+)
+sampler = trainer.calibrate(spot_setup, "sceua", CALIBRATION_MAX_REP, dbformat="ram")
+results = sampler.getdata()
+best_index, best_obj = spotpy.analyser.get_minlikeindex(results)
+print(f"Best combined objective: {best_obj:.3f}")
+
+print("\n=== constraint: reject runs with a poor mass balance ===")
+# Keep the discharge KGE as the objective, but reject any run whose mean absolute
+# mass-balance error exceeds the tolerance (mm w.e.). The behavioural filter lives
+# on the observation object itself (mode='constraint').
+glacier_mb_constraint = hb.GlacierMassBalanceObservations.from_glamos(
+    GLACIER_MB_WHOLE,
+    kind="whole",
+    glacier_id="B43-03",
+    balance_types=("annual", "winter", "summer"),
+    start_date=START_DATE,
+    end_date=END_DATE,
+    mode="constraint",
+    tolerance=800.0,
+)
+spot_setup_c = trainer.SpotpySetup(
+    model,
+    parameters,
+    forcing,
+    obs,
+    warmup=WARMUP,
+    obj_func="kge_2012",
+    invert_obj_func=True,
+    extra_observations=[glacier_mb_constraint],
+)
+sampler_c = trainer.calibrate(
+    spot_setup_c, "sceua", CALIBRATION_MAX_REP, dbformat="ram"
+)
+results_c = sampler_c.getdata()
+behavioural = np.isfinite(results_c["like1"])
+print(f"Behavioural (within tolerance) runs: {behavioural.sum()} / {len(results_c)}")
+
+print("\n=== combine='pareto': discharge vs mass balance trade-off (NSGAII) ===")
+# Multi-objective: NSGAII returns a Pareto set rather than a single best run.
+spot_setup_p = trainer.SpotpySetup(
+    model,
+    parameters,
+    forcing,
+    obs,
+    warmup=WARMUP,
+    obj_func="kge_2012",
+    invert_obj_func=True,
+    extra_observations=[glacier_mb],
+    combine="pareto",
+)
+sampler_p = trainer.calibrate(
+    spot_setup_p,
+    "NSGAII",
+    CALIBRATION_MAX_REP,
+    dbformat="ram",
+    sample_kwargs={"n_obj": 2, "n_pop": 20},
+)
+results_p = sampler_p.getdata()
+print(f"Pareto sampler produced {len(results_p)} evaluations.")
+
+# ---------------------------------------------------------------------------
+# 4. Inspect the best 'weighted' run: observed vs simulated mass balance
+# ---------------------------------------------------------------------------
+# Re-run the model with the best parameter set and compute the simulated mass
+# balance to compare it with the observations.
+best_values = {
+    name[3:]: results[best_index][name]
+    for name in results.dtype.names
+    if name.startswith("par")
+}
+parameters.set_values(best_values)
+model.run(parameters=parameters, forcing=forcing)
+sim_mb = glacier_mb.simulated(model)
+
+annual = [
+    (t["t0"].year, t["value"], s)
+    for t, s in zip(glacier_mb.targets, sim_mb)
+    if t["balance_type"] == "annual"
+]
+years = [a[0] for a in annual]
+obs_vals = [a[1] for a in annual]
+sim_vals = [a[2] for a in annual]
+
+fig, ax = plt.subplots(figsize=(12, 6))
+ax.plot(years, obs_vals, "o-", color="black", label="Observed (GLAMOS)")
+ax.plot(years, sim_vals, "s--", color="tab:blue", label="Simulated")
+ax.axhline(0, color="gray", linewidth=0.8)
+ax.set_title("Rhonegletscher annual glacier mass balance")
+ax.set_xlabel("Hydrological year")
+ax.set_ylabel("Mass balance [mm w.e.]")
+ax.legend()
+fig.tight_layout()
+plt.show()
+
+hb.close_log()

@@ -40,16 +40,20 @@ from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     xrs,
 )
 from hydrobricks.catchment import Catchment
+from hydrobricks.evaluation import (
+    AuxiliaryObservation,
+    DischargeObservations,
+    GlacierMassBalanceObservations,
+    evaluate,
+)
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model import Model
-from hydrobricks.observations import Observations
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.plotter import Plotter
 from hydrobricks.results import Results
 from hydrobricks.structure import StructureGraph
 from hydrobricks.time_series import TimeSeries
-from hydrobricks.trainer import evaluate
 
 from ._hydrobricks import (
     close_log,
@@ -66,7 +70,9 @@ __all__ = (
     "ParameterSet",
     "HydroUnits",
     "Forcing",
-    "Observations",
+    "DischargeObservations",
+    "AuxiliaryObservation",
+    "GlacierMassBalanceObservations",
     "TimeSeries",
     "Catchment",
     "Results",

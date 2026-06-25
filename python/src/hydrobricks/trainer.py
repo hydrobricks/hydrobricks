@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import uuid
@@ -11,8 +10,12 @@ import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, DataError, ModelError
 from hydrobricks._optional import HAS_PATHOS, spotpy
+from hydrobricks.evaluation.metrics import evaluate  # noqa: F401 (re-exported)
 
 logger = logging.getLogger(__name__)
+
+# How the auxiliary-observation objective terms combine with the discharge term.
+COMBINE_MODES = ("weighted", "pareto")
 
 # Process-scoped cache of the heavy, C++-backed objects (model, forcing, obs)
 # built by a setup_factory. In parallel calibration SPOTPY pickles the work
@@ -72,9 +75,10 @@ def _enable_mpc_progress() -> None:
 
 
 if TYPE_CHECKING:
+    from hydrobricks.evaluation.base import AuxiliaryObservation
+    from hydrobricks.evaluation.discharge import DischargeObservations
     from hydrobricks.forcing import Forcing
     from hydrobricks.models.model import Model
-    from hydrobricks.observations import Observations
     from hydrobricks.parameters import ParameterSet
 
 
@@ -86,7 +90,7 @@ class SpotpySetup:
         model: Model | list[Model] | None = None,
         params: ParameterSet | None = None,
         forcing: Forcing | list[Forcing] | None = None,
-        obs: Observations | list[Observations] | None = None,
+        discharge: DischargeObservations | list[DischargeObservations] | None = None,
         warmup: int = 365,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
         invert_obj_func: bool = False,
@@ -94,6 +98,9 @@ class SpotpySetup:
         dump_forcing: bool = False,
         dump_dir: str = "",
         setup_factory: Callable[[], tuple] | None = None,
+        extra_observations: list[AuxiliaryObservation] | None = None,
+        combine: str = "weighted",
+        discharge_weight: float = 1.0,
     ) -> None:
         """
         Initialize SPOTPY setup for model calibration.
@@ -114,12 +121,12 @@ class SpotpySetup:
         forcing
             Single Forcing instance or list of Forcing instances (one per model).
             Leave as None when using ``setup_factory``.
-        obs
-            Single Observations instance or list for observed data (one per model).
-            Leave as None when using ``setup_factory``.
+        discharge
+            The primary signal: a DischargeObservations instance (or list, one per
+            model). Leave as None when using ``setup_factory``.
         setup_factory
             Optional picklable callable taking no arguments and returning a
-            ``(model, forcing, obs)`` tuple (each a single instance or a list).
+            ``(model, forcing, discharge)`` tuple (each a single instance or a list).
             When provided, the heavy objects are built lazily (once per process),
             making the setup picklable for parallel calibration. Must be a
             top-level/module-level function so it can be pickled.
@@ -140,6 +147,24 @@ class SpotpySetup:
             If True, save forcing data used in simulations. Default: False
         dump_dir
             Directory path for saving dumped outputs. Default: '' (current directory)
+        extra_observations
+            Optional list of auxiliary signals
+            (:class:`~hydrobricks.evaluation.base.AuxiliaryObservation`, e.g.
+            :class:`~hydrobricks.evaluation.glacier_mass_balance.GlacierMassBalanceObservations`)
+            to evaluate alongside discharge. Each carries its own ``metric``,
+            ``weight``, ``mode`` (``'objective'`` or ``'constraint'``) and
+            ``tolerance``. Signals that need recorded series require the model to be
+            created with ``record_all=True``, and currently a single (non-ensemble)
+            model is supported. Default: None
+        combine
+            How the objective terms combine: ``'weighted'`` (a single score, the
+            discharge term plus the weighted ``'objective'`` auxiliary terms) or
+            ``'pareto'`` (a ``[discharge, *objective terms]`` vector, e.g. for
+            SPOTPY's ``NSGAII``). ``'constraint'`` auxiliary signals reject runs
+            regardless of ``combine``. Default: 'weighted'
+        discharge_weight
+            Weight of the discharge term in the ``'weighted'`` combination.
+            Default: 1.0
 
         Raises
         ------
@@ -176,6 +201,11 @@ class SpotpySetup:
         # Validate objective function
         self._validate_and_set_objective_function(obj_func)
 
+        # Validate and store the (optional) auxiliary-observation configuration.
+        self._validate_and_set_extra_observations(
+            extra_observations, combine, discharge_weight
+        )
+
         # Heavy objects: either provided eagerly, or built lazily by the factory
         # (the latter keeps the setup picklable for parallel calibration).
         self.model = None
@@ -183,7 +213,52 @@ class SpotpySetup:
         self.obs = None
         self._built = False
         if setup_factory is None:
-            self._build_from_objects(model, forcing, obs)
+            self._build_from_objects(model, forcing, discharge)
+
+    def _validate_and_set_extra_observations(
+        self,
+        extra_observations: list[AuxiliaryObservation] | None,
+        combine: str,
+        discharge_weight: float,
+    ) -> None:
+        """Validate and store the auxiliary-observation calibration settings.
+
+        Each auxiliary observation is compared with its simulated counterpart on
+        every evaluation, contributing either a weighted objective term
+        (``mode='objective'``) or a behavioural pass/fail filter
+        (``mode='constraint'``). Signals that need recorded series require the model
+        to be created with ``record_all=True`` (checked when the model is built).
+        """
+        self.extra_observations = list(extra_observations or [])
+        self._has_extra_obs = len(self.extra_observations) > 0
+        self.combine = combine
+        self.discharge_weight = discharge_weight
+        # Per-observation lengths; finalized when the model is built (targets may be
+        # restricted to the post-warmup simulation period).
+        self._extra_lengths = [len(o) for o in self.extra_observations]
+
+        if combine not in COMBINE_MODES:
+            raise ConfigurationError(
+                f"Unknown combine mode '{combine}'.",
+                item_name="combine",
+                item_value=combine,
+                reason=f"Expected one of {COMBINE_MODES}",
+            )
+        for obs in self.extra_observations:
+            if obs.mode not in ("objective", "constraint"):
+                raise ConfigurationError(
+                    f"Unknown observation mode '{obs.mode}'.",
+                    item_name="mode",
+                    item_value=obs.mode,
+                    reason="Expected 'objective' or 'constraint'",
+                )
+            if obs.mode == "constraint" and obs.tolerance is None:
+                raise ConfigurationError(
+                    "A constraint-mode observation requires a tolerance.",
+                    item_name="tolerance",
+                    item_value=None,
+                    reason="Missing tolerance for constraint mode",
+                )
 
     @classmethod
     def from_factory(
@@ -226,7 +301,7 @@ class SpotpySetup:
         self,
         model: Model | list[Model] | None,
         forcing: Forcing | list[Forcing] | None,
-        obs: Observations | list[Observations] | None,
+        obs: DischargeObservations | list[DischargeObservations] | None,
     ) -> None:
         """Normalize, validate, and wire up the concrete model/forcing/obs objects."""
         self.model = self._normalize_model_list(model)
@@ -239,7 +314,61 @@ class SpotpySetup:
         # Setup forcing and models
         self._setup_forcing_and_models()
 
+        # Finalize the (optional) auxiliary observations now that the model exists
+        # (validate recording, restrict targets to the post-warmup eval period).
+        self._finalize_extra_observations()
+
         self._built = True
+
+    def _finalize_extra_observations(self) -> None:
+        """Validate the model for the auxiliary observations and align them.
+
+        Auxiliary signals that need recorded series require ``record_all=True``.
+        Each observation is restricted to the post-warmup simulation period so it
+        lines up with the evaluated discharge, and the per-observation lengths are
+        recorded for splitting the concatenated series in ``objectivefunction``.
+        """
+        if not self._has_extra_obs:
+            return
+
+        import pandas as pd
+
+        if len(self.model) != 1:
+            raise ConfigurationError(
+                "Calibrating with extra observations currently supports a single "
+                "model (not an ensemble).",
+                item_name="model",
+                reason="Multiple models with extra observations",
+            )
+        model = self.model[0]
+        needs_recording = any(
+            getattr(o, "requires_recording", True) for o in self.extra_observations
+        )
+        if needs_recording and not getattr(model, "record_all", False):
+            raise ConfigurationError(
+                "Calibrating with these extra observations requires the model to "
+                "be created with record_all=True so the series are recorded.",
+                item_name="record_all",
+                item_value=False,
+                reason="Series not recorded",
+            )
+
+        warmup_start = None
+        if model.start_date is not None:
+            warmup_start = pd.Timestamp(model.start_date) + pd.Timedelta(
+                days=self.warmup
+            )
+        for obs in self.extra_observations:
+            if warmup_start is not None:
+                obs.restrict_to_period(warmup_start, model.end_date)
+        self._extra_lengths = [len(o) for o in self.extra_observations]
+        if self._has_extra_obs and sum(self._extra_lengths) == 0:
+            raise DataError(
+                "No extra observations fall within the post-warmup simulation "
+                "period.",
+                data_type="extra observations",
+                reason="No observations in period",
+            )
 
     def _ensure_built(self) -> None:
         """Build the heavy objects on first use, reusing them across the worker.
@@ -380,7 +509,7 @@ class SpotpySetup:
         return forcings
 
     def _normalize_observations_list(
-        self, obs: Observations | list[Observations]
+        self, obs: DischargeObservations | list[DischargeObservations]
     ) -> list[np.ndarray]:
         """
         Validate and normalize observations to a list of numpy arrays.
@@ -388,7 +517,8 @@ class SpotpySetup:
         Parameters
         ----------
         obs
-            Single Observations instance or list of Observations instances.
+            Single DischargeObservations instance or list of DischargeObservations
+            instances.
 
         Returns
         -------
@@ -404,14 +534,14 @@ class SpotpySetup:
         """
         if obs is None:
             raise ConfigurationError(
-                "Observations cannot be None.",
+                "DischargeObservations cannot be None.",
                 item_name="obs",
                 reason="Required parameter missing",
             )
         obs_list = [obs] if not isinstance(obs, list) else obs
         if len(obs_list) == 0:
             raise ConfigurationError(
-                "Observations list cannot be empty.",
+                "DischargeObservations list cannot be empty.",
                 item_name="obs",
                 reason="Empty observations list",
             )
@@ -420,13 +550,13 @@ class SpotpySetup:
         for idx, o in enumerate(obs_list):
             if not hasattr(o, "data") or o.data is None:
                 raise DataError(
-                    f"Observations at index {idx} has no data attribute.",
+                    f"DischargeObservations at index {idx} has no data attribute.",
                     data_type="observations",
                     reason="Missing or invalid observation data",
                 )
             if len(o.data) == 0:
                 raise DataError(
-                    f"Observations at index {idx} has empty data.",
+                    f"DischargeObservations at index {idx} has empty data.",
                     data_type="observations",
                     reason="Empty observation dataset",
                 )
@@ -712,6 +842,26 @@ class SpotpySetup:
                     forcing.save_as(os.path.join(path, f"forcing_{model_idx}.nc"))
 
         logger.debug(f"Simulation complete: {len(all_sim)} models processed")
+
+        if self._has_extra_obs:
+            # Append each auxiliary signal's simulated values (read from memory) to
+            # the single model's discharge as one concatenated series, so they
+            # travel back to objectivefunction() together with the discharge (this
+            # also works across processes for parallel calibration, where the
+            # objective is scored in a different process than the run).
+            try:
+                extra = [
+                    obs.simulated(self.model[0]) for obs in self.extra_observations
+                ]
+            except Exception as e:
+                logger.warning(
+                    "Skipped run: extra-observation computation failed (%s): %s",
+                    _format_params(x),
+                    e,
+                )
+                return None
+            all_sim = [np.concatenate([all_sim[0], *extra])]
+
         return all_sim
 
     def evaluation(self) -> list[np.ndarray]:
@@ -720,6 +870,12 @@ class SpotpySetup:
         for obs in self.obs:
             all_obs.append(obs[self.warmup :])
 
+        if self._has_extra_obs:
+            # Mirror simulation(): append each observed signal to the discharge so
+            # the series line up entry-for-entry.
+            extra = [obs.observed() for obs in self.extra_observations]
+            all_obs = [np.concatenate([all_obs[0], *extra])]
+
         return all_obs
 
     def objectivefunction(
@@ -727,7 +883,7 @@ class SpotpySetup:
         simulation: list[np.ndarray],
         evaluation: list[np.ndarray],
         params: spotpy.parameter | None = None,
-    ) -> float:
+    ) -> float | list[float]:
         if simulation is None:
             # The reason (constraints / range / no discharge) is already logged by
             # simulation(); here the set is just scored as worst so the optimizer
@@ -735,9 +891,12 @@ class SpotpySetup:
             logger.debug(
                 "Scoring rejected parameter set as worst (%s).", _format_params(params)
             )
-            if self.invert_obj_func:
-                return np.inf
-            return -np.inf
+            return self._worst_score()
+
+        if self._has_extra_obs:
+            return self._objective_with_extra_observations(
+                simulation, evaluation, params
+            )
 
         all_like = []
         for sim, obs in zip(simulation, evaluation):
@@ -756,12 +915,7 @@ class SpotpySetup:
                 )
                 like = -np.inf
             else:
-                if not self.obj_func:
-                    like = spotpy.objectivefunctions.kge_non_parametric(obs, sim)
-                elif isinstance(self.obj_func, str):
-                    like = evaluate(sim, obs, self.obj_func)
-                else:
-                    like = self.obj_func(obs, sim)
+                like = self._discharge_skill(sim, obs)
 
             if self.invert_obj_func:
                 like = -like
@@ -770,6 +924,95 @@ class SpotpySetup:
 
         # Return the mean of the objective function
         return np.mean(all_like)
+
+    def _worst_score(self) -> float | list[float]:
+        """The score a rejected parameter set receives (worst for the optimizer).
+
+        For ``combine='pareto'`` a vector is returned (one worst value per objective:
+        discharge plus each ``'objective'`` auxiliary signal), so the multi-objective
+        sampler always receives a consistent-length objective.
+        """
+        worst = np.inf if self.invert_obj_func else -np.inf
+        if self._has_extra_obs and self.combine == "pareto":
+            n_obj = 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
+            return [worst] * n_obj
+        return worst
+
+    def _discharge_skill(self, sim: np.ndarray, obs: np.ndarray) -> float:
+        """Discharge goodness-of-fit (higher is better), before any inversion."""
+        if not self.obj_func:
+            return spotpy.objectivefunctions.kge_non_parametric(obs, sim)
+        if isinstance(self.obj_func, str):
+            return evaluate(sim, obs, self.obj_func)
+        return self.obj_func(obs, sim)
+
+    def _objective_with_extra_observations(
+        self,
+        simulation: list[np.ndarray],
+        evaluation: list[np.ndarray],
+        params: spotpy.parameter | None,
+    ) -> float | list[float]:
+        """Score a run that also has one or more auxiliary observations.
+
+        ``simulation``/``evaluation`` each hold a single concatenated series:
+        discharge followed by each auxiliary signal's values (lengths in
+        ``self._extra_lengths``). The discharge and each auxiliary goodness-of-fit
+        are computed separately, then combined: ``'objective'`` signals contribute a
+        weighted term and ``'constraint'`` signals reject the run when their mean
+        absolute error exceeds their ``tolerance``. ``combine='weighted'`` returns a
+        single score; ``combine='pareto'`` returns ``[discharge, *objective terms]``.
+        """
+        combined = simulation[0]
+        obs_combined = evaluation[0]
+        if combined is None or combined.size == 0 or len(combined) != len(obs_combined):
+            return self._worst_score()
+
+        n_extra = sum(self._extra_lengths)
+        q_len = len(combined) - n_extra
+        q_skill = self._discharge_skill(combined[:q_len], obs_combined[:q_len])
+
+        objective_terms = []  # (weight, skill) per 'objective' signal
+        offset = q_len
+        for obs, length in zip(self.extra_observations, self._extra_lengths):
+            a_sim = combined[offset : offset + length]
+            a_obs = obs_combined[offset : offset + length]
+            offset += length
+
+            mask = np.isfinite(a_sim) & np.isfinite(a_obs)
+            if not np.any(mask):
+                logger.debug(
+                    "Scoring run as worst: no usable values for an extra "
+                    "observation (%s).",
+                    _format_params(params),
+                )
+                return self._worst_score()
+            a_sim, a_obs = a_sim[mask], a_obs[mask]
+
+            if obs.mode == "constraint":
+                # Behavioural filter: reject the run when the error is too large.
+                error = float(np.mean(np.abs(a_sim - a_obs)))
+                if obs.tolerance is not None and error > obs.tolerance:
+                    logger.debug(
+                        "Rejected non-behavioural run: error %.3g > %.3g (%s).",
+                        error,
+                        obs.tolerance,
+                        _format_params(params),
+                    )
+                    return self._worst_score()
+            else:  # objective
+                objective_terms.append((obs.weight, evaluate(a_sim, a_obs, obs.metric)))
+
+        if self.combine == "pareto":
+            # Each objective oriented like the single-objective score so the sampler
+            # (e.g. spotpy's NSGAII) optimizes them consistently.
+            terms = [q_skill, *(skill for _w, skill in objective_terms)]
+            return [(-t if self.invert_obj_func else t) for t in terms]
+
+        # Weighted single score.
+        combined_skill = self.discharge_weight * q_skill + sum(
+            weight * skill for weight, skill in objective_terms
+        )
+        return -combined_skill if self.invert_obj_func else combined_skill
 
 
 def calibrate(
@@ -781,6 +1024,7 @@ def calibrate(
     parallel: str = "seq",
     save_sim: bool = True,
     n_workers: int | None = None,
+    sample_kwargs: dict[str, Any] | None = None,
     **algorithm_kwargs: Any,
 ) -> Any:
     """
@@ -816,6 +1060,11 @@ def calibrate(
         Number of worker processes for ``parallel='mpc'``/``'umpc'``. Defaults to
         None, i.e. all logical CPUs. Ignored for ``'seq'`` and ``'mpi'`` (the MPI
         process count is set by the MPI launcher, e.g. ``mpiexec -n``).
+    sample_kwargs
+        Extra keyword arguments forwarded to ``sampler.sample()``. Needed by some
+        algorithms; e.g. the multi-objective ``NSGAII`` (used for the glacier
+        mass-balance ``'pareto'`` mode) requires ``{'n_obj': 2}`` and accepts
+        ``'n_pop'``. Default: None.
     **algorithm_kwargs
         Extra keyword arguments forwarded to the SPOTPY algorithm constructor.
 
@@ -878,7 +1127,9 @@ def calibrate(
         save_sim=save_sim,
         **algorithm_kwargs,
     )
-    sampler.sample(repetitions)
+    # Some algorithms need extra sample() arguments (e.g. multi-objective NSGAII
+    # requires n_obj); forward them when provided.
+    sampler.sample(repetitions, **(sample_kwargs or {}))
 
     return sampler
 
@@ -899,6 +1150,10 @@ def calibrate_from_factory(
     parallel: str = "seq",
     save_sim: bool = True,
     n_workers: int | None = None,
+    sample_kwargs: dict[str, Any] | None = None,
+    extra_observations: list[AuxiliaryObservation] | None = None,
+    combine: str = "weighted",
+    discharge_weight: float = 1.0,
     **algorithm_kwargs: Any,
 ) -> Any:
     """
@@ -920,7 +1175,7 @@ def calibrate_from_factory(
     ----------
     setup_factory
         Callable taking no arguments and returning a
-        ``(model, parameters, forcing, obs)`` tuple. Called once in the main
+        ``(model, parameters, forcing, discharge)`` tuple. Called once in the main
         process (to obtain the parameters and build the local setup) and once in
         each worker (to rebuild the model). Must be picklable for parallel runs.
     algorithm
@@ -932,7 +1187,12 @@ def calibrate_from_factory(
         overrides any ``parameters.allow_changing`` set inside the factory.
     warmup, obj_func, invert_obj_func, dump_outputs, dump_forcing, dump_dir
         Forwarded to :class:`SpotpySetup`.
-    dbname, dbformat, parallel, save_sim, n_workers, **algorithm_kwargs
+    extra_observations, combine, discharge_weight
+        Forwarded to :class:`SpotpySetup` to calibrate (also) on auxiliary signals
+        such as glacier mass balance. ``extra_observations`` are light, picklable
+        objects, so they are passed directly rather than rebuilt by the factory.
+    dbname, dbformat, parallel, save_sim, n_workers, sample_kwargs,
+    **algorithm_kwargs
         Forwarded to :func:`calibrate`.
 
     Returns
@@ -942,11 +1202,12 @@ def calibrate_from_factory(
     built = setup_factory()
     if not isinstance(built, tuple) or len(built) != 4:
         raise ConfigurationError(
-            "setup_factory must return a (model, parameters, forcing, obs) tuple.",
+            "setup_factory must return a (model, parameters, forcing, discharge) "
+            "tuple.",
             item_name="setup_factory",
             reason="Invalid factory return value",
         )
-    model, params, forcing, obs = built
+    model, params, forcing, discharge = built
     if allow_changing is not None:
         params.allow_changing = allow_changing
 
@@ -959,11 +1220,14 @@ def calibrate_from_factory(
         dump_outputs=dump_outputs,
         dump_forcing=dump_forcing,
         dump_dir=dump_dir,
+        extra_observations=extra_observations,
+        combine=combine,
+        discharge_weight=discharge_weight,
     )
     # Reuse the objects already built in this (main) process to avoid building
     # them twice here; workers rebuild via the factory after unpickling (the
     # heavy objects are dropped by SpotpySetup.__getstate__).
-    spot_setup._build_from_objects(model, forcing, obs)
+    spot_setup._build_from_objects(model, forcing, discharge)
 
     return calibrate(
         spot_setup,
@@ -974,30 +1238,6 @@ def calibrate_from_factory(
         parallel=parallel,
         save_sim=save_sim,
         n_workers=n_workers,
+        sample_kwargs=sample_kwargs,
         **algorithm_kwargs,
     )
-
-
-def evaluate(simulation: np.array, observation: np.array, metric: str) -> float:
-    """
-    Evaluate the simulation using the provided metric (goodness of fit).
-
-    Parameters
-    ----------
-    simulation
-        The predicted time series.
-    observation
-        The time series of the observations with dates matching the simulated
-        series.
-    metric
-        The abbreviation of the function as defined in HydroErr
-        (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
-        Examples: nse, kge_2012, ...
-
-    Returns
-    -------
-    The value of the selected metric.
-    """
-    eval_fct = getattr(importlib.import_module("HydroErr"), metric)
-
-    return eval_fct(simulation, observation)

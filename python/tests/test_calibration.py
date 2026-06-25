@@ -94,7 +94,7 @@ def build_setup_objects():
     forcing.spatialize_from_station_data(variable="pet", method="constant")
     forcing.spatialize_from_station_data(variable="precipitation", method="constant")
 
-    obs = hb.Observations()
+    obs = hb.DischargeObservations()
     obs.load_from_csv(
         SITTER_DIR / "discharge.csv",
         column_time="Date",

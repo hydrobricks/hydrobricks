@@ -333,7 +333,17 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the total change in water storage.")
         .def("get_total_snow_storage_changes", &ModelHydro::GetTotalSnowStorageChanges,
              "Get the total change in snow storage.")
-        .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
+        .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a)
+        .def("get_hydro_unit_values", &ModelHydro::GetHydroUnitValues,
+             "Get the recorded hydro unit series for a component label (time x units).", "label"_a)
+        .def("get_hydro_unit_fractions", &ModelHydro::GetHydroUnitFractions,
+             "Get the recorded land-cover fraction series for a label (time x units).", "label"_a)
+        .def("get_recorded_hydro_unit_labels", &ModelHydro::GetRecordedHydroUnitLabels,
+             "Get the labels of the recorded hydro unit components.")
+        .def("get_recorded_hydro_unit_fraction_labels", &ModelHydro::GetRecordedHydroUnitFractionLabels,
+             "Get the labels of the recorded land-cover fractions.")
+        .def("get_hydro_unit_ids", &ModelHydro::GetHydroUnitIds, "Get the hydro unit ids in recorded order.")
+        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.");
 
     py::class_<Action>(m, "Action").def(py::init<>());
 

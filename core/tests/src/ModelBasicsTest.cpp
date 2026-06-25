@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 
 #include "ModelHydro.h"
 #include "ProcessOutflowLinear.h"
@@ -165,6 +167,54 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
     EXPECT_TRUE(model.Run());
 
     EXPECT_TRUE(model.DumpOutputs(std::filesystem::temp_directory_path().string()));
+}
+
+TEST_F(ModelBasics, InMemoryHydroUnitValuesMatchLogger) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model1, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // The recorded component labels are exposed in memory (no file dump).
+    vecStr labels = model.GetRecordedHydroUnitLabels();
+    ASSERT_FALSE(labels.empty());
+    auto it = std::find(labels.begin(), labels.end(), "storage:water_content");
+    ASSERT_NE(it, labels.end());
+
+    // The in-memory series equals the one held by the logger (time x units).
+    Logger* logger = model.GetLogger();
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    axxd fromModel = model.GetHydroUnitValues("storage:water_content");
+    const axxd& fromLogger = logger->GetHydroUnitValues()[index];
+    ASSERT_EQ(fromModel.rows(), fromLogger.rows());
+    ASSERT_EQ(fromModel.cols(), fromLogger.cols());
+    EXPECT_EQ(fromModel.cols(), 1);  // one hydro unit
+    EXPECT_TRUE(fromModel.isApprox(fromLogger));
+
+    // The hydro unit ids and areas are exposed too.
+    vecInt ids = model.GetHydroUnitIds();
+    ASSERT_EQ(ids.size(), 1);
+    EXPECT_EQ(ids[0], 1);
+    axd areas = model.GetHydroUnitAreas();
+    ASSERT_EQ(areas.size(), 1);
+    EXPECT_NEAR(areas[0], 100.0, 1e-9);
+
+    // An unknown component label throws.
+    EXPECT_THROW(
+        {
+            axxd unused = model.GetHydroUnitValues("does_not_exist");
+            (void)unused;
+        },
+        std::invalid_argument);
 }
 
 TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {

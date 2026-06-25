@@ -120,8 +120,10 @@ void ProcessLateralSnowRedistributionFrey::Finalize() {
     double settleFactor = std::clamp(static_cast<double>(*_rhoSettling) * dt, 0.0, 1.0);
     double settledDensity = _density + (rhoMax - _density) * settleFactor;
 
-    // SWE gained since the previous step is treated as fresh snow (as is acceptor inflow, consistent with
-    // the paper, which treats redistributed snow in acceptor cells as fresh).
+    // Fresh snow is inferred from the step-to-step SWE increase, which cannot distinguish new snowfall
+    // from snow received via redistribution; acceptor inflow is therefore also counted as "fresh" and
+    // mixed in at the temperature-derived fresh-snow density. This is a simplification of the density
+    // bookkeeping (hydrobricks tracks only SWE, not the donor density of transported snow).
     double fresh = std::max(swe - _prevSwe, 0.0);
     double existing = std::max(std::min(_prevSwe, swe), 0.0);
 

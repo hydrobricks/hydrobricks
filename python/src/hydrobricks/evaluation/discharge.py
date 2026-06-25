@@ -7,17 +7,17 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import DataError
+from hydrobricks.evaluation.metrics import evaluate
 from hydrobricks.time_series import TimeSeries1D
-from hydrobricks.trainer import evaluate
 
 logger = logging.getLogger(__name__)
 
 
-class Observations(TimeSeries1D):
-    """Class for observation time series data"""
+class DischargeObservations(TimeSeries1D):
+    """Observed discharge time series (the primary calibration signal)."""
 
     def __init__(self) -> None:
-        """Initialize Observations instance."""
+        """Initialize DischargeObservations instance."""
         super().__init__()
 
     def compute_reference_metric(
@@ -76,7 +76,7 @@ class Observations(TimeSeries1D):
 
         Examples
         --------
-        >>> obs = Observations()
+        >>> obs = DischargeObservations()
         >>> obs.load_from_csv('data.csv', 'date', '%Y-%m-%d', {'discharge': 'Q'})
         >>> ref_metric = obs.compute_reference_metric('nse', n_evals=100)
         """

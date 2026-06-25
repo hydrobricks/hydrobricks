@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import HydroErr
 import numpy as np
+import pandas as pd
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
@@ -54,6 +55,8 @@ class Model(ABC):
         self.name: str | None = name
         self.model: ModelHydro = ModelHydro()
         self.spatial_structure: HydroUnits | None = None
+        self.start_date: str | None = None
+        self.end_date: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
             "record_all",
@@ -149,6 +152,8 @@ class Model(ABC):
                 os.mkdir(output_path)
 
             self.spatial_structure = spatial_structure
+            self.start_date = start_date
+            self.end_date = end_date
 
             # Initialize log
             init_log(str(output_path))
@@ -397,6 +402,90 @@ class Model(ABC):
             Path to the target file.
         """
         self.model.dump_outputs(path)
+
+    def get_recorded_labels(self) -> list[str]:
+        """
+        Get the labels of the recorded hydro-unit components (in-memory).
+
+        These are the components that can be retrieved with
+        :meth:`get_recorded_hydro_unit_values` without dumping the outputs to a
+        netCDF file. The set depends on what was recorded (use ``record_all=True``
+        to record everything).
+
+        Returns
+        -------
+        The list of recorded component labels (e.g. 'glacier:melt:output').
+        """
+        return list(self.model.get_recorded_hydro_unit_labels())
+
+    def get_recorded_hydro_unit_values(self, label: str) -> np.ndarray:
+        """
+        Get a recorded hydro-unit component series directly from memory.
+
+        Reads the in-memory logger (no netCDF dump), which makes it suitable for
+        use inside a calibration loop. The component must have been recorded (see
+        ``record_all``).
+
+        Parameters
+        ----------
+        label
+            The recorded component label (e.g. 'glacier_snowpack:snow_content').
+
+        Returns
+        -------
+        The recorded series as a 2D array of shape (n_hydro_units, n_timesteps),
+        matching the convention of ``Results.get_hydro_units_values``. Values are
+        NaN for hydro units to which the component does not apply.
+        """
+        # The engine stores the series as (time, units); transpose to the
+        # (units, time) convention used by the Results reader.
+        return np.asarray(self.model.get_hydro_unit_values(label)).T
+
+    def get_recorded_hydro_unit_fractions(self, label: str) -> np.ndarray:
+        """
+        Get a recorded land-cover fraction series directly from memory.
+
+        Fractions are recorded only when ``record_all`` is enabled. With a glacier
+        evolution action the fraction evolves over time; otherwise it is constant.
+
+        Parameters
+        ----------
+        label
+            The land cover name (e.g. 'glacier').
+
+        Returns
+        -------
+        The fraction series as a 2D array of shape (n_hydro_units, n_timesteps),
+        matching the convention of ``Results.get_hydro_units_values``.
+        """
+        # The engine stores the series as (time, units); transpose to (units, time).
+        return np.asarray(self.model.get_hydro_unit_fractions(label)).T
+
+    def get_recorded_hydro_unit_ids(self) -> np.ndarray:
+        """Get the hydro unit ids, in the order of the recorded series."""
+        return np.asarray(self.model.get_hydro_unit_ids())
+
+    def get_recorded_hydro_unit_areas(self) -> np.ndarray:
+        """Get the hydro unit areas [m2], in the order of the recorded series."""
+        return np.asarray(self.model.get_hydro_unit_areas())
+
+    def get_recorded_time(self) -> pd.DatetimeIndex:
+        """
+        Reconstruct the daily date axis of the recorded series.
+
+        The model runs on a daily time step, so the axis is rebuilt from the
+        modelling period rather than read from the engine.
+
+        Returns
+        -------
+        A daily ``DatetimeIndex`` spanning the modelling period.
+        """
+        if self.start_date is None or self.end_date is None:
+            raise ModelError(
+                "The model has no modelling period; call setup() first.",
+                is_initialized=self._is_initialized,
+            )
+        return pd.date_range(start=self.start_date, end=self.end_date, freq="D")
 
     def eval(self, metric: str, observations: np.ndarray, warmup: int = 0) -> float:
         """

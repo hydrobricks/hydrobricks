@@ -1,6 +1,8 @@
 ﻿#include "ModelHydro.h"
 
+#include <algorithm>
 #include <memory>
+#include <stdexcept>
 
 #include "Includes.h"
 #include "ModelBuilder.h"
@@ -155,6 +157,44 @@ double ModelHydro::GetTotalSnowStorageChanges() const {
 
 double ModelHydro::GetTotalGlacierStorageChanges() const {
     return _logger.GetTotalGlacierStorageChanges();
+}
+
+axxd ModelHydro::GetHydroUnitValues(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The hydro unit component '" + label +
+                                    "' was not recorded. Enable record_all to record it.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitValues()[index];
+}
+
+axxd ModelHydro::GetHydroUnitFractions(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitFractionLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The land cover fraction '" + label +
+                                    "' was not recorded. Fractions are recorded when record_all is enabled.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitFractions()[index];
+}
+
+vecStr ModelHydro::GetRecordedHydroUnitLabels() const {
+    return _logger.GetHydroUnitLabels();
+}
+
+vecStr ModelHydro::GetRecordedHydroUnitFractionLabels() const {
+    return _logger.GetHydroUnitFractionLabels();
+}
+
+vecInt ModelHydro::GetHydroUnitIds() const {
+    return _logger.GetHydroUnitIds();
+}
+
+axd ModelHydro::GetHydroUnitAreas() const {
+    return _logger.GetHydroUnitAreas();
 }
 
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {

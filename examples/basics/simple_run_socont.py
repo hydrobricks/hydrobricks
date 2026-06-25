@@ -78,7 +78,7 @@ forcing.spatialize_from_station_data(
 forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=47.3)
 
 # Obs data
-obs = hb.Observations()
+obs = hb.DischargeObservations()
 obs.load_from_csv(
     CATCHMENT_DISCHARGE,
     column_time="Date",

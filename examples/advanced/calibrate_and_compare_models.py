@@ -107,7 +107,7 @@ hydro_units.set_connectivity(connectivity)
 # ---------------------------------------------------------------------------
 # The discharge file covers a longer period than the simulation; trim it so the
 # observed series matches the simulated one (the trainer compares them directly).
-obs = hb.Observations()
+obs = hb.DischargeObservations()
 obs.load_from_csv(
     CATCHMENT_DISCHARGE,
     column_time="Date",

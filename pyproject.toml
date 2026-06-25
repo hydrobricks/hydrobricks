@@ -97,6 +97,9 @@ filterwarnings = [
 ]
 testpaths = ["python/tests"]
 
+[tool.codespell]
+ignore-words-list = "crate, mape, ned"
+
 [tool.cibuildwheel]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"

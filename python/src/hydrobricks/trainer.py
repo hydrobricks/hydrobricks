@@ -10,7 +10,10 @@ import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, DataError, ModelError
 from hydrobricks._optional import HAS_PATHOS, spotpy
-from hydrobricks.evaluation.metrics import evaluate  # noqa: F401 (re-exported)
+from hydrobricks.evaluation.metrics import (  # evaluate re-exported
+    evaluate,
+    is_error_metric,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +153,7 @@ class SpotpySetup:
         extra_observations
             Optional list of auxiliary signals
             (:class:`~hydrobricks.evaluation.base.AuxiliaryObservation`, e.g.
-            :class:`~hydrobricks.evaluation.glacier_mass_balance.GlacierMassBalanceObservations`)
+            ``GlacierMassBalanceObservations``)
             to evaluate alongside discharge. Each carries its own ``metric``,
             ``weight``, ``mode`` (``'objective'`` or ``'constraint'``) and
             ``tolerance``. Signals that need recorded series require the model to be
@@ -1000,7 +1003,11 @@ class SpotpySetup:
                     )
                     return self._worst_score()
             else:  # objective
-                objective_terms.append((obs.weight, evaluate(a_sim, a_obs, obs.metric)))
+                # Orient to a skill (higher is better) so error metrics (rmse, ...)
+                # combine correctly with the discharge skill.
+                value = evaluate(a_sim, a_obs, obs.metric)
+                skill = -value if is_error_metric(obs.metric) else value
+                objective_terms.append((obs.weight, skill))
 
         if self.combine == "pareto":
             # Each objective oriented like the single-objective score so the sampler

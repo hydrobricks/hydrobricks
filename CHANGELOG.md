@@ -7,7 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- The discharge observations class `Observations` is renamed `DischargeObservations`, and
+  the calibration argument `obs` (in `SpotpySetup` and `calibrate_from_factory`) is
+  renamed `discharge`.
+- The observation/reference classes moved to a new `hydrobricks.evaluation` subpackage
+  (`DischargeObservations`, `AuxiliaryObservation`, `GlacierMassBalanceObservations`,
+  `evaluate`). They remain importable from the top level (`hb.DischargeObservations`, …);
+  `hydrobricks.observations` and `hydrobricks.glacier_mass_balance` are gone.
+
 ### Added
+
+- Calibration on observed glacier mass balance: a new `hydrobricks.evaluation` subpackage
+  with `GlacierMassBalanceObservations` (loaders `from_glamos` for GLAMOS "fixdate" data
+  and a generic `from_csv`, whole-glacier or per elevation band; annual/winter/summer)
+  and an `AuxiliaryObservation` base. `SpotpySetup`/`calibrate_from_factory` accept
+  `extra_observations=[...]` evaluated alongside discharge, each with its own `metric`,
+  `weight`, `mode` (`'objective'`/`'constraint'`) and `tolerance`; objective terms combine
+  via `combine='weighted'` or `combine='pareto'` (the latter for multi-objective samplers
+  such as NSGAII, with `sample_kwargs`). The simulated balance is the flux-based
+  glaciological surface balance, read from memory (no NetCDF dump). See the example
+  `examples/advanced/calibrate_with_glacier_mass_balance.py`.
+- In-memory accessors for recorded per–hydro-unit series (no file dump):
+  `model.get_recorded_hydro_unit_values(label)`, `get_recorded_hydro_unit_fractions`,
+  `get_recorded_labels`, `get_recorded_hydro_unit_ids`/`_areas` and `get_recorded_time`
+  (C++ `ModelHydro` + binding).
 
 - Model structure inspection: `model.get_structure_graph()` returns a `StructureGraph`
   (bricks, processes, fluxes, splitters — the complete structure incl. snow routine,

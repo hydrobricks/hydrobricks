@@ -1,5 +1,6 @@
 import os.path
 import tempfile
+import types
 import uuid
 from pathlib import Path
 
@@ -300,13 +301,8 @@ def test_per_band_mass_balance_runs(glacier_run):
     assert np.isfinite(sim).sum() > 0
 
 
-@pytest.mark.parametrize("combine_mode", ["weighted", "pareto", "constraint"])
-def test_calibration_with_glacier_mb_runs(glacier_run, combine_mode):
-    """A small calibration with a glacier mass-balance term runs end-to-end."""
-    pytest.importorskip("spotpy")
-    model, params, forcing, _ = glacier_run
-    params.allow_changing = ["a_snow", "a_ice"]
-
+def _load_discharge():
+    """Load and trim the Gletsch discharge to the test period."""
     obs = hb.DischargeObservations()
     obs.load_from_csv(
         GLETSCH_DIR / "discharge.csv",
@@ -319,29 +315,23 @@ def test_calibration_with_glacier_mb_runs(glacier_run, combine_mode):
     )
     obs.data = [d[sel] for d in obs.data]
     obs.time = obs.time[sel].reset_index(drop=True)
+    return obs
 
-    # 'constraint' is a per-observation mode; 'weighted'/'pareto' are objective
-    # terms combined at the setup level.
-    if combine_mode == "constraint":
-        mb = GlacierMassBalanceObservations.from_glamos(
-            MB_WHOLE,
-            kind="whole",
-            glacier_id="B43-03",
-            balance_types=("annual",),
-            mode="constraint",
-            tolerance=5000.0,
-        )
-        combine = "weighted"
-        algorithm, sample_kwargs = "sceua", None
-    else:
-        mb = GlacierMassBalanceObservations.from_glamos(
-            MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
-        )
-        combine = combine_mode
-        if combine_mode == "pareto":
-            algorithm, sample_kwargs = "NSGAII", {"n_obj": 2, "n_pop": 6}
-        else:
-            algorithm, sample_kwargs = "sceua", None
+
+@pytest.mark.parametrize("mode", ["objective", "constraint"])
+def test_calibration_with_glacier_mb_runs(glacier_run, mode):
+    """A small calibration with a glacier mass-balance term runs end-to-end."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    params.allow_changing = ["a_snow", "a_ice"]
+    obs = _load_discharge()
+
+    kwargs = {"mode": mode}
+    if mode == "constraint":
+        kwargs["tolerance"] = 5000.0
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",), **kwargs
+    )
 
     spot_setup = trainer.SpotpySetup(
         model,
@@ -352,18 +342,47 @@ def test_calibration_with_glacier_mb_runs(glacier_run, combine_mode):
         obj_func="kge_2012",
         invert_obj_func=True,
         extra_observations=[mb],
-        combine=combine,
+        combine="weighted",
     )
     # The targets were restricted to the post-warmup simulation period.
     assert sum(spot_setup._extra_lengths) > 0
-    reps = 24 if combine_mode == "pareto" else 12
-    sampler = trainer.calibrate(
-        spot_setup, algorithm, reps, dbformat="ram", sample_kwargs=sample_kwargs
-    )
+    sampler = trainer.calibrate(spot_setup, "sceua", 12, dbformat="ram")
     results = sampler.getdata()
     assert len(results) > 0
     # At least one behavioural run was found (finite objective).
     assert np.isfinite(results["like1"]).any()
+
+
+def test_pareto_objective_returns_vector(glacier_run):
+    """combine='pareto' yields a [discharge, mass_balance] objective vector."""
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        invert_obj_func=True,
+        extra_observations=[mb],
+        combine="pareto",
+    )
+    # A rejected run still returns a consistent-length objective vector.
+    worst = spot_setup._worst_score()
+    assert isinstance(worst, list) and len(worst) == 2
+
+    # A real evaluation returns the [discharge, mass_balance] objective vector.
+    # spotpy hands simulation() an object exposing .name/.random; build one here.
+    pars = spot_setup.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    sim = spot_setup.simulation(x)
+    like = spot_setup.objectivefunction(sim, spot_setup.evaluation(), x)
+    assert isinstance(like, list) and len(like) == 2
+    assert all(np.isfinite(v) for v in like)
 
 
 def test_record_all_required(glacier_run):

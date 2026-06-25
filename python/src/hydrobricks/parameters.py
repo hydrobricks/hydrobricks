@@ -576,6 +576,136 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    "transport:snow_redistribution_frey": [
+        ParamSpec(
+            name="correction",
+            unit="-",
+            aliases=["snow_redist_frey_c"],
+            min=0,
+            max=10,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_holding_capacity",
+            unit="mm",
+            aliases=["snow_redist_frey_holding_capacity"],
+            min=0,
+            max=5000,
+            default=200,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_rho_max"],
+            min=200,
+            max=600,
+            default=450,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_density",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_snow_density"],
+            min=50,
+            max=600,
+            default=250,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="max_snow_depth",
+            unit="mm",
+            aliases=["snow_redist_frey_max_snow_depth"],
+            min=-1,
+            max=50000,
+            default=20000,
+            mandatory=False,
+        ),
+    ],
+    "transport:snow_redistribution_frey_dynamic": [
+        ParamSpec(
+            name="correction",
+            unit="-",
+            aliases=["snow_redist_frey_dyn_c"],
+            min=0,
+            max=10,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_holding_capacity",
+            unit="mm",
+            aliases=["snow_redist_frey_dyn_holding_capacity"],
+            min=0,
+            max=5000,
+            default=200,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_max"],
+            min=200,
+            max=600,
+            default=450,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_min",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_min"],
+            min=50,
+            max=300,
+            default=100,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_fresh_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_fresh_max"],
+            min=100,
+            max=500,
+            default=300,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_settling",
+            unit="1/day",
+            aliases=["snow_redist_frey_dyn_rho_settling"],
+            min=0,
+            max=1,
+            default=0.1,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_scale",
+            unit="-",
+            aliases=["snow_redist_frey_dyn_rho_scale"],
+            min=0.1,
+            max=10,
+            default=1.2,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="t_scale",
+            unit="°C",
+            aliases=["snow_redist_frey_dyn_t_scale"],
+            min=-5,
+            max=5,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="max_snow_depth",
+            unit="mm",
+            aliases=["snow_redist_frey_dyn_max_snow_depth"],
+            min=-1,
+            max=50000,
+            default=20000,
+            mandatory=False,
+        ),
+    ],
 }
 
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
@@ -1830,10 +1960,8 @@ class ParameterSet:
                     self._register(component="type:snowpack", spec=spec)
 
             # Snow/ice transformation
-            if "snow_ice_transformation" in options:
-                algo = options["snow_ice_transformation"]
-                if algo is None:
-                    return
+            algo = options.get("snow_ice_transformation")
+            if algo is not None:
                 if algo not in PROCESS_PARAM_SPECS:
                     raise ConfigurationError(
                         f"The snow/ice transformation option {algo} is not recognised.",
@@ -1889,12 +2017,25 @@ class ParameterSet:
                 if red is None:
                     return
                 if red in PROCESS_PARAM_SPECS:
+                    multi = len(land_cover_names) > 1
                     for spec in PROCESS_PARAM_SPECS[red]:
-                        self._register(
-                            component="type:snowpack",
-                            spec=spec,
-                            aliases=spec.aliases or [],
-                        )
+                        if spec.name == "snow_holding_capacity":
+                            # The snow holding capacity is land-cover specific
+                            # (vegetation / surface roughness), so register it per
+                            # snowpack with a per-cover alias suffix.
+                            for cover_name in land_cover_names:
+                                suffix = f"_{cover_name}" if multi else ""
+                                self._register(
+                                    component=f"{cover_name}_snowpack",
+                                    spec=spec,
+                                    alias_suffix=suffix,
+                                )
+                        else:
+                            self._register(
+                                component="type:snowpack",
+                                spec=spec,
+                                aliases=spec.aliases or [],
+                            )
                 elif red is not None:
                     raise ConfigurationError(
                         f"The snow redistribution option {red} is not recognised.",

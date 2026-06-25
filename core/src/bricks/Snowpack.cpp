@@ -58,6 +58,12 @@ WaterContainer* Snowpack::GetSnowContainer() const {
 void Snowpack::Finalize() {
     _snow->Finalize();
     _water->Finalize();
+
+    // Finalize processes that maintain explicit internal state across the time step
+    // (e.g. the dynamic snow density tracked by the Frey & Holzmann redistribution).
+    for (int i = 0; i < GetProcessCount(); ++i) {
+        GetProcess(i)->Finalize();
+    }
 }
 
 void Snowpack::SetInitialState(double value, ContentType type) {

@@ -19,6 +19,7 @@
 #include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessInterceptionGR4J.h"
+#include "ProcessLateralSnowRedistributionFrey.h"
 #include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
@@ -329,6 +330,30 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessLateralSnowSlide::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), false);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey_dynamic", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), true);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettingsDynamic
         }},
 
         {"interception:gr4j", {

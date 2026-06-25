@@ -397,3 +397,123 @@ def test_error_is_raised_if_parameter_missing():
         tmp_dir.cleanup()
     except Exception:
         print("Could not remove temporary directory.")
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "transport:snow_redistribution_frey",
+        "transport:snow_redistribution_frey_dynamic",
+    ],
+)
+def test_snow_redistribution_frey_registers_parameters(kind):
+    # The snow redistribution parameters must be registered (regression: an early
+    # return in the snow parameter generation used to skip them entirely).
+    socont = models.Socont(snow_redistribution=kind)
+    parameters = socont.generate_parameters()
+    names = set(parameters.parameters["name"])
+    assert "snow_holding_capacity" in names
+    assert "correction" in names
+    assert "rho_max" in names
+
+    # The holding capacity is registered per land cover snowpack (not globally).
+    hv_rows = parameters.parameters[
+        parameters.parameters["name"] == "snow_holding_capacity"
+    ]
+    assert all("snowpack" in c for c in hv_rows["component"])
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "transport:snow_redistribution_frey",
+        "transport:snow_redistribution_frey_dynamic",
+    ],
+)
+def test_snow_redistribution_frey_closes_water_balance(kind):
+    tmp_dir = tempfile.TemporaryDirectory()
+
+    socont = models.Socont(
+        soil_storage_nb=1,
+        surface_runoff="linear_storage",
+        snow_redistribution=kind,
+        record_all=True,
+    )
+
+    parameters = socont.generate_parameters()
+    parameters.set_values({"a_snow": 3, "k_quick": 0.05, "A": 200, "k_slow": 0.001})
+    parameters.add_data_parameter("precip_correction_factor", 1)
+    parameters.add_data_parameter("precip_gradient", 0.05)
+    parameters.add_data_parameter("temp_gradients", -0.6)
+
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        SITTER_HUS, column_elevation="elevation", column_area="area"
+    )
+
+    # A slope property is required by the redistribution process.
+    n = len(hydro_units.get_ids())
+    hydro_units.add_property(("slope", "degrees"), np.full(n, 30.0))
+    hydro_units.populate_bounded_instance()
+
+    # A downslope connectivity chain (each band drains to the next lower one) so the
+    # redistribution is actually active. Added after populate_bounded_instance, which
+    # clears the settings.
+    df = hydro_units.hydro_units
+    order = sorted(
+        range(n), key=lambda i: float(df[("elevation", "m")].iloc[i]), reverse=True
+    )
+    ids = [int(df[("id", "-")].iloc[i]) for i in order]
+    for upper, lower in zip(ids[:-1], ids[1:]):
+        hydro_units.settings.add_lateral_connection(upper, lower, 1.0)
+
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        SITTER_METEO,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "temperature": "temp(C)",
+            "pet": "pet_sim(mm/day)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature",
+        ref_elevation=1250,
+        gradient=parameters.get("temp_gradients"),
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    forcing.correct_station_data(
+        variable="precipitation",
+        correction_factor=parameters.get("precip_correction_factor"),
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation",
+        ref_elevation=1250,
+        gradient=parameters.get("precip_gradient"),
+    )
+
+    socont.setup(
+        spatial_structure=hydro_units,
+        output_path=tmp_dir.name,
+        start_date="1981-01-01",
+        end_date="2020-12-31",
+    )
+    socont.run(parameters=parameters, forcing=forcing)
+
+    # Water balance must close: redistribution moves snow between units without
+    # creating or destroying mass.
+    precip_total = forcing.get_total_precipitation()
+    discharge_total = socont.get_total_outlet_discharge()
+    et_total = socont.get_total_et()
+    storage_change = socont.get_total_water_storage_changes()
+    snow_change = socont.get_total_snow_storage_changes()
+    balance = discharge_total + et_total + storage_change + snow_change - precip_total
+
+    assert balance == pytest.approx(0, abs=1e-6)
+
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        print("Could not remove temporary directory.")

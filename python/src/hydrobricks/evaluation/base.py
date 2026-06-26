@@ -27,7 +27,9 @@ class AuxiliaryObservation:
     - ``mode='objective'`` contributes a ``weight``-scaled goodness-of-fit
       (``metric``) term to the combined objective;
     - ``mode='constraint'`` acts as a behavioural pass/fail filter — a run is
-      rejected when the mean absolute error exceeds ``tolerance``.
+      rejected when the mean absolute error exceeds ``tolerance`` (absolute, in the
+      signal's units) or, alternatively, ``relative_tolerance`` times the mean
+      absolute observed value. Exactly one of the two must be set.
 
     Attributes
     ----------
@@ -38,7 +40,12 @@ class AuxiliaryObservation:
     mode : str
         ``'objective'`` or ``'constraint'`` (default ``'objective'``).
     tolerance : float or None
-        Maximum allowed mean absolute error for ``'constraint'`` mode.
+        Maximum allowed mean absolute error for ``'constraint'`` mode, in the
+        signal's units. Mutually exclusive with ``relative_tolerance``.
+    relative_tolerance : float or None
+        Maximum allowed mean absolute error for ``'constraint'`` mode, expressed as
+        a fraction of the mean absolute observed value (e.g. ``0.1`` for 10%).
+        Mutually exclusive with ``tolerance``.
     requires_recording : bool
         Whether computing the simulated values needs the model run with
         ``record_all=True`` (default True).
@@ -48,6 +55,7 @@ class AuxiliaryObservation:
     weight: float = 1.0
     mode: str = "objective"
     tolerance: float | None = None
+    relative_tolerance: float | None = None
     requires_recording: bool = True
 
     def observed(self) -> np.ndarray:

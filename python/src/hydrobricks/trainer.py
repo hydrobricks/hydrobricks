@@ -255,13 +255,25 @@ class SpotpySetup:
                     item_value=obs.mode,
                     reason="Expected 'objective' or 'constraint'",
                 )
-            if obs.mode == "constraint" and obs.tolerance is None:
-                raise ConfigurationError(
-                    "A constraint-mode observation requires a tolerance.",
-                    item_name="tolerance",
-                    item_value=None,
-                    reason="Missing tolerance for constraint mode",
-                )
+            if obs.mode == "constraint":
+                has_abs = obs.tolerance is not None
+                has_rel = obs.relative_tolerance is not None
+                if not has_abs and not has_rel:
+                    raise ConfigurationError(
+                        "A constraint-mode observation requires a tolerance.",
+                        item_name="tolerance",
+                        item_value=None,
+                        reason="Missing tolerance or relative_tolerance for "
+                        "constraint mode",
+                    )
+                if has_abs and has_rel:
+                    raise ConfigurationError(
+                        "A constraint-mode observation accepts only one of "
+                        "'tolerance' and 'relative_tolerance'.",
+                        item_name="tolerance",
+                        item_value=(obs.tolerance, obs.relative_tolerance),
+                        reason="Both absolute and relative tolerance were set",
+                    )
 
     @classmethod
     def from_factory(
@@ -356,14 +368,12 @@ class SpotpySetup:
                 reason="Series not recorded",
             )
 
-        warmup_start = None
+        eval_start = None
         if model.start_date is not None:
-            warmup_start = pd.Timestamp(model.start_date) + pd.Timedelta(
-                days=self.warmup
-            )
+            eval_start = pd.Timestamp(model.start_date) + pd.Timedelta(days=self.warmup)
         for obs in self.extra_observations:
-            if warmup_start is not None:
-                obs.restrict_to_period(warmup_start, model.end_date)
+            if eval_start is not None:
+                obs.restrict_to_period(eval_start, model.end_date)
         self._extra_lengths = [len(o) for o in self.extra_observations]
         if self._has_extra_obs and sum(self._extra_lengths) == 0:
             raise DataError(
@@ -994,11 +1004,17 @@ class SpotpySetup:
             if obs.mode == "constraint":
                 # Behavioural filter: reject the run when the error is too large.
                 error = float(np.mean(np.abs(a_sim - a_obs)))
-                if obs.tolerance is not None and error > obs.tolerance:
+                if obs.relative_tolerance is not None:
+                    # Relative to the mean absolute observed value.
+                    scale = float(np.mean(np.abs(a_obs)))
+                    threshold = obs.relative_tolerance * scale
+                else:
+                    threshold = obs.tolerance
+                if threshold is not None and error > threshold:
                     logger.debug(
                         "Rejected non-behavioural run: error %.3g > %.3g (%s).",
                         error,
-                        obs.tolerance,
+                        threshold,
                         _format_params(params),
                     )
                     return self._worst_score()

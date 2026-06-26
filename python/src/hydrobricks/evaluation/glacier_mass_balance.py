@@ -117,7 +117,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
 
     Parameters
     ----------
-    metric, weight, mode, tolerance
+    metric, weight, mode, tolerance, relative_tolerance
         Calibration configuration, see
         :class:`~hydrobricks.evaluation.base.AuxiliaryObservation`.
 
@@ -137,6 +137,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         weight: float = 1.0,
         mode: str = "objective",
         tolerance: float | None = None,
+        relative_tolerance: float | None = None,
     ) -> None:
         self.targets: list[dict[str, Any]] = []
         self.granularity: str | None = None
@@ -144,6 +145,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         self.weight = weight
         self.mode = mode
         self.tolerance = tolerance
+        self.relative_tolerance = relative_tolerance
 
     # ------------------------------------------------------------------ #
     # Loading
@@ -174,6 +176,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         weight: float = 1.0,
         mode: str = "objective",
         tolerance: float | None = None,
+        relative_tolerance: float | None = None,
         **read_csv_kwargs: Any,
     ) -> GlacierMassBalanceObservations:
         """Load observed glacier mass balance from a generic CSV file.
@@ -215,7 +218,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
             Keep only observations whose period lies fully within this range.
         skiprows
             Rows to skip at the top of the file (metadata header).
-        metric, weight, mode, tolerance
+        metric, weight, mode, tolerance, relative_tolerance
             Calibration configuration (see the class docstring).
         **read_csv_kwargs
             Extra keyword arguments forwarded to ``pandas.read_csv``.
@@ -275,7 +278,13 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
             hi = pd.to_numeric(cls._column(df, band_hi_col), errors="coerce")
             bands = (lo.to_numpy(), hi.to_numpy())
 
-        obj = cls(metric=metric, weight=weight, mode=mode, tolerance=tolerance)
+        obj = cls(
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
         obj.granularity = "elevationbins" if bands is not None else "whole"
         obj._add_targets(
             t0.to_numpy(), t1.to_numpy(), values.to_numpy(), balance_type, bands
@@ -299,6 +308,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         weight: float = 1.0,
         mode: str = "objective",
         tolerance: float | None = None,
+        relative_tolerance: float | None = None,
     ) -> GlacierMassBalanceObservations:
         """Load a GLAMOS "fixdate" mass-balance CSV file (preset over the CSV reader).
 
@@ -321,7 +331,7 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
             ``'summer'`` (Bs).
         start_date, end_date
             Keep only observations whose period lies fully within this range.
-        metric, weight, mode, tolerance
+        metric, weight, mode, tolerance, relative_tolerance
             Calibration configuration (see the class docstring).
 
         Returns
@@ -347,7 +357,13 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
                     f"No rows found for glacier id '{glacier_id}' in {path}."
                 )
 
-        obj = cls(metric=metric, weight=weight, mode=mode, tolerance=tolerance)
+        obj = cls(
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
         obj.granularity = kind
         is_bins = kind == "elevationbins"
         bands = (

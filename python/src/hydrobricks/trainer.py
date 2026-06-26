@@ -96,7 +96,6 @@ class SpotpySetup:
         discharge: DischargeObservations | list[DischargeObservations] | None = None,
         warmup: int = 365,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
-        invert_obj_func: bool = False,
         dump_outputs: bool = False,
         dump_forcing: bool = False,
         dump_dir: str = "",
@@ -139,11 +138,13 @@ class SpotpySetup:
         obj_func
             Objective function for optimization. If None, uses non-parametric
             Kling-Gupta Efficiency. Can be a string (HydroErr function name) or
-            callable that takes (observed, simulated) and returns a scalar.
-            Default: None
-        invert_obj_func
-            If True, multiply objective function result by -1 (for minimizers).
-            Default: False
+            callable that takes (observed, simulated) and returns a scalar. String
+            metrics are oriented automatically (error metrics such as ``'rmse'`` are
+            internally negated so that higher is always better); a callable is
+            assumed to already follow "higher is better". The sign needed by the
+            optimizer is then applied automatically from the chosen algorithm's
+            direction (see :func:`calibrate`), so there is no ``invert_obj_func``
+            to set. Default: None
         dump_outputs
             If True, save all simulation outputs to disk. Default: False
         dump_forcing
@@ -193,9 +194,7 @@ class SpotpySetup:
         self._build_token = uuid.uuid4().hex
 
         # Validate and set configuration parameters
-        self._validate_and_set_parameters(
-            warmup, dump_dir, invert_obj_func, dump_outputs, dump_forcing
-        )
+        self._validate_and_set_parameters(warmup, dump_dir, dump_outputs, dump_forcing)
 
         # Initialize SPOTPY parameters
         self.params_spotpy = params.get_for_spotpy()
@@ -303,7 +302,7 @@ class SpotpySetup:
             be picklable (plain hydrobricks ParameterSet instances are).
         **kwargs
             Forwarded to :class:`SpotpySetup` (``warmup``, ``obj_func``,
-            ``invert_obj_func``, ``dump_outputs``, ``dump_forcing``, ``dump_dir``).
+            ``dump_outputs``, ``dump_forcing``, ``dump_dir``).
 
         Returns
         -------
@@ -630,7 +629,6 @@ class SpotpySetup:
         self,
         warmup: int,
         dump_dir: str,
-        invert_obj_func: bool,
         dump_outputs: bool,
         dump_forcing: bool,
     ) -> None:
@@ -647,8 +645,6 @@ class SpotpySetup:
         dump_dir
             Directory path for saving dumped outputs. Only validated/created
             if dump_outputs or dump_forcing is True.
-        invert_obj_func
-            If True, multiply objective function result by -1 (for minimizers).
         dump_outputs
             If True, save all simulation outputs to disk.
         dump_forcing
@@ -686,7 +682,13 @@ class SpotpySetup:
 
         self.dump_outputs = dump_outputs
         self.dump_forcing = dump_forcing
-        self.invert_obj_func = invert_obj_func
+        # Whether the objective must be negated for the optimizer. The objective is
+        # always computed as a skill (higher is better); SPOTPY's minimizing
+        # algorithms (e.g. SCE-UA, NSGA-II) need the negated value, so calibrate()
+        # sets this from the chosen algorithm's optimization_direction. Default
+        # False (maximize/grid), so a setup used outside calibrate() returns the
+        # skill unchanged.
+        self._minimize = False
 
     def _setup_forcing_and_models(self) -> None:
         """
@@ -949,7 +951,7 @@ class SpotpySetup:
             else:
                 like = self._discharge_skill(sim, obs)
 
-            if self.invert_obj_func:
+            if self._minimize:
                 like = -like
 
             all_like.append(like)
@@ -964,18 +966,26 @@ class SpotpySetup:
         discharge plus each ``'objective'`` auxiliary signal), so the multi-objective
         sampler always receives a consistent-length objective.
         """
-        worst = np.inf if self.invert_obj_func else -np.inf
+        worst = np.inf if self._minimize else -np.inf
         if self._has_extra_obs and self.combine == "pareto":
             n_obj = 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
             return [worst] * n_obj
         return worst
 
     def _discharge_skill(self, sim: np.ndarray, obs: np.ndarray) -> float:
-        """Discharge goodness-of-fit (higher is better), before any inversion."""
+        """Discharge skill (higher is better), in metric-consistent space.
+
+        Single source of truth for orienting the discharge metric: error metrics
+        (rmse, ...) are negated to a skill so that, like KGE/NSE and the auxiliary
+        terms, higher is always better. The optimizer-direction sign is applied
+        later, once, in :meth:`objectivefunction`. A custom callable is assumed to
+        already follow "higher is better".
+        """
         if not self.obj_func:
             return spotpy.objectivefunctions.kge_non_parametric(obs, sim)
         if isinstance(self.obj_func, str):
-            return evaluate(sim, obs, self.obj_func)
+            value = evaluate(sim, obs, self.obj_func)
+            return -value if is_error_metric(self.obj_func) else value
         return self.obj_func(obs, sim)
 
     def _objective_with_extra_observations(
@@ -1048,13 +1058,13 @@ class SpotpySetup:
             # Each objective oriented like the single-objective score so the sampler
             # (e.g. spotpy's NSGAII) optimizes them consistently.
             terms = [q_skill, *(skill for _w, skill in objective_terms)]
-            return [(-t if self.invert_obj_func else t) for t in terms]
+            return [(-t if self._minimize else t) for t in terms]
 
         # Weighted single score.
         combined_skill = self.discharge_weight * q_skill + sum(
             weight * skill for weight, skill in objective_terms
         )
-        return -combined_skill if self.invert_obj_func else combined_skill
+        return -combined_skill if self._minimize else combined_skill
 
 
 def calibrate(
@@ -1169,6 +1179,14 @@ def calibrate(
         save_sim=save_sim,
         **algorithm_kwargs,
     )
+    # Orient the objective for this algorithm: SPOTPY declares an
+    # optimization_direction per algorithm ('minimize' for SCE-UA, NSGA-II, PADDS;
+    # 'maximize'/'grid' otherwise). The objective is computed as a skill (higher is
+    # better), so it must be negated only for minimizing algorithms. Setting this
+    # before sample() ensures it is pickled to workers for parallel backends.
+    spot_setup._minimize = (
+        getattr(sampler, "optimization_direction", "grid") == "minimize"
+    )
     # Some algorithms need extra sample() arguments (e.g. multi-objective NSGAII
     # requires n_obj); forward them when provided.
     sampler.sample(repetitions, **(sample_kwargs or {}))
@@ -1183,7 +1201,6 @@ def calibrate_from_factory(
     allow_changing: list[str] | None = None,
     warmup: int = 365,
     obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
-    invert_obj_func: bool = False,
     dump_outputs: bool = False,
     dump_forcing: bool = False,
     dump_dir: str = "",
@@ -1227,7 +1244,7 @@ def calibrate_from_factory(
     allow_changing
         Optional list of parameter names/aliases to calibrate. If given, it
         overrides any ``parameters.allow_changing`` set inside the factory.
-    warmup, obj_func, invert_obj_func, dump_outputs, dump_forcing, dump_dir
+    warmup, obj_func, dump_outputs, dump_forcing, dump_dir
         Forwarded to :class:`SpotpySetup`.
     extra_observations, combine, discharge_weight
         Forwarded to :class:`SpotpySetup` to calibrate (also) on auxiliary signals
@@ -1258,7 +1275,6 @@ def calibrate_from_factory(
         params,
         warmup=warmup,
         obj_func=obj_func,
-        invert_obj_func=invert_obj_func,
         dump_outputs=dump_outputs,
         dump_forcing=dump_forcing,
         dump_dir=dump_dir,
@@ -1283,3 +1299,104 @@ def calibrate_from_factory(
         sample_kwargs=sample_kwargs,
         **algorithm_kwargs,
     )
+
+
+def _optimizer_minimizes(sampler: Any) -> bool:
+    """Whether the sampler's algorithm minimizes the objective it was given."""
+    return getattr(sampler, "optimization_direction", "grid") == "minimize"
+
+
+def get_results(sampler: Any) -> Any:
+    """Return the calibration results as a DataFrame, scores in skill space.
+
+    SPOTPY stores the objective exactly as it was handed to the optimizer, which is
+    the *negated* skill for minimizing algorithms (SCE-UA, NSGA-II, PADDS). This
+    helper flips it back so every score column is a skill where **higher is always
+    better**, regardless of the algorithm — e.g. a KGE of 0.7 reads as 0.7, never
+    -0.7. (Error metrics such as ``rmse`` are negated by the skill convention, so a
+    smaller error shows as a larger, less-negative score.)
+
+    Parameters
+    ----------
+    sampler
+        The sampler returned by :func:`calibrate` / :func:`calibrate_from_factory`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per evaluated parameter set, with the calibrated parameter columns
+        (the SPOTPY ``par`` prefix stripped) and a ``score`` column — or ``score1``,
+        ``score2``, ... for a multi-objective (``combine='pareto'``) calibration.
+        The simulated series are not included.
+    """
+    import pandas as pd
+
+    data = sampler.getdata()
+    sign = -1.0 if _optimizer_minimizes(sampler) else 1.0
+    names = data.dtype.names
+    like_cols = [n for n in names if n.startswith("like")]
+    par_cols = [n for n in names if n.startswith("par")]
+
+    out: dict[str, np.ndarray] = {}
+    if len(like_cols) == 1:
+        out["score"] = sign * np.asarray(data["like1"], dtype=float)
+    else:
+        for n in sorted(like_cols):
+            out[f"score{n[len('like'):]}"] = sign * np.asarray(data[n], dtype=float)
+    for n in par_cols:
+        out[n[len("par") :]] = np.asarray(data[n], dtype=float)
+    return pd.DataFrame(out)
+
+
+def get_best(sampler: Any) -> dict[str, Any]:
+    """Return the best parameter set and its score (skill space, higher is better).
+
+    Convenience over :func:`get_results` for single-objective calibrations: it
+    selects the run with the highest skill (after undoing any optimizer sign flip),
+    so the reported score is the true metric value — a KGE of 0.7 is ``0.7``, not
+    ``-0.7``.
+
+    Parameters
+    ----------
+    sampler
+        The sampler returned by :func:`calibrate` / :func:`calibrate_from_factory`.
+
+    Returns
+    -------
+    dict
+        ``{'score': float, 'parameters': {name: value}, 'index': int}`` where
+        ``index`` is the row in ``sampler.getdata()``.
+
+    Raises
+    ------
+    ConfigurationError
+        For a multi-objective (``combine='pareto'``) calibration, where a single
+        best run is not defined — use :func:`get_results` and select a point on the
+        Pareto front instead.
+    """
+    data = sampler.getdata()
+    names = data.dtype.names
+    like_cols = [n for n in names if n.startswith("like")]
+    if len(like_cols) != 1:
+        raise ConfigurationError(
+            "get_best is for single-objective calibrations; this run has "
+            f"{len(like_cols)} objectives. Use get_results() and pick a point on "
+            "the Pareto front.",
+            item_name="objectives",
+            item_value=len(like_cols),
+            reason="Multi-objective result",
+        )
+
+    sign = -1.0 if _optimizer_minimizes(sampler) else 1.0
+    scores = sign * np.asarray(data["like1"], dtype=float)
+    if not np.isfinite(scores).any():
+        raise DataError(
+            "No finite objective values in the calibration results.",
+            data_type="calibration results",
+            reason="All runs rejected or non-finite",
+        )
+    best = int(np.nanargmax(scores))
+    params = {
+        n[len("par") :]: float(data[n][best]) for n in names if n.startswith("par")
+    }
+    return {"score": float(scores[best]), "parameters": params, "index": best}

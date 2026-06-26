@@ -340,7 +340,6 @@ def test_calibration_with_glacier_mb_runs(glacier_run, mode):
         obs,
         warmup=180,
         obj_func="kge_2012",
-        invert_obj_func=True,
         extra_observations=[mb],
         combine="weighted",
     )
@@ -367,7 +366,6 @@ def test_pareto_objective_returns_vector(glacier_run):
         obs,
         warmup=180,
         obj_func="kge_2012",
-        invert_obj_func=True,
         extra_observations=[mb],
         combine="pareto",
     )
@@ -457,7 +455,6 @@ def test_configure_recording_replaces_record_all(glacier_run):
         obs,
         warmup=180,
         obj_func="kge_2012",
-        invert_obj_func=True,
         extra_observations=[mb],
     )
     assert sum(spot_setup._extra_lengths) > 0

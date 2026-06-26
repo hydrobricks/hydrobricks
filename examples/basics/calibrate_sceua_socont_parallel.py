@@ -2,7 +2,6 @@ import logging
 import sys
 
 import matplotlib.pyplot as plt
-import spotpy
 
 import hydrobricks.trainer as trainer
 from examples._helpers.models_setup_helper import ModelSetupHelper
@@ -47,10 +46,11 @@ def build():
 
 
 if __name__ == "__main__":
-    # A single call builds the (picklable) setup and runs the sampler. We invert
-    # the KGE score as SCE-UA minimizes it. parallel='mpc' spreads evaluations
-    # across CPU cores (requires 'pathos'); note that SCE-UA is largely
-    # sequential, so the speedup is modest compared to samplers like 'mc'/'lhs'.
+    # A single call builds the (picklable) setup and runs the sampler. The
+    # objective is a skill (higher is better) and calibrate_from_factory applies the
+    # sign SCE-UA needs automatically. parallel='mpc' spreads evaluations across CPU
+    # cores (requires 'pathos'); note that SCE-UA is largely sequential, so the
+    # speedup is modest compared to samplers like 'mc'/'lhs'.
     max_rep = 4000
     sampler = trainer.calibrate_from_factory(
         build,
@@ -58,26 +58,28 @@ if __name__ == "__main__":
         max_rep,
         warmup=365,
         obj_func="kge_2012",
-        invert_obj_func=True,
         dbname="spotpy_socont_sitter_SCEUA",
         dbformat="csv",
         parallel="mpc",
     )
 
-    # Load the results
-    results = sampler.getdata()
+    # Results in metric space (KGE, higher is better) — no confusing negative values.
+    results = trainer.get_results(sampler)
+    best = trainer.get_best(sampler)
+    print(f"Best KGE: {best['score']:.3f}")
+    print("Best parameters:", best["parameters"])
 
-    # Plot evolution
+    # Plot evolution (scores are already in skill space, higher is better).
     fig_evolution = plt.figure(figsize=(9, 5))
-    plt.plot(-results["like1"])
-    plt.ylabel("NSE")
+    plt.plot(results["score"])
+    plt.ylabel("KGE")
     plt.xlabel("Iteration")
     plt.tight_layout()
     plt.show()
 
-    # Get best results
-    best_index, best_obj_func = spotpy.analyser.get_minlikeindex(results)
-    best_model_run = results[best_index]
+    # Best simulation series (read from the raw SPOTPY records at the best index).
+    records = sampler.getdata()
+    best_model_run = records[best["index"]]
     fields = [word for word in best_model_run.dtype.names if word.startswith("sim")]
     best_simulation = list(best_model_run[fields])
 
@@ -88,7 +90,7 @@ if __name__ == "__main__":
         best_simulation,
         color="black",
         linestyle="solid",
-        label="Best obj. func.=" + str(best_obj_func),
+        label=f"Best KGE = {best['score']:.3f}",
     )
     ax.plot(sampler.evaluation, "r.", markersize=3, label="Observation data")
     plt.xlabel("Number of Observation Points")

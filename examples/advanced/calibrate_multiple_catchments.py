@@ -2,7 +2,6 @@ import logging
 import sys
 
 import matplotlib.pyplot as plt
-import spotpy
 
 import hydrobricks.trainer as trainer
 from examples._helpers.models_setup_helper import ModelSetupHelper
@@ -47,7 +46,8 @@ parameters.allow_changing = [
     "precip_corr_factor",
 ]
 
-# Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
+# Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
+# applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
     [socont_appenzell, socont_stgallen],
     parameters,
@@ -55,29 +55,30 @@ spot_setup = trainer.SpotpySetup(
     [obs_appenzell, obs_stgallen],
     warmup=365,
     obj_func="kge_2012",
-    invert_obj_func=True,
 )
 
-# Select number of maximum repetitions and run spotpy
+# Run the calibration (orients the objective for the algorithm automatically).
 max_rep = 4000
-sampler = spotpy.algorithms.sceua(
-    spot_setup, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
+sampler = trainer.calibrate(
+    spot_setup, "sceua", max_rep, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
 )
-sampler.sample(max_rep)
 
-# Load the results
-results = spotpy.analyser.load_csv_results("spotpy_socont_sitter_SCEUA")
+# Results in metric space (KGE, higher is better) — no confusing negative values.
+results = trainer.get_results(sampler)
+best = trainer.get_best(sampler)
+print(f"Best KGE: {best['score']:.3f}")
+print("Best parameters:", best["parameters"])
 
-# Plot evolution
+# Plot evolution (scores are already in skill space, higher is better).
 fig_evolution = plt.figure(figsize=(9, 5))
-plt.plot(-results["like1"])
-plt.ylabel("NSE")
+plt.plot(results["score"])
+plt.ylabel("KGE")
 plt.xlabel("Iteration")
 plt.tight_layout()
 plt.show()
 
-# Get best results
-best_index, best_obj_func = spotpy.analyser.get_minlikeindex(results)
-best_model_run = results[best_index]
+# Best simulation series (read from the raw SPOTPY records at the best index).
+records = sampler.getdata()
+best_model_run = records[best["index"]]
 fields = [word for word in best_model_run.dtype.names if word.startswith("sim")]
 best_simulation = list(best_model_run[fields])

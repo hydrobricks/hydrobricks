@@ -262,6 +262,45 @@ def test_add_recordings_after_setup_raises():
         model.add_recordings(RecordingRequest(brick_states=[("open", "water_content")]))
 
 
+def test_get_best_returns_metric_space_score():
+    """get_best un-flips the optimizer sign so a KGE reads as itself, not negated."""
+    params = build_params()
+    spot_setup = trainer.SpotpySetup.from_factory(
+        build_setup_objects, params, warmup=WARMUP, obj_func="kge_2012"
+    )
+    # SCE-UA minimizes: SPOTPY stores the negated skill.
+    sampler = trainer.calibrate(spot_setup, "sceua", 30, dbformat="ram")
+    assert spot_setup._minimize is True
+
+    best = trainer.get_best(sampler)
+    assert {"score", "parameters", "index"}.issubset(best)
+    assert {"a_snow", "k_quick"}.issubset(best["parameters"].keys())
+
+    data = sampler.getdata()
+    raw_best = float(data["like1"][best["index"]])
+    # The stored value is the negated skill; get_best flips it back.
+    assert np.isclose(best["score"], -raw_best)
+    # KGE is bounded above by 1; the skill-space score must respect that.
+    assert best["score"] <= 1.0 + 1e-9
+
+
+def test_get_results_grid_algorithm_no_sign_flip():
+    """For a non-minimizing (grid) algorithm, scores equal the stored objective."""
+    params = build_params()
+    spot_setup = trainer.SpotpySetup.from_factory(
+        build_setup_objects, params, warmup=WARMUP, obj_func="kge_2012"
+    )
+    sampler = trainer.calibrate(spot_setup, "mc", repetitions=5, dbformat="ram")
+    assert spot_setup._minimize is False
+
+    df = trainer.get_results(sampler)
+    assert "score" in df.columns
+    assert "a_snow" in df.columns  # parameter columns, 'par' prefix stripped
+    data = sampler.getdata()
+    # 'grid' direction: no flip, so the score is exactly the stored objective.
+    assert np.allclose(df["score"].to_numpy(), np.asarray(data["like1"], dtype=float))
+
+
 def test_calibrate_sequential_runs():
     """A small sequential MC calibration runs end-to-end via the factory setup."""
     params = build_params()

@@ -53,7 +53,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import spotpy
 
 import hydrobricks as hb
 import hydrobricks.models as models
@@ -246,15 +245,15 @@ spot_setup = trainer.SpotpySetup(
     obs,
     warmup=WARMUP,
     obj_func="kge_2012",
-    invert_obj_func=True,
     extra_observations=[glacier_mb],
     combine="weighted",
     discharge_weight=1.0,
 )
 sampler = trainer.calibrate(spot_setup, "sceua", CALIBRATION_MAX_REP, dbformat="ram")
-results = sampler.getdata()
-best_index, best_obj = spotpy.analyser.get_minlikeindex(results)
-print(f"Best combined objective: {best_obj:.3f}")
+best = trainer.get_best(sampler)
+# Score in skill space (higher is better): the combined discharge + mass-balance
+# objective, not a sign-flipped value.
+print(f"Best combined objective: {best['score']:.3f}")
 
 print("\n=== constraint: reject runs with a poor mass balance ===")
 # Keep the discharge KGE as the objective, but reject any run whose mean absolute
@@ -277,7 +276,6 @@ spot_setup_c = trainer.SpotpySetup(
     obs,
     warmup=WARMUP,
     obj_func="kge_2012",
-    invert_obj_func=True,
     extra_observations=[glacier_mb_constraint],
 )
 sampler_c = trainer.calibrate(
@@ -296,7 +294,6 @@ spot_setup_p = trainer.SpotpySetup(
     obs,
     warmup=WARMUP,
     obj_func="kge_2012",
-    invert_obj_func=True,
     extra_observations=[glacier_mb],
     combine="pareto",
 )
@@ -315,12 +312,7 @@ print(f"Pareto sampler produced {len(results_p)} evaluations.")
 # ---------------------------------------------------------------------------
 # Re-run the model with the best parameter set and compute the simulated mass
 # balance to compare it with the observations.
-best_values = {
-    name[3:]: results[best_index][name]
-    for name in results.dtype.names
-    if name.startswith("par")
-}
-parameters.set_values(best_values)
+parameters.set_values(best["parameters"])
 model.run(parameters=parameters, forcing=forcing)
 sim_mb = glacier_mb.simulated(model)
 

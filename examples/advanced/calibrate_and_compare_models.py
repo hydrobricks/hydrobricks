@@ -36,7 +36,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import spotpy
 
 import hydrobricks as hb
 import hydrobricks.models as models
@@ -268,7 +267,8 @@ for label, factory, allow_changing in model_configs:
     add_data_parameters(parameters)
     parameters.allow_changing = allow_changing
 
-    # Calibrate with SCE-UA on the KGE (inverted, as SCE-UA minimizes).
+    # Calibrate with SCE-UA on the KGE. The objective is a skill (higher is
+    # better); trainer.calibrate applies the sign SCE-UA needs automatically.
     spot_setup = trainer.SpotpySetup(
         model,
         parameters,
@@ -276,7 +276,6 @@ for label, factory, allow_changing in model_configs:
         obs,
         warmup=WARMUP,
         obj_func=CALIBRATION_OBJ_FUNC,
-        invert_obj_func=True,
     )
     sampler = trainer.calibrate(
         spot_setup,
@@ -290,7 +289,7 @@ for label, factory, allow_changing in model_configs:
     # of every run, so we read the best one directly (no need to re-run the
     # model nor to back-transform the parameters).
     results = sampler.getdata()
-    best_index, _ = spotpy.analyser.get_minlikeindex(results)
+    best_index = trainer.get_best(sampler)["index"]
     best_run = results[best_index]
     sim_fields = [name for name in best_run.dtype.names if name.startswith("sim")]
     best_sim = np.array([best_run[name] for name in sim_fields], dtype=float)

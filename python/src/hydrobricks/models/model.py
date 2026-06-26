@@ -23,6 +23,8 @@ from hydrobricks.trainer import evaluate
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from hydrobricks.evaluation.base import RecordingRequest
+
 logger = logging.getLogger(__name__)
 
 # Generic (soil-bearing) land cover aliases. ``open`` is the canonical name (the HBV
@@ -181,6 +183,39 @@ class Model(ABC):
                 f"Invalid argument type or value in model setup: {e}", exc_info=True
             )
             raise ConfigurationError(f"Invalid configuration: {e}") from e
+
+    def add_recordings(self, request: RecordingRequest) -> None:
+        """
+        Enable the recording of specific stores/fluxes.
+
+        A targeted alternative to ``record_all=True``: records only the items needed
+        (e.g. by an auxiliary calibration observation). Must be called before
+        :meth:`setup` (the recordings are part of the model settings used to build
+        the model).
+
+        Parameters
+        ----------
+        request
+            The stores/fluxes to record (see
+            :class:`~hydrobricks.evaluation.base.RecordingRequest`).
+
+        Raises
+        ------
+        ModelError
+            If the model has already been initialized.
+        """
+        if self._is_initialized:
+            raise ModelError(
+                "Cannot configure recordings after the model has been initialized; "
+                "call add_recordings() (or obs.configure_recording()) before setup().",
+                is_initialized=True,
+            )
+        for brick, item in request.brick_states:
+            self.settings.record_brick_state(brick, item)
+        for brick, process, item in request.process_outputs:
+            self.settings.record_process_output(brick, process, item)
+        if request.fractions:
+            self.settings.record_fractions()
 
     def run(self, parameters: ParameterSet, forcing: Forcing | None = None) -> None:
         """

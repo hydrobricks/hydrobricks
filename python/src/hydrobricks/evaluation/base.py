@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -8,6 +9,39 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from hydrobricks.models.model import Model
+
+
+@dataclass
+class RecordingRequest:
+    """The specific stores/fluxes an auxiliary observation needs recorded.
+
+    Used as a lightweight alternative to ``record_all``: an observation declares
+    exactly which series it reads from a run model, so only those are logged.
+
+    Attributes
+    ----------
+    brick_states : list[tuple[str, str]]
+        ``(brick_name, item)`` pairs, e.g. ``("glacier_snowpack", "snow_content")``.
+        Logged label: ``"{brick}:{item}"``.
+    process_outputs : list[tuple[str, str, str]]
+        ``(brick_name, process_name, item)`` triples, e.g.
+        ``("glacier", "melt", "output")``. Logged label:
+        ``"{brick}:{process}:{item}"``.
+    fractions : bool
+        Whether the time-varying land-cover fractions must be recorded.
+    """
+
+    brick_states: list[tuple[str, str]] = field(default_factory=list)
+    process_outputs: list[tuple[str, str, str]] = field(default_factory=list)
+    fractions: bool = False
+
+    def value_labels(self) -> list[str]:
+        """Return the hydro-unit value labels this request records."""
+        labels = [f"{brick}:{item}" for brick, item in self.brick_states]
+        labels += [
+            f"{brick}:{process}:{item}" for brick, process, item in self.process_outputs
+        ]
+        return labels
 
 
 class AuxiliaryObservation:
@@ -47,8 +81,9 @@ class AuxiliaryObservation:
         a fraction of the mean absolute observed value (e.g. ``0.1`` for 10%).
         Mutually exclusive with ``tolerance``.
     requires_recording : bool
-        Whether computing the simulated values needs the model run with
-        ``record_all=True`` (default True).
+        Whether computing the simulated values needs recorded series, either via
+        ``record_all=True`` or by recording the specific items returned by
+        :meth:`required_recordings` (default True).
     """
 
     metric: str = "rmse"
@@ -70,6 +105,24 @@ class AuxiliaryObservation:
         :meth:`observed`; entries that cannot be evaluated should be NaN.
         """
         raise NotImplementedError
+
+    def required_recordings(self, model: Model) -> RecordingRequest:
+        """Return the specific stores/fluxes this signal needs recorded.
+
+        Default: an empty request. Subclasses that read recorded series should
+        override this so the model can record only what is needed, instead of
+        ``record_all=True``. ``model`` is provided to resolve names (e.g. the
+        glacier land covers) from the model configuration.
+        """
+        return RecordingRequest()
+
+    def configure_recording(self, model: Model) -> None:
+        """Enable, on ``model``, the recordings this signal needs.
+
+        Call this before ``model.setup()`` as a targeted alternative to creating
+        the model with ``record_all=True``.
+        """
+        model.add_recordings(self.required_recordings(model))
 
     def restrict_to_period(
         self,

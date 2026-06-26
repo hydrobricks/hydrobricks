@@ -11,7 +11,7 @@ This subpackage holds the reference series used to evaluate and calibrate a mode
 It also exposes :func:`evaluate`, the HydroErr-based goodness-of-fit helper.
 """
 
-from hydrobricks.evaluation.base import AuxiliaryObservation
+from hydrobricks.evaluation.base import AuxiliaryObservation, RecordingRequest
 from hydrobricks.evaluation.discharge import DischargeObservations
 from hydrobricks.evaluation.glacier_mass_balance import GlacierMassBalanceObservations
 from hydrobricks.evaluation.metrics import evaluate
@@ -20,5 +20,6 @@ __all__ = (
     "evaluate",
     "DischargeObservations",
     "AuxiliaryObservation",
+    "RecordingRequest",
     "GlacierMassBalanceObservations",
 )

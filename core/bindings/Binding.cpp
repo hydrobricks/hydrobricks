@@ -174,7 +174,15 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
+        .def("record_fractions", &SettingsModel::SetRecordFractions,
+             "Record the land-cover fractions over time (selective recording).", "record"_a = true)
         .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
+        .def("add_brick_logging", static_cast<void (SettingsModel::*)(const string&)>(&SettingsModel::AddBrickLogging),
+             "Add logging of an item (e.g. a state) to the selected brick.", "name"_a)
+        .def("select_process", static_cast<void (SettingsModel::*)(const string&)>(&SettingsModel::SelectProcess),
+             "Select a process of the selected brick by name.", "name"_a)
+        .def("add_process_logging", &SettingsModel::AddProcessLogging,
+             "Add logging of an item (e.g. 'output') to the selected process.", "name"_a)
         .def("add_structure", &SettingsModel::AddStructure,
              "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)

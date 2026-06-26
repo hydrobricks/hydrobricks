@@ -778,6 +778,7 @@ class SettingsModel {
     void SetLogAll(bool logAll = true) {
         if (logAll) {
             LogDebug("Logging all components.");
+            _recordFractions = true;
         } else {
             LogDebug("Minimal logging.");
         }
@@ -791,6 +792,27 @@ class SettingsModel {
      */
     bool LogAll() const {
         return _logAll;
+    }
+
+    /**
+     * Flag to record the land-cover fractions over time. Enabled automatically by
+     * SetLogAll(true); can also be enabled on its own for selective recording (e.g.
+     * when an auxiliary observation needs the time-varying land-cover areas without
+     * logging every component).
+     *
+     * @param record true to record the fractions, false otherwise.
+     */
+    void SetRecordFractions(bool record = true) {
+        _recordFractions = record;
+    }
+
+    /**
+     * Check if the land-cover fractions are recorded.
+     *
+     * @return true if the fractions are recorded, false otherwise.
+     */
+    bool RecordsFractions() const {
+        return _recordFractions;
     }
 
     /**
@@ -818,6 +840,7 @@ class SettingsModel {
     bool SetParameterValueInSelectedStructure(const string& component, const string& name, float value);
 
     bool _logAll;
+    bool _recordFractions;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
     TimerSettings _timer;

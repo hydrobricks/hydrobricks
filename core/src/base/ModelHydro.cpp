@@ -47,7 +47,7 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
         }
 
         _processor.Initialize(modelSettings.GetSolverSettings());
-        if (modelSettings.LogAll()) {
+        if (modelSettings.LogAll() || modelSettings.RecordsFractions()) {
             _logger.RecordFractions();
         }
         _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);

@@ -356,17 +356,8 @@ class SpotpySetup:
                 reason="Multiple models with extra observations",
             )
         model = self.model[0]
-        needs_recording = any(
-            getattr(o, "requires_recording", True) for o in self.extra_observations
-        )
-        if needs_recording and not getattr(model, "record_all", False):
-            raise ConfigurationError(
-                "Calibrating with these extra observations requires the model to "
-                "be created with record_all=True so the series are recorded.",
-                item_name="record_all",
-                item_value=False,
-                reason="Series not recorded",
-            )
+        if not getattr(model, "record_all", False):
+            self._check_required_recordings(model)
 
         eval_start = None
         if model.start_date is not None:
@@ -381,6 +372,34 @@ class SpotpySetup:
                 "period.",
                 data_type="extra observations",
                 reason="No observations in period",
+            )
+
+    def _check_required_recordings(self, model: Model) -> None:
+        """Verify the series needed by the auxiliary observations are recorded.
+
+        When the model is not built with ``record_all=True``, each observation that
+        needs recorded series must have had its items recorded — typically via
+        ``obs.configure_recording(model)`` before ``model.setup()``. Here we confirm
+        the resulting hydro-unit value labels are present; a clear error points to
+        the fix otherwise.
+        """
+        recorded = set(model.get_recorded_labels())
+        missing: list[str] = []
+        for obs in self.extra_observations:
+            if not getattr(obs, "requires_recording", True):
+                continue
+            for label in obs.required_recordings(model).value_labels():
+                if label not in recorded:
+                    missing.append(label)
+        if missing:
+            raise ConfigurationError(
+                "Calibrating with these extra observations requires the needed "
+                "series to be recorded. Either create the model with "
+                "record_all=True, or call obs.configure_recording(model) before "
+                f"model.setup() for each auxiliary observation. Missing: {missing}.",
+                item_name="record_all",
+                item_value=False,
+                reason="Required series not recorded",
             )
 
     def _ensure_built(self) -> None:

@@ -353,6 +353,56 @@ class ModelSettings:
         """
         self.settings.add_logging_to(item)
 
+    def record_fractions(self, record: bool = True) -> None:
+        """
+        Record the time-varying land-cover fractions.
+
+        Enabled automatically with ``record_all``; can be enabled on its own for
+        selective recording (e.g. when an auxiliary observation needs the land-cover
+        areas without logging every component).
+
+        Parameters
+        ----------
+        record
+            True to record the fractions.
+        """
+        self.settings.record_fractions(record)
+
+    def record_brick_state(self, brick: str, item: str) -> None:
+        """
+        Record a state (e.g. a content) of a hydro-unit brick.
+
+        Parameters
+        ----------
+        brick
+            Name of the brick (e.g. ``'glacier_snowpack'``).
+        item
+            Name of the item to log (e.g. ``'snow_content'``). The recorded label
+            is ``'{brick}:{item}'``.
+        """
+        self.settings.select_hydro_unit_brick(brick)
+        self.settings.add_brick_logging(item)
+
+    def record_process_output(
+        self, brick: str, process: str, item: str = "output"
+    ) -> None:
+        """
+        Record an output of a process of a hydro-unit brick.
+
+        Parameters
+        ----------
+        brick
+            Name of the brick holding the process (e.g. ``'glacier'``).
+        process
+            Name of the process (e.g. ``'melt'``).
+        item
+            Name of the item to log (default ``'output'``). The recorded label is
+            ``'{brick}:{process}:{item}'``.
+        """
+        self.settings.select_hydro_unit_brick(brick)
+        self.settings.select_process(process)
+        self.settings.add_process_logging(item)
+
     def add_structure(self) -> int:
         """
         Add a new (empty) model-structure variant and select it.

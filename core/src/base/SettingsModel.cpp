@@ -11,6 +11,7 @@
 
 SettingsModel::SettingsModel()
     : _logAll(false),
+      _recordFractions(false),
       _selectedStructure(nullptr),
       _selectedBrick(nullptr),
       _selectedProcess(nullptr),

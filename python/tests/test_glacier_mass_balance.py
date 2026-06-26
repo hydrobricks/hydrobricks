@@ -385,18 +385,24 @@ def test_pareto_objective_returns_vector(glacier_run):
     assert all(np.isfinite(v) for v in like)
 
 
-def test_record_all_required(glacier_run):
-    """Glacier mass-balance calibration requires record_all=True."""
-    pytest.importorskip("spotpy")
-    _, params, forcing, catchment = glacier_run
-
+def _make_glacier_model(catchment, record_all):
+    """Build and set up a 2-cover (open/glacier) Socont on the Gletsch catchment."""
     model = models.Socont(
         soil_storage_nb=2,
         surface_runoff="linear_storage",
-        record_all=False,  # not recording -> must be rejected
+        record_all=record_all,
         land_cover_types=["open", "glacier"],
         land_cover_names=["open", "glacier"],
     )
+    return model
+
+
+def test_recording_required(glacier_run):
+    """Without record_all nor configure_recording, the needed series are missing."""
+    pytest.importorskip("spotpy")
+    _, params, forcing, catchment = glacier_run
+
+    model = _make_glacier_model(catchment, record_all=False)
     work_dir = Path(tempfile.gettempdir()) / f"hb_norec_{uuid.uuid4().hex}"
     work_dir.mkdir(parents=True, exist_ok=True)
     model.setup(
@@ -405,18 +411,7 @@ def test_record_all_required(glacier_run):
         start_date=START_DATE,
         end_date=END_DATE,
     )
-    obs = hb.DischargeObservations()
-    obs.load_from_csv(
-        GLETSCH_DIR / "discharge.csv",
-        column_time="Date",
-        time_format="%d/%m/%Y",
-        content={"discharge": "Discharge (mm/d)"},
-    )
-    sel = np.asarray(
-        (obs.time >= pd.Timestamp(START_DATE)) & (obs.time <= pd.Timestamp(END_DATE))
-    )
-    obs.data = [d[sel] for d in obs.data]
-    obs.time = obs.time[sel].reset_index(drop=True)
+    obs = _load_discharge()
     mb = GlacierMassBalanceObservations.from_glamos(
         MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
     )
@@ -425,3 +420,46 @@ def test_record_all_required(glacier_run):
         trainer.SpotpySetup(
             model, params, forcing, obs, warmup=180, extra_observations=[mb]
         )
+
+
+def test_configure_recording_replaces_record_all(glacier_run):
+    """configure_recording() lets the calibration run without record_all=True."""
+    pytest.importorskip("spotpy")
+    _, params, forcing, catchment = glacier_run
+    params.allow_changing = ["a_snow", "a_ice"]
+
+    model = _make_glacier_model(catchment, record_all=False)
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    # Target only the series the mass balance needs, instead of record_all.
+    mb.configure_recording(model)
+
+    work_dir = Path(tempfile.gettempdir()) / f"hb_selrec_{uuid.uuid4().hex}"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    model.setup(
+        spatial_structure=catchment.hydro_units,
+        output_path=str(work_dir),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    obs = _load_discharge()
+
+    # Only the requested series are recorded (record_all would log many more).
+    labels = set(model.get_recorded_labels())
+    assert "glacier:melt:output" in labels
+    assert "glacier_snowpack:snow_content" in labels
+
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        invert_obj_func=True,
+        extra_observations=[mb],
+    )
+    assert sum(spot_setup._extra_lengths) > 0
+    sampler = trainer.calibrate(spot_setup, "sceua", 12, dbformat="ram")
+    assert len(sampler.getdata()) > 0

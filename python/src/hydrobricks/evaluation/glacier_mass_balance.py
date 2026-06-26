@@ -49,7 +49,7 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import ConfigurationError, DataError
-from hydrobricks.evaluation.base import AuxiliaryObservation
+from hydrobricks.evaluation.base import AuxiliaryObservation, RecordingRequest
 
 if TYPE_CHECKING:
     from hydrobricks.models.model import Model
@@ -399,6 +399,24 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         """The observed mass-balance values [mm w.e.], one per target."""
         return np.array([t["value"] for t in self.targets], dtype=float)
 
+    def required_recordings(self, model: Model) -> RecordingRequest:
+        """The glacier series needed by :meth:`simulated` for each glacier cover.
+
+        For each glacier land cover this records the snowpack snow content, the ice
+        melt output, and (once) the land-cover fractions — the exact inputs of the
+        flux-based surface balance. A targeted alternative to ``record_all=True``.
+        """
+        glacier_covers = [
+            name
+            for name, cover_type in zip(model.land_cover_names, model.land_cover_types)
+            if cover_type == "glacier"
+        ]
+        request = RecordingRequest(fractions=True)
+        for cover in glacier_covers:
+            request.brick_states.append((f"{cover}_snowpack", "snow_content"))
+            request.process_outputs.append((cover, "melt", "output"))
+        return request
+
     def simulated(self, model: Model) -> np.ndarray:
         """Compute the simulated glacier mass balance matching each observation.
 
@@ -408,8 +426,10 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
         granularity — over all glacierized units for a whole-glacier target, or over
         the units whose elevation lies in the band for an elevation-bin target.
 
-        The model must have been run with ``record_all=True`` (so the glacier
-        snowpack, ice melt and land-cover fractions are recorded in memory).
+        The glacier snowpack, ice melt and land-cover fractions must have been
+        recorded in memory — either with ``record_all=True`` or by recording the
+        specific items (see :meth:`required_recordings`, applied via
+        ``configure_recording(model)`` before ``model.setup()``).
 
         Returns
         -------

@@ -180,6 +180,88 @@ def test_eager_setup_is_not_picklable():
         pickle.dumps(spot_setup)
 
 
+def _build_units_and_forcing():
+    """Hydro units + forcing for the Sitter test catchment (no model setup)."""
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        SITTER_DIR / "hydro_units_elevation.csv",
+        column_elevation="elevation",
+        column_area="area",
+    )
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        SITTER_DIR / "meteo.csv",
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "temperature": "temp(C)",
+            "pet": "pet_sim(mm/day)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=1250, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(variable="pet", method="constant")
+    forcing.spatialize_from_station_data(variable="precipitation", method="constant")
+    return hydro_units, forcing
+
+
+def test_selective_recording_records_only_requested_items():
+    """add_recordings logs only the requested series (targeted alt. to record_all)."""
+    from hydrobricks.evaluation.base import RecordingRequest
+
+    hydro_units, forcing = _build_units_and_forcing()
+    model = models.Socont(
+        soil_storage_nb=2, surface_runoff="linear_storage", record_all=False
+    )
+    model.add_recordings(
+        RecordingRequest(
+            brick_states=[("open_snowpack", "snow_content")],
+            process_outputs=[("open_snowpack", "melt", "output")],
+            fractions=True,
+        )
+    )
+
+    work_dir = Path(tempfile.gettempdir()) / f"hb_recordtest_{uuid.uuid4().hex}"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(work_dir),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    model.run(parameters=build_params(), forcing=forcing)
+
+    labels = set(model.get_recorded_labels())
+    # Only the two requested series are recorded (record_all would log many more).
+    assert labels == {"open_snowpack:snow_content", "open_snowpack:melt:output"}
+    snow = model.get_recorded_hydro_unit_values("open_snowpack:snow_content")
+    assert snow.shape[0] > 0 and np.isfinite(snow).any()
+    # Fractions were recorded too.
+    frac = model.get_recorded_hydro_unit_fractions("open")
+    assert frac.shape == snow.shape
+
+
+def test_add_recordings_after_setup_raises():
+    """Recordings must be configured before setup() (they shape the model build)."""
+    from hydrobricks._exceptions import ModelError
+    from hydrobricks.evaluation.base import RecordingRequest
+
+    hydro_units, _ = _build_units_and_forcing()
+    model = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage")
+    work_dir = Path(tempfile.gettempdir()) / f"hb_recordtest_{uuid.uuid4().hex}"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(work_dir),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    with pytest.raises(ModelError, match="before setup"):
+        model.add_recordings(RecordingRequest(brick_states=[("open", "water_content")]))
+
+
 def test_calibrate_sequential_runs():
     """A small sequential MC calibration runs end-to-end via the factory setup."""
     params = build_params()

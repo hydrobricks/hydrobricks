@@ -69,8 +69,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `ground:*` to `open:*`. `HBV` no longer lists `ground` in its allowed cover types
   (still accepted via the alias).
 - Land-cover taxonomy: the near-empty `Vegetation`/`Urban` classes were removed (C++).
+- The glacier-evolution preprocessing now initializes the glacier cover of each hydro unit
+  from the extracted ice thickness:
+  `GlacierEvolutionDeltaH.compute_initial_ice_thickness` and
+  `GlacierEvolutionAreaScaling.compute_lookup_table` set the glacier land-cover area by
+  default (new `initialize_cover=True` / `land_cover` arguments; pass
+  `initialize_cover=False` to manage the cover separately). The glacier-evolution examples
+  no longer need a manual `initialize_area_from_land_cover_change` step.
 
 ### Fixed
+
+- `HydroUnits.populate_bounded_instance` no longer fails when the lateral connectivity has
+  been computed with `calculate_connectivity` (which stores a dict-valued `connectivity`
+  column): that column is skipped (it is applied via `add_lateral_connection`), so
+  initializing land-cover areas after computing connectivity (e.g. glacier-evolution
+  setups) works.
 
 - Water balance is now conserved when a land cover area fraction changes (land-cover
   change and glacier-evolution actions). The water, snow and canopy content stored on

@@ -59,7 +59,9 @@ glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment, ice_thickness=GLACIER_ICE_THICKNESS
 )
 
-# It can then optionally be saved as a csv file
+# It can then optionally be saved as a csv file. compute_initial_ice_thickness also
+# initializes the glacier cover of each hydro unit from the ice thickness, so the
+# glacier land cover starts with its actual area (pass initialize_cover=False to skip).
 glacier_df.to_csv(working_dir / "glacier_profile.csv", index=False)
 
 # The lookup table can be computed and saved as a csv file

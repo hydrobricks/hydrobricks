@@ -644,6 +644,11 @@ class HydroUnits:
                 continue
             if self.FRACTION_PREFIX in prop[0]:
                 continue
+            # The connectivity column (added by calculate_connectivity) holds a dict
+            # per unit; it is applied separately via add_lateral_connection in
+            # set_connectivity, so it is not a per-unit scalar property here.
+            if prop[0] == "connectivity":
+                continue
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation

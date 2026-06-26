@@ -9,6 +9,9 @@ import pandas as pd
 from hydrobricks._constants import ICE_WE
 from hydrobricks._exceptions import ConfigurationError, DependencyError
 from hydrobricks._optional import HAS_PYPROJ
+from hydrobricks.preprocessing.glacier_evolution_delta_h import (
+    _initialize_glacier_cover,
+)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -41,7 +44,12 @@ class GlacierEvolutionAreaScaling:
         self.px_ice_we: np.ndarray | None = None
 
     def compute_lookup_table(
-        self, catchment: Catchment, ice_thickness: str | Path, nb_increments: int = 200
+        self,
+        catchment: Catchment,
+        ice_thickness: str | Path,
+        nb_increments: int = 200,
+        land_cover: str | None = None,
+        initialize_cover: bool = True,
     ) -> None:
         """
         Compute the glacier area and volume evolution lookup tables.
@@ -58,6 +66,14 @@ class GlacierEvolutionAreaScaling:
             Path to the TIF file containing the glacier thickness in meters.
         nb_increments
             Number of increments for glacier mass balance calculation. Default is 200.
+        land_cover
+            Name of the glacier land cover to initialize. If None (default), the
+            single land cover of type 'glacier' is detected from the catchment.
+        initialize_cover
+            Whether to initialize the glacier cover of each hydro unit from the
+            extracted ice thickness, so the model starts with the actual glacier
+            area. Default is True. Set to False if the glacier cover is set
+            separately (e.g. from a land cover change CSV or shapefiles).
         """
 
         # Check that the catchment has been discretized
@@ -91,6 +107,9 @@ class GlacierEvolutionAreaScaling:
             self._width_scaling(increment, catchment=catchment)
 
         self._update_lookup_tables()
+
+        if initialize_cover:
+            _initialize_glacier_cover(catchment, self.glacier_df, land_cover)
 
     def get_lookup_table_area(self) -> pd.DataFrame:
         """

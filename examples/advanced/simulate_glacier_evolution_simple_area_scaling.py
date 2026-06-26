@@ -55,11 +55,11 @@ catchment.hydro_units.set_connectivity(connectivity)
 # Glacier evolution. This is for demonstration purposes only as the glacier
 # volume/extent from 2016 is used for the 1981 initial conditions!
 glacier_evolution = hb.preprocessing.GlacierEvolutionAreaScaling()
-glacier_df = glacier_evolution.compute_lookup_table(
-    catchment, ice_thickness=GLACIER_ICE_THICKNESS
-)
+glacier_evolution.compute_lookup_table(catchment, ice_thickness=GLACIER_ICE_THICKNESS)
 
-# The lookup table can be saved as a csv file
+# The lookup table can be saved as a csv file. compute_lookup_table also initializes
+# the glacier cover of each hydro unit from the ice thickness, so the glacier land
+# cover starts with its actual area (pass initialize_cover=False to skip).
 glacier_evolution.save_as_csv(working_dir)
 
 # Create the action glacier evolution object

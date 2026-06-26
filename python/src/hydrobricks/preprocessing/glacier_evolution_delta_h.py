@@ -268,6 +268,8 @@ class GlacierEvolutionDeltaH:
         ice_thickness: str | None = None,
         elevation_bands_distance: int = 10,
         pixel_based_approach: bool = True,
+        land_cover: str | None = None,
+        initialize_cover: bool = True,
     ) -> pd.DataFrame:
         """
         Extract the initial ice thickness to be used in compute_lookup_table()
@@ -294,6 +296,14 @@ class GlacierEvolutionDeltaH:
             ice thicknesses are updated accordingly. Otherwise, the glacier area
             is updated based on the Bahr et al. (1997) formula.
             Default is True.
+        land_cover
+            Name of the glacier land cover to initialize. If None (default), the
+            single land cover of type 'glacier' is detected from the catchment.
+        initialize_cover
+            Whether to initialize the glacier cover of each hydro unit from the
+            extracted ice thickness, so the model starts with the actual glacier
+            area. Default is True. Set to False if the glacier cover is set
+            separately (e.g. from a land cover change CSV or shapefiles).
 
         Returns
         -------
@@ -412,6 +422,9 @@ class GlacierEvolutionDeltaH:
         self.glacier_df = glacier_df
         self.hydro_units = catchment.hydro_units.hydro_units
         self.catchment_area = np.sum(self.hydro_units.area.values)
+
+        if initialize_cover:
+            _initialize_glacier_cover(catchment, self.glacier_df, land_cover)
 
         return self.glacier_df
 
@@ -1222,3 +1235,53 @@ class GlacierEvolutionDeltaH:
         df = df[["geometry"]]
 
         return df
+
+
+def _initialize_glacier_cover(
+    catchment: Catchment, glacier_df: pd.DataFrame, land_cover: str | None = None
+) -> None:
+    """Initialize the glacier cover of each hydro unit from per-unit glacier areas.
+
+    Aggregates ``glacier_df`` (with ``(hydro_unit_id, -)`` and ``(glacier_area, m2)``
+    columns) per hydro unit and sets the ``land_cover`` fractions on the catchment,
+    so the glacier land cover starts with its actual area. When ``land_cover`` is
+    None, the (single) land cover of type ``glacier`` is detected from the catchment.
+    """
+    if land_cover is None:
+        land_cover = _detect_glacier_cover(catchment)
+    areas = (
+        pd.DataFrame(
+            {
+                "hydro_unit": glacier_df[("hydro_unit_id", "-")].to_numpy(),
+                "area": glacier_df[("glacier_area", "m2")].to_numpy(),
+            }
+        )
+        .groupby("hydro_unit", as_index=False)["area"]
+        .sum()
+    )
+    catchment.initialize_area_from_land_cover_change(land_cover, areas)
+
+
+def _detect_glacier_cover(catchment: Catchment) -> str:
+    """Return the name of the (single) land cover of type ``glacier``.
+
+    Raises a ConfigurationError if there is no glacier cover, or more than one (in
+    which case the caller must pass ``land_cover`` explicitly).
+    """
+    glacier_covers = [
+        name
+        for name, cover_type in zip(
+            catchment.hydro_units.land_cover_names,
+            catchment.hydro_units.land_cover_types,
+        )
+        if cover_type == "glacier"
+    ]
+    if len(glacier_covers) != 1:
+        raise ConfigurationError(
+            "Could not determine the glacier land cover automatically "
+            f"(found {glacier_covers}); pass land_cover explicitly.",
+            item_name="land_cover",
+            item_value=glacier_covers,
+            reason="Expected exactly one land cover of type 'glacier'",
+        )
+    return glacier_covers[0]

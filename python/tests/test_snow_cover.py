@@ -12,7 +12,11 @@ import hydrobricks.models as models
 import hydrobricks.trainer as trainer
 from hydrobricks._exceptions import ConfigurationError
 from hydrobricks.evaluation import SnowCoverObservations
-from hydrobricks.evaluation.snow_cover import _swe_to_fraction
+from hydrobricks.evaluation.snow_cover import (
+    _date_from_name,
+    _parse_struct_metadata,
+    _swe_to_fraction,
+)
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -149,6 +153,146 @@ def test_from_netcdf_min_valid_ratio_drops_cloudy(tmp_path):
     keys = {(t["t"], t["unit_id"]) for t in obs.targets}
     assert (pd.Timestamp("2016-01-15"), 1) not in keys
     assert (pd.Timestamp("2016-02-15"), 1) in keys
+
+
+def _write_modis_with_quality_code(tmp_path):
+    """Like the synthetic MODIS but with a quality/error code (>100) in unit 2."""
+    xr = pytest.importorskip("xarray")
+    pytest.importorskip("rioxarray")
+    pytest.importorskip("rasterio")
+    pytest.importorskip("netCDF4")
+
+    x0, y0 = 2600000.0, 1200000.0
+    xs = x0 + np.array([0.5, 1.5, 2.5, 3.5])
+    ys = y0 - np.array([0.5, 1.5, 2.5, 3.5])
+    unit = np.array(
+        [[1, 1, 1, 1], [1, 1, 1, 1], [2, 2, 2, 2], [2, 2, 2, 2]], dtype="int32"
+    )
+    uda = xr.DataArray(unit, coords={"y": ys, "x": xs}, dims=("y", "x"))
+    uda = uda.rio.write_crs("epsg:2056")
+    uda.rio.write_nodata(0, inplace=True)
+    tif = tmp_path / "units.tif"
+    uda.rio.to_raster(tif)
+
+    scf0 = np.where(unit == 1, 80.0, 20.0)
+    scf0[2, 0] = 200.0  # a quality/error code in unit 2
+    scf1 = np.full((4, 4), 100.0)
+    data = np.stack([scf0, scf1])
+    times = pd.to_datetime(["2016-01-15", "2016-02-15"])
+    da = xr.DataArray(
+        data,
+        coords={"time": times, "y": ys, "x": xs},
+        dims=("time", "y", "x"),
+        name="scf",
+    )
+    nc = tmp_path / "modis.nc"
+    da.to_dataset().to_netcdf(nc)
+    return nc, tif
+
+
+def test_from_netcdf_valid_max_filters_quality_codes(tmp_path):
+    nc, tif = _write_modis_with_quality_code(tmp_path)
+    # Without filtering, the 200 code inflates unit 2: (7*20 + 200)/8 * 0.01 = 0.425.
+    raw = SnowCoverObservations.from_netcdf(
+        nc, tif, var_name="scf", data_crs=2056, value_scale=0.01
+    )
+    raw_by_key = {(t["t"], t["unit_id"]): t["value"] for t in raw.targets}
+    assert abs(raw_by_key[(pd.Timestamp("2016-01-15"), 2)] - 0.425) < 1e-6
+    # With valid_max=100 the code is dropped, leaving the seven 20 % pixels -> 0.2.
+    obs = SnowCoverObservations.from_netcdf(
+        nc, tif, var_name="scf", data_crs=2056, value_scale=0.01, valid_max=100.0
+    )
+    by_key = {(t["t"], t["unit_id"]): t["value"] for t in obs.targets}
+    assert abs(by_key[(pd.Timestamp("2016-01-15"), 2)] - 0.2) < 1e-6
+
+
+def test_from_hdf5_matches_netcdf(tmp_path):
+    pytest.importorskip("h5netcdf")
+    xr = pytest.importorskip("xarray")
+    pytest.importorskip("rioxarray")
+    pytest.importorskip("rasterio")
+
+    nc, tif = _write_synthetic_modis(tmp_path)
+    # Re-encode the same data as HDF5 and read it back through from_hdf5.
+    h5 = tmp_path / "modis.h5"
+    xr.open_dataset(nc).to_netcdf(h5, engine="h5netcdf")
+
+    obs = SnowCoverObservations.from_hdf5(
+        h5,
+        tif,
+        var_name="scf",
+        data_crs=2056,
+        value_scale=0.01,
+        nodata=255.0,
+        engine="h5netcdf",
+    )
+    by_key = {(t["t"], t["unit_id"]): t["value"] for t in obs.targets}
+    assert len(obs) == 4
+    assert abs(by_key[(pd.Timestamp("2016-01-15"), 1)] - 0.8) < 1e-6
+    assert abs(by_key[(pd.Timestamp("2016-02-15"), 2)] - 1.0) < 1e-6
+
+
+# --------------------------------------------------------------------------- #
+# MODIS (HDF-EOS) loader
+# --------------------------------------------------------------------------- #
+_STRUCT_META = (
+    "GROUP=GridStructure\n"
+    "\tGROUP=GRID_1\n"
+    '\t\tGridName="MOD_Grid_Snow_500m"\n'
+    "\t\tXDim=2400\n"
+    "\t\tYDim=2400\n"
+    "\t\tUpperLeftPointMtrs=(0.000000,5559752.598333)\n"
+    "\t\tLowerRightMtrs=(1111950.519667,4447802.078667)\n"
+    "\t\tProjection=GCTP_SNSOID\n"
+    "\t\tProjParams=(6371007.181000,0,0,0,0,0,0,0,0,0,0,0,0)\n"
+)
+
+
+def test_parse_struct_metadata():
+    ul, lr, nx, ny, radius = _parse_struct_metadata(_STRUCT_META)
+    assert ul == [0.0, 5559752.598333]
+    assert lr == [1111950.519667, 4447802.078667]
+    assert nx == 2400 and ny == 2400
+    assert radius == 6371007.181
+
+
+def test_date_from_modis_filename():
+    name = "MOD10A1.A2025361.h18v04.061.2025363025242.hdf"
+    d = _date_from_name(name, r"A(\d{7})", "%Y%j", None)
+    assert d == pd.Timestamp("2025-12-27")  # 2025, day-of-year 361
+
+
+# Sample MOD10A1 tiles may be dropped in the repo's tmp/ folder for a real read.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_MODIS_SAMPLES = sorted((_REPO_ROOT / "tmp").glob("MOD10A1*.hdf"))
+_SITTER_UNIT_IDS = TEST_FILES_DIR / "ch_sitter_appenzell" / "unit_ids.tif"
+
+
+@pytest.mark.skipif(
+    not _MODIS_SAMPLES or not _SITTER_UNIT_IDS.exists(),
+    reason="No MOD10A1 sample tiles in tmp/ (or missing Sitter unit_ids.tif)",
+)
+def test_from_modis_sample_tiles():
+    pytest.importorskip("rioxarray")
+    pytest.importorskip("netCDF4")
+    obs = SnowCoverObservations.from_modis(
+        _REPO_ROOT / "tmp",
+        raster_hydro_units=_SITTER_UNIT_IDS,
+        file_pattern="MOD10A1*.hdf",
+        value_scale=0.01,
+        valid_min=0,
+        valid_max=100,
+    )
+    assert len(obs) > 0
+    vals = obs.observed()
+    # Quality codes (>100) were filtered and the % rescaled to a [0, 1] fraction.
+    assert np.all((vals >= 0.0) & (vals <= 1.0))
+    # Snow cover should increase with elevation: the lowest unit (id 1) has less snow
+    # than a mid-elevation unit, on the first available date.
+    first_date = sorted({t["t"] for t in obs.targets})[0]
+    by_unit = {t["unit_id"]: t["value"] for t in obs.targets if t["t"] == first_date}
+    if 1 in by_unit and 15 in by_unit:
+        assert by_unit[1] < by_unit[15]
 
 
 # --------------------------------------------------------------------------- #

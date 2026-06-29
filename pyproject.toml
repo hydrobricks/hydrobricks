@@ -31,6 +31,7 @@ all = [
     "datashader==0.19.0",
     "geopandas",
     "graphviz",
+    "h5netcdf",
     "matplotlib",
     "netCDF4",
     "pathos",

@@ -36,6 +36,7 @@ the per-cover fractions::
 from __future__ import annotations
 
 import logging
+import re
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -48,6 +49,7 @@ from hydrobricks._optional import (
     HAS_NETCDF,
     HAS_RASTERIO,
     HAS_RIOXARRAY,
+    is_module_available,
     rxr,
     xr,
 )
@@ -138,6 +140,8 @@ class SnowCoverObservations(AuxiliaryObservation):
         unit_col: str | int,
         value_col: str | int,
         value_scale: float = 1.0,
+        valid_min: float | None = None,
+        valid_max: float | None = None,
         date_format: str | None = None,
         start_date: str | pd.Timestamp | None = None,
         end_date: str | pd.Timestamp | None = None,
@@ -165,6 +169,10 @@ class SnowCoverObservations(AuxiliaryObservation):
         value_scale
             Factor applied to the value column to obtain a fraction in [0, 1] (e.g.
             ``0.01`` for a 0-100 % cover). Default: 1.0.
+        valid_min, valid_max
+            Keep only raw values within ``[valid_min, valid_max]`` (applied before
+            ``value_scale``); values outside are dropped. Use to filter quality/error
+            codes (e.g. ``valid_max=100`` for a 0-100 % product).
         date_format
             Optional explicit date format; otherwise dates are inferred.
         start_date, end_date
@@ -185,9 +193,12 @@ class SnowCoverObservations(AuxiliaryObservation):
             cls._column(df, date_col), format=date_format, errors="coerce"
         )
         units = pd.to_numeric(cls._column(df, unit_col), errors="coerce")
-        values = (
-            pd.to_numeric(cls._column(df, value_col), errors="coerce") * value_scale
-        )
+        raw = pd.to_numeric(cls._column(df, value_col), errors="coerce")
+        if valid_min is not None:
+            raw = raw.where(raw >= valid_min)
+        if valid_max is not None:
+            raw = raw.where(raw <= valid_max)
+        values = raw * value_scale
 
         obj = cls(
             swe_full=swe_full,
@@ -220,7 +231,9 @@ class SnowCoverObservations(AuxiliaryObservation):
         dim_y: str = "y",
         value_scale: float = 1.0,
         nodata: float | None = None,
-        min_valid_ratio: float = 0.0,
+        valid_min: float | None = None,
+        valid_max: float | None = None,
+        min_valid_ratio: float = 0.5,
         start_date: str | pd.Timestamp | None = None,
         end_date: str | pd.Timestamp | None = None,
         swe_full: float = 100.0,
@@ -230,19 +243,155 @@ class SnowCoverObservations(AuxiliaryObservation):
         mode: str = "objective",
         tolerance: float | None = None,
         relative_tolerance: float | None = None,
+        engine: str | None = None,
+        group: str | None = None,
     ) -> SnowCoverObservations:
-        """Load and aggregate a snow-cover raster/NetCDF stack per hydro unit.
+        """Load and aggregate a snow-cover NetCDF stack per hydro unit.
+
+        See :meth:`_from_stack` for the full parameter description. This is the netCDF
+        variant; for HDF5 inputs use :meth:`from_hdf5`.
+        """
+        return cls._from_stack(
+            path,
+            raster_hydro_units,
+            hydro_units,
+            var_name=var_name,
+            file_pattern=file_pattern,
+            data_crs=data_crs,
+            dim_time=dim_time,
+            dim_x=dim_x,
+            dim_y=dim_y,
+            value_scale=value_scale,
+            nodata=nodata,
+            valid_min=valid_min,
+            valid_max=valid_max,
+            min_valid_ratio=min_valid_ratio,
+            start_date=start_date,
+            end_date=end_date,
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+            engine=engine,
+            group=group,
+            fmt="netcdf",
+        )
+
+    @classmethod
+    def from_hdf5(
+        cls,
+        path: str | Path,
+        raster_hydro_units: str | Path,
+        hydro_units: Any | None = None,
+        *,
+        var_name: str | None = None,
+        file_pattern: str | None = None,
+        data_crs: int | None = None,
+        dim_time: str = "time",
+        dim_x: str = "x",
+        dim_y: str = "y",
+        value_scale: float = 1.0,
+        nodata: float | None = None,
+        valid_min: float | None = None,
+        valid_max: float | None = None,
+        min_valid_ratio: float = 0.5,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
+        swe_full: float = 100.0,
+        land_covers: list[str] | None = None,
+        metric: str = "rmse",
+        weight: float = 1.0,
+        mode: str = "objective",
+        tolerance: float | None = None,
+        relative_tolerance: float | None = None,
+        engine: str | None = None,
+        group: str | None = None,
+    ) -> SnowCoverObservations:
+        """Load and aggregate a snow-cover HDF5 stack per hydro unit.
+
+        Same as :meth:`from_netcdf` but reads HDF5 files: ``engine`` defaults to
+        ``'h5netcdf'`` when available, falling back to ``'netcdf4'`` (which reads
+        NetCDF4/HDF5). For data that stores its variable in an HDF5 group, pass
+        ``group``. Quality/error codes are filtered with ``valid_min`` / ``valid_max``
+        (e.g. ``valid_max=100`` to drop MODIS codes above 100 %).
+        See :meth:`_from_stack` for the full parameter description.
+        """
+        return cls._from_stack(
+            path,
+            raster_hydro_units,
+            hydro_units,
+            var_name=var_name,
+            file_pattern=file_pattern,
+            data_crs=data_crs,
+            dim_time=dim_time,
+            dim_x=dim_x,
+            dim_y=dim_y,
+            value_scale=value_scale,
+            nodata=nodata,
+            valid_min=valid_min,
+            valid_max=valid_max,
+            min_valid_ratio=min_valid_ratio,
+            start_date=start_date,
+            end_date=end_date,
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+            engine=engine,
+            group=group,
+            fmt="hdf5",
+        )
+
+    @classmethod
+    def _from_stack(
+        cls,
+        path: str | Path,
+        raster_hydro_units: str | Path,
+        hydro_units: Any | None = None,
+        *,
+        var_name: str | None = None,
+        file_pattern: str | None = None,
+        data_crs: int | None = None,
+        dim_time: str = "time",
+        dim_x: str = "x",
+        dim_y: str = "y",
+        value_scale: float = 1.0,
+        nodata: float | None = None,
+        valid_min: float | None = None,
+        valid_max: float | None = None,
+        min_valid_ratio: float = 0.5,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
+        swe_full: float = 100.0,
+        land_covers: list[str] | None = None,
+        metric: str = "rmse",
+        weight: float = 1.0,
+        mode: str = "objective",
+        tolerance: float | None = None,
+        relative_tolerance: float | None = None,
+        engine: str | None = None,
+        group: str | None = None,
+        fmt: str = "netcdf",
+    ) -> SnowCoverObservations:
+        """Load and aggregate a snow-cover raster stack per hydro unit.
 
         The snow-cover data (e.g. a MODIS time series) is aggregated to the hydro units
         defined by the ``raster_hydro_units`` raster of unit ids: for each date and
         unit, the mean of the valid snow-cover pixels falling in that unit is taken.
-        Cloud/nodata pixels are ignored; a unit whose valid-pixel ratio on a date is
-        below ``min_valid_ratio`` yields no observation for that date.
+        Cloud/nodata pixels and out-of-range quality codes are ignored; a unit whose
+        valid-pixel ratio on a date is below ``min_valid_ratio`` yields no observation
+        for that date.
 
         Parameters
         ----------
         path
-            Path to a netCDF file, or to a folder of files (with ``file_pattern``).
+            Path to a data file, or to a folder of files (with ``file_pattern``).
         raster_hydro_units
             Path to the raster of hydro unit ids used for the spatial aggregation.
         hydro_units
@@ -253,17 +402,25 @@ class SnowCoverObservations(AuxiliaryObservation):
             Name of the data variable to read. If ``None``, the sole data variable of
             the dataset is used.
         file_pattern
-            Glob pattern of the files to read (e.g. ``'*.nc'``). If ``None``, ``path``
-            is a single file.
+            Glob pattern of the files to read (e.g. ``'*.nc'``, ``'*.h5'``). If
+            ``None``, ``path`` is a single file.
         data_crs
-            CRS of the data (EPSG code). If ``None``, read from the file.
+            CRS of the data (EPSG code). If ``None``, read from the file. When the data
+            carries no CRS, it must already be on the same grid as the hydro-unit
+            raster (no reprojection is then possible).
         dim_time, dim_x, dim_y
             Names of the time and spatial dimensions (defaults ``'time'``, ``'x'``,
             ``'y'``).
         value_scale
-            Factor applied to obtain a fraction in [0, 1] (e.g. ``0.01`` for 0-100 %).
+            Factor applied (after filtering) to obtain a fraction in [0, 1] (e.g.
+            ``0.01`` for a 0-100 % product).
         nodata
-            Value flagged as missing (in addition to NaN), e.g. a cloud/fill code.
+            Value flagged as missing (in addition to NaN), e.g. a fill code.
+        valid_min, valid_max
+            Keep only raw values within ``[valid_min, valid_max]`` (applied before
+            ``value_scale``); values outside are treated as missing. Use this to drop
+            quality/error codes, e.g. ``valid_max=100`` for a 0-100 % snow product
+            whose codes above 100 flag clouds/water/no-decision.
         min_valid_ratio
             Minimum fraction of a unit's pixels that must be valid on a date for the
             aggregate to be kept (else that date is dropped for the unit). Default: 0.
@@ -271,6 +428,13 @@ class SnowCoverObservations(AuxiliaryObservation):
             Keep only observations whose date lies within this range.
         swe_full, land_covers, metric, weight, mode, tolerance, relative_tolerance
             Configuration (see the class docstring).
+        engine
+            xarray backend engine. If ``None``, xarray's default is used for
+            ``fmt='netcdf'``, and ``'h5netcdf'`` (or ``'netcdf4'``) for ``fmt='hdf5'``.
+        group
+            Optional HDF5/NetCDF group holding the variable.
+        fmt
+            ``'netcdf'`` or ``'hdf5'`` (selects the default engine).
 
         Returns
         -------
@@ -280,22 +444,31 @@ class SnowCoverObservations(AuxiliaryObservation):
             raise DependencyError(
                 "rasterio is required to load snow cover from rasters.",
                 package_name="rasterio",
-                operation="SnowCoverObservations.from_netcdf",
+                operation="SnowCoverObservations",
                 install_command="pip install rasterio",
             )
         if not HAS_RIOXARRAY:
             raise DependencyError(
                 "rioxarray is required to load snow cover from rasters.",
                 package_name="rioxarray",
-                operation="SnowCoverObservations.from_netcdf",
+                operation="SnowCoverObservations",
                 install_command="pip install rioxarray",
             )
-        if not HAS_NETCDF:
+        if engine is None and fmt == "hdf5":
+            engine = "h5netcdf" if is_module_available("h5netcdf") else "netcdf4"
+        if engine in (None, "netcdf4") and not HAS_NETCDF:
             raise DependencyError(
-                "netCDF4 is required to load snow cover from netCDF.",
+                "netCDF4 is required to read this data.",
                 package_name="netCDF4",
-                operation="SnowCoverObservations.from_netcdf",
+                operation="SnowCoverObservations",
                 install_command="pip install netCDF4",
+            )
+        if engine == "h5netcdf" and not is_module_available("h5netcdf"):
+            raise DependencyError(
+                "h5netcdf is required to read HDF5 snow cover data.",
+                package_name="h5netcdf",
+                operation="SnowCoverObservations.from_hdf5",
+                install_command="pip install h5netcdf",
             )
 
         times, unit_ids, matrix = cls._aggregate_per_unit(
@@ -310,9 +483,178 @@ class SnowCoverObservations(AuxiliaryObservation):
             dim_y=dim_y,
             value_scale=value_scale,
             nodata=nodata,
+            valid_min=valid_min,
+            valid_max=valid_max,
             min_valid_ratio=min_valid_ratio,
+            engine=engine,
+            group=group,
         )
 
+        return cls._build(
+            times,
+            unit_ids,
+            matrix,
+            source=path,
+            start_date=start_date,
+            end_date=end_date,
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
+
+    @classmethod
+    def from_modis(
+        cls,
+        path: str | Path,
+        raster_hydro_units: str | Path,
+        hydro_units: Any | None = None,
+        *,
+        variable: str = "NDSI_Snow_Cover",
+        file_pattern: str = "*.hdf",
+        date_regex: str = r"A(\d{7})",
+        date_format: str = "%Y%j",
+        date_parser: Any | None = None,
+        value_scale: float = 0.01,
+        valid_min: float | None = 0.0,
+        valid_max: float | None = 100.0,
+        nodata: float | None = None,
+        min_valid_ratio: float = 0.5,
+        resampling: str = "nearest",
+        engine: str = "netcdf4",
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
+        swe_full: float = 100.0,
+        land_covers: list[str] | None = None,
+        metric: str = "rmse",
+        weight: float = 1.0,
+        mode: str = "objective",
+        tolerance: float | None = None,
+        relative_tolerance: float | None = None,
+    ) -> SnowCoverObservations:
+        """Load MODIS (HDF-EOS) daily snow-cover tiles, aggregated per hydro unit.
+
+        Reads HDF-EOS grid products such as MOD10A1 / MYD10A1 (NDSI snow cover). Each
+        file holds one date's tile; the date is parsed from the file name, tiles
+        sharing a date are mosaicked, and the data are reprojected from the MODIS
+        sinusoidal grid (read from the file's ``StructMetadata``) to the hydro-unit
+        raster's CRS before aggregating. The default ``valid_min=0`` / ``valid_max=100``
+        drop the product's quality/error codes (200=missing, 250=cloud, 255=fill, ...),
+        and ``value_scale=0.01`` converts the 0-100 % NDSI snow cover to a fraction.
+
+        Reading the HDF-EOS files uses xarray's ``netcdf4`` engine (the bundled
+        ``netCDF4`` reads HDF4-EOS); no separate HDF4/GDAL build is required.
+
+        Parameters
+        ----------
+        path
+            Folder of tiles (with ``file_pattern``) or a single file.
+        raster_hydro_units, hydro_units
+            The hydro-unit id raster and (optionally) the units to aggregate; see
+            :meth:`_from_stack`.
+        variable
+            Data field to read (default ``'NDSI_Snow_Cover'``).
+        file_pattern
+            Glob of the tile files (default ``'*.hdf'``).
+        date_regex, date_format
+            Parse the date from the file name: ``date_regex``'s first group is parsed
+            with ``date_format`` (defaults match MODIS ``A%Y%j`` tokens, e.g.
+            ``A2025361``).
+        date_parser
+            Optional callable ``(filename) -> pd.Timestamp`` overriding the regex.
+        value_scale, valid_min, valid_max, nodata, min_valid_ratio
+            Aggregation/filtering options; see :meth:`_from_stack`.
+        resampling
+            Resampling for the reprojection to the hydro-unit grid (a
+            ``rasterio.enums.Resampling`` name, default ``'nearest'``).
+        engine
+            xarray engine used to read the files (default ``'netcdf4'``).
+        start_date, end_date, swe_full, land_covers, metric, weight, mode, tolerance,
+        relative_tolerance
+            Configuration; see :meth:`_from_stack` and the class docstring.
+
+        Returns
+        -------
+        The populated observations object.
+        """
+        if not HAS_RASTERIO:
+            raise DependencyError(
+                "rasterio is required to load MODIS snow cover.",
+                package_name="rasterio",
+                operation="SnowCoverObservations.from_modis",
+                install_command="pip install rasterio",
+            )
+        if not HAS_RIOXARRAY:
+            raise DependencyError(
+                "rioxarray is required to load MODIS snow cover.",
+                package_name="rioxarray",
+                operation="SnowCoverObservations.from_modis",
+                install_command="pip install rioxarray",
+            )
+        if engine == "netcdf4" and not HAS_NETCDF:
+            raise DependencyError(
+                "netCDF4 is required to read MODIS HDF-EOS files.",
+                package_name="netCDF4",
+                operation="SnowCoverObservations.from_modis",
+                install_command="pip install netCDF4",
+            )
+
+        times, unit_ids, matrix = _aggregate_modis(
+            path=path,
+            raster_hydro_units=raster_hydro_units,
+            hydro_units=hydro_units,
+            variable=variable,
+            file_pattern=file_pattern,
+            date_regex=date_regex,
+            date_format=date_format,
+            date_parser=date_parser,
+            value_scale=value_scale,
+            nodata=nodata,
+            valid_min=valid_min,
+            valid_max=valid_max,
+            min_valid_ratio=min_valid_ratio,
+            resampling=resampling,
+            engine=engine,
+        )
+
+        return cls._build(
+            times,
+            unit_ids,
+            matrix,
+            source=path,
+            start_date=start_date,
+            end_date=end_date,
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
+
+    @classmethod
+    def _build(
+        cls,
+        times: np.ndarray,
+        unit_ids: np.ndarray,
+        matrix: np.ndarray,
+        *,
+        source: Any,
+        start_date: str | pd.Timestamp | None,
+        end_date: str | pd.Timestamp | None,
+        swe_full: float,
+        land_covers: list[str] | None,
+        metric: str,
+        weight: float,
+        mode: str,
+        tolerance: float | None,
+        relative_tolerance: float | None,
+    ) -> SnowCoverObservations:
+        """Build the observation object from a (n_time, n_units) aggregate matrix."""
         obj = cls(
             swe_full=swe_full,
             land_covers=land_covers,
@@ -338,7 +680,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         if start_date is not None or end_date is not None:
             obj.restrict_to_period(start_date, end_date)
         if not obj.targets:
-            logger.warning("No snow cover observations loaded from %s.", path)
+            logger.warning("No snow cover observations loaded from %s.", source)
         return obj
 
     # ------------------------------------------------------------------ #
@@ -500,9 +842,13 @@ class SnowCoverObservations(AuxiliaryObservation):
         dim_y: str,
         value_scale: float,
         nodata: float | None,
+        valid_min: float | None,
+        valid_max: float | None,
         min_valid_ratio: float,
+        engine: str | None = None,
+        group: str | None = None,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Aggregate a raster/NetCDF stack to a (n_time, n_units) fraction matrix.
+        """Aggregate a raster stack to a (n_time, n_units) fraction matrix.
 
         Returns ``(times, unit_ids, matrix)`` where ``times`` is a ``DatetimeIndex``,
         ``unit_ids`` the aggregated unit ids, and ``matrix[i, j]`` the mean snow cover
@@ -515,11 +861,22 @@ class SnowCoverObservations(AuxiliaryObservation):
         units_nodata = unit_da.rio.nodata
 
         # Open the data and select the variable as a (time, y, x) DataArray.
+        open_kwargs: dict[str, Any] = {"chunks": {}}
+        if engine is not None:
+            open_kwargs["engine"] = engine
+        if group is not None:
+            open_kwargs["group"] = group
         if file_pattern is None:
-            ds = xr.open_dataset(path, chunks={})
+            ds = xr.open_dataset(path, **open_kwargs)
         else:
             files = sorted(Path(path).glob(file_pattern))
-            ds = xr.open_mfdataset(files, chunks={})
+            if not files:
+                raise DataError(
+                    f"No files matching '{file_pattern}' found in {path}.",
+                    data_type="snow cover stack",
+                    reason="No input files",
+                )
+            ds = xr.open_mfdataset(files, **open_kwargs)
         if var_name is not None:
             da = ds[var_name]
         else:
@@ -537,11 +894,24 @@ class SnowCoverObservations(AuxiliaryObservation):
         if data_crs is not None:
             da = da.rio.write_crs(f"epsg:{data_crs}")
 
-        # Align the data to the unit-ids grid only when needed (avoids resampling when
-        # the two already share the same CRS and shape).
-        same_crs = da.rio.crs is not None and da.rio.crs == unit_da.rio.crs
+        # Align the data to the unit-ids grid. When the data has no CRS (common for raw
+        # HDF5), it can only be used if it already shares the unit raster's grid; align
+        # otherwise (avoids resampling when CRS and shape already match).
         same_shape = da.shape[-2:] == unit_arr.shape
-        if not (same_crs and same_shape):
+        if da.rio.crs is None:
+            if not same_shape:
+                raise DataError(
+                    "The snow-cover data has no CRS and its grid does not match the "
+                    "hydro-unit raster; pass data_crs, or pre-align the data to the "
+                    "unit-ids grid.",
+                    data_type="snow cover stack",
+                    reason="No CRS and mismatched grid",
+                )
+            logger.warning(
+                "The snow-cover data has no CRS; assuming it shares the hydro-unit "
+                "raster grid (no reprojection)."
+            )
+        elif not (da.rio.crs == unit_da.rio.crs and same_shape):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
                 da = da.rio.reproject_match(unit_da)
@@ -551,39 +921,18 @@ class SnowCoverObservations(AuxiliaryObservation):
         vals = np.asarray(da.values, dtype=float)  # (n_time, ny, nx)
         times = pd.to_datetime(np.asarray(da[dim_time].values))
 
-        # Unit ids to aggregate.
-        if hydro_units is not None:
-            ids = np.asarray(hydro_units["id"]).squeeze().astype(int).ravel().tolist()
-        else:
-            ids = [
-                int(u)
-                for u in np.unique(unit_arr)
-                if np.isfinite(u)
-                and u > 0
-                and (units_nodata is None or u != units_nodata)
-            ]
-
-        n_time = vals.shape[0]
-        matrix = np.full((n_time, len(ids)), np.nan, dtype=float)
-        for j, uid in enumerate(ids):
-            mask = unit_arr == uid
-            n_pix = int(mask.sum())
-            if n_pix == 0:
-                continue
-            sub = vals[:, mask]  # (n_time, n_pix_unit)
-            valid = np.isfinite(sub)
-            if nodata is not None:
-                valid &= sub != nodata
-            sub = np.where(valid, sub, np.nan)
-            count = valid.sum(axis=1)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                mean = np.nanmean(sub, axis=1)
-            frac_valid = count / n_pix
-            keep = (count > 0) & (frac_valid >= min_valid_ratio)
-            matrix[:, j] = np.where(keep, mean * value_scale, np.nan)
-
-        return times, np.array(ids, dtype=int), matrix
+        return _aggregate_stack(
+            vals,
+            times,
+            unit_arr,
+            units_nodata,
+            hydro_units,
+            nodata,
+            valid_min,
+            valid_max,
+            min_valid_ratio,
+            value_scale,
+        )
 
 
 def _date_index(time: pd.DatetimeIndex, date: pd.Timestamp) -> int | None:
@@ -592,3 +941,209 @@ def _date_index(time: pd.DatetimeIndex, date: pd.Timestamp) -> int | None:
         return None
     pos = int(time.get_indexer([date], method="nearest")[0])
     return pos if pos >= 0 else None
+
+
+def _aggregate_stack(
+    vals: np.ndarray,
+    times: np.ndarray,
+    unit_arr: np.ndarray,
+    units_nodata: float | None,
+    hydro_units: Any | None,
+    nodata: float | None,
+    valid_min: float | None,
+    valid_max: float | None,
+    min_valid_ratio: float,
+    value_scale: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Aggregate a ``(n_time, ny, nx)`` value stack to a ``(n_time, n_units)`` matrix.
+
+    For each unit and time the mean of the valid pixels (finite, not ``nodata``, and
+    within ``[valid_min, valid_max]``) is taken, scaled by ``value_scale``; a time with
+    a valid-pixel ratio below ``min_valid_ratio`` is left NaN. ``unit_arr`` must share
+    the spatial grid of ``vals``.
+    """
+    if hydro_units is not None:
+        ids = np.asarray(hydro_units["id"]).squeeze().astype(int).ravel().tolist()
+    else:
+        ids = [
+            int(u)
+            for u in np.unique(unit_arr)
+            if np.isfinite(u) and u > 0 and (units_nodata is None or u != units_nodata)
+        ]
+
+    n_time = vals.shape[0]
+    matrix = np.full((n_time, len(ids)), np.nan, dtype=float)
+    for j, uid in enumerate(ids):
+        mask = unit_arr == uid
+        n_pix = int(mask.sum())
+        if n_pix == 0:
+            continue
+        sub = vals[:, mask]  # (n_time, n_pix_unit)
+        valid = np.isfinite(sub)
+        if nodata is not None:
+            valid &= sub != nodata
+        if valid_min is not None:
+            valid &= sub >= valid_min
+        if valid_max is not None:
+            valid &= sub <= valid_max
+        sub = np.where(valid, sub, np.nan)
+        count = valid.sum(axis=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            mean = np.nanmean(sub, axis=1)
+        frac_valid = count / n_pix
+        keep = (count > 0) & (frac_valid >= min_valid_ratio)
+        matrix[:, j] = np.where(keep, mean * value_scale, np.nan)
+
+    return times, np.array(ids, dtype=int), matrix
+
+
+def _parse_struct_metadata(
+    meta: str,
+) -> tuple[list[float], list[float], int, int, float]:
+    """Parse an HDF-EOS ``StructMetadata`` grid block.
+
+    Returns ``(upper_left_xy, lower_right_xy, n_x, n_y, sphere_radius)`` in projection
+    metres, as needed to build the grid's affine transform and (sinusoidal) CRS.
+    """
+
+    def _tuple(key: str) -> list[float]:
+        m = re.search(key + r"=\(([^)]*)\)", meta)
+        if m is None:
+            raise DataError(
+                f"Could not find '{key}' in the HDF-EOS StructMetadata.",
+                data_type="MODIS HDF-EOS",
+                reason="Missing grid metadata",
+            )
+        return [float(x) for x in m.group(1).split(",")]
+
+    def _int(key: str) -> int:
+        m = re.search(key + r"=(\d+)", meta)
+        if m is None:
+            raise DataError(
+                f"Could not find '{key}' in the HDF-EOS StructMetadata.",
+                data_type="MODIS HDF-EOS",
+                reason="Missing grid metadata",
+            )
+        return int(m.group(1))
+
+    ul = _tuple("UpperLeftPointMtrs")
+    lr = _tuple("LowerRightMtrs")
+    proj_params = _tuple("ProjParams")
+    radius = proj_params[0] if proj_params and proj_params[0] > 0 else 6371007.181
+    return ul, lr, _int("XDim"), _int("YDim"), radius
+
+
+def _read_hdf_eos_grid(path: str | Path, variable: str, engine: str) -> Any:
+    """Read one HDF-EOS grid field as a georeferenced ``(y, x)`` DataArray.
+
+    The CRS (MODIS sinusoidal) and the affine transform are reconstructed from the
+    file's ``StructMetadata``, since the HDF4-EOS georeferencing is not exposed as
+    standard coordinates.
+    """
+    with warnings.catch_warnings():
+        # HDF-EOS fields often declare both a _FillValue and a missing_value; xarray
+        # warns when decoding them, which is expected here (both map to NaN).
+        warnings.filterwarnings("ignore", message=".*multiple fill values.*")
+        ds = xr.open_dataset(path, engine=engine)
+        da = ds[variable]
+    ul, lr, n_x, n_y, radius = _parse_struct_metadata(ds.attrs["StructMetadata.0"])
+    px = (lr[0] - ul[0]) / n_x
+    py = (ul[1] - lr[1]) / n_y
+    xs = ul[0] + (np.arange(n_x) + 0.5) * px
+    ys = ul[1] - (np.arange(n_y) + 0.5) * py
+    da = da.rename({da.dims[0]: "y", da.dims[1]: "x"})
+    da = da.assign_coords(x=("x", xs), y=("y", ys))
+    proj4 = (
+        f"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a={radius} +b={radius} +units=m +no_defs"
+    )
+    da = da.astype(float)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+        da = da.rio.write_crs(proj4).rio.set_spatial_dims(x_dim="x", y_dim="y")
+    da = da.rio.write_nodata(np.nan)
+    return da
+
+
+def _date_from_name(
+    name: str, date_regex: str, date_format: str, date_parser: Any | None
+) -> pd.Timestamp:
+    """Parse the observation date from a tile file name."""
+    if date_parser is not None:
+        return pd.Timestamp(date_parser(name))
+    m = re.search(date_regex, name)
+    if m is None:
+        raise DataError(
+            f"Could not parse a date from '{name}' with /{date_regex}/.",
+            data_type="MODIS file name",
+            reason="Date not found in file name",
+        )
+    return pd.Timestamp(pd.to_datetime(m.group(1), format=date_format))
+
+
+def _aggregate_modis(
+    path: str | Path,
+    raster_hydro_units: str | Path,
+    hydro_units: Any | None,
+    variable: str,
+    file_pattern: str,
+    date_regex: str,
+    date_format: str,
+    date_parser: Any | None,
+    value_scale: float,
+    nodata: float | None,
+    valid_min: float | None,
+    valid_max: float | None,
+    min_valid_ratio: float,
+    resampling: str,
+    engine: str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Read MODIS HDF-EOS tiles, mosaic+reproject per date, and aggregate per unit."""
+    from rasterio.enums import Resampling
+    from rioxarray.merge import merge_arrays
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+        unit_da = rxr.open_rasterio(raster_hydro_units).squeeze(drop=True)
+    unit_arr = np.asarray(unit_da.values)
+    units_nodata = unit_da.rio.nodata
+
+    p = Path(path)
+    files = sorted(p.glob(file_pattern)) if p.is_dir() else [p]
+    if not files:
+        raise DataError(
+            f"No files matching '{file_pattern}' found in {path}.",
+            data_type="MODIS stack",
+            reason="No input files",
+        )
+
+    # Group tiles by date (a date may be covered by several tiles).
+    by_date: dict[pd.Timestamp, list[Path]] = {}
+    for f in files:
+        d = _date_from_name(f.name, date_regex, date_format, date_parser)
+        by_date.setdefault(d, []).append(f)
+
+    resampling_enum = getattr(Resampling, resampling)
+    times = sorted(by_date)
+    grids = []
+    for d in times:
+        tiles = [_read_hdf_eos_grid(f, variable, engine) for f in by_date[d]]
+        grid = tiles[0] if len(tiles) == 1 else merge_arrays(tiles, nodata=np.nan)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
+            grid = grid.rio.reproject_match(unit_da, resampling=resampling_enum)
+        grids.append(np.asarray(grid.values, dtype=float))
+
+    vals = np.stack(grids, axis=0)  # (n_time, ny, nx)
+    return _aggregate_stack(
+        vals,
+        np.array(times),
+        unit_arr,
+        units_nodata,
+        hydro_units,
+        nodata,
+        valid_min,
+        valid_max,
+        min_valid_ratio,
+        value_scale,
+    )

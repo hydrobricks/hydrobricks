@@ -44,6 +44,7 @@ from hydrobricks.evaluation import (
     AuxiliaryObservation,
     DischargeObservations,
     GlacierMassBalanceObservations,
+    SnowCoverObservations,
     evaluate,
 )
 from hydrobricks.forcing import Forcing
@@ -73,6 +74,7 @@ __all__ = (
     "DischargeObservations",
     "AuxiliaryObservation",
     "GlacierMassBalanceObservations",
+    "SnowCoverObservations",
     "TimeSeries",
     "Catchment",
     "Results",

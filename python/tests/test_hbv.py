@@ -920,6 +920,58 @@ def test_hbv96_glacier_brick_absent_where_no_glacier(tmp_path):
         assert has_glacier == brick_present
 
 
+def test_hbv96_total_swe_aggregates_land_covers(tmp_path):
+    """get_total_swe combines the per-land-cover snowpacks into a unit-average SWE
+    depth while keeping the hydro unit dimension. The all-ground unit (no glacier) must
+    equal its ground snowpack, and the catchment area-weighted mean of the per-unit
+    totals must match get_mean_swe."""
+    _, _, results = _run_ground_glacier(tmp_path)
+    total_swe = results.get_total_swe()
+    ground_swe = results.get_hydro_units_values("ground_snowpack:snow_content")
+
+    # Shape is (units, time), matching the per-unit component arrays.
+    assert total_swe.shape == ground_swe.shape
+
+    # Unit 0 is all ground (no glacier): its total SWE is just the ground snowpack.
+    np.testing.assert_allclose(total_swe[0, :], ground_swe[0, :], rtol=1e-9)
+
+    # Area-weighting the per-unit totals over the catchment recovers get_mean_swe.
+    unit_areas = np.nan_to_num(results.results.hydro_units_areas.to_numpy())[:, None]
+    mean_from_total = np.nansum(total_swe * unit_areas, axis=0) / unit_areas.sum(axis=0)
+    np.testing.assert_allclose(mean_from_total, results.get_mean_swe(), rtol=1e-9)
+
+
+def test_hbv96_total_swe_handles_snowless_land_cover(tmp_path):
+    """A land cover without a snowpack (a lake) must not raise: it contributes zero SWE
+    over its area. The all-ground unit keeps its ground snowpack; the all-lake unit
+    averages to zero SWE."""
+    _, _, results = _run_ground_lake(tmp_path, PET=0.5)
+    total_swe = results.get_total_swe()
+    ground_swe = results.get_hydro_units_values("ground_snowpack:snow_content")
+
+    np.testing.assert_allclose(total_swe[0, :], ground_swe[0, :], rtol=1e-9)
+    np.testing.assert_allclose(total_swe[1, :], 0.0, atol=1e-12)
+
+
+def test_hbv96_total_swe_date_slicing(tmp_path):
+    """Date selection slices the land-cover areas consistently with the SWE values, so a
+    sub-range matches the corresponding slice of the full series, and a single date
+    returns a per-unit snapshot."""
+    _, _, results = _run_ground_glacier(tmp_path)
+    full = results.get_total_swe()
+    times = results.results.time.to_numpy()
+    start = np.datetime_as_string(times[10], unit="D")
+    end = np.datetime_as_string(times[20], unit="D")
+
+    sub = results.get_total_swe(start, end)
+    assert sub.shape == (full.shape[0], 11)
+    np.testing.assert_allclose(sub, full[:, 10:21], rtol=1e-9)
+
+    snapshot = results.get_total_swe(start)
+    assert snapshot.shape == (full.shape[0],)
+    np.testing.assert_allclose(snapshot, full[:, 10], rtol=1e-9)
+
+
 def test_hbv96_glacier_infinite_storage_adds_discharge(tmp_path):
     """An infinite ice store lets the glacier melt ice on top of the precipitation it
     receives, so it yields more discharge than a finite (depletable) store."""

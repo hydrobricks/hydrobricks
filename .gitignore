@@ -64,3 +64,4 @@ vcpkg/
 **/daily_potential_radiation.nc
 .claude/
 bin-test/
+tmp/

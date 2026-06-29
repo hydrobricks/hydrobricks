@@ -145,7 +145,7 @@ class HBV(Model):
         """
         # Separate the cover categories: lakes (exclusive open water), glaciers
         # (Socont-style, drain to sub-basin reservoirs) and the soil-bearing covers
-        # (ground, forest, ...) that go through the soil/response/routing routine.
+        # (open, forest, ...) that go through the soil/response/routing routine.
         self._lake_cover_names = [
             name
             for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
@@ -164,7 +164,7 @@ class HBV(Model):
         if not soil_cover_names:
             raise ConfigurationError(
                 "The HBV model requires at least one soil-bearing land cover "
-                "(ground or forest).",
+                "(open or forest).",
                 item_name="land_cover_types",
                 reason="Only lake/glacier covers provided",
             )
@@ -277,7 +277,7 @@ class HBV(Model):
         """Build the structure variants for the land-use classes.
 
         The primary (structure 1) is the glacier- and lake-free **base**: the soil
-        covers (ground, forest) with the soil/response/routing routine, plus the
+        covers (open, forest) with the soil/response/routing routine, plus the
         catchment-level glacier reservoirs (kept here so the sub-basin, built from
         structure 1, owns them and they are shared by all units). Optional variants:
 

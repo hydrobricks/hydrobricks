@@ -601,7 +601,7 @@ class HydroUnits:
         """
         # Land cover fraction column name
         field_name = self.FRACTION_PREFIX + land_cover_name
-        ground_name = self.FRACTION_PREFIX + self.get_generic_cover_name()
+        open_name = self.FRACTION_PREFIX + self.get_generic_cover_name()
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
         for _, row in land_cover_change.iterrows():
@@ -621,9 +621,22 @@ class HydroUnits:
                     reason="Fraction outside valid range",
                 )
 
-            # Set the land cover fraction
+            # Set the land cover fraction, taking the area from the generic (soil)
+            # cover so the unit's fractions still sum to 1.
             self.hydro_units.loc[hu_idx, (field_name, "fraction")] = fraction
-            self.hydro_units.loc[hu_idx, (ground_name, "fraction")] -= fraction
+            self.hydro_units.loc[hu_idx, (open_name, "fraction")] -= fraction
+            open_fraction = self.hydro_units.loc[hu_idx, (open_name, "fraction")]
+            if open_fraction < -1e-8:
+                raise DataError(
+                    f"Initializing '{land_cover_name}' to fraction {fraction:.4g} "
+                    f"for unit {id} leaves the generic cover negative "
+                    f"({open_fraction:.4g}). This usually means the cover was "
+                    f"already initialized (e.g. compute_initial_ice_thickness "
+                    f"initializes the glacier cover by default; pass "
+                    f"initialize_cover=False to skip it).",
+                    data_type="land cover fraction",
+                    reason="Generic cover fraction went negative",
+                )
 
         self.populate_bounded_instance()
 
@@ -675,7 +688,19 @@ class HydroUnits:
                 fraction = float(row[self.FRACTION_PREFIX + cover_name].values[0])
                 if np.isnan(fraction):
                     fraction = 0.0
-                assert 0 <= fraction <= 1
+                if not 0 <= fraction <= 1:
+                    unit_id = row[("id", "-")].values[0]
+                    raise DataError(
+                        f"Land cover '{cover_name}' fraction {fraction:.4g} for "
+                        f"hydro unit {unit_id} is outside [0, 1]. The land-cover "
+                        f"fractions of a unit must sum to 1; a negative residual "
+                        f"usually means a cover area was applied twice (e.g. "
+                        f"compute_initial_ice_thickness already initializes the "
+                        f"glacier cover by default, so an extra "
+                        f"initialize_area_from_land_cover_change double-counts it).",
+                        data_type="land cover fraction",
+                        reason="Fraction outside valid range",
+                    )
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:

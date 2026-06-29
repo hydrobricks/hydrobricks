@@ -110,21 +110,12 @@ catchment.extract_dem(CATCHMENT_DEM)
 catchment.create_elevation_bands(method="equal_intervals", distance=100)
 
 glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
+# compute_initial_ice_thickness initializes the glacier cover of each hydro unit by
+# default (initialize_cover=True), so the glacier land cover already starts with its
+# actual area — no separate initialize_area_from_land_cover_change call is needed.
 glacier_df = glacier_evolution.compute_initial_ice_thickness(
     catchment, ice_thickness=GLACIER_ICE_THICKNESS
 )
-# Sum the glacier area of each hydro unit and set it as the initial glacier cover.
-glacier_areas = (
-    pd.DataFrame(
-        {
-            "hydro_unit": glacier_df[("hydro_unit_id", "-")].to_numpy(),
-            "area": glacier_df[("glacier_area", "m2")].to_numpy(),
-        }
-    )
-    .groupby("hydro_unit", as_index=False)["area"]
-    .sum()
-)
-catchment.initialize_area_from_land_cover_change("glacier", glacier_areas)
 hydro_units = catchment.hydro_units
 
 # ---------------------------------------------------------------------------

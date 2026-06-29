@@ -17,16 +17,9 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
 }
 
 void ActionLandCoverChange::Reset() {
-    // Roll back all changes.
-    int changeCount = static_cast<int>(_hydroUnitIds.size());
-    for (int i = changeCount - 1; i >= 0; --i) {
-        HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[i]);
-        string landCoverName = _landCoverNames[_landCoverIds[i]];
-        double areaFraction = _areas[i] / unit->GetArea();
-        areaFraction = CheckLandCoverAreaFraction(landCoverName, _hydroUnitIds[i], areaFraction, unit->GetArea(),
-                                                  _areas[i]);
-        unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
-    }
+    // Nothing to roll back here: the land-cover extents are restored from the model's
+    // saved initial state on reset (LandCover::Reset). Only the cursor needs resetting,
+    // which the ActionsManager does separately.
 }
 
 bool ActionLandCoverChange::Apply(double) {

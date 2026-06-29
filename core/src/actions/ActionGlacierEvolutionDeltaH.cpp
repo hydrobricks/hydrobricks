@@ -70,16 +70,10 @@ bool ActionGlacierEvolutionDeltaH::Init() {
 }
 
 void ActionGlacierEvolutionDeltaH::Reset() {
-    // Set the land cover area fraction to 0 for all hydro units.
-    for (int id : _hydroUnitIds) {
-        HydroUnit* unit = _manager->GetHydroUnitById(id);
-        unit->ChangeLandCoverAreaFraction(_landCoverName, 0);
-    }
-
-    // Re-initialize.
-    if (!Init()) {
-        throw RuntimeError("Failed to re-initialize the glacier evolution action during reset.");
-    }
+    // The glacier extent and ice volume are restored from the model's saved initial
+    // state (Glacier::Reset); only the lookup-table cursor needs resetting so the next
+    // run re-applies the evolution from the initial (full-glacier) row.
+    _lastRow = 0;
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {

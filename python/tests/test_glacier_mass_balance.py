@@ -175,20 +175,12 @@ def glacier_run():
     catchment.create_elevation_bands(method="equal_intervals", distance=200)
 
     ge = hb.preprocessing.GlacierEvolutionDeltaH()
-    gdf = ge.compute_initial_ice_thickness(
+    # compute_initial_ice_thickness initializes the glacier cover fractions by default
+    # (initialize_cover=True), so no separate initialize_area_from_land_cover_change
+    # call is needed (doing so would apply the glacier area twice).
+    ge.compute_initial_ice_thickness(
         catchment, ice_thickness=GLACIER_DIR / "ice_thickness.tif"
     )
-    areas = (
-        pd.DataFrame(
-            {
-                "hydro_unit": gdf[("hydro_unit_id", "-")].to_numpy(),
-                "area": gdf[("glacier_area", "m2")].to_numpy(),
-            }
-        )
-        .groupby("hydro_unit", as_index=False)["area"]
-        .sum()
-    )
-    catchment.initialize_area_from_land_cover_change("glacier", areas)
 
     model = models.Socont(
         soil_storage_nb=2,

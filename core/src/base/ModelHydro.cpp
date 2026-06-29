@@ -123,6 +123,11 @@ ModelResult ModelHydro::Run() {
 void ModelHydro::Reset() {
     _timer.Reset();
     _logger.Reset();
+    // Roll back action bookkeeping (cursors, lookup-table row, ...); the land-cover
+    // extents and storages are restored by the sub-basin reset below. Land covers
+    // capture their initial extent on the first reset (before the first run) and
+    // restore it on every later reset, so a model can be re-run (e.g. in a calibration
+    // loop) from the same initial conditions even when actions changed the extents.
     _actionsManager.Reset();
     _subBasin->Reset();
 }

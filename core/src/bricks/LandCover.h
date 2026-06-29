@@ -12,6 +12,21 @@ class LandCover : public Brick {
     LandCover();
 
     /**
+     * @copydoc Brick::Reset()
+     *
+     * Also restores the area fraction to the saved initial extent, so that land-cover
+     * changes (e.g. glacier evolution) are rolled back when the model is re-run.
+     */
+    void Reset() override;
+
+    /**
+     * @copydoc Brick::SaveAsInitialState()
+     *
+     * Also stores the current area fraction as the initial extent to restore on reset.
+     */
+    void SaveAsInitialState() override;
+
+    /**
      * @copydoc Brick::CanHaveAreaFraction()
      */
     [[nodiscard]] bool CanHaveAreaFraction() const override {
@@ -66,6 +81,8 @@ class LandCover : public Brick {
 
   protected:
     double _areaFraction;
+    double _initialAreaFraction;
+    bool _initialAreaSaved;
 };
 
 #endif  // HYDROBRICKS_BASE_LAND_COVER_H

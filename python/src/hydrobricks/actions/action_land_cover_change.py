@@ -340,13 +340,13 @@ class ActionLandCoverChange(Action):
         glacier_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
         ice_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
         debris_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
-        ground_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
+        open_df = self._create_new_change_dataframe(hydro_units, n_unit_ids)
 
         # Parse the files
         glacier_np = np.zeros((n_unit_ids, len(times)))
         ice_np = np.zeros((n_unit_ids, len(times)))
         debris_np = np.zeros((n_unit_ids, len(times)))
-        ground_np = np.zeros((n_unit_ids, len(times)))
+        open_np = np.zeros((n_unit_ids, len(times)))
         for glacier_shp, debris_shp, time in zip(full_glaciers, debris_glaciers, times):
             logger.debug(f"Extracting glacier cover changes for {time}...")
             glacier, ice, debris, other = self._extract_glacier_cover_change(
@@ -355,7 +355,7 @@ class ActionLandCoverChange(Action):
             glacier_np[:, times.index(time)] = glacier
             ice_np[:, times.index(time)] = ice
             debris_np[:, times.index(time)] = debris
-            ground_np[:, times.index(time)] = other
+            open_np[:, times.index(time)] = other
 
         # Interpolate the data to yearly time steps
         times_full = pd.to_datetime(times)
@@ -365,7 +365,7 @@ class ActionLandCoverChange(Action):
                 debris_np, _ = self._interpolate_yearly(debris_np, times)
             else:
                 glacier_np, _ = self._interpolate_yearly(glacier_np, times)
-            ground_np, times_full = self._interpolate_yearly(ground_np, times)
+            open_np, times_full = self._interpolate_yearly(open_np, times)
 
         # Add the columns to the dataframes
         times_full_str = [time.strftime("%Y-%m-%d") for time in times_full]
@@ -375,7 +375,7 @@ class ActionLandCoverChange(Action):
             debris_df = pd.concat([debris_df, empty_df.copy()], axis=1)
         else:
             glacier_df = pd.concat([glacier_df, empty_df.copy()], axis=1)
-        ground_df = pd.concat([ground_df, empty_df.copy()], axis=1)
+        open_df = pd.concat([open_df, empty_df.copy()], axis=1)
 
         # Set data to the dataframes
         if with_debris:
@@ -383,9 +383,9 @@ class ActionLandCoverChange(Action):
             debris_df.iloc[:, 1:] = debris_np
         else:
             glacier_df.iloc[:, 1:] = glacier_np
-        ground_df.iloc[:, 1:] = ground_np
+        open_df.iloc[:, 1:] = open_np
 
-        # Populate the bounded instance (not needed for the ground type)
+        # Populate the bounded instance (not needed for the open type)
         if with_debris:
             self._remove_rows_with_no_changes(ice_df)
             self._populate_bounded_instance("glacier_ice", "m2", ice_df)
@@ -396,9 +396,9 @@ class ActionLandCoverChange(Action):
             self._populate_bounded_instance("glacier", "m2", glacier_df)
 
         if with_debris:
-            return [ice_df, debris_df, ground_df]
+            return [ice_df, debris_df, open_df]
         else:
-            return [glacier_df, ground_df]
+            return [glacier_df, open_df]
 
     def _extract_glacier_cover_change(
         self,

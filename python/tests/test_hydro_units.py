@@ -137,3 +137,25 @@ def test_set_connectivity():
     hydro_units.set_connectivity(RHONE_CONNECT)
 
     assert hydro_units.settings.get_lateral_connection_count() == 359
+
+
+def test_initialize_from_land_cover_change_double_application_raises():
+    """Driving the generic cover negative (e.g. initializing a cover twice) raises a
+    clear error rather than a bare assertion deeper in the build."""
+    import pandas as pd
+
+    units = hb.HydroUnits(
+        land_cover_types=["open", "glacier"], land_cover_names=["open", "glacier"]
+    )
+    units.load_from_csv(RHONE_HUS)
+
+    unit_id = int(units.hydro_units.loc[0].at["id"].values[0])
+    unit_area = float(units.hydro_units.loc[0].at["area"].values[0])
+
+    # 60% of the unit -> glacier 0.6, open 0.4.
+    change = pd.DataFrame({"hydro_unit": [unit_id], "area": [0.6 * unit_area]})
+    units.initialize_from_land_cover_change("glacier", change)
+
+    # Applying it again would drive the generic 'open' cover negative (-0.2).
+    with pytest.raises(hb.DataError, match="initialize_cover"):
+        units.initialize_from_land_cover_change("glacier", change)

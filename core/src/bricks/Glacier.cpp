@@ -7,12 +7,14 @@ Glacier::Glacier()
 }
 
 void Glacier::Reset() {
-    _water->Reset();
+    // LandCover::Reset restores the water container, processes and the area fraction
+    // (initial glacier extent); here we also restore the ice volume.
+    LandCover::Reset();
     _ice->Reset();
 }
 
 void Glacier::SaveAsInitialState() {
-    _water->SaveAsInitialState();
+    LandCover::SaveAsInitialState();
     _ice->SaveAsInitialState();
 }
 

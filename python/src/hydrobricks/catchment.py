@@ -797,6 +797,10 @@ class Catchment:
         """
         Initialize the HydroUnits cover area from a land cover change object.
 
+        Must be called before ``Model.setup()``: it updates the land cover fractions
+        that the model reads at build time. Calling it afterwards changes the hydro
+        units' settings but does not propagate to an already-built model.
+
         Parameters
         ----------
         land_cover_name

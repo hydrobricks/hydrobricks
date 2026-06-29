@@ -587,6 +587,10 @@ class HydroUnits:
         land cover change dataframe. Automatically adjusts the generic soil land cover
         fraction ('open', or its 'ground' alias) to maintain conservation.
 
+        Must be called before ``Model.setup()``: the fractions set here become the
+        model's initial extent, captured at build time. Calling it afterwards updates
+        the settings but does not propagate to an already-built model.
+
         Parameters
         ----------
         land_cover_name

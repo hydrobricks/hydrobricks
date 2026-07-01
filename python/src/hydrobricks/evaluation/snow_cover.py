@@ -618,6 +618,8 @@ class SnowCoverObservations(AuxiliaryObservation):
             min_valid_ratio=min_valid_ratio,
             resampling=resampling,
             engine=engine,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         return cls._build(
@@ -1057,11 +1059,16 @@ def _read_hdf_eos_grid(path: str | Path, variable: str, engine: str) -> Any:
     proj4 = (
         f"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a={radius} +b={radius} +units=m +no_defs"
     )
-    da = da.astype(float)
+    # Avoid extra full-tile copies: only cast when the field is not already floating
+    # (xarray decodes fill values to float), and set the CRS in place.
+    # The nodata is passed to reproject_match by the caller instead of
+    # via write_nodata (which would deep-copy the tile).
+    if not np.issubdtype(da.dtype, np.floating):
+        da = da.astype(float)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-        da = da.rio.write_crs(proj4).rio.set_spatial_dims(x_dim="x", y_dim="y")
-    da = da.rio.write_nodata(np.nan)
+        da.rio.write_crs(proj4, inplace=True)
+        da.rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
     return da
 
 
@@ -1097,8 +1104,16 @@ def _aggregate_modis(
     min_valid_ratio: float,
     resampling: str,
     engine: str,
+    start_date: str | pd.Timestamp | None = None,
+    end_date: str | pd.Timestamp | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Read MODIS HDF-EOS tiles, mosaic+reproject per date, and aggregate per unit."""
+    """Read MODIS HDF-EOS tiles, mosaic+reproject per date, and aggregate per unit.
+
+    Each date is reprojected and reduced to a per-unit vector immediately, so only one
+    tile is held in memory at a time (a multi-year daily archive would otherwise need
+    tens of GB if every grid were stacked). Files outside ``[start_date, end_date]``
+    are skipped before reading.
+    """
     from rasterio.enums import Resampling
     from rioxarray.merge import merge_arrays
 
@@ -1117,33 +1132,71 @@ def _aggregate_modis(
             reason="No input files",
         )
 
-    # Group tiles by date (a date may be covered by several tiles).
+    # Group tiles by date (a date may be covered by several tiles), skipping dates
+    # outside the requested period so a large archive is not read in full.
+    lo = pd.Timestamp(start_date) if start_date is not None else None
+    hi = pd.Timestamp(end_date) if end_date is not None else None
     by_date: dict[pd.Timestamp, list[Path]] = {}
     for f in files:
         d = _date_from_name(f.name, date_regex, date_format, date_parser)
+        if (lo is not None and d < lo) or (hi is not None and d > hi):
+            continue
         by_date.setdefault(d, []).append(f)
+    times = sorted(by_date)
+    if not times:
+        return (
+            np.array([], dtype="datetime64[ns]"),
+            np.array([], dtype=int),
+            np.empty((0, 0)),
+        )
+
+    # Hydro-unit ids and a per-pixel unit index, computed once.
+    if hydro_units is not None:
+        ids = np.asarray(hydro_units["id"]).squeeze().astype(int).ravel().tolist()
+    else:
+        ids = [
+            int(u)
+            for u in np.unique(unit_arr)
+            if np.isfinite(u) and u > 0 and (units_nodata is None or u != units_nodata)
+        ]
+    n_ids = len(ids)
+    flat_units = unit_arr.ravel()
+    label = np.full(flat_units.shape, -1, dtype=np.int64)
+    for j, uid in enumerate(ids):
+        label[flat_units == uid] = j
+    in_unit = label >= 0
+    n_pix_per_unit = np.bincount(label[in_unit], minlength=n_ids).astype(float)
 
     resampling_enum = getattr(Resampling, resampling)
-    times = sorted(by_date)
-    grids = []
-    for d in times:
+    logger.info("Reading %d MODIS date(s) from %s", len(times), path)
+    matrix = np.full((len(times), n_ids), np.nan, dtype=float)
+    for i, d in enumerate(times):
         tiles = [_read_hdf_eos_grid(f, variable, engine) for f in by_date[d]]
         grid = tiles[0] if len(tiles) == 1 else merge_arrays(tiles, nodata=np.nan)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            grid = grid.rio.reproject_match(unit_da, resampling=resampling_enum)
-        grids.append(np.asarray(grid.values, dtype=float))
+            grid = grid.rio.reproject_match(
+                unit_da, resampling=resampling_enum, nodata=np.nan
+            )
+        flat = np.asarray(grid.values, dtype=float).ravel()
 
-    vals = np.stack(grids, axis=0)  # (n_time, ny, nx)
-    return _aggregate_stack(
-        vals,
-        np.array(times),
-        unit_arr,
-        units_nodata,
-        hydro_units,
-        nodata,
-        valid_min,
-        valid_max,
-        min_valid_ratio,
-        value_scale,
-    )
+        valid = np.isfinite(flat)
+        if nodata is not None:
+            valid &= flat != nodata
+        if valid_min is not None:
+            valid &= flat >= valid_min
+        if valid_max is not None:
+            valid &= flat <= valid_max
+        valid &= in_unit
+
+        lab = label[valid]
+        sums = np.bincount(lab, weights=flat[valid], minlength=n_ids)
+        cnts = np.bincount(lab, minlength=n_ids).astype(float)
+        safe_pix = np.where(n_pix_per_unit > 0, n_pix_per_unit, 1.0)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            mean = np.where(cnts > 0, sums / np.where(cnts > 0, cnts, 1.0), np.nan)
+            frac_valid = np.where(n_pix_per_unit > 0, cnts / safe_pix, 0.0)
+        keep = (cnts > 0) & (frac_valid >= min_valid_ratio)
+        matrix[i] = np.where(keep, mean * value_scale, np.nan)
+
+    return np.array(times), np.array(ids, dtype=int), matrix

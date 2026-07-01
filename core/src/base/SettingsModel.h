@@ -400,6 +400,13 @@ class SettingsModel {
     void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
 
     /**
+     * Add a sublimation process to all snowpacks (snow container to the atmosphere).
+     *
+     * @param sublimationProcess name of the sublimation process.
+     */
+    void AddSnowpackSublimation(const string& sublimationProcess);
+
+    /**
      * Add a new (empty) model-structure variant and select it. Hydro units can be
      * assigned to it via HydroUnit::SetStructureId(). Subsequent generate/add calls
      * populate the newly selected structure.

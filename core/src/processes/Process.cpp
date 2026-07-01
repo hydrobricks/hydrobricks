@@ -40,6 +40,8 @@
 #include "ProcessRoutingHBV.h"
 #include "ProcessRunoffHBV.h"
 #include "ProcessRunoffSocont.h"
+#include "ProcessSublimationConstant.h"
+#include "ProcessSublimationPET.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
@@ -295,6 +297,29 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply melt:cemaneige to unsupported brick: {}", b->GetName()));
             },
             &ProcessMeltCemaNeige::RegisterProcessSettings
+        }},
+
+        {"sublimation:constant", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationConstant>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationConstant::RegisterProcessSettings
+        }},
+
+        {"sublimation:pet", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationPET>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationPET::RegisterProcessSettings
         }},
 
         {"transformation:snow_ice_constant", {

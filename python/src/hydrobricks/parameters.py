@@ -283,6 +283,30 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Constant-rate snow sublimation
+    "sublimation:constant": [
+        ParamSpec(
+            name="sublimation_rate",
+            unit="mm/d",
+            aliases=["sublimation_rate"],
+            min=0,
+            max=2,
+            default=0.1,
+            mandatory=False,
+        ),
+    ],
+    # PET-fraction snow sublimation (evapo-sublimation; Herrero & Polo, 2016)
+    "sublimation:pet": [
+        ParamSpec(
+            name="sublimation_pet_factor",
+            unit="-",
+            aliases=["sublimation_pet_factor", "sublimation_factor"],
+            min=0,
+            max=1,
+            default=0.2,
+            mandatory=False,
+        ),
+    ],
     # Snow/ice constant transformation (dynamic aliases per glacier snowpack)
     "transform:snow_ice_constant": [
         ParamSpec(
@@ -1957,6 +1981,20 @@ class ParameterSet:
                         reason="Unknown process",
                     )
                 for spec in PROCESS_PARAM_SPECS[process]:
+                    self._register(component="type:snowpack", spec=spec)
+
+            # Snow sublimation (snow container to the atmosphere)
+            sublimation = options.get("snow_sublimation_process")
+            if sublimation is not None:
+                if sublimation not in PROCESS_PARAM_SPECS:
+                    raise ConfigurationError(
+                        f"The snow_sublimation_process option {sublimation} is "
+                        f"not recognised.",
+                        item_name="snow_sublimation_process",
+                        item_value=sublimation,
+                        reason="Unknown process",
+                    )
+                for spec in PROCESS_PARAM_SPECS[sublimation]:
                     self._register(component="type:snowpack", spec=spec)
 
             # Snow/ice transformation

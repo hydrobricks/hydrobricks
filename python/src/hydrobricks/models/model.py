@@ -979,6 +979,7 @@ class Model(ABC):
         snow_redistribution = None
         snow_water_retention_process = None
         snow_refreezing_process = None
+        snow_sublimation_process = None
         rain_to_snowpack = False
 
         if self.options.get("snow_melt_process") is not None:
@@ -991,6 +992,8 @@ class Model(ABC):
             snow_water_retention_process = self.options["snow_water_retention_process"]
         if "snow_refreezing_process" in self.options:
             snow_refreezing_process = self.options["snow_refreezing_process"]
+        if "snow_sublimation_process" in self.options:
+            snow_sublimation_process = self.options["snow_sublimation_process"]
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
         # with_snow is on by default; an explicit option overrides it last, so it wins
@@ -1008,6 +1011,7 @@ class Model(ABC):
             snow_redistribution=snow_redistribution,
             snow_water_retention_process=snow_water_retention_process,
             snow_refreezing_process=snow_refreezing_process,
+            snow_sublimation_process=snow_sublimation_process,
             rain_to_snowpack=rain_to_snowpack,
             forest_interception=self.options.get("forest_interception", False),
         )

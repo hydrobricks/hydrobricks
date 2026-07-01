@@ -52,6 +52,9 @@ class HBV(Model):
         which matches the HBV-96 linear transition over TT ± TTI/2).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     share_soil : bool
         Share a single soil moisture storage across all land covers (default:
         False, i.e. each land cover has its own soil moisture store, as in the
@@ -94,6 +97,7 @@ class HBV(Model):
         self.options["rain_to_snowpack"] = True
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.options["share_soil"] = False
         self.options["forest_interception"] = False
         self.options["glacier_infinite_storage"] = True
@@ -331,6 +335,7 @@ class HBV(Model):
                 "snow_melt_process": None,
                 "snow_water_retention_process": None,
                 "snow_refreezing_process": None,
+                "snow_sublimation_process": None,
                 "rain_to_snowpack": False,
             }
             variants.append((lake_names, lake_types, lake_structure, lake_options))

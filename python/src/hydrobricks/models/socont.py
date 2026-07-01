@@ -71,6 +71,9 @@ class Socont(Model):
         Snow-to-ice transformation on the glacier (default: None).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True).
     glacier_module : str
@@ -88,6 +91,7 @@ class Socont(Model):
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_ice_transformation"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["open", "glacier"]

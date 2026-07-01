@@ -38,6 +38,9 @@ class GR4J(Model):
         'melt:degree_day_aspect' an 'aspect_class' hydro unit property.
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     """
 
     def __init__(self, name: str = "gr4j", **kwargs: Any) -> None:
@@ -48,6 +51,7 @@ class GR4J(Model):
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)
@@ -67,6 +71,7 @@ class GR4J(Model):
         with_snow = snow_melt_process is not None
         snow_rain_process = self.options.get("snow_rain_process")
         snow_redistribution = self.options.get("snow_redistribution")
+        snow_sublimation_process = self.options.get("snow_sublimation_process")
 
         self.settings.generate_base_structure(
             self.land_cover_names,
@@ -75,6 +80,7 @@ class GR4J(Model):
             snow_melt_process=snow_melt_process or "melt:degree_day",
             snow_rain_process=snow_rain_process,
             snow_redistribution=snow_redistribution,
+            snow_sublimation_process=snow_sublimation_process,
         )
 
     def _define_structure(self) -> None:

@@ -582,6 +582,20 @@ void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
     }
 }
 
+void SettingsModel::AddSnowpackSublimation(const string& sublimationProcess) {
+    assert(_selectedStructure);
+
+    for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
+
+        // The sublimation process lives on the snowpack snow container and removes
+        // snow directly to the atmosphere. As an atmosphere-bound process (like ET),
+        // it needs no target: the model builder attaches a FluxToAtmosphere to it.
+        AddBrickProcess("sublimation", sublimationProcess);
+    }
+}
+
 void SettingsModel::GenerateSnowpacksWithWaterRetention(const string& snowMeltProcess, const string& outflowProcess,
                                                         bool rainToSnowpack) {
     assert(_selectedStructure);

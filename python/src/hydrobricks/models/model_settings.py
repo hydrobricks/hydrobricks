@@ -88,6 +88,7 @@ class ModelSettings:
         snow_redistribution: str | None = None,
         snow_water_retention_process: str | None = None,
         snow_refreezing_process: str | None = None,
+        snow_sublimation_process: str | None = None,
         rain_to_snowpack: bool = False,
         forest_interception: bool = False,
     ) -> None:
@@ -119,6 +120,10 @@ class ModelSettings:
         snow_refreezing_process
             Refreezing process of the retained liquid water (optional; requires
             snow_water_retention_process). E.g. 'refreeze:degree_day'.
+        snow_sublimation_process
+            Sublimation process removing snow water equivalent directly to the
+            atmosphere (optional). One of 'sublimation:constant' or
+            'sublimation:pet'.
         rain_to_snowpack
             Route the rain to the snowpack liquid water storage instead of the
             land cover (requires snow_water_retention_process).
@@ -204,6 +209,8 @@ class ModelSettings:
                 self.settings.add_snow_ice_transformation(snow_ice_transformation)
             if snow_redistribution:
                 self.settings.add_snow_redistribution(snow_redistribution)
+            if snow_sublimation_process:
+                self.settings.add_snowpack_sublimation(snow_sublimation_process)
 
     def add_land_cover_brick(self, name: str, kind: str) -> None:
         """

@@ -221,6 +221,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
              "Add a refreezing process to the snowpacks (requires water retention).",
              "refreezing_process"_a = "refreeze:degree_day")
+        .def("add_snowpack_sublimation", &SettingsModel::AddSnowpackSublimation,
+             "Add a sublimation process to the snowpacks (snow to the atmosphere).", "sublimation_process"_a)
         .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",

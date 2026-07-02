@@ -274,6 +274,20 @@ class Catchment:
 
         return PotentialSolarRadiation(self)
 
+    @lazy_property
+    def land_cover(self) -> Any:
+        """
+        Lazy-loaded land-cover extraction module.
+
+        Returns
+        -------
+        CatchmentLandCover
+            Land-cover extraction processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentLandCover
+
+        return CatchmentLandCover(self)
+
     def extract_dem(self, raster_path: str | Path) -> bool:
         """
         Extract the DEM data for the catchment. Does not handle change in coordinates.
@@ -306,10 +320,10 @@ class Catchment:
         resample_to_dem_resolution: bool = True,
         resampling: str = "average",
         replace_nans_by_zeros: bool = True,
+        reproject_crs: bool = False,
     ) -> bool:
         """
         Extract spatial attributes (raster) for the catchment.
-        Does not handle change in coordinates.
 
         Parameters
         ----------
@@ -328,6 +342,12 @@ class Catchment:
         replace_nans_by_zeros
             If True, replace NaN values with zero in the output raster.
             Default: True
+        reproject_crs
+            If True, the raster is warped onto the DEM grid even when its CRS differs
+            from the catchment CRS (the raster is not required to match the catchment
+            CRS and is not masked by the outline beforehand). Use this for datasets
+            provided in a different CRS, e.g. ESA WorldCover (EPSG:4326) against a
+            projected DEM. Implies resampling onto the DEM grid. Default: False
 
         Returns
         -------
@@ -341,14 +361,14 @@ class Catchment:
         ValueError
             If the resampling method is not recognized.
         """
-        src, data = self._extract_raster(raster_path)
+        src, data = self._extract_raster(raster_path, reproject_crs=reproject_crs)
         if src is None:
             return False
 
         if replace_nans_by_zeros:
             data[np.isnan(data)] = 0
 
-        if resample_to_dem_resolution:
+        if resample_to_dem_resolution or reproject_crs:
             memfile = None
             if resampling == "nearest":
                 resampling_id = 0
@@ -837,6 +857,22 @@ class Catchment:
         """
         self.hydro_units.initialize_land_cover_fractions()
 
+    def extract_land_cover_from_raster(self, *args, **kwargs) -> None:
+        """
+        Extract land-cover fractions from a categorical raster (e.g. ESA WorldCover).
+
+        Call the ``extract_from_raster`` method of the CatchmentLandCover class.
+        """
+        self.land_cover.extract_from_raster(*args, **kwargs)
+
+    def extract_land_cover_from_shapefile(self, *args, **kwargs) -> None:
+        """
+        Extract land-cover fractions from a vector dataset (e.g. swissTLMRegio).
+
+        Call the ``extract_from_shapefile`` method of the CatchmentLandCover class.
+        """
+        self.land_cover.extract_from_shapefile(*args, **kwargs)
+
     def discretize_by(self, *args, **kwargs) -> None:
         """
         Call the discretize_by method of the Discretization class.
@@ -1029,18 +1065,25 @@ class Catchment:
         self.outline = geoms
 
     def _extract_raster(
-        self, raster_path: str | Path
+        self, raster_path: str | Path, reproject_crs: bool = False
     ) -> tuple[rasterio.DatasetReader, np.ndarray]:
         """
-        Extract raster data for the catchment. Does not handle change in coordinates.
+        Extract raster data for the catchment.
 
         Reads a raster file, applies catchment outline masking if available, and
-        replaces nodata values with NaN.
+        replaces nodata values with NaN. By default the raster CRS must match the
+        catchment CRS (no coordinate change is performed here). When ``reproject_crs``
+        is True, the CRS check and the outline masking are skipped so the caller can
+        warp the raster onto the DEM grid afterwards (the outline is expressed in the
+        catchment/DEM CRS and cannot mask a raster in a different CRS).
 
         Parameters
         ----------
         raster_path
             Path of the raster file.
+        reproject_crs
+            If True, do not check the CRS nor mask by the outline (the caller
+            reprojects the data onto the DEM grid). Default: False
 
         Returns
         -------
@@ -1069,13 +1112,18 @@ class Catchment:
             raise ImportError("shapely is required to do this.")
 
         src = rasterio.open(raster_path)
-        self._check_crs(src)
 
-        if self.outline is not None:
-            geoms = [mapping(polygon) for polygon in self.outline]
-            masked_data, _ = mask(src, geoms, crop=False)
+        if reproject_crs:
+            # The CRS may differ from the catchment; the caller reprojects onto the
+            # DEM grid. Read as float so nodata can be represented as NaN.
+            masked_data = src.read(1).astype(float)
         else:
-            masked_data = src.read(1)
+            self._check_crs(src)
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                masked_data, _ = mask(src, geoms, crop=False)
+            else:
+                masked_data = src.read(1)
 
         masked_data[masked_data == src.nodata] = np.nan
         if len(masked_data.shape) == 3:

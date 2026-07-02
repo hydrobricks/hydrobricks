@@ -576,6 +576,39 @@ class HydroUnits:
                 return name
         return self.land_cover_names[0]
 
+    def add_land_cover(self, name: str, cover_type: str = "generic_land_cover") -> None:
+        """
+        Register a new land cover on the hydro units.
+
+        Appends the land cover (name + type) and adds its ``fraction-<name>``
+        column, initialized to 0.0 for every hydro unit. Existing fractions are left
+        untouched, so the generic soil cover keeps absorbing the residual area until
+        the new cover's fractions are set (e.g. via
+        ``initialize_from_land_cover_change``).
+
+        Parameters
+        ----------
+        name
+            The name of the land cover to add.
+        cover_type
+            The land cover type identifier (e.g. 'glacier', 'forest', 'open').
+            Default: 'generic_land_cover'.
+
+        Raises
+        ------
+        DataError
+            If a land cover with the same name already exists.
+        """
+        if name in self.land_cover_names:
+            raise DataError(
+                f"A land cover named '{name}' already exists.",
+                data_type="land cover",
+                reason="Duplicate land cover name",
+            )
+        self.land_cover_names.append(name)
+        self.land_cover_types.append(cover_type)
+        self.hydro_units[(self.FRACTION_PREFIX + name, "fraction")] = 0.0
+
     def initialize_from_land_cover_change(
         self, land_cover_name: str, land_cover_change: pd.DataFrame
     ) -> None:
@@ -692,8 +725,14 @@ class HydroUnits:
                 fraction = float(row[self.FRACTION_PREFIX + cover_name].values[0])
                 if np.isnan(fraction):
                     fraction = 0.0
+                # Snap tiny floating-point overshoots into [0, 1] (e.g. the generic
+                # cover ending at -1e-17 when the other covers sum to exactly 1).
+                if -1e-8 <= fraction < 0:
+                    fraction = 0.0
+                elif 1 < fraction <= 1 + 1e-8:
+                    fraction = 1.0
                 if not 0 <= fraction <= 1:
-                    unit_id = row[("id", "-")].values[0]
+                    unit_id = int(row[("id", "-")])
                     raise DataError(
                         f"Land cover '{cover_name}' fraction {fraction:.4g} for "
                         f"hydro unit {unit_id} is outside [0, 1]. The land-cover "

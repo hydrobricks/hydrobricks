@@ -67,7 +67,23 @@ def extract_ice_thickness_and_mask(
 def extract_glacier_mask_from_shapefile(
     catchment: Catchment, glacier_outline: str | Path
 ) -> np.ndarray:
-    """Extract the glacier cover mask from a glacier outline shapefile."""
+    """Extract the glacier cover mask from a glacier outline shapefile.
+
+    Clips the glacier outlines to the catchment extent and rasterizes them onto the
+    catchment DEM grid.
+
+    Parameters
+    ----------
+    catchment
+        The catchment object (with its DEM extracted).
+    glacier_outline
+        Path to the SHP file containing the glacier extents.
+
+    Returns
+    -------
+    A mask array over the DEM grid, holding the DEM elevation where a glacier is
+    present and ``-9999`` elsewhere.
+    """
     # Clip the glaciers to the catchment extent
     all_glaciers = gpd.read_file(glacier_outline)
     all_glaciers.to_crs(catchment.crs, inplace=True)
@@ -157,6 +173,17 @@ def initialize_glacier_cover(
     columns) per hydro unit and sets the ``land_cover`` fractions on the catchment,
     so the glacier land cover starts with its actual area. When ``land_cover`` is
     None, the (single) land cover of type ``glacier`` is detected from the catchment.
+
+    Parameters
+    ----------
+    catchment
+        The (already discretized) catchment object.
+    glacier_df
+        DataFrame with ``(hydro_unit_id, -)`` and ``(glacier_area, m2)`` columns
+        giving the glacier area of each hydro unit.
+    land_cover
+        Name of the glacier land cover to initialize. If None (default), the single
+        land cover of type 'glacier' is detected from the catchment.
     """
     if land_cover is None:
         land_cover = detect_glacier_cover(catchment)
@@ -176,8 +203,20 @@ def initialize_glacier_cover(
 def detect_glacier_cover(catchment: Catchment) -> str:
     """Return the name of the (single) land cover of type ``glacier``.
 
-    Raises a ConfigurationError if there is no glacier cover, or more than one (in
-    which case the caller must pass ``land_cover`` explicitly).
+    Parameters
+    ----------
+    catchment
+        The catchment object.
+
+    Returns
+    -------
+    The name of the land cover of type 'glacier'.
+
+    Raises
+    ------
+    ConfigurationError
+        If there is no glacier cover, or more than one (in which case the caller
+        must pass ``land_cover`` explicitly).
     """
     glacier_covers = [
         name
@@ -221,12 +260,15 @@ def _glacier_area_per_unit(
 
 
 def _mask_dem(
-    catchment: Catchment, shapefile: gpd.GeoDataFrame, nodata: int = -9999
+    catchment: Catchment,
+    shapefile: gpd.GeoDataFrame,
+    nodata: int = -9999,
+    all_touched: bool = True,
 ) -> np.ndarray:
     geoms = []
     for geo in shapefile.geometry.values:
         geoms.append(mapping(geo))
-    dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=True)
+    dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=all_touched)
     dem_masked[dem_masked == catchment.dem.nodata] = nodata
     if len(dem_masked.shape) == 3:
         dem_masked = dem_masked[0]

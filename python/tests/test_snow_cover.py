@@ -13,6 +13,7 @@ import hydrobricks.trainer as trainer
 from hydrobricks._exceptions import ConfigurationError
 from hydrobricks.evaluation import SnowCoverObservations
 from hydrobricks.evaluation.snow_cover import (
+    _cache_key,
     _date_from_name,
     _parse_struct_metadata,
     _swe_to_fraction,
@@ -155,6 +156,30 @@ def test_from_netcdf_min_valid_ratio_drops_cloudy(tmp_path):
     assert (pd.Timestamp("2016-02-15"), 1) in keys
 
 
+def test_from_netcdf_cache_roundtrip(tmp_path):
+    nc, tif = _write_synthetic_modis(tmp_path)
+    cache = tmp_path / "cache"
+    kw = dict(
+        raster_hydro_units=tif,
+        var_name="scf",
+        data_crs=2056,
+        value_scale=0.01,
+        nodata=255.0,
+        cache_dir=str(cache),
+    )
+    first = SnowCoverObservations.from_netcdf(nc, **kw)
+    assert len(list(cache.glob("snow_cover_*.csv"))) == 1
+
+    # Second call reads the cache and yields identical observations.
+    second = SnowCoverObservations.from_netcdf(nc, **kw)
+    assert len(second) == len(first)
+    assert np.allclose(np.sort(second.observed()), np.sort(first.observed()))
+
+    # A different option is a cache miss -> a second, distinct cache file.
+    SnowCoverObservations.from_netcdf(nc, **{**kw, "valid_max": 50})
+    assert len(list(cache.glob("snow_cover_*.csv"))) == 2
+
+
 def _write_modis_with_quality_code(tmp_path):
     """Like the synthetic MODIS but with a quality/error code (>100) in unit 2."""
     xr = pytest.importorskip("xarray")
@@ -262,6 +287,25 @@ def test_date_from_modis_filename():
     assert d == pd.Timestamp("2025-12-27")  # 2025, day-of-year 361
 
 
+def test_cache_key_distinguishes_config_and_discretization(tmp_path):
+    raster_a = tmp_path / "units_a.tif"
+    raster_a.write_bytes(b"discretization-A")
+    raster_b = tmp_path / "units_b.tif"
+    raster_b.write_bytes(b"discretization-B")
+    cfg = {"variable": "NDSI_Snow_Cover", "valid_max": 100}
+    src = [("MOD10A1.A2025361.hdf", 123, 456)]
+
+    key = _cache_key(raster_a, cfg, src)
+    # Deterministic for identical inputs.
+    assert key == _cache_key(raster_a, cfg, src)
+    # A different discretization (raster) gives a different key.
+    assert key != _cache_key(raster_b, cfg, src)
+    # A different option gives a different key.
+    assert key != _cache_key(raster_a, {**cfg, "valid_max": 50}, src)
+    # A changed input-file signature gives a different key.
+    assert key != _cache_key(raster_a, cfg, [("MOD10A1.A2025361.hdf", 999, 456)])
+
+
 # Sample MOD10A1 tiles may be dropped in the repo's tmp/ folder for a real read.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MODIS_SAMPLES = sorted((_REPO_ROOT / "tmp").glob("MOD10A1*.hdf"))
@@ -293,6 +337,37 @@ def test_from_modis_sample_tiles():
     by_unit = {t["unit_id"]: t["value"] for t in obs.targets if t["t"] == first_date}
     if 1 in by_unit and 15 in by_unit:
         assert by_unit[1] < by_unit[15]
+
+
+@pytest.mark.skipif(
+    not _MODIS_SAMPLES or not _SITTER_UNIT_IDS.exists(),
+    reason="No MOD10A1 sample tiles in tmp/ (or missing Sitter unit_ids.tif)",
+)
+def test_from_modis_cache_roundtrip(tmp_path):
+    pytest.importorskip("rioxarray")
+    pytest.importorskip("netCDF4")
+    kwargs = dict(
+        raster_hydro_units=_SITTER_UNIT_IDS,
+        file_pattern="MOD10A1*.hdf",
+        value_scale=0.01,
+        valid_min=0,
+        valid_max=100,
+        cache_dir=str(tmp_path),
+    )
+    first = SnowCoverObservations.from_modis(_REPO_ROOT / "tmp", **kwargs)
+    cache_files = list(tmp_path.glob("snow_cover_*.csv"))
+    assert len(cache_files) == 1  # aggregation was cached
+
+    # Second call reads the cache and yields identical observations.
+    second = SnowCoverObservations.from_modis(_REPO_ROOT / "tmp", **kwargs)
+    assert len(second) == len(first)
+    assert np.allclose(np.sort(second.observed()), np.sort(first.observed()))
+
+    # A different option is a cache miss -> a second, distinct cache file.
+    SnowCoverObservations.from_modis(
+        _REPO_ROOT / "tmp", **{**kwargs, "min_valid_ratio": 0.9}
+    )
+    assert len(list(tmp_path.glob("snow_cover_*.csv"))) == 2
 
 
 # --------------------------------------------------------------------------- #

@@ -128,6 +128,7 @@ snow_cover = hb.SnowCoverObservations.from_modis(
     metric="rmse",  # the default; lower error -> higher skill internally
     weight=1.0,
     mode="objective",
+    cache_dir=catchment_dir / "snow_cover_cache",  # Cache the per-unit fractions
 )
 print(f"Loaded {len(snow_cover)} (unit, date) snow-cover observations.")
 

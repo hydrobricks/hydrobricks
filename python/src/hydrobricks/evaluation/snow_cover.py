@@ -245,6 +245,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         relative_tolerance: float | None = None,
         engine: str | None = None,
         group: str | None = None,
+        cache_dir: str | Path | None = None,
     ) -> SnowCoverObservations:
         """Load and aggregate a snow-cover NetCDF stack per hydro unit.
 
@@ -277,6 +278,7 @@ class SnowCoverObservations(AuxiliaryObservation):
             relative_tolerance=relative_tolerance,
             engine=engine,
             group=group,
+            cache_dir=cache_dir,
             fmt="netcdf",
         )
 
@@ -309,6 +311,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         relative_tolerance: float | None = None,
         engine: str | None = None,
         group: str | None = None,
+        cache_dir: str | Path | None = None,
     ) -> SnowCoverObservations:
         """Load and aggregate a snow-cover HDF5 stack per hydro unit.
 
@@ -345,6 +348,7 @@ class SnowCoverObservations(AuxiliaryObservation):
             relative_tolerance=relative_tolerance,
             engine=engine,
             group=group,
+            cache_dir=cache_dir,
             fmt="hdf5",
         )
 
@@ -377,6 +381,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         relative_tolerance: float | None = None,
         engine: str | None = None,
         group: str | None = None,
+        cache_dir: str | Path | None = None,
         fmt: str = "netcdf",
     ) -> SnowCoverObservations:
         """Load and aggregate a snow-cover raster stack per hydro unit.
@@ -433,6 +438,10 @@ class SnowCoverObservations(AuxiliaryObservation):
             ``fmt='netcdf'``, and ``'h5netcdf'`` (or ``'netcdf4'``) for ``fmt='hdf5'``.
         group
             Optional HDF5/NetCDF group holding the variable.
+        cache_dir
+            If given, the aggregated per-(unit, date) fractions are cached there as
+            ``snow_cover_<hash>.csv`` (keyed by discretization + options + input files)
+            and loaded directly on a later equivalent call. Default: ``None``.
         fmt
             ``'netcdf'`` or ``'hdf5'`` (selects the default engine).
 
@@ -471,6 +480,42 @@ class SnowCoverObservations(AuxiliaryObservation):
                 install_command="pip install h5netcdf",
             )
 
+        build_kwargs = dict(
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
+        cache_file, cached = cls._cache_lookup(
+            cache_dir,
+            raster_hydro_units,
+            path,
+            file_pattern,
+            config={
+                "loader": fmt,
+                "var_name": var_name,
+                "data_crs": data_crs,
+                "dim_time": dim_time,
+                "dim_x": dim_x,
+                "dim_y": dim_y,
+                "value_scale": value_scale,
+                "nodata": nodata,
+                "valid_min": valid_min,
+                "valid_max": valid_max,
+                "min_valid_ratio": min_valid_ratio,
+                "engine": engine,
+                "group": group,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+            },
+            build_kwargs=build_kwargs,
+        )
+        if cached is not None:
+            return cached
+
         times, unit_ids, matrix = cls._aggregate_per_unit(
             path=path,
             raster_hydro_units=raster_hydro_units,
@@ -490,21 +535,17 @@ class SnowCoverObservations(AuxiliaryObservation):
             group=group,
         )
 
-        return cls._build(
+        obs = cls._build(
             times,
             unit_ids,
             matrix,
             source=path,
             start_date=start_date,
             end_date=end_date,
-            swe_full=swe_full,
-            land_covers=land_covers,
-            metric=metric,
-            weight=weight,
-            mode=mode,
-            tolerance=tolerance,
-            relative_tolerance=relative_tolerance,
+            **build_kwargs,
         )
+        cls._cache_save(obs, cache_file)
+        return obs
 
     @classmethod
     def from_modis(
@@ -534,6 +575,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         mode: str = "objective",
         tolerance: float | None = None,
         relative_tolerance: float | None = None,
+        cache_dir: str | Path | None = None,
     ) -> SnowCoverObservations:
         """Load MODIS (HDF-EOS) daily snow-cover tiles, aggregated per hydro unit.
 
@@ -575,6 +617,14 @@ class SnowCoverObservations(AuxiliaryObservation):
         start_date, end_date, swe_full, land_covers, metric, weight, mode, tolerance,
         relative_tolerance
             Configuration; see :meth:`_from_stack` and the class docstring.
+        cache_dir
+            If given, the aggregated per-(unit, date) fractions are cached there as a
+            CSV named ``snow_cover_<hash>.csv``. The hash is built from the hydro-unit
+            id raster (the discretization), the aggregation options and a signature of
+            the input tiles, so caches never mix across discretizations or settings. On
+            a later call with the same inputs the CSV is loaded directly (skipping the
+            slow tile reading); otherwise it is written after aggregating. Default:
+            ``None`` (no caching).
 
         Returns
         -------
@@ -602,6 +652,37 @@ class SnowCoverObservations(AuxiliaryObservation):
                 install_command="pip install netCDF4",
             )
 
+        build_kwargs = dict(
+            swe_full=swe_full,
+            land_covers=land_covers,
+            metric=metric,
+            weight=weight,
+            mode=mode,
+            tolerance=tolerance,
+            relative_tolerance=relative_tolerance,
+        )
+        cache_file, cached = cls._cache_lookup(
+            cache_dir,
+            raster_hydro_units,
+            path,
+            file_pattern,
+            config={
+                "loader": "modis",
+                "variable": variable,
+                "value_scale": value_scale,
+                "valid_min": valid_min,
+                "valid_max": valid_max,
+                "nodata": nodata,
+                "min_valid_ratio": min_valid_ratio,
+                "resampling": resampling,
+                "start_date": str(start_date),
+                "end_date": str(end_date),
+            },
+            build_kwargs=build_kwargs,
+        )
+        if cached is not None:
+            return cached
+
         times, unit_ids, matrix = _aggregate_modis(
             path=path,
             raster_hydro_units=raster_hydro_units,
@@ -622,21 +703,17 @@ class SnowCoverObservations(AuxiliaryObservation):
             end_date=end_date,
         )
 
-        return cls._build(
+        obs = cls._build(
             times,
             unit_ids,
             matrix,
             source=path,
             start_date=start_date,
             end_date=end_date,
-            swe_full=swe_full,
-            land_covers=land_covers,
-            metric=metric,
-            weight=weight,
-            mode=mode,
-            tolerance=tolerance,
-            relative_tolerance=relative_tolerance,
+            **build_kwargs,
         )
+        cls._cache_save(obs, cache_file)
+        return obs
 
     @classmethod
     def _build(
@@ -684,6 +761,49 @@ class SnowCoverObservations(AuxiliaryObservation):
         if not obj.targets:
             logger.warning("No snow cover observations loaded from %s.", source)
         return obj
+
+    @classmethod
+    def _cache_lookup(
+        cls,
+        cache_dir: str | Path | None,
+        raster_hydro_units: str | Path,
+        path: str | Path,
+        file_pattern: str | None,
+        config: dict,
+        build_kwargs: dict,
+    ) -> tuple[Path | None, SnowCoverObservations | None]:
+        """Resolve the cache file for a request and load it if it already exists.
+
+        Returns ``(cache_file, cached_obs)``: ``cache_file`` is ``None`` when caching is
+        off, otherwise the path to use; ``cached_obs`` is the loaded observations on a
+        cache hit, else ``None``. The key combines the hydro-unit id raster (the
+        discretization), the aggregation ``config`` and a signature of the input files,
+        so caches never mix across discretizations or options.
+        """
+        if cache_dir is None:
+            return None, None
+        p = Path(path)
+        files = sorted(p.glob(file_pattern)) if (file_pattern and p.is_dir()) else [p]
+        key = _cache_key(raster_hydro_units, config, _source_signature(files))
+        cache_file = Path(cache_dir) / f"snow_cover_{key}.csv"
+        if cache_file.exists():
+            logger.info("Loading cached snow cover from %s", cache_file)
+            return cache_file, cls.from_csv(
+                cache_file,
+                date_col="date",
+                unit_col="unit_id",
+                value_col="value",
+                **build_kwargs,
+            )
+        return cache_file, None
+
+    @staticmethod
+    def _cache_save(obs: SnowCoverObservations, cache_file: Path | None) -> None:
+        """Write the aggregated observations to the cache file (if caching is on)."""
+        if cache_file is not None and len(obs) > 0:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            obs.to_csv(cache_file)
+            logger.info("Saved snow cover cache to %s", cache_file)
 
     # ------------------------------------------------------------------ #
     # AuxiliaryObservation interface
@@ -802,6 +922,20 @@ class SnowCoverObservations(AuxiliaryObservation):
     def values(self) -> np.ndarray:
         """Alias of :meth:`observed` (observed fractions [0, 1])."""
         return self.observed()
+
+    def to_csv(self, path: str | Path) -> None:
+        """Save the per-(hydro unit, date) observations to a long-format CSV.
+
+        The file has ``date``, ``unit_id`` and ``value`` columns and can be read back
+        with :meth:`from_csv` (it is also the format used by the raster loaders' cache).
+        """
+        pd.DataFrame(
+            {
+                "date": [t["t"] for t in self.targets],
+                "unit_id": [t["unit_id"] for t in self.targets],
+                "value": [t["value"] for t in self.targets],
+            }
+        ).to_csv(path, index=False)
 
     def __len__(self) -> int:
         return len(self.targets)
@@ -1070,6 +1204,42 @@ def _read_hdf_eos_grid(path: str | Path, variable: str, engine: str) -> Any:
         da.rio.write_crs(proj4, inplace=True)
         da.rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
     return da
+
+
+def _source_signature(files: list[Path]) -> list[tuple[str, int, int]]:
+    """A cheap, order-independent signature of the input files (name, size, mtime).
+
+    Lets the cache detect added, removed or changed tiles without reading them.
+    """
+    sig = []
+    for f in files:
+        try:
+            st = f.stat()
+            sig.append((f.name, int(st.st_size), int(st.st_mtime)))
+        except OSError:
+            sig.append((f.name, -1, -1))
+    return sorted(sig)
+
+
+def _cache_key(raster_hydro_units: str | Path, config: dict, sources: list) -> str:
+    """A hash identifying an aggregation: discretization + options + input files.
+
+    The hydro-unit id raster (which fixes the discretization: geometry *and* the
+    per-pixel unit ids) is hashed together with the aggregation options and a
+    signature of the source files, so a cache is reused only for a truly equivalent
+    request and never mixed across discretizations.
+    """
+    import hashlib
+    import json
+
+    h = hashlib.sha256()
+    try:
+        h.update(Path(raster_hydro_units).read_bytes())
+    except OSError:
+        h.update(str(raster_hydro_units).encode())
+    h.update(json.dumps(config, sort_keys=True, default=str).encode())
+    h.update(json.dumps(sources, sort_keys=True, default=str).encode())
+    return h.hexdigest()[:16]
 
 
 def _date_from_name(

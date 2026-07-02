@@ -74,6 +74,49 @@ class ModelSetupHelper:
             other_columns=other_columns,
         )
 
+    def create_glacierized_hydro_units_from_csv_file(
+        self,
+        filename="hydro_units.csv",
+        unit_ids_filename="unit_ids.tif",
+        ice_thickness_filename="glaciers/ice_thickness.tif",
+        other_columns=None,
+        outline_filename="outline.shp",
+        dem_filename="dem.tif",
+    ):
+        """Create hydro units with a glacier land cover initialized from ice data.
+
+        The elevation bands and their attributes are read from the CSV (so the unit
+        ids keep matching the accompanying rasters/connectivity), the unit ids are
+        loaded from the raster, and the initial glacier fraction of each unit is
+        extracted from the ice-thickness raster with GlacierEvolutionDeltaH.
+        """
+        catchment_dir = TEST_FILES_DIR / self.catchment_name
+
+        catchment = hb.Catchment(
+            catchment_dir / outline_filename,
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
+        )
+        catchment.extract_dem(catchment_dir / dem_filename)
+        catchment.hydro_units.load_from_csv(
+            catchment_dir / filename,
+            column_elevation="elevation",
+            column_area="area",
+            other_columns=other_columns,
+        )
+        catchment.load_unit_ids_from_raster(str(catchment_dir / unit_ids_filename))
+        # Start every unit as fully 'open'; the glacier fraction is then taken from
+        # the ice-thickness raster. This also gives the ice-free units an explicit
+        # zero glacier fraction (instead of NaN, which would fail at model setup).
+        catchment.initialize_land_cover_fractions()
+        glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
+        glacier_evolution.compute_initial_ice_thickness(
+            catchment, ice_thickness=str(catchment_dir / ice_thickness_filename)
+        )
+
+        self.hydro_units = catchment.hydro_units
+        return self.hydro_units
+
     def get_forcing_data_from_csv_file(
         self,
         filename="meteo.csv",
@@ -160,14 +203,21 @@ class ModelSetupHelper:
         surface_runoff="linear_storage",
         snow_melt_process="melt:degree_day",
         record_all=False,
+        land_cover_types=None,
+        land_cover_names=None,
     ):
 
-        socont = models.Socont(
+        socont_kwargs = dict(
             soil_storage_nb=soil_storage_nb,
             surface_runoff=surface_runoff,
             snow_melt_process=snow_melt_process,
             record_all=record_all,
         )
+        if land_cover_types is not None:
+            socont_kwargs["land_cover_types"] = land_cover_types
+            socont_kwargs["land_cover_names"] = land_cover_names
+
+        socont = models.Socont(**socont_kwargs)
 
         socont.setup(
             spatial_structure=self.hydro_units,

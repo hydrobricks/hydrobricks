@@ -33,7 +33,9 @@ CATCHMENT_METEO = CATCHMENT_DIR / "meteo.csv"
 CATCHMENT_DISCHARGE = CATCHMENT_DIR / "discharge.csv"
 CATCHMENT_RASTER = CATCHMENT_DIR / "unit_ids_radiation.tif"
 CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / "connectivity_elevation_radiation.csv"
+CATCHMENT_OUTLINE = CATCHMENT_DIR / "outline.shp"
 DEM_RASTER = CATCHMENT_DIR / "dem.tif"
+GLACIER_ICE_THICKNESS = CATCHMENT_DIR / "glaciers" / "ice_thickness.tif"
 
 for with_snow_redistribution in [True, False]:
     working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
@@ -46,17 +48,25 @@ for with_snow_redistribution in [True, False]:
         print("Running model without snow redistribution")
         title = "Without snow redistribution (snow towers !)"
 
-    # Model structure
+    # Model structure. The Rhône @ Gletsch catchment is heavily glacierized, so a
+    # glacier land cover is added (its per-unit fraction is initialized from the
+    # ice-thickness raster further down).
     if with_snow_redistribution:
         socont = models.Socont(
             soil_storage_nb=2,
             surface_runoff="linear_storage",
             record_all=True,
             snow_redistribution="transport:snow_slide",
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
         )
     else:
         socont = models.Socont(
-            soil_storage_nb=2, surface_runoff="linear_storage", record_all=True
+            soil_storage_nb=2,
+            surface_runoff="linear_storage",
+            record_all=True,
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
         )
 
     # Parameters
@@ -65,6 +75,9 @@ for with_snow_redistribution in [True, False]:
         params = {
             "A": 300,
             "a_snow": 6,
+            "a_ice": 12,
+            "k_snow": 0.5,
+            "k_ice": 0.5,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
             "k_quick": 1,
@@ -80,6 +93,9 @@ for with_snow_redistribution in [True, False]:
         params = {
             "A": 300,
             "a_snow": 4,
+            "a_ice": 12,
+            "k_snow": 0.5,
+            "k_ice": 0.5,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
             "k_quick": 1,
@@ -88,14 +104,31 @@ for with_snow_redistribution in [True, False]:
 
     parameters.set_values(params)
 
-    # Hydro units
-    hydro_units = hb.HydroUnits()
-    hydro_units.load_from_csv(
+    # Hydro units, with a glacier land cover whose per-unit fraction is initialized
+    # from the ice-thickness raster. The bands are read from the CSV (so their unit
+    # ids keep matching the raster and the connectivity file) and the unit ids are
+    # loaded from the raster before extracting the glacier cover.
+    catchment = hb.Catchment(
+        CATCHMENT_OUTLINE,
+        land_cover_types=["open", "glacier"],
+        land_cover_names=["open", "glacier"],
+    )
+    catchment.extract_dem(DEM_RASTER)
+    catchment.hydro_units.load_from_csv(
         CATCHMENT_BANDS,
         column_elevation="elevation",
         column_area="area",
         other_columns={"slope": "slope"},
     )
+    catchment.load_unit_ids_from_raster(str(CATCHMENT_RASTER))
+    # Start every unit as fully 'open', then take the glacier fraction from the
+    # ice-thickness raster (this leaves the ice-free units with a zero, not NaN,
+    # glacier fraction).
+    catchment.initialize_land_cover_fractions()
+    hb.preprocessing.GlacierEvolutionDeltaH().compute_initial_ice_thickness(
+        catchment, ice_thickness=str(GLACIER_ICE_THICKNESS)
+    )
+    hydro_units = catchment.hydro_units
 
     # Load connectivity (computed as in compute_lateral_connectivity.py)
     if with_snow_redistribution:

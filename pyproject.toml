@@ -61,15 +61,11 @@ dev = [
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
 
 [tool.setuptools]
-packages = [
-    "hydrobricks",
-    "hydrobricks.models",
-    "hydrobricks.modules",
-    "hydrobricks.actions",
-    "hydrobricks.preprocessing",
-    "hydrobricks.evaluation"
-]
-package-dir = {"hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.modules" = "python/src/hydrobricks/modules", "hydrobricks.actions" = "python/src/hydrobricks/actions", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing", "hydrobricks.evaluation" = "python/src/hydrobricks/evaluation"}
+package-dir = {"" = "python/src"}
+
+[tool.setuptools.packages.find]
+where = ["python/src"]
+include = ["hydrobricks*"]
 
 [build-system]
 requires = [

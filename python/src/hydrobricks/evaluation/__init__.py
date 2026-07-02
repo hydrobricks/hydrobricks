@@ -15,11 +15,12 @@ It also exposes :func:`evaluate`, the HydroErr-based goodness-of-fit helper.
 from hydrobricks.evaluation.base import AuxiliaryObservation, RecordingRequest
 from hydrobricks.evaluation.discharge import DischargeObservations
 from hydrobricks.evaluation.glacier_mass_balance import GlacierMassBalanceObservations
-from hydrobricks.evaluation.metrics import evaluate
+from hydrobricks.evaluation.metrics import evaluate, to_skill
 from hydrobricks.evaluation.snow_cover import SnowCoverObservations
 
 __all__ = (
     "evaluate",
+    "to_skill",
     "DischargeObservations",
     "AuxiliaryObservation",
     "RecordingRequest",

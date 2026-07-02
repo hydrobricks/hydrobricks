@@ -13,6 +13,7 @@ from hydrobricks._optional import HAS_PATHOS, spotpy
 from hydrobricks.evaluation.metrics import (  # evaluate re-exported
     evaluate,
     is_error_metric,
+    to_skill,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,7 @@ class SpotpySetup:
         extra_observations: list[AuxiliaryObservation] | None = None,
         combine: str = "weighted",
         discharge_weight: float = 1.0,
+        normalize: bool = True,
     ) -> None:
         """
         Initialize SPOTPY setup for model calibration.
@@ -169,6 +171,14 @@ class SpotpySetup:
         discharge_weight
             Weight of the discharge term in the ``'weighted'`` combination.
             Default: 1.0
+        normalize
+            For ``combine='weighted'``, express each objective term as a benchmark
+            skill score (1 = perfect, 0 = no better than the mean/climatology of that
+            signal's observations) before weighting, so a discharge KGE/NSE and an
+            auxiliary RMSE share a comparable range and the weights are meaningful.
+            Error metrics become ``1 - value/reference``; skill metrics (nse, kge, ...)
+            and custom callables are left unchanged. Set ``False`` to combine the raw
+            oriented metrics as before. Ignored for ``'pareto'``. Default: True
 
         Raises
         ------
@@ -205,7 +215,7 @@ class SpotpySetup:
 
         # Validate and store the (optional) auxiliary-observation configuration.
         self._validate_and_set_extra_observations(
-            extra_observations, combine, discharge_weight
+            extra_observations, combine, discharge_weight, normalize
         )
 
         # Heavy objects: either provided eagerly, or built lazily by the factory
@@ -222,6 +232,7 @@ class SpotpySetup:
         extra_observations: list[AuxiliaryObservation] | None,
         combine: str,
         discharge_weight: float,
+        normalize: bool = True,
     ) -> None:
         """Validate and store the auxiliary-observation calibration settings.
 
@@ -235,6 +246,9 @@ class SpotpySetup:
         self._has_extra_obs = len(self.extra_observations) > 0
         self.combine = combine
         self.discharge_weight = discharge_weight
+        # Whether to combine the weighted terms as benchmark skill scores (see
+        # _oriented_term). Comparable ranges across heterogeneous metrics.
+        self.normalize = normalize
         # Per-observation lengths; finalized when the model is built (targets may be
         # restricted to the post-warmup simulation period).
         self._extra_lengths = [len(o) for o in self.extra_observations]
@@ -988,6 +1002,19 @@ class SpotpySetup:
             return -value if is_error_metric(self.obj_func) else value
         return self.obj_func(obs, sim)
 
+    def _oriented_term(self, value: float, metric: str, obs: np.ndarray) -> float:
+        """Orient a metric value to "higher is better" for the weighted combination.
+
+        With ``self.normalize`` (the default) it is turned into a benchmark skill score
+        (1 = perfect, 0 = the mean/climatology of ``obs``) via
+        :func:`~hydrobricks.evaluation.metrics.to_skill`, so heterogeneous terms (e.g. a
+        discharge KGE and an auxiliary RMSE) share a comparable range. Otherwise the raw
+        metric is oriented as before (error metrics negated).
+        """
+        if self.normalize:
+            return to_skill(value, metric, obs)
+        return -value if is_error_metric(metric) else value
+
     def _objective_with_extra_observations(
         self,
         simulation: list[np.ndarray],
@@ -1049,9 +1076,10 @@ class SpotpySetup:
                     return self._worst_score()
             else:  # objective
                 # Orient to a skill (higher is better) so error metrics (rmse, ...)
-                # combine correctly with the discharge skill.
+                # combine correctly with the discharge skill; normalized to a benchmark
+                # skill when self.normalize so the ranges are comparable.
                 value = evaluate(a_sim, a_obs, obs.metric)
-                skill = -value if is_error_metric(obs.metric) else value
+                skill = self._oriented_term(value, obs.metric, a_obs)
                 objective_terms.append((obs.weight, skill))
 
         if self.combine == "pareto":
@@ -1060,8 +1088,15 @@ class SpotpySetup:
             terms = [q_skill, *(skill for _w, skill in objective_terms)]
             return [(-t if self._minimize else t) for t in terms]
 
-        # Weighted single score.
-        combined_skill = self.discharge_weight * q_skill + sum(
+        # Weighted single score. The discharge term is normalized on the same benchmark
+        # skill scale as the auxiliary terms when it is a (string) error metric; a
+        # non-parametric KGE (obj_func None) or a custom callable is already a skill.
+        if self.normalize and isinstance(self.obj_func, str):
+            q_value = evaluate(combined[:q_len], obs_combined[:q_len], self.obj_func)
+            q_term = self._oriented_term(q_value, self.obj_func, obs_combined[:q_len])
+        else:
+            q_term = q_skill
+        combined_skill = self.discharge_weight * q_term + sum(
             weight * skill for weight, skill in objective_terms
         )
         return -combined_skill if self._minimize else combined_skill
@@ -1213,6 +1248,7 @@ def calibrate_from_factory(
     extra_observations: list[AuxiliaryObservation] | None = None,
     combine: str = "weighted",
     discharge_weight: float = 1.0,
+    normalize: bool = True,
     **algorithm_kwargs: Any,
 ) -> Any:
     """
@@ -1246,10 +1282,12 @@ def calibrate_from_factory(
         overrides any ``parameters.allow_changing`` set inside the factory.
     warmup, obj_func, dump_outputs, dump_forcing, dump_dir
         Forwarded to :class:`SpotpySetup`.
-    extra_observations, combine, discharge_weight
+    extra_observations, combine, discharge_weight, normalize
         Forwarded to :class:`SpotpySetup` to calibrate (also) on auxiliary signals
         such as glacier mass balance. ``extra_observations`` are light, picklable
         objects, so they are passed directly rather than rebuilt by the factory.
+        ``normalize`` (default True) combines the weighted terms as benchmark skill
+        scores so a discharge KGE/NSE and an auxiliary RMSE share a comparable range.
     dbname, dbformat, parallel, save_sim, n_workers, sample_kwargs,
     **algorithm_kwargs
         Forwarded to :func:`calibrate`.
@@ -1281,6 +1319,7 @@ def calibrate_from_factory(
         extra_observations=extra_observations,
         combine=combine,
         discharge_weight=discharge_weight,
+        normalize=normalize,
     )
     # Reuse the objects already built in this (main) process to avoid building
     # them twice here; workers rebuild via the factory after unpickling (the

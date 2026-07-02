@@ -70,7 +70,7 @@ START_DATE = "2009-01-01"
 END_DATE = "2020-12-31"
 REF_ELEVATION = 2702  # Reference altitude of the meteorological station [m]
 WARMUP = 365
-CALIBRATION_MAX_REP = 300  # Increase for a real calibration
+CALIBRATION_MAX_REP = 3000
 
 # Paths
 CATCHMENT_DIR = Path(

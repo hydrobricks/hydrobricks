@@ -32,7 +32,6 @@ all = [
     "geopandas",
     "graphviz",
     "h5netcdf",
-    "h5py",
     "matplotlib",
     "netCDF4",
     "pathos",

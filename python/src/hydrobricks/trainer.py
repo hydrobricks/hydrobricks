@@ -21,6 +21,14 @@ logger = logging.getLogger(__name__)
 # How the auxiliary-observation objective terms combine with the discharge term.
 COMBINE_MODES = ("weighted", "pareto")
 
+# Score given to a rejected/failed parameter set (see SpotpySetup._worst_score).
+# A large *finite* penalty rather than ±inf: it stays far worse than any real
+# skill score (which is O(1)), so rejected sets are still dominated by every
+# valid run, while keeping SPOTPY's NSGAII crowding-distance maths free of the
+# inf - inf = NaN that produced "invalid value encountered in subtract/divide"
+# RuntimeWarnings.
+_WORST_PENALTY = 1e12
+
 # Process-scoped cache of the heavy, C++-backed objects (model, forcing, obs)
 # built by a setup_factory. In parallel calibration SPOTPY pickles the work
 # function (which carries the SpotpySetup) and ships it to workers *per task*, so
@@ -980,7 +988,7 @@ class SpotpySetup:
         discharge plus each ``'objective'`` auxiliary signal), so the multi-objective
         sampler always receives a consistent-length objective.
         """
-        worst = np.inf if self._minimize else -np.inf
+        worst = _WORST_PENALTY if self._minimize else -_WORST_PENALTY
         if self._has_extra_obs and self.combine == "pareto":
             n_obj = 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
             return [worst] * n_obj
@@ -1226,6 +1234,11 @@ def calibrate(
     # requires n_obj); forward them when provided.
     sampler.sample(repetitions, **(sample_kwargs or {}))
 
+    # Stash the calibrated ParameterSet on the sampler so get_best/get_results can
+    # map the stored optimizer-space samples back to real values on their own,
+    # without the caller having to re-supply it.
+    sampler._hydrobricks_parameters = spot_setup.params
+
     return sampler
 
 
@@ -1345,7 +1358,36 @@ def _optimizer_minimizes(sampler: Any) -> bool:
     return getattr(sampler, "optimization_direction", "grid") == "minimize"
 
 
-def get_results(sampler: Any) -> Any:
+def _resolve_parameters(
+    sampler: Any, parameters: ParameterSet | None
+) -> ParameterSet | None:
+    """Pick the ParameterSet to back-transform with.
+
+    An explicit ``parameters`` argument wins; otherwise fall back to the set stashed
+    on the sampler by :func:`calibrate` (present for any sampler this module returns).
+    """
+    if parameters is not None:
+        return parameters
+    return getattr(sampler, "_hydrobricks_parameters", None)
+
+
+def _to_real_values(
+    name: str, values: np.ndarray, parameters: ParameterSet | None
+) -> np.ndarray:
+    """Map a parameter column from optimizer (transformed) space to real values.
+
+    Returns ``values`` unchanged when no ParameterSet is given or the parameter has
+    no transform. Otherwise applies the parameter's ``to_real`` element-wise.
+    """
+    if parameters is None:
+        return values
+    transform = parameters.get_transform(name)
+    if transform is None:
+        return values
+    return np.array([transform.to_real(v) for v in values], dtype=float)
+
+
+def get_results(sampler: Any, parameters: ParameterSet | None = None) -> Any:
     """Return the calibration results as a DataFrame, scores in skill space.
 
     SPOTPY stores the objective exactly as it was handed to the optimizer, which is
@@ -1359,6 +1401,15 @@ def get_results(sampler: Any) -> Any:
     ----------
     sampler
         The sampler returned by :func:`calibrate` / :func:`calibrate_from_factory`.
+    parameters
+        The ParameterSet that was calibrated. SPOTPY samples — and therefore the
+        stored ``par`` columns — are in the optimizer's *transformed* space; each
+        parameter column is mapped back to its real value using that parameter's
+        transform, so the returned values match what the model actually used.
+        Parameters without a transform are left unchanged. This argument is optional:
+        :func:`calibrate` stashes the calibrated ParameterSet on the sampler, so the
+        back-transform happens automatically. Pass it only to override that stashed
+        set (e.g. an unpickled sampler that lost it).
 
     Returns
     -------
@@ -1370,6 +1421,7 @@ def get_results(sampler: Any) -> Any:
     """
     import pandas as pd
 
+    parameters = _resolve_parameters(sampler, parameters)
     data = sampler.getdata()
     sign = -1.0 if _optimizer_minimizes(sampler) else 1.0
     names = data.dtype.names
@@ -1383,11 +1435,12 @@ def get_results(sampler: Any) -> Any:
         for n in sorted(like_cols):
             out[f"score{n[len('like'):]}"] = sign * np.asarray(data[n], dtype=float)
     for n in par_cols:
-        out[n[len("par") :]] = np.asarray(data[n], dtype=float)
+        name = n[len("par") :]
+        out[name] = _to_real_values(name, np.asarray(data[n], dtype=float), parameters)
     return pd.DataFrame(out)
 
 
-def get_best(sampler: Any) -> dict[str, Any]:
+def get_best(sampler: Any, parameters: ParameterSet | None = None) -> dict[str, Any]:
     """Return the best parameter set and its score (skill space, higher is better).
 
     Convenience over :func:`get_results` for single-objective calibrations: it
@@ -1399,6 +1452,14 @@ def get_best(sampler: Any) -> dict[str, Any]:
     ----------
     sampler
         The sampler returned by :func:`calibrate` / :func:`calibrate_from_factory`.
+    parameters
+        The ParameterSet that was calibrated. The stored parameter values are in the
+        optimizer's *transformed* space; the returned ``'parameters'`` are mapped back
+        to real values via each parameter's transform, so they can be passed straight
+        to ``ParameterSet.set_values(...)``. Parameters without a transform are
+        unchanged. This argument is optional: :func:`calibrate` stashes the calibrated
+        ParameterSet on the sampler, so the back-transform happens automatically. Pass
+        it only to override that stashed set (e.g. an unpickled sampler that lost it).
 
     Returns
     -------
@@ -1413,6 +1474,7 @@ def get_best(sampler: Any) -> dict[str, Any]:
         best run is not defined — use :func:`get_results` and select a point on the
         Pareto front instead.
     """
+    parameters = _resolve_parameters(sampler, parameters)
     data = sampler.getdata()
     names = data.dtype.names
     like_cols = [n for n in names if n.startswith("like")]
@@ -1435,7 +1497,12 @@ def get_best(sampler: Any) -> dict[str, Any]:
             reason="All runs rejected or non-finite",
         )
     best = int(np.nanargmax(scores))
-    params = {
-        n[len("par") :]: float(data[n][best]) for n in names if n.startswith("par")
-    }
+    params = {}
+    for n in names:
+        if not n.startswith("par"):
+            continue
+        name = n[len("par") :]
+        value = float(data[n][best])
+        transform = parameters.get_transform(name) if parameters is not None else None
+        params[name] = transform.to_real(value) if transform is not None else value
     return {"score": float(scores[best]), "parameters": params, "index": best}

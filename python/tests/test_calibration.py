@@ -284,6 +284,42 @@ def test_get_best_returns_metric_space_score():
     assert best["score"] <= 1.0 + 1e-9
 
 
+def test_get_best_back_transforms_parameters_to_real_values():
+    """get_best returns real values by default, using the ParameterSet stashed on
+    the sampler by calibrate — no need for the caller to re-supply it."""
+    params = build_params()
+    # k_slow_1 (slow_reservoir:response_factor) carries a log transform, so its
+    # stored 'par' value is in optimizer space (a log, typically negative).
+    params.allow_changing = ["k_slow_1"]
+    spot_setup = trainer.SpotpySetup.from_factory(
+        build_setup_objects, params, warmup=WARMUP, obj_func="kge_2012"
+    )
+    sampler = trainer.calibrate(spot_setup, "sceua", 30, dbformat="ram")
+
+    # calibrate stashes the ParameterSet on the sampler.
+    assert sampler._hydrobricks_parameters is params
+
+    # Default (no ParameterSet argument): values are already back-transformed.
+    real = trainer.get_best(sampler)["parameters"]["k_slow_1"]
+    transform = params.get_transform("k_slow_1")
+    assert transform is not None
+    # The raw stored value is the optimizer-space log; confirm real is its to_real.
+    data = sampler.getdata()
+    raw = float(data["park_slow_1"][int(np.nanargmax(-data["like1"]))])
+    assert np.isclose(real, transform.to_real(raw))
+    assert not np.isclose(real, raw)  # a transform really was applied
+
+    # Real values respect the parameter range and can be stored back directly.
+    assert real >= 0.0001
+    params.set_values(trainer.get_best(sampler)["parameters"])
+
+    # get_results is back-transformed too: every value is a real rate in range,
+    # and the best row equals what get_best reports.
+    df = trainer.get_results(sampler)
+    assert (df["k_slow_1"] >= 0.0001).all()
+    assert np.isclose(df["k_slow_1"].iloc[trainer.get_best(sampler)["index"]], real)
+
+
 def test_get_results_grid_algorithm_no_sign_flip():
     """For a non-minimizing (grid) algorithm, scores equal the stored objective."""
     params = build_params()

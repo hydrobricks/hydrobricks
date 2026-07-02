@@ -1189,6 +1189,26 @@ class ParameterSet:
                 )
             self.parameters.loc[index, "value"] = value
 
+    def get_transform(self, name: str) -> ParameterTransform | None:
+        """
+        Return the transform attached to a parameter, or None.
+
+        Parameters
+        ----------
+        name
+            The name or one of the aliases of the parameter.
+
+        Returns
+        -------
+        ParameterTransform | None
+            The transform if one is set, otherwise None. Parameters without a
+            transform (or unknown names) return None.
+        """
+        index = self._get_parameter_index(name, raise_exception=False)
+        if index is None:
+            return None
+        return self._get_transform(index)
+
     def has(self, name: str) -> bool:
         """
         Check if a parameter exists.

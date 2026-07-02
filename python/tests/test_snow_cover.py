@@ -233,6 +233,7 @@ def test_from_netcdf_valid_max_filters_quality_codes(tmp_path):
 
 def test_from_hdf5_matches_netcdf(tmp_path):
     pytest.importorskip("h5netcdf")
+    pytest.importorskip("h5py")  # h5netcdf's default backend for read/write
     xr = pytest.importorskip("xarray")
     pytest.importorskip("rioxarray")
     pytest.importorskip("rasterio")

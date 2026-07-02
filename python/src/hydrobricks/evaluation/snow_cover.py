@@ -479,6 +479,14 @@ class SnowCoverObservations(AuxiliaryObservation):
                 operation="SnowCoverObservations.from_hdf5",
                 install_command="pip install h5netcdf",
             )
+        if engine == "h5netcdf" and not is_module_available("h5py"):
+            raise DependencyError(
+                "h5py is required as the h5netcdf backend to read HDF5 snow "
+                "cover data.",
+                package_name="h5py",
+                operation="SnowCoverObservations.from_hdf5",
+                install_command="pip install h5py",
+            )
 
         build_kwargs = dict(
             swe_full=swe_full,

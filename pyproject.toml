@@ -32,6 +32,7 @@ all = [
     "geopandas",
     "graphviz",
     "h5netcdf",
+    "h5py",
     "matplotlib",
     "netCDF4",
     "pathos",
@@ -102,7 +103,7 @@ ignore-words-list = "crate, mape, ned, PADDS"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37*", "cp38*", "cp39*", "cp314t*", "pp*"]
+skip = ["*musllinux*", "cp38*", "cp39*", "cp314t*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

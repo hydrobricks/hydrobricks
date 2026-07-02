@@ -13,7 +13,6 @@ from hydrobricks._optional import (
     HAS_SHAPELY,
     gpd,
 )
-from hydrobricks.preprocessing.glacier_cover import _mask_dem
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -263,7 +262,7 @@ class CatchmentLandCover:
             subset = gdf[gdf[class_field] == class_value]
             if subset.empty:
                 continue
-            masked = _mask_dem(catchment, subset, nodata=-9999, all_touched=all_touched)
+            masked = catchment.mask_dem(subset, nodata=-9999, all_touched=all_touched)
             present = (masked != -9999) & ~assigned
             classes[present] = self._as_int_class(class_value)
             assigned |= present

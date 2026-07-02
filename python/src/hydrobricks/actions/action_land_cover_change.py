@@ -9,7 +9,7 @@ import pandas as pd
 
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._hydrobricks import ActionLandCoverChange as _ActionLandCoverChange
-from hydrobricks._optional import HAS_GEOPANDAS, HAS_RASTERIO, HAS_SHAPELY, gpd
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_SHAPELY, gpd
 from hydrobricks._units import Unit, convert_unit
 from hydrobricks._utils import compute_area, date_as_mjd
 from hydrobricks.actions import Action
@@ -19,11 +19,8 @@ from hydrobricks.hydro_units import HydroUnits
 logger = logging.getLogger(__name__)
 
 if HAS_SHAPELY:
-    from shapely.geometry import MultiPolygon, mapping
+    from shapely.geometry import MultiPolygon
     from shapely.ops import unary_union
-
-if HAS_RASTERIO:
-    from rasterio.mask import mask
 
 m2 = Unit.M2
 km2 = Unit.KM2
@@ -523,13 +520,11 @@ class ActionLandCoverChange(Action):
             )
 
         # Get the glacier mask
-        glaciers_mask = self._mask_dem(
-            catchment, glaciers, nodata=0, all_touched=all_touched
-        )
+        glaciers_mask = catchment.mask_dem(glaciers, nodata=0, all_touched=all_touched)
         debris_mask = None
         if debris_shapefile is not None:
-            debris_mask = self._mask_dem(
-                catchment, glaciers_debris, nodata=0, all_touched=all_touched
+            debris_mask = catchment.mask_dem(
+                glaciers_debris, nodata=0, all_touched=all_touched
             )
 
         unit_ids = catchment.hydro_units.hydro_units[("id", "-")].values
@@ -741,44 +736,6 @@ class ActionLandCoverChange(Action):
         df = df[["geometry"]]
 
         return df
-
-    @staticmethod
-    def _mask_dem(
-        catchment: Catchment,
-        shapefile: gpd.GeoDataFrame,
-        nodata: float,
-        all_touched: bool = False,
-    ) -> np.ndarray:
-        """
-        Create a raster mask from shapefile geometries.
-
-        Parameters
-        ----------
-        catchment
-            The catchment whose DEM extent and resolution are used.
-        shapefile
-            GeoDataFrame containing geometries to rasterize.
-        nodata
-            Value to assign to cells outside the shapefile geometries.
-        all_touched
-            If True, all touched pixels are included. If False, only pixels
-            whose center is within the geometry are included. Default: False
-
-        Returns
-        -------
-        np.ndarray
-            2D binary mask array with same dimensions as DEM, where
-            geometries are marked with 1 and non-geometry areas with nodata value.
-        """
-        geoms = []
-        for geo in shapefile.geometry.values:
-            geoms.append(mapping(geo))
-        dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=all_touched)
-        dem_masked[dem_masked == catchment.dem.nodata] = nodata
-        if len(dem_masked.shape) == 3:
-            dem_masked = dem_masked[0]
-
-        return dem_masked
 
     @staticmethod
     def _match_hydro_unit_ids(

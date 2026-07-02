@@ -7,16 +7,13 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
-from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY, gpd
+from hydrobricks._optional import HAS_PYPROJ, HAS_SHAPELY, gpd
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
 
 if HAS_SHAPELY:
-    from shapely.geometry import MultiPolygon, mapping
-
-if HAS_RASTERIO:
-    from rasterio.mask import mask
+    from shapely.geometry import MultiPolygon
 
 
 def extract_ice_thickness_and_mask(
@@ -100,7 +97,7 @@ def extract_glacier_mask_from_shapefile(
     glaciers = _simplify_df_geometries(glaciers)
 
     # Get the glacier mask
-    glaciers_mask = _mask_dem(catchment, glaciers, -9999)
+    glaciers_mask = catchment.mask_dem(glaciers, -9999)
 
     return glaciers_mask
 
@@ -257,23 +254,6 @@ def _glacier_area_per_unit(
         rows.append([unit_id, area])
 
     return pd.DataFrame(rows, columns=[("hydro_unit_id", "-"), ("glacier_area", "m2")])
-
-
-def _mask_dem(
-    catchment: Catchment,
-    shapefile: gpd.GeoDataFrame,
-    nodata: int = -9999,
-    all_touched: bool = True,
-) -> np.ndarray:
-    geoms = []
-    for geo in shapefile.geometry.values:
-        geoms.append(mapping(geo))
-    dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=all_touched)
-    dem_masked[dem_masked == catchment.dem.nodata] = nodata
-    if len(dem_masked.shape) == 3:
-        dem_masked = dem_masked[0]
-
-    return dem_masked
 
 
 def _simplify_df_geometries(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:

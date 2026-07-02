@@ -281,3 +281,78 @@ def test_discretize_by_sub_catchments_requires_file():
     catchment.extract_dem(SITTER_DEM)
     with pytest.raises(ConfigurationError):
         catchment.discretize_by(["elevation", "sub_catchments"], elevation_distance=50)
+
+
+def test_discretize_by_sub_catchments_incomplete_coverage_raises():
+    if not has_required_packages():
+        return
+    from shapely.geometry import box
+
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        shp = Path(tmp_dir) / "partial_sub_catchments.shp"
+        # A single polygon covering only the left ~40% of the catchment bbox, so part
+        # of the catchment is left uncovered.
+        b = catchment.dem.bounds
+        x_cut = b.left + 0.4 * (b.right - b.left)
+        gdf = hb.gpd.GeoDataFrame(
+            {"id": [1], "geometry": [box(b.left, b.bottom, x_cut, b.top)]},
+            crs=catchment.crs,
+        )
+        gdf.to_file(shp)
+
+        with pytest.raises(DataError):
+            catchment.discretize_by(
+                ["elevation", "sub_catchments"],
+                elevation_distance=50,
+                sub_catchments=shp,
+            )
+
+
+def test_land_cover_presets_available():
+    from hydrobricks.preprocessing import CatchmentLandCover
+
+    assert set(CatchmentLandCover.PRESETS) == {"esa_worldcover", "corine"}
+    assert CatchmentLandCover.ESA_WORLDCOVER_2021[10] == "forest"
+    assert CatchmentLandCover.ESA_WORLDCOVER_2021[70] == "glacier"
+
+
+def test_land_cover_lazy_property_raster():
+    if not has_required_packages():
+        return
+    catchment = _discretized_catchment()
+
+    # Same object is returned on repeated access (lazy property caching).
+    assert catchment.land_cover is catchment.land_cover
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        raster = Path(tmp_dir) / "worldcover.tif"
+        _write_worldcover_raster(
+            raster, catchment, lambda r, c: np.full((r, c), 10, dtype="uint8")
+        )
+        catchment.land_cover.extract_from_raster(raster, dataset="esa_worldcover")
+
+    forest = catchment.hydro_units.hydro_units[
+        ("fraction-forest", "fraction")
+    ].to_numpy()
+    assert np.allclose(forest, 1.0, atol=1e-6)
+
+
+def test_land_cover_lazy_property_shapefile():
+    if not has_required_packages():
+        return
+    catchment = _discretized_catchment()
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        shp = Path(tmp_dir) / "landcover.shp"
+        _write_polygon_shapefile(shp, catchment, [10])
+        catchment.land_cover.extract_from_shapefile(
+            shp, class_field="lc", dataset="esa_worldcover"
+        )
+
+    forest = catchment.hydro_units.hydro_units[
+        ("fraction-forest", "fraction")
+    ].to_numpy()
+    assert np.allclose(forest, 1.0, atol=1e-6)

@@ -811,6 +811,49 @@ class Catchment:
 
         return shapely.geometry.box(x_min, y_min, x_max, y_max)
 
+    def mask_dem(
+        self,
+        shapefile: gpd.GeoDataFrame,
+        nodata: float = -9999,
+        all_touched: bool = True,
+    ) -> np.ndarray:
+        """
+        Rasterize vector geometries onto the DEM grid.
+
+        Masks the catchment DEM with the geometries of ``shapefile`` (which must be in
+        the catchment CRS): cells covered by a geometry keep their DEM value, cells
+        outside get ``nodata``. Used to derive per-cell presence masks from polygons
+        (e.g. land cover, glacier extent, sub-catchments).
+
+        Parameters
+        ----------
+        shapefile
+            GeoDataFrame of geometries, expressed in the catchment CRS.
+        nodata
+            Value assigned to cells outside the geometries. Default: -9999.
+        all_touched
+            If True (default), every cell touched by a geometry is included; if False,
+            only cells whose centre falls within a geometry.
+
+        Returns
+        -------
+        np.ndarray
+            2D array over the DEM grid holding the DEM value where a geometry is present
+            and ``nodata`` elsewhere.
+        """
+        if not HAS_RASTERIO:
+            raise ImportError("rasterio is required to do this.")
+        if not HAS_SHAPELY:
+            raise ImportError("shapely is required to do this.")
+
+        geoms = [mapping(geo) for geo in shapefile.geometry.values]
+        dem_masked, _ = mask(self.dem, geoms, crop=False, all_touched=all_touched)
+        dem_masked[dem_masked == self.dem.nodata] = nodata
+        if len(dem_masked.shape) == 3:
+            dem_masked = dem_masked[0]
+
+        return dem_masked
+
     def initialize_area_from_land_cover_change(
         self, land_cover_name: str, land_cover_change: pd.DataFrame
     ) -> None:

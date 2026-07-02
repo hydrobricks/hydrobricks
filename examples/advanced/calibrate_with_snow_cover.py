@@ -126,7 +126,7 @@ snow_cover = hb.SnowCoverObservations.from_modis(
     end_date=END_DATE,
     swe_full=SWE_FULL,
     metric="rmse",  # the default; lower error -> higher skill internally
-    weight=1.0,
+    weight=0.3,
     mode="objective",
     cache_dir=catchment_dir / "snow_cover_cache",  # Cache the per-unit fractions
 )

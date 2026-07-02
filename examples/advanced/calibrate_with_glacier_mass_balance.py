@@ -224,8 +224,8 @@ parameters = build_parameters()
 
 # The mass-balance signal carries its own metric/weight/mode; here it is an
 # 'objective' term (used by the weighted and pareto combinations below).
-glacier_mb.metric = "nse"
-glacier_mb.weight = 1.0
+glacier_mb.metric = "rmse"
+glacier_mb.weight = 0.5
 glacier_mb.mode = "objective"
 
 print("\n=== combine='weighted': single score combining discharge and mass balance ===")
@@ -258,7 +258,7 @@ glacier_mb_constraint = hb.GlacierMassBalanceObservations.from_glamos(
     start_date=START_DATE,
     end_date=END_DATE,
     mode="constraint",
-    tolerance=800.0,
+    relative_tolerance=0.3,
 )
 spot_setup_c = trainer.SpotpySetup(
     model,
@@ -288,12 +288,16 @@ spot_setup_p = trainer.SpotpySetup(
     extra_observations=[glacier_mb],
     combine="pareto",
 )
+# Unlike SCE-UA, NSGAII's first sample() argument is the number of *generations*,
+# not the total number of runs: it performs generations * n_pop model evaluations.
+# Divide by n_pop so the total stays comparable to CALIBRATION_MAX_REP.
+NSGAII_POP = 20
 sampler_p = trainer.calibrate(
     spot_setup_p,
     "NSGAII",
-    CALIBRATION_MAX_REP,
+    CALIBRATION_MAX_REP // NSGAII_POP,
     dbformat="ram",
-    sample_kwargs={"n_obj": 2, "n_pop": 20},
+    sample_kwargs={"n_obj": 2, "n_pop": NSGAII_POP},
 )
 results_p = sampler_p.getdata()
 print(f"Pareto sampler produced {len(results_p)} evaluations.")

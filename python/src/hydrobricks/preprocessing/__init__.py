@@ -1,6 +1,7 @@
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
+from hydrobricks.preprocessing.glacier_cover import initialize_glacier_cover_from_extent
 from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
 )
@@ -14,4 +15,5 @@ __all__ = (
     "GlacierEvolutionDeltaH",
     "GlacierEvolutionAreaScaling",
     "PotentialSolarRadiation",
+    "initialize_glacier_cover_from_extent",
 )

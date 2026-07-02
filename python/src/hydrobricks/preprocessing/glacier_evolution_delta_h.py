@@ -8,17 +8,16 @@ import pandas as pd
 
 from hydrobricks._constants import ICE_WE
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
-from hydrobricks._optional import HAS_PYPROJ, HAS_RASTERIO, HAS_SHAPELY, gpd, rasterio
+from hydrobricks._optional import HAS_PYPROJ, rasterio
+from hydrobricks.preprocessing.glacier_cover import (
+    extract_glacier_mask_from_shapefile,
+    extract_ice_thickness_and_mask,
+    initialize_glacier_cover,
+)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
     from hydrobricks.hydro_units import HydroUnits
-
-if HAS_SHAPELY:
-    from shapely.geometry import MultiPolygon, mapping
-
-if HAS_RASTERIO:
-    from rasterio.mask import mask
 
 
 class GlacierEvolutionDeltaH:
@@ -332,31 +331,16 @@ class GlacierEvolutionDeltaH:
 
         # Extract the ice thickness from a TIF file created either from geophysical
         # measurements or calculated based on an inversion of surface topography
-        # (Farinotti et al., 2009a,b; Huss et al., 2010)).
+        # (Farinotti et al., 2009a,b; Huss et al., 2010)), or the glacier cover from
+        # a shapefile. The ice-thickness branch leaves ``ice_thickness`` as the
+        # resampled array (used below); the shapefile branch keeps it None, which
+        # selects the Bahr (1997) thickness estimation.
         if ice_thickness is not None:
-            if not HAS_PYPROJ:
-                raise DependencyError(
-                    "pyproj is required to process glacier ice thickness data.",
-                    package_name="pyproj",
-                    operation="GlacierEvolutionDeltaH.initialize_from_glacier_data",
-                    install_command="pip install pyproj",
-                )
-
-            # Extract the ice thickness and resample it to the DEM resolution
-            catchment.extract_attribute_raster(
-                ice_thickness,
-                "ice_thickness",
-                resample_to_dem_resolution=True,
-                resampling="average",
+            ice_thickness, glaciers_mask = extract_ice_thickness_and_mask(
+                catchment, ice_thickness
             )
-            ice_thickness = catchment.attributes["ice_thickness"]["data"]
-            ice_thickness[catchment.dem_data == 0] = 0.0
-
-            glaciers_mask = np.zeros(catchment.dem_data.shape)
-            glaciers_mask[ice_thickness > 0] = 1
         else:
-            # Extract the glacier cover from the shapefile
-            glaciers_mask = self._extract_glacier_mask_from_shapefile(
+            glaciers_mask = extract_glacier_mask_from_shapefile(
                 catchment, glacier_outline
             )
 
@@ -424,7 +408,7 @@ class GlacierEvolutionDeltaH:
         self.catchment_area = np.sum(self.hydro_units.area.values)
 
         if initialize_cover:
-            _initialize_glacier_cover(catchment, self.glacier_df, land_cover)
+            initialize_glacier_cover(catchment, self.glacier_df, land_cover)
 
         return self.glacier_df
 
@@ -1161,30 +1145,6 @@ class GlacierEvolutionDeltaH:
 
         return elevations, map_bands_ids
 
-    def _extract_glacier_mask_from_shapefile(
-        self, catchment: Catchment, glacier_outline: str | Path
-    ) -> np.ndarray:
-        """Extract the glacier cover from shapefiles."""
-        # Clip the glaciers to the catchment extent
-        all_glaciers = gpd.read_file(glacier_outline)
-        all_glaciers.to_crs(catchment.crs, inplace=True)
-        if catchment.outline[0].geom_type == "MultiPolygon":
-            glaciers = gpd.clip(all_glaciers, catchment.outline[0])
-        elif catchment.outline[0].geom_type == "Polygon":
-            glaciers = gpd.clip(all_glaciers, MultiPolygon(catchment.outline))
-        else:
-            raise DataError(
-                "The catchment outline must be a (multi)polygon.",
-                data_type="catchment outline",
-                reason="Invalid geometry type",
-            )
-        glaciers = self._simplify_df_geometries(glaciers)
-
-        # Get the glacier mask
-        glaciers_mask = self._mask_dem(catchment, glaciers, -9999)
-
-        return glaciers_mask
-
     @staticmethod
     def _get_glacier_patches(
         catchment: Catchment, map_bands_ids: np.ndarray, glaciers_mask: np.ndarray
@@ -1211,77 +1171,3 @@ class GlacierEvolutionDeltaH:
                 glacier_patches.append((band_id, unit_id, area))
 
         return glacier_patches
-
-    @staticmethod
-    def _mask_dem(
-        catchment: Catchment, shapefile: gpd.GeoDataFrame, nodata: int = -9999
-    ) -> np.ndarray:
-        geoms = []
-        for geo in shapefile.geometry.values:
-            geoms.append(mapping(geo))
-        dem_masked, _ = mask(catchment.dem, geoms, crop=False, all_touched=True)
-        dem_masked[dem_masked == catchment.dem.nodata] = nodata
-        if len(dem_masked.shape) == 3:
-            dem_masked = dem_masked[0]
-
-        return dem_masked
-
-    @staticmethod
-    def _simplify_df_geometries(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        # Merge the polygons
-        df["new_col"] = 0
-        df = df.dissolve(by="new_col", as_index=False)
-        # Drop all columns except the geometry
-        df = df[["geometry"]]
-
-        return df
-
-
-def _initialize_glacier_cover(
-    catchment: Catchment, glacier_df: pd.DataFrame, land_cover: str | None = None
-) -> None:
-    """Initialize the glacier cover of each hydro unit from per-unit glacier areas.
-
-    Aggregates ``glacier_df`` (with ``(hydro_unit_id, -)`` and ``(glacier_area, m2)``
-    columns) per hydro unit and sets the ``land_cover`` fractions on the catchment,
-    so the glacier land cover starts with its actual area. When ``land_cover`` is
-    None, the (single) land cover of type ``glacier`` is detected from the catchment.
-    """
-    if land_cover is None:
-        land_cover = _detect_glacier_cover(catchment)
-    areas = (
-        pd.DataFrame(
-            {
-                "hydro_unit": glacier_df[("hydro_unit_id", "-")].to_numpy(),
-                "area": glacier_df[("glacier_area", "m2")].to_numpy(),
-            }
-        )
-        .groupby("hydro_unit", as_index=False)["area"]
-        .sum()
-    )
-    catchment.initialize_area_from_land_cover_change(land_cover, areas)
-
-
-def _detect_glacier_cover(catchment: Catchment) -> str:
-    """Return the name of the (single) land cover of type ``glacier``.
-
-    Raises a ConfigurationError if there is no glacier cover, or more than one (in
-    which case the caller must pass ``land_cover`` explicitly).
-    """
-    glacier_covers = [
-        name
-        for name, cover_type in zip(
-            catchment.hydro_units.land_cover_names,
-            catchment.hydro_units.land_cover_types,
-        )
-        if cover_type == "glacier"
-    ]
-    if len(glacier_covers) != 1:
-        raise ConfigurationError(
-            "Could not determine the glacier land cover automatically "
-            f"(found {glacier_covers}); pass land_cover explicitly.",
-            item_name="land_cover",
-            item_value=glacier_covers,
-            reason="Expected exactly one land cover of type 'glacier'",
-        )
-    return glacier_covers[0]

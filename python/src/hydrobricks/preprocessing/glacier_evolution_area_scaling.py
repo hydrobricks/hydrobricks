@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._constants import ICE_WE
-from hydrobricks._exceptions import ConfigurationError, DependencyError
-from hydrobricks._optional import HAS_PYPROJ
-from hydrobricks.preprocessing.glacier_evolution_delta_h import (
-    _initialize_glacier_cover,
+from hydrobricks._exceptions import ConfigurationError
+from hydrobricks.preprocessing.glacier_cover import (
+    extract_ice_thickness_and_mask,
+    initialize_glacier_cover,
 )
 
 if TYPE_CHECKING:
@@ -84,15 +84,6 @@ class GlacierEvolutionAreaScaling:
                 reason="Catchment not initialized",
             )
 
-        # Extract the ice thickness from a TIF file.
-        if not HAS_PYPROJ:
-            raise DependencyError(
-                "pyproj is required to extract glacier thickness.",
-                package_name="pyproj",
-                operation="GlacierEvolutionAreaScaling.compute_lookup_table",
-                install_command="pip install pyproj",
-            )
-
         self.hydro_units = catchment.hydro_units.hydro_units
         self.catchment_area = np.sum(self.hydro_units.area.values)
 
@@ -109,7 +100,7 @@ class GlacierEvolutionAreaScaling:
         self._update_lookup_tables()
 
         if initialize_cover:
-            _initialize_glacier_cover(catchment, self.glacier_df, land_cover)
+            initialize_glacier_cover(catchment, self.glacier_df, land_cover)
 
     def get_lookup_table_area(self) -> pd.DataFrame:
         """
@@ -215,16 +206,9 @@ class GlacierEvolutionAreaScaling:
         ice_thickness
             Path to ice thickness raster file.
         """
-        catchment.extract_attribute_raster(
-            ice_thickness,
-            "ice_thickness",
-            resample_to_dem_resolution=True,
-            resampling="average",
+        ice_thickness, glaciers_mask = extract_ice_thickness_and_mask(
+            catchment, ice_thickness
         )
-        ice_thickness = catchment.attributes["ice_thickness"]["data"]
-        ice_thickness[catchment.dem_data == 0] = 0.0
-        glaciers_mask = np.zeros(catchment.dem_data.shape)
-        glaciers_mask[ice_thickness > 0] = 1
 
         glacier_patches = self._get_glacier_patches(catchment, glaciers_mask)
 

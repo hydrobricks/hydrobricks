@@ -125,7 +125,7 @@ for with_snow_redistribution in [True, False]:
     # ice-thickness raster (this leaves the ice-free units with a zero, not NaN,
     # glacier fraction).
     catchment.initialize_land_cover_fractions()
-    hb.preprocessing.GlacierEvolutionDeltaH().compute_initial_ice_thickness(
+    hb.preprocessing.initialize_glacier_cover_from_extent(
         catchment, ice_thickness=str(GLACIER_ICE_THICKNESS)
     )
     hydro_units = catchment.hydro_units

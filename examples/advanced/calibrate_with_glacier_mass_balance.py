@@ -109,11 +109,11 @@ catchment = hb.Catchment(
 catchment.extract_dem(CATCHMENT_DEM)
 catchment.create_elevation_bands(method="equal_intervals", distance=100)
 
-glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
-# compute_initial_ice_thickness initializes the glacier cover of each hydro unit by
-# default (initialize_cover=True), so the glacier land cover already starts with its
-# actual area — no separate initialize_area_from_land_cover_change call is needed.
-glacier_df = glacier_evolution.compute_initial_ice_thickness(
+# The glacier geometry stays fixed here (static glacier), so only the initial cover
+# is needed — not a delta-h lookup table. initialize_glacier_cover_from_extent sets
+# the glacier land-cover fractions of each hydro unit directly from the ice-thickness
+# raster, without the elevation-band discretization compute_initial_ice_thickness does.
+hb.preprocessing.initialize_glacier_cover_from_extent(
     catchment, ice_thickness=GLACIER_ICE_THICKNESS
 )
 hydro_units = catchment.hydro_units

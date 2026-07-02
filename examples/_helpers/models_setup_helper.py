@@ -88,7 +88,8 @@ class ModelSetupHelper:
         The elevation bands and their attributes are read from the CSV (so the unit
         ids keep matching the accompanying rasters/connectivity), the unit ids are
         loaded from the raster, and the initial glacier fraction of each unit is
-        extracted from the ice-thickness raster with GlacierEvolutionDeltaH.
+        extracted from the ice-thickness raster with
+        ``initialize_glacier_cover_from_extent``.
         """
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
@@ -109,8 +110,7 @@ class ModelSetupHelper:
         # the ice-thickness raster. This also gives the ice-free units an explicit
         # zero glacier fraction (instead of NaN, which would fail at model setup).
         catchment.initialize_land_cover_fractions()
-        glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH()
-        glacier_evolution.compute_initial_ice_thickness(
+        hb.preprocessing.initialize_glacier_cover_from_extent(
             catchment, ice_thickness=str(catchment_dir / ice_thickness_filename)
         )
 

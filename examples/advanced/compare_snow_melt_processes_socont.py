@@ -63,7 +63,7 @@ for method in methods:
             elevation_distance=50,
         )
         aspect_catchment.initialize_land_cover_fractions()
-        hb.preprocessing.GlacierEvolutionDeltaH().compute_initial_ice_thickness(
+        hb.preprocessing.initialize_glacier_cover_from_extent(
             aspect_catchment,
             ice_thickness=str(catchment_dir / "glaciers" / "ice_thickness.tif"),
         )

@@ -70,6 +70,15 @@ class LandCover : public Brick {
     }
 
     /**
+     * Restore the area fraction to the initial extent without touching the stored
+     * content (used after the spin-up phase, where the warmed-up states are kept but
+     * the extents must match the declared initial ones).
+     */
+    void RestoreInitialAreaFraction() {
+        SetAreaFraction(_initialAreaFraction);
+    }
+
+    /**
      * @copydoc Brick::IsLandCover()
      */
     [[nodiscard]] bool IsLandCover() const override {

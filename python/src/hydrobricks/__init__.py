@@ -51,6 +51,7 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model import Model
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.periods import Period, Periods, evaluate_periods
 from hydrobricks.plotter import Plotter
 from hydrobricks.results import Results
 from hydrobricks.structure import StructureGraph
@@ -81,7 +82,10 @@ __all__ = (
     "Model",
     "Plotter",
     "StructureGraph",
+    "Period",
+    "Periods",
     "evaluate",
+    "evaluate_periods",
     # Logging functions
     "init",
     "init_log",

@@ -17,6 +17,7 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
 from hydrobricks.trainer import evaluate
 
@@ -63,6 +64,8 @@ class Model(ABC):
         self.spatial_structure: HydroUnits | None = None
         self.start_date: str | None = None
         self.end_date: str | None = None
+        self.period: Period | None = None
+        self.spinup_days: int = 0
         self.output_path: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
@@ -116,8 +119,10 @@ class Model(ABC):
         self,
         spatial_structure: HydroUnits,
         output_path: str | Path,
-        start_date: str,
+        start_date: str | None = None,
         end_date: str | None = None,
+        period: Period | tuple | None = None,
+        spinup: int | str = 0,
     ) -> None:
         """
         Setup and initialize the model for simulation.
@@ -133,6 +138,17 @@ class Model(ABC):
         end_date
             Ending date of the computation (format: 'YYYY-MM-DD').
             If None, uses last date in time series. Default: None
+        period
+            The modelling period, as a :class:`~hydrobricks.periods.Period` or a
+            ``(start, end)`` pair (e.g. ``periods.calibration`` from a
+            :class:`~hydrobricks.periods.Periods`). Mutually exclusive with
+            ``start_date``/``end_date``.
+        spinup
+            The spin-up duration: the first days/years of the modelling period are
+            replayed (unlogged) on every run to initialize the states, then the run
+            restarts at the period start with the warmed-up states. Either a number
+            of days (int) or a string like ``'4y'`` (calendar years). A spin-up
+            longer than the period is clamped to it. Default: 0 (no spin-up)
 
         Raises
         ------
@@ -147,11 +163,30 @@ class Model(ABC):
         --------
         >>> model = SomeModel()
         >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
+        >>> model.setup(hydro_units, './output', period=periods.calibration,
+        ...             spinup='4y')
         """
         if self._is_initialized:
             raise ModelError(
                 "The model has already been initialized. Please create a new instance.",
                 is_initialized=True,
+            )
+
+        if period is not None:
+            if start_date is not None or end_date is not None:
+                raise ConfigurationError(
+                    "Pass either a period or start_date/end_date, not both.",
+                    item_name="period",
+                    reason="Conflicting period specification",
+                )
+            self.period = Period.coerce(period)
+            start_date, end_date = self.period.bounds
+        elif start_date is None:
+            raise ConfigurationError(
+                "A modelling period is required: pass start_date (and end_date) "
+                "or period.",
+                item_name="start_date",
+                reason="Missing modelling period",
             )
 
         # Fail early and clearly if the land cover declared on the model and on the
@@ -172,6 +207,11 @@ class Model(ABC):
 
             # Modelling period
             self.settings.set_timer(start_date, end_date, 1, "day")
+
+            # Spin-up (replays the first days of the period, unlogged, on every run)
+            self.spinup_days = spinup_to_days(spinup, start_date)
+            if self.spinup_days > 0:
+                self.settings.set_spinup_days(self.spinup_days)
 
             # Initialize the model (with sub basin creation)
             self.model.init_with_basin(
@@ -577,7 +617,13 @@ class Model(ABC):
             )
         return pd.date_range(start=self.start_date, end=self.end_date, freq="D")
 
-    def eval(self, metric: str, observations: np.ndarray, warmup: int = 0) -> float:
+    def eval(
+        self,
+        metric: str,
+        observations: np.ndarray | Any,
+        warmup: int = 0,
+        period: Period | tuple | None = None,
+    ) -> float:
         """
         Evaluate the simulation using the provided metric (goodness of fit).
 
@@ -588,8 +634,9 @@ class Model(ABC):
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
         observations
-            The time series of the observations with dates matching the simulated
-            series.
+            The observations: an array with dates matching the simulated series, or
+            a :class:`~hydrobricks.evaluation.discharge.DischargeObservations`
+            (sliced by its own dates when a period is given).
         warmup
             The number of days of warmup period. This option is used to
             discard the warmup period from the evaluation. It is useful when
@@ -597,15 +644,68 @@ class Model(ABC):
             its score with those from the calibration. By setting the 'warmup'
             value, you can ensure fair assessments by discarding outputs
             from the specified warmup period (as is done automatically during
-            calibration).
+            calibration). Not needed when the model was set up with a spin-up.
+        period
+            Evaluate on this date slice of the simulation only (a
+            :class:`~hydrobricks.periods.Period` or ``(start, end)`` pair). The
+            period must be covered by the modelling period. Mutually exclusive
+            with ``warmup``.
 
         Returns
         -------
         The value of the selected metric.
         """
-        return evaluate(
-            self.get_outlet_discharge()[warmup:], observations[warmup:], metric
+        sim = self.get_outlet_discharge()
+        obs_values = (
+            observations
+            if isinstance(observations, np.ndarray)
+            else observations.data[0]
         )
+
+        if period is None:
+            return evaluate(sim[warmup:], obs_values[warmup:], metric)
+
+        if warmup:
+            raise ConfigurationError(
+                "Pass either a period or a warmup, not both.",
+                item_name="period",
+                reason="Conflicting evaluation options",
+            )
+
+        period = Period.coerce(period)
+        time = self.get_recorded_time()
+        if period.start < time[0] or period.end > time[-1]:
+            raise ConfigurationError(
+                f"The evaluation period ({period.start.date()}.."
+                f"{period.end.date()}) is not covered by the modelling period "
+                f"({time[0].date()}..{time[-1].date()}).",
+                item_name="period",
+                reason="Period not covered by the simulation",
+            )
+
+        sim_slice = sim[period.mask(time)]
+        if isinstance(observations, np.ndarray):
+            if len(obs_values) != len(sim):
+                raise ConfigurationError(
+                    f"The observations array ({len(obs_values)} values) does not "
+                    f"match the simulated series ({len(sim)} values); pass a "
+                    "DischargeObservations to slice by dates instead.",
+                    item_name="observations",
+                    reason="Length mismatch",
+                )
+            obs_slice = obs_values[period.mask(time)]
+        else:
+            obs_slice = obs_values[period.mask(observations.time)]
+            if len(obs_slice) != len(sim_slice):
+                raise ConfigurationError(
+                    f"The observations cover {len(obs_slice)} days of the "
+                    f"evaluation period but the simulation covers "
+                    f"{len(sim_slice)}.",
+                    item_name="observations",
+                    reason="Observations do not cover the period",
+                )
+
+        return evaluate(sim_slice, obs_slice, metric)
 
     def generate_parameters(self) -> ParameterSet:
         """

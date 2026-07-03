@@ -294,19 +294,14 @@ def test_per_band_mass_balance_runs(glacier_run):
 
 
 def _load_discharge():
-    """Load and trim the Gletsch discharge to the test period."""
-    obs = hb.DischargeObservations()
+    """Load the Gletsch discharge, restricted to the test period."""
+    obs = hb.DischargeObservations(START_DATE, END_DATE)
     obs.load_from_csv(
         GLETSCH_DIR / "discharge.csv",
         column_time="Date",
         time_format="%d/%m/%Y",
         content={"discharge": "Discharge (mm/d)"},
     )
-    sel = np.asarray(
-        (obs.time >= pd.Timestamp(START_DATE)) & (obs.time <= pd.Timestamp(END_DATE))
-    )
-    obs.data = [d[sel] for d in obs.data]
-    obs.time = obs.time[sel].reset_index(drop=True)
     return obs
 
 

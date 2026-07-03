@@ -28,10 +28,13 @@ class ModelSetupHelper:
     You do not need to use it in your own code.
     """
 
-    def __init__(self, catchment_name, start_date, end_date, working_dir=None):
+    def __init__(
+        self, catchment_name, start_date, end_date, working_dir=None, spinup=0
+    ):
         self.catchment_name = catchment_name
         self.start_date = start_date
         self.end_date = end_date
+        self.spinup = spinup
         self.hydro_units = None
         self.working_dir = None
         if working_dir is not None:
@@ -224,6 +227,7 @@ class ModelSetupHelper:
             output_path=str(self.working_dir),
             start_date=self.start_date,
             end_date=self.end_date,
+            spinup=self.spinup,
         )
 
         # Parameters

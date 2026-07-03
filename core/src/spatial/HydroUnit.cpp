@@ -450,6 +450,12 @@ void HydroUnit::TransferLandCoverContent(LandCover* changed, double oldFraction,
     }
 }
 
+void HydroUnit::RestoreInitialAreaFractions() {
+    for (auto brick : _landCoverBricks) {
+        brick->RestoreInitialAreaFraction();
+    }
+}
+
 bool HydroUnit::FixLandCoverFractionsTotal() {
     // The generic (soil) land cover absorbs the area changes.
     LandCover* ground = GetGenericLandCover();

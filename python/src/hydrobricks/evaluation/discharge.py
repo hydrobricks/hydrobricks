@@ -10,6 +10,7 @@ import pandas as pd
 
 from hydrobricks._exceptions import DataError
 from hydrobricks.evaluation.metrics import evaluate
+from hydrobricks.periods import Period, Periods
 from hydrobricks.time_series import TimeSeries1D
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,8 @@ class DischargeObservations(TimeSeries1D):
 
     def __init__(
         self,
-        start_date: str | pd.Timestamp | datetime,
-        end_date: str | pd.Timestamp | datetime,
+        start_date: str | pd.Timestamp | datetime | Period | Periods,
+        end_date: str | pd.Timestamp | datetime | None = None,
     ) -> None:
         """Initialize DischargeObservations instance.
 
@@ -34,9 +35,22 @@ class DischargeObservations(TimeSeries1D):
             the natural reference to pass as ``start_date``/``end_date`` to any
             auxiliary observation (e.g. ``GlacierMassBalanceObservations.from_glamos``,
             ``SnowCoverObservations.from_modis``), so every signal is restricted to
-            the same period.
+            the same period. Alternatively, pass a single
+            :class:`~hydrobricks.periods.Period` or
+            :class:`~hydrobricks.periods.Periods` (its full span is used), so the
+            observations are loaded once for all periods.
         """
         super().__init__()
+        if isinstance(start_date, Periods):
+            start_date = start_date.full_span
+        if isinstance(start_date, Period):
+            start_date, end_date = start_date.start, start_date.end
+        if end_date is None:
+            raise DataError(
+                "An end date is required (or pass a Period/Periods).",
+                data_type="observations",
+                reason="Missing end date",
+            )
         self.start_date = pd.Timestamp(start_date)
         self.end_date = pd.Timestamp(end_date)
 

@@ -92,6 +92,7 @@ if TYPE_CHECKING:
     from hydrobricks.forcing import Forcing
     from hydrobricks.models.model import Model
     from hydrobricks.parameters import ParameterSet
+    from hydrobricks.periods import Periods
 
 
 class SpotpySetup:
@@ -103,7 +104,7 @@ class SpotpySetup:
         params: ParameterSet | None = None,
         forcing: Forcing | list[Forcing] | None = None,
         discharge: DischargeObservations | list[DischargeObservations] | None = None,
-        warmup: int = 365,
+        warmup: int | None = None,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
         dump_outputs: bool = False,
         dump_forcing: bool = False,
@@ -113,6 +114,7 @@ class SpotpySetup:
         combine: str = "weighted",
         discharge_weight: float = 1.0,
         normalize: bool = True,
+        periods: Periods | None = None,
     ) -> None:
         """
         Initialize SPOTPY setup for model calibration.
@@ -144,7 +146,8 @@ class SpotpySetup:
             top-level/module-level function so it can be pickled.
         warmup
             Number of days for model warmup period (skipped in evaluation).
-            Default: 365
+            Default: 365, or 0 when ``periods`` is given (the spin-up replaces
+            the warmup; passing both explicitly is an error).
         obj_func
             Objective function for optimization. If None, uses non-parametric
             Kling-Gupta Efficiency. Can be a string (HydroErr function name) or
@@ -187,6 +190,14 @@ class SpotpySetup:
             Error metrics become ``1 - value/reference``; skill metrics (nse, kge, ...)
             and custom callables are left unchanged. Set ``False`` to combine the raw
             oriented metrics as before. Ignored for ``'pareto'``. Default: True
+        periods
+            The modelling :class:`~hydrobricks.periods.Periods`. When given, the
+            model(s) must be set up over ``periods.calibration`` (typically with the
+            spin-up, ``spinup=periods.spinup``), the whole calibration period is
+            evaluated (no warmup trimming), and the observations are aligned to it.
+            After calibration, re-run the best parameters over ``periods.simulation``
+            and use :func:`~hydrobricks.periods.evaluate_periods` for the
+            calibration/validation scores. Default: None
 
         Raises
         ------
@@ -210,6 +221,29 @@ class SpotpySetup:
         # cache. It is pickled with the setup, so every worker task of this run
         # shares it and reuses the same model instead of rebuilding it each time.
         self._build_token = uuid.uuid4().hex
+
+        # Resolve the warmup/periods combination: with periods, the spin-up (part of
+        # the model setup) replaces the warmup and the whole calibration period is
+        # evaluated.
+        self.periods = periods
+        if periods is not None:
+            if warmup is not None:
+                raise ConfigurationError(
+                    "Pass either periods or a warmup, not both (with periods, the "
+                    "spin-up replaces the warmup).",
+                    item_name="warmup",
+                    item_value=warmup,
+                    reason="Conflicting period configuration",
+                )
+            if periods.calibration is None:
+                raise ConfigurationError(
+                    "The periods object has no calibration period.",
+                    item_name="periods",
+                    reason="Missing calibration period",
+                )
+            warmup = 0
+        elif warmup is None:
+            warmup = 365
 
         # Validate and set configuration parameters
         self._validate_and_set_parameters(warmup, dump_dir, dump_outputs, dump_forcing)
@@ -350,6 +384,9 @@ class SpotpySetup:
         # Setup forcing and models
         self._setup_forcing_and_models()
 
+        # With periods, the models must be set up over the calibration period.
+        self._check_models_match_periods()
+
         # Align each discharge observation to its model's simulation period so the
         # observed and simulated series line up by date (no manual pre-slicing), and
         # fail with a clear error when they cannot be reconciled.
@@ -360,6 +397,42 @@ class SpotpySetup:
         self._finalize_extra_observations()
 
         self._built = True
+
+    def _check_models_match_periods(self) -> None:
+        """Require the models to be set up over the declared calibration period.
+
+        With ``periods``, the objective is computed on the whole calibration period
+        (no warmup trimming), so a model set up over a different span would silently
+        score against the wrong dates. The spin-up is recommended (it replaces the
+        warmup) but not enforced.
+        """
+        if self.periods is None:
+            return
+
+        import pandas as pd
+
+        calib = self.periods.calibration
+        for model in self.model:
+            start = pd.Timestamp(model.start_date) if model.start_date else None
+            end = pd.Timestamp(model.end_date) if model.end_date else None
+            if start != calib.start or end != calib.end:
+                raise ConfigurationError(
+                    f"The model '{model.name}' is set up over "
+                    f"{start.date() if start else None}.."
+                    f"{end.date() if end else None} but the calibration period is "
+                    f"{calib.start.date()}..{calib.end.date()}. Set the model up "
+                    "with setup(period=periods.calibration, "
+                    "spinup=periods.spinup).",
+                    item_name="periods",
+                    reason="Model period does not match the calibration period",
+                )
+            if getattr(model, "spinup_days", 0) == 0:
+                logger.warning(
+                    f"The model '{model.name}' has no spin-up: with periods, the "
+                    "whole calibration period is evaluated, so the first steps "
+                    "reflect the (cold) initial states. Consider "
+                    "setup(period=periods.calibration, spinup=periods.spinup)."
+                )
 
     def _align_observations_to_period(
         self,
@@ -1333,7 +1406,7 @@ def calibrate_from_factory(
     algorithm: str,
     repetitions: int,
     allow_changing: list[str] | None = None,
-    warmup: int = 365,
+    warmup: int | None = None,
     obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
     dump_outputs: bool = False,
     dump_forcing: bool = False,
@@ -1348,6 +1421,7 @@ def calibrate_from_factory(
     combine: str = "weighted",
     discharge_weight: float = 1.0,
     normalize: bool = True,
+    periods: Periods | None = None,
     **algorithm_kwargs: Any,
 ) -> Any:
     """
@@ -1379,8 +1453,10 @@ def calibrate_from_factory(
     allow_changing
         Optional list of parameter names/aliases to calibrate. If given, it
         overrides any ``parameters.allow_changing`` set inside the factory.
-    warmup, obj_func, dump_outputs, dump_forcing, dump_dir
-        Forwarded to :class:`SpotpySetup`.
+    warmup, obj_func, dump_outputs, dump_forcing, dump_dir, periods
+        Forwarded to :class:`SpotpySetup`. With ``periods``, the factory must set
+        the model up over ``periods.calibration`` (typically with
+        ``spinup=periods.spinup``) and ``warmup`` must be left unset.
     extra_observations, combine, discharge_weight, normalize
         Forwarded to :class:`SpotpySetup` to calibrate (also) on auxiliary signals
         such as glacier mass balance. ``extra_observations`` are light, picklable
@@ -1419,6 +1495,7 @@ def calibrate_from_factory(
         combine=combine,
         discharge_weight=discharge_weight,
         normalize=normalize,
+        periods=periods,
     )
     # Reuse the objects already built in this (main) process to avoid building
     # them twice here; workers rebuild via the factory after unpickling (the

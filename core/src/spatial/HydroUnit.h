@@ -308,6 +308,12 @@ class HydroUnit {
     bool FixLandCoverFractionsTotal();
 
     /**
+     * Restore the area fractions of all land covers to their initial extents without
+     * touching the stored contents (used after the spin-up phase).
+     */
+    void RestoreInitialAreaFractions();
+
+    /**
      * Get the generic land cover that absorbs area changes ('open', or its
      * 'ground'/'generic'/'generic_land_cover' aliases).
      *

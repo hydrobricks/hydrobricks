@@ -35,6 +35,13 @@ void SettingsModel::SetTimer(const string& start, const string& end, int timeSte
     _timer.timeStepUnit = timeStepUnit;
 }
 
+void SettingsModel::SetSpinupDays(int days) {
+    if (days < 0) {
+        throw InputError("The spin-up duration cannot be negative.");
+    }
+    _timer.spinupDays = days;
+}
+
 void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     assert(_selectedStructure);
 

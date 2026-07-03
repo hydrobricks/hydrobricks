@@ -121,6 +121,12 @@ void SubBasin::SaveAsInitialState() {
     }
 }
 
+void SubBasin::RestoreInitialAreaFractions() {
+    for (const auto& hydroUnit : _hydroUnits) {
+        hydroUnit->RestoreInitialAreaFractions();
+    }
+}
+
 bool SubBasin::IsValid(bool checkProcesses) const {
     if (_hydroUnits.empty()) {
         LogError("The sub basin has no hydro unit attached.");

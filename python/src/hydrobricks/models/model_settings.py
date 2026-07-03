@@ -47,6 +47,20 @@ class ModelSettings:
         """
         self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
+    def set_spinup_days(self, days: int) -> None:
+        """
+        Set the spin-up duration.
+
+        The first days of the modelling period are replayed (unlogged) on every run
+        to initialize the states, then the run restarts at the period start.
+
+        Parameters
+        ----------
+        days
+            Number of days of the modelling period replayed as spin-up.
+        """
+        self.settings.set_spinup_days(int(days))
+
     def set_parameter_value(self, component: str, name: str, value: float) -> bool:
         """
         Set a parameter value

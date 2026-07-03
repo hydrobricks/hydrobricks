@@ -30,6 +30,11 @@ START_DATE = "1981-01-01"
 END_DATE = "1982-12-31"
 WARMUP = 100
 
+# Full extent of the discharge.csv file (much longer than the simulation window),
+# used to build deliberately untrimmed observations in a few alignment tests.
+FULL_DISCHARGE_START = "1981-01-01"
+FULL_DISCHARGE_END = "2020-12-31"
+
 # Parameters varied during the test calibrations.
 ALLOW_CHANGING = ["a_snow", "k_quick"]
 
@@ -94,20 +99,15 @@ def build_setup_objects():
     forcing.spatialize_from_station_data(variable="pet", method="constant")
     forcing.spatialize_from_station_data(variable="precipitation", method="constant")
 
-    obs = hb.DischargeObservations()
+    # DischargeObservations restricts the loaded data to [START_DATE, END_DATE] by
+    # default, matching the (short) simulation window.
+    obs = hb.DischargeObservations(START_DATE, END_DATE)
     obs.load_from_csv(
         SITTER_DIR / "discharge.csv",
         column_time="Date",
         time_format="%d/%m/%Y",
         content={"discharge": "Discharge (mm/d)"},
     )
-    # Restrict observations to the (short) simulation window so they match the
-    # simulated discharge length.
-    sel = np.asarray(
-        (obs.time >= pd.Timestamp(START_DATE)) & (obs.time <= pd.Timestamp(END_DATE))
-    )
-    obs.data = [d[sel] for d in obs.data]
-    obs.time = obs.time[sel].reset_index(drop=True)
 
     socont = _make_socont()
     work_dir = Path(tempfile.gettempdir()) / f"hb_caltest_{uuid.uuid4().hex}"
@@ -120,6 +120,55 @@ def build_setup_objects():
     )
 
     return socont, forcing, obs
+
+
+def _build_untrimmed_objects(obs_start=None, obs_end=None):
+    """Build (model, forcing, obs) without pre-trimming the observations to the
+    (short) simulation window.
+
+    ``obs_start``/``obs_end`` optionally restrict the observations to a period other
+    than the simulation window, to exercise the alignment error paths. When omitted,
+    the full extent of the discharge file (much longer than the simulation window)
+    is used.
+    """
+    model, forcing, _ = build_setup_objects()
+    obs = hb.DischargeObservations(
+        obs_start or FULL_DISCHARGE_START, obs_end or FULL_DISCHARGE_END
+    )
+    obs.load_from_csv(
+        SITTER_DIR / "discharge.csv",
+        column_time="Date",
+        time_format="%d/%m/%Y",
+        content={"discharge": "Discharge (mm/d)"},
+    )
+    return model, forcing, obs
+
+
+def test_obs_auto_aligned_without_manual_trim():
+    """Observations spanning more than the simulation period are auto-trimmed to it,
+    so the user no longer has to pre-slice them by hand."""
+    model, forcing, obs = _build_untrimmed_objects()
+    # The raw observations are much longer than the 2-year simulation window.
+    expected = pd.date_range(pd.Timestamp(START_DATE), pd.Timestamp(END_DATE), freq="D")
+    assert len(obs.data[0]) > len(expected)
+
+    spot_setup = trainer.SpotpySetup(
+        model, build_params(), forcing, obs, warmup=WARMUP, obj_func="nse"
+    )
+    # After build-time alignment the stored observation matches the sim period.
+    assert len(spot_setup.obs[0]) == len(expected)
+
+
+def test_obs_non_overlapping_period_raises():
+    """Observations that do not overlap the simulation period fail with a clear
+    DataError instead of silently scoring -inf on every parameter set."""
+    model, forcing, obs = _build_untrimmed_objects(
+        obs_start="1990-01-01", obs_end="1991-12-31"
+    )
+    with pytest.raises(hb.DataError):
+        trainer.SpotpySetup(
+            model, build_params(), forcing, obs, warmup=WARMUP, obj_func="nse"
+        )
 
 
 def test_factory_setup_builds_lazily():
@@ -470,4 +519,87 @@ def test_calibrate_from_factory_requires_4tuple():
     with pytest.raises(ConfigurationError):
         trainer.calibrate_from_factory(
             build_setup_objects, "mc", 2, dbformat="ram", parallel="seq"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Periods integration
+# ---------------------------------------------------------------------------
+def _build_periods():
+    """Periods matching the (short) test calibration window, with a short spin-up."""
+    return hb.Periods(
+        calibration=(START_DATE, END_DATE),
+        validation=("1983-01-01", "1984-12-31"),
+        spinup=60,
+    )
+
+
+def _build_periods_objects(periods):
+    """Build (model, forcing, obs) for a periods-driven calibration.
+
+    ``build_setup_objects`` sets the model up over START_DATE..END_DATE, which
+    matches ``periods.calibration``; the observations span the full periods range.
+    """
+    model, forcing, _ = build_setup_objects()
+    obs = hb.DischargeObservations(periods)
+    obs.load_from_csv(
+        SITTER_DIR / "discharge.csv",
+        column_time="Date",
+        time_format="%d/%m/%Y",
+        content={"discharge": "Discharge (mm/d)"},
+    )
+    return model, forcing, obs
+
+
+def test_calibrate_with_periods():
+    """With periods, the whole calibration period is scored (warmup 0) and a small
+    calibration runs end-to-end."""
+    periods = _build_periods()
+    model, forcing, obs = _build_periods_objects(periods)
+    params = build_params()
+
+    spot_setup = trainer.SpotpySetup(
+        model, params, forcing, obs, obj_func="nse", periods=periods
+    )
+    assert spot_setup.warmup == 0
+    # The observations were aligned to the calibration period (no warmup trimming).
+    assert len(spot_setup.evaluation()[0]) == periods.calibration.n_days
+
+    sampler = trainer.calibrate(
+        spot_setup, "mc", repetitions=3, dbformat="ram", save_sim=False
+    )
+    assert len(sampler.getdata()) >= 1
+
+
+def test_periods_and_warmup_are_exclusive():
+    periods = _build_periods()
+    model, forcing, obs = _build_periods_objects(periods)
+    with pytest.raises(ConfigurationError):
+        trainer.SpotpySetup(
+            model,
+            forcing=forcing,
+            discharge=obs,
+            params=build_params(),
+            warmup=100,
+            periods=periods,
+        )
+
+
+def test_periods_model_span_mismatch_raises():
+    """A model set up over a span other than the calibration period is rejected."""
+    periods = hb.Periods(
+        calibration=("1985-01-01", "1986-12-31"),  # != model span
+        spinup=60,
+    )
+    model, forcing, _ = build_setup_objects()
+    obs = hb.DischargeObservations(periods)
+    obs.load_from_csv(
+        SITTER_DIR / "discharge.csv",
+        column_time="Date",
+        time_format="%d/%m/%Y",
+        content={"discharge": "Discharge (mm/d)"},
+    )
+    with pytest.raises(ConfigurationError):
+        trainer.SpotpySetup(
+            model, build_params(), forcing, obs, obj_func="nse", periods=periods
         )

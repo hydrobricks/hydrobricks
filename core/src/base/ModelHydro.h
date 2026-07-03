@@ -296,11 +296,16 @@ class ModelHydro {
     ActionsManager _actionsManager;
     ParametersUpdater _parametersUpdater;
     std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
+    int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
 
   private:
     ModelResult InitializeTimeSeries();
 
     ModelResult UpdateForcing();
+
+    ModelResult RunSpinup();
+
+    ModelResult RewindAfterSpinup();
 };
 
 #endif  // HYDROBRICKS_MODEL_HYDRO_H

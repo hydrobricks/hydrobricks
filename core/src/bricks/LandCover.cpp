@@ -15,7 +15,7 @@ void LandCover::Reset() {
     // Restore the extent (area fraction) to the initial one captured at build time, so
     // land-cover-change actions (e.g. glacier evolution) are rolled back and the model
     // can be re-run from the same extent in a calibration loop.
-    SetAreaFraction(_initialAreaFraction);
+    RestoreInitialAreaFraction();
 }
 
 void LandCover::SaveAsInitialState() {

@@ -188,6 +188,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
+        .def("set_spinup_days", &SettingsModel::SetSpinupDays,
+             "Set the spin-up duration: the first days of the modelling period are replayed (unlogged) to "
+             "initialize the states before the run restarts at the period start.",
+             "days"_a)
         .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
         .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
              "kind"_a = "storage")

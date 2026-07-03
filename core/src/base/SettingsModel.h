@@ -17,6 +17,7 @@ struct TimerSettings {
     string end;
     int timeStep = 1;
     string timeStepUnit;
+    int spinupDays = 0;
 };
 
 struct OutputSettings {
@@ -88,6 +89,17 @@ class SettingsModel {
      * @param timeStepUnit time step unit.
      */
     void SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit);
+
+    /**
+     * Set the spin-up duration.
+     *
+     * The model pre-runs the first spin-up days of the modelling period (without
+     * logging and without triggering actions) to initialize the state variables, then
+     * restarts at the period start with the warmed-up states.
+     *
+     * @param days number of days of the modelling period replayed as spin-up.
+     */
+    void SetSpinupDays(int days);
 
     /**
      * Add a hydro unit brick to the model (e.g. storage).

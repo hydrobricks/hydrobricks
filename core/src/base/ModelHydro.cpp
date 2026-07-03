@@ -46,6 +46,12 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
             return std::unexpected("Timer initialization failed validation.");
         }
 
+        // Convert the spin-up duration into time steps; a spin-up longer than the
+        // modelling period degrades to replaying the whole period once.
+        double timeStepInDays = *_timer.GetTimeStepPointer();
+        _spinupSteps = static_cast<int>(modelSettings.GetTimerSettings().spinupDays / timeStepInDays);
+        _spinupSteps = std::min(_spinupSteps, _timer.GetTimeStepCount());
+
         _processor.Initialize(modelSettings.GetSolverSettings());
         if (modelSettings.LogAll() || modelSettings.RecordsFractions()) {
             _logger.RecordFractions();
@@ -96,6 +102,12 @@ ModelResult ModelHydro::Run() {
         return r;
     }
 
+    if (_spinupSteps > 0) {
+        if (auto r = RunSpinup(); !r) {
+            return r;
+        }
+    }
+
     _logger.SaveInitialValues();
 
     // Per-run lifecycle messages are debug-level: at Message level they would
@@ -116,6 +128,54 @@ ModelResult ModelHydro::Run() {
     }
 
     LogDebug("Simulation completed.");
+
+    return {};
+}
+
+ModelResult ModelHydro::RunSpinup() {
+    LogDebug("Spin-up starting ({} time steps).", _spinupSteps);
+
+    // Actions and date-driven parameter updates must not fire during the spin-up: the
+    // same dates are replayed in the real run, and some of their side effects (e.g.
+    // ice redistribution by glacier evolution) cannot be rolled back. Detach them from
+    // the timer for the spin-up phase.
+    _timer.SetActionsManager(nullptr);
+    _timer.SetParametersUpdater(nullptr);
+
+    ModelResult result{};
+    for (int i = 0; i < _spinupSteps; ++i) {
+        if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
+            result = std::unexpected("Time step processing failed during spin-up.");
+            break;
+        }
+        _timer.IncrementTime();
+        if (auto r = UpdateForcing(); !r) {
+            result = std::unexpected(std::format("Failed updating forcing during spin-up: {}", r.error()));
+            break;
+        }
+    }
+
+    _timer.SetActionsManager(&_actionsManager);
+    _timer.SetParametersUpdater(&_parametersUpdater);
+
+    if (!result) {
+        return result;
+    }
+
+    return RewindAfterSpinup();
+}
+
+ModelResult ModelHydro::RewindAfterSpinup() {
+    // Restart the clock and the forcing cursors at the period start, keeping the
+    // warmed-up storage states. The land cover area fractions are restored to their
+    // initial values so the real run starts from the declared extents.
+    _timer.Reset();
+    _subBasin->RestoreInitialAreaFractions();
+    if (auto r = InitializeTimeSeries(); !r) {
+        return r;
+    }
+
+    LogDebug("Spin-up completed; simulation restarting at the period start.");
 
     return {};
 }

@@ -7,7 +7,7 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 
-from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
+from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._hydrobricks import SettingsBasin
 from hydrobricks._optional import HAS_NETCDF, Dataset
 from hydrobricks._units import (
@@ -88,7 +88,6 @@ class HydroUnits:
         path: str | Path,
         column_elevation: str | None = None,
         column_area: str | None = None,
-        column_fractions: dict[str, str] | None = None,
         columns_areas: dict[str, str] | None = None,
         other_columns: dict[str, str] | None = None,
     ) -> None:
@@ -107,10 +106,6 @@ class HydroUnits:
         column_area
             Column name containing the total area values.
             If None, looks for 'area' column. Default: None
-        column_fractions
-            NOT IMPLEMENTED.
-            Dictionary mapping land cover names to area fraction column names.
-            Default: None
         columns_areas
             Dictionary mapping land cover names to area column names.
             Cannot be used with column_area. Default: None
@@ -125,8 +120,6 @@ class HydroUnits:
             If the CSV file does not exist.
         ValueError
             If required columns are missing or are inconsistent.
-        NotImplementedError
-            If column_fractions is provided (not yet implemented).
         """
         # Validate parameter conflicts before touching the filesystem
         if column_area is not None and columns_areas is not None:
@@ -135,10 +128,6 @@ class HydroUnits:
                 "provided at the same time.",
                 data_type="hydro units",
                 reason="Ambiguous column specification",
-            )
-        if column_fractions is not None:
-            raise ConfigurationError(
-                'The "column_fractions" parameter is not yet implemented.'
             )
 
         # Load and prepare CSV file

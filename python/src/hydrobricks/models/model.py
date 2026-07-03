@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from hydrobricks.evaluation.base import RecordingRequest
+    from hydrobricks.results import Results
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ logger = logging.getLogger(__name__)
 # "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
 # aliases for backward compatibility.
 GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+
+# Name of the netCDF file written by dump_outputs() into the output directory.
+RESULTS_FILENAME = "results.nc"
 
 
 class Model(ABC):
@@ -59,6 +63,7 @@ class Model(ABC):
         self.spatial_structure: HydroUnits | None = None
         self.start_date: str | None = None
         self.end_date: str | None = None
+        self.output_path: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
             "record_all",
@@ -149,6 +154,10 @@ class Model(ABC):
                 is_initialized=True,
             )
 
+        # Fail early and clearly if the land cover declared on the model and on the
+        # hydro units disagree (they are provided in two places and must match).
+        self._check_land_cover_matches_structure(spatial_structure)
+
         try:
             if isinstance(output_path, str) and not os.path.isdir(output_path):
                 os.mkdir(output_path)
@@ -156,6 +165,7 @@ class Model(ABC):
             self.spatial_structure = spatial_structure
             self.start_date = start_date
             self.end_date = end_date
+            self.output_path = str(output_path)
 
             # Initialize log
             init_log(str(output_path))
@@ -427,16 +437,61 @@ class Model(ABC):
         """
         return self.model.get_total_snow_storage_changes()
 
-    def dump_outputs(self, path: str) -> None:
+    def dump_outputs(self, path: str | Path | None = None) -> str:
         """
-        Write the model outputs to a netcdf file.
+        Write the model outputs to a netCDF file.
 
         Parameters
         ----------
         path
-            Path to the target file.
+            Path to the output *directory* in which the ``results.nc`` file is
+            written. If None, the output path given to :meth:`setup` is used.
+
+        Returns
+        -------
+        str
+            The full path to the written netCDF file (``<path>/results.nc``), ready to
+            pass to :class:`~hydrobricks.results.Results`.
+
+        Raises
+        ------
+        ModelError
+            If no path is given and the model has no output path (setup not called).
         """
-        self.model.dump_outputs(path)
+        if path is None:
+            path = self.output_path
+        if path is None:
+            raise ModelError(
+                "No output path is available; pass a path to dump_outputs() or call "
+                "setup() first.",
+                is_initialized=self._is_initialized,
+            )
+        self.model.dump_outputs(str(path))
+        return os.path.join(str(path), RESULTS_FILENAME)
+
+    def get_results(self, output_path: str | Path | None = None) -> Results:
+        """
+        Dump the outputs and return a :class:`~hydrobricks.results.Results` reader.
+
+        Convenience wrapper around :meth:`dump_outputs` and ``Results`` that removes
+        the need to know the ``results.nc`` filename convention: it writes the outputs
+        and returns a ready-to-use reader.
+
+        Parameters
+        ----------
+        output_path
+            Output directory to write ``results.nc`` into. If None, the output path
+            given to :meth:`setup` is used.
+
+        Returns
+        -------
+        Results
+            A reader opened on the freshly written results file.
+        """
+        from hydrobricks.results import Results
+
+        results_path = self.dump_outputs(output_path)
+        return Results(results_path)
 
     def get_recorded_labels(self) -> list[str]:
         """
@@ -764,6 +819,55 @@ class Model(ABC):
                     item_value=cover_type,
                     reason="Invalid land cover type",
                 )
+
+    @staticmethod
+    def _same_cover_type(type_a: str, type_b: str) -> bool:
+        """Whether two land cover types are equivalent (generic aliases included)."""
+        if type_a == type_b:
+            return True
+        return type_a in GENERIC_COVER_ALIASES and type_b in GENERIC_COVER_ALIASES
+
+    def _check_land_cover_matches_structure(
+        self, spatial_structure: HydroUnits
+    ) -> None:
+        """
+        Check that the model land cover matches the spatial structure land cover.
+
+        The land cover names/types are declared twice (once on the ``HydroUnits`` and
+        once on the model), and they must agree. A mismatch would otherwise surface as
+        a confusing low-level error when the C++ model is built. This validates the two
+        definitions up front and reports the exact difference.
+
+        Parameters
+        ----------
+        spatial_structure
+            The hydro units passed to :meth:`setup`.
+
+        Raises
+        ------
+        ConfigurationError
+            If the model and hydro units define different land covers.
+        """
+        hu_names = list(getattr(spatial_structure, "land_cover_names", []) or [])
+        hu_types = list(getattr(spatial_structure, "land_cover_types", []) or [])
+        model_map = dict(zip(self.land_cover_names, self.land_cover_types))
+        hu_map = dict(zip(hu_names, hu_types))
+
+        matches = set(model_map) == set(hu_map) and all(
+            self._same_cover_type(model_map[name], hu_map[name]) for name in model_map
+        )
+        if not matches:
+            raise ConfigurationError(
+                "The land cover definition of the model does not match that of the "
+                "hydro units (spatial structure); they must be identical. Pass the "
+                "same land_cover_names/land_cover_types to both HydroUnits (or "
+                "Catchment) and the model.\n"
+                f"  Model:      names={self.land_cover_names}, "
+                f"types={self.land_cover_types}\n"
+                f"  HydroUnits: names={hu_names}, types={hu_types}",
+                item_name="land_cover",
+                reason="Land cover mismatch between model and hydro units",
+            )
 
     def _set_basic_options(self, kwargs: dict[str, Any]) -> None:
         """

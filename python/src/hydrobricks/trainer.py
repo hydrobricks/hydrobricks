@@ -350,11 +350,92 @@ class SpotpySetup:
         # Setup forcing and models
         self._setup_forcing_and_models()
 
+        # Align each discharge observation to its model's simulation period so the
+        # observed and simulated series line up by date (no manual pre-slicing), and
+        # fail with a clear error when they cannot be reconciled.
+        self.obs = self._align_observations_to_period(obs, self.obs)
+
         # Finalize the (optional) auxiliary observations now that the model exists
         # (validate recording, restrict targets to the post-warmup eval period).
         self._finalize_extra_observations()
 
         self._built = True
+
+    def _align_observations_to_period(
+        self,
+        obs_objects: DischargeObservations | list[DischargeObservations] | None,
+        obs_arrays: list[np.ndarray],
+    ) -> list[np.ndarray]:
+        """Align discharge observations to each model's daily simulation period.
+
+        The simulated and observed series must line up entry-for-entry. Rather than
+        requiring the user to pre-slice the observations to exactly the simulation
+        window, this reindexes each observation onto the model's daily date axis
+        (``start_date``..``end_date``):
+
+        - already-aligned observations are unchanged (no-op reindex);
+        - observations longer than the period are trimmed to it;
+        - observations that do not overlap, or do not fully cover, the period raise a
+          clear :class:`DataError` naming the mismatched date ranges — instead of the
+          run silently scoring ``-inf`` on every parameter set.
+
+        When the time axis or the model dates are unavailable, the observation is kept
+        as-is (legacy positional behaviour).
+        """
+        import pandas as pd
+
+        obs_list = [obs_objects] if not isinstance(obs_objects, list) else obs_objects
+        aligned: list[np.ndarray] = []
+        for idx, model in enumerate(self.model):
+            arr = np.asarray(obs_arrays[idx])
+            o = obs_list[idx] if idx < len(obs_list) else None
+            times = getattr(o, "time", None)
+            start, end = model.start_date, model.end_date
+
+            # Not enough information to align by date: keep the legacy behaviour.
+            if start is None or end is None or times is None or len(times) != len(arr):
+                aligned.append(arr)
+                continue
+
+            expected = pd.date_range(pd.Timestamp(start), pd.Timestamp(end), freq="D")
+            if self.warmup >= len(expected):
+                raise DataError(
+                    f"The warmup period ({self.warmup} days) is not shorter than the "
+                    f"simulation period ({len(expected)} days: "
+                    f"{expected[0].date()}..{expected[-1].date()}); nothing would be "
+                    "left to evaluate.",
+                    data_type="discharge observations",
+                    reason="Warmup longer than simulation period",
+                )
+
+            series = pd.Series(arr, index=pd.DatetimeIndex(pd.Series(times).to_numpy()))
+            series = series[~series.index.duplicated(keep="last")]
+            present = expected.isin(series.index)
+            if not present.any():
+                raise DataError(
+                    "The discharge observations do not overlap the simulation period. "
+                    f"Simulation: {expected[0].date()}..{expected[-1].date()}; "
+                    f"observations: {series.index.min().date()}.."
+                    f"{series.index.max().date()}.",
+                    data_type="discharge observations",
+                    reason="No overlap with simulation period",
+                )
+            if not present.all():
+                missing = expected[~present]
+                raise DataError(
+                    "The discharge observations do not cover the whole simulation "
+                    f"period ({expected[0].date()}..{expected[-1].date()}, "
+                    f"{len(expected)} days). Missing {int((~present).sum())} day(s) "
+                    f"in that range (first missing: {missing[0].date()}). Provide "
+                    "observations covering the full period, or shorten the simulation "
+                    "period.",
+                    data_type="discharge observations",
+                    reason="Observations do not cover simulation period",
+                )
+
+            aligned.append(series.reindex(expected).to_numpy())
+
+        return aligned
 
     def _finalize_extra_observations(self) -> None:
         """Validate the model for the auxiliary observations and align them.
@@ -962,9 +1043,14 @@ class SpotpySetup:
                 )
                 like = -np.inf
             elif len(sim) != len(obs):
-                logger.warning(
+                # After build-time date alignment this should not happen; if it does
+                # it is a structural inconsistency (same for every parameter set), so
+                # log it loudly rather than silently degrading the whole calibration.
+                logger.error(
                     "Simulation and observation lengths differ "
-                    "(sim=%d, obs=%d, params: %s).",
+                    "(sim=%d, obs=%d); the calibration cannot score this run. "
+                    "This is a structural mismatch between the simulation period and "
+                    "the observations (params: %s).",
                     len(sim),
                     len(obs),
                     _format_params(params),

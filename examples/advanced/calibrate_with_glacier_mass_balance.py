@@ -195,21 +195,47 @@ def build_forcing():
 def build_parameters():
     """Parameters with sensible defaults; the melt parameters are calibrated."""
     parameters = build_model().generate_parameters()
-    parameters.set_values(
-        {
-            "A": 458,
-            "a_snow": 4,
-            "a_ice": 8,
-            "k_slow_1": 0.9,
-            "k_slow_2": 0.8,
-            "k_quick": 1,
-            "percol": 9.8,
-            "k_snow": 0.1,
-            "k_ice": 0.5,
-        }
-    )
-    parameters.allow_changing = ["a_snow", "a_ice", "k_snow", "k_ice"]
+    parameters.allow_changing = [
+        "A",
+        "a_snow",
+        "a_ice",
+        "k_slow_1",
+        "k_slow_2",
+        "k_quick",
+        "percol",
+        "k_snow",
+        "k_ice",
+    ]
     return parameters
+
+
+def print_real_parameters(param_values):
+    """Print the calibrated parameters as their real (physical) values.
+
+    SPOTPY's own summary prints the values in the optimizer's *transformed* space
+    (e.g. the slow-reservoir response factors as log(k[1/h]), which look negative);
+    ``get_best``/``get_results`` back-transform them, so these are the values the
+    model actually uses.
+    """
+    print("Best parameters (real values):")
+    for name, value in param_values.items():
+        print(f"  {name}: {value:.4g}")
+
+
+def evaluate_run(param_values):
+    """Re-run the model with the given real parameters and score the two signals.
+
+    Returns the discharge KGE (2012) and the glacier mass-balance RMSE separately,
+    so the combined weighted objective can be read term by term. The discharge is
+    sliced by the warmup to match the calibration; the glacier mass-balance targets
+    are already restricted to the post-warmup period, so they are compared as-is.
+    """
+    parameters.set_values(param_values)
+    model.run(parameters=parameters, forcing=forcing)
+    sim_q = model.get_outlet_discharge()
+    kge = hb.evaluate(sim_q[WARMUP:], obs.data[0][WARMUP:], "kge_2012")
+    rmse = hb.evaluate(glacier_mb.simulated(model), glacier_mb.observed(), "rmse")
+    return kge, rmse
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +254,10 @@ glacier_mb.metric = "rmse"
 glacier_mb.weight = 0.5
 glacier_mb.mode = "objective"
 
+# Collects the discharge KGE and glacier mass-balance RMSE of each mode's best run
+# for the comparison table printed at the end.
+summary = {}
+
 print("\n=== combine='weighted': single score combining discharge and mass balance ===")
 spot_setup = trainer.SpotpySetup(
     model,
@@ -245,6 +275,11 @@ best = trainer.get_best(sampler)
 # Score in skill space (higher is better): the combined discharge + mass-balance
 # objective, not a sign-flipped value.
 print(f"Best combined objective: {best['score']:.3f}")
+print_real_parameters(best["parameters"])
+kge_w, rmse_w = evaluate_run(best["parameters"])
+print(f"  Discharge KGE (2012):      {kge_w:.3f}")
+print(f"  Glacier MB RMSE [mm w.e.]: {rmse_w:.1f}")
+summary["weighted"] = {"kge": kge_w, "rmse": rmse_w, "combined": best["score"]}
 
 print("\n=== constraint: reject runs with a poor mass balance ===")
 # Keep the discharge KGE as the objective, but reject any run whose mean absolute
@@ -258,7 +293,11 @@ glacier_mb_constraint = hb.GlacierMassBalanceObservations.from_glamos(
     start_date=START_DATE,
     end_date=END_DATE,
     mode="constraint",
-    relative_tolerance=0.3,
+    # Accept runs whose mass balance is within 50% of the observed mean. A tighter
+    # value (e.g. 0.3) can reject the entire random burn-in population, leaving
+    # SCE-UA with no fitness gradient to evolve from; loosen it if every run scores
+    # the rejection penalty.
+    relative_tolerance=0.5,
 )
 spot_setup_c = trainer.SpotpySetup(
     model,
@@ -275,6 +314,17 @@ sampler_c = trainer.calibrate(
 results_c = sampler_c.getdata()
 behavioural = np.isfinite(results_c["like1"])
 print(f"Behavioural (within tolerance) runs: {behavioural.sum()} / {len(results_c)}")
+if behavioural.sum() > 0:
+    # Objective here is the discharge KGE alone; the mass balance only filters runs.
+    best_c = trainer.get_best(sampler_c)
+    print_real_parameters(best_c["parameters"])
+    kge_c, rmse_c = evaluate_run(best_c["parameters"])
+    # best_c['score'] is the discharge KGE, so it should match kge_c (cross-check).
+    print(f"  Discharge KGE (2012):      {kge_c:.3f}  (the objective)")
+    print(f"  Glacier MB RMSE [mm w.e.]: {rmse_c:.1f}")
+    summary["constraint"] = {"kge": kge_c, "rmse": rmse_c, "combined": None}
+else:
+    print("  No behavioural run: skipping (relax the tolerance or run more reps).")
 
 print("\n=== combine='pareto': discharge vs mass balance trade-off (NSGAII) ===")
 # Multi-objective: NSGAII returns a Pareto set rather than a single best run.
@@ -301,6 +351,29 @@ sampler_p = trainer.calibrate(
 )
 results_p = sampler_p.getdata()
 print(f"Pareto sampler produced {len(results_p)} evaluations.")
+
+# get_best is undefined for a multi-objective run, so pick one representative point:
+# the compromise that maximizes the sum of the two skills (both higher is better).
+df_p = trainer.get_results(sampler_p)
+param_names = [c for c in df_p.columns if not c.startswith("score")]
+idx_p = (df_p["score1"] + df_p["score2"]).idxmax()
+pareto_params = {n: float(df_p.loc[idx_p, n]) for n in param_names}
+print("Representative Pareto point (max score1 + score2):")
+print_real_parameters(pareto_params)
+kge_p, rmse_p = evaluate_run(pareto_params)
+print(f"  Discharge KGE (2012):      {kge_p:.3f}")
+print(f"  Glacier MB RMSE [mm w.e.]: {rmse_p:.1f}")
+summary["pareto*"] = {"kge": kge_p, "rmse": rmse_p, "combined": None}
+
+# ---------------------------------------------------------------------------
+# Summary: compare the discharge KGE and glacier MB RMSE across the three modes
+# ---------------------------------------------------------------------------
+print("\n=== Summary: discharge KGE and glacier MB RMSE by mode ===")
+print(f"{'Mode':<12} {'Discharge KGE':>14} {'MB RMSE [mm w.e.]':>18} {'Combined':>10}")
+for mode, m in summary.items():
+    combined = f"{m['combined']:.3f}" if m["combined"] is not None else "-"
+    print(f"{mode:<12} {m['kge']:>14.3f} {m['rmse']:>18.1f} {combined:>10}")
+print("* pareto: one representative point (max score1 + score2) on the Pareto front")
 
 # ---------------------------------------------------------------------------
 # 4. Inspect the best 'weighted' run: observed vs simulated mass balance

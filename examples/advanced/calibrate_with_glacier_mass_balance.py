@@ -48,11 +48,10 @@ import os.path
 import sys
 import tempfile
 import uuid
+import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 
 import hydrobricks as hb
 import hydrobricks.models as models
@@ -70,7 +69,11 @@ START_DATE = "2009-01-01"
 END_DATE = "2020-12-31"
 REF_ELEVATION = 2702  # Reference altitude of the meteorological station [m]
 WARMUP = 365
-CALIBRATION_MAX_REP = 3000
+CALIBRATION_MAX_REP = 5000
+# Score SPOTPY stores for a rejected (non-behavioural / invalid) run: hydrobricks'
+# _WORST_PENALTY. It is a large *finite* value, and real objective scores are O(1),
+# so a stored score below it is a genuine run and one at it is a rejection.
+REJECTED_SCORE = 1e12
 
 # Paths
 CATCHMENT_DIR = Path(
@@ -121,19 +124,16 @@ hydro_units = catchment.hydro_units
 # ---------------------------------------------------------------------------
 # 2. Observations: discharge and glacier mass balance
 # ---------------------------------------------------------------------------
-obs = hb.DischargeObservations()
+# DischargeObservations restricts the loaded data to [START_DATE, END_DATE] by
+# default, so it already matches the simulated series (used as-is in evaluate_run()
+# below).
+obs = hb.DischargeObservations(START_DATE, END_DATE)
 obs.load_from_csv(
     CATCHMENT_DISCHARGE,
     column_time="Date",
     time_format="%d/%m/%Y",
     content={"discharge": "Discharge (mm/d)"},
 )
-# Restrict the discharge to the simulation period so it matches the simulated one.
-sel = np.asarray(
-    (obs.time >= pd.Timestamp(START_DATE)) & (obs.time <= pd.Timestamp(END_DATE))
-)
-obs.data = [d[sel] for d in obs.data]
-obs.time = obs.time[sel].reset_index(drop=True)
 
 # Observed glacier mass balance (GLAMOS): whole-glacier annual, winter and summer
 # balances. The observation periods come from the per-row dates in the file.
@@ -312,7 +312,9 @@ sampler_c = trainer.calibrate(
     spot_setup_c, "sceua", CALIBRATION_MAX_REP, dbformat="ram"
 )
 results_c = sampler_c.getdata()
-behavioural = np.isfinite(results_c["like1"])
+# A rejected run is stored with the (finite) rejection penalty, so np.isfinite() would
+# wrongly count it as behavioural; a behavioural run scores below the penalty.
+behavioural = results_c["like1"] < REJECTED_SCORE
 print(f"Behavioural (within tolerance) runs: {behavioural.sum()} / {len(results_c)}")
 if behavioural.sum() > 0:
     # Objective here is the discharge KGE alone; the mass balance only filters runs.
@@ -340,8 +342,20 @@ spot_setup_p = trainer.SpotpySetup(
 )
 # Unlike SCE-UA, NSGAII's first sample() argument is the number of *generations*,
 # not the total number of runs: it performs generations * n_pop model evaluations.
-# Divide by n_pop so the total stays comparable to CALIBRATION_MAX_REP.
-NSGAII_POP = 20
+# Divide by n_pop so the total stays comparable to CALIBRATION_MAX_REP. A larger
+# population keeps the Pareto front more diverse (fewer fronts collapse to a single
+# objective value), which reduces NSGA-II's zero-range crowding-distance divisions,
+# at the cost of fewer generations for the same total budget.
+NSGAII_POP = 50
+# SPOTPY's NSGA-II normalizes crowding distance by each objective's range within a
+# front; when a front's members share an objective value that range is zero, raising
+# a harmless "invalid value encountered in divide" RuntimeWarning (NaN crowding
+# distances for that step, then the run continues). Silence just that warning.
+warnings.filterwarnings(
+    "ignore",
+    message="invalid value encountered in divide",
+    module="spotpy.algorithms.nsgaii",
+)
 sampler_p = trainer.calibrate(
     spot_setup_p,
     "NSGAII",

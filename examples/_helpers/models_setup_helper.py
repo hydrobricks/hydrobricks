@@ -187,7 +187,7 @@ class ModelSetupHelper:
     def get_obs_data_from_csv_file(self, filename="discharge.csv"):
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
-        obs = hb.DischargeObservations()
+        obs = hb.DischargeObservations(self.start_date, self.end_date)
         obs.load_from_csv(
             catchment_dir / filename,
             column_time="Date",

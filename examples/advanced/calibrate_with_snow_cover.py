@@ -85,10 +85,45 @@ unit_ids_raster = catchment_dir / "unit_ids.tif"
 forcing = helper.get_forcing_data_from_csv_file(
     ref_elevation=REF_ELEVATION, use_precip_gradient=True
 )
+# get_obs_data_from_csv_file() restricts the discharge to [START_DATE, END_DATE]
+# (the helper's own dates), so it already lines up entry-for-entry with the
+# simulated series when we score the best run below in evaluate_run().
 discharge = helper.get_obs_data_from_csv_file()
 # record_all=True so the snowpack SWE (and land-cover fractions) are recorded and the
 # simulated snow cover can be read from memory each iteration.
 socont, parameters = helper.get_model_and_params_socont(record_all=True)
+
+
+def print_real_parameters(param_values):
+    """Print the calibrated parameters as their real (physical) values.
+
+    SPOTPY's own summary prints the values in the optimizer's *transformed* space
+    (e.g. the slow-reservoir response factors as log(k[1/h]), which look negative);
+    ``get_best`` back-transforms them, so these are the values the model actually uses.
+    """
+    print("Best parameters (real values):")
+    for name, value in param_values.items():
+        print(f"  {name}: {value:.4g}")
+
+
+def evaluate_run(param_values):
+    """Re-run the model with the given real parameters and score the two signals.
+
+    Returns the discharge KGE (2012) and the snow-cover RMSE separately, so the
+    combined weighted objective can be read term by term. The discharge is sliced by
+    the warmup to match the calibration; the snow-cover values keep only the finite
+    (cloud-free, in-period) pairs, exactly as the weighted objective does.
+    """
+    parameters.set_values(param_values)
+    socont.run(parameters=parameters, forcing=forcing)
+    sim_q = socont.get_outlet_discharge()
+    kge = hb.evaluate(sim_q[WARMUP:], discharge.data[0][WARMUP:], "kge_2012")
+    sim_sc = np.asarray(snow_cover.simulated(socont))
+    obs_sc = np.asarray(snow_cover.observed())
+    mask = np.isfinite(sim_sc) & np.isfinite(obs_sc)
+    rmse = hb.evaluate(sim_sc[mask], obs_sc[mask], "rmse")
+    return kge, rmse
+
 
 parameters.allow_changing = [
     "a_snow",
@@ -190,7 +225,18 @@ spot_setup = trainer.SpotpySetup(
 sampler = trainer.calibrate(spot_setup, "sceua", CALIBRATION_MAX_REP, dbformat="ram")
 best = trainer.get_best(sampler)
 print(f"Best combined objective (discharge + snow cover): {best['score']:.3f}")
-print("Best parameters:", best["parameters"])
+print_real_parameters(best["parameters"])
+kge, rmse = evaluate_run(best["parameters"])
+print(f"  Discharge KGE (2012):       {kge:.3f}")
+print(f"  Snow-cover RMSE [fraction]: {rmse:.3f}")
+
+# Summary: the single weighted score is 1.0 * discharge_skill + 0.3 * snow-cover_skill,
+# so it can exceed 1; here it is shown alongside the two terms it combines.
+print("\n=== Summary: best run ===")
+print(f"{'Signal':<22} {'Metric':>16}")
+print(f"{'Discharge':<22} {kge:>10.3f} KGE")
+print(f"{'Snow cover':<22} {rmse:>10.3f} RMSE")
+print(f"{'Combined objective':<22} {best['score']:>10.3f}")
 
 # --------------------------------------------------------------------------- #
 # 4. Inspect the best run: observed vs simulated catchment-mean snow cover

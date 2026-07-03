@@ -29,6 +29,8 @@ CATCHMENT_METEO = TEST_FILES_DIR / "ch_sitter_appenzell" / "meteo.csv"
 CATCHMENT_DISCHARGE = TEST_FILES_DIR / "ch_sitter_appenzell" / "discharge.csv"
 CATCHMENT_RASTER = TEST_FILES_DIR / "ch_sitter_appenzell" / "unit_ids.tif"
 DEM_RASTER = TEST_FILES_DIR / "ch_sitter_appenzell" / "dem.tif"
+START_DATE = "1981-01-01"
+END_DATE = "2020-12-31"
 
 working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
 working_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +80,7 @@ forcing.spatialize_from_station_data(
 forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=47.3)
 
 # Obs data
-obs = hb.DischargeObservations()
+obs = hb.DischargeObservations(START_DATE, END_DATE)
 obs.load_from_csv(
     CATCHMENT_DISCHARGE,
     column_time="Date",
@@ -90,8 +92,8 @@ obs.load_from_csv(
 socont.setup(
     spatial_structure=hydro_units,
     output_path=str(working_dir),
-    start_date="1981-01-01",
-    end_date="2020-12-31",
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 
 # Initialize and run the model

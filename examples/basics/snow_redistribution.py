@@ -36,6 +36,8 @@ CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / "connectivity_elevation_radiation.csv"
 CATCHMENT_OUTLINE = CATCHMENT_DIR / "outline.shp"
 DEM_RASTER = CATCHMENT_DIR / "dem.tif"
 GLACIER_ICE_THICKNESS = CATCHMENT_DIR / "glaciers" / "ice_thickness.tif"
+START_DATE = "1981-01-01"
+END_DATE = "2020-12-31"
 
 for with_snow_redistribution in [True, False]:
     working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
@@ -153,7 +155,7 @@ for with_snow_redistribution in [True, False]:
     forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
 
     # Obs data
-    obs = hb.DischargeObservations()
+    obs = hb.DischargeObservations(START_DATE, END_DATE)
     obs.load_from_csv(
         CATCHMENT_DISCHARGE,
         column_time="Date",
@@ -165,8 +167,8 @@ for with_snow_redistribution in [True, False]:
     socont.setup(
         spatial_structure=hydro_units,
         output_path=str(working_dir),
-        start_date="1981-01-01",
-        end_date="2020-12-31",
+        start_date=START_DATE,
+        end_date=END_DATE,
     )
 
     # Run the model

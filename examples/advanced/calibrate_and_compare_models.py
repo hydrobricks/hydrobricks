@@ -102,23 +102,21 @@ connectivity = catchment.calculate_connectivity(mode="multiple")
 hydro_units.set_connectivity(connectivity)
 
 # ---------------------------------------------------------------------------
-# 2. Observations (trimmed to the simulation period)
+# 2. Observations
 # ---------------------------------------------------------------------------
-# The discharge file covers a longer period than the simulation; trim it so the
-# observed series matches the simulated one (the trainer compares them directly).
-obs = hb.DischargeObservations()
+# The discharge file covers a longer period than the simulation; DischargeObservations
+# restricts the loaded data to [START_DATE, END_DATE] by default, so no manual
+# trimming is needed here.
+obs = hb.DischargeObservations(START_DATE, END_DATE)
 obs.load_from_csv(
     CATCHMENT_DISCHARGE,
     column_time="Date",
     time_format="%d/%m/%Y",
     content={"discharge": "Discharge (mm/d)"},
 )
-period_mask = obs.time <= pd.Timestamp(END_DATE)
-obs.time = obs.time[period_mask].reset_index(drop=True)
-obs.data[0] = obs.data[0][period_mask.to_numpy()]
 
 # Time axis of the evaluation period (after the warmup), used for the plots.
-eval_time = pd.DatetimeIndex(obs.time[WARMUP:])
+eval_time = pd.date_range(START_DATE, END_DATE, freq="D")[WARMUP:]
 
 
 # ---------------------------------------------------------------------------

@@ -151,6 +151,7 @@ before-all = [ # Independent of Python version
 before-build = [ # Depends on Python version
     "pip install cmake",
 ]
+repair-wheel-command = "cp {wheel} {dest_dir}/"
 
 [tool.cibuildwheel.macos]
 before-all = [ # Independent of Python version

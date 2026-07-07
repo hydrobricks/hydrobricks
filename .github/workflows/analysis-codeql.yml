@@ -35,7 +35,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Install libraries
       run: sudo apt-get install tree python3
@@ -44,6 +44,11 @@ jobs:
       uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
+        config: |
+          paths-ignore:
+            - vcpkg/**
+            - vcpkg_installed/**
+            - '**/vcpkg_installed/**'
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11

@@ -49,7 +49,7 @@ void InitLog(const string& path) {
 
     string version = std::format("{}.{}.{}", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
                                  HYDROBRICKS_PATCH_VERSION);
-    LogMessage(std::format("hydrobricks version {}, {}", version, __DATE__));
+    LogDebug(std::format("hydrobricks version {}, {}", version, __DATE__));
 }
 
 void CloseLog() {

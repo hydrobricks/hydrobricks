@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import HydroErr
 import numpy as np
+import pandas as pd
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
@@ -16,10 +17,15 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.periods import Period, spinup_to_days
+from hydrobricks.structure import StructureGraph
 from hydrobricks.trainer import evaluate
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from hydrobricks.evaluation.base import RecordingRequest
+    from hydrobricks.results import Results
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +33,9 @@ logger = logging.getLogger(__name__)
 # "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
 # aliases for backward compatibility.
 GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+
+# Name of the netCDF file written by dump_outputs() into the output directory.
+RESULTS_FILENAME = "results.nc"
 
 
 class Model(ABC):
@@ -53,6 +62,11 @@ class Model(ABC):
         self.name: str | None = name
         self.model: ModelHydro = ModelHydro()
         self.spatial_structure: HydroUnits | None = None
+        self.start_date: str | None = None
+        self.end_date: str | None = None
+        self.period: Period | None = None
+        self.spinup_days: int = 0
+        self.output_path: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
             "record_all",
@@ -105,8 +119,10 @@ class Model(ABC):
         self,
         spatial_structure: HydroUnits,
         output_path: str | Path,
-        start_date: str,
+        start_date: str | None = None,
         end_date: str | None = None,
+        period: Period | tuple | None = None,
+        spinup: int | str = 0,
     ) -> None:
         """
         Setup and initialize the model for simulation.
@@ -122,6 +138,17 @@ class Model(ABC):
         end_date
             Ending date of the computation (format: 'YYYY-MM-DD').
             If None, uses last date in time series. Default: None
+        period
+            The modelling period, as a :class:`~hydrobricks.periods.Period` or a
+            ``(start, end)`` pair (e.g. ``periods.calibration`` from a
+            :class:`~hydrobricks.periods.Periods`). Mutually exclusive with
+            ``start_date``/``end_date``.
+        spinup
+            The spin-up duration: the first days/years of the modelling period are
+            replayed (unlogged) on every run to initialize the states, then the run
+            restarts at the period start with the warmed-up states. Either a number
+            of days (int) or a string like ``'4y'`` (calendar years). A spin-up
+            longer than the period is clamped to it. Default: 0 (no spin-up)
 
         Raises
         ------
@@ -136,6 +163,8 @@ class Model(ABC):
         --------
         >>> model = SomeModel()
         >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
+        >>> model.setup(hydro_units, './output', period=periods.calibration,
+        ...             spinup='4y')
         """
         if self._is_initialized:
             raise ModelError(
@@ -143,17 +172,46 @@ class Model(ABC):
                 is_initialized=True,
             )
 
+        if period is not None:
+            if start_date is not None or end_date is not None:
+                raise ConfigurationError(
+                    "Pass either a period or start_date/end_date, not both.",
+                    item_name="period",
+                    reason="Conflicting period specification",
+                )
+            self.period = Period.coerce(period)
+            start_date, end_date = self.period.bounds
+        elif start_date is None:
+            raise ConfigurationError(
+                "A modelling period is required: pass start_date (and end_date) "
+                "or period.",
+                item_name="start_date",
+                reason="Missing modelling period",
+            )
+
+        # Fail early and clearly if the land cover declared on the model and on the
+        # hydro units disagree (they are provided in two places and must match).
+        self._check_land_cover_matches_structure(spatial_structure)
+
         try:
             if isinstance(output_path, str) and not os.path.isdir(output_path):
                 os.mkdir(output_path)
 
             self.spatial_structure = spatial_structure
+            self.start_date = start_date
+            self.end_date = end_date
+            self.output_path = str(output_path)
 
             # Initialize log
             init_log(str(output_path))
 
             # Modelling period
             self.settings.set_timer(start_date, end_date, 1, "day")
+
+            # Spin-up (replays the first days of the period, unlogged, on every run)
+            self.spinup_days = spinup_to_days(spinup, start_date)
+            if self.spinup_days > 0:
+                self.settings.set_spinup_days(self.spinup_days)
 
             # Initialize the model (with sub basin creation)
             self.model.init_with_basin(
@@ -175,6 +233,39 @@ class Model(ABC):
                 f"Invalid argument type or value in model setup: {e}", exc_info=True
             )
             raise ConfigurationError(f"Invalid configuration: {e}") from e
+
+    def add_recordings(self, request: RecordingRequest) -> None:
+        """
+        Enable the recording of specific stores/fluxes.
+
+        A targeted alternative to ``record_all=True``: records only the items needed
+        (e.g. by an auxiliary calibration observation). Must be called before
+        :meth:`setup` (the recordings are part of the model settings used to build
+        the model).
+
+        Parameters
+        ----------
+        request
+            The stores/fluxes to record (see
+            :class:`~hydrobricks.evaluation.base.RecordingRequest`).
+
+        Raises
+        ------
+        ModelError
+            If the model has already been initialized.
+        """
+        if self._is_initialized:
+            raise ModelError(
+                "Cannot configure recordings after the model has been initialized; "
+                "call add_recordings() (or obs.configure_recording()) before setup().",
+                is_initialized=True,
+            )
+        for brick, item in request.brick_states:
+            self.settings.record_brick_state(brick, item)
+        for brick, process, item in request.process_outputs:
+            self.settings.record_process_output(brick, process, item)
+        if request.fractions:
+            self.settings.record_fractions()
 
     def run(self, parameters: ParameterSet, forcing: Forcing | None = None) -> None:
         """
@@ -221,6 +312,9 @@ class Model(ABC):
 
             logger.debug("Starting model simulation")
             timer = Timer(text="Model simulation completed in {seconds:.2f} seconds")
+            # Route the per-run timing to debug so it does not flood the output
+            # during calibration (thousands of runs); visible with debug logging.
+            timer.logger = logger.debug
             timer.start()
 
             self.model.run()
@@ -383,18 +477,153 @@ class Model(ABC):
         """
         return self.model.get_total_snow_storage_changes()
 
-    def dump_outputs(self, path: str) -> None:
+    def dump_outputs(self, path: str | Path | None = None) -> str:
         """
-        Write the model outputs to a netcdf file.
+        Write the model outputs to a netCDF file.
 
         Parameters
         ----------
         path
-            Path to the target file.
-        """
-        self.model.dump_outputs(path)
+            Path to the output *directory* in which the ``results.nc`` file is
+            written. If None, the output path given to :meth:`setup` is used.
 
-    def eval(self, metric: str, observations: np.ndarray, warmup: int = 0) -> float:
+        Returns
+        -------
+        str
+            The full path to the written netCDF file (``<path>/results.nc``), ready to
+            pass to :class:`~hydrobricks.results.Results`.
+
+        Raises
+        ------
+        ModelError
+            If no path is given and the model has no output path (setup not called).
+        """
+        if path is None:
+            path = self.output_path
+        if path is None:
+            raise ModelError(
+                "No output path is available; pass a path to dump_outputs() or call "
+                "setup() first.",
+                is_initialized=self._is_initialized,
+            )
+        self.model.dump_outputs(str(path))
+        return os.path.join(str(path), RESULTS_FILENAME)
+
+    def get_results(self, output_path: str | Path | None = None) -> Results:
+        """
+        Dump the outputs and return a :class:`~hydrobricks.results.Results` reader.
+
+        Convenience wrapper around :meth:`dump_outputs` and ``Results`` that removes
+        the need to know the ``results.nc`` filename convention: it writes the outputs
+        and returns a ready-to-use reader.
+
+        Parameters
+        ----------
+        output_path
+            Output directory to write ``results.nc`` into. If None, the output path
+            given to :meth:`setup` is used.
+
+        Returns
+        -------
+        Results
+            A reader opened on the freshly written results file.
+        """
+        from hydrobricks.results import Results
+
+        results_path = self.dump_outputs(output_path)
+        return Results(results_path)
+
+    def get_recorded_labels(self) -> list[str]:
+        """
+        Get the labels of the recorded hydro-unit components (in-memory).
+
+        These are the components that can be retrieved with
+        :meth:`get_recorded_hydro_unit_values` without dumping the outputs to a
+        netCDF file. The set depends on what was recorded (use ``record_all=True``
+        to record everything).
+
+        Returns
+        -------
+        The list of recorded component labels (e.g. 'glacier:melt:output').
+        """
+        return list(self.model.get_recorded_hydro_unit_labels())
+
+    def get_recorded_hydro_unit_values(self, label: str) -> np.ndarray:
+        """
+        Get a recorded hydro-unit component series directly from memory.
+
+        Reads the in-memory logger (no netCDF dump), which makes it suitable for
+        use inside a calibration loop. The component must have been recorded (see
+        ``record_all``).
+
+        Parameters
+        ----------
+        label
+            The recorded component label (e.g. 'glacier_snowpack:snow_content').
+
+        Returns
+        -------
+        The recorded series as a 2D array of shape (n_hydro_units, n_timesteps),
+        matching the convention of ``Results.get_hydro_units_values``. Values are
+        NaN for hydro units to which the component does not apply.
+        """
+        # The engine stores the series as (time, units); transpose to the
+        # (units, time) convention used by the Results reader.
+        return np.asarray(self.model.get_hydro_unit_values(label)).T
+
+    def get_recorded_hydro_unit_fractions(self, label: str) -> np.ndarray:
+        """
+        Get a recorded land-cover fraction series directly from memory.
+
+        Fractions are recorded only when ``record_all`` is enabled. With a glacier
+        evolution action the fraction evolves over time; otherwise it is constant.
+
+        Parameters
+        ----------
+        label
+            The land cover name (e.g. 'glacier').
+
+        Returns
+        -------
+        The fraction series as a 2D array of shape (n_hydro_units, n_timesteps),
+        matching the convention of ``Results.get_hydro_units_values``.
+        """
+        # The engine stores the series as (time, units); transpose to (units, time).
+        return np.asarray(self.model.get_hydro_unit_fractions(label)).T
+
+    def get_recorded_hydro_unit_ids(self) -> np.ndarray:
+        """Get the hydro unit ids, in the order of the recorded series."""
+        return np.asarray(self.model.get_hydro_unit_ids())
+
+    def get_recorded_hydro_unit_areas(self) -> np.ndarray:
+        """Get the hydro unit areas [m2], in the order of the recorded series."""
+        return np.asarray(self.model.get_hydro_unit_areas())
+
+    def get_recorded_time(self) -> pd.DatetimeIndex:
+        """
+        Reconstruct the daily date axis of the recorded series.
+
+        The model runs on a daily time step, so the axis is rebuilt from the
+        modelling period rather than read from the engine.
+
+        Returns
+        -------
+        A daily ``DatetimeIndex`` spanning the modelling period.
+        """
+        if self.start_date is None or self.end_date is None:
+            raise ModelError(
+                "The model has no modelling period; call setup() first.",
+                is_initialized=self._is_initialized,
+            )
+        return pd.date_range(start=self.start_date, end=self.end_date, freq="D")
+
+    def eval(
+        self,
+        metric: str,
+        observations: np.ndarray | Any,
+        warmup: int = 0,
+        period: Period | tuple | None = None,
+    ) -> float:
         """
         Evaluate the simulation using the provided metric (goodness of fit).
 
@@ -405,8 +634,9 @@ class Model(ABC):
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
             Examples: nse, kge_2012, ...
         observations
-            The time series of the observations with dates matching the simulated
-            series.
+            The observations: an array with dates matching the simulated series, or
+            a :class:`~hydrobricks.evaluation.discharge.DischargeObservations`
+            (sliced by its own dates when a period is given).
         warmup
             The number of days of warmup period. This option is used to
             discard the warmup period from the evaluation. It is useful when
@@ -414,15 +644,68 @@ class Model(ABC):
             its score with those from the calibration. By setting the 'warmup'
             value, you can ensure fair assessments by discarding outputs
             from the specified warmup period (as is done automatically during
-            calibration).
+            calibration). Not needed when the model was set up with a spin-up.
+        period
+            Evaluate on this date slice of the simulation only (a
+            :class:`~hydrobricks.periods.Period` or ``(start, end)`` pair). The
+            period must be covered by the modelling period. Mutually exclusive
+            with ``warmup``.
 
         Returns
         -------
         The value of the selected metric.
         """
-        return evaluate(
-            self.get_outlet_discharge()[warmup:], observations[warmup:], metric
+        sim = self.get_outlet_discharge()
+        obs_values = (
+            observations
+            if isinstance(observations, np.ndarray)
+            else observations.data[0]
         )
+
+        if period is None:
+            return evaluate(sim[warmup:], obs_values[warmup:], metric)
+
+        if warmup:
+            raise ConfigurationError(
+                "Pass either a period or a warmup, not both.",
+                item_name="period",
+                reason="Conflicting evaluation options",
+            )
+
+        period = Period.coerce(period)
+        time = self.get_recorded_time()
+        if period.start < time[0] or period.end > time[-1]:
+            raise ConfigurationError(
+                f"The evaluation period ({period.start.date()}.."
+                f"{period.end.date()}) is not covered by the modelling period "
+                f"({time[0].date()}..{time[-1].date()}).",
+                item_name="period",
+                reason="Period not covered by the simulation",
+            )
+
+        sim_slice = sim[period.mask(time)]
+        if isinstance(observations, np.ndarray):
+            if len(obs_values) != len(sim):
+                raise ConfigurationError(
+                    f"The observations array ({len(obs_values)} values) does not "
+                    f"match the simulated series ({len(sim)} values); pass a "
+                    "DischargeObservations to slice by dates instead.",
+                    item_name="observations",
+                    reason="Length mismatch",
+                )
+            obs_slice = obs_values[period.mask(time)]
+        else:
+            obs_slice = obs_values[period.mask(observations.time)]
+            if len(obs_slice) != len(sim_slice):
+                raise ConfigurationError(
+                    f"The observations cover {len(obs_slice)} days of the "
+                    f"evaluation period but the simulation covers "
+                    f"{len(sim_slice)}.",
+                    item_name="observations",
+                    reason="Observations do not cover the period",
+                )
+
+        return evaluate(sim_slice, obs_slice, metric)
 
     def generate_parameters(self) -> ParameterSet:
         """
@@ -459,6 +742,99 @@ class Model(ABC):
             ps.define_constraint(*constraint)
 
         return ps
+
+    def get_structure_graph(
+        self, structure_id: int = 1, with_forcing: bool = True
+    ) -> StructureGraph:
+        """
+        Build the model structure graph (bricks, processes, fluxes, splitters).
+
+        The graph reflects the complete structure (including the snow routine, the
+        precipitation splitters, the forest canopy and the glacier reservoirs), is
+        available right after model construction (no setup/run needed), and can be
+        serialized, summarized and plotted.
+
+        Parameters
+        ----------
+        structure_id
+            The structure variant to inspect (default 1, the primary). Models with
+            glacier/lake covers define several variants.
+        with_forcing
+            Include the meteorological forcing inputs (precipitation, temperature,
+            pet) as source nodes. Set to False for a less cluttered graph.
+
+        Returns
+        -------
+        StructureGraph
+            The structure graph object.
+        """
+        return StructureGraph.from_settings(
+            self.settings.get_structure(),
+            structure_id=structure_id,
+            model_name=type(self).__name__,
+            solver=self.solver,
+            with_forcing=with_forcing,
+        )
+
+    def summary(self, structure_id: int = 1) -> str:
+        """Return a compact textual summary of the model structure."""
+        return self.get_structure_graph(structure_id).to_text()
+
+    def print_structure(self, structure_id: int = 1) -> None:
+        """Print a compact textual summary of the model structure."""
+        print(self.summary(structure_id))
+
+    def plot_structure(
+        self,
+        path: str | None = None,
+        fmt: str = "png",
+        view: bool = False,
+        legend: bool = True,
+        with_forcing: bool = True,
+        nodesep: float = 0.5,
+        ranksep: float = 0.7,
+        dpi: int = 200,
+        structure_id: int = 1,
+    ):
+        """Plot the model structure as a directed graph (requires ``graphviz``).
+
+        Parameters
+        ----------
+        path
+            Output file path without extension; if None, the graph object is returned
+            without writing a file.
+        fmt
+            Output format (e.g. 'png', 'pdf', 'svg'). Vector formats ('pdf', 'svg')
+            are resolution-independent and give the sharpest result.
+        view
+            Open the rendered file with the default viewer.
+        legend
+            Add a legend describing the node and flux styles (default True).
+        with_forcing
+            Include the meteorological forcing inputs (precipitation, temperature,
+            pet). Set to False for a less cluttered diagram.
+        nodesep, ranksep
+            Graphviz spacing (inches) between nodes in a rank and between ranks;
+            larger values give the diagram more breathing room.
+        dpi
+            Raster (e.g. PNG) resolution in dots per inch; raise it for a crisper
+            image. Ignored for vector formats.
+        structure_id
+            The structure variant to plot (default 1, the primary).
+
+        Returns
+        -------
+        The ``graphviz.Digraph`` object.
+        """
+        return self.get_structure_graph(structure_id, with_forcing=with_forcing).plot(
+            path=path,
+            fmt=fmt,
+            view=view,
+            legend=legend,
+            nodesep=nodesep,
+            ranksep=ranksep,
+            dpi=dpi,
+        )
 
     @abstractmethod
     def _define_structure(self) -> None:
@@ -543,6 +919,55 @@ class Model(ABC):
                     item_value=cover_type,
                     reason="Invalid land cover type",
                 )
+
+    @staticmethod
+    def _same_cover_type(type_a: str, type_b: str) -> bool:
+        """Whether two land cover types are equivalent (generic aliases included)."""
+        if type_a == type_b:
+            return True
+        return type_a in GENERIC_COVER_ALIASES and type_b in GENERIC_COVER_ALIASES
+
+    def _check_land_cover_matches_structure(
+        self, spatial_structure: HydroUnits
+    ) -> None:
+        """
+        Check that the model land cover matches the spatial structure land cover.
+
+        The land cover names/types are declared twice (once on the ``HydroUnits`` and
+        once on the model), and they must agree. A mismatch would otherwise surface as
+        a confusing low-level error when the C++ model is built. This validates the two
+        definitions up front and reports the exact difference.
+
+        Parameters
+        ----------
+        spatial_structure
+            The hydro units passed to :meth:`setup`.
+
+        Raises
+        ------
+        ConfigurationError
+            If the model and hydro units define different land covers.
+        """
+        hu_names = list(getattr(spatial_structure, "land_cover_names", []) or [])
+        hu_types = list(getattr(spatial_structure, "land_cover_types", []) or [])
+        model_map = dict(zip(self.land_cover_names, self.land_cover_types))
+        hu_map = dict(zip(hu_names, hu_types))
+
+        matches = set(model_map) == set(hu_map) and all(
+            self._same_cover_type(model_map[name], hu_map[name]) for name in model_map
+        )
+        if not matches:
+            raise ConfigurationError(
+                "The land cover definition of the model does not match that of the "
+                "hydro units (spatial structure); they must be identical. Pass the "
+                "same land_cover_names/land_cover_types to both HydroUnits (or "
+                "Catchment) and the model.\n"
+                f"  Model:      names={self.land_cover_names}, "
+                f"types={self.land_cover_types}\n"
+                f"  HydroUnits: names={hu_names}, types={hu_types}",
+                item_name="land_cover",
+                reason="Land cover mismatch between model and hydro units",
+            )
 
     def _set_basic_options(self, kwargs: dict[str, Any]) -> None:
         """
@@ -758,6 +1183,7 @@ class Model(ABC):
         snow_redistribution = None
         snow_water_retention_process = None
         snow_refreezing_process = None
+        snow_sublimation_process = None
         rain_to_snowpack = False
 
         if self.options.get("snow_melt_process") is not None:
@@ -770,6 +1196,8 @@ class Model(ABC):
             snow_water_retention_process = self.options["snow_water_retention_process"]
         if "snow_refreezing_process" in self.options:
             snow_refreezing_process = self.options["snow_refreezing_process"]
+        if "snow_sublimation_process" in self.options:
+            snow_sublimation_process = self.options["snow_sublimation_process"]
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
         # with_snow is on by default; an explicit option overrides it last, so it wins
@@ -787,7 +1215,9 @@ class Model(ABC):
             snow_redistribution=snow_redistribution,
             snow_water_retention_process=snow_water_retention_process,
             snow_refreezing_process=snow_refreezing_process,
+            snow_sublimation_process=snow_sublimation_process,
             rain_to_snowpack=rain_to_snowpack,
+            forest_interception=self.options.get("forest_interception", False),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:

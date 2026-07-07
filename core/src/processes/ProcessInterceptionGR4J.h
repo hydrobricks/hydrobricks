@@ -42,7 +42,7 @@ class ProcessInterceptionGR4J : public ProcessET {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_INTERCEPTION_GR4J_H

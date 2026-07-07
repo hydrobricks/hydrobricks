@@ -32,11 +32,11 @@ void ProcessRunoffHBV::SetParameters(const ProcessSettings& processSettings) {
     _alpha = GetParameterValuePointer(processSettings, "alpha");
 }
 
-vecDouble ProcessRunoffHBV::GetRates() {
+const vecDouble& ProcessRunoffHBV::GetRates() {
     double uz = _container->GetContentWithChanges();
     if (uz <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
-    return {(*_responseFactor) * std::pow(uz, 1.0 + static_cast<double>(*_alpha))};
+    return StoreRates({(*_responseFactor) * std::pow(uz, 1.0 + static_cast<double>(*_alpha))});
 }

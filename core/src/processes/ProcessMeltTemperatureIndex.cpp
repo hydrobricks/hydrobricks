@@ -59,9 +59,9 @@ void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessMeltTemperatureIndex::GetRates() {
+const vecDouble& ProcessMeltTemperatureIndex::GetRates() {
     if (!_container->ContentAccessible()) {
-        return {0};
+        return StoreRates({0});
     }
 
     double melt = 0;
@@ -70,5 +70,5 @@ vecDouble ProcessMeltTemperatureIndex::GetRates() {
                (*_meltFactor + *_radiationCoefficient * _solarRadiation->GetValue());
     }
 
-    return {melt};
+    return StoreRates({melt});
 }

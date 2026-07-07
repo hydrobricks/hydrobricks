@@ -308,6 +308,20 @@ class HydroUnit {
     bool FixLandCoverFractionsTotal();
 
     /**
+     * Restore the area fractions of all land covers to their initial extents without
+     * touching the stored contents (used after the spin-up phase).
+     */
+    void RestoreInitialAreaFractions();
+
+    /**
+     * Get the generic land cover that absorbs area changes ('open', or its
+     * 'ground'/'generic'/'generic_land_cover' aliases).
+     *
+     * @return Pointer to the generic land cover, or nullptr if none is defined.
+     */
+    [[nodiscard]] LandCover* GetGenericLandCover() const;
+
+    /**
      * Get the type of the hydro unit.
      *
      * @return The type of the hydro unit.
@@ -369,6 +383,24 @@ class HydroUnit {
      * @return A vector of lateral connections associated with the hydro unit.
      */
     [[nodiscard]] std::vector<HydroUnitLateralConnection*> GetLateralConnections() const;
+
+  private:
+    /**
+     * Conserve stored water/snow/ice when a land cover's area changes by transferring
+     * the content sitting on the converted land between the changed cover and the
+     * generic cover. The land that changes hands carries the donor cover's water
+     * column; the donor keeps its depth while the receiver's depth is diluted or
+     * concentrated so the total volume is preserved.
+     *
+     * @param changed The land cover whose fraction changes.
+     * @param oldFraction The changed cover's area fraction before the change.
+     * @param newFraction The changed cover's area fraction after the change.
+     * @param generic The generic cover that absorbs the area difference.
+     * @param genericOldFraction The generic cover's area fraction before the change.
+     * @param genericNewFraction The generic cover's area fraction after the change.
+     */
+    void TransferLandCoverContent(LandCover* changed, double oldFraction, double newFraction, LandCover* generic,
+                                  double genericOldFraction, double genericNewFraction);
 
   protected:
     Types _type;

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import itertools
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from hydrobricks._exceptions import ConfigurationError, DependencyError, ModelError
-from hydrobricks._optional import HAS_PYPROJ, rasterio
+from hydrobricks._exceptions import (
+    ConfigurationError,
+    DataError,
+    DependencyError,
+    ModelError,
+)
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, gpd, rasterio
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -81,13 +87,15 @@ class CatchmentDiscretization:
         radiation_distance: int = 50,
         min_radiation: int | None = None,
         max_radiation: int | None = None,
+        sub_catchments: str | Path | None = None,
     ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
 
         Discretizes the catchment into hydro units based on multiple criteria
-        (elevation, slope, aspect, radiation). Creates all combinations of
-        specified criteria and populates the map_unit_ids and hydro_units objects.
+        (elevation, slope, aspect, radiation, sub_catchments). Creates all
+        combinations of specified criteria and populates the map_unit_ids and
+        hydro_units objects.
 
         Parameters
         ----------
@@ -97,6 +105,9 @@ class CatchmentDiscretization:
             'aspect' = aspect according to the cardinal directions (4 classes)
             'radiation' = potential radiation (Hock, 1999)
             'slope' = slope in degrees
+            'sub_catchments' = membership to a sub-catchment polygon (keeps a hydro
+            unit from spanning spatially-distant areas); requires the
+            'sub_catchments' argument
         elevation_method
             The method to build the elevation bands:
             'equal_intervals' = fixed contour intervals
@@ -138,6 +149,13 @@ class CatchmentDiscretization:
             Minimum radiation of the radiation bands (to homogenize between runs).
         max_radiation
             Maximum radiation of the radiation bands (to homogenize between runs).
+        sub_catchments
+            Path to a vector file of sub-catchment polygons. Required when
+            'sub_catchments' is in ``criteria``. Each polygon defines a sub-catchment;
+            a DEM cell is assigned to the first polygon covering it. The sub-catchment
+            polygons must cover the whole catchment: if any catchment cell is left
+            uncovered, a ``DataError`` is raised (rather than silently dropping that
+            area from the hydro units).
         """
         if not HAS_PYPROJ:
             raise DependencyError(
@@ -261,6 +279,19 @@ class CatchmentDiscretization:
                     reason="Invalid method value",
                 )
 
+        sub_catchments_map = None
+        if "sub_catchments" in criteria:
+            if sub_catchments is None:
+                raise ConfigurationError(
+                    "The 'sub_catchments' criterion requires the 'sub_catchments' "
+                    "argument (path to the sub-catchment polygons).",
+                    item_name="sub_catchments",
+                    item_value=None,
+                    reason="Missing sub-catchment file",
+                )
+            sub_catchments_map, n_sub = self._build_sub_catchments_map(sub_catchments)
+            criteria_dict["sub_catchments"] = list(range(1, n_sub + 1))
+
         res_elevation = []
         res_elevation_min = []
         res_elevation_max = []
@@ -271,17 +302,20 @@ class CatchmentDiscretization:
         res_radiation = []
         res_radiation_min = []
         res_radiation_max = []
+        res_sub_catchment = []
 
         combinations = list(itertools.product(*criteria_dict.values()))
-        combinations_keys = criteria_dict.keys()
+        combinations_keys = list(criteria_dict.keys())
+        # Position of each criterion within a combination tuple (computed once).
+        criterion_positions = {name: pos for pos, name in enumerate(combinations_keys)}
 
         unit_id = 1
-        for i, criteria in enumerate(combinations):
+        for combination in combinations:
             mask_unit = np.ones(self.catchment.dem_data.shape, dtype=bool)
             # Mask nan values
             mask_unit[np.isnan(self.catchment.dem_data)] = False
 
-            for criterion_name, criterion in zip(combinations_keys, criteria):
+            for criterion_name, criterion in zip(combinations_keys, combination):
                 if criterion_name == "elevation":
                     mask_elev = np.logical_and(
                         self.catchment.dem_data >= criterion[0],
@@ -335,6 +369,9 @@ class CatchmentDiscretization:
                         radiation >= criterion[0], radiation < criterion[1]
                     )
                     mask_unit = np.logical_and(mask_unit, mask_radiation)
+                elif criterion_name == "sub_catchments":
+                    mask_sub = sub_catchments_map == criterion
+                    mask_unit = np.logical_and(mask_unit, mask_sub)
 
             # If the unit is empty, skip it
             if np.count_nonzero(mask_unit) == 0:
@@ -348,32 +385,33 @@ class CatchmentDiscretization:
 
             # Set the mean elevation of the unit if elevation is a criterion
             if "elevation" in criteria_dict.keys():
-                i = list(combinations_keys).index("elevation")
-                elevations = criteria[i]
+                elevations = combination[criterion_positions["elevation"]]
                 res_elevation.append(round(float(np.mean(elevations)), 2))
                 res_elevation_min.append(round(float(elevations[0]), 2))
                 res_elevation_max.append(round(float(elevations[1]), 2))
 
             # Set the mean slope of the unit if slope is a criterion
             if "slope" in criteria_dict.keys():
-                i = list(combinations_keys).index("slope")
-                slopes = criteria[i]
+                slopes = combination[criterion_positions["slope"]]
                 res_slope.append(round(float(np.mean(slopes)), 2))
                 res_slope_min.append(round(float(slopes[0]), 2))
                 res_slope_max.append(round(float(slopes[1]), 2))
 
             # Get the aspect class if aspect is a criterion
             if "aspect" in criteria_dict.keys():
-                i = list(combinations_keys).index("aspect")
-                res_aspect_class.append(criteria[i])
+                res_aspect_class.append(combination[criterion_positions["aspect"]])
 
             # Get the radiation class if radiation is a criterion
             if "radiation" in criteria_dict.keys():
-                i = list(combinations_keys).index("radiation")
-                radiations = criteria[i]
+                radiations = combination[criterion_positions["radiation"]]
                 res_radiation.append(round(float(np.mean(radiations)), 2))
                 res_radiation_min.append(round(float(radiations[0]), 2))
                 res_radiation_max.append(round(float(radiations[1]), 2))
+
+            # Get the sub-catchment id if sub_catchments is a criterion
+            if "sub_catchments" in criteria_dict.keys():
+                sub_id = combination[criterion_positions["sub_catchments"]]
+                res_sub_catchment.append(str(sub_id))
 
             unit_id += 1
 
@@ -409,6 +447,80 @@ class CatchmentDiscretization:
                 ("radiation_max", "W/m2"), res_radiation_max
             )
 
+        if res_sub_catchment:
+            self.catchment.hydro_units.add_property(
+                ("sub_catchment", "-"), res_sub_catchment
+            )
+
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()
         self.catchment.hydro_units.populate_bounded_instance()
+
+    def _build_sub_catchments_map(
+        self, sub_catchments: str | Path
+    ) -> tuple[np.ndarray, int]:
+        """Rasterize sub-catchment polygons onto the DEM grid.
+
+        Reads the sub-catchment polygons, reprojects them to the catchment CRS and
+        assigns each DEM cell to the first polygon covering it (ids 1..N in feature
+        order). The sub-catchment polygons must cover the whole catchment: if any
+        catchment cell is left uncovered, a ``DataError`` is raised (rather than
+        silently dropping that area from the hydro units).
+
+        Parameters
+        ----------
+        sub_catchments
+            Path to the vector file of sub-catchment polygons.
+
+        Returns
+        -------
+        A tuple ``(sub_catchments_map, n_sub)`` with the per-cell integer id grid over
+        the DEM and the number of sub-catchments.
+
+        Raises
+        ------
+        DataError
+            If part of the catchment is not covered by any sub-catchment polygon.
+        """
+        if not HAS_GEOPANDAS:
+            raise DependencyError(
+                "geopandas is required to discretize by sub-catchments.",
+                package_name="geopandas",
+                operation="CatchmentDiscretization.discretize_by",
+                install_command="pip install geopandas",
+            )
+        gdf = gpd.read_file(sub_catchments)
+        gdf = gdf.to_crs(self.catchment.crs)
+        if gdf.empty:
+            raise DataError(
+                "The sub-catchments file contains no polygons.",
+                data_type="sub-catchments",
+                reason="Empty file",
+            )
+
+        sub_map = np.zeros(self.catchment.dem_data.shape, dtype=int)
+        assigned = np.zeros(sub_map.shape, dtype=bool)
+        for i in range(len(gdf)):
+            subset = gdf.iloc[[i]]
+            masked = self.catchment.mask_dem(subset, nodata=-9999, all_touched=True)
+            present = (masked != -9999) & ~assigned
+            sub_map[present] = i + 1
+            assigned |= present
+
+        # Ensure the sub-catchments cover the whole catchment. Catchment cells are
+        # those with a valid elevation; any such cell left with id 0 would be silently
+        # dropped from the hydro units, so fail instead.
+        inside_catchment = ~np.isnan(self.catchment.dem_data)
+        uncovered = inside_catchment & (sub_map == 0)
+        n_uncovered = int(np.count_nonzero(uncovered))
+        if n_uncovered > 0:
+            uncovered_area = n_uncovered * self.catchment.get_dem_pixel_area()
+            raise DataError(
+                f"The sub-catchment polygons do not cover the whole catchment: "
+                f"{n_uncovered} cell(s) ({uncovered_area:.0f} m²) are left uncovered. "
+                f"Provide sub-catchments that tile the entire catchment.",
+                data_type="sub-catchments",
+                reason="Incomplete catchment coverage",
+            )
+
+        return sub_map, len(gdf)

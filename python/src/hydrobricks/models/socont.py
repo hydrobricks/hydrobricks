@@ -71,6 +71,9 @@ class Socont(Model):
         Snow-to-ice transformation on the glacier (default: None).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True).
     glacier_module : str
@@ -88,6 +91,7 @@ class Socont(Model):
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_ice_transformation"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["open", "glacier"]
@@ -176,7 +180,7 @@ class Socont(Model):
         }
 
         if self.options["soil_storage_nb"] == 2:
-            logger.info("Using 2 soil storages.")
+            logger.debug("Using 2 soil storages.")
             self.structure["slow_reservoir"]["processes"]["percolation"] = {
                 "kind": "percolation:constant",
                 "target": "slow_reservoir_2",
@@ -193,7 +197,7 @@ class Socont(Model):
         if self.options["surface_runoff"] == "socont_runoff":
             surface_runoff_kind = "runoff:socont"
         elif self.options["surface_runoff"] == "linear_storage":
-            logger.info("Using a linear storage for the quick flow.")
+            logger.debug("Using a linear storage for the quick flow.")
             surface_runoff_kind = "outflow:linear"
         else:
             raise ConfigurationError(
@@ -267,6 +271,9 @@ class Socont(Model):
         - k_slow_1 < k_quick: Slow flow slower than quick flow
         - k_slow_2 < k_quick: Second soil layer slower than quick flow
         - k_slow_2 < k_slow_1: Second soil layer slower than first layer
+
+        The snow/rain correction factor constraint (rain <= snow) is defined
+        generically for every snow-bearing model in ParameterSet.
 
         These constraints ensure the model behaves physically.
         """

@@ -1,6 +1,8 @@
 ﻿#include "ModelHydro.h"
 
+#include <algorithm>
 #include <memory>
+#include <stdexcept>
 
 #include "Includes.h"
 #include "ModelBuilder.h"
@@ -44,8 +46,14 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
             return std::unexpected("Timer initialization failed validation.");
         }
 
+        // Convert the spin-up duration into time steps; a spin-up longer than the
+        // modelling period degrades to replaying the whole period once.
+        double timeStepInDays = *_timer.GetTimeStepPointer();
+        _spinupSteps = static_cast<int>(modelSettings.GetTimerSettings().spinupDays / timeStepInDays);
+        _spinupSteps = std::min(_spinupSteps, _timer.GetTimeStepCount());
+
         _processor.Initialize(modelSettings.GetSolverSettings());
-        if (modelSettings.LogAll()) {
+        if (modelSettings.LogAll() || modelSettings.RecordsFractions()) {
             _logger.RecordFractions();
         }
         _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);
@@ -94,9 +102,17 @@ ModelResult ModelHydro::Run() {
         return r;
     }
 
+    if (_spinupSteps > 0) {
+        if (auto r = RunSpinup(); !r) {
+            return r;
+        }
+    }
+
     _logger.SaveInitialValues();
 
-    LogMessage("Simulation starting.");
+    // Per-run lifecycle messages are debug-level: at Message level they would
+    // flood the output during calibration (thousands of runs).
+    LogDebug("Simulation starting.");
 
     while (!_timer.IsOver()) {
         if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
@@ -111,7 +127,55 @@ ModelResult ModelHydro::Run() {
         }
     }
 
-    LogMessage("Simulation completed.");
+    LogDebug("Simulation completed.");
+
+    return {};
+}
+
+ModelResult ModelHydro::RunSpinup() {
+    LogDebug("Spin-up starting ({} time steps).", _spinupSteps);
+
+    // Actions and date-driven parameter updates must not fire during the spin-up: the
+    // same dates are replayed in the real run, and some of their side effects (e.g.
+    // ice redistribution by glacier evolution) cannot be rolled back. Detach them from
+    // the timer for the spin-up phase.
+    _timer.SetActionsManager(nullptr);
+    _timer.SetParametersUpdater(nullptr);
+
+    ModelResult result{};
+    for (int i = 0; i < _spinupSteps; ++i) {
+        if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
+            result = std::unexpected("Time step processing failed during spin-up.");
+            break;
+        }
+        _timer.IncrementTime();
+        if (auto r = UpdateForcing(); !r) {
+            result = std::unexpected(std::format("Failed updating forcing during spin-up: {}", r.error()));
+            break;
+        }
+    }
+
+    _timer.SetActionsManager(&_actionsManager);
+    _timer.SetParametersUpdater(&_parametersUpdater);
+
+    if (!result) {
+        return result;
+    }
+
+    return RewindAfterSpinup();
+}
+
+ModelResult ModelHydro::RewindAfterSpinup() {
+    // Restart the clock and the forcing cursors at the period start, keeping the
+    // warmed-up storage states. The land cover area fractions are restored to their
+    // initial values so the real run starts from the declared extents.
+    _timer.Reset();
+    _subBasin->RestoreInitialAreaFractions();
+    if (auto r = InitializeTimeSeries(); !r) {
+        return r;
+    }
+
+    LogDebug("Spin-up completed; simulation restarting at the period start.");
 
     return {};
 }
@@ -119,6 +183,11 @@ ModelResult ModelHydro::Run() {
 void ModelHydro::Reset() {
     _timer.Reset();
     _logger.Reset();
+    // Roll back action bookkeeping (cursors, lookup-table row, ...); the land-cover
+    // extents and storages are restored by the sub-basin reset below. Land covers
+    // capture their initial extent on the first reset (before the first run) and
+    // restore it on every later reset, so a model can be re-run (e.g. in a calibration
+    // loop) from the same initial conditions even when actions changed the extents.
     _actionsManager.Reset();
     _subBasin->Reset();
 }
@@ -153,6 +222,44 @@ double ModelHydro::GetTotalSnowStorageChanges() const {
 
 double ModelHydro::GetTotalGlacierStorageChanges() const {
     return _logger.GetTotalGlacierStorageChanges();
+}
+
+axxd ModelHydro::GetHydroUnitValues(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The hydro unit component '" + label +
+                                    "' was not recorded. Enable record_all to record it.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitValues()[index];
+}
+
+axxd ModelHydro::GetHydroUnitFractions(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitFractionLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The land cover fraction '" + label +
+                                    "' was not recorded. Fractions are recorded when record_all is enabled.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitFractions()[index];
+}
+
+vecStr ModelHydro::GetRecordedHydroUnitLabels() const {
+    return _logger.GetHydroUnitLabels();
+}
+
+vecStr ModelHydro::GetRecordedHydroUnitFractionLabels() const {
+    return _logger.GetHydroUnitFractionLabels();
+}
+
+vecInt ModelHydro::GetHydroUnitIds() const {
+    return _logger.GetHydroUnitIds();
+}
+
+axd ModelHydro::GetHydroUnitAreas() const {
+    return _logger.GetHydroUnitAreas();
 }
 
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {

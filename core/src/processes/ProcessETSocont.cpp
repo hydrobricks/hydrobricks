@@ -32,7 +32,7 @@ void ProcessETSocont::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETSocont::GetRates() {
+const vecDouble& ProcessETSocont::GetRates() {
     assert(_container->HasMaximumCapacity());
-    return {_pet->GetValue() * pow(_container->GetTargetFillingRatio(), _exponent)};
+    return StoreRates({_pet->GetValue() * pow(_container->GetTargetFillingRatio(), _exponent)});
 }

@@ -50,7 +50,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
     /**
      * Get the area of the hydro unit.

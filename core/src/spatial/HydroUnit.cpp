@@ -1,8 +1,75 @@
 #include "HydroUnit.h"
 
+#include <cmath>
 #include <utility>
 
 #include "SettingsBasin.h"
+
+namespace {
+
+// Identifies a single content storage exposed by a land cover, used to pair the
+// matching storages of two covers when water is transferred between them.
+enum class CoverRole {
+    SelfWater,      // the land cover's own water container
+    SelfIce,        // the land cover's ice container (glaciers only)
+    Snow,           // the snow held by the cover's snowpack
+    SnowpackWater,  // the liquid water retained in the cover's snowpack
+    CanopyWater     // the water intercepted by the cover's canopy
+};
+
+struct ContentSlot {
+    Brick* brick;
+    ContentType type;
+    CoverRole role;
+};
+
+// Build the list of content storages a land cover exposes: its own water (and ice
+// for glaciers) plus the water/snow held by its snowpack and canopy surface
+// components (named '<cover>_snowpack' / '<cover>_canopy'). Infinite storages (e.g.
+// an unlimited glacier ice reservoir) are not tracked masses and cannot be
+// reassigned, so they are excluded from the transfer.
+vector<ContentSlot> GetContentSlots(LandCover* cover, const HydroUnit* unit) {
+    vector<ContentSlot> slots;
+    auto addSlot = [&slots](Brick* brick, ContentType type, CoverRole role) {
+        if (!std::isinf(brick->GetContent(type))) {
+            slots.push_back({brick, type, role});
+        }
+    };
+    addSlot(cover, ContentType::Water, CoverRole::SelfWater);
+    if (cover->GetCategory() == BrickCategory::Glacier) {
+        addSlot(cover, ContentType::Ice, CoverRole::SelfIce);
+    }
+    Brick* snowpack = unit->TryGetBrick(string(cover->GetName()) + "_snowpack");
+    if (snowpack != nullptr) {
+        addSlot(snowpack, ContentType::Snow, CoverRole::Snow);
+        addSlot(snowpack, ContentType::Water, CoverRole::SnowpackWater);
+    }
+    Brick* canopy = unit->TryGetBrick(string(cover->GetName()) + "_canopy");
+    if (canopy != nullptr) {
+        addSlot(canopy, ContentType::Water, CoverRole::CanopyWater);
+    }
+    return slots;
+}
+
+double GetSlotDepth(const vector<ContentSlot>& slots, CoverRole role) {
+    for (const auto& slot : slots) {
+        if (slot.role == role) {
+            return slot.brick->GetContent(slot.type);
+        }
+    }
+    return 0;
+}
+
+bool HasRole(const vector<ContentSlot>& slots, CoverRole role) {
+    for (const auto& slot : slots) {
+        if (slot.role == role) {
+            return true;
+        }
+    }
+    return false;
+}
+
+}  // namespace
 
 HydroUnit::HydroUnit(double area, Types type)
     : _type(type),
@@ -268,26 +335,130 @@ bool HydroUnit::ChangeLandCoverAreaFraction(std::string_view name, double fracti
         return false;
     }
     auto it = _landCoverMap.find(string(name));
-    if (it != _landCoverMap.end()) {
-        it->second->SetAreaFraction(fraction);
-        return FixLandCoverFractionsTotal();
+    if (it == _landCoverMap.end()) {
+        LogError("Land cover '{}' was not found.", name);
+        return false;
     }
-    LogError("Land cover '{}' was not found.", name);
-    return false;
+    LandCover* changed = it->second;
+
+    // Conserve the stored water by transferring the content sitting on the land that
+    // changes hands between the changed cover and the generic (soil) cover that
+    // absorbs the area difference. Only relevant when there is a distinct generic
+    // cover to exchange with.
+    LandCover* generic = GetGenericLandCover();
+    if (generic != nullptr && generic != changed && _landCoverBricks.size() > 1) {
+        double oldFraction = changed->GetAreaFraction();
+        double delta = fraction - oldFraction;
+        double genericOldFraction = generic->GetAreaFraction();
+        double genericNewFraction = genericOldFraction - delta;
+
+        // The generic cover must be able to absorb the change (it cannot go negative).
+        if (LessThan(genericNewFraction, 0, EPSILON_D)) {
+            LogError(
+                "The generic soil (open) land cover (%.20g) is not large enough to compensate "
+                "the area change (%.20g) with error margin (%.20g).",
+                genericOldFraction, delta, EPSILON_D);
+            return false;
+        }
+
+        TransferLandCoverContent(changed, oldFraction, fraction, generic, genericOldFraction, genericNewFraction);
+    }
+
+    changed->SetAreaFraction(fraction);
+    return FixLandCoverFractionsTotal();
 }
 
-bool HydroUnit::FixLandCoverFractionsTotal() {
-    // Find the generic (soil) land cover that absorbs the area changes. 'open' is the
-    // canonical name; 'ground'/'generic'/'generic_land_cover' are accepted aliases kept
-    // for backward compatibility.
-    LandCover* ground = nullptr;
+LandCover* HydroUnit::GetGenericLandCover() const {
+    // 'open' is the canonical name; 'ground'/'generic'/'generic_land_cover' are accepted
+    // aliases kept for backward compatibility.
     for (const auto& name : {"open", "ground", "generic", "generic_land_cover"}) {
         auto it = _landCoverMap.find(name);
         if (it != _landCoverMap.end()) {
-            ground = it->second;
-            break;
+            return it->second;
         }
     }
+    return nullptr;
+}
+
+void HydroUnit::TransferLandCoverContent(LandCover* changed, double oldFraction, double newFraction, LandCover* generic,
+                                         double genericOldFraction, double genericNewFraction) {
+    double delta = newFraction - oldFraction;
+    if (NearlyZero(delta, EPSILON_D)) {
+        return;
+    }
+
+    // The cover that loses area is the donor; the one that gains area is the receiver.
+    // The strip of land that changes hands carries the donor's water column.
+    LandCover* donor;
+    LandCover* receiver;
+    double fReceiverOld;
+    double fReceiverNew;
+    double fDonorNew;
+    double strip;
+    if (delta > 0) {
+        // The changed cover grows, taking land from the generic cover.
+        donor = generic;
+        receiver = changed;
+        fReceiverOld = oldFraction;
+        fReceiverNew = newFraction;
+        fDonorNew = genericNewFraction;
+        strip = delta;
+    } else {
+        // The changed cover shrinks, giving land to the generic cover.
+        donor = changed;
+        receiver = generic;
+        fReceiverOld = genericOldFraction;
+        fReceiverNew = genericNewFraction;
+        fDonorNew = newFraction;
+        strip = -delta;
+    }
+
+    if (NearlyZero(fReceiverNew, EPSILON_D)) {
+        return;  // The receiver grows, so this should not happen; guard against division by zero.
+    }
+
+    vector<ContentSlot> receiverSlots = GetContentSlots(receiver, this);
+    vector<ContentSlot> donorSlots = GetContentSlots(donor, this);
+
+    // Liquid water held in donor storages the receiver cannot mirror (e.g. a forest
+    // canopy converting to bare ground) is folded into the receiver's own water so no
+    // water is lost. Snow/ice without a matching receiver storage stays with the donor
+    // (a shrinking glacier's ice is left to the glacier-evolution action to manage).
+    double unmatchedDonorWater = 0;
+    for (const auto& slot : donorSlots) {
+        if (slot.type == ContentType::Water && !HasRole(receiverSlots, slot.role)) {
+            unmatchedDonorWater += slot.brick->GetContent(ContentType::Water);
+        }
+    }
+
+    for (const auto& slot : receiverSlots) {
+        double donorDepth = GetSlotDepth(donorSlots, slot.role);
+        if (slot.role == CoverRole::SelfWater) {
+            donorDepth += unmatchedDonorWater;
+        }
+        double receiverDepth = slot.brick->GetContent(slot.type);
+        double newDepth = (receiverDepth * fReceiverOld + donorDepth * strip) / fReceiverNew;
+        slot.brick->UpdateContent(newDepth, slot.type);
+    }
+
+    // If the donor cover has fully vanished, clear its now zero-area storages so no
+    // stale depth lingers; its volume has already been credited to the receiver.
+    if (NearlyZero(fDonorNew, EPSILON_D)) {
+        for (const auto& slot : donorSlots) {
+            slot.brick->UpdateContent(0, slot.type);
+        }
+    }
+}
+
+void HydroUnit::RestoreInitialAreaFractions() {
+    for (auto brick : _landCoverBricks) {
+        brick->RestoreInitialAreaFraction();
+    }
+}
+
+bool HydroUnit::FixLandCoverFractionsTotal() {
+    // The generic (soil) land cover absorbs the area changes.
+    LandCover* ground = GetGenericLandCover();
 
     double total = 0;
     for (auto brick : _landCoverBricks) {

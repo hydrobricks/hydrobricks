@@ -32,7 +32,7 @@ class ProcessInfiltrationGR4J : public ProcessInfiltration {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_INFILTRATION_GR4J_H

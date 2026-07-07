@@ -43,10 +43,10 @@ void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettin
     _maxSnowDepth = GetParameterValuePointer(processSettings, "max_snow_depth");
 }
 
-vecDouble ProcessLateralSnowSlide::GetRates() {
+const vecDouble& ProcessLateralSnowSlide::GetRates() {
     // If no fluxes attached (no connection), return empty vector
     if (_outputs.empty()) {
-        return {};
+        return StoreRates({});
     }
 
     // Snow density conversion factor
@@ -82,11 +82,11 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
     }
 
     // Iterate through each output and calculate the lateral rate
-    vecDouble rates(_outputs.size(), 0.0);
+    _changeRates.assign(_outputs.size(), 0.0);
 
     if (excessSwe <= 0.0) {
         // No excess snow to redistribute
-        return rates;
+        return _changeRates;
     }
 
     // Cap the excess SWE to a maximum of 1000 mm to prevent unrealistic redistribution rates
@@ -101,12 +101,12 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
         Flux* flux = _outputs[i].get();  // Extract raw pointer from unique_ptr
         double targetFraction = GetTargetLandCoverAreaFraction(flux);
         if (NearlyZero(targetFraction, PRECISION)) {
-            rates[i] = 0.0;  // No redistribution if target fraction is negligible
+            _changeRates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }
-        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
+        _changeRates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
 
-        rates[i] = AvoidUnrealisticAccumulation(rates[i], flux);
+        _changeRates[i] = AvoidUnrealisticAccumulation(_changeRates[i], flux);
 
         // The weight of the flux is adjusted to account for the area ratio between the source and target land cover.
         // As it can change (e.g., due to land cover changes), we compute it dynamically.
@@ -114,7 +114,7 @@ vecDouble ProcessLateralSnowSlide::GetRates() {
         flux->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
     }
 
-    return rates;
+    return _changeRates;
 }
 
 double ProcessLateralSnowSlide::AvoidUnrealisticAccumulation(double rate, Flux* flux) {

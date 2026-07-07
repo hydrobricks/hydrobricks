@@ -44,7 +44,7 @@ class ProcessETSocont : public ProcessET {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_ET_SOCONT_H

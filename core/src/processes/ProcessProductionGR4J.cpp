@@ -31,14 +31,14 @@ void ProcessProductionGR4J::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessProductionGR4J::GetRates() {
+const vecDouble& ProcessProductionGR4J::GetRates() {
     if (_pet == nullptr) {
-        return {0};
+        return StoreRates({0});
     }
 
     double X1 = _container->GetMaximumCapacity();
     if (X1 <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     // Start-of-step store level and this step's net precipitation. Pn is the
@@ -59,5 +59,5 @@ vecDouble ProcessProductionGR4J::GetRates() {
     // infiltrate, plus percolation leaving the store.
     double PR = (Pn - Ps) + Perc;
 
-    return {PR};
+    return StoreRates({PR});
 }

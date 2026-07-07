@@ -1,6 +1,6 @@
 [project]
 name = "hydrobricks"
-version = "0.8.7"
+version = "0.9.0"
 authors = [
     { name = "Pascal Horton et al.", email = "pascal.horton@unibe.ch" }
 ]
@@ -18,54 +18,57 @@ classifiers = [
 ]
 dependencies = [
     "cftime",
-    "numpy<=2.3.5",
+    "numpy<2.4",
     "HydroErr",
     "pandas",
     "pyyaml",
-    "StrEnum",
-    "dask",
-    "dask-expr"
+    "StrEnum; python_version < '3.11'"
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest>=6.0",
-    "cftime",
-    "HydroErr",
-    "numpy<=2.3.5",
-    "pandas",
-    "pyyaml",
-    "StrEnum",
+all = [
     "dask",
-    "dask-expr",
+    "datashader==0.19.0",
     "geopandas",
+    "graphviz",
+    "h5netcdf",
+    "matplotlib",
     "netCDF4",
+    "pathos",
+    "pyarrow",
     "pyet",
+    "pyproj",
+    "pysheds",
     "rasterio",
     "rioxarray",
+    "scipy",
     "shapely",
+    "spotpy",
     "xarray",
-    "pyarrow",
-    "xarray-spatial",
-    "pysheds"
+    "xarray-spatial"
+]
+test = [
+    "hydrobricks[all]",
+    "pytest>=6.0"
 ]
 dev = [
+    "hydrobricks[all]",
     "pre-commit>=3.4.0"
 ]
+
+[project.scripts]
+hydrobricks = "hydrobricks.cli:main"
 
 [project.urls]
 "Source Code" = "https://github.com/hydrobricks/hydrobricks"
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"
 
 [tool.setuptools]
-packages = [
-    "hydrobricks",
-    "hydrobricks.models",
-    "hydrobricks.modules",
-    "hydrobricks.actions",
-    "hydrobricks.preprocessing"
-]
-package-dir = {"hydrobricks" = "python/src/hydrobricks", "hydrobricks.models" = "python/src/hydrobricks/models", "hydrobricks.modules" = "python/src/hydrobricks/modules", "hydrobricks.actions" = "python/src/hydrobricks/actions", "hydrobricks.preprocessing" = "python/src/hydrobricks/preprocessing"}
+package-dir = {"" = "python/src"}
+
+[tool.setuptools.packages.find]
+where = ["python/src"]
+include = ["hydrobricks*"]
 
 [build-system]
 requires = [
@@ -95,11 +98,14 @@ filterwarnings = [
 ]
 testpaths = ["python/tests"]
 
+[tool.codespell]
+ignore-words-list = "crate, mape, ned, PADDS"
+
 [tool.cibuildwheel]
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp37*", "cp38*", "cp39*", "cp314t*", "pp*"]
+skip = ["*musllinux*", "cp38*", "cp39*", "cp314t*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

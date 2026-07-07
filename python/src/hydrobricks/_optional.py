@@ -31,6 +31,7 @@ Available flags:
     - HAS_GEOPANDAS: GeoPandas library
     - HAS_SHAPELY: Shapely library
     - HAS_SPOTPY: SPOTPY library
+    - HAS_PATHOS: Pathos library (multiprocessing backend for SPOTPY 'mpc')
     - HAS_PYET: PyEt library
     - HAS_PYPROJ: Pyproj library
     - HAS_PYSHEDS: Pysheds library
@@ -96,6 +97,7 @@ xr = None
 rxr = None
 pyarrow = None
 xrs = None
+graphviz = None
 
 # Check availability and setup lazy imports
 HAS_NETCDF = is_module_available("netCDF4")
@@ -120,6 +122,9 @@ if HAS_SHAPELY:
 HAS_SPOTPY = is_module_available("spotpy")
 if HAS_SPOTPY:
     spotpy = LazyImport("spotpy")
+
+# Pathos provides the multiprocessing pool used by SPOTPY's parallel='mpc' backend.
+HAS_PATHOS = is_module_available("pathos")
 
 HAS_PYET = is_module_available("pyet")
 if HAS_PYET:
@@ -154,6 +159,10 @@ HAS_XRSPATIAL = is_module_available("xrspatial")
 if HAS_XRSPATIAL:
     xrs = LazyImport("xrspatial")
 
+HAS_GRAPHVIZ = is_module_available("graphviz")
+if HAS_GRAPHVIZ:
+    graphviz = LazyImport("graphviz")
+
 __all__ = [
     # Utility functions
     "is_module_available",
@@ -167,6 +176,7 @@ __all__ = [
     "HAS_GEOPANDAS",
     "HAS_SHAPELY",
     "HAS_SPOTPY",
+    "HAS_PATHOS",
     "HAS_PYET",
     "HAS_PYPROJ",
     "HAS_PYSHEDS",
@@ -175,6 +185,7 @@ __all__ = [
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
+    "HAS_GRAPHVIZ",
     # Lazy-loaded modules
     "Dataset",
     "rasterio",
@@ -190,4 +201,5 @@ __all__ = [
     "rxr",
     "pyarrow",
     "xrs",
+    "graphviz",
 ]

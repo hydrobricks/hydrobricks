@@ -37,7 +37,7 @@ class ProcessPercolationConstant : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_PERCOLATION_CONSTANT_H

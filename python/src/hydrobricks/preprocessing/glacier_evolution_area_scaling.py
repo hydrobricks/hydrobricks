@@ -7,8 +7,11 @@ import numpy as np
 import pandas as pd
 
 from hydrobricks._constants import ICE_WE
-from hydrobricks._exceptions import ConfigurationError, DependencyError
-from hydrobricks._optional import HAS_PYPROJ
+from hydrobricks._exceptions import ConfigurationError
+from hydrobricks.preprocessing.glacier_cover import (
+    extract_ice_thickness_and_mask,
+    initialize_glacier_cover,
+)
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -41,11 +44,15 @@ class GlacierEvolutionAreaScaling:
         self.px_ice_we: np.ndarray | None = None
 
     def compute_lookup_table(
-        self, catchment: Catchment, ice_thickness: str | Path, nb_increments: int = 200
+        self,
+        catchment: Catchment,
+        ice_thickness: str | Path,
+        nb_increments: int = 200,
+        land_cover: str | None = None,
+        initialize_cover: bool = True,
     ) -> None:
         """
-        Extract the initial ice thickness to be used in compute_lookup_table()
-        for the glacier mass balance calculation.
+        Compute the glacier area and volume evolution lookup tables.
 
         Computes glacier area and volume evolution lookup tables based on incremental
         melting using a simple volume-area scaling approach. Results stored in
@@ -59,6 +66,14 @@ class GlacierEvolutionAreaScaling:
             Path to the TIF file containing the glacier thickness in meters.
         nb_increments
             Number of increments for glacier mass balance calculation. Default is 200.
+        land_cover
+            Name of the glacier land cover to initialize. If None (default), the
+            single land cover of type 'glacier' is detected from the catchment.
+        initialize_cover
+            Whether to initialize the glacier cover of each hydro unit from the
+            extracted ice thickness, so the model starts with the actual glacier
+            area. Default is True. Set to False if the glacier cover is set
+            separately (e.g. from a land cover change CSV or shapefiles).
         """
 
         # Check that the catchment has been discretized
@@ -67,15 +82,6 @@ class GlacierEvolutionAreaScaling:
                 "Catchment has not been discretized. "
                 "Please run create_elevation_bands() first.",
                 reason="Catchment not initialized",
-            )
-
-        # Extract the ice thickness from a TIF file.
-        if not HAS_PYPROJ:
-            raise DependencyError(
-                "pyproj is required to extract glacier thickness.",
-                package_name="pyproj",
-                operation="GlacierEvolutionAreaScaling.compute_lookup_table",
-                install_command="pip install pyproj",
             )
 
         self.hydro_units = catchment.hydro_units.hydro_units
@@ -92,6 +98,9 @@ class GlacierEvolutionAreaScaling:
             self._width_scaling(increment, catchment=catchment)
 
         self._update_lookup_tables()
+
+        if initialize_cover:
+            initialize_glacier_cover(catchment, self.glacier_df, land_cover)
 
     def get_lookup_table_area(self) -> pd.DataFrame:
         """
@@ -197,34 +206,21 @@ class GlacierEvolutionAreaScaling:
         ice_thickness
             Path to ice thickness raster file.
         """
-        catchment.extract_attribute_raster(
-            ice_thickness,
-            "ice_thickness",
-            resample_to_dem_resolution=True,
-            resampling="average",
+        ice_thickness, glaciers_mask = extract_ice_thickness_and_mask(
+            catchment, ice_thickness
         )
-        ice_thickness = catchment.attributes["ice_thickness"]["data"]
-        ice_thickness[catchment.dem_data == 0] = 0.0
-        glaciers_mask = np.zeros(catchment.dem_data.shape)
-        glaciers_mask[ice_thickness > 0] = 1
 
         glacier_patches = self._get_glacier_patches(catchment, glaciers_mask)
 
         # Create the dataframe for the glacier data
-        glacier_df = None
-        for unit_id, area in glacier_patches:
-            new_row = pd.DataFrame(
-                [[unit_id, area, 0.0]],
-                columns=[
-                    ("hydro_unit_id", "-"),
-                    ("glacier_area", "m2"),
-                    ("glacier_thickness", "m"),
-                ],
-            )
-            if glacier_df is None:
-                glacier_df = new_row
-            else:
-                glacier_df = pd.concat([glacier_df, new_row], ignore_index=True)
+        glacier_df = pd.DataFrame(
+            [[unit_id, area, 0.0] for unit_id, area in glacier_patches],
+            columns=[
+                ("hydro_unit_id", "-"),
+                ("glacier_area", "m2"),
+                ("glacier_thickness", "m"),
+            ],
+        )
 
         self.px_ice_we = np.empty((1, len(glacier_df)), dtype=object)
 
@@ -305,7 +301,12 @@ class GlacierEvolutionAreaScaling:
         # Compute the melt
         for i_unit in np.arange(len(self.hydro_unit_ids)):
             change = mass_change[i_unit]
-            melt = change / self.areas_pc[increment - 1, i_unit]
+            unit_area_pc = self.areas_pc[increment - 1, i_unit]
+            # A fully melted unit has no area left: nothing more to melt, and
+            # dividing by zero would yield Inf/NaN and trip the assert below.
+            if unit_area_pc == 0:
+                continue
+            melt = change / unit_area_pc
 
             # Update the glacier water equivalent of the pixels
             px_values = self.px_ice_we[increment, i_unit]
@@ -365,10 +366,9 @@ class GlacierEvolutionAreaScaling:
         """
         Update lookup tables with glacier area and volume for each increment.
 
-        Aggregates glacier areas and volumes across hydro units based on elevation
-        bands. Step 5 (6) of Seibert et al. (2018): "Sum the total (width-scaled)
-        areas for all respective elevation bands which are covered by glaciers
-        (i.e. glacier water equivalent ≥ 0) for each elevation zone."
+        Aggregates the glacier area and volume per hydro unit (one column per
+        hydro unit) across all melt increments, in this simple volume-area
+        scaling approach (no elevation-band sub-discretization).
         """
         # Update elevation zone areas
         for i, hydro_unit_id in enumerate(np.unique(self.hydro_unit_ids)):

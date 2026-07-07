@@ -15,7 +15,7 @@ class TimeSeriesData {
      * @param values vector of values to set.
      * @return true if the values were successfully set.
      */
-    virtual bool SetValues(const vecDouble& values);
+    virtual bool SetValues(vecDouble values);
 
     /**
      * Get the value for the provided date.
@@ -98,7 +98,7 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::SetValues()
      */
-    bool SetValues(const vecDouble& values) override;
+    bool SetValues(vecDouble values) override;
 
     /**
      * @copydoc TimeSeriesData::GetValueFor()
@@ -161,7 +161,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::SetValues()
      */
-    bool SetValues(const vecDouble& values) override;
+    bool SetValues(vecDouble values) override;
 
     /**
      * @copydoc TimeSeriesData::GetValueFor()

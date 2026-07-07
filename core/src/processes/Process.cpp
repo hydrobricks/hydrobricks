@@ -8,14 +8,18 @@
 #include "Glacier.h"
 #include "HydroUnit.h"
 #include "ProcessCapillaryHBV.h"
+#include "ProcessETExponential.h"
 #include "ProcessETGR4J.h"
 #include "ProcessETHBV.h"
+#include "ProcessETLinear.h"
 #include "ProcessETOpenWater.h"
+#include "ProcessETPowerLaw.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessInterceptionGR4J.h"
+#include "ProcessLateralSnowRedistributionFrey.h"
 #include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
@@ -36,6 +40,8 @@
 #include "ProcessRoutingHBV.h"
 #include "ProcessRunoffHBV.h"
 #include "ProcessRunoffSocont.h"
+#include "ProcessSublimationConstant.h"
+#include "ProcessSublimationPET.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
@@ -219,6 +225,27 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessETOpenWater::RegisterProcessSettings
         }},
 
+        {"et:linear", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETLinear>(b->GetWaterContainer());
+            },
+            &ProcessETLinear::RegisterProcessSettings
+        }},
+
+        {"et:power_law", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETPowerLaw>(b->GetWaterContainer());
+            },
+            &ProcessETPowerLaw::RegisterProcessSettings
+        }},
+
+        {"et:exponential", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETExponential>(b->GetWaterContainer());
+            },
+            &ProcessETExponential::RegisterProcessSettings
+        }},
+
         {"melt:degree_day", {
             [](Brick* b) -> std::unique_ptr<Process> {
                 if (b->GetCategory() == BrickCategory::Snowpack) {
@@ -272,6 +299,29 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessMeltCemaNeige::RegisterProcessSettings
         }},
 
+        {"sublimation:constant", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationConstant>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationConstant::RegisterProcessSettings
+        }},
+
+        {"sublimation:pet", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationPET>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationPET::RegisterProcessSettings
+        }},
+
         {"transformation:snow_ice_constant", {
             [](Brick* b) -> std::unique_ptr<Process> {
                 if (b->GetCategory() == BrickCategory::Snowpack) {
@@ -305,6 +355,30 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessLateralSnowSlide::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), false);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey_dynamic", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), true);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettingsDynamic
         }},
 
         {"interception:gr4j", {
@@ -403,11 +477,10 @@ const float* Process::GetParameterValuePointer(const ProcessSettings& processSet
     throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
-vecDouble Process::GetChangeRates() {
+const vecDouble& Process::GetChangeRates() {
     if (LessThanOrEqual(_container->GetContentWithChanges(), 0, PRECISION)) {
-        vecDouble res(GetConnectionCount());
-        std::fill(res.begin(), res.end(), 0);
-        return res;
+        _changeRates.assign(GetConnectionCount(), 0.0);
+        return _changeRates;
     }
 
     return GetRates();

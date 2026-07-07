@@ -523,10 +523,18 @@ def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
 
 
 def _run_open_forest(
-    tmp_path, *, forest_frac, params, ic=None, P=5.0, PET=2.0, n_days=_N_2Y
+    tmp_path,
+    *,
+    forest_frac,
+    params,
+    ic=None,
+    interception=True,
+    P=5.0,
+    PET=2.0,
+    n_days=_N_2Y,
 ) -> tuple:
-    """Run HBV-96 with an open ('ground') and a forest cover (the latter
-    intercepting)."""
+    """Run HBV-96 with an open ('ground') and a forest cover (the latter optionally
+    intercepting rain in a canopy)."""
     open_frac = 1.0 - forest_frac
     hydro_units = hb.HydroUnits(
         land_cover_types=["ground", "forest"], land_cover_names=["open", "forest"]
@@ -548,6 +556,7 @@ def _run_open_forest(
     model = models.HBV96(
         land_cover_names=["open", "forest"],
         land_cover_types=["ground", "forest"],
+        forest_interception=interception,
         record_all=True,
     )
     parameters = model.generate_parameters()
@@ -584,9 +593,21 @@ _PARAMS_OPEN_FOREST = {
 }
 
 
+def test_hbv96_forest_interception_is_off_by_default():
+    """Forest interception is opt-in: by default a forest cover exposes no canopy
+    interception capacity parameter (no canopy is generated)."""
+    assert models.HBV96().options["forest_interception"] is False
+    parameters = models.HBV96(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    ).generate_parameters()
+    assert not parameters.has("ic")
+
+
 def test_hbv96_forest_exposes_interception_capacity_alias():
     parameters = models.HBV96(
-        land_cover_names=["open", "forest"], land_cover_types=["ground", "forest"]
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        forest_interception=True,
     ).generate_parameters()
     assert parameters.has("ic"), "interception capacity alias 'ic' not found"
 
@@ -610,6 +631,18 @@ def test_hbv96_forest_interception_reduces_discharge(tmp_path):
         _subdir(tmp_path, "high"), forest_frac=0.4, params=_PARAMS_OPEN_FOREST, ic=5.0
     )
     assert high.get_total_outlet_discharge() < low.get_total_outlet_discharge()
+
+
+def test_hbv96_forest_without_interception_runs_and_balances(tmp_path):
+    """With interception disabled (the default), a forest cover behaves like a generic
+    soil cover: the model runs and the water balance closes."""
+    model, forcing = _run_open_forest(
+        _subdir(tmp_path, "noint"),
+        forest_frac=0.4,
+        params=_PARAMS_OPEN_FOREST,
+        interception=False,
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
 def test_hbv96_single_cover_keeps_legacy_aliases():
@@ -885,6 +918,58 @@ def test_hbv96_glacier_brick_absent_where_no_glacier(tmp_path):
         has_glacier = not bool(np.all(np.isnan(glacier_areas[i, :])))
         brick_present = not bool(np.all(np.isnan(glacier_state[i, :])))
         assert has_glacier == brick_present
+
+
+def test_hbv96_total_swe_aggregates_land_covers(tmp_path):
+    """get_total_swe combines the per-land-cover snowpacks into a unit-average SWE
+    depth while keeping the hydro unit dimension. The all-ground unit (no glacier) must
+    equal its ground snowpack, and the catchment area-weighted mean of the per-unit
+    totals must match get_mean_swe."""
+    _, _, results = _run_ground_glacier(tmp_path)
+    total_swe = results.get_total_swe()
+    ground_swe = results.get_hydro_units_values("ground_snowpack:snow_content")
+
+    # Shape is (units, time), matching the per-unit component arrays.
+    assert total_swe.shape == ground_swe.shape
+
+    # Unit 0 is all ground (no glacier): its total SWE is just the ground snowpack.
+    np.testing.assert_allclose(total_swe[0, :], ground_swe[0, :], rtol=1e-9)
+
+    # Area-weighting the per-unit totals over the catchment recovers get_mean_swe.
+    unit_areas = np.nan_to_num(results.results.hydro_units_areas.to_numpy())[:, None]
+    mean_from_total = np.nansum(total_swe * unit_areas, axis=0) / unit_areas.sum(axis=0)
+    np.testing.assert_allclose(mean_from_total, results.get_mean_swe(), rtol=1e-9)
+
+
+def test_hbv96_total_swe_handles_snowless_land_cover(tmp_path):
+    """A land cover without a snowpack (a lake) must not raise: it contributes zero SWE
+    over its area. The all-ground unit keeps its ground snowpack; the all-lake unit
+    averages to zero SWE."""
+    _, _, results = _run_ground_lake(tmp_path, PET=0.5)
+    total_swe = results.get_total_swe()
+    ground_swe = results.get_hydro_units_values("ground_snowpack:snow_content")
+
+    np.testing.assert_allclose(total_swe[0, :], ground_swe[0, :], rtol=1e-9)
+    np.testing.assert_allclose(total_swe[1, :], 0.0, atol=1e-12)
+
+
+def test_hbv96_total_swe_date_slicing(tmp_path):
+    """Date selection slices the land-cover areas consistently with the SWE values, so a
+    sub-range matches the corresponding slice of the full series, and a single date
+    returns a per-unit snapshot."""
+    _, _, results = _run_ground_glacier(tmp_path)
+    full = results.get_total_swe()
+    times = results.results.time.to_numpy()
+    start = np.datetime_as_string(times[10], unit="D")
+    end = np.datetime_as_string(times[20], unit="D")
+
+    sub = results.get_total_swe(start, end)
+    assert sub.shape == (full.shape[0], 11)
+    np.testing.assert_allclose(sub, full[:, 10:21], rtol=1e-9)
+
+    snapshot = results.get_total_swe(start)
+    assert snapshot.shape == (full.shape[0],)
+    np.testing.assert_allclose(snapshot, full[:, 10], rtol=1e-9)
 
 
 def test_hbv96_glacier_infinite_storage_adds_discharge(tmp_path):

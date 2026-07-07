@@ -57,9 +57,9 @@ double* ProcessRoutingHBV::GetValuePointer(std::string_view name) {
     return nullptr;
 }
 
-vecDouble ProcessRoutingHBV::GetRates() {
+const vecDouble& ProcessRoutingHBV::GetRates() {
     if (_maxbas == nullptr) {
-        return {0};
+        return StoreRates({0});
     }
 
     // Recompute UH ordinates if maxbas changed (calibration loop)
@@ -71,7 +71,7 @@ vecDouble ProcessRoutingHBV::GetRates() {
     // previous under-deliveries) plus the same-step share of this timestep's inflow.
     double in = _container->SumIncomingFluxes();
 
-    return {std::max(0.0, _stuh[0]) + _uhOrd[0] * in};
+    return StoreRates({std::max(0.0, _stuh[0]) + _uhOrd[0] * in});
 }
 
 void ProcessRoutingHBV::Finalize() {

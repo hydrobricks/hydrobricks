@@ -91,6 +91,50 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f, 0.0000001);
 }
 
+TEST_F(ActionsInModel, LandCoverChangeConservesWaterBalance) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    // Change the land cover area while snow is on the ground (day 3) and again later
+    // (day 6). The ground cover area changes in both directions, which used to break
+    // the water balance because the stored water/snow was not moved with the land.
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 3), 1, "glacier", 70);
+    action.AddChange(GetMJD(2020, 1, 6), 1, "glacier", 30);
+    EXPECT_TRUE(model.AddAction(&action));
+
+    EXPECT_TRUE(model.Run());
+
+    Logger* logger = model.GetLogger();
+
+    // Full water balance: precipitation = discharge + ET + storage changes (water,
+    // snow and ice). No water may be created or destroyed by the area changes.
+    double precip = 80;
+    double discharge = logger->GetTotalOutletDischarge();
+    double et = logger->GetTotalET();
+    double waterStorage = logger->GetTotalWaterStorageChanges();
+    double snowStorage = logger->GetTotalSnowStorageChanges();
+    double iceStorage = logger->GetTotalGlacierStorageChanges();
+
+    double balance = discharge + et + waterStorage + snowStorage + iceStorage - precip;
+
+    EXPECT_NEAR(balance, 0.0, 1e-5);
+}
+
 TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     // Change the model settings to cover a larger time period
     _model.SetTimer("2000-01-01", "2020-12-31", 1, "day");
@@ -150,6 +194,128 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
 
     EXPECT_TRUE(model.Run());
 
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+}
+
+TEST_F(ActionsInModel, LandCoverChangeIsRestoredOnRerun) {
+    // Re-running a model with a land-cover-change action (e.g. in a calibration loop)
+    // must restore the initial extents and reproduce the exact same result.
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+    basinSettings.AddHydroUnit(2, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+    basinSettings.AddHydroUnit(3, 100);
+    basinSettings.AddLandCover("ground", "", 0.5);
+    basinSettings.AddLandCover("glacier", "", 0.5);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    ActionLandCoverChange action;
+    action.AddChange(GetMJD(2020, 1, 2), 2, "glacier", 60);
+    action.AddChange(GetMJD(2020, 1, 4), 2, "glacier", 70);
+    action.AddChange(GetMJD(2020, 1, 6), 2, "glacier", 80);
+    action.AddChange(GetMJD(2020, 1, 6), 3, "glacier", 40);
+    EXPECT_TRUE(model.AddAction(&action));
+
+    // The calibration loop is reset() -> run() each iteration; the first reset
+    // snapshots the initial extents, every later reset restores them.
+    model.Reset();
+    EXPECT_TRUE(model.Run());
+    double discharge1 = model.GetLogger()->GetTotalOutletDischarge();
+
+    // Second iteration: must not throw and must reproduce the first run exactly.
+    model.Reset();
+    EXPECT_TRUE(model.Run());
+    double discharge2 = model.GetLogger()->GetTotalOutletDischarge();
+
+    EXPECT_NEAR(discharge1, discharge2, 1e-8);
+    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2, 0.0000001);
+    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4, 0.0000001);
+}
+
+TEST_F(ActionsInModel, GlacierEvolutionDeltaHIsRestoredOnRerun) {
+    // The delta-h evolution model used to fail / produce different results when re-run
+    // (the glacier extent and ice volume were not restored). Re-running must reproduce
+    // the first run exactly.
+    _model.SetTimer("2000-01-01", "2020-12-31", 1, "day");
+    int timeStepCount = GetMJD(2020, 12, 31) - GetMJD(2000, 1, 1) + 1;
+
+    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, TimeUnit::Day);
+    precip->SetValues(vecDouble(timeStepCount, 0.0));
+    _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+    _tsPrecip->SetData(std::move(precip));
+
+    auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1,
+                                                               TimeUnit::Day);
+    temperature->SetValues(vecDouble(timeStepCount, 2.0));
+    _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+    _tsTemp->SetData(std::move(temperature));
+
+    auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2000, 1, 1), GetMJD(2020, 12, 31), 1, TimeUnit::Day);
+    pet->SetValues(vecDouble(timeStepCount, 0.0));
+    _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
+    _tsPet->SetData(std::move(pet));
+
+    SettingsBasin basinSettings;
+    for (int i = 0; i < 3; ++i) {
+        basinSettings.AddHydroUnit(i + 1, 10000);
+        basinSettings.AddLandCover("ground", "", 0.5);
+        basinSettings.AddLandCover("glacier", "", 0.5);
+    }
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+    EXPECT_TRUE(model.IsValid());
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    ActionGlacierEvolutionDeltaH action;
+    axi hydroUnitIds(3);
+    hydroUnitIds << 1, 2, 3;
+    axxd areas = axxd::Zero(4, 3);
+    areas << 5000, 5000, 5000, 2000, 3000, 4000, 0, 1000, 2000, 0, 0, 0;
+    axxd volumes = axxd::Zero(4, 3);
+    volumes << 50000, 50000, 50000, 10000, 35000, 40000, 0, 5000, 10000, 0, 0, 0;
+    action.AddLookupTables(10, "glacier", hydroUnitIds, areas, volumes);
+    EXPECT_TRUE(model.AddAction(&action));
+
+    // The calibration loop is reset() -> run() each iteration; the first reset
+    // snapshots the initial glacier extent and ice volume, every later reset restores
+    // them (the delta-h action also rewinds its lookup-table cursor).
+    model.Reset();
+    EXPECT_TRUE(model.Run());
+    double discharge1 = model.GetLogger()->GetTotalOutletDischarge();
+
+    // Second iteration: must not throw and must reproduce the first run exactly.
+    model.Reset();
+    EXPECT_TRUE(model.Run());
+    double discharge2 = model.GetLogger()->GetTotalOutletDischarge();
+
+    EXPECT_NEAR(discharge1, discharge2, 1e-6);
     EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
     EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
     EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);

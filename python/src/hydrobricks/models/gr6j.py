@@ -53,6 +53,9 @@ class GR6J(GR4J):
         'melt:degree_day_aspect' an 'aspect_class' hydro unit property.
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     """
 
     def __init__(self, name: str = "gr6j", **kwargs: Any) -> None:
@@ -65,6 +68,7 @@ class GR6J(GR4J):
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)

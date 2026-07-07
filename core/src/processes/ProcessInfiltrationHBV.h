@@ -47,7 +47,7 @@ class ProcessInfiltrationHBV : public ProcessInfiltration {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_INFILTRATION_HBV_H

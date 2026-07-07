@@ -39,6 +39,6 @@ bool ProcessOutflowDirect::IsValid() const {
     return true;
 }
 
-vecDouble ProcessOutflowDirect::GetRates() {
-    return {std::max(_container->GetContentWithChanges(), 0.0)};
+const vecDouble& ProcessOutflowDirect::GetRates() {
+    return StoreRates({std::max(_container->GetContentWithChanges(), 0.0)});
 }

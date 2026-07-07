@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path
 import shutil
@@ -9,6 +10,8 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
+
+logger = logging.getLogger(__name__)
 
 FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -255,7 +258,10 @@ def test_radiation_calculation_with_cast_shadows():
         diff = ref_radiation - calc_radiation
         average_diff = np.mean(diff)
 
-        assert abs(average_diff) < 0.1  # Different from the previous test
+        # The reference raster predates the correction of the Earth-Sun distance
+        # ratio (true anomaly) in _calculate_radiation_hock_equation, which shifts
+        # the annual mean by ~0.19 W/m². Tolerance relaxed accordingly.
+        assert abs(average_diff) < 0.25  # Different from the previous test
 
 
 def test_radiation_calculation_resolution():
@@ -277,7 +283,7 @@ def test_radiation_calculation_resolution():
     try:
         shutil.rmtree(working_dir)
     except Exception:
-        print("Failed to clean up.")
+        logger.debug("Failed to clean up temporary directory %s", working_dir)
 
 
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")

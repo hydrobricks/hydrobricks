@@ -126,7 +126,9 @@ def test_forcing_load_station_data_from_csv(hydro_units: hb.HydroUnits):
 
 def test_correct_station_data(forcing: hb.Forcing):
     forcing.correct_station_data(
-        variable="precipitation", method="additive", correction="param:precip_corr"
+        variable="precipitation",
+        method="additive",
+        correction_factor="param:precip_corr",
     )
     assert len(forcing._operations) == 1
     assert forcing._operations[0]["type"] == "prior_correction"
@@ -158,6 +160,45 @@ def test_compute_pet(forcing: hb.Forcing):
     assert len(forcing._operations) == 1
     assert forcing._operations[0]["type"] == "compute_pet"
     assert forcing._operations[0]["method"] == "Priestley-Taylor"
+
+
+def test_correct_station_data_unknown_variable_raises_at_call(forcing: hb.Forcing):
+    # An unrecognized variable name is reported immediately, not at apply time.
+    with pytest.raises(hb.ForcingError):
+        forcing.correct_station_data(variable="not_a_variable", correction_factor=0.9)
+    assert len(forcing._operations) == 0
+
+
+def test_correct_station_data_unknown_method_raises_at_call(forcing: hb.Forcing):
+    with pytest.raises(hb.ForcingError):
+        forcing.correct_station_data(
+            variable="precipitation", method="scale", correction_factor=0.9
+        )
+    assert len(forcing._operations) == 0
+
+
+def test_correct_station_data_missing_factor_raises_at_call(forcing: hb.Forcing):
+    with pytest.raises(hb.ForcingError):
+        forcing.correct_station_data(variable="precipitation", method="additive")
+    assert len(forcing._operations) == 0
+
+
+def test_spatialize_from_station_data_unknown_method_raises_at_call(
+    forcing: hb.Forcing,
+):
+    with pytest.raises(hb.ForcingError):
+        forcing.spatialize_from_station_data(
+            variable="temperature", method="linear_gradient", ref_elevation=1250
+        )
+    assert len(forcing._operations) == 0
+
+
+def test_compute_pet_unknown_method_raises_at_call(forcing: hb.Forcing):
+    if not hb.HAS_PYET:
+        return
+    with pytest.raises(hb.ForcingError):
+        forcing.compute_pet(method="NotAMethod", use=["t", "lat"])
+    assert len(forcing._operations) == 0
 
 
 def test_apply_prior_correction_multiplicative(

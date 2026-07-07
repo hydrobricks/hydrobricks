@@ -77,6 +77,8 @@ ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
                 auto brick = dynamic_cast<LandCover*>(genericBrick);
                 assert(brick);
                 brick->SetAreaFraction(elementSettings.fraction);
+                // Capture the assigned extent as the initial one to restore on reset.
+                brick->SetInitialAreaFraction(elementSettings.fraction);
             }
 
             for (int iElement = 0; iElement < surfaceComponentCount; ++iElement) {
@@ -112,10 +114,16 @@ void SubBasin::Reset() {
 
 void SubBasin::SaveAsInitialState() {
     for (const auto& brick : _bricks) {
-        brick->Reset();
+        brick->SaveAsInitialState();
     }
     for (const auto& hydroUnit : _hydroUnits) {
-        hydroUnit->Reset();
+        hydroUnit->SaveAsInitialState();
+    }
+}
+
+void SubBasin::RestoreInitialAreaFractions() {
+    for (const auto& hydroUnit : _hydroUnits) {
+        hydroUnit->RestoreInitialAreaFractions();
     }
 }
 

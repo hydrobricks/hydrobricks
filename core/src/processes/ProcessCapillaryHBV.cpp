@@ -66,8 +66,8 @@ void ProcessCapillaryHBV::SetParameters(const ProcessSettings& processSettings) 
     _maxCapillaryFlux = GetParameterValuePointer(processSettings, "max_capillary_flux");
 }
 
-vecDouble ProcessCapillaryHBV::GetRates() {
-    vecDouble rates(_targetBricks.size(), 0.0);
+const vecDouble& ProcessCapillaryHBV::GetRates() {
+    _changeRates.assign(_targetBricks.size(), 0.0);
 
     for (size_t i = 0; i < _targetBricks.size(); ++i) {
         WaterContainer* target = _targetBricks[i]->GetWaterContainer();
@@ -89,8 +89,8 @@ vecDouble ProcessCapillaryHBV::GetRates() {
         }
 
         double deficit = 1.0 - std::clamp(target->GetTargetFillingRatio(), 0.0, 1.0);
-        rates[i] = (*_maxCapillaryFlux) * weight * deficit;
+        _changeRates[i] = (*_maxCapillaryFlux) * weight * deficit;
     }
 
-    return rates;
+    return _changeRates;
 }

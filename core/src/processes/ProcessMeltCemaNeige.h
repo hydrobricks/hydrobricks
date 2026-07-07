@@ -69,7 +69,7 @@ class ProcessMeltCemaNeige : public ProcessMelt {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_CEMANEIGE_H

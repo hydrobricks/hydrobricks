@@ -4,7 +4,6 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Hashable
 
-import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import (
@@ -135,7 +134,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
-            aliases=["rfcf", "rcf"],
+            aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -144,7 +143,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="snow_correction_factor",
             unit="-",
-            aliases=["sfcf", "scf"],
+            aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -156,7 +155,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
-            aliases=["rfcf", "rcf"],
+            aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
             min=0.5,
             max=2.0,
             default=1.0,
@@ -284,6 +283,30 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Constant-rate snow sublimation
+    "sublimation:constant": [
+        ParamSpec(
+            name="sublimation_rate",
+            unit="mm/d",
+            aliases=["sublimation_rate"],
+            min=0,
+            max=2,
+            default=0.1,
+            mandatory=False,
+        ),
+    ],
+    # PET-fraction snow sublimation (evapo-sublimation; Herrero & Polo, 2016)
+    "sublimation:pet": [
+        ParamSpec(
+            name="sublimation_pet_factor",
+            unit="-",
+            aliases=["sublimation_pet_factor", "sublimation_factor"],
+            min=0,
+            max=1,
+            default=0.2,
+            mandatory=False,
+        ),
+    ],
     # Snow/ice constant transformation (dynamic aliases per glacier snowpack)
     "transform:snow_ice_constant": [
         ParamSpec(
@@ -343,11 +366,35 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="et_correction_factor",
             unit="-",
-            aliases=["cevpf", "etcf"],
+            aliases=["et_correction_factor", "et_corr_factor", "cevpf", "etcf"],
             min=0.5,
             max=2.0,
             default=1.0,
             mandatory=False,
+        ),
+    ],
+    # Power-law actual evapotranspiration (Ea = PET * (S/Smax)^exponent)
+    "et:power_law": [
+        ParamSpec(
+            name="exponent",
+            unit="-",
+            aliases=["et_beta"],
+            min=0.2,
+            max=3.0,
+            default=0.5,
+            mandatory=True,
+        ),
+    ],
+    # Exponential ET (Ea = PET * (1 - exp(-alpha * S/Smax)))
+    "et:exponential": [
+        ParamSpec(
+            name="alpha",
+            unit="-",
+            aliases=["et_alpha"],
+            min=0.5,
+            max=10.0,
+            default=2.0,
+            mandatory=True,
         ),
     ],
     # HBV-96 non-linear upper zone runoff (Q0 = k * UZ^(1+alpha))
@@ -547,6 +594,136 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="max_snow_depth",
             unit="mm",
             aliases=["snow_slide_max_snow_depth"],
+            min=-1,
+            max=50000,
+            default=20000,
+            mandatory=False,
+        ),
+    ],
+    "transport:snow_redistribution_frey": [
+        ParamSpec(
+            name="correction",
+            unit="-",
+            aliases=["snow_redist_frey_c"],
+            min=0,
+            max=10,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_holding_capacity",
+            unit="mm",
+            aliases=["snow_redist_frey_holding_capacity"],
+            min=0,
+            max=5000,
+            default=200,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_rho_max"],
+            min=200,
+            max=600,
+            default=450,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_density",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_snow_density"],
+            min=50,
+            max=600,
+            default=250,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="max_snow_depth",
+            unit="mm",
+            aliases=["snow_redist_frey_max_snow_depth"],
+            min=-1,
+            max=50000,
+            default=20000,
+            mandatory=False,
+        ),
+    ],
+    "transport:snow_redistribution_frey_dynamic": [
+        ParamSpec(
+            name="correction",
+            unit="-",
+            aliases=["snow_redist_frey_dyn_c"],
+            min=0,
+            max=10,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="snow_holding_capacity",
+            unit="mm",
+            aliases=["snow_redist_frey_dyn_holding_capacity"],
+            min=0,
+            max=5000,
+            default=200,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_max"],
+            min=200,
+            max=600,
+            default=450,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_min",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_min"],
+            min=50,
+            max=300,
+            default=100,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_fresh_max",
+            unit="kg/m3",
+            aliases=["snow_redist_frey_dyn_rho_fresh_max"],
+            min=100,
+            max=500,
+            default=300,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_settling",
+            unit="1/day",
+            aliases=["snow_redist_frey_dyn_rho_settling"],
+            min=0,
+            max=1,
+            default=0.1,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="rho_scale",
+            unit="-",
+            aliases=["snow_redist_frey_dyn_rho_scale"],
+            min=0.1,
+            max=10,
+            default=1.2,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="t_scale",
+            unit="°C",
+            aliases=["snow_redist_frey_dyn_t_scale"],
+            min=-5,
+            max=5,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="max_snow_depth",
+            unit="mm",
+            aliases=["snow_redist_frey_dyn_max_snow_depth"],
             min=-1,
             max=50000,
             default=20000,
@@ -1012,6 +1189,26 @@ class ParameterSet:
                 )
             self.parameters.loc[index, "value"] = value
 
+    def get_transform(self, name: str) -> ParameterTransform | None:
+        """
+        Return the transform attached to a parameter, or None.
+
+        Parameters
+        ----------
+        name
+            The name or one of the aliases of the parameter.
+
+        Returns
+        -------
+        ParameterTransform | None
+            The transform if one is set, otherwise None. Parameters without a
+            transform (or unknown names) return None.
+        """
+        index = self._get_parameter_index(name, raise_exception=False)
+        if index is None:
+            return None
+        return self._get_transform(index)
+
     def has(self, name: str) -> bool:
         """
         Check if a parameter exists.
@@ -1286,7 +1483,9 @@ class ParameterSet:
         for param_name in self.allow_changing:
             index = self._get_parameter_index(param_name)
             param = self.parameters.loc[index]
-            if param["prior"] and not np.isnan(param["prior"]):
+            # The prior is either unset (NaN) or a spotpy parameter object; pd.isna
+            # handles both (np.isnan would raise on the object).
+            if not pd.isna(param["prior"]):
                 # A supplied prior is assumed to already be in optimizer space.
                 spotpy_params.append(param["prior"])
             else:
@@ -1359,8 +1558,10 @@ class ParameterSet:
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
 
-        # Parameters for the forest canopies (interception capacity)
-        self._generate_canopy_parameters(land_cover_types, land_cover_names)
+        # Parameters for the forest canopies (interception capacity), only when the
+        # canopy interception is enabled (the canopy bricks are then generated).
+        if options.get("forest_interception", False):
+            self._generate_canopy_parameters(land_cover_types, land_cover_names)
 
         # Parameters for the different bricks
         for key, brick in structure.items():
@@ -1457,6 +1658,7 @@ class ParameterSet:
             "outflow:direct",
             "et:socont",
             "et:open_water",
+            "et:linear",
             "overflow",
             "interception:gr4j",
             "infiltration:gr4j",
@@ -1690,6 +1892,12 @@ class ParameterSet:
         if with_snow:
             for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
                 self._register(component="snow_rain_transition", spec=spec)
+            # Snow undercatch is usually at least as large as rain undercatch, so the
+            # snow factor should not fall below the rain factor. Applies to every
+            # snow-bearing model (only the snow/rain splitter carries both factors).
+            self.define_constraint(
+                "rain_correction_factor", "<=", "snow_correction_factor"
+            )
         else:
             for spec in PROCESS_PARAM_SPECS["correction:rain"]:
                 self._register(component="rain", spec=spec)
@@ -1795,11 +2003,23 @@ class ParameterSet:
                 for spec in PROCESS_PARAM_SPECS[process]:
                     self._register(component="type:snowpack", spec=spec)
 
+            # Snow sublimation (snow container to the atmosphere)
+            sublimation = options.get("snow_sublimation_process")
+            if sublimation is not None:
+                if sublimation not in PROCESS_PARAM_SPECS:
+                    raise ConfigurationError(
+                        f"The snow_sublimation_process option {sublimation} is "
+                        f"not recognised.",
+                        item_name="snow_sublimation_process",
+                        item_value=sublimation,
+                        reason="Unknown process",
+                    )
+                for spec in PROCESS_PARAM_SPECS[sublimation]:
+                    self._register(component="type:snowpack", spec=spec)
+
             # Snow/ice transformation
-            if "snow_ice_transformation" in options:
-                algo = options["snow_ice_transformation"]
-                if algo is None:
-                    return
+            algo = options.get("snow_ice_transformation")
+            if algo is not None:
                 if algo not in PROCESS_PARAM_SPECS:
                     raise ConfigurationError(
                         f"The snow/ice transformation option {algo} is not recognised.",
@@ -1855,12 +2075,25 @@ class ParameterSet:
                 if red is None:
                     return
                 if red in PROCESS_PARAM_SPECS:
+                    multi = len(land_cover_names) > 1
                     for spec in PROCESS_PARAM_SPECS[red]:
-                        self._register(
-                            component="type:snowpack",
-                            spec=spec,
-                            aliases=spec.aliases or [],
-                        )
+                        if spec.name == "snow_holding_capacity":
+                            # The snow holding capacity is land-cover specific
+                            # (vegetation / surface roughness), so register it per
+                            # snowpack with a per-cover alias suffix.
+                            for cover_name in land_cover_names:
+                                suffix = f"_{cover_name}" if multi else ""
+                                self._register(
+                                    component=f"{cover_name}_snowpack",
+                                    spec=spec,
+                                    alias_suffix=suffix,
+                                )
+                        else:
+                            self._register(
+                                component="type:snowpack",
+                                spec=spec,
+                                aliases=spec.aliases or [],
+                            )
                 elif red is not None:
                     raise ConfigurationError(
                         f"The snow redistribution option {red} is not recognised.",

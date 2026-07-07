@@ -28,10 +28,10 @@ void ProcessOutflowThreshold::SetParameters(const ProcessSettings& processSettin
     _capacity = GetParameterValuePointer(processSettings, "capacity");
 }
 
-vecDouble ProcessOutflowThreshold::GetRates() {
+const vecDouble& ProcessOutflowThreshold::GetRates() {
     double excess = _container->GetContentWithChanges() - (*_capacity);
     if (excess <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     // Return a rate (amount per unit time): dividing the excess by the time step drains exactly
@@ -39,5 +39,5 @@ vecDouble ProcessOutflowThreshold::GetRates() {
     // case where no time machine is wired up (e.g. unit tests).
     double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
 
-    return {excess / timeStep};
+    return StoreRates({excess / timeStep});
 }

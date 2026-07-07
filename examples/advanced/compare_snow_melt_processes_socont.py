@@ -37,16 +37,41 @@ for method in methods:
         catchment_name, start_date="1981-01-01", end_date="2020-12-31"
     )
 
+    # The Rhône @ Gletsch catchment is heavily glacierized, so every discretization
+    # gets a glacier land cover whose per-unit fraction is initialized from the
+    # ice-thickness raster.
     if method == "degree_day":
-        helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-    elif method == "degree_day_aspect":
-        helper.create_hydro_units_from_csv_file(
-            filename="hydro_units_elevation_aspect.csv",
-            other_columns={"slope": "slope", "aspect_class": "aspect_class"},
+        helper.create_glacierized_hydro_units_from_csv_file(
+            filename="hydro_units_elevation.csv",
+            unit_ids_filename="unit_ids.tif",
         )
+    elif method == "degree_day_aspect":
+        # No unit-ids raster ships for the elevation+aspect discretization, so the
+        # bands (and their unit ids) are regenerated from the DEM here; the glacier
+        # fraction of each unit is then initialized from the ice-thickness raster.
+        catchment_dir = helper.get_catchment_dir()
+        aspect_catchment = hb.Catchment(
+            catchment_dir / "outline.shp",
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
+        )
+        aspect_catchment.extract_dem(catchment_dir / "dem.tif")
+        aspect_catchment.calculate_slope_aspect()
+        aspect_catchment.discretize_by(
+            criteria=["elevation", "aspect"],
+            elevation_method="equal_intervals",
+            elevation_distance=50,
+        )
+        aspect_catchment.initialize_land_cover_fractions()
+        hb.preprocessing.initialize_glacier_cover_from_extent(
+            aspect_catchment,
+            ice_thickness=str(catchment_dir / "glaciers" / "ice_thickness.tif"),
+        )
+        helper.hydro_units = aspect_catchment.hydro_units
     elif method == "temperature_index":
-        helper.create_hydro_units_from_csv_file(
+        helper.create_glacierized_hydro_units_from_csv_file(
             filename="hydro_units_elevation_radiation.csv",
+            unit_ids_filename="unit_ids_radiation.tif",
             other_columns={"slope": "slope", "radiation": "radiation"},
         )
     else:
@@ -79,15 +104,21 @@ for method in methods:
             raster_hydro_units=helper.get_catchment_dir() / "unit_ids_radiation.tif",
         )
 
-    # Set up the model
+    # Set up the model (with a glacier land cover)
     socont, parameters = helper.get_model_and_params_socont(
-        snow_melt_process=f"melt:{method}"
+        snow_melt_process=f"melt:{method}",
+        land_cover_types=["open", "glacier"],
+        land_cover_names=["open", "glacier"],
     )
 
-    # Select the parameters to optimize/analyze
+    # Select the parameters to optimize/analyze. The glacier-specific melt factors
+    # and the glacier reservoir response factors (k_snow, k_ice) are calibrated too.
     if method == "degree_day":
         parameters.allow_changing = [
             "a_snow",
+            "a_ice",
+            "k_snow",
+            "k_ice",
             "k_quick",
             "A",
             "k_slow_1",
@@ -99,6 +130,11 @@ for method in methods:
             "a_snow_n",
             "a_snow_s",
             "a_snow_ew",
+            "a_ice_n",
+            "a_ice_s",
+            "a_ice_ew",
+            "k_snow",
+            "k_ice",
             "k_quick",
             "A",
             "k_slow_1",
@@ -109,6 +145,9 @@ for method in methods:
         parameters.allow_changing = [
             "melt_factor",
             "r_snow",
+            "r_ice",
+            "k_snow",
+            "k_ice",
             "k_quick",
             "A",
             "k_slow_1",

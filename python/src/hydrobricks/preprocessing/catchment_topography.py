@@ -138,6 +138,14 @@ class CatchmentTopography:
             )
 
         # Save the downsampled DEM to a file
+        if output_path is None:
+            raise ConfigurationError(
+                "An output path is required when resampling the DEM "
+                "to a different resolution.",
+                parameter_name="output_path",
+                parameter_value=output_path,
+                reason="Missing output directory for the resampled DEM",
+            )
         if isinstance(output_path, str):
             output_path = Path(output_path)
         filepath = output_path / "downsampled_dem.tif"
@@ -269,8 +277,10 @@ class CatchmentTopography:
             Mean aspect in degrees (0-360).
         """
         aspect_rad = np.radians(self.aspect[mask_unit])
+        # Use nanmean: xarray-spatial produces NaN aspect along the DEM edges,
+        # which would otherwise yield a NaN mean for units touching the border.
         circular_mean_aspect_rad = math.atan2(
-            np.mean(np.sin(aspect_rad)), np.mean(np.cos(aspect_rad))
+            np.nanmean(np.sin(aspect_rad)), np.nanmean(np.cos(aspect_rad))
         )
         circular_mean_aspect_deg = np.degrees(circular_mean_aspect_rad)
         if circular_mean_aspect_deg < 0:

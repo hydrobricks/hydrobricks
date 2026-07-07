@@ -63,21 +63,21 @@ ProcessMeltDegreeDay* ProcessRefreezeDegreeDay::FindSiblingMeltProcess() const {
     return nullptr;
 }
 
-vecDouble ProcessRefreezeDegreeDay::GetRates() {
+const vecDouble& ProcessRefreezeDegreeDay::GetRates() {
     if (_meltProcess == nullptr) {
         _meltProcess = FindSiblingMeltProcess();
         if (_meltProcess == nullptr) {
-            return {0};
+            return StoreRates({0});
         }
     }
 
     double meltingTemperature = _meltProcess->GetMeltingTemperature();
     if (_temperature->GetValue() >= meltingTemperature) {
-        return {0};
+        return StoreRates({0});
     }
 
     double refreeze = (*_refreezingFactor) * _meltProcess->GetDegreeDayFactor() *
                       (meltingTemperature - _temperature->GetValue());
 
-    return {refreeze};
+    return StoreRates({refreeze});
 }

@@ -10,7 +10,7 @@ void ProcessOutflowRest::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }
 
-vecDouble ProcessOutflowRest::GetRates() {
+const vecDouble& ProcessOutflowRest::GetRates() {
     double rest = _container->GetContentWithChanges();
 
     Brick* brick = _container->GetParentBrick();
@@ -37,5 +37,5 @@ vecDouble ProcessOutflowRest::GetRates() {
     }
     // Direct brick: the content already reflects the siblings' withdrawals, so take it as-is.
 
-    return {std::max(rest, 0.0)};
+    return StoreRates({std::max(rest, 0.0)});
 }

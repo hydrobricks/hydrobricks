@@ -88,17 +88,17 @@ double* ProcessRoutingGR6J::GetValuePointer(std::string_view name) {
     return nullptr;
 }
 
-vecDouble ProcessRoutingGR6J::GetChangeRates() {
+const vecDouble& ProcessRoutingGR6J::GetChangeRates() {
     // Bypass the base-class empty-container short-circuit: the exponential store is bottomless and
     // discharges even when the container is empty (its baseflow at level 0 is X6*ln(2) > 0, and it
     // keeps discharging as it goes negative). The discharge is computed directly from the stores.
     return GetRates();
 }
 
-vecDouble ProcessRoutingGR6J::GetRates() {
+const vecDouble& ProcessRoutingGR6J::GetRates() {
     if (_uhBaseTime == nullptr || _routingCapacity == nullptr || _exchangeFactor == nullptr ||
         _exchangeThreshold == nullptr || _expStoreCoeff == nullptr) {
-        return {0};
+        return StoreRates({0});
     }
 
     double X2 = *_exchangeFactor;
@@ -149,7 +149,7 @@ vecDouble ProcessRoutingGR6J::GetRates() {
     // negative, which is allowed (see SetAllowNegativeContent in the constructor). The container
     // content then mirrors the routing storage — including the negative exponential-store level — so
     // both the discharge and the water balance stay consistent with the airGR GR6J formulation.
-    return {std::max(0.0, _qr + _qrexp + _qd)};
+    return StoreRates({std::max(0.0, _qr + _qrexp + _qd)});
 }
 
 void ProcessRoutingGR6J::Finalize() {

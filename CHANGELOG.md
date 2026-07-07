@@ -5,46 +5,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## 0.9.0 - 2026-07-07
+
+### Breaking changes
+
+- The default land cover is now `open` instead of `ground`. `ground` (and `generic`/`generic_land_cover`) are kept as accepted aliases for backward compatibility, but default-run output labels change from `ground:*` to `open:*`.
+- The discharge observations class `Observations` is renamed `DischargeObservations`, and the calibration argument `obs` (in `SpotpySetup`) is renamed `discharge`.
+- The observation/reference classes moved to a new `hydrobricks.evaluation` subpackage (`DischargeObservations`, `AuxiliaryObservation`, `GlacierMassBalanceObservations`, `evaluate`). They remain importable from the top level (`hb.DischargeObservations`, …); `hydrobricks.observations` is gone.
 
 ### Added
 
-- HBV land-use classes as land covers: `forest` (rain interception in a canopy store),
-  `lake` (exclusive open-water cover: all precipitation direct, open-water evaporation,
-  linear outflow, via a dedicated no-snow structure variant) and `glacier` (Socont-style).
-- Per-class soil moisture stores in HBV (one per land cover), with a `share_soil` option
-  to use a single shared store. Soil/recharge parameters are exposed per cover
-  (`fc_<cover>`, `lp_<cover>`, `beta_<cover>`) when several soil covers are present.
-- Open-water evaporation process (`et:open_water`) and a threshold outflow process
-  (`outflow:threshold`).
-- Pluggable glacier modules: a `glacier_module` option (default `"gsm"`, the Glacier
-  Sub-Model of GSM-Socont) selecting the glacier formulation, shared by Socont and HBV.
-  New `hydrobricks.modules` package (`Module` base + `GlacierModule`/`GSM`).
-- HBV-96 capillary flux can fan out to several per-class soil stores (area-weighted).
-- HBV evapotranspiration correction factor (`cevpf`, default 1) on `et:hbv`, scaling the
-  potential evaporation per land cover (e.g. a higher evaporation over forests via
-  `cevpf_forest`).
-- Per–hydro-unit structure variants: a unit uses only the structure matching its land
-  covers (e.g. glacier-free units carry no glacier bricks); the per-unit structure id is
-  written to the results NetCDF.
+- Adding a file-based (yaml) project definition.
+- Adding the GR4J model structure and its processes along with the CemaNeige snow model.
+- Adding the GR6J model structure and its processes.
+- Adding the HBV-96 model structure and its processes.
+- Adding custom model structures (based on yaml files).
+- Enabling per-hydro-unit model structure variants.
+- Automate hydro unit structure assignment from land covers.
+- Adding model structure inspection and visualization (a textual `model.summary()` / `model.print_structure()`, and a Graphviz `model.plot_structure()`).
+- Introducing parameter transforms for model calibration.
+- Adding a Periods class to handle calibration and validation periods.
+- Adding dynamic forcing override mechanism (ability to dynamically override forcing values within a simulation timestep).
+- Adding a temperature threshold-based snow-rain splitter based on a single temperature threshold (`SplitterSnowRainThreshold`).
+- Adding separate snow/rain correction factors.
+- Adding rain routing to snowpack liquid water storage (parameter `rain_to_snowpack`).
+- Adding open water evaporation process (`et:open_water`). This process evaporates at the full potential rate (PET).
+- Adding forest canopy interception with dedicated storage and processes.
+- Adding linear, power-law, and exponential actual evapotranspiration.
+- Adding Frey & Holzmann (2015) lateral snow redistribution.
+- Adding snow sublimation processes.
+- Enable calibration with auxiliary observations (e.g., snow coverage or glacier mass balance).
+- Enable parallel model calibration with SPOTPY.
+- Adding land cover extraction from raster (ESA WorldCover, CORINE) and vector datasets to set hydro unit land-cover fractions.
+- Adding catchment discretization by sub-catchments.
+- Adding different example scripts.
+- Initialize glacier cover from extracted ice thickness rasters.
+- Restoring dynamic land cover and glacier state on model reset.
+- Adding per-unit total SWE extraction in results.
+- Adding in-memory accessors for recorded per–hydro-unit series (no file dump): `model.get_recorded_hydro_unit_values(label)`, `get_recorded_hydro_unit_fractions`, `get_recorded_labels`, `get_recorded_hydro_unit_ids`/`_areas` and `get_recorded_time`.
 
 ### Changed
 
-- The default land cover is now `open` (the HBV "open areas" class) instead of `ground`,
-  in `HydroUnits` and the models. `ground` (and `generic`/`generic_land_cover`) are kept
-  as accepted aliases for backward compatibility, but default-run output labels change
-  from `ground:*` to `open:*`. `HBV` no longer lists `ground` in its allowed cover types
-  (still accepted via the alias).
-- Land-cover taxonomy: the near-empty `Vegetation`/`Urban` classes were removed (C++).
+- Generalizing outflow rest process for direct and solver bricks (`ProcessOutflowRest` now correctly determines the remaining water for both direct-computation and solver-driven bricks).
+- Refactoring plotting as a class.
+- Changing PET method to Oudin in examples.
+- Making the parameter aliases case-insensitive.
+- Refactoring land covers allowing pre-defined classes (e.g. forest, lake, glacier) and user-defined classes (e.g. urban, wetland).
+- Introduce pluggable glacier modules.
+- Standardize `open` as default generic land cover (instead of `ground`). `ground` (and `generic`/`generic_land_cover`) are kept as accepted aliases.
+- Optimize process rate calculations with reusable buffers.
+- Reducing logging verbosity for skipped runs during calibration when parameters are out of range or violate constraints.
+- Refactor observation handling for multi-objective calibration.
+- When a parameter set is rejected due to constraints, for example, a very bad value is given to the objective function rather than NaNs.
 
 ### Fixed
 
-- NaN-safe aggregation of per–hydro-unit values across heterogeneous structures
-  (area weighting of storage changes and ET when a cover is absent from a unit).
-- The generic soil cover that absorbs residual area (land cover evolution / single-area
-  loading) is now resolved from `open`/`ground`/`generic` aliases instead of a hardcoded
-  `ground`, so it works with the new `open` default (C++ `HydroUnit` and Python
-  `HydroUnits`).
+- Water balance is now conserved when a land cover area fraction changes (land-cover change and glacier-evolution actions). The water, snow and canopy content stored on the land that changes hands is transferred between the changed cover and the generic cover that absorbs the area difference, instead of leaving the depth (mm) unchanged over a different area, which silently created or destroyed water.
+- Snap near-zero water container content to zero (addresses floating-point precision issues).
+- Adding the missing glacier area in examples.
 
 
 ## 0.8.7 - 2026-05-10

@@ -60,9 +60,9 @@ void ProcessMeltCemaNeige::Reset() {
     _coldContent = 0.0;
 }
 
-vecDouble ProcessMeltCemaNeige::GetRates() {
+const vecDouble& ProcessMeltCemaNeige::GetRates() {
     if (!_container->ContentAccessible()) {
-        return {0};
+        return StoreRates({0});
     }
 
     double T = _temperature->GetValue();
@@ -77,7 +77,7 @@ vecDouble ProcessMeltCemaNeige::GetRates() {
     _coldContent = std::min(0.0, CTG * _coldContent + (1.0 - CTG) * (T - Tmelt));
 
     if (_coldContent < 0.0 || T <= Tmelt) {
-        return {0};
+        return StoreRates({0});
     }
 
     // Potential melt (cold content fully dissipated)
@@ -88,5 +88,5 @@ vecDouble ProcessMeltCemaNeige::GetRates() {
     // The fraction is corrected between 0.1 and 1 to avoid zero melt when the snowpack is very thin (based on RRMPG)
     double melt = (0.9 * G_ratio + 0.1) * potMelt;
 
-    return {melt};
+    return StoreRates({melt});
 }

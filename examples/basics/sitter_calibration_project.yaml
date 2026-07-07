@@ -1,0 +1,45 @@
+# hydrobricks project file: SOCONT on the Sitter at Appenzell, set up for
+# calibration. No parameter values are given (they are calibrated), and the
+# forcing corrections are declared as calibratable 'param:' references whose
+# ranges live in the data_parameters section.
+#
+# Used by the calibration examples (calibrate_sceua_socont.py,
+# analyse_mc_socont.py and their parallel variants).
+
+model:
+  name: socont
+  options:
+    soil_storage_nb: 2
+    surface_runoff: linear_storage
+
+hydro_units:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/hydro_units_elevation.csv
+
+forcing:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/meteo.csv
+  time: {column: date, format: "%d/%m/%Y"}
+  columns:
+    precipitation: precip(mm/day)
+    temperature: temp(C)
+    pet: pet_sim(mm/day)
+  ref_elevation: 1253
+  temperature:
+    gradient: param:temp_gradients
+  precipitation:
+    correction_factor: param:precip_corr_factor
+    gradient: param:precip_gradient
+
+observations:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/discharge.csv
+  time: {column: Date, format: "%d/%m/%Y"}
+  column: Discharge (mm/d)
+
+periods:
+  simulation: [1981-01-01, 2020-12-31]
+  spinup: 0   # the calibration examples use a legacy warmup instead
+
+# Calibratable forcing corrections referenced above (value + range).
+data_parameters:
+  temp_gradients: {value: -0.6, min: -1, max: 0}
+  precip_corr_factor: {value: 0.85, min: 0.7, max: 1.3}
+  precip_gradient: {value: 0.05, min: 0, max: 0.2}

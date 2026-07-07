@@ -70,7 +70,7 @@ class ProcessMeltDegreeDay : public ProcessMelt {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_MELT_DEGREE_DAY_H

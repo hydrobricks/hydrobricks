@@ -68,16 +68,8 @@ bool ActionGlacierEvolutionAreaScaling::Init() {
 }
 
 void ActionGlacierEvolutionAreaScaling::Reset() {
-    // Set the land cover area fraction to 0 for all hydro units.
-    for (int id : _hydroUnitIds) {
-        HydroUnit* unit = _manager->GetHydroUnitById(id);
-        unit->ChangeLandCoverAreaFraction(_landCoverName, 0);
-    }
-
-    // Re-initialize.
-    if (!Init()) {
-        throw RuntimeError("Failed to re-initialize the glacier evolution area scaling action during reset.");
-    }
+    // The glacier extent and ice volume are restored from the model's saved initial
+    // state (Glacier::Reset); this action keeps no per-run bookkeeping to reset.
 }
 
 bool ActionGlacierEvolutionAreaScaling::Apply(double) {

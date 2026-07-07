@@ -53,7 +53,7 @@ class ProcessProductionGR4J : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_PRODUCTION_GR4J_H

@@ -619,10 +619,12 @@ class PotentialSolarRadiation:
         """
 
         # True anomaly (the angle subtended at the Sun between the semi major
-        # axis line and the current position)
+        # axis line and the current position). It sweeps ~360° over the year,
+        # i.e. ~360/365.5 °/day. The ratio was previously inverted (365.5/360),
+        # which made the angle advance ~1% too fast over the year.
         # Different definition here:
         # https://physics.stackexchange.com/questions/177949/earth-sun-distance-on-a-given-day-of-the-year
-        theta = (365.5 / 360) * day_of_year
+        theta = (360 / 365.5) * day_of_year
 
         # Current Sun-Earth distance (computed using the modern version of
         # Kepler's first law)
@@ -766,8 +768,11 @@ class PotentialSolarRadiation:
                 install_command="pip install xarray",
             )
 
-        rows, cols = np.where(masked_dem_data)
-        xs, ys = rasterio.transform.xy(dem.transform, list(rows), list(cols))
+        # Build the full index grid independent of cell values: relying on
+        # np.where(masked_dem_data) would drop any valid cell with elevation 0
+        # and break the reshape below.
+        rows, cols = np.indices(masked_dem_data.shape)
+        xs, ys = rasterio.transform.xy(dem.transform, rows.ravel(), cols.ravel())
         xs = np.array(xs).reshape(masked_dem_data.shape)[0, :]
         ys = np.array(ys).reshape(masked_dem_data.shape)[:, 0]
 

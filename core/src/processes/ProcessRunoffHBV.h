@@ -44,7 +44,7 @@ class ProcessRunoffHBV : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_RUNOFF_HBV_H

@@ -11,6 +11,7 @@
 
 SettingsModel::SettingsModel()
     : _logAll(false),
+      _recordFractions(false),
       _selectedStructure(nullptr),
       _selectedBrick(nullptr),
       _selectedProcess(nullptr),
@@ -32,6 +33,13 @@ void SettingsModel::SetTimer(const string& start, const string& end, int timeSte
     _timer.end = end;
     _timer.timeStep = timeStep;
     _timer.timeStepUnit = timeStepUnit;
+}
+
+void SettingsModel::SetSpinupDays(int days) {
+    if (days < 0) {
+        throw InputError("The spin-up duration cannot be negative.");
+    }
+    _timer.spinupDays = days;
 }
 
 void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
@@ -578,6 +586,20 @@ void SettingsModel::AddSnowpackRefreezing(const string& refreezingProcess) {
         // until the next step).
         AddBrickProcess("refreeze", refreezingProcess, snowpackName + ":snow");
         SetProcessOutputsAsInstantaneous();
+    }
+}
+
+void SettingsModel::AddSnowpackSublimation(const string& sublimationProcess) {
+    assert(_selectedStructure);
+
+    for (int brickSettingsIndex : _selectedStructure->landCoverBricks) {
+        const BrickSettings& brickSettings = _selectedStructure->hydroUnitBricks[brickSettingsIndex];
+        SelectHydroUnitBrickByName(brickSettings.name + "_snowpack");
+
+        // The sublimation process lives on the snowpack snow container and removes
+        // snow directly to the atmosphere. As an atmosphere-bound process (like ET),
+        // it needs no target: the model builder attaches a FluxToAtmosphere to it.
+        AddBrickProcess("sublimation", sublimationProcess);
     }
 }
 

@@ -56,7 +56,7 @@ class ProcessRefreezeDegreeDay : public ProcessTransform {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
   private:
     ProcessMeltDegreeDay* _meltProcess;  // non-owning reference (sibling process, cached)

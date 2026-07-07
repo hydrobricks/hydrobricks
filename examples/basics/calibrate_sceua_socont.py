@@ -1,11 +1,11 @@
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-import spotpy
 
+import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,60 +14,57 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
-# Set up the model
-helper = ModelSetupHelper(
-    "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
-)
-helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True
-)
-obs = helper.get_obs_data_from_csv_file()
-socont, parameters = helper.get_model_and_params_socont()
+# The whole setup (data, model, forcing spatialization with calibratable
+# 'param:' corrections) is declared in the project file.
+project = hb.load_project(Path(__file__).parent / "sitter_calibration_project.yaml")
 
 # Select the parameters to optimize/analyze
-parameters.allow_changing = [
+project.parameters.allow_changing = [
     "a_snow",
     "k_quick",
     "A",
     "k_slow_1",
     "percol",
     "k_slow_2",
-    "precip_corr_factor",
+    "rain_corr_factor",
+    "snow_corr_factor",
 ]
 
-# Setup SPOTPY (we need to invert the NSE score as SCE-UA minimizes it)
+# Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
+# applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
-    socont,
-    parameters,
-    forcing,
-    obs,
+    project.model,
+    project.parameters,
+    project.forcing,
+    project.observations,
     warmup=365,
     obj_func="kge_2012",
-    invert_obj_func=True,
 )
 
-# Select number of maximum repetitions and run spotpy
+# Run the calibration. trainer.calibrate orients the objective for the chosen
+# algorithm, so the stored/returned scores stay in metric space (no flipped signs).
 max_rep = 4000
-sampler = spotpy.algorithms.sceua(
-    spot_setup, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
+sampler = trainer.calibrate(
+    spot_setup, "sceua", max_rep, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
 )
-sampler.sample(max_rep)
 
-# Load the results
-results = spotpy.analyser.load_csv_results("spotpy_socont_sitter_SCEUA")
+# Results in metric space (KGE, higher is better) — no confusing negative values.
+results = trainer.get_results(sampler)
+best = trainer.get_best(sampler)
+print(f"Best KGE: {best['score']:.3f}")
+print("Best parameters:", best["parameters"])
 
-# Plot evolution
+# Plot evolution (scores are already in skill space, higher is better).
 fig_evolution = plt.figure(figsize=(9, 5))
-plt.plot(-results["like1"])
-plt.ylabel("NSE")
+plt.plot(results["score"])
+plt.ylabel("KGE")
 plt.xlabel("Iteration")
 plt.tight_layout()
 plt.show()
 
-# Get best results
-best_index, best_obj_func = spotpy.analyser.get_minlikeindex(results)
-best_model_run = results[best_index]
+# Best simulation series (read from the raw SPOTPY records at the best index).
+records = sampler.getdata()
+best_model_run = records[best["index"]]
 fields = [word for word in best_model_run.dtype.names if word.startswith("sim")]
 best_simulation = list(best_model_run[fields])
 
@@ -78,7 +75,7 @@ ax.plot(
     best_simulation,
     color="black",
     linestyle="solid",
-    label="Best obj. func.=" + str(best_obj_func),
+    label=f"Best KGE = {best['score']:.3f}",
 )
 ax.plot(spot_setup.evaluation(), "r.", markersize=3, label="Observation data")
 plt.xlabel("Number of Observation Points")

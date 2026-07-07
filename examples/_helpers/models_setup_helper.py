@@ -1,3 +1,4 @@
+import logging
 import os.path
 import shutil
 import tempfile
@@ -6,6 +7,8 @@ from pathlib import Path
 
 import hydrobricks as hb
 import hydrobricks.models as models
+
+logger = logging.getLogger(__name__)
 
 # Paths
 TEST_FILES_DIR = Path(
@@ -21,14 +24,21 @@ TEST_FILES_DIR = Path(
 class ModelSetupHelper:
     """
     Helper class to setup a model for testing using data provided in the repo.
-    This class is used in the examples and only aims at avoiding code duplication.
-    You do not need to use it in your own code.
+
+    Most examples now declare their setup in a YAML project file loaded with
+    ``hb.load_project`` (see ``examples/README.md``); this helper remains only
+    for the examples whose setup goes beyond the project-file schema (e.g.
+    per-method glacierized discretizations). You do not need to use it in your
+    own code.
     """
 
-    def __init__(self, catchment_name, start_date, end_date, working_dir=None):
+    def __init__(
+        self, catchment_name, start_date, end_date, working_dir=None, spinup=0
+    ):
         self.catchment_name = catchment_name
         self.start_date = start_date
         self.end_date = end_date
+        self.spinup = spinup
         self.hydro_units = None
         self.working_dir = None
         if working_dir is not None:
@@ -42,11 +52,18 @@ class ModelSetupHelper:
         self.temp_gradients = None
 
     def __del__(self):
-        # Cleanup
+        # Release the hydrobricks log file handle first, otherwise the working
+        # directory cannot be removed on Windows (logging then continues to the
+        # console only, and the later close_log() on model deletion is a no-op).
+        try:
+            hb.close_log()
+        except Exception:
+            pass
+        # Best-effort cleanup of the temporary working directory.
         try:
             shutil.rmtree(self.working_dir)
         except Exception:
-            print("Failed to clean up.")
+            logger.debug("Failed to clean up temporary directory %s", self.working_dir)
 
     def get_catchment_dir(self):
         return TEST_FILES_DIR / self.catchment_name
@@ -63,6 +80,49 @@ class ModelSetupHelper:
             column_area="area",
             other_columns=other_columns,
         )
+
+    def create_glacierized_hydro_units_from_csv_file(
+        self,
+        filename="hydro_units.csv",
+        unit_ids_filename="unit_ids.tif",
+        ice_thickness_filename="glaciers/ice_thickness.tif",
+        other_columns=None,
+        outline_filename="outline.shp",
+        dem_filename="dem.tif",
+    ):
+        """Create hydro units with a glacier land cover initialized from ice data.
+
+        The elevation bands and their attributes are read from the CSV (so the unit
+        ids keep matching the accompanying rasters/connectivity), the unit ids are
+        loaded from the raster, and the initial glacier fraction of each unit is
+        extracted from the ice-thickness raster with
+        ``initialize_glacier_cover_from_extent``.
+        """
+        catchment_dir = TEST_FILES_DIR / self.catchment_name
+
+        catchment = hb.Catchment(
+            catchment_dir / outline_filename,
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
+        )
+        catchment.extract_dem(catchment_dir / dem_filename)
+        catchment.hydro_units.load_from_csv(
+            catchment_dir / filename,
+            column_elevation="elevation",
+            column_area="area",
+            other_columns=other_columns,
+        )
+        catchment.load_unit_ids_from_raster(str(catchment_dir / unit_ids_filename))
+        # Start every unit as fully 'open'; the glacier fraction is then taken from
+        # the ice-thickness raster. This also gives the ice-free units an explicit
+        # zero glacier fraction (instead of NaN, which would fail at model setup).
+        catchment.initialize_land_cover_fractions()
+        hb.preprocessing.initialize_glacier_cover_from_extent(
+            catchment, ice_thickness=str(catchment_dir / ice_thickness_filename)
+        )
+
+        self.hydro_units = catchment.hydro_units
+        return self.hydro_units
 
     def get_forcing_data_from_csv_file(
         self,
@@ -134,7 +194,7 @@ class ModelSetupHelper:
     def get_obs_data_from_csv_file(self, filename="discharge.csv"):
         catchment_dir = TEST_FILES_DIR / self.catchment_name
 
-        obs = hb.Observations()
+        obs = hb.DischargeObservations(self.start_date, self.end_date)
         obs.load_from_csv(
             catchment_dir / filename,
             column_time="Date",
@@ -150,20 +210,28 @@ class ModelSetupHelper:
         surface_runoff="linear_storage",
         snow_melt_process="melt:degree_day",
         record_all=False,
+        land_cover_types=None,
+        land_cover_names=None,
     ):
 
-        socont = models.Socont(
+        socont_kwargs = dict(
             soil_storage_nb=soil_storage_nb,
             surface_runoff=surface_runoff,
             snow_melt_process=snow_melt_process,
             record_all=record_all,
         )
+        if land_cover_types is not None:
+            socont_kwargs["land_cover_types"] = land_cover_types
+            socont_kwargs["land_cover_names"] = land_cover_names
+
+        socont = models.Socont(**socont_kwargs)
 
         socont.setup(
             spatial_structure=self.hydro_units,
             output_path=str(self.working_dir),
             start_date=self.start_date,
             end_date=self.end_date,
+            spinup=self.spinup,
         )
 
         # Parameters

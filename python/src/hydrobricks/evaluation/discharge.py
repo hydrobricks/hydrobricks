@@ -2,23 +2,110 @@ from __future__ import annotations
 
 import itertools
 import logging
+from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import DataError
+from hydrobricks.evaluation.metrics import evaluate
+from hydrobricks.periods import Period, Periods
 from hydrobricks.time_series import TimeSeries1D
-from hydrobricks.trainer import evaluate
 
 logger = logging.getLogger(__name__)
 
 
-class Observations(TimeSeries1D):
-    """Class for observation time series data"""
+class DischargeObservations(TimeSeries1D):
+    """Observed discharge time series (the primary calibration signal)."""
 
-    def __init__(self) -> None:
-        """Initialize Observations instance."""
+    def __init__(
+        self,
+        start_date: str | pd.Timestamp | datetime | Period | Periods,
+        end_date: str | pd.Timestamp | datetime | None = None,
+    ) -> None:
+        """Initialize DischargeObservations instance.
+
+        Parameters
+        ----------
+        start_date, end_date
+            Bounds of the period of interest. :meth:`load_from_csv` restricts the
+            loaded data to this range by default, so the calibration observations
+            match the simulation period without manual pre-slicing. These are also
+            the natural reference to pass as ``start_date``/``end_date`` to any
+            auxiliary observation (e.g. ``GlacierMassBalanceObservations.from_glamos``,
+            ``SnowCoverObservations.from_modis``), so every signal is restricted to
+            the same period. Alternatively, pass a single
+            :class:`~hydrobricks.periods.Period` or
+            :class:`~hydrobricks.periods.Periods` (its full span is used), so the
+            observations are loaded once for all periods.
+        """
         super().__init__()
+        if isinstance(start_date, Periods):
+            start_date = start_date.full_span
+        if isinstance(start_date, Period):
+            start_date, end_date = start_date.start, start_date.end
+        if end_date is None:
+            raise DataError(
+                "An end date is required (or pass a Period/Periods).",
+                data_type="observations",
+                reason="Missing end date",
+            )
+        self.start_date = pd.Timestamp(start_date)
+        self.end_date = pd.Timestamp(end_date)
+
+    def load_from_csv(
+        self,
+        path: str | Path,
+        column_time: str,
+        time_format: str,
+        content: dict[str, str],
+        start_date: str | pd.Timestamp | datetime | None = None,
+        end_date: str | pd.Timestamp | datetime | None = None,
+    ) -> None:
+        """
+        Read discharge observations from a CSV file.
+
+        Restricted by default to ``[start_date, end_date]`` as given to the
+        constructor, so the loaded series already matches the simulation period
+        (no manual pre-slicing needed). Pass ``start_date``/``end_date`` here to
+        load a different range instead (e.g. to deliberately load a period wider
+        than the constructor's, for testing).
+
+        Parameters
+        ----------
+        path
+            Path to the CSV file containing the discharge data.
+        column_time
+            Column name containing the time values.
+        time_format
+            Format string for parsing time values (e.g., '%Y-%m-%d').
+        content
+            Dictionary mapping variable names/enums to column names in the CSV.
+            Example: {'discharge': 'Discharge (mm/d)'}
+        start_date, end_date
+            Overrides the constructor's ``start_date``/``end_date`` for this load.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the specified file does not exist.
+        KeyError
+            If required columns are not found in the CSV file.
+
+        Examples
+        --------
+        >>> obs = DischargeObservations('2000-01-01', '2010-12-31')
+        >>> obs.load_from_csv('data.csv', 'date', '%Y-%m-%d', {'discharge': 'Q'})
+        """
+        super().load_from_csv(
+            path,
+            column_time,
+            time_format,
+            content,
+            start_date=start_date if start_date is not None else self.start_date,
+            end_date=end_date if end_date is not None else self.end_date,
+        )
 
     def compute_reference_metric(
         self,
@@ -76,7 +163,7 @@ class Observations(TimeSeries1D):
 
         Examples
         --------
-        >>> obs = Observations()
+        >>> obs = DischargeObservations('2000-01-01', '2010-12-31')
         >>> obs.load_from_csv('data.csv', 'date', '%Y-%m-%d', {'discharge': 'Q'})
         >>> ref_metric = obs.compute_reference_metric('nse', n_evals=100)
         """

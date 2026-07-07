@@ -112,6 +112,12 @@ class SubBasin {
     void SaveAsInitialState();
 
     /**
+     * Restore the area fractions of all land covers to their initial extents without
+     * touching the stored contents (used after the spin-up phase).
+     */
+    void RestoreInitialAreaFractions();
+
+    /**
      * Check if the sub basin is correctly defined.
      *
      * @return True if everything is correctly defined, false otherwise.

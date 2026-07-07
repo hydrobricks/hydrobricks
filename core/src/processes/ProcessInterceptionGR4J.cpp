@@ -31,9 +31,9 @@ void ProcessInterceptionGR4J::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessInterceptionGR4J::GetRates() {
+const vecDouble& ProcessInterceptionGR4J::GetRates() {
     double P = _container->GetContentWithChanges();  // P_total (rain + melt)
     double E = _pet->GetValue();
     _pet->UpdateValue(std::max(0.0, E - P));  // publish En for downstream ET processes
-    return {std::min(P, E)};
+    return StoreRates({std::min(P, E)});
 }

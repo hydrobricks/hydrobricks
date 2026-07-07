@@ -31,16 +31,16 @@ void ProcessETGR4J::AttachForcing(Forcing* forcing) {
     }
 }
 
-vecDouble ProcessETGR4J::GetRates() {
+const vecDouble& ProcessETGR4J::GetRates() {
     double En = _pet->GetValue();  // En = max(0, E - P_total), updated by interception:gr4j
 
     if (En <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     double X1 = _container->GetMaximumCapacity();
     if (X1 <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
     // Evaporation is drawn from the store after this step's infiltration, using
@@ -51,5 +51,5 @@ vecDouble ProcessETGR4J::GetRates() {
     double Pn = _container->GetContentWithChanges() - _container->GetContentWithDynamicChanges();
     double S1 = S0 + gr4j::Infiltration(S0, Pn, X1);
 
-    return {gr4j::Evaporation(S1, En, X1)};
+    return StoreRates({gr4j::Evaporation(S1, En, X1)});
 }

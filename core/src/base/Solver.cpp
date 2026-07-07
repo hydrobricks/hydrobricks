@@ -66,8 +66,9 @@ void Solver::ComputeChangeRates(int col, bool applyConstraints) {
         for (int i = 0; i < brick->GetProcessCount(); ++i) {
             auto process = brick->GetProcess(i);
 
-            // Get the change rates (per day) independently of the time step and constraints (null bricks handled)
-            vecDouble rates = process->GetChangeRates();
+            // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
+            // Reference into the process's reusable buffer; consumed below before the next process is queried.
+            const vecDouble& rates = process->GetChangeRates();
 
             for (int j = 0; j < rates.size(); ++j) {
                 assert(_changeRates.rows() > iRate);

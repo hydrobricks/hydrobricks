@@ -47,6 +47,20 @@ class ModelSettings:
         """
         self.settings.set_timer(start_date, end_date, int(time_step), time_step_unit)
 
+    def set_spinup_days(self, days: int) -> None:
+        """
+        Set the spin-up duration.
+
+        The first days of the modelling period are replayed (unlogged) on every run
+        to initialize the states, then the run restarts at the period start.
+
+        Parameters
+        ----------
+        days
+            Number of days of the modelling period replayed as spin-up.
+        """
+        self.settings.set_spinup_days(int(days))
+
     def set_parameter_value(self, component: str, name: str, value: float) -> bool:
         """
         Set a parameter value
@@ -66,6 +80,17 @@ class ModelSettings:
         """
         return self.settings.set_parameter_value(component, name, float(value))
 
+    def get_structure(self) -> list:
+        """
+        Export the model structure (bricks, processes, fluxes, splitters).
+
+        Returns
+        -------
+        A list of structure-variant dicts (see SettingsModel.get_structure in the C++
+        bindings); used to build the model structure graph.
+        """
+        return self.settings.get_structure()
+
     def generate_base_structure(
         self,
         land_cover_names: list[str],
@@ -77,7 +102,9 @@ class ModelSettings:
         snow_redistribution: str | None = None,
         snow_water_retention_process: str | None = None,
         snow_refreezing_process: str | None = None,
+        snow_sublimation_process: str | None = None,
         rain_to_snowpack: bool = False,
+        forest_interception: bool = False,
     ) -> None:
         """
         Generate basic elements
@@ -107,12 +134,19 @@ class ModelSettings:
         snow_refreezing_process
             Refreezing process of the retained liquid water (optional; requires
             snow_water_retention_process). E.g. 'refreeze:degree_day'.
+        snow_sublimation_process
+            Sublimation process removing snow water equivalent directly to the
+            atmosphere (optional). One of 'sublimation:constant' or
+            'sublimation:pet'.
         rain_to_snowpack
             Route the rain to the snowpack liquid water storage instead of the
             land cover (requires snow_water_retention_process).
             The rain is retained in the snowpack (up to the holding capacity)
             and exposed to refreezing; without snow, it reaches the land cover
             within the same time step.
+        forest_interception
+            Add a canopy interception store on each ``forest`` land cover (default
+            False). When False, forest covers behave like a generic soil cover.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -140,21 +174,23 @@ class ModelSettings:
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
 
-        # Forest canopy interception, on the rain path upstream of the snowpack.
-        # Generated before the snowpacks so the canopy (a surface component) is
-        # declared/computed before the snowpack it feeds; the throughfall rejoins the
-        # original rain target (the snowpack when the rain is routed to it,
-        # otherwise the land cover).
-        rain_to_snowpack_active = with_snow and rain_to_snowpack
-        for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type == "forest":
-                if rain_to_snowpack_active:
-                    throughfall_target = f"{cover_name}_snowpack"
-                else:
-                    throughfall_target = cover_name
-                self.settings.generate_canopy_interception(
-                    cover_name, throughfall_target
-                )
+        # Forest canopy interception (opt-in), on the rain path upstream of the
+        # snowpack. Generated before the snowpacks so the canopy (a surface component)
+        # is declared/computed before the snowpack it feeds; the throughfall rejoins the
+        # original rain target (the snowpack when the rain is routed to it, otherwise
+        # the land cover). When disabled, forest covers behave like a generic soil cover
+        # and interception can be accounter for through ET correction.
+        if forest_interception:
+            rain_to_snowpack_active = with_snow and rain_to_snowpack
+            for cover_type, cover_name in zip(land_cover_types, land_cover_names):
+                if cover_type == "forest":
+                    if rain_to_snowpack_active:
+                        throughfall_target = f"{cover_name}_snowpack"
+                    else:
+                        throughfall_target = cover_name
+                    self.settings.generate_canopy_interception(
+                        cover_name, throughfall_target
+                    )
 
         # Snowpack
         if with_snow:
@@ -187,6 +223,8 @@ class ModelSettings:
                 self.settings.add_snow_ice_transformation(snow_ice_transformation)
             if snow_redistribution:
                 self.settings.add_snow_redistribution(snow_redistribution)
+            if snow_sublimation_process:
+                self.settings.add_snowpack_sublimation(snow_sublimation_process)
 
     def add_land_cover_brick(self, name: str, kind: str) -> None:
         """
@@ -335,6 +373,56 @@ class ModelSettings:
             Name of the item
         """
         self.settings.add_logging_to(item)
+
+    def record_fractions(self, record: bool = True) -> None:
+        """
+        Record the time-varying land-cover fractions.
+
+        Enabled automatically with ``record_all``; can be enabled on its own for
+        selective recording (e.g. when an auxiliary observation needs the land-cover
+        areas without logging every component).
+
+        Parameters
+        ----------
+        record
+            True to record the fractions.
+        """
+        self.settings.record_fractions(record)
+
+    def record_brick_state(self, brick: str, item: str) -> None:
+        """
+        Record a state (e.g. a content) of a hydro-unit brick.
+
+        Parameters
+        ----------
+        brick
+            Name of the brick (e.g. ``'glacier_snowpack'``).
+        item
+            Name of the item to log (e.g. ``'snow_content'``). The recorded label
+            is ``'{brick}:{item}'``.
+        """
+        self.settings.select_hydro_unit_brick(brick)
+        self.settings.add_brick_logging(item)
+
+    def record_process_output(
+        self, brick: str, process: str, item: str = "output"
+    ) -> None:
+        """
+        Record an output of a process of a hydro-unit brick.
+
+        Parameters
+        ----------
+        brick
+            Name of the brick holding the process (e.g. ``'glacier'``).
+        process
+            Name of the process (e.g. ``'melt'``).
+        item
+            Name of the item to log (default ``'output'``). The recorded label is
+            ``'{brick}:{process}:{item}'``.
+        """
+        self.settings.select_hydro_unit_brick(brick)
+        self.settings.select_process(process)
+        self.settings.add_process_logging(item)
 
     def add_structure(self) -> int:
         """

@@ -52,6 +52,9 @@ class HBV(Model):
         which matches the HBV-96 linear transition over TT ± TTI/2).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    snow_sublimation_process : str or None
+        Optional snow sublimation process removing snow directly to the atmosphere
+        (default: None). One of 'sublimation:constant' or 'sublimation:pet'.
     share_soil : bool
         Share a single soil moisture storage across all land covers (default:
         False, i.e. each land cover has its own soil moisture store, as in the
@@ -60,6 +63,11 @@ class HBV(Model):
         and are exposed with a per-cover suffix (e.g. ``fc_forest``); with a single
         land cover (or when sharing) the bare aliases (``fc``, ``lp``, ``beta``)
         are kept.
+    forest_interception : bool
+        Add a canopy interception store on each ``forest`` land cover (default:
+        False). When enabled, the canopy intercepts rain (capacity ``ic``),
+        evaporates at the potential rate and passes the excess as throughfall; when
+        disabled, a ``forest`` cover behaves like a generic soil cover.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True), as in Socont.
     glacier_module : str
@@ -69,9 +77,10 @@ class HBV(Model):
 
     Land-use classes
     ----------------
-    Besides the default soil-bearing ``ground`` cover, HBV supports the HBV land-use
-    classes as land covers: ``forest`` (canopy interception on the rain path),
-    ``lake`` (exclusive open-water cover: all precipitation direct, open-water
+    Besides the default soil-bearing ``open`` cover, HBV supports the HBV land-use
+    classes as land covers: ``forest`` (an optional canopy interception on the rain
+    path, enabled with ``forest_interception=True``), ``lake`` (exclusive open-water
+    cover: all precipitation direct, open-water
     evaporation, linear outflow — its own no-snow structure variant) and ``glacier``
     (Socont-style: glacier-area rain + snowmelt and ice melt feed two linear
     sub-basin reservoirs draining to the outlet, with a glacier-free base variant).
@@ -88,7 +97,9 @@ class HBV(Model):
         self.options["rain_to_snowpack"] = True
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = None
         self.options["share_soil"] = False
+        self.options["forest_interception"] = False
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["open", "forest", "lake", "glacier"]
@@ -138,7 +149,7 @@ class HBV(Model):
         """
         # Separate the cover categories: lakes (exclusive open water), glaciers
         # (Socont-style, drain to sub-basin reservoirs) and the soil-bearing covers
-        # (ground, forest, ...) that go through the soil/response/routing routine.
+        # (open, forest, ...) that go through the soil/response/routing routine.
         self._lake_cover_names = [
             name
             for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
@@ -157,7 +168,7 @@ class HBV(Model):
         if not soil_cover_names:
             raise ConfigurationError(
                 "The HBV model requires at least one soil-bearing land cover "
-                "(ground or forest).",
+                "(open or forest).",
                 item_name="land_cover_types",
                 reason="Only lake/glacier covers provided",
             )
@@ -270,7 +281,7 @@ class HBV(Model):
         """Build the structure variants for the land-use classes.
 
         The primary (structure 1) is the glacier- and lake-free **base**: the soil
-        covers (ground, forest) with the soil/response/routing routine, plus the
+        covers (open, forest) with the soil/response/routing routine, plus the
         catchment-level glacier reservoirs (kept here so the sub-basin, built from
         structure 1, owns them and they are shared by all units). Optional variants:
 
@@ -324,6 +335,7 @@ class HBV(Model):
                 "snow_melt_process": None,
                 "snow_water_retention_process": None,
                 "snow_refreezing_process": None,
+                "snow_sublimation_process": None,
                 "rain_to_snowpack": False,
             }
             variants.append((lake_names, lake_types, lake_structure, lake_options))

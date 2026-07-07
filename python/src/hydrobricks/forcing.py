@@ -66,6 +66,22 @@ _PET_METHOD_MAP: dict[str, str] = {
     "oudin": "oudin",
 }
 
+# Accepted method names for each forcing operation, validated eagerly at call time so
+# a typo raises at the call site rather than later inside apply_operations().
+_CORRECTION_METHODS: frozenset[str] = frozenset({"additive", "multiplicative"})
+_STATION_SPATIALIZE_METHODS: frozenset[str] = frozenset(
+    {
+        "default",
+        "constant",
+        "additive_elevation_gradient",
+        "multiplicative_elevation_gradient",
+        "multiplicative_elevation_threshold_gradients",
+    }
+)
+_GRIDDED_SPATIALIZE_METHODS: frozenset[str] = frozenset(
+    {"default", "regrid_from_netcdf"}
+)
+
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
     from hydrobricks.hydro_units import HydroUnits
@@ -322,22 +338,35 @@ class Forcing:
 
         self.data1D.load_from_csv(path, column_time, time_format, content)
 
-    def correct_station_data(self, **kwargs: Any) -> None:
+    def correct_station_data(
+        self,
+        variable: str,
+        method: str = "multiplicative",
+        correction_factor: float | str | None = None,
+    ) -> None:
         """
-        Define prior correction operations to apply to forcing data.
+        Define a prior correction operation to apply to station forcing data.
+
+        The operation is stored and applied later (deferred execution). The
+        ``variable`` and ``method`` are validated immediately so mistakes are reported
+        at the call site.
 
         Parameters
         ----------
-        **kwargs
-            Keyword arguments defining the correction operation.
-            Required keys:
+        variable
+            Name or alias of the variable to correct (e.g. 'precipitation', 'p').
+        method
+            Correction method: 'multiplicative' (default) or 'additive'.
+        correction_factor
+            Value of the correction factor (to add or multiply). A ``'param:<name>'``
+            string can be given to have the value taken from the parameter set at
+            calibration time.
 
-            - variable : str
-                Name of the variable to correct.
-            - method : str
-                Correction method: 'additive' or 'multiplicative'
-            - correction_factor : float
-                Value of the correction factor (to add or multiply).
+        Raises
+        ------
+        ForcingError
+            If the variable/method is not recognized or ``correction_factor`` is
+            missing.
 
         Examples
         --------
@@ -347,122 +376,243 @@ class Forcing:
         ...     correction_factor=0.5  # Add 0.5 degrees
         ... )
         """
-        kwargs["type"] = "prior_correction"
-        self._operations.append(kwargs)
+        self.get_variable_enum(variable)  # eager validation of the variable name
+        if method not in _CORRECTION_METHODS:
+            raise ForcingError(
+                f"Unknown correction method: '{method}'. Expected one of "
+                f"{sorted(_CORRECTION_METHODS)}.",
+                variable=variable,
+                method=method,
+            )
+        if correction_factor is None:
+            raise ForcingError(
+                "A 'correction_factor' must be provided for correct_station_data().",
+                variable=variable,
+                method=method,
+            )
 
-    def spatialize_from_station_data(self, **kwargs: Any) -> None:
+        self._operations.append(
+            {
+                "type": "prior_correction",
+                "variable": variable,
+                "method": method,
+                "correction_factor": correction_factor,
+            }
+        )
+
+    def spatialize_from_station_data(
+        self,
+        variable: str,
+        method: str = "default",
+        ref_elevation: float | str | None = None,
+        gradient: float | list | str | None = None,
+        gradient_1: float | list | str | None = None,
+        gradient_2: float | list | str | None = None,
+        elevation_threshold: float | str | None = None,
+    ) -> None:
         """
-        Define the spatialization operations from station data to all hydro units.
+        Define a spatialization operation from station data to all hydro units.
+
+        The operation is stored and applied later (deferred execution). The
+        ``variable`` and ``method`` are validated immediately. Any of the numeric
+        options may be given as a ``'param:<name>'`` string to be resolved from the
+        parameter set at calibration time.
 
         Parameters
         ----------
-        variable : str
-            Name of the variable to spatialize.
-        method : str
-            Name of the method to use. Can be:
+        variable
+            Name or alias of the variable to spatialize (e.g. 'temperature', 't').
+        method
+            Name of the method to use:
 
-            * constant: the same value will be used
-            * additive_elevation_gradient: use of an additive elevation gradient that
-              is either constant or changes for every month.
-              Parameters: 'ref_elevation', 'gradient'.
-            * multiplicative_elevation_gradient: use of a multiplicative elevation
-              gradient that is either constant or changes for every month.
-              Parameters: 'ref_elevation', 'gradient'.
-            * multiplicative_elevation_threshold_gradients: same as
-              multiplicative_elevation_gradient, but with an elevation threshold with a
-              gradient below and a gradient above.
-              Parameters: 'ref_elevation', 'gradient', 'gradient_2',
-              'elevation_threshold'
-        ref_elevation : float
-            Reference (station) elevation.
-            For method(s): 'elevation_gradient'
-        gradient : float/list
-            Gradient of the variable to apply per 100m (e.g., °C/100m).
-            Can be a unique value or a list providing a value for every month.
-            For method(s): 'elevation_gradient', 'elevation_multi_gradients'
-        gradient_1 : float/list
-            Same as parameter 'gradient'
-        gradient_2 : float/list
-            Gradient of the variable to apply per 100m (e.g., °C/100m) for the units
-            above the elevation threshold defined by 'elevation_threshold'.
-            For method(s): 'elevation_multi_gradients'
-        elevation_threshold : int/float
-            Threshold elevation to switch from gradient to gradient_2.
-            For method(s): 'elevation_multi_gradients'
-        """
-        kwargs["type"] = "spatialize_from_station"
-        self._operations.append(kwargs)
+            * 'default': pick a sensible method for the variable (additive gradient for
+              temperature, multiplicative for precipitation, constant for PET).
+            * 'constant': the same value is used for every hydro unit.
+            * 'additive_elevation_gradient': additive elevation gradient, constant or
+              one value per month. Uses 'ref_elevation' and 'gradient'.
+            * 'multiplicative_elevation_gradient': multiplicative elevation gradient,
+              constant or one value per month. Uses 'ref_elevation' and 'gradient'.
+            * 'multiplicative_elevation_threshold_gradients': as above but with a
+              gradient below and above an elevation threshold. Uses 'ref_elevation',
+              'gradient', 'gradient_2' and 'elevation_threshold'.
+        ref_elevation
+            Reference (station) elevation. Required for the gradient methods.
+        gradient
+            Gradient of the variable per 100 m (e.g. °C/100 m). Either a single value
+            or a list of 12 monthly values.
+        gradient_1
+            Alias of ``gradient`` (used if ``gradient`` is not provided).
+        gradient_2
+            Gradient per 100 m for the units above ``elevation_threshold`` (threshold
+            method only).
+        elevation_threshold
+            Threshold elevation to switch from ``gradient`` to ``gradient_2``.
 
-    def spatialize_from_gridded_data(self, **kwargs: Any) -> None:
+        Raises
+        ------
+        ForcingError
+            If the variable or method is not recognized.
         """
-        Define the spatialization operations from gridded data to all hydro units.
+        self.get_variable_enum(variable)  # eager validation of the variable name
+        if method not in _STATION_SPATIALIZE_METHODS:
+            raise ForcingError(
+                f"Unknown spatialization method: '{method}'. Expected one of "
+                f"{sorted(_STATION_SPATIALIZE_METHODS)}.",
+                variable=variable,
+                method=method,
+            )
+
+        operation: dict[str, Any] = {
+            "type": "spatialize_from_station",
+            "variable": variable,
+            "method": method,
+        }
+        # Only store options that were explicitly provided, so the executor keeps
+        # applying its per-method defaults for the rest.
+        for key, value in (
+            ("ref_elevation", ref_elevation),
+            ("gradient", gradient),
+            ("gradient_1", gradient_1),
+            ("gradient_2", gradient_2),
+            ("elevation_threshold", elevation_threshold),
+        ):
+            if value is not None:
+                operation[key] = value
+
+        self._operations.append(operation)
+
+    def spatialize_from_gridded_data(
+        self,
+        variable: str,
+        method: str = "default",
+        path: str | Path | None = None,
+        file_pattern: str | None = None,
+        data_crs: int | None = None,
+        var_name: str | None = None,
+        dim_time: str | None = None,
+        dim_x: str | None = None,
+        dim_y: str | None = None,
+        raster_hydro_units: str | Path | None = None,
+        apply_data_gradient: bool | None = None,
+        gradient_type: str | None = None,
+    ) -> None:
+        """
+        Define a spatialization operation from gridded data to all hydro units.
+
+        The operation is stored and applied later (deferred execution). The
+        ``variable`` and ``method`` are validated immediately.
 
         Parameters
         ----------
-        variable : str
-            Name of the variable to spatialize.
-        method : str
-            Name of the method to use. Can be:
-            * regrid_from_netcdf: regrid data from a single or multiple netCDF files.
-        path : str|Path
+        variable
+            Name or alias of the variable to spatialize.
+        method
+            Name of the method to use. Currently only 'regrid_from_netcdf' (the
+            'default').
+        path
             Path to the file containing the data or to a folder containing multiple
             files.
-        file_pattern : str, optional
-            Pattern of the files to read. If None, the path is considered to be
-            a single file.
-        data_crs : int, optional
+        file_pattern
+            Pattern of the files to read. If None, the path is considered a single file.
+        data_crs
             CRS (as EPSG id) of the data file. If None, the CRS is read from the file.
-        var_name : str
-            Name of the variable to read.
-        dim_time : str
-            Name of the time dimension.
-        dim_x : str
-            Name of the x dimension.
-        dim_y : str
-            Name of the y dimension.
-        raster_hydro_units : str|Path
-            Path to a raster containing the hydro unit ids to use for the
-            spatialization.
-        apply_data_gradient : bool, optional
-            If True, elevation-based gradients will be retrieved from the data and
-            applied to the hydro units (e.g., for temperature and precipitation).
-            If False, the data will be regridded without applying any gradient.
-            Default is True for temperature and precipitation variables, and False
-            for other variables.
-        """
-        kwargs["type"] = "spatialize_from_grid"
-        self._operations.append(kwargs)
+        var_name
+            Name of the variable to read in the netCDF file.
+        dim_time
+            Name of the time dimension (default 'time').
+        dim_x
+            Name of the x dimension (default 'x').
+        dim_y
+            Name of the y dimension (default 'y').
+        raster_hydro_units
+            Path to a raster containing the hydro unit ids used for the spatialization.
+        apply_data_gradient
+            If True, elevation-based gradients are retrieved from the data and applied
+            to the hydro units (e.g. for temperature and precipitation). If None, the
+            default depends on the variable (True for temperature and precipitation,
+            False otherwise). Requires the Forcing to be built from a Catchment with a
+            single DEM.
+        gradient_type
+            'additive' or 'multiplicative'. If None, a per-variable default is used.
 
-    def compute_pet(self, **kwargs: Any) -> None:
+        Raises
+        ------
+        ForcingError
+            If the variable or method is not recognized.
         """
-        Define the PET computation operations using the pyet library. The PET will be
-        computed for all hydro units.
+        self.get_variable_enum(variable)  # eager validation of the variable name
+        if method not in _GRIDDED_SPATIALIZE_METHODS:
+            raise ForcingError(
+                f"Unknown spatialization method: '{method}'. Expected one of "
+                f"{sorted(_GRIDDED_SPATIALIZE_METHODS)}.",
+                variable=variable,
+                method=method,
+            )
+
+        operation: dict[str, Any] = {
+            "type": "spatialize_from_grid",
+            "variable": variable,
+            "method": method,
+        }
+        # Only store options that were explicitly provided, so the executor keeps
+        # applying its per-variable defaults for the rest (e.g. apply_data_gradient).
+        for key, value in (
+            ("path", path),
+            ("file_pattern", file_pattern),
+            ("data_crs", data_crs),
+            ("var_name", var_name),
+            ("dim_time", dim_time),
+            ("dim_x", dim_x),
+            ("dim_y", dim_y),
+            ("raster_hydro_units", raster_hydro_units),
+            ("apply_data_gradient", apply_data_gradient),
+            ("gradient_type", gradient_type),
+        ):
+            if value is not None:
+                operation[key] = value
+
+        self._operations.append(operation)
+
+    def compute_pet(
+        self,
+        method: str,
+        use: list[str],
+        lat: float | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Define a PET computation operation using the pyet library. The PET is computed
+        for all hydro units.
+
+        The operation is stored and applied later (deferred execution). The ``method``
+        is validated immediately.
 
         Parameters
         ----------
-        method : str
-            Name of the method to use. Possible values are those provided in the
-            table from the pyet documentation: https://pypi.org/project/pyet/. The
-            method name or the pyet function name can be used.
-        use : list
+        method
+            Name of the method to use. Possible values are those provided in the table
+            from the pyet documentation: https://pypi.org/project/pyet/. The method
+            name or the pyet function name can be used.
+        use
             List of the meteorological variables to use to compute the PET. Only the
             variables listed here will be used. The variables must be named according
-            to pyet naming convention (see pyet API documentation:
-            https://pyet.readthedocs.io/en/latest/api/index.html).
-            These variables must be available (data loaded in forcing) and spatialized.
+            to the pyet naming convention (see the pyet API documentation:
+            https://pyet.readthedocs.io/en/latest/api/index.html) and must be available
+            (loaded in the forcing) and spatialized.
             Example: use=['t', 'tmin', 'tmax', 'lat', 'elevation']
-        lat : float, optional
-            Latitude of the catchment. If not provided, the latitude computed for each
-            hydro unit will be used.
-        other options : see pyet documentation for function-specific options. These
-            options will be passed to the pyet function.
+        lat
+            Latitude of the catchment (degrees). If not provided, the latitude computed
+            for each hydro unit is used.
+        **kwargs
+            Additional function-specific options passed through to the pyet function
+            (see the pyet documentation).
 
         Raises
         ------
         DependencyError
             If pyet is not installed.
-        ValueError
-            If required variables are not available.
+        ForcingError
+            If the PET method is not recognized.
         """
         if not HAS_PYET:
             raise DependencyError(
@@ -472,9 +622,24 @@ class Forcing:
                 install_command="pip install pyet",
             )
 
-        kwargs["type"] = "compute_pet"
+        if method not in _PET_METHOD_MAP:
+            raise ForcingError(
+                f"Unknown PET method: '{method}'. Expected one of "
+                f"{sorted(set(_PET_METHOD_MAP))}.",
+                variable="PET",
+                method=method,
+            )
 
-        self._operations.append(kwargs)
+        operation: dict[str, Any] = {
+            "type": "compute_pet",
+            "method": method,
+            "use": use,
+        }
+        if lat is not None:
+            operation["lat"] = lat
+        operation.update(kwargs)
+
+        self._operations.append(operation)
 
     def apply_operations(
         self, parameters: ParameterSet | None = None, apply_to_all: bool = True

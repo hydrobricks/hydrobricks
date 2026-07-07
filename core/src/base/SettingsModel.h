@@ -17,6 +17,7 @@ struct TimerSettings {
     string end;
     int timeStep = 1;
     string timeStepUnit;
+    int spinupDays = 0;
 };
 
 struct OutputSettings {
@@ -88,6 +89,17 @@ class SettingsModel {
      * @param timeStepUnit time step unit.
      */
     void SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit);
+
+    /**
+     * Set the spin-up duration.
+     *
+     * The model pre-runs the first spin-up days of the modelling period (without
+     * logging and without triggering actions) to initialize the state variables, then
+     * restarts at the period start with the warmed-up states.
+     *
+     * @param days number of days of the modelling period replayed as spin-up.
+     */
+    void SetSpinupDays(int days);
 
     /**
      * Add a hydro unit brick to the model (e.g. storage).
@@ -398,6 +410,13 @@ class SettingsModel {
      * @param refreezingProcess name of the refreezing process.
      */
     void AddSnowpackRefreezing(const string& refreezingProcess = "refreeze:degree_day");
+
+    /**
+     * Add a sublimation process to all snowpacks (snow container to the atmosphere).
+     *
+     * @param sublimationProcess name of the sublimation process.
+     */
+    void AddSnowpackSublimation(const string& sublimationProcess);
 
     /**
      * Add a new (empty) model-structure variant and select it. Hydro units can be
@@ -778,6 +797,7 @@ class SettingsModel {
     void SetLogAll(bool logAll = true) {
         if (logAll) {
             LogDebug("Logging all components.");
+            _recordFractions = true;
         } else {
             LogDebug("Minimal logging.");
         }
@@ -791,6 +811,27 @@ class SettingsModel {
      */
     bool LogAll() const {
         return _logAll;
+    }
+
+    /**
+     * Flag to record the land-cover fractions over time. Enabled automatically by
+     * SetLogAll(true); can also be enabled on its own for selective recording (e.g.
+     * when an auxiliary observation needs the time-varying land-cover areas without
+     * logging every component).
+     *
+     * @param record true to record the fractions, false otherwise.
+     */
+    void SetRecordFractions(bool record = true) {
+        _recordFractions = record;
+    }
+
+    /**
+     * Check if the land-cover fractions are recorded.
+     *
+     * @return true if the fractions are recorded, false otherwise.
+     */
+    bool RecordsFractions() const {
+        return _recordFractions;
     }
 
     /**
@@ -818,6 +859,7 @@ class SettingsModel {
     bool SetParameterValueInSelectedStructure(const string& component, const string& name, float value);
 
     bool _logAll;
+    bool _recordFractions;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
     TimerSettings _timer;

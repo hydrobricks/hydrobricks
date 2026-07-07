@@ -7,6 +7,7 @@ import pytest
 
 import hydrobricks as hb
 import hydrobricks.actions as actions
+from hydrobricks._exceptions import DataError
 
 TEST_FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
@@ -346,3 +347,74 @@ def test_glacier_evolution_area_scaling():
         assert np.allclose(
             volume_diff, volume_diff[0, :], rtol=1e-3
         ), "Volume difference is not constant across the rows."
+
+
+def _build_glacier_catchment():
+    catchment = hb.Catchment(
+        CATCHMENT_OUTLINE,
+        land_cover_types=["ground", "glacier"],
+        land_cover_names=["ground", "glacier"],
+    )
+    catchment.extract_dem(CATCHMENT_DEM)
+    catchment.create_elevation_bands(method="equal_intervals", distance=100)
+    return catchment
+
+
+def test_initialize_glacier_cover_from_extent_matches_delta_h():
+    if not hb.HAS_RASTERIO:
+        return
+
+    # Reference: the delta-h initializer (which also discretizes into 10 m bands).
+    reference = _build_glacier_catchment()
+    hb.preprocessing.GlacierEvolutionDeltaH().compute_initial_ice_thickness(
+        reference, ice_thickness=GLACIER_ICE_THICKNESS
+    )
+    reference_fractions = reference.hydro_units.hydro_units[
+        ("fraction-glacier", "fraction")
+    ].to_numpy()
+
+    # The lightweight initializer must set the exact same per-unit glacier fractions
+    # without the elevation-band discretization.
+    simple = _build_glacier_catchment()
+    hb.preprocessing.initialize_glacier_cover_from_extent(
+        simple, ice_thickness=GLACIER_ICE_THICKNESS
+    )
+    simple_fractions = simple.hydro_units.hydro_units[
+        ("fraction-glacier", "fraction")
+    ].to_numpy()
+
+    assert simple_fractions.max() > 0  # the glacier is actually present
+    assert np.allclose(reference_fractions, simple_fractions)
+
+
+def test_initialize_glacier_cover_from_extent_from_shapefile():
+    if not hb.HAS_RASTERIO:
+        return
+
+    catchment = _build_glacier_catchment()
+    hb.preprocessing.initialize_glacier_cover_from_extent(
+        catchment, glacier_outline=GLACIER_OUTLINE
+    )
+    fractions = catchment.hydro_units.hydro_units[("fraction-glacier", "fraction")]
+
+    assert not fractions.isnull().values.any()
+    assert fractions.max() > 0
+
+
+def test_initialize_glacier_cover_from_extent_requires_one_source():
+    if not hb.HAS_RASTERIO:
+        return
+
+    catchment = _build_glacier_catchment()
+
+    # Neither source provided.
+    with pytest.raises(DataError):
+        hb.preprocessing.initialize_glacier_cover_from_extent(catchment)
+
+    # Both sources provided.
+    with pytest.raises(DataError):
+        hb.preprocessing.initialize_glacier_cover_from_extent(
+            catchment,
+            ice_thickness=GLACIER_ICE_THICKNESS,
+            glacier_outline=GLACIER_OUTLINE,
+        )

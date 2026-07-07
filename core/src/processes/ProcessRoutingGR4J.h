@@ -83,7 +83,7 @@ class ProcessRoutingGR4J : public ProcessOutflow {
      * Read-only: computes Q from current buffer state without modifying it.
      * Buffer advancement happens in Finalize() exactly once per timestep.
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
     /**
      * Recompute UH ordinates and resize buffers based on current X4.

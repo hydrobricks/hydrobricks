@@ -2,11 +2,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <set>
+
 #include "Action.h"
 #include "ActionGlacierEvolutionAreaScaling.h"
 #include "ActionGlacierEvolutionDeltaH.h"
 #include "ActionGlacierSnowToIceTransformation.h"
 #include "ActionLandCoverChange.h"
+#include "ContentTypes.h"
 #include "Includes.h"
 #include "ModelHydro.h"
 #include "Parameter.h"
@@ -18,6 +21,145 @@
 
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+namespace {
+
+// Read-only export of the model structure (bricks, processes, fluxes, splitters) as plain
+// Python objects, used by the Python StructureGraph (model.get_structure_graph()).
+
+std::string VariableTypeToStr(VariableType type) {
+    switch (type) {
+        case VariableType::Precipitation:
+            return "precipitation";
+        case VariableType::Temperature:
+            return "temperature";
+        case VariableType::TemperatureMin:
+            return "temperature_min";
+        case VariableType::TemperatureMax:
+            return "temperature_max";
+        case VariableType::Radiation:
+            return "solar_radiation";
+        case VariableType::PET:
+            return "pet";
+        case VariableType::Custom1:
+            return "custom_1";
+        case VariableType::Custom2:
+            return "custom_2";
+        case VariableType::Custom3:
+            return "custom_3";
+    }
+    return "unknown";
+}
+
+py::list ForcingToList(const vector<VariableType>& forcing) {
+    py::list list;
+    for (auto type : forcing) {
+        list.append(VariableTypeToStr(type));
+    }
+    return list;
+}
+
+py::list OutputsToList(const vector<OutputSettings>& outputs) {
+    py::list list;
+    for (const auto& output : outputs) {
+        py::dict d;
+        d["target"] = output.target;
+        d["flux_type"] = ContentTypeToString(output.fluxType);
+        d["instantaneous"] = output.isInstantaneous;
+        d["static"] = output.isStatic;
+        list.append(d);
+    }
+    return list;
+}
+
+py::list ProcessesToList(const vector<ProcessSettings>& processes) {
+    py::list list;
+    for (const auto& process : processes) {
+        py::dict d;
+        d["name"] = process.name;
+        d["kind"] = process.type;
+        d["forcing"] = ForcingToList(process.forcing);
+        d["outputs"] = OutputsToList(process.outputs);
+        list.append(d);
+    }
+    return list;
+}
+
+py::dict BrickToDict(const BrickSettings& brick, const string& attach, bool isLandCover, bool isSurfaceComponent) {
+    py::dict d;
+    d["name"] = brick.name;
+    d["kind"] = brick.type;
+    d["parent"] = brick.parent.empty() ? py::none() : py::cast(brick.parent);
+    d["attach"] = attach;
+    d["computed_directly"] = brick.computedDirectly;
+    d["is_land_cover"] = isLandCover;
+    d["is_surface_component"] = isSurfaceComponent;
+    d["forcing"] = ForcingToList(brick.forcing);
+    d["processes"] = ProcessesToList(brick.processes);
+    return d;
+}
+
+py::list SplittersToList(SettingsModel& settings, bool subBasin) {
+    py::list list;
+    int count = subBasin ? settings.GetSubBasinSplitterCount() : settings.GetHydroUnitSplitterCount();
+    for (int i = 0; i < count; ++i) {
+        const SplitterSettings& s = subBasin ? settings.GetSubBasinSplitterSettings(i)
+                                             : settings.GetHydroUnitSplitterSettings(i);
+        py::dict d;
+        d["name"] = s.name;
+        d["kind"] = s.type;
+        d["attach"] = subBasin ? "sub_basin" : "hydro_unit";
+        d["forcing"] = ForcingToList(s.forcing);
+        d["outputs"] = OutputsToList(s.outputs);
+        list.append(d);
+    }
+    return list;
+}
+
+py::list ExportStructure(SettingsModel& settings) {
+    py::list structures;
+    int structureCount = settings.GetStructureCount();
+    for (int id = 1; id <= structureCount; ++id) {
+        settings.SelectStructure(id);
+
+        std::set<int> landCoverIdx;
+        for (int i : settings.GetLandCoverBricksIndices()) {
+            landCoverIdx.insert(i);
+        }
+        std::set<int> surfaceIdx;
+        for (int i : settings.GetSurfaceComponentBricksIndices()) {
+            surfaceIdx.insert(i);
+        }
+
+        py::list hydroUnitBricks;
+        for (int i = 0; i < settings.GetHydroUnitBrickCount(); ++i) {
+            hydroUnitBricks.append(BrickToDict(settings.GetHydroUnitBrickSettings(i), "hydro_unit",
+                                               landCoverIdx.count(i) > 0, surfaceIdx.count(i) > 0));
+        }
+
+        py::list subBasinBricks;
+        for (int i = 0; i < settings.GetSubBasinBrickCount(); ++i) {
+            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "sub_basin", false, false));
+        }
+
+        py::dict structure;
+        structure["id"] = id;
+        structure["hydro_unit_bricks"] = hydroUnitBricks;
+        structure["sub_basin_bricks"] = subBasinBricks;
+        structure["hydro_unit_splitters"] = SplittersToList(settings, false);
+        structure["sub_basin_splitters"] = SplittersToList(settings, true);
+        structures.append(structure);
+    }
+
+    // Restore the primary structure selection (selection has side effects).
+    if (structureCount >= 1) {
+        settings.SelectStructure(1);
+    }
+
+    return structures;
+}
+
+}  // namespace
 
 PYBIND11_MODULE(_hydrobricks, m) {
     m.doc() = "hydrobricks Python interface";
@@ -32,12 +174,24 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsModel>(m, "SettingsModel")
         .def(py::init<>())
         .def("log_all", &SettingsModel::SetLogAll, "Logging all components.", "log_all"_a = true)
+        .def("record_fractions", &SettingsModel::SetRecordFractions,
+             "Record the land-cover fractions over time (selective recording).", "record"_a = true)
         .def("add_logging_to", &SettingsModel::AddLoggingToItem, "Add logging to the item.", "name"_a)
+        .def("add_brick_logging", static_cast<void (SettingsModel::*)(const string&)>(&SettingsModel::AddBrickLogging),
+             "Add logging of an item (e.g. a state) to the selected brick.", "name"_a)
+        .def("select_process", static_cast<void (SettingsModel::*)(const string&)>(&SettingsModel::SelectProcess),
+             "Select a process of the selected brick by name.", "name"_a)
+        .def("add_process_logging", &SettingsModel::AddProcessLogging,
+             "Add logging of an item (e.g. 'output') to the selected process.", "name"_a)
         .def("add_structure", &SettingsModel::AddStructure,
              "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
+        .def("set_spinup_days", &SettingsModel::SetSpinupDays,
+             "Set the spin-up duration: the first days of the modelling period are replayed (unlogged) to "
+             "initialize the states before the run restarts at the period start.",
+             "days"_a)
         .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
         .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
              "kind"_a = "storage")
@@ -71,6 +225,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
              "Add a refreezing process to the snowpacks (requires water retention).",
              "refreezing_process"_a = "refreeze:degree_day")
+        .def("add_snowpack_sublimation", &SettingsModel::AddSnowpackSublimation,
+             "Add a sublimation process to the snowpacks (snow to the atmosphere).", "sublimation_process"_a)
         .def("add_snow_ice_transformation", &SettingsModel::AddSnowIceTransformation,
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
@@ -78,7 +234,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,
-             "Set the process outputs as static.");
+             "Set the process outputs as static.")
+        .def(
+            "get_structure", [](SettingsModel& settings) { return ExportStructure(settings); },
+            "Export the model structure (bricks, processes, fluxes, splitters) as a list of "
+            "structure-variant dicts, for inspection/visualization.");
 
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
@@ -174,7 +334,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
                 auto r = m.Run();
                 if (!r) throw py::value_error(r.error());
             },
-            "Run the model.")
+            // Run() is pure C++ and touches no Python state, so the GIL can be released for the
+            // whole simulation. This lets independent model instances run concurrently from Python
+            // threads (e.g. multi-catchment ensembles) and enables in-process parallel calibration.
+            py::call_guard<py::gil_scoped_release>(), "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
         .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
@@ -184,7 +347,17 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the total change in water storage.")
         .def("get_total_snow_storage_changes", &ModelHydro::GetTotalSnowStorageChanges,
              "Get the total change in snow storage.")
-        .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a);
+        .def("dump_outputs", &ModelHydro::DumpOutputs, "Dump the model outputs to file.", "path"_a)
+        .def("get_hydro_unit_values", &ModelHydro::GetHydroUnitValues,
+             "Get the recorded hydro unit series for a component label (time x units).", "label"_a)
+        .def("get_hydro_unit_fractions", &ModelHydro::GetHydroUnitFractions,
+             "Get the recorded land-cover fraction series for a label (time x units).", "label"_a)
+        .def("get_recorded_hydro_unit_labels", &ModelHydro::GetRecordedHydroUnitLabels,
+             "Get the labels of the recorded hydro unit components.")
+        .def("get_recorded_hydro_unit_fraction_labels", &ModelHydro::GetRecordedHydroUnitFractionLabels,
+             "Get the labels of the recorded land-cover fractions.")
+        .def("get_hydro_unit_ids", &ModelHydro::GetHydroUnitIds, "Get the hydro unit ids in recorded order.")
+        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.");
 
     py::class_<Action>(m, "Action").def(py::init<>());
 

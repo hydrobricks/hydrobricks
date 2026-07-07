@@ -10,6 +10,7 @@ from hydrobricks._exceptions import (
 # Import optional dependency management
 from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_GEOPANDAS,
+    HAS_GRAPHVIZ,
     HAS_NETCDF,
     HAS_PYARROW,
     HAS_PYET,
@@ -24,6 +25,7 @@ from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_XRSPATIAL,
     Dataset,
     gpd,
+    graphviz,
     pyarrow,
     pyet,
     pyproj,
@@ -38,15 +40,23 @@ from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     xrs,
 )
 from hydrobricks.catchment import Catchment
+from hydrobricks.evaluation import (
+    AuxiliaryObservation,
+    DischargeObservations,
+    GlacierMassBalanceObservations,
+    SnowCoverObservations,
+    evaluate,
+)
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.models.model import Model
-from hydrobricks.observations import Observations
 from hydrobricks.parameters import ParameterSet
+from hydrobricks.periods import Period, Periods, evaluate_periods
 from hydrobricks.plotter import Plotter
+from hydrobricks.project import Project, load_project
 from hydrobricks.results import Results
+from hydrobricks.structure import StructureGraph
 from hydrobricks.time_series import TimeSeries
-from hydrobricks.trainer import evaluate
 
 from ._hydrobricks import (
     close_log,
@@ -63,13 +73,23 @@ __all__ = (
     "ParameterSet",
     "HydroUnits",
     "Forcing",
-    "Observations",
+    "DischargeObservations",
+    "AuxiliaryObservation",
+    "GlacierMassBalanceObservations",
+    "SnowCoverObservations",
     "TimeSeries",
     "Catchment",
     "Results",
     "Model",
     "Plotter",
+    "StructureGraph",
+    "Period",
+    "Periods",
     "evaluate",
+    "evaluate_periods",
+    # Project file loader
+    "load_project",
+    "Project",
     # Logging functions
     "init",
     "init_log",
@@ -91,10 +111,12 @@ __all__ = (
     "HAS_RIOXARRAY",
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
+    "HAS_GRAPHVIZ",
     # Lazy-loaded optional modules
     "Dataset",
     "rasterio",
     "gpd",
+    "graphviz",
     "shapely",
     "spotpy",
     "pyet",

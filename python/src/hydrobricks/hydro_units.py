@@ -7,7 +7,7 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 
-from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
+from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._hydrobricks import SettingsBasin
 from hydrobricks._optional import HAS_NETCDF, Dataset
 from hydrobricks._units import (
@@ -88,7 +88,6 @@ class HydroUnits:
         path: str | Path,
         column_elevation: str | None = None,
         column_area: str | None = None,
-        column_fractions: dict[str, str] | None = None,
         columns_areas: dict[str, str] | None = None,
         other_columns: dict[str, str] | None = None,
     ) -> None:
@@ -107,10 +106,6 @@ class HydroUnits:
         column_area
             Column name containing the total area values.
             If None, looks for 'area' column. Default: None
-        column_fractions
-            NOT IMPLEMENTED.
-            Dictionary mapping land cover names to area fraction column names.
-            Default: None
         columns_areas
             Dictionary mapping land cover names to area column names.
             Cannot be used with column_area. Default: None
@@ -125,8 +120,6 @@ class HydroUnits:
             If the CSV file does not exist.
         ValueError
             If required columns are missing or are inconsistent.
-        NotImplementedError
-            If column_fractions is provided (not yet implemented).
         """
         # Validate parameter conflicts before touching the filesystem
         if column_area is not None and columns_areas is not None:
@@ -135,10 +128,6 @@ class HydroUnits:
                 "provided at the same time.",
                 data_type="hydro units",
                 reason="Ambiguous column specification",
-            )
-        if column_fractions is not None:
-            raise ConfigurationError(
-                'The "column_fractions" parameter is not yet implemented.'
             )
 
         # Load and prepare CSV file
@@ -576,6 +565,39 @@ class HydroUnits:
                 return name
         return self.land_cover_names[0]
 
+    def add_land_cover(self, name: str, cover_type: str = "generic_land_cover") -> None:
+        """
+        Register a new land cover on the hydro units.
+
+        Appends the land cover (name + type) and adds its ``fraction-<name>``
+        column, initialized to 0.0 for every hydro unit. Existing fractions are left
+        untouched, so the generic soil cover keeps absorbing the residual area until
+        the new cover's fractions are set (e.g. via
+        ``initialize_from_land_cover_change``).
+
+        Parameters
+        ----------
+        name
+            The name of the land cover to add.
+        cover_type
+            The land cover type identifier (e.g. 'glacier', 'forest', 'open').
+            Default: 'generic_land_cover'.
+
+        Raises
+        ------
+        DataError
+            If a land cover with the same name already exists.
+        """
+        if name in self.land_cover_names:
+            raise DataError(
+                f"A land cover named '{name}' already exists.",
+                data_type="land cover",
+                reason="Duplicate land cover name",
+            )
+        self.land_cover_names.append(name)
+        self.land_cover_types.append(cover_type)
+        self.hydro_units[(self.FRACTION_PREFIX + name, "fraction")] = 0.0
+
     def initialize_from_land_cover_change(
         self, land_cover_name: str, land_cover_change: pd.DataFrame
     ) -> None:
@@ -586,6 +608,10 @@ class HydroUnits:
         Updates the land cover fractions for specified hydro units based on a
         land cover change dataframe. Automatically adjusts the generic soil land cover
         fraction ('open', or its 'ground' alias) to maintain conservation.
+
+        Must be called before ``Model.setup()``: the fractions set here become the
+        model's initial extent, captured at build time. Calling it afterwards updates
+        the settings but does not propagate to an already-built model.
 
         Parameters
         ----------
@@ -601,7 +627,7 @@ class HydroUnits:
         """
         # Land cover fraction column name
         field_name = self.FRACTION_PREFIX + land_cover_name
-        ground_name = self.FRACTION_PREFIX + self.get_generic_cover_name()
+        open_name = self.FRACTION_PREFIX + self.get_generic_cover_name()
 
         # Apply land cover fractions one hydro unit at a time (order might differ)
         for _, row in land_cover_change.iterrows():
@@ -621,9 +647,22 @@ class HydroUnits:
                     reason="Fraction outside valid range",
                 )
 
-            # Set the land cover fraction
+            # Set the land cover fraction, taking the area from the generic (soil)
+            # cover so the unit's fractions still sum to 1.
             self.hydro_units.loc[hu_idx, (field_name, "fraction")] = fraction
-            self.hydro_units.loc[hu_idx, (ground_name, "fraction")] -= fraction
+            self.hydro_units.loc[hu_idx, (open_name, "fraction")] -= fraction
+            open_fraction = self.hydro_units.loc[hu_idx, (open_name, "fraction")]
+            if open_fraction < -1e-8:
+                raise DataError(
+                    f"Initializing '{land_cover_name}' to fraction {fraction:.4g} "
+                    f"for unit {id} leaves the generic cover negative "
+                    f"({open_fraction:.4g}). This usually means the cover was "
+                    f"already initialized (e.g. compute_initial_ice_thickness "
+                    f"initializes the glacier cover by default; pass "
+                    f"initialize_cover=False to skip it).",
+                    data_type="land cover fraction",
+                    reason="Generic cover fraction went negative",
+                )
 
         self.populate_bounded_instance()
 
@@ -643,6 +682,11 @@ class HydroUnits:
             if prop[0] in ["id", "area", "elevation"]:
                 continue
             if self.FRACTION_PREFIX in prop[0]:
+                continue
+            # The connectivity column (added by calculate_connectivity) holds a dict
+            # per unit; it is applied separately via add_lateral_connection in
+            # set_connectivity, so it is not a per-unit scalar property here.
+            if prop[0] == "connectivity":
                 continue
             properties.append(prop[0])
 
@@ -670,7 +714,25 @@ class HydroUnits:
                 fraction = float(row[self.FRACTION_PREFIX + cover_name].values[0])
                 if np.isnan(fraction):
                     fraction = 0.0
-                assert 0 <= fraction <= 1
+                # Snap tiny floating-point overshoots into [0, 1] (e.g. the generic
+                # cover ending at -1e-17 when the other covers sum to exactly 1).
+                if -1e-8 <= fraction < 0:
+                    fraction = 0.0
+                elif 1 < fraction <= 1 + 1e-8:
+                    fraction = 1.0
+                if not 0 <= fraction <= 1:
+                    unit_id = int(row[("id", "-")])
+                    raise DataError(
+                        f"Land cover '{cover_name}' fraction {fraction:.4g} for "
+                        f"hydro unit {unit_id} is outside [0, 1]. The land-cover "
+                        f"fractions of a unit must sum to 1; a negative residual "
+                        f"usually means a cover area was applied twice (e.g. "
+                        f"compute_initial_ice_thickness already initializes the "
+                        f"glacier cover by default, so an extra "
+                        f"initialize_area_from_land_cover_change double-counts it).",
+                        data_type="land cover fraction",
+                        reason="Fraction outside valid range",
+                    )
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:

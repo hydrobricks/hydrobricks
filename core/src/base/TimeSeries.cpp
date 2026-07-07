@@ -70,9 +70,10 @@ bool TimeSeries::Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& 
             } else {
                 axxd values = file.GetVarDouble2D(iVar, timeLength, unitCount);
                 for (int i = 0; i < values.cols(); ++i) {
-                    axd valuesUnit = values.col(i);
+                    // A column of a column-major array is contiguous, so copy it straight into the vector.
+                    const double* colStart = values.col(i).data();
                     auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
+                    forcingData->SetValues(vecDouble(colStart, colStart + values.rows()));
                     timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             }
@@ -116,9 +117,10 @@ std::unique_ptr<TimeSeries> TimeSeries::Create(const string& varName, const axd&
     }
 
     for (int i = 0; i < data.cols(); ++i) {
-        axd valuesUnit = data.col(i);
+        // A column of a column-major array is contiguous, so copy it straight into the vector.
+        const double* colStart = data.col(i).data();
         auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
-        if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
+        if (!forcingData->SetValues(vecDouble(colStart, colStart + data.rows()))) {
             throw RuntimeError("Time series creation failed.");
         }
         timeSeries->AddData(std::move(forcingData), ids[i]);

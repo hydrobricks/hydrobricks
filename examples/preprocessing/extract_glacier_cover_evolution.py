@@ -35,8 +35,8 @@ working_dir.mkdir(parents=True, exist_ok=True)
 # Prepare catchment data
 catchment = hb.Catchment(
     CATCHMENT_OUTLINE,
-    land_cover_types=["ground", "glacier"],
-    land_cover_names=["ground", "glacier"],
+    land_cover_types=["open", "glacier"],
+    land_cover_names=["open", "glacier"],
 )
 catchment.extract_dem(CATCHMENT_DEM)
 
@@ -70,7 +70,7 @@ changes, changes_df = ActionLandCoverChange.create_action_for_glaciers(
 
 # The dataframe can be saved as csv (without column names)
 changes_df[0].to_csv(working_dir / "changes_glacier.csv", index=False)
-changes_df[1].to_csv(working_dir / "changes_ground.csv", index=False)
+changes_df[1].to_csv(working_dir / "changes_open.csv", index=False)
 
 # And can be loaded again to be used in hydrobricks later
 changes_glacier = ActionLandCoverChange()
@@ -83,5 +83,5 @@ changes_glacier.load_from_csv(
 )
 
 # Finally, initialize the HydroUnits cover with the first cover values of the
-# ActionLandCoverChange object (no need to do it for the ground land cover type).
+# ActionLandCoverChange object (no need to do it for the open land cover type).
 catchment.initialize_area_from_land_cover_change("glacier", changes_df[0])

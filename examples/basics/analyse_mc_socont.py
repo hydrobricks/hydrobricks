@@ -1,11 +1,12 @@
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import spotpy
 
+import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,19 +15,12 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
-# Set up the model
-helper = ModelSetupHelper(
-    "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
-)
-helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=1253, use_precip_gradient=True
-)
-obs = helper.get_obs_data_from_csv_file()
-socont, parameters = helper.get_model_and_params_socont()
+# The whole setup (data, model, forcing spatialization with calibratable
+# 'param:' corrections) is declared in the project file.
+project = hb.load_project(Path(__file__).parent / "sitter_calibration_project.yaml")
 
 # Select the parameters to optimize/analyze
-parameters.allow_changing = [
+project.parameters.allow_changing = [
     "a_snow",
     "k_quick",
     "A",
@@ -38,14 +32,14 @@ parameters.allow_changing = [
 ]
 
 # Set a specific prior distribution instead of the default (Uniform)
-parameters.set_prior("a_snow", spotpy.parameter.Normal(mean=4, stddev=2))
+project.parameters.set_prior("a_snow", spotpy.parameter.Normal(mean=4, stddev=2))
 
 # Setup SPOTPY
 spot_setup = trainer.SpotpySetup(
-    socont,
-    parameters,
-    forcing,
-    obs,
+    project.model,
+    project.parameters,
+    project.forcing,
+    project.observations,
     warmup=365,
     obj_func=spotpy.objectivefunctions.nashsutcliffe,
 )

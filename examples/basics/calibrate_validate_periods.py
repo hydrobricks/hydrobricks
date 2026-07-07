@@ -13,12 +13,12 @@ This example shows the recommended period workflow:
 
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
 import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,41 +27,23 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
+PROJECT_FILE = Path(__file__).parent / "sitter_periods_project.yaml"
+
 # ---------------------------------------------------------------------------
-# 1. Declare the periods
+# 1. The periods (calibration/validation/spin-up) are declared in the project
+#    file, together with the whole setup.
 # ---------------------------------------------------------------------------
-periods = hb.Periods(
-    calibration=("1981-01-01", "2000-12-31"),
-    validation=("2001-01-01", "2020-12-31"),
-    spinup="4y",  # replay the first 4 years of each period to warm the stores
-)
-
-
-def build(period, spinup):
-    """Build a SOCONT model, forcing and observations over the given period."""
-    helper = ModelSetupHelper(
-        "ch_sitter_appenzell",
-        start_date=period.bounds[0],
-        end_date=period.bounds[1],
-        spinup=spinup,
-    )
-    helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-    forcing = helper.get_forcing_data_from_csv_file(
-        ref_elevation=1250, use_precip_gradient=True
-    )
-    obs = helper.get_obs_data_from_csv_file()
-    socont, parameters = helper.get_model_and_params_socont()
-    return helper, socont, parameters, forcing, obs
-
 
 # ---------------------------------------------------------------------------
 # 2. Calibrate on the calibration period only
 # ---------------------------------------------------------------------------
-helper, socont, parameters, forcing, obs = build(
-    periods.calibration, spinup=periods.spinup
-)
+# With setup=False the model is built but not set up; setting it up over the
+# calibration period applies the spin-up policy to that period.
+project = hb.load_project(PROJECT_FILE, setup=False)
+project.setup(period="calibration")
+periods = project.periods
 
-parameters.allow_changing = [
+project.parameters.allow_changing = [
     "a_snow",
     "k_quick",
     "A",
@@ -75,10 +57,10 @@ parameters.allow_changing = [
 # With periods=..., the whole calibration period is scored (the spin-up replaces
 # the warmup) and the setup checks the model spans periods.calibration.
 spot_setup = trainer.SpotpySetup(
-    socont,
-    parameters,
-    forcing,
-    obs,
+    project.model,
+    project.parameters,
+    project.forcing,
+    project.observations,
     obj_func="kge_2012",
     periods=periods,
 )
@@ -89,11 +71,12 @@ print(f"Calibration finished: best KGE = {best['score']:.3f}")
 # ---------------------------------------------------------------------------
 # 3. Validate: re-run the best parameters over the full span, score per period
 # ---------------------------------------------------------------------------
-helper_full, socont_full, parameters_full, forcing_full, obs_full = build(
-    periods.simulation, spinup=periods.spinup
-)
-parameters_full.set_values(best["parameters"])
-socont_full.run(parameters_full, forcing_full)
+# A fresh load (default setup) spans the full simulation period.
+project_full = hb.load_project(PROJECT_FILE)
+project_full.parameters.set_values(best["parameters"])
+socont_full = project_full.model
+obs_full = project_full.observations
+socont_full.run(project_full.parameters, project_full.forcing)
 
 scores = hb.evaluate_periods(
     socont_full, obs_full, periods, metrics=("kge_2012", "nse")

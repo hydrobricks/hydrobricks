@@ -622,9 +622,10 @@ class SnowCoverObservations(AuxiliaryObservation):
             ``rasterio.enums.Resampling`` name, default ``'nearest'``).
         engine
             xarray engine used to read the files (default ``'netcdf4'``).
-        start_date, end_date, swe_full, land_covers, metric, weight, mode, tolerance,
-        relative_tolerance
+        start_date, end_date, swe_full, land_covers
             Configuration; see :meth:`_from_stack` and the class docstring.
+        metric, weight, mode, tolerance, relative_tolerance
+            Calibration-signal configuration; see the class docstring.
         cache_dir
             If given, the aggregated per-(unit, date) fractions are cached there as a
             CSV named ``snow_cover_<hash>.csv``. The hash is built from the hydro-unit

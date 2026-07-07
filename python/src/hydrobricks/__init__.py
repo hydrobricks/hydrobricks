@@ -53,6 +53,7 @@ from hydrobricks.models.model import Model
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, Periods, evaluate_periods
 from hydrobricks.plotter import Plotter
+from hydrobricks.project import Project, load_project
 from hydrobricks.results import Results
 from hydrobricks.structure import StructureGraph
 from hydrobricks.time_series import TimeSeries
@@ -86,6 +87,9 @@ __all__ = (
     "Periods",
     "evaluate",
     "evaluate_periods",
+    # Project file loader
+    "load_project",
+    "Project",
     # Logging functions
     "init",
     "init_log",

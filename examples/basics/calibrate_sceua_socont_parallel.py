@@ -1,10 +1,11 @@
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,19 +20,12 @@ def build():
 
     For parallel runs this factory is shipped to each worker process to rebuild
     the model there, so it must be a module-level function (not a lambda/closure).
+    The whole setup is declared in the project file.
     """
-    helper = ModelSetupHelper(
-        "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
-    )
-    helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-    forcing = helper.get_forcing_data_from_csv_file(
-        ref_elevation=1250, use_precip_gradient=True
-    )
-    obs = helper.get_obs_data_from_csv_file()
-    socont, parameters = helper.get_model_and_params_socont()
+    project = hb.load_project(Path(__file__).parent / "sitter_calibration_project.yaml")
 
     # Select the parameters to optimize
-    parameters.allow_changing = [
+    project.parameters.allow_changing = [
         "a_snow",
         "k_quick",
         "A",
@@ -42,7 +36,7 @@ def build():
         "snow_corr_factor",
     ]
 
-    return socont, parameters, forcing, obs
+    return project.model, project.parameters, project.forcing, project.observations
 
 
 if __name__ == "__main__":

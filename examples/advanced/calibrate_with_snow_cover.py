@@ -42,7 +42,6 @@ import pandas as pd
 
 import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,9 +54,8 @@ logging.basicConfig(
 # Configuration
 # --------------------------------------------------------------------------- #
 CATCHMENT = "ch_sitter_appenzell"
-START_DATE = "2003-01-01"
+START_DATE = "2003-01-01"  # matches the periods of the project file
 END_DATE = "2014-12-31"
-REF_ELEVATION = 1250  # Reference altitude of the meteorological station [m]
 WARMUP = 365
 CALIBRATION_MAX_REP = 300  # Increase for a real calibration
 
@@ -70,28 +68,30 @@ SWE_FULL = 100.0
 # the repository's tmp/ folder so this example runs out of the box (those sample
 # dates fall outside the discharge period, so the script then only demonstrates the
 # loading/aggregation rather than a full calibration).
-MODIS_DIR = Path("path/to/data")
+MODIS_DIR = Path(
+    r"\\hydroshare.giub.unibe.ch\data\Hydrology\Switzerland\Snow\MODIS_daily"
+)
 MODIS_FILE_PATTERN = "MOD10A1*.hdf"
 
 # --------------------------------------------------------------------------- #
 # 1. Catchment, hydro units, model, forcing, discharge
 # --------------------------------------------------------------------------- #
-helper = ModelSetupHelper(CATCHMENT, start_date=START_DATE, end_date=END_DATE)
-helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-hydro_units = helper.hydro_units
-catchment_dir = helper.get_catchment_dir()
-unit_ids_raster = catchment_dir / "unit_ids.tif"
+# The whole setup (incl. record_all=True, needed to read the simulated SWE, and
+# the calibratable 'param:' forcing corrections) is declared in the project file.
+project = hb.load_project(Path(__file__).parent / "sitter_snow_cover_project.yaml")
+socont = project.model
+parameters = project.parameters
+forcing = project.forcing
+# The observations are restricted to [START_DATE, END_DATE] (the project
+# periods), so they already line up entry-for-entry with the simulated series
+# when we score the best run below in evaluate_run().
+discharge = project.observations
+hydro_units = project.hydro_units
 
-forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=REF_ELEVATION, use_precip_gradient=True
+catchment_dir = (
+    Path(__file__).parent / ".." / ".." / "tests" / "files" / "catchments" / CATCHMENT
 )
-# get_obs_data_from_csv_file() restricts the discharge to [START_DATE, END_DATE]
-# (the helper's own dates), so it already lines up entry-for-entry with the
-# simulated series when we score the best run below in evaluate_run().
-discharge = helper.get_obs_data_from_csv_file()
-# record_all=True so the snowpack SWE (and land-cover fractions) are recorded and the
-# simulated snow cover can be read from memory each iteration.
-socont, parameters = helper.get_model_and_params_socont(record_all=True)
+unit_ids_raster = catchment_dir / "unit_ids.tif"
 
 
 def print_real_parameters(param_values):

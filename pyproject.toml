@@ -56,6 +56,9 @@ dev = [
     "pre-commit>=3.4.0"
 ]
 
+[project.scripts]
+hydrobricks = "hydrobricks.cli:main"
+
 [project.urls]
 "Source Code" = "https://github.com/hydrobricks/hydrobricks"
 "Bug Tracker" = "https://github.com/hydrobricks/hydrobricks/issues"

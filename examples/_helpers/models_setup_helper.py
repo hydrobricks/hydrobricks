@@ -24,8 +24,12 @@ TEST_FILES_DIR = Path(
 class ModelSetupHelper:
     """
     Helper class to setup a model for testing using data provided in the repo.
-    This class is used in the examples and only aims at avoiding code duplication.
-    You do not need to use it in your own code.
+
+    Most examples now declare their setup in a YAML project file loaded with
+    ``hb.load_project`` (see ``examples/README.md``); this helper remains only
+    for the examples whose setup goes beyond the project-file schema (e.g.
+    per-method glacierized discretizations). You do not need to use it in your
+    own code.
     """
 
     def __init__(

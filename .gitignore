@@ -65,3 +65,6 @@ vcpkg/
 .claude/
 bin-test/
 tmp/
+
+# Example run outputs
+examples/**/output/

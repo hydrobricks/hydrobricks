@@ -1,10 +1,13 @@
 import logging
 import sys
+import tempfile
+import uuid
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,29 +16,64 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
-# Set up the model for the Sitter
-helper_appenzell = ModelSetupHelper(
-    "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
-)
-helper_appenzell.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-forcing_appenzell = helper_appenzell.get_forcing_data_from_csv_file(
-    ref_elevation=1253, use_precip_gradient=True
-)
-obs_appenzell = helper_appenzell.get_obs_data_from_csv_file()
-socont_appenzell, _ = helper_appenzell.get_model_and_params_socont()
+TEST_FILES_DIR = Path(Path(__file__).parent, "..", "..", "tests", "files", "catchments")
 
-# Set up the model for the Rhone at Gletsch
-helper_stgallen = ModelSetupHelper(
-    "ch_sitter_stgallen", start_date="1981-01-01", end_date="2020-12-31"
-)
-helper_stgallen.create_hydro_units_from_csv_file(filename="elevation_bands.csv")
-forcing_stgallen = helper_stgallen.get_forcing_data_from_csv_file(
-    ref_elevation=1045, use_precip_gradient=True
-)
-obs_stgallen = helper_stgallen.get_obs_data_from_csv_file()
-socont_stgallen, parameters = helper_stgallen.get_model_and_params_socont()
 
-# Select the parameters to optimize/analyze
+def catchment_config(name, hydro_units_csv, ref_elevation):
+    """The per-catchment project configuration, built as a dict.
+
+    Both catchments share the same structure, so a small function with the
+    varying pieces replaces two project files (``hb.load_project`` accepts
+    dicts as well as YAML paths).
+    """
+    return {
+        "model": {
+            "name": "socont",
+            "options": {"soil_storage_nb": 2, "surface_runoff": "linear_storage"},
+        },
+        "hydro_units": {"file": hydro_units_csv},
+        "forcing": {
+            "file": "meteo.csv",
+            "time": {"column": "date", "format": "%d/%m/%Y"},
+            "columns": {
+                "precipitation": "precip(mm/day)",
+                "temperature": "temp(C)",
+                "pet": "pet_sim(mm/day)",
+            },
+            "ref_elevation": ref_elevation,
+            "temperature": {"gradient": "param:temp_gradients"},
+            "precipitation": {
+                "correction_factor": "param:precip_corr_factor",
+                "gradient": "param:precip_gradient",
+            },
+        },
+        "observations": {
+            "file": "discharge.csv",
+            "time": {"column": "Date", "format": "%d/%m/%Y"},
+            "column": "Discharge (mm/d)",
+        },
+        "periods": ["1981-01-01", "2020-12-31"],
+        "output": str(Path(tempfile.gettempdir()) / f"hb_{name}_{uuid.uuid4().hex}"),
+        "data_parameters": {
+            "temp_gradients": {"value": -0.6, "min": -1, "max": 0},
+            "precip_corr_factor": {"value": 0.85, "min": 0.7, "max": 1.3},
+            "precip_gradient": {"value": 0.05, "min": 0, "max": 0.2},
+        },
+    }
+
+
+# Set up the two catchments from their (dict) project configurations.
+appenzell = hb.load_project(
+    catchment_config("appenzell", "hydro_units_elevation.csv", 1253),
+    base_dir=TEST_FILES_DIR / "ch_sitter_appenzell",
+)
+stgallen = hb.load_project(
+    catchment_config("stgallen", "elevation_bands.csv", 1045),
+    base_dir=TEST_FILES_DIR / "ch_sitter_stgallen",
+)
+
+# One shared parameter set is calibrated on both catchments at once.
+parameters = stgallen.parameters
 parameters.allow_changing = [
     "a_snow",
     "k_quick",
@@ -49,10 +87,10 @@ parameters.allow_changing = [
 # Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
 # applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
-    [socont_appenzell, socont_stgallen],
+    [appenzell.model, stgallen.model],
     parameters,
-    [forcing_appenzell, forcing_stgallen],
-    [obs_appenzell, obs_stgallen],
+    [appenzell.forcing, stgallen.forcing],
+    [appenzell.observations, stgallen.observations],
     warmup=365,
     obj_func="kge_2012",
 )

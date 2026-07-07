@@ -1463,9 +1463,10 @@ def calibrate_from_factory(
         objects, so they are passed directly rather than rebuilt by the factory.
         ``normalize`` (default True) combines the weighted terms as benchmark skill
         scores so a discharge KGE/NSE and an auxiliary RMSE share a comparable range.
-    dbname, dbformat, parallel, save_sim, n_workers, sample_kwargs,
-    **algorithm_kwargs
+    dbname, dbformat, parallel, save_sim, n_workers, sample_kwargs
         Forwarded to :func:`calibrate`.
+    **algorithm_kwargs
+        Extra sampler options, forwarded to :func:`calibrate` as well.
 
     Returns
     -------

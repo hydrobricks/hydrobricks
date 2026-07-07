@@ -1,10 +1,11 @@
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+import hydrobricks as hb
 import hydrobricks.trainer as trainer
-from examples._helpers.models_setup_helper import ModelSetupHelper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,19 +14,12 @@ logging.basicConfig(
     format="%(levelname)s - %(name)s - %(message)s",
 )
 
-# Set up the model
-helper = ModelSetupHelper(
-    "ch_sitter_appenzell", start_date="1981-01-01", end_date="2020-12-31"
-)
-helper.create_hydro_units_from_csv_file(filename="hydro_units_elevation.csv")
-forcing = helper.get_forcing_data_from_csv_file(
-    ref_elevation=1250, use_precip_gradient=True
-)
-obs = helper.get_obs_data_from_csv_file()
-socont, parameters = helper.get_model_and_params_socont()
+# The whole setup (data, model, forcing spatialization with calibratable
+# 'param:' corrections) is declared in the project file.
+project = hb.load_project(Path(__file__).parent / "sitter_calibration_project.yaml")
 
 # Select the parameters to optimize/analyze
-parameters.allow_changing = [
+project.parameters.allow_changing = [
     "a_snow",
     "k_quick",
     "A",
@@ -39,10 +33,10 @@ parameters.allow_changing = [
 # Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
 # applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
-    socont,
-    parameters,
-    forcing,
-    obs,
+    project.model,
+    project.parameters,
+    project.forcing,
+    project.observations,
     warmup=365,
     obj_func="kge_2012",
 )

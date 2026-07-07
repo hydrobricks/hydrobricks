@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## 0.9.0 - 2026-07-02
+## 0.9.0 - 2026-07-07
 
 ### Breaking changes
 
@@ -15,13 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Adding a file-based (yaml) project definition.
 - Adding the GR4J model structure and its processes along with the CemaNeige snow model.
 - Adding the GR6J model structure and its processes.
 - Adding the HBV-96 model structure and its processes.
+- Adding custom model structures (based on yaml files).
 - Enabling per-hydro-unit model structure variants.
 - Automate hydro unit structure assignment from land covers.
 - Adding model structure inspection and visualization (a textual `model.summary()` / `model.print_structure()`, and a Graphviz `model.plot_structure()`).
 - Introducing parameter transforms for model calibration.
+- Adding a Periods class to handle calibration and validation periods.
 - Adding dynamic forcing override mechanism (ability to dynamically override forcing values within a simulation timestep).
 - Adding a temperature threshold-based snow-rain splitter based on a single temperature threshold (`SplitterSnowRainThreshold`).
 - Adding separate snow/rain correction factors.
@@ -53,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optimize process rate calculations with reusable buffers.
 - Reducing logging verbosity for skipped runs during calibration when parameters are out of range or violate constraints.
 - Refactor observation handling for multi-objective calibration.
+- When a parameter set is rejected due to constraints, for example, a very bad value is given to the objective function rather than NaNs.
 
 ### Fixed
 

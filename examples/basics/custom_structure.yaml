@@ -1,0 +1,73 @@
+# hydrobricks custom model structure: bricks (stores/land covers), their
+# processes, and the fluxes routing the water (each process 'target').
+#
+# This example replicates the SOCONT structure (two soil storages, linear
+# quick-flow storage) — compare with `hb.models.Socont` — but any graph can be
+# declared. Use it directly (`hb.models.CustomModel('custom_structure.yaml')`)
+# or from a project file (`model: {structure: custom_structure.yaml}`).
+#
+# The rain/snow splitters and one snowpack per land cover are generated from
+# the options below (same snow options as every model); the declared bricks
+# start where the snow routine ends. Declare bricks in flow order: fluxes must
+# point to bricks declared later (or to 'outlet').
+
+name: socont_like
+
+options:
+  snow_melt_process: melt:degree_day
+  # with_snow: true, snow_redistribution, snow_sublimation_process, ... are
+  # also available here (or as CustomModel keyword arguments).
+
+bricks:
+  open:                        # a land cover: must match the model's
+    kind: land_cover           # land_cover_names (default: ['open'])
+    processes:
+      infiltration:
+        kind: infiltration:socont
+        target: slow_reservoir
+      runoff:
+        kind: outflow:rest     # everything not infiltrated...
+        target: surface_runoff # ...becomes surface runoff
+
+  slow_reservoir:
+    kind: storage              # attached to each hydro unit (default);
+    parameters:                # use 'attach_to: sub_basin' for
+      capacity: 200            # catchment-level stores
+    processes:
+      et:
+        kind: et:socont        # ET needs no target (to the atmosphere)
+      outflow:
+        kind: outflow:linear
+        target: outlet
+      percolation:
+        kind: percolation:constant
+        target: slow_reservoir_2
+      overflow:
+        kind: overflow
+        target: outlet
+
+  slow_reservoir_2:
+    kind: storage
+    processes:
+      outflow:
+        kind: outflow:linear
+        target: outlet
+
+  surface_runoff:
+    kind: storage
+    processes:
+      runoff:
+        kind: outflow:linear
+        target: outlet
+
+# Friendly names for the generated parameters (literature notation).
+aliases:
+  slow_reservoir:capacity: A
+  slow_reservoir:response_factor: k_slow_1
+  slow_reservoir_2:response_factor: k_slow_2
+  surface_runoff:response_factor: k_quick
+
+# Physical relationships enforced during calibration.
+constraints:
+  - [k_slow_2, "<", k_slow_1]
+  - [k_slow_1, "<", k_quick]

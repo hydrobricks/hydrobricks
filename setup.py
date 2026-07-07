@@ -91,7 +91,7 @@ class CMakeBuild(build_ext):
 
         # Add user-specified CMake arguments (for cross-compilation, etc.)
         if "CMAKE_ARGS" in os.environ:
-            cmake_args.append(
+            cmake_args.extend(
                 item for item in os.environ["CMAKE_ARGS"].split(" ") if item
             )
         if "PYBIND11_PYTHON_VERSION" in os.environ:

@@ -150,7 +150,8 @@ class SpotpySetup:
             the warmup; passing both explicitly is an error).
         obj_func
             Objective function for optimization. If None, uses non-parametric
-            Kling-Gupta Efficiency. Can be a string (HydroErr function name) or
+            Kling-Gupta Efficiency. Can be a string (HydroErr function name, or
+            ``'kge_np'`` for the non-parametric KGE) or a
             callable that takes (observed, simulated) and returns a scalar. String
             metrics are oriented automatically (error metrics such as ``'rmse'`` are
             internally negated so that higher is always better); a callable is
@@ -906,7 +907,8 @@ class SpotpySetup:
         obj_func
             Objective function specification. Can be:
             - None: Use default non-parametric Kling-Gupta Efficiency
-            - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012')
+            - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012'), or 'kge_np'
+              for the non-parametric KGE
             - callable: User-defined function with signature
               (observed, simulated) -> float
 

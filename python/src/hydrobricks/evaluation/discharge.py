@@ -128,7 +128,8 @@ class DischargeObservations(TimeSeries1D):
         metric
             The abbreviation of the function as defined in HydroErr
             (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
-            Examples: 'nse', 'kge_2012', 'rmse', etc.
+            Examples: 'nse', 'kge_2012', 'rmse', etc. Also accepts 'kge_np' for the
+            non-parametric KGE (Pool et al., 2018; requires the optional SPOTPY).
         start_date
             Start date string for period of interest (format: 'YYYY-MM-DD').
             If None, uses full time series. Default: None

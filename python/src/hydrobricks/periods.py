@@ -322,7 +322,8 @@ def evaluate_periods(
     periods
         The periods to evaluate on.
     metrics
-        HydroErr metric names (e.g. ``'nse'``, ``'kge_2012'``).
+        HydroErr metric names (e.g. ``'nse'``, ``'kge_2012'``), or ``'kge_np'`` for
+        the non-parametric KGE (requires the optional SPOTPY dependency).
 
     Returns
     -------

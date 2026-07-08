@@ -15,7 +15,11 @@ from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kw
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.models.model_settings import (
+    GENERIC_COVER_ALIASES,
+    GENERIC_SOIL_COVER_TYPES,
+    ModelSettings,
+)
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
@@ -29,10 +33,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Generic (soil-bearing) land cover aliases. ``open`` is the canonical name (the HBV
-# "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
-# aliases for backward compatibility.
-GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+# GENERIC_COVER_ALIASES and GENERIC_SOIL_COVER_TYPES are imported from model_settings.
 
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"
@@ -904,12 +905,15 @@ class Model(ABC):
 
         # Check the allowed land cover types. The generic cover aliases (ground,
         # generic, ...) are accepted wherever the canonical generic cover (open) is
-        # allowed, so older 'ground'-based configurations keep working.
+        # allowed, so older 'ground'-based configurations keep working. The generic
+        # soil covers (e.g. wetland) are likewise accepted wherever a generic cover
+        # is allowed, so they are available in every model without being listed.
         allowed = set(self.allowed_land_cover_types)
         allows_generic = bool(allowed & GENERIC_COVER_ALIASES)
         for cover_type in self.land_cover_types:
             accepted = cover_type in allowed or (
-                allows_generic and cover_type in GENERIC_COVER_ALIASES
+                allows_generic
+                and cover_type in (GENERIC_COVER_ALIASES | GENERIC_SOIL_COVER_TYPES)
             )
             if not accepted:
                 raise ConfigurationError(

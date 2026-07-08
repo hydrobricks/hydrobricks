@@ -3,6 +3,20 @@ from typing import Any
 from hydrobricks._exceptions import ConfigurationError
 from hydrobricks._hydrobricks import SettingsModel
 
+# Canonical generic cover names (the "open areas" class and its backward-compatible
+# aliases). Treated as interchangeable with ``open`` everywhere.
+GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+
+# Land cover types that behave as a generic soil cover (same generic_land_cover
+# brick and soil routine) but keep a distinct identity for labelling, land-cover
+# extraction and per-cover parameters. Accepted by any model that accepts the generic
+# cover, so they are available globally without each model listing them; unlike the
+# generic aliases they are not interchangeable with ``open`` (a model may special-case
+# them, as PREVAH does for ``wetland``). ``urban`` (built-up) has no impervious
+# routine of its own yet — it is a distinct generic soil cover so built-up areas can be
+# tracked and parameterized separately (e.g. a lower field capacity).
+GENERIC_SOIL_COVER_TYPES = frozenset({"wetland", "urban"})
+
 
 class ModelSettings:
     """Base class for the model settings"""
@@ -168,15 +182,15 @@ class ModelSettings:
         # while special covers (e.g. glacier) keep their type. Several generic covers
         # can coexist (e.g. open and forest), each getting its own snowpack and
         # soil routine.
+        # Covers that map to the generic land-cover brick: the generic aliases
+        # (open/ground/...), the generic soil covers (wetland, ...), and the covers
+        # whose special behaviour is layered on top of a generic brick (forest =
+        # generic + optional canopy; lake = generic + open-water routine).
+        generic_covers = (
+            GENERIC_COVER_ALIASES | GENERIC_SOIL_COVER_TYPES | {"forest", "lake"}
+        )
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type in [
-                "ground",
-                "generic_land_cover",
-                "open",
-                "forest",
-                "wetland",
-                "lake",
-            ]:
+            if cover_type in generic_covers:
                 self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)

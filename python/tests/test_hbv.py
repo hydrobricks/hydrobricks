@@ -656,6 +656,38 @@ def test_hbv96_single_cover_keeps_legacy_aliases():
         assert parameters.has(name)
 
 
+def test_hbv96_wetland_is_accepted_as_generic_soil_cover():
+    """A 'wetland' cover is available globally (accepted wherever the generic cover
+    is), behaving as a generic soil cover with its own per-cover soil parameters."""
+    model = models.HBV96(
+        land_cover_names=["open", "wetland"], land_cover_types=["open", "wetland"]
+    )
+    assert "wetland" in model.structure
+    parameters = model.generate_parameters()
+    for name in ("fc_open", "fc_wetland", "beta_wetland"):
+        assert parameters.has(name), f"parameter {name!r} not found"
+
+
+def test_socont_wetland_is_accepted():
+    """Wetland is accepted by Socont too (a single-soil-cover model): used as the
+    lone soil cover it builds the normal soil routine on the wetland brick."""
+    model = models.Socont(land_cover_names=["wetland"], land_cover_types=["wetland"])
+    assert "wetland" in model.structure
+
+
+def test_hbv96_urban_is_accepted_as_generic_soil_cover():
+    """An 'urban' (built-up) cover is available globally as a generic soil cover, with
+    its own per-cover soil parameters (so built-up areas can be tracked/parameterized
+    separately, e.g. a lower field capacity)."""
+    model = models.HBV96(
+        land_cover_names=["open", "urban"], land_cover_types=["open", "urban"]
+    )
+    assert "urban" in model.structure
+    parameters = model.generate_parameters()
+    for name in ("fc_open", "fc_urban", "beta_urban"):
+        assert parameters.has(name), f"parameter {name!r} not found"
+
+
 def test_hbv96_default_cover_is_open():
     """HBV defaults to an 'open' land cover (the HBV 'open areas' class)."""
     model = models.HBV96()

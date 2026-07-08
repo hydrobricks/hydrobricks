@@ -39,7 +39,7 @@ class CatchmentLandCover:
         20: "open",  # Shrubland
         30: "open",  # Grassland
         40: "open",  # Cropland
-        50: "open",  # Built-up (no dedicated urban brick yet)
+        50: "urban",  # Built-up (generic soil cover, no impervious routine yet)
         60: "open",  # Bare / sparse vegetation
         70: "glacier",  # Snow and ice
         80: "lake",  # Permanent water bodies
@@ -53,18 +53,18 @@ class CatchmentLandCover:
     #: than these semantic codes; for such rasters, supply a custom ``mapping`` (or use
     #: the vector CLC product, whose ``CODE_18`` attribute matches these keys).
     CORINE: ClassVar[dict[int, str]] = {
-        # Artificial surfaces -> generic soil (no dedicated urban brick yet)
-        111: "open",  # Continuous urban fabric
-        112: "open",  # Discontinuous urban fabric
-        121: "open",  # Industrial or commercial units
-        122: "open",  # Road and rail networks and associated land
-        123: "open",  # Port areas
-        124: "open",  # Airports
-        131: "open",  # Mineral extraction sites
-        132: "open",  # Dump sites
-        133: "open",  # Construction sites
-        141: "open",  # Green urban areas
-        142: "open",  # Sport and leisure facilities
+        # Artificial surfaces -> urban (built) or open (vegetated urban)
+        111: "urban",  # Continuous urban fabric
+        112: "urban",  # Discontinuous urban fabric
+        121: "urban",  # Industrial or commercial units
+        122: "urban",  # Road and rail networks and associated land
+        123: "urban",  # Port areas
+        124: "urban",  # Airports
+        131: "urban",  # Mineral extraction sites
+        132: "urban",  # Dump sites
+        133: "urban",  # Construction sites
+        141: "open",  # Green urban areas (vegetated)
+        142: "open",  # Sport and leisure facilities (vegetated)
         # Agricultural areas -> generic soil
         211: "open",  # Non-irrigated arable land
         212: "open",  # Permanently irrigated land
@@ -123,7 +123,8 @@ class CatchmentLandCover:
         "ground": "generic_land_cover",
         "generic": "generic_land_cover",
         "generic_land_cover": "generic_land_cover",
-        "urban": "generic_land_cover",  # no dedicated urban brick yet
+        "wetland": "generic_land_cover",  # generic soil cover (models may special-case)
+        "urban": "generic_land_cover",  # generic soil cover (no impervious routine yet)
     }
 
     def __init__(self, catchment: Catchment) -> None:

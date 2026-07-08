@@ -759,7 +759,7 @@ class Model(ABC):
         ----------
         structure_id
             The structure variant to inspect (default 1, the primary). Models with
-            glacier/lake covers define several variants.
+            glacier/water covers define several variants.
         with_forcing
             Include the meteorological forcing inputs (precipitation, temperature,
             pet) as source nodes. Set to False for a less cluttered graph.
@@ -1048,7 +1048,7 @@ class Model(ABC):
         # a cover carries no zero-area brick for it. Most models have a single variant.
         # A variant may optionally carry a 4th element: an options override (a dict
         # merged over self.options for that variant only, e.g. {"with_snow": False} for
-        # a lake variant whose precipitation goes directly into open water).
+        # a water variant whose precipitation goes directly into open water).
         for i, variant in enumerate(self._define_structure_variants()):
             if len(variant) == 4:
                 land_cover_names, land_cover_types, structure, options_override = (
@@ -1125,7 +1125,7 @@ class Model(ABC):
         An entry may optionally be a 4-tuple
         ``(names, types, structure, options_override)`` where ``options_override`` is a
         dict merged over ``self.options`` while that variant is generated (e.g.
-        ``{"with_snow": False}`` for an HBV lake variant, whose precipitation goes
+        ``{"with_snow": False}`` for an HBV water variant, whose precipitation goes
         directly into open water with no snowpack).
         """
         return [(self.land_cover_names, self.land_cover_types, self.structure)]
@@ -1205,7 +1205,7 @@ class Model(ABC):
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
         # with_snow is on by default; an explicit option overrides it last, so it wins
-        # over the presence of a snow melt process (e.g. a lake variant sets it False
+        # over the presence of a snow melt process (e.g. a water variant sets it False
         # to send all precipitation directly into open water, with no snowpack).
         if "with_snow" in self.options:
             with_snow = self.options["with_snow"]

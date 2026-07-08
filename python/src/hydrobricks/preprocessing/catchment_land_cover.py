@@ -40,9 +40,9 @@ class CatchmentLandCover:
         30: "open",  # Grassland
         40: "open",  # Cropland
         50: "urban",  # Built-up (generic soil cover, no impervious routine yet)
-        60: "open",  # Bare / sparse vegetation
+        60: "rock",  # Bare / sparse vegetation
         70: "glacier",  # Snow and ice
-        80: "lake",  # Permanent water bodies
+        80: "water",  # Permanent water bodies
         90: "wetland",  # Herbaceous wetland
         95: "wetland",  # Mangroves
         100: "open",  # Moss and lichen
@@ -88,22 +88,22 @@ class CatchmentLandCover:
         324: "forest",  # Transitional woodland-shrub
         # Open spaces with little or no vegetation
         331: "open",  # Beaches, dunes, sands
-        332: "open",  # Bare rocks
-        333: "open",  # Sparsely vegetated areas
+        332: "rock",  # Bare rocks
+        333: "rock",  # Sparsely vegetated areas
         334: "open",  # Burnt areas
         335: "glacier",  # Glaciers and perpetual snow
         # Wetlands / others
         411: "wetland",  # Inland marshes
         412: "wetland",  # Peatbogs
         421: "wetland",  # Salt marshes
-        422: "lake",  # Salines
-        423: "lake",  # Intertidal flats
-        # Water bodies -> lake
-        511: "lake",  # Water courses
-        512: "lake",  # Water bodies
-        521: "lake",  # Coastal lagoons
-        522: "lake",  # Estuaries
-        523: "lake",  # Sea and ocean
+        422: "water",  # Salines
+        423: "water",  # Intertidal flats
+        # Water bodies -> water
+        511: "water",  # Water courses
+        512: "water",  # Water bodies
+        521: "water",  # Coastal lagoons
+        522: "water",  # Estuaries
+        523: "water",  # Sea and ocean
     }
 
     #: Registry of named presets accepted by the ``dataset`` argument.
@@ -118,13 +118,14 @@ class CatchmentLandCover:
     KNOWN_COVER_TYPES: ClassVar[dict[str, str]] = {
         "glacier": "glacier",
         "forest": "forest",
-        "lake": "lake",
+        "water": "water",  # exclusive open water ('lake' reserved for a future cover)
         "open": "open",
         "ground": "generic_land_cover",
         "generic": "generic_land_cover",
         "generic_land_cover": "generic_land_cover",
         "wetland": "generic_land_cover",  # generic soil cover (models may special-case)
         "urban": "generic_land_cover",  # generic soil cover (no impervious routine yet)
+        "rock": "generic_land_cover",  # generic soil cover (bare rock / sparse veg)
     }
 
     def __init__(self, catchment: Catchment) -> None:

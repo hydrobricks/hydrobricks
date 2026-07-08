@@ -151,8 +151,8 @@ class Results:
         Get the model-structure id used by each hydro unit.
 
         Units sharing the same subsurface use the same structure; an exclusive land
-        cover (e.g. a lake) places a unit on a different structure variant. Useful to
-        identify which units a given (possibly NaN-omitted) component applies to.
+        cover (e.g. open water) places a unit on a different structure variant. Useful
+        to identify which units a given (possibly NaN-omitted) component applies to.
 
         Returns
         -------

@@ -347,7 +347,7 @@ class CustomModel(Model):
             "generic_land_cover",
             "glacier",
             "forest",
-            "lake",
+            "water",
         ]
 
         self._set_options(kwargs)

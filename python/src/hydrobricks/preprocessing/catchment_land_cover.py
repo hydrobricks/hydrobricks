@@ -43,8 +43,8 @@ class CatchmentLandCover:
         60: "open",  # Bare / sparse vegetation
         70: "glacier",  # Snow and ice
         80: "lake",  # Permanent water bodies
-        90: "lake",  # Herbaceous wetland
-        95: "lake",  # Mangroves
+        90: "wetland",  # Herbaceous wetland
+        95: "wetland",  # Mangroves
         100: "open",  # Moss and lichen
     }
 
@@ -92,10 +92,10 @@ class CatchmentLandCover:
         333: "open",  # Sparsely vegetated areas
         334: "open",  # Burnt areas
         335: "glacier",  # Glaciers and perpetual snow
-        # Wetlands -> lake
-        411: "lake",  # Inland marshes
-        412: "lake",  # Peatbogs
-        421: "lake",  # Salt marshes
+        # Wetlands / others
+        411: "wetland",  # Inland marshes
+        412: "wetland",  # Peatbogs
+        421: "wetland",  # Salt marshes
         422: "lake",  # Salines
         423: "lake",  # Intertidal flats
         # Water bodies -> lake

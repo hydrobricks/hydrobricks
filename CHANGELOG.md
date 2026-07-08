@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adding the `outflow:split` process (fixed-ratio outflow to two targets, e.g. the SLOWCOMP 8/9 : 1/9 recharge split).
 - Adding the `percolation:prevah` process (constant maximum rate gated by the soil moisture state) and a generic gate-brick mechanism (a process can read the state of a brick that does not receive its flux; `gate` key in custom structures).
 - Adding the PREVAH glacier module (`glacier_module='prevah'`): ice and firn covers split at the ELA, each with its own linear reservoir; the firn melt drains into the groundwater store.
+- Adding a `wetland` land cover to the PREVAH model (PREVAH wet-surface: a fraction of the input recharges the groundwater directly, alias `wet_fraction`).
 - Adding `preprocessing.initialize_glacier_covers_split_by_elevation` to split the glacier extent into ice and firn covers at the equilibrium line altitude.
 
 ## 0.9.0 - 2026-07-07

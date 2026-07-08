@@ -276,6 +276,12 @@ void SettingsModel::AddProcessOutput(const string& target, ContentType fluxType)
     _selectedProcess->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::SetProcessGateBrick(const string& name) {
+    assert(_selectedProcess);
+
+    _selectedProcess->gateBrick = name;
+}
+
 void SettingsModel::SetProcessOutputsAsInstantaneous() {
     assert(_selectedProcess);
 

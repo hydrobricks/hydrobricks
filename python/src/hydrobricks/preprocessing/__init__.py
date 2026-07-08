@@ -2,7 +2,10 @@ from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivi
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_land_cover import CatchmentLandCover
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
-from hydrobricks.preprocessing.glacier_cover import initialize_glacier_cover_from_extent
+from hydrobricks.preprocessing.glacier_cover import (
+    initialize_glacier_cover_from_extent,
+    initialize_glacier_covers_split_by_elevation,
+)
 from hydrobricks.preprocessing.glacier_evolution_area_scaling import (
     GlacierEvolutionAreaScaling,
 )
@@ -18,4 +21,5 @@ __all__ = (
     "GlacierEvolutionAreaScaling",
     "PotentialSolarRadiation",
     "initialize_glacier_cover_from_extent",
+    "initialize_glacier_covers_split_by_elevation",
 )

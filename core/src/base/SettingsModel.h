@@ -30,6 +30,7 @@ struct OutputSettings {
 struct ProcessSettings {
     string name;
     string type;
+    string gateBrick;  // brick whose state modulates the process rate (no flux; e.g. percolation:prevah)
     vecStr logItems;
     vector<Parameter> parameters;
     vector<VariableType> forcing;
@@ -222,6 +223,15 @@ class SettingsModel {
      * @param fluxType type of the flux.
      */
     void AddProcessOutput(const string& target, ContentType fluxType = ContentType::Water);
+
+    /**
+     * Set the gate brick of the selected process (a brick whose state modulates
+     * the process rate without receiving its flux, e.g. the soil moisture store
+     * gating the PREVAH percolation).
+     *
+     * @param name name of the gate brick.
+     */
+    void SetProcessGateBrick(const string& name);
 
     /**
      * Set the outputs of the selected process as instantaneous.

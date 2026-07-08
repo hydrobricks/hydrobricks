@@ -48,8 +48,10 @@ declared bricks start where the snow routine ends. A process routes its output
 with ``target`` (a declared brick, a generated one such as
 ``<cover>_snowpack``, or ``outlet``) or fans out with ``targets`` (a list);
 ``log: true`` records the process output, and ``instantaneous: true`` makes
-the flux instantaneous. Bricks attach to each hydro unit by default; use
-``attach_to: sub_basin`` for catchment-level stores.
+the flux instantaneous. ``gate: <brick>`` names a brick whose state modulates
+the process rate without receiving its flux (required by state-gated processes
+such as ``percolation:prevah``). Bricks attach to each hydro unit by default;
+use ``attach_to: sub_basin`` for catchment-level stores.
 """
 
 from __future__ import annotations
@@ -85,7 +87,7 @@ _SNOW_OPTION_DEFAULTS: dict[str, Any] = {
     "forest_interception": False,
 }
 _BRICK_KEYS = {"kind", "attach_to", "computed_directly", "parameters", "processes"}
-_PROCESS_KEYS = {"kind", "target", "targets", "log", "instantaneous"}
+_PROCESS_KEYS = {"kind", "target", "targets", "log", "instantaneous", "gate"}
 _CONSTRAINT_OPERATORS = ("<", "<=", ">", ">=")
 _TARGETLESS_PREFIXES = ("et:", "interception:", "sublimation:")
 
@@ -172,6 +174,8 @@ def _validate_process(process: Any, where: str, errors: list[str]) -> None:
     for flag in ("log", "instantaneous"):
         if flag in process and not isinstance(process[flag], bool):
             errors.append(f"{where}.{flag}: expected true or false.")
+    if "gate" in process and not isinstance(process["gate"], str):
+        errors.append(f"{where}.gate: expected a brick name.")
 
 
 def _validate_brick(brick: Any, where: str, errors: list[str]) -> None:

@@ -169,7 +169,14 @@ class ModelSettings:
         # can coexist (e.g. open and forest), each getting its own snowpack and
         # soil routine.
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type in ["ground", "generic_land_cover", "open", "forest", "lake"]:
+            if cover_type in [
+                "ground",
+                "generic_land_cover",
+                "open",
+                "forest",
+                "wetland",
+                "lake",
+            ]:
                 self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
@@ -320,6 +327,20 @@ class ModelSettings:
             Target brick of the additional output.
         """
         self.settings.add_process_output(target)
+
+    def set_process_gate_brick(self, name: str) -> None:
+        """
+        Set the gate brick of the most recently added process.
+
+        The gate brick's state modulates the process rate without receiving its
+        flux (e.g. the soil moisture store gating the PREVAH percolation).
+
+        Parameters
+        ----------
+        name
+            Name of the gate brick.
+        """
+        self.settings.set_process_gate_brick(name)
 
     def add_brick_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"

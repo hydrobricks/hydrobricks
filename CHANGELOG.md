@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Added
+
+- Adding the PREVAH model structure (`Prevah`): seasonal degree-day snow routine, beta-function soil moisture, threshold upper zone (Q0/Q1), soil-moisture-gated percolation and the SLOWCOMP three-store groundwater.
+- Adding the `melt:degree_day_seasonal` process (PREVAH seasonal sine melt factor between CRMFMIN and CRMFMAX; compatible with the degree-day refreezing).
+- Adding the `outflow:linear_threshold` process (PREVAH surface runoff Q0 = k0 × (S − threshold)).
+- Adding the `outflow:split` process (fixed-ratio outflow to two targets, e.g. the SLOWCOMP 8/9 : 1/9 recharge split).
+- Adding the `percolation:prevah` process (constant maximum rate gated by the soil moisture state) and a generic gate-brick mechanism (a process can read the state of a brick that does not receive its flux; `gate` key in custom structures).
+- Adding the PREVAH glacier module (`glacier_module='prevah'`): ice and firn covers split at the ELA, each with its own linear reservoir; the firn melt drains into the groundwater store.
+- Adding `preprocessing.initialize_glacier_covers_split_by_elevation` to split the glacier extent into ice and firn covers at the equilibrium line altitude.
+
 ## 0.9.0 - 2026-07-07
 
 ### Breaking changes

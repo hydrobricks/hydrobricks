@@ -24,15 +24,19 @@
 #include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
+#include "ProcessMeltDegreeDaySeasonal.h"
 #include "ProcessMeltTemperatureIndex.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
+#include "ProcessOutflowLinearThreshold.h"
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
 #include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowSplit.h"
 #include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
+#include "ProcessPercolationPrevah.h"
 #include "ProcessProductionGR4J.h"
 #include "ProcessRefreezeDegreeDay.h"
 #include "ProcessRoutingGR4J.h"
@@ -97,6 +101,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessPercolationGR4J>(b->GetWaterContainer());
             },
             &ProcessPercolationGR4J::RegisterProcessSettings
+        }},
+
+        {"percolation:prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationPrevah>(b->GetWaterContainer());
+            },
+            &ProcessPercolationPrevah::RegisterProcessSettings
         }},
 
         {"outflow:direct", {
@@ -181,6 +192,20 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
             },
             &ProcessOutflowThreshold::RegisterProcessSettings
+        }},
+
+        {"outflow:linear_threshold", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowLinearThreshold>(b->GetWaterContainer());
+            },
+            &ProcessOutflowLinearThreshold::RegisterProcessSettings
+        }},
+
+        {"outflow:split", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSplit>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSplit::RegisterProcessSettings
         }},
 
         {"refreeze:degree_day", {
@@ -272,6 +297,22 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessMeltDegreeDayAspect::RegisterProcessSettings
+        }},
+
+        {"melt:degree_day_seasonal", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltDegreeDaySeasonal>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                if (b->GetCategory() == BrickCategory::Glacier) {
+                    return std::make_unique<ProcessMeltDegreeDaySeasonal>(
+                        dynamic_cast<Glacier*>(b)->GetIceContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltDegreeDaySeasonal::RegisterProcessSettings
         }},
 
         {"melt:temperature_index", {

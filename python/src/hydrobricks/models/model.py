@@ -1265,7 +1265,9 @@ class Model(ABC):
             Name/identifier for the process.
         process_data
             Process definition dictionary containing 'kind', 'target', and optional
-            'log' and 'instantaneous' keys.
+            'log', 'instantaneous' and 'gate' keys ('gate' names a brick whose state
+            modulates the process rate without receiving its flux, e.g. the soil
+            moisture store gating the PREVAH percolation).
 
         Raises
         ------
@@ -1306,6 +1308,8 @@ class Model(ABC):
         )
         for extra_target in targets[1:]:
             self.settings.add_process_output(extra_target)
+        if "gate" in process_data:
+            self.settings.set_process_gate_brick(process_data["gate"])
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """

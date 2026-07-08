@@ -43,11 +43,11 @@ class ProcessMeltDegreeDay : public ProcessMelt {
     void AttachForcing(Forcing* forcing) override;
 
     /**
-     * Get the degree-day factor value.
+     * Get the degree-day factor value (possibly time-dependent in subclasses).
      *
      * @return The degree-day factor [mm/d/°C].
      */
-    [[nodiscard]] double GetDegreeDayFactor() const {
+    [[nodiscard]] virtual double GetDegreeDayFactor() const {
         assert(_degreeDayFactor);
         return *_degreeDayFactor;
     }

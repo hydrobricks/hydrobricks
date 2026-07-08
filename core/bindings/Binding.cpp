@@ -231,6 +231,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
              "redistribution_process"_a = "transport:snow_slide", "skip_glaciers"_a = false)
+        .def("set_process_gate_brick", &SettingsModel::SetProcessGateBrick,
+             "Set the gate brick of the selected process (read-only state access; no flux).", "name"_a)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,

@@ -73,6 +73,62 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Linear reservoir outflow above a storage threshold (PREVAH surface runoff:
+    # Q0 = K0 * (SUZ - SGRLUZ)). The response factor carries a distinct name so the
+    # process can share a brick with an 'outflow:linear'.
+    "outflow:linear_threshold": [
+        ParamSpec(
+            name="response_factor_threshold",
+            unit="1/d",
+            aliases=[],
+            min=0.0001,
+            max=1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="threshold",
+            unit="mm",
+            aliases=[],
+            min=0,
+            max=100,
+            default=0.0,
+            mandatory=True,
+        ),
+    ],
+    # PREVAH percolation: constant maximum rate gated by the soil moisture state
+    # (full rate at saturation, linear ramp between cu*FC and FC, none below cu*FC)
+    "percolation:prevah": [
+        ParamSpec(
+            name="percolation_rate",
+            unit="mm/d",
+            aliases=["cperc"],
+            min=0,
+            max=10,
+            default=0.1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="threshold_fraction",
+            unit="-",
+            aliases=["cu_perc"],
+            min=0,
+            max=0.9,
+            default=0.7,
+            mandatory=False,
+        ),
+    ],
+    # Fixed-ratio outflow split to two targets (PREVAH SLOWCOMP recharge split)
+    "outflow:split": [
+        ParamSpec(
+            name="split_fraction",
+            unit="-",
+            aliases=[],
+            min=0,
+            max=1,
+            default=0.8889,
+            mandatory=False,
+        ),
+    ],
     # Socont quick flow
     "runoff:socont": [
         ParamSpec(
@@ -255,6 +311,34 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         ),
     ],
+    # Degree-day melt with a seasonal sine melt factor (PREVAH CRMFMIN/CRMFMAX)
+    "melt:degree_day_seasonal": [
+        ParamSpec(
+            name="degree_day_factor_min",
+            unit="mm/d/°C",
+            aliases=["crmfmin"],
+            min=0.5,
+            max=6,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="degree_day_factor_max",
+            unit="mm/d/°C",
+            aliases=["crmfmax"],
+            min=1.5,
+            max=12,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=None,
+            min=-3,  # PREVAH calibrates a negative snowmelt threshold (T0)
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Temperature-index melt (Hock, 1999)
     "melt:temperature_index": [
         ParamSpec(
@@ -340,13 +424,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
-    # HBV soil moisture recharge split (beta function)
+    # HBV/PREVAH soil moisture recharge split (beta function). PREVAH calibrates
+    # values below 1 (CBETA), so the lower bound admits them.
     "infiltration:hbv": [
         ParamSpec(
             name="beta",
             unit="-",
             aliases=["beta"],
-            min=1,
+            min=0.3,
             max=6,
             default=2.0,
             mandatory=True,
@@ -1668,6 +1753,7 @@ class ParameterSet:
             # Defined elsewhere (glacier/snow generation logic)
             "melt:degree_day",
             "melt:degree_day_aspect",
+            "melt:degree_day_seasonal",
             "melt:temperature_index",
             "melt:cemaneige",
         }
@@ -1801,6 +1887,24 @@ class ParameterSet:
                     "degree_day_factor_ew": a_ew_aliases,
                     "melting_temperature": t_aliases,
                 }
+            elif melt_method == "melt:degree_day_seasonal":
+                if len(glacier_names) == 1:
+                    a_min_aliases = ["a_ice_min"]
+                    a_max_aliases = ["a_ice_max"]
+                else:
+                    a_min_aliases = [
+                        f'a_ice_min_{cover_name.replace("-", "_")}',
+                        f"a_ice_min_{i}",
+                    ]
+                    a_max_aliases = [
+                        f'a_ice_max_{cover_name.replace("-", "_")}',
+                        f"a_ice_max_{i}",
+                    ]
+                alias_map = {
+                    "degree_day_factor_min": a_min_aliases,
+                    "degree_day_factor_max": a_max_aliases,
+                    "melting_temperature": t_aliases,
+                }
             elif melt_method == "melt:temperature_index":
                 if len(glacier_names) == 1:
                     r_aliases = ["r_ice"]
@@ -1859,6 +1963,20 @@ class ParameterSet:
                 )
                 self.define_constraint(
                     "a_snow_ew", "<", alias_map["degree_day_factor_ew"][0]
+                )
+            elif melt_method == "melt:degree_day_seasonal":
+                if with_glacier_debris:
+                    self.define_constraint(
+                        "a_ice_min_glacier_debris", "<", "a_ice_min_glacier_ice"
+                    )
+                    self.define_constraint(
+                        "a_ice_max_glacier_debris", "<", "a_ice_max_glacier_ice"
+                    )
+                self.define_constraint(
+                    "a_snow_min", "<", alias_map["degree_day_factor_min"][0]
+                )
+                self.define_constraint(
+                    "a_snow_max", "<", alias_map["degree_day_factor_max"][0]
                 )
             elif melt_method == "melt:temperature_index":
                 if with_glacier_debris:
@@ -1954,6 +2072,12 @@ class ParameterSet:
                             "degree_day_factor_ew": ["a_snow_ew"],
                             "melting_temperature": ["melt_t_snow"],
                         }
+                    elif smp == "melt:degree_day_seasonal":
+                        snow_alias_map = {
+                            "degree_day_factor_min": ["a_snow_min", "crmfmin"],
+                            "degree_day_factor_max": ["a_snow_max", "crmfmax"],
+                            "melting_temperature": ["melt_t_snow"],
+                        }
                     elif smp == "melt:temperature_index":
                         snow_alias_map = {
                             "melt_factor": ["melt_factor", "mf"],
@@ -1977,6 +2101,8 @@ class ParameterSet:
                             spec=spec,
                             aliases=snow_alias_map.get(spec.name, []),
                         )
+                    if smp == "melt:degree_day_seasonal":
+                        self.define_constraint("a_snow_min", "<", "a_snow_max")
                 else:
                     raise ConfigurationError(
                         f"The snow melt process option {smp} is not recognised.",

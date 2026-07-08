@@ -149,6 +149,17 @@ class Process {
     }
 
     /**
+     * Check if the process needs to link a gate brick (a brick whose state
+     * modulates the process rate without receiving its flux, e.g. the soil
+     * moisture store gating the PREVAH percolation).
+     *
+     * @return true if the process needs to link a gate brick.
+     */
+    [[nodiscard]] virtual bool NeedsGateBrickLinking() const {
+        return false;
+    }
+
+    /**
      * Get the number of connections to the process.
      *
      * @return number of connections to the process.
@@ -250,6 +261,15 @@ class Process {
      */
     virtual void SetTargetBrick(Brick*) {
         throw ShouldNotHappen("Process::SetTargetBrick - Should not be called (virtual)");
+    }
+
+    /**
+     * Set the gate brick for the process (read-only state access; no flux).
+     *
+     * @param brick gate brick.
+     */
+    virtual void SetGateBrick(Brick*) {
+        throw ShouldNotHappen("Process::SetGateBrick - Should not be called (virtual)");
     }
 
     /**

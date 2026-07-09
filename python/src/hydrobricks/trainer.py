@@ -15,6 +15,7 @@ from hydrobricks.evaluation.metrics import (  # evaluate re-exported
     is_error_metric,
     to_skill,
 )
+from hydrobricks.evaluation.transforms import DischargeTransform
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ class SpotpySetup:
         discharge: DischargeObservations | list[DischargeObservations] | None = None,
         warmup: int | None = None,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+        transform: DischargeTransform | str | dict | Callable | None = None,
         dump_outputs: bool = False,
         dump_forcing: bool = False,
         dump_dir: str = "",
@@ -159,6 +161,16 @@ class SpotpySetup:
             optimizer is then applied automatically from the chosen algorithm's
             direction (see :func:`calibrate`), so there is no ``invert_obj_func``
             to set. Default: None
+        transform
+            Optional discharge transformation applied to the observed and simulated
+            discharge before the objective is computed, to shift its emphasis (e.g.
+            ``'power(0.2)'`` or ``'log'`` for low flows; Thirel et al., 2024).
+            Anything accepted by :meth:`DischargeTransform.from_spec
+            <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`: a
+            :class:`~hydrobricks.evaluation.transforms.DischargeTransform`, a string, a
+            dict, or a callable. Applies to the discharge objective only — never to
+            the auxiliary ``extra_observations`` signals. A callable ``obj_func``
+            also receives the transformed series. Default: None (untransformed).
         dump_outputs
             If True, save all simulation outputs to disk. Default: False
         dump_forcing
@@ -255,6 +267,11 @@ class SpotpySetup:
 
         # Validate objective function
         self._validate_and_set_objective_function(obj_func)
+
+        # Discharge transformation for the discharge objective (identity when
+        # transform is None). Coerced here so an invalid spec fails at setup time,
+        # not on the first evaluation. Picklable, so it travels to workers.
+        self.transform = DischargeTransform.from_spec(transform)
 
         # Validate and store the (optional) auxiliary-observation configuration.
         self._validate_and_set_extra_observations(
@@ -1163,7 +1180,11 @@ class SpotpySetup:
         terms, higher is always better. The optimizer-direction sign is applied
         later, once, in :meth:`objectivefunction`. A custom callable is assumed to
         already follow "higher is better".
+
+        The discharge transform (if any) is applied to both series first, so the
+        metric is computed in transformed space.
         """
+        sim, obs = self.transform.transform_pair(sim, obs)
         if not self.obj_func:
             return spotpy.objectivefunctions.kge_non_parametric(obs, sim)
         if isinstance(self.obj_func, str):
@@ -1261,8 +1282,13 @@ class SpotpySetup:
         # skill scale as the auxiliary terms when it is a (string) error metric; a
         # non-parametric KGE (obj_func None) or a custom callable is already a skill.
         if self.normalize and isinstance(self.obj_func, str):
-            q_value = evaluate(combined[:q_len], obs_combined[:q_len], self.obj_func)
-            q_term = self._oriented_term(q_value, self.obj_func, obs_combined[:q_len])
+            # Score (and benchmark) the discharge term in transformed space, like
+            # _discharge_skill does.
+            q_sim, q_obs = self.transform.transform_pair(
+                combined[:q_len], obs_combined[:q_len]
+            )
+            q_value = evaluate(q_sim, q_obs, self.obj_func)
+            q_term = self._oriented_term(q_value, self.obj_func, q_obs)
         else:
             q_term = q_skill
         combined_skill = self.discharge_weight * q_term + sum(
@@ -1410,6 +1436,7 @@ def calibrate_from_factory(
     allow_changing: list[str] | None = None,
     warmup: int | None = None,
     obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+    transform: DischargeTransform | str | dict | Callable | None = None,
     dump_outputs: bool = False,
     dump_forcing: bool = False,
     dump_dir: str = "",
@@ -1455,7 +1482,7 @@ def calibrate_from_factory(
     allow_changing
         Optional list of parameter names/aliases to calibrate. If given, it
         overrides any ``parameters.allow_changing`` set inside the factory.
-    warmup, obj_func, dump_outputs, dump_forcing, dump_dir, periods
+    warmup, obj_func, transform, dump_outputs, dump_forcing, dump_dir, periods
         Forwarded to :class:`SpotpySetup`. With ``periods``, the factory must set
         the model up over ``periods.calibration`` (typically with
         ``spinup=periods.spinup``) and ``warmup`` must be left unset.
@@ -1491,6 +1518,7 @@ def calibrate_from_factory(
         params,
         warmup=warmup,
         obj_func=obj_func,
+        transform=transform,
         dump_outputs=dump_outputs,
         dump_forcing=dump_forcing,
         dump_dir=dump_dir,

@@ -43,6 +43,7 @@ def _bare_setup(normalize, obj_func="kge_2012", weight=2.0, discharge_weight=1.0
     """A minimal SpotpySetup with only the attributes the objective needs."""
     s = trainer.SpotpySetup.__new__(trainer.SpotpySetup)
     s.obj_func = obj_func
+    s.transform = trainer.DischargeTransform.from_spec(None)
     s.combine = "weighted"
     s.discharge_weight = discharge_weight
     s.normalize = normalize

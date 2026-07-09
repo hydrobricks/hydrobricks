@@ -70,7 +70,12 @@ def _kge_non_parametric(simulation: np.ndarray, observation: np.ndarray) -> floa
     return spotpy.objectivefunctions.kge_non_parametric(observation, simulation)
 
 
-def evaluate(simulation: np.ndarray, observation: np.ndarray, metric: str) -> float:
+def evaluate(
+    simulation: np.ndarray,
+    observation: np.ndarray,
+    metric: str,
+    transform=None,
+) -> float:
     """
     Evaluate the simulation using the provided metric (goodness of fit).
 
@@ -87,11 +92,26 @@ def evaluate(simulation: np.ndarray, observation: np.ndarray, metric: str) -> fl
         Examples: nse, kge_2012, ... In addition, ``'kge_np'`` (alias
         ``'kge_non_parametric'``) selects the non-parametric KGE (Pool et al., 2018),
         which is computed via the optional SPOTPY dependency.
+    transform
+        Optional discharge transformation applied to both series before computing
+        the metric, to shift its emphasis (e.g. towards low flows). Anything
+        accepted by :meth:`DischargeTransform.from_spec
+        <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`: a
+        :class:`~hydrobricks.evaluation.transforms.DischargeTransform`, a string
+        (``'power(0.2)'``, ``'sqrt'``, ``'log'``, ...), a dict, or a callable.
+        Default: None (no transformation).
 
     Returns
     -------
     The value of the selected metric.
     """
+    if transform is not None:
+        from hydrobricks.evaluation.transforms import DischargeTransform
+
+        simulation, observation = DischargeTransform.from_spec(
+            transform
+        ).transform_pair(simulation, observation)
+
     if metric.lower() in _KGE_NP_NAMES:
         return _kge_non_parametric(simulation, observation)
 

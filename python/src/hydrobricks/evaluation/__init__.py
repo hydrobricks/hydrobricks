@@ -9,7 +9,9 @@ This subpackage holds the reference series used to evaluate and calibrate a mode
 - :class:`GlacierMassBalanceObservations` — observed glacier mass balance.
 - :class:`SnowCoverObservations` — observed snow cover fraction (e.g. MODIS).
 
-It also exposes :func:`evaluate`, the HydroErr-based goodness-of-fit helper.
+It also exposes :func:`evaluate`, the HydroErr-based goodness-of-fit helper, and
+:class:`DischargeTransform`, the discharge transformation applied before scoring
+(e.g. a power transform to emphasize low flows).
 """
 
 from hydrobricks.evaluation.base import AuxiliaryObservation, RecordingRequest
@@ -17,10 +19,12 @@ from hydrobricks.evaluation.discharge import DischargeObservations
 from hydrobricks.evaluation.glacier_mass_balance import GlacierMassBalanceObservations
 from hydrobricks.evaluation.metrics import evaluate, to_skill
 from hydrobricks.evaluation.snow_cover import SnowCoverObservations
+from hydrobricks.evaluation.transforms import DischargeTransform
 
 __all__ = (
     "evaluate",
     "to_skill",
+    "DischargeTransform",
     "DischargeObservations",
     "AuxiliaryObservation",
     "RecordingRequest",

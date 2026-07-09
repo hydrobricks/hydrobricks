@@ -303,6 +303,7 @@ def evaluate_periods(
     observations: DischargeObservations | np.ndarray,
     periods: Periods,
     metrics: Iterable[str] = ("kge_2012",),
+    transform=None,
 ) -> pd.DataFrame:
     """Evaluate a simulation on each declared period (split-sample table).
 
@@ -324,12 +325,23 @@ def evaluate_periods(
     metrics
         HydroErr metric names (e.g. ``'nse'``, ``'kge_2012'``), or ``'kge_np'`` for
         the non-parametric KGE (requires the optional SPOTPY dependency).
+    transform
+        Optional discharge transformation applied to the observed and simulated
+        series of each period before computing the metrics (e.g. ``'power(0.2)'``
+        or ``'log'`` to emphasize low flows). Anything accepted by
+        :meth:`DischargeTransform.from_spec
+        <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`. An ``'auto'``
+        epsilon is resolved per period, from that period's observations.
+        Default: None (untransformed).
 
     Returns
     -------
     A DataFrame with one row per period and one column per metric.
     """
     from hydrobricks.evaluation.metrics import evaluate
+    from hydrobricks.evaluation.transforms import DischargeTransform
+
+    transform = DischargeTransform.from_spec(transform)
 
     sim = model.get_outlet_discharge()
     time = model.get_recorded_time()
@@ -370,6 +382,7 @@ def evaluate_periods(
                 data_type="observations",
                 reason="Observations do not cover the period",
             )
+        sim_slice, obs_slice = transform.transform_pair(sim_slice, obs_slice)
         rows[name] = {
             metric: evaluate(sim_slice, obs_slice, metric) for metric in metrics
         }

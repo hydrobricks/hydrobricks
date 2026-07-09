@@ -43,6 +43,7 @@ from hydrobricks.catchment import Catchment
 from hydrobricks.evaluation import (
     AuxiliaryObservation,
     DischargeObservations,
+    DischargeTransform,
     GlacierMassBalanceObservations,
     SnowCoverObservations,
     evaluate,
@@ -85,6 +86,7 @@ __all__ = (
     "StructureGraph",
     "Period",
     "Periods",
+    "DischargeTransform",
     "evaluate",
     "evaluate_periods",
     # Project file loader

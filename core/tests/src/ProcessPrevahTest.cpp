@@ -463,3 +463,94 @@ TEST_F(SeasonalMeltSnowpack, MeltsSlowlyInWinter) {
     // 2020-01-03 is doy 3; DDF is close to the minimum (2).
     RunAndCheckMelt("2020-01-01", "2020-01-10", GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 3);
 }
+
+/**
+ * Model: a forest canopy with the Menzel (1997) asymptotic filling (interception:menzel).
+ * Warm temperatures (all rain, no snow) and zero PET isolate the canopy filling, so the
+ * logged canopy content must follow the Menzel retention exactly.
+ */
+class MenzelCanopy : public ::testing::Test {
+  protected:
+    SettingsModel _model;
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
+    std::unique_ptr<TimeSeriesUniform> _tsPet;
+    static constexpr double SI_MAX = 5.0;
+
+    void SetUp() override {
+        _model.SetSolver("euler_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-06", 1, "day");
+
+        _model.GeneratePrecipitationSplitters(true);
+        _model.AddLandCoverBrick("ground", "generic_land_cover");
+        // Canopy with Menzel throughfall to the land cover, then out to the outlet.
+        _model.GenerateCanopyInterception("ground", "ground", "interception:menzel");
+        _model.GenerateSnowpacks("melt:degree_day");
+
+        _model.SelectHydroUnitSplitter("snow_rain_transition");
+        _model.AddSplitterParameter("transition_start", 0.0f);
+        _model.AddSplitterParameter("transition_end", 2.0f);
+
+        _model.SelectHydroUnitBrick("ground_snowpack");
+        _model.SelectProcess("melt");
+        _model.SetProcessParameterValue("degree_day_factor", 3.0f);
+        _model.SetProcessParameterValue("melting_temperature", 2.0f);
+
+        _model.SelectHydroUnitBrick("ground_canopy");
+        _model.SelectProcess("throughfall");
+        _model.SetProcessParameterValue("capacity", static_cast<float>(SI_MAX));
+        _model.AddBrickLogging("water_content");
+
+        _model.SelectHydroUnitBrick("ground");
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+        _model.AddLoggingToItem("outlet");
+
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 6), 1, TimeUnit::Day);
+        precip->SetValues({10.0, 10.0, 10.0, 10.0, 10.0, 10.0});
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
+
+        auto temp = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 6), 1, TimeUnit::Day);
+        temp->SetValues({10.0, 10.0, 10.0, 10.0, 10.0, 10.0});  // all rain
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temp));
+
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 6), 1, TimeUnit::Day);
+        pet->SetValues({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});  // no interception ET
+        _tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
+        _tsPet->SetData(std::move(pet));
+    }
+};
+
+TEST_F(MenzelCanopy, CanopyContentFollowsMenzelFilling) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPet))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // The only logged hydro-unit series is the canopy water content (cover fraction = 1).
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+
+    // Reproduce the Menzel filling: retained_{t} = min(S + (si_max - S)(1 - e^{-rain/si_max}), si_max).
+    double s = 0.0;
+    for (int j = 0; j < 6; ++j) {
+        double deltaSi = (SI_MAX - s) * (1.0 - std::exp(-10.0 / SI_MAX));
+        s = std::min(s + deltaSi, SI_MAX);
+        EXPECT_NEAR(unitContent[0](j, 0), s, 0.0001);
+    }
+    // Asymptotically the canopy approaches (but never exceeds) its capacity.
+    EXPECT_LT(unitContent[0](5, 0), SI_MAX);
+    EXPECT_GT(unitContent[0](5, 0), 4.9);
+}

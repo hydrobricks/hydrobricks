@@ -69,6 +69,11 @@ class HBV(Model):
         False). When enabled, the canopy intercepts rain (capacity ``ic``),
         evaporates at the potential rate and passes the excess as throughfall; when
         disabled, a ``forest`` cover behaves like a generic soil cover.
+    canopy_interception_process : str
+        Throughfall process of the forest canopy (default: 'outflow:threshold',
+        fill-then-spill). Use 'interception:menzel' for the PREVAH asymptotic
+        filling (Menzel, 1997), where a diminishing fraction of the rain is
+        intercepted as the canopy fills.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True), as in Socont.
     glacier_module : str
@@ -103,6 +108,7 @@ class HBV(Model):
         self.options["snow_sublimation_process"] = None
         self.options["share_soil"] = False
         self.options["forest_interception"] = False
+        self.options["canopy_interception_process"] = "outflow:threshold"
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
         self.allowed_land_cover_types = ["open", "forest", "water", "glacier"]

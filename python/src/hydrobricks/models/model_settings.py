@@ -126,6 +126,7 @@ class ModelSettings:
         snow_sublimation_process: str | None = None,
         rain_to_snowpack: bool = False,
         forest_interception: bool = False,
+        canopy_interception_process: str = "outflow:threshold",
     ) -> None:
         """
         Generate basic elements
@@ -168,6 +169,10 @@ class ModelSettings:
         forest_interception
             Add a canopy interception store on each ``forest`` land cover (default
             False). When False, forest covers behave like a generic soil cover.
+        canopy_interception_process
+            Throughfall process of the forest canopy (default 'outflow:threshold',
+            fill-then-spill). Use 'interception:menzel' for the PREVAH asymptotic
+            filling (Menzel, 1997).
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -219,7 +224,7 @@ class ModelSettings:
                     else:
                         throughfall_target = cover_name
                     self.settings.generate_canopy_interception(
-                        cover_name, throughfall_target
+                        cover_name, throughfall_target, canopy_interception_process
                     )
 
         # Snowpack

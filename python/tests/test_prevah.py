@@ -353,6 +353,78 @@ def test_prevah_wetland_only_cover_is_rejected():
 
 
 # ---------------------------------------------------------------------------
+# C2 — Forest canopy interception (WP4: Menzel exactness option)
+# ---------------------------------------------------------------------------
+
+
+def _run_open_forest(tmp_path, *, ic, n_days=_N_2Y, P=5.0, PET=1.5, **model_options):
+    """Run PREVAH with an open and a forest cover (60/40); ic = canopy capacity."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.Prevah(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        record_all=True,
+        **model_options,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": ic})
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_canopy_default_is_menzel():
+    assert (
+        models.Prevah().options["canopy_interception_process"] == "interception:menzel"
+    )
+
+
+def test_prevah_menzel_canopy_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(tmp_path, ic=3.0)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_menzel_intercepts_less_than_threshold(tmp_path):
+    """For the same capacity, Menzel filling retains a diminishing fraction of the rain
+    (partial throughfall before the canopy is full), so it evaporates less from the
+    canopy and yields more discharge than the fill-then-spill threshold store."""
+    menzel, _ = _run_open_forest(
+        _subdir(tmp_path, "menzel"),
+        ic=3.0,
+        canopy_interception_process="interception:menzel",
+    )
+    threshold, _ = _run_open_forest(
+        _subdir(tmp_path, "threshold"),
+        ic=3.0,
+        canopy_interception_process="outflow:threshold",
+    )
+    assert menzel.get_total_outlet_discharge() > threshold.get_total_outlet_discharge()
+
+
+# ---------------------------------------------------------------------------
 # D — Glacier (PREVAH module, ice + firn)
 # ---------------------------------------------------------------------------
 

@@ -19,6 +19,7 @@
 #include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessInterceptionGR4J.h"
+#include "ProcessInterceptionMenzel.h"
 #include "ProcessLateralSnowRedistributionFrey.h"
 #include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltCemaNeige.h"
@@ -427,6 +428,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessInterceptionGR4J>(b->GetWaterContainer());
             },
             &ProcessInterceptionGR4J::RegisterProcessSettings
+        }},
+
+        {"interception:menzel", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInterceptionMenzel>(b->GetWaterContainer());
+            },
+            &ProcessInterceptionMenzel::RegisterProcessSettings
         }},
 
         {"routing:gr4j", {

@@ -1222,6 +1222,9 @@ class Model(ABC):
             snow_sublimation_process=snow_sublimation_process,
             rain_to_snowpack=rain_to_snowpack,
             forest_interception=self.options.get("forest_interception", False),
+            canopy_interception_process=self.options.get(
+                "canopy_interception_process", "outflow:threshold"
+            ),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:

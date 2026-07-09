@@ -417,7 +417,8 @@ bool SettingsModel::ChangeSplitterOutputTargetIfFound(const string& currentTarge
     return false;
 }
 
-void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget) {
+void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget,
+                                               const string& throughfallProcess) {
     assert(_selectedStructure);
 
     // Canopy storage as a surface component of the cover: it is therefore computed in the
@@ -425,10 +426,12 @@ void SettingsModel::GenerateCanopyInterception(const string& coverName, const st
     // storage/ET by the cover fraction (by name). The throughfall (the water above the
     // interception capacity) is released first, then the retained water evaporates at the
     // potential rate. The capacity is enforced by the throughfall process (no maximum capacity
-    // on the container), which is robust on the direct computation path.
+    // on the container), which is robust on the direct computation path. The throughfall
+    // process is 'outflow:threshold' (fill-then-spill) by default or 'interception:menzel'
+    // (PREVAH asymptotic filling); both carry the same 'capacity' parameter.
     AddSurfaceComponentBrick(coverName + "_canopy", "interception_storage");
     SetSurfaceComponentParent(coverName);
-    AddBrickProcess("throughfall", "outflow:threshold", throughfallTarget);
+    AddBrickProcess("throughfall", throughfallProcess, throughfallTarget);
     AddBrickProcess("interception_et", "et:open_water");
 
     // Route the cover's rain through the canopy (upstream of the snowpack).

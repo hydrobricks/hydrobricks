@@ -324,8 +324,12 @@ class SettingsModel {
      *
      * @param coverName the land cover bearing the canopy.
      * @param throughfallTarget the brick receiving the throughfall (e.g. the snowpack).
+     * @param throughfallProcess the throughfall process type ('outflow:threshold' fills
+     *   the canopy to capacity before spilling; 'interception:menzel' uses the PREVAH
+     *   asymptotic filling).
      */
-    void GenerateCanopyInterception(const string& coverName, const string& throughfallTarget);
+    void GenerateCanopyInterception(const string& coverName, const string& throughfallTarget,
+                                    const string& throughfallProcess = "outflow:threshold");
 
     /**
      * Add logging to a given item.

@@ -130,7 +130,11 @@ class Prevah(Model):
         Optional snow redistribution process (e.g. 'transport:snow_slide').
     forest_interception : bool
         Add a canopy interception store on each ``forest`` land cover (default:
-        True; PREVAH's interception module, simplified to a threshold store).
+        True; PREVAH's interception module).
+    canopy_interception_process : str
+        Throughfall process of the forest canopy (default: 'interception:menzel',
+        PREVAH's Menzel (1997) asymptotic filling). Use 'outflow:threshold' for a
+        simpler fill-then-spill store.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True).
     glacier_module : str
@@ -152,8 +156,8 @@ class Prevah(Model):
     Deviations from the original PREVAH
     -----------------------------------
     - Continuous ODE integration instead of 6 explicit sub-steps per day.
-    - The canopy interception fills as a threshold store (no Menzel asymptotic
-      filling) with a constant (not monthly) capacity.
+    - The canopy interception uses the Menzel (1997) asymptotic filling (as in
+      PREVAH) but with a constant (not monthly) capacity.
     - The snowpack liquid water in excess of CWH·SWE drains within the step
       (no CEXLIQ release exponent).
     - No dynamic contributing-area (soil-topographic-index) surface runoff
@@ -175,6 +179,7 @@ class Prevah(Model):
         self.options["snow_redistribution"] = None
         self.options["snow_sublimation_process"] = "sublimation:pet"
         self.options["forest_interception"] = True
+        self.options["canopy_interception_process"] = "interception:menzel"
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "prevah"
         self.options["firn_to_groundwater"] = True

@@ -68,3 +68,4 @@ tmp/
 
 # Example run outputs
 examples/**/output/
+examples/hydromip/

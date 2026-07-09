@@ -108,7 +108,11 @@ class Forcing:
         WIND = auto()  # Wind speed [m s-1]
         PRESSURE = auto()  # Atmospheric pressure [kPa]
 
-    def __init__(self, spatial_entity: HydroUnits | Catchment) -> None:
+    def __init__(
+        self,
+        spatial_entity: HydroUnits | Catchment,
+        cache_dir: str | Path | None = None,
+    ) -> None:
         """
         Initialize Forcing object for a spatial entity.
 
@@ -116,6 +120,11 @@ class Forcing:
         ----------
         spatial_entity
             Either a HydroUnits or Catchment object defining the spatial structure.
+        cache_dir
+            Directory where expensive spatialization results (e.g. regridding
+            from gridded data) are cached, keyed by a hash of the inputs and
+            options, and automatically reloaded when the same setup is reused.
+            Default: None (caching disabled).
 
         Raises
         ------
@@ -155,6 +164,7 @@ class Forcing:
         self.data2D: TimeSeries2D = TimeSeries2D()
         self.catchment: Catchment | None = catchment
         self.hydro_units: pd.DataFrame = hydro_units.hydro_units
+        self.cache_dir: Path | None = Path(cache_dir) if cache_dir is not None else None
         self._operations: list[dict[str, Any]] = []
         self._is_initialized: bool = False
 
@@ -1258,6 +1268,7 @@ class Forcing:
                 apply_data_gradient=apply_data_gradient,
                 gradient_type=gradient_type,
                 dem_path=dem_path,
+                cache_dir=self.cache_dir,
             )
             self.data2D.data_name.append(variable)
         else:

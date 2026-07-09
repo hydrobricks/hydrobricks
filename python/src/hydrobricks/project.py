@@ -1208,10 +1208,18 @@ def _build_project(
         if catchment is not None and unit_ids_raster is not None:
             catchment.load_unit_ids_from_raster(str(unit_ids_raster))
 
-    # Forcing: station CSV and/or gridded netCDF sources.
+    # Forcing: station CSV and/or gridded netCDF sources. Expensive gridded
+    # spatializations are cached under <output>/cache (created on first write)
+    # and reloaded when the same setup is reused. Note: in the discretization
+    # path, unit_ids.tif is regenerated into the output dir on each load, but
+    # the cache key hashes the raster's bytes (deterministic for identical
+    # inputs), not its mtime, so the cache is not invalidated.
     fc = cfg["forcing"]
     station = fc["station"]
-    forcing = Forcing(catchment if catchment is not None else hydro_units)
+    forcing = Forcing(
+        catchment if catchment is not None else hydro_units,
+        cache_dir=cfg["output"] / "cache",
+    )
 
     if station is not None:
         forcing.load_station_data_from_csv(

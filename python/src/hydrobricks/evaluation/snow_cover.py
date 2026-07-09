@@ -44,6 +44,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 
+from hydrobricks import caching
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._optional import (
     HAS_NETCDF,
@@ -794,7 +795,7 @@ class SnowCoverObservations(AuxiliaryObservation):
         p = Path(path)
         files = sorted(p.glob(file_pattern)) if (file_pattern and p.is_dir()) else [p]
         key = _cache_key(raster_hydro_units, config, _source_signature(files))
-        cache_file = Path(cache_dir) / f"snow_cover_{key}.csv"
+        cache_file = caching.cache_file(cache_dir, "snow_cover", key)
         if cache_file.exists():
             logger.info("Loading cached snow cover from %s", cache_file)
             return cache_file, cls.from_csv(
@@ -1220,14 +1221,7 @@ def _source_signature(files: list[Path]) -> list[tuple[str, int, int]]:
 
     Lets the cache detect added, removed or changed tiles without reading them.
     """
-    sig = []
-    for f in files:
-        try:
-            st = f.stat()
-            sig.append((f.name, int(st.st_size), int(st.st_mtime)))
-        except OSError:
-            sig.append((f.name, -1, -1))
-    return sorted(sig)
+    return caching.source_signature(files)
 
 
 def _cache_key(raster_hydro_units: str | Path, config: dict, sources: list) -> str:
@@ -1238,17 +1232,7 @@ def _cache_key(raster_hydro_units: str | Path, config: dict, sources: list) -> s
     signature of the source files, so a cache is reused only for a truly equivalent
     request and never mixed across discretizations.
     """
-    import hashlib
-    import json
-
-    h = hashlib.sha256()
-    try:
-        h.update(Path(raster_hydro_units).read_bytes())
-    except OSError:
-        h.update(str(raster_hydro_units).encode())
-    h.update(json.dumps(config, sort_keys=True, default=str).encode())
-    h.update(json.dumps(sources, sort_keys=True, default=str).encode())
-    return h.hexdigest()[:16]
+    return caching.cache_key(config, sources, hash_files=[raster_hydro_units])
 
 
 def _date_from_name(

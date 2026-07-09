@@ -264,6 +264,26 @@ def test_gridded_with_elevation_gradient(tmp_path):
     assert project.forcing.data2D.data[0].shape[0] == 3
 
 
+@needs_gridded_packages
+def test_gridded_forcing_cache_populated_and_reused(tmp_path):
+    """The project wires <output>/cache into the forcing; a reload reuses it."""
+    project = hb.load_project(gridded_config(tmp_path), base_dir=SITTER_DIR)
+    assert project.forcing.cache_dir == Path(tmp_path) / "cache"
+    discharge = project.run()
+
+    # All three variables read the same source with the same options, so they
+    # share a single cache entry (the key covers source + options, not the
+    # target variable).
+    cache_files = sorted((Path(tmp_path) / "cache").glob("forcing_regrid_*.csv"))
+    assert len(cache_files) == 1
+
+    project2 = hb.load_project(gridded_config(tmp_path), base_dir=SITTER_DIR)
+    discharge2 = project2.run()
+    cache_files2 = sorted((Path(tmp_path) / "cache").glob("forcing_regrid_*.csv"))
+    assert cache_files2 == cache_files
+    assert np.allclose(discharge.to_numpy(), discharge2.to_numpy())
+
+
 def test_mixed_station_and_gridded(tmp_path):
     """Station and gridded sources can be mixed (one source per variable)."""
     config = minimal_config(tmp_path)

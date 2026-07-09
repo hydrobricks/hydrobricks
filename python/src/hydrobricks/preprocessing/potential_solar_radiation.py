@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from hydrobricks import caching
 from hydrobricks._constants import (
     AIR_MOLAR_MASS,
     ES_ECCENTRICITY,
@@ -62,6 +64,7 @@ class PotentialSolarRadiation:
         atmos_transmissivity: float = 0.75,
         steps_per_hour: int = 4,
         with_cast_shadows: bool = True,
+        cache_dir: str | Path | None = None,
     ) -> None:
         """
         Compute the daily mean potential clear-sky direct solar radiation
@@ -85,6 +88,12 @@ class PotentialSolarRadiation:
             Number of steps per hour to compute the potential radiation, default is 4.
         with_cast_shadows
             If True, the cast shadows are taken into account. Default is True.
+        cache_dir
+            Directory where the computed radiation files are cached, keyed by a
+            hash of the DEM and options; an identical request copies them back
+            into output_path instead of recomputing. Note that the cache holds
+            an extra copy of the daily radiation netCDF file per key, which can
+            be large. Default: None (caching disabled).
 
         Notes
         -----
@@ -96,6 +105,46 @@ class PotentialSolarRadiation:
         - Hock, R. (1999). A distributed temperature-index ice-and snowmelt model
           including potential direct solar radiation. J. Glaciol., 45(149), 101-111.
         """
+        # Cache lookup: copy previously computed radiation files back into
+        # output_path for an identical request (same DEM, mask and options).
+        payload_names = [
+            "daily_potential_radiation.nc",
+            "annual_potential_radiation.tif",
+        ]
+        payload_dir = None
+        if cache_dir is not None:
+            config = {
+                "cache_version": 1,
+                "resolution": resolution,
+                "atmos_transmissivity": atmos_transmissivity,
+                "steps_per_hour": steps_per_hour,
+                "with_cast_shadows": with_cast_shadows,
+                "dem_crs": str(self.catchment.dem.crs),
+                "dem_shape": self.catchment.dem.shape,
+                "dem_res": self.catchment.dem.res,
+                # The masked area (catchment outline) affects the results; its
+                # mean elevation and latitude fingerprint it cheaply.
+                "mean_elevation": float(self.catchment.topography.get_mean_elevation()),
+                "mean_lat": float(
+                    self.catchment.extract_unit_mean_lat_lon(self.catchment.dem_data)[0]
+                ),
+            }
+            # The DEM gets a stat signature (not full bytes) as it can be large.
+            dem_files = [
+                f for f in self.catchment.dem.files if not f.endswith(".aux.xml")
+            ]
+            key = caching.cache_key(config, caching.source_signature(dem_files))
+            payload_dir = caching.cache_payload_dir(
+                cache_dir, "potential_radiation", key
+            )
+            if caching.payload_complete(payload_dir, payload_names):
+                logger.info(f"Loading cached potential radiation from {payload_dir}")
+                Path(output_path).mkdir(parents=True, exist_ok=True)
+                for name in payload_names:
+                    shutil.copy2(payload_dir / name, Path(output_path) / name)
+                self.load_mean_annual_radiation_raster(output_path)
+                return
+
         # Resample the DEM and calculate the slope and aspect
         dem, masked_dem_data, slope, aspect = (
             self.catchment.topography.resample_dem_and_calculate_slope_aspect(
@@ -206,6 +255,14 @@ class PotentialSolarRadiation:
         # If DEM is the downsampled one, close it
         if dem.res[0] != self.catchment.get_dem_x_resolution():
             dem.close()
+
+        # Save the produced files to the cache (the downsampled-DEM
+        # intermediates are not part of the payload).
+        if payload_dir is not None:
+            payload_dir.mkdir(parents=True, exist_ok=True)
+            for name in payload_names:
+                shutil.copy2(Path(output_path) / name, payload_dir / name)
+            logger.info(f"Saved potential radiation cache to {payload_dir}")
 
     def load_mean_annual_radiation_raster(
         self, dir_path: str, filename: str = "annual_potential_radiation.tif"

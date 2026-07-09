@@ -286,6 +286,50 @@ def test_radiation_calculation_resolution():
         logger.debug("Failed to clean up temporary directory %s", working_dir)
 
 
+def test_radiation_cache_roundtrip(tmp_path, monkeypatch):
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
+    cache_dir = tmp_path / "cache"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+    out1.mkdir()
+    out2.mkdir()
+
+    catchment = hb.Catchment()
+    catchment.extract_dem(dem_path)
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 1
+
+    # The second run must be served from the cache without any computation.
+    catchment2 = hb.Catchment()
+    catchment2.extract_dem(dem_path)
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("cache miss: the radiation was recomputed")
+
+    monkeypatch.setattr(
+        catchment2.topography, "resample_dem_and_calculate_slope_aspect", _fail
+    )
+    catchment2.calculate_daily_potential_radiation(
+        str(out2), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+
+    assert (out2 / "annual_potential_radiation.tif").exists()
+    assert (out2 / "daily_potential_radiation.nc").exists()
+    assert catchment2.solar_radiation.mean_annual_radiation is not None
+
+    rad1 = hb.rasterio.open(out1 / "annual_potential_radiation.tif").read(1)
+    rad2 = hb.rasterio.open(out2 / "annual_potential_radiation.tif").read(1)
+    assert np.allclose(rad1, rad2, equal_nan=True)
+
+    # A different option is a different key.
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=True, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 2
+
+
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
     catchment = hb.Catchment(SITTER_OUTLINE)

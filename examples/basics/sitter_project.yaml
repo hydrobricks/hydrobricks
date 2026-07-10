@@ -36,7 +36,7 @@ forcing:
   pet:
     # Computed with pyet since forcing.columns has no 'pet' entry.
     method: Oudin
-    latitude: 47.3
+    lat: 47.3
 
 observations:
   file: ../../tests/files/catchments/ch_sitter_appenzell/discharge.csv

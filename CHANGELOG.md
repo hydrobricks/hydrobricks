@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Breaking changes
+
+- Project-file YAML keys renamed to match the underlying Python API parameter they map to: `forcing.gridded.<var>.elevation_gradient` → `apply_data_gradient`, `forcing.gridded.<var>.crs` → `data_crs`, `hydro_units.land_cover_areas` → `columns_areas`, `forcing.pet.latitude` → `lat`.
+
+
 ## 0.9.0 - 2026-07-07
 
 ### Breaking changes

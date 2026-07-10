@@ -168,12 +168,12 @@ def test_missing_file_and_pet_latitude(tmp_path):
     config = minimal_config(tmp_path)
     config["hydro_units"]["file"] = "does_not_exist.csv"
     del config["forcing"]["columns"]["pet"]  # PET must be computed...
-    # ...but no latitude is given.
+    # ...but no lat is given.
     with pytest.raises(hb.ConfigurationError) as excinfo:
         hb.load_project(config, base_dir=SITTER_DIR)
     message = str(excinfo.value)
     assert "does_not_exist.csv" in message
-    assert "forcing.pet.latitude" in message
+    assert "forcing.pet.lat" in message
 
 
 def test_period_not_covered_by_forcing(tmp_path):
@@ -195,6 +195,115 @@ def test_run_lists_undefined_parameters(tmp_path):
     assert "[" in message  # The valid ranges are listed.
 
 
+# --- Calibration section ------------------------------------------------------
+
+
+def calibration_config(tmp_path):
+    """A calibratable project configuration using the Sitter test data."""
+    config = minimal_config(tmp_path)
+    config["observations"] = {
+        "file": "discharge.csv",
+        "time": {"column": "Date", "format": "%d/%m/%Y"},
+        "column": "Discharge (mm/d)",
+    }
+    config["periods"] = {
+        "calibration": ["1981-01-01", "1981-12-31"],
+        "validation": ["1982-01-01", "1982-12-31"],
+        "spinup": 60,
+    }
+    config["calibration"] = {
+        "algorithm": "mc",
+        "repetitions": 3,
+        "objective": "nse",
+        "parameters": ["a_snow", "A"],
+    }
+    return config
+
+
+def test_calibration_section_validation(tmp_path):
+    config = calibration_config(tmp_path)
+    config["calibration"]["max_rep"] = 300  # Unknown key.
+    config["calibration"]["repetitions"] = -1
+    config["calibration"]["transform"] = "power(oops)"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "calibration: unknown key 'max_rep'" in message
+    assert "calibration.repetitions: expected a positive integer" in message
+    assert "calibration.transform:" in message
+
+
+def test_calibration_requires_observations_and_period(tmp_path):
+    config = calibration_config(tmp_path)
+    del config["observations"]
+    config["periods"] = ["1981-01-01", "1982-12-31"]  # No calibration period.
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "'observations' section is required" in message
+    assert "declare a calibration period" in message
+
+
+def test_calibration_unknown_parameter_name(tmp_path):
+    config = calibration_config(tmp_path)
+    config["calibration"]["parameters"] = ["a_sno"]
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "calibration.parameters.a_sno: unknown parameter" in message
+    assert "did you mean 'a_snow'?" in message
+
+
+def test_project_calibrate_smoke(tmp_path):
+    """calibrate() optimizes on the calibration period and applies the best set."""
+    project = hb.load_project(calibration_config(tmp_path), base_dir=SITTER_DIR)
+    result = project.calibrate()
+
+    assert {"score", "parameters", "index", "sampler", "algorithm"} <= set(result)
+    assert result["algorithm"] == "mc"
+    assert np.isfinite(result["score"])
+    assert set(result["parameters"]) == {"a_snow", "A"}
+
+    # The best values were applied; the project still runs over the full span.
+    discharge = project.run()
+    assert len(discharge) == 730
+
+    scores = hb.evaluate_periods(
+        project.model, project.observations, project.periods, metrics=("nse",)
+    )
+    assert np.isfinite(scores["nse"]).all()
+
+
+def test_project_calibrate_overrides_and_errors(tmp_path):
+    config = calibration_config(tmp_path)
+    del config["calibration"]
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        project.calibrate()
+    assert "repetitions" in str(excinfo.value)
+
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        project.calibrate(repetitions=2)
+    assert "parameters to calibrate" in str(excinfo.value)
+
+    result = project.calibrate(
+        algorithm="mc", repetitions=2, objective="nse", parameters=["a_snow"]
+    )
+    assert set(result["parameters"]) == {"a_snow"}
+
+
+def test_project_cache_key(tmp_path):
+    """The optional cache key overrides the default <output>/cache location."""
+    config = minimal_config(tmp_path)
+    config["cache"] = str(tmp_path / "shared_cache")
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    assert project.forcing.cache_dir == tmp_path / "shared_cache"
+
+    project2 = hb.load_project(minimal_config(tmp_path), base_dir=SITTER_DIR)
+    assert project2.forcing.cache_dir == tmp_path / "cache"
+
+
 # --- Gridded forcing ----------------------------------------------------------
 
 needs_gridded_packages = pytest.mark.skipif(
@@ -205,7 +314,7 @@ needs_gridded_packages = pytest.mark.skipif(
 GRIDDED_SOURCE = {
     "path": "gridded_precip.nc",  # 3 days (1962-01-01..03) of RhiresD
     "var_name": "RhiresD",
-    "crs": 2056,
+    "data_crs": 2056,
     "dim_x": "E",
     "dim_y": "N",
 }
@@ -256,7 +365,7 @@ def test_gridded_with_elevation_gradient(tmp_path):
     config = gridded_config(tmp_path)
     config["hydro_units"]["outline"] = "outline.shp"
     config["hydro_units"]["dem"] = "dem.tif"
-    config["forcing"]["gridded"]["precipitation"]["elevation_gradient"] = True
+    config["forcing"]["gridded"]["precipitation"]["apply_data_gradient"] = True
 
     project = hb.load_project(config, base_dir=SITTER_DIR)
     project.forcing.apply_operations()
@@ -315,10 +424,10 @@ def test_gridded_requires_unit_ids_raster(tmp_path):
 
 def test_gridded_elevation_gradient_requires_dem(tmp_path):
     config = gridded_config(tmp_path)
-    config["forcing"]["gridded"]["temperature"]["elevation_gradient"] = True
+    config["forcing"]["gridded"]["temperature"]["apply_data_gradient"] = True
     with pytest.raises(hb.ConfigurationError) as excinfo:
         hb.load_project(config, base_dir=SITTER_DIR)
-    assert "elevation_gradient: requires 'outline' and 'dem'" in str(excinfo.value)
+    assert "apply_data_gradient: requires 'outline' and 'dem'" in str(excinfo.value)
 
 
 def test_gridded_validation_collects_errors(tmp_path):

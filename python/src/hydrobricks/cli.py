@@ -1,11 +1,17 @@
 """Command-line interface: create, check and run YAML project files.
 
-Three subcommands wrap the :mod:`hydrobricks.project` loader so the canonical
-workflow needs no Python at all::
+The subcommands wrap the :mod:`hydrobricks.project` and
+:mod:`hydrobricks.study` loaders so the canonical workflows need no Python at
+all::
 
     hydrobricks init                 # interactive wizard, writes project.yaml
     hydrobricks validate project.yaml
     hydrobricks run project.yaml
+
+    hydrobricks study list study.yaml       # the comparison matrix's jobs
+    hydrobricks study run study.yaml <job>  # one job (parallelize per process)
+    hydrobricks study run study.yaml --all
+    hydrobricks study assess study.yaml     # aggregate + comparison pivot
 
 ``init`` asks a short series of questions (proposing answers sniffed from the
 CSV files: column names, date formats, data period) and writes a commented
@@ -83,12 +89,58 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser_run.add_argument("project", help="Path to the project file.")
 
+    parser_study = subparsers.add_parser(
+        "study",
+        help="Run a multi-variant comparison study (matrix of jobs).",
+    )
+    study_subparsers = parser_study.add_subparsers(dest="study_command", required=True)
+
+    study_list = study_subparsers.add_parser(
+        "list", help="List the study's jobs and their status."
+    )
+    study_list.add_argument("study", help="Path to the study file.")
+
+    study_validate = study_subparsers.add_parser(
+        "validate",
+        help="Check every job's project configuration (files, columns, ...) "
+        "and report every problem at once.",
+    )
+    study_validate.add_argument("study", help="Path to the study file.")
+
+    study_run = study_subparsers.add_parser(
+        "run",
+        help="Run one job (or all with --all); finished jobs are skipped, so "
+        "jobs can be distributed one-per-process (e.g. a SLURM array).",
+    )
+    study_run.add_argument("study", help="Path to the study file.")
+    study_run.add_argument("job_id", nargs="?", help="Job to run (see 'study list').")
+    study_run.add_argument(
+        "--all", action="store_true", help="Run every pending job sequentially."
+    )
+    study_run.add_argument(
+        "--force", action="store_true", help="Recompute even if a result exists."
+    )
+
+    study_assess = study_subparsers.add_parser(
+        "assess",
+        help="Aggregate the finished jobs into results/scores.csv and print "
+        "the comparison pivot.",
+    )
+    study_assess.add_argument("study", help="Path to the study file.")
+    study_assess.add_argument(
+        "--period",
+        default="validation",
+        help="Period for the printed pivot (default: validation).",
+    )
+
     args = parser.parse_args(argv)
     try:
         if args.command == "init":
             return _cmd_init(args)
         if args.command == "validate":
             return _cmd_validate(args)
+        if args.command == "study":
+            return _cmd_study(args)
         return _cmd_run(args)
     except HydroBricksError as err:
         # The message is args[0]; str(err) would render the whole args tuple.
@@ -143,6 +195,61 @@ def _cmd_run(args: argparse.Namespace) -> int:
         )
         print("\nScores against the observed discharge:")
         print(scores.to_string(float_format=lambda x: f"{x:.3f}"))
+    return 0
+
+
+# --- study --------------------------------------------------------------------
+
+
+def _cmd_study(args: argparse.Namespace) -> int:
+    from hydrobricks.study import load_study
+
+    study = load_study(args.study)
+
+    if args.study_command == "list":
+        done = sum(study.is_done(job.id) for job in study.jobs)
+        name = f" '{study.name}'" if study.name else ""
+        print(
+            f"Study{name}: {len(study.jobs)} job(s), {done} done "
+            f"({', '.join(study.dimensions)})."
+        )
+        for job in study.jobs:
+            status = "done" if study.is_done(job.id) else "pending"
+            print(f"  [{status:7s}] {job.id}")
+        return 0
+
+    if args.study_command == "validate":
+        study.validate()
+        print(f"'{args.study}' is valid: all {len(study.jobs)} job(s) can run.")
+        return 0
+
+    if args.study_command == "run":
+        if args.all == (args.job_id is not None):
+            print(
+                "Error: pass either a job id or --all (see 'study list').",
+                file=sys.stderr,
+            )
+            return 2
+        job_ids = [j.id for j in study.jobs] if args.all else [args.job_id]
+        for job_id in job_ids:
+            if study.is_done(job_id) and not args.force:
+                print(f"[done   ] {job_id} (skipped; --force to recompute)")
+                continue
+            print(f"[running] {job_id}...")
+            record = study.run(job_id, force=args.force)
+            print(
+                f"[done   ] {job_id}: calibration score "
+                f"{record['calibration_score']:.3f}"
+            )
+        return 0
+
+    # assess
+    scores = study.assess()
+    print(f"Aggregated {scores['job_id'].nunique()} job(s) into ")
+    print(f"  {study.results_dir / 'scores.csv'}")
+    print(f"\nComparison on the {args.period} period:")
+    pivot = study.pivot(period=args.period)
+    print(pivot.to_string(float_format=lambda x: f"{x:.3f}"))
     return 0
 
 
@@ -653,7 +760,7 @@ def _station_forcing_lines(fc: dict) -> list[str]:
     if not fc["pet_col"]:
         lines += ["  pet:", "    method: Oudin"]
         if fc["latitude"] is not None:
-            lines.append(f"    latitude: {_number(fc['latitude'])}")
+            lines.append(f"    lat: {_number(fc['latitude'])}")
     return lines
 
 
@@ -666,16 +773,16 @@ def _gridded_forcing_lines(fc: dict) -> list[str]:
             lines.append(f"      file_pattern: {_yaml_str(spec['file_pattern'])}")
         lines.append(f"      var_name: {_yaml_str(spec['var_name'])}")
         if spec["crs"] is not None:
-            lines.append(f"      crs: {spec['crs']}")
+            lines.append(f"      data_crs: {spec['crs']}")
         lines.append(f"      dim_time: {_yaml_str(spec['dim_time'])}")
         lines.append(f"      dim_x: {_yaml_str(spec['dim_x'])}")
         lines.append(f"      dim_y: {_yaml_str(spec['dim_y'])}")
         if spec["elevation_gradient"]:
-            lines.append("      elevation_gradient: true")
+            lines.append("      apply_data_gradient: true")
     if "pet" not in fc["gridded"]:
         lines += ["  pet:", "    method: Oudin"]
         if fc["latitude"] is not None:
-            lines.append(f"    latitude: {_number(fc['latitude'])}")
+            lines.append(f"    lat: {_number(fc['latitude'])}")
     return lines
 
 

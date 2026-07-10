@@ -27,7 +27,7 @@ Example project file::
         temperature: temp(C)
       ref_elevation: 1253
       precipitation: {correction_factor: 0.75, gradient: 0.05}
-      pet: {method: Oudin, latitude: 47.3}
+      pet: {method: Oudin, lat: 47.3}
 
     observations:
       file: discharge.csv
@@ -42,6 +42,17 @@ Example project file::
     parameters:
       A: 458
       a_snow: 2
+
+    calibration:
+      algorithm: sceua
+      repetitions: 300
+      objective: kge_2012
+      transform: power(0.2)
+      parameters: [a_snow, A]
+
+The optional ``calibration`` section declares how to optimize the parameters
+(see :meth:`Project.calibrate`); ``observations`` and a calibration period are
+then required.
 
 The forcing can also come from gridded netCDF data — per variable, mixable
 with the station CSV — using a ``gridded`` section (the hydro units then need
@@ -58,7 +69,7 @@ a ``unit_ids_raster`` to aggregate the grid cells, and optionally an
           path: RhiresD_v2.0_swiss.lv95
           file_pattern: "RhiresD_*.nc"
           var_name: RhiresD
-          crs: 2056
+          data_crs: 2056
           dim_x: E
           dim_y: N
 
@@ -104,7 +115,9 @@ _TOP_LEVEL_KEYS = {
     "periods",
     "parameters",
     "data_parameters",
+    "calibration",
     "output",
+    "cache",
 }
 _REQUIRED_TOP_LEVEL_KEYS = ("model", "hydro_units", "forcing", "periods")
 
@@ -159,6 +172,12 @@ class Project:
     catchment
         The :class:`~hydrobricks.catchment.Catchment`, when the project
         declares an ``outline``/``dem``; otherwise ``None``.
+    calibration
+        The validated ``calibration`` section (algorithm, repetitions,
+        objective, transform, parameters), or ``None`` when the project file
+        has none. Used as the defaults of :meth:`calibrate`.
+    base_dir
+        The directory the configuration paths were resolved against.
     """
 
     model: Model
@@ -171,6 +190,8 @@ class Project:
     output_dir: Path | None = None
     hydro_units: HydroUnits | None = None
     catchment: Any | None = None
+    calibration: dict | None = field(default=None, repr=False)
+    base_dir: Path | None = None
 
     def setup(self, period: Period | tuple | str | None = None) -> None:
         """Set the model up, over the full simulation span or a given period.
@@ -246,6 +267,135 @@ class Project:
         discharge = self.model.get_outlet_discharge()
         time = self.model.get_recorded_time()
         return pd.Series(discharge, index=time, name="discharge")
+
+    def calibrate(
+        self,
+        algorithm: str | None = None,
+        repetitions: int | None = None,
+        objective: str | None = None,
+        transform: Any = None,
+        parameters: list[str] | None = None,
+        dbname: str | None = None,
+        dbformat: str = "ram",
+        parallel: str = "seq",
+        **calibrate_kwargs: Any,
+    ) -> dict:
+        """Calibrate the project parameters on the calibration period.
+
+        The settings come from the project file's ``calibration`` section;
+        every argument given here overrides its file counterpart. The best
+        parameter values are applied to :attr:`parameters` on return, so a
+        subsequent :meth:`run` simulates the calibrated model over the full
+        span (the recommended flow: calibrate, run, then
+        :func:`~hydrobricks.periods.evaluate_periods`).
+
+        The model cannot be set up twice, so the calibration runs on a fresh
+        internal build of the project over the calibration period; this
+        project's model stays set up over the full simulation span.
+
+        Parameters
+        ----------
+        algorithm
+            SPOTPY algorithm name (e.g. ``'sceua'``, ``'mc'``).
+            Default: the file value, or ``'sceua'``.
+        repetitions
+            Number of runs the algorithm may use. Required here or in the file.
+        objective
+            Metric name to optimize (e.g. ``'kge_2012'``). Default: the file
+            value, or the trainer default (non-parametric KGE).
+        transform
+            Discharge transformation applied within the objective — anything
+            :meth:`DischargeTransform.from_spec
+            <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`
+            accepts (e.g. ``'power(0.2)'``). Default: the file value, or none.
+        parameters
+            Names of the parameters to calibrate (model parameters or
+            data_parameters). Required here or in the file.
+        dbname, dbformat, parallel, **calibrate_kwargs
+            Forwarded to :func:`hydrobricks.trainer.calibrate`.
+
+        Returns
+        -------
+        dict
+            The :func:`~hydrobricks.trainer.get_best` record (``score``,
+            ``parameters``, ``index``) extended with ``sampler``,
+            ``algorithm`` and ``repetitions``.
+        """
+        import hydrobricks.trainer as trainer
+
+        if self.observations is None:
+            raise ConfigurationError(
+                "The project has no observed discharge; add an 'observations' "
+                "section to calibrate.",
+                item_name="observations",
+                reason="Missing observations",
+            )
+        if self.periods.calibration is None:
+            raise ConfigurationError(
+                "The project declares no calibration period; add one to the "
+                "'periods' section to calibrate.",
+                item_name="periods.calibration",
+                reason="Missing calibration period",
+            )
+
+        defaults = self.calibration or {}
+        algorithm = algorithm or defaults.get("algorithm") or "sceua"
+        repetitions = repetitions or defaults.get("repetitions")
+        if not repetitions:
+            raise ConfigurationError(
+                "The number of repetitions is required: pass repetitions= or "
+                "set calibration.repetitions in the project file.",
+                item_name="calibration.repetitions",
+                reason="Missing repetitions",
+            )
+        objective = objective or defaults.get("objective")
+        if transform is None:
+            transform = defaults.get("transform")
+        parameters = parameters or defaults.get("parameters")
+        if not parameters:
+            raise ConfigurationError(
+                "The parameters to calibrate are required: pass parameters= or "
+                "set calibration.parameters in the project file.",
+                item_name="calibration.parameters",
+                reason="Missing parameters to calibrate",
+            )
+        errors: list[str] = []
+        _check_parameter_names(
+            self.parameters, parameters, errors, section="calibration.parameters"
+        )
+        _raise_if_errors(errors, self.path)
+
+        # Fresh build over the calibration period (a model cannot be re-setup).
+        calib = load_project(self.config, base_dir=self.base_dir, setup=False)
+        calib.setup(period="calibration")
+        calib.parameters.allow_changing = list(parameters)
+
+        spot_setup = trainer.SpotpySetup(
+            calib.model,
+            calib.parameters,
+            calib.forcing,
+            calib.observations,
+            obj_func=objective,
+            transform=transform,
+            periods=calib.periods,
+        )
+        sampler = trainer.calibrate(
+            spot_setup,
+            algorithm,
+            repetitions,
+            dbname=dbname,
+            dbformat=dbformat,
+            parallel=parallel,
+            **calibrate_kwargs,
+        )
+        best = trainer.get_best(sampler)
+        self.parameters.set_values(best["parameters"])
+        return {
+            **best,
+            "sampler": sampler,
+            "algorithm": algorithm,
+            "repetitions": repetitions,
+        }
 
 
 def load_project(
@@ -580,7 +730,7 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
     valid = {
         "file",
         "columns",
-        "land_cover_areas",
+        "columns_areas",
         "unit_ids_raster",
         "outline",
         "dem",
@@ -610,7 +760,7 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
                 "hydro_units.discretization: requires 'outline' and 'dem' "
                 "(the catchment to delineate)."
             )
-        for key in ("columns", "land_cover_areas"):
+        for key in ("columns", "columns_areas"):
             if key in section:
                 errors.append(
                     f"hydro_units.{key}: only applies when the hydro units "
@@ -647,24 +797,24 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
         prop: col for prop, col in columns.items() if prop not in ("elevation", "area")
     }
 
-    land_cover_areas = section.get("land_cover_areas")
-    if land_cover_areas is not None and not isinstance(land_cover_areas, dict):
+    columns_areas = section.get("columns_areas")
+    if columns_areas is not None and not isinstance(columns_areas, dict):
         errors.append(
-            "hydro_units.land_cover_areas: expected a mapping of land cover "
+            "hydro_units.columns_areas: expected a mapping of land cover "
             "name to area column."
         )
-        land_cover_areas = None
-    out["land_cover_areas"] = land_cover_areas
+        columns_areas = None
+    out["columns_areas"] = columns_areas
 
     if file is not None:
         available = _csv_columns(file, "hydro_units", errors)
         needed = {"hydro_units.columns.elevation": out["column_elevation"]}
-        if land_cover_areas is None:
+        if columns_areas is None:
             needed["hydro_units.columns.area"] = out["column_area"]
         else:
             # With per-land-cover areas the total area column is not used.
-            for name, col in land_cover_areas.items():
-                needed[f"hydro_units.land_cover_areas.{name}"] = col
+            for name, col in columns_areas.items():
+                needed[f"hydro_units.columns_areas.{name}"] = col
         for prop, col in out["other_columns"].items():
             needed[f"hydro_units.columns.{prop}"] = col
         _check_columns(needed, available, file, errors)
@@ -750,11 +900,11 @@ def _validate_gridded_forcing(gridded: Any, base: Path, errors: list[str]) -> di
         "path",
         "file_pattern",
         "var_name",
-        "crs",
+        "data_crs",
         "dim_time",
         "dim_x",
         "dim_y",
-        "elevation_gradient",
+        "apply_data_gradient",
         "gradient_type",
     }
     out: dict[str, dict] = {}
@@ -797,20 +947,24 @@ def _validate_gridded_forcing(gridded: Any, base: Path, errors: list[str]) -> di
             errors.append(f"{where}.var_name: the netCDF variable name is required.")
         cfg["var_name"] = var_name
 
-        crs = spec.get("crs")
-        if crs is not None and (isinstance(crs, bool) or not isinstance(crs, int)):
-            errors.append(f"{where}.crs: expected an EPSG integer, got {crs!r}.")
-            crs = None
-        cfg["crs"] = crs
+        data_crs = spec.get("data_crs")
+        if data_crs is not None and (
+            isinstance(data_crs, bool) or not isinstance(data_crs, int)
+        ):
+            errors.append(
+                f"{where}.data_crs: expected an EPSG integer, got {data_crs!r}."
+            )
+            data_crs = None
+        cfg["data_crs"] = data_crs
 
         for dim in ("dim_time", "dim_x", "dim_y"):
             cfg[dim] = _get_str(spec, dim, where, errors)
 
-        elevation_gradient = spec.get("elevation_gradient", False)
-        if not isinstance(elevation_gradient, bool):
-            errors.append(f"{where}.elevation_gradient: expected true or false.")
-            elevation_gradient = False
-        cfg["elevation_gradient"] = elevation_gradient
+        apply_data_gradient = spec.get("apply_data_gradient", False)
+        if not isinstance(apply_data_gradient, bool):
+            errors.append(f"{where}.apply_data_gradient: expected true or false.")
+            apply_data_gradient = False
+        cfg["apply_data_gradient"] = apply_data_gradient
 
         gradient_type = _get_str(spec, "gradient_type", where, errors)
         if gradient_type is not None and gradient_type not in (
@@ -833,7 +987,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "station": None,
         "gridded": {},
         "pet_method": "Oudin",
-        "pet_latitude": None,
+        "pet_lat": None,
         "variables": set(),
     }
     section = _get_mapping(config, "forcing", errors, required=True)
@@ -864,11 +1018,11 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
 
     pet = section.get("pet", {}) or {}
     if not isinstance(pet, dict):
-        errors.append("forcing.pet: expected a mapping (method, latitude).")
+        errors.append("forcing.pet: expected a mapping (method, lat).")
         pet = {}
-    _check_keys(pet, {"method", "latitude"}, "forcing.pet", errors)
+    _check_keys(pet, {"method", "lat"}, "forcing.pet", errors)
     out["pet_method"] = _get_str(pet, "method", "forcing.pet", errors) or "Oudin"
-    out["pet_latitude"] = _get_number(pet, "latitude", "forcing.pet", errors)
+    out["pet_lat"] = _get_number(pet, "lat", "forcing.pet", errors)
 
     station_vars = set((out["station"] or {}).get("columns", {}))
     gridded_vars = set(out["gridded"])
@@ -997,6 +1151,64 @@ def _validate_data_parameters(config: dict, errors: list[str]) -> dict:
     return out
 
 
+def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
+    """Validate the calibration section (how to calibrate the parameters)."""
+    section = config.get("calibration")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        errors.append(
+            "calibration: expected a mapping (algorithm, repetitions, "
+            "objective, transform, parameters)."
+        )
+        return None
+    valid = {"algorithm", "repetitions", "objective", "transform", "parameters"}
+    _check_keys(section, valid, "calibration", errors)
+
+    out = {
+        "algorithm": section.get("algorithm", "sceua"),
+        "repetitions": section.get("repetitions"),
+        "objective": section.get("objective"),
+        "transform": section.get("transform"),
+        "parameters": section.get("parameters"),
+    }
+    if not isinstance(out["algorithm"], str):
+        errors.append(
+            f"calibration.algorithm: expected an algorithm name (e.g. 'sceua'), "
+            f"got {out['algorithm']!r}."
+        )
+    reps = out["repetitions"]
+    if reps is not None and (
+        isinstance(reps, bool) or not isinstance(reps, int) or reps < 1
+    ):
+        errors.append(
+            f"calibration.repetitions: expected a positive integer, got {reps!r}."
+        )
+    if out["objective"] is not None and not isinstance(out["objective"], str):
+        errors.append(
+            f"calibration.objective: expected a metric name (e.g. 'kge_2012'), "
+            f"got {out['objective']!r}."
+        )
+    if out["transform"] is not None:
+        from hydrobricks.evaluation.transforms import DischargeTransform
+
+        try:
+            DischargeTransform.from_spec(out["transform"])
+        except (HydroBricksError, ValueError, TypeError) as err:
+            message = err.args[0] if getattr(err, "args", None) else str(err)
+            errors.append(f"calibration.transform: {message}")
+    params = out["parameters"]
+    if params is not None and (
+        not isinstance(params, list) or not all(isinstance(p, str) for p in params)
+    ):
+        errors.append(
+            "calibration.parameters: expected a list of parameter names to "
+            "calibrate."
+        )
+        out["parameters"] = None
+    return out
+
+
 def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
     """Checks spanning several sections (gridded forcing vs hydro units, PET)."""
     hu = cfg["hydro_units"]
@@ -1014,18 +1226,18 @@ def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
             "raster of the hydro unit ids, used to aggregate the grid cells)."
         )
     for variable, spec in gridded.items():
-        if spec.get("elevation_gradient") and not has_catchment:
+        if spec.get("apply_data_gradient") and not has_catchment:
             errors.append(
-                f"forcing.gridded.{variable}.elevation_gradient: requires "
+                f"forcing.gridded.{variable}.apply_data_gradient: requires "
                 "'outline' and 'dem' in the hydro_units section (a DEM is "
                 "needed to derive the gradients from the data)."
             )
 
     variables = fc.get("variables") or set()
     if variables and "pet" not in variables:
-        if fc.get("pet_latitude") is None and not has_catchment:
+        if fc.get("pet_lat") is None and not has_catchment:
             errors.append(
-                "forcing.pet.latitude: required to compute the PET, since "
+                "forcing.pet.lat: required to compute the PET, since "
                 "there is no 'pet' forcing source (provide a PET source, the "
                 "catchment latitude, or an outline/dem to derive it from)."
             )
@@ -1064,8 +1276,19 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
         "periods": _validate_periods(config, errors),
         "parameters": _validate_parameters(config, errors),
         "data_parameters": _validate_data_parameters(config, errors),
+        "calibration": _validate_calibration(config, errors),
     }
     _validate_cross_checks(cfg, errors)
+
+    if cfg["calibration"] is not None:
+        if cfg["observations"] is None:
+            errors.append(
+                "calibration: an 'observations' section is required to calibrate."
+            )
+        if cfg["periods"] is not None and cfg["periods"].calibration is None:
+            errors.append(
+                "calibration: declare a calibration period in the 'periods' " "section."
+            )
 
     output = config.get("output")
     if output is not None and not isinstance(output, str):
@@ -1075,6 +1298,17 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
     if not out_dir.is_absolute():
         out_dir = base / out_dir
     cfg["output"] = out_dir
+
+    cache = config.get("cache")
+    if cache is not None and not isinstance(cache, str):
+        errors.append(f"cache: expected a directory path, got {cache!r}.")
+        cache = None
+    cache_dir = Path(cache) if cache is not None else out_dir / "cache"
+    if not cache_dir.is_absolute():
+        cache_dir = base / cache_dir
+    cfg["cache"] = cache_dir
+
+    cfg["base_dir"] = base
     return cfg
 
 
@@ -1096,7 +1330,10 @@ def _parameter_range(row: pd.Series) -> str:
 
 
 def _check_parameter_names(
-    parameter_set: ParameterSet, values: dict, errors: list[str]
+    parameter_set: ParameterSet,
+    values: dict | list,
+    errors: list[str],
+    section: str = "parameters",
 ) -> None:
     known: set[str] = set()
     labels = []
@@ -1108,7 +1345,7 @@ def _check_parameter_names(
     for name in values:
         if not parameter_set.has(name):
             errors.append(
-                f"parameters.{name}: unknown parameter for this model"
+                f"{section}.{name}: unknown parameter for this model"
                 f"{_suggest(name, known)}. Model parameters: "
                 f"{', '.join(labels)}."
             )
@@ -1191,11 +1428,11 @@ def _build_project(
             unit_ids_raster = cfg["output"] / "unit_ids.tif"
     else:
         hydro_units = catchment.hydro_units if catchment else HydroUnits()
-        if hu_cfg["land_cover_areas"] is not None:
+        if hu_cfg["columns_areas"] is not None:
             hydro_units.load_from_csv(
                 hu_cfg["file"],
                 column_elevation=hu_cfg["column_elevation"],
-                columns_areas=hu_cfg["land_cover_areas"],
+                columns_areas=hu_cfg["columns_areas"],
                 other_columns=hu_cfg["other_columns"] or None,
             )
         else:
@@ -1218,7 +1455,7 @@ def _build_project(
     station = fc["station"]
     forcing = Forcing(
         catchment if catchment is not None else hydro_units,
-        cache_dir=cfg["output"] / "cache",
+        cache_dir=cfg["cache"],
     )
 
     if station is not None:
@@ -1283,19 +1520,19 @@ def _build_project(
                 variable=variable,
                 path=spec["path"],
                 file_pattern=spec["file_pattern"],
-                data_crs=spec["crs"],
+                data_crs=spec["data_crs"],
                 var_name=spec["var_name"],
                 dim_time=spec["dim_time"],
                 dim_x=spec["dim_x"],
                 dim_y=spec["dim_y"],
                 raster_hydro_units=unit_ids_raster,
-                apply_data_gradient=spec["elevation_gradient"],
+                apply_data_gradient=spec["apply_data_gradient"],
                 gradient_type=spec["gradient_type"],
             )
 
     if "pet" not in fc["variables"]:
         forcing.compute_pet(
-            method=fc["pet_method"], use=["t", "lat"], lat=fc["pet_latitude"]
+            method=fc["pet_method"], use=["t", "lat"], lat=fc["pet_lat"]
         )
 
     # Model and parameters: a pre-built model by name, or a custom structure.
@@ -1319,6 +1556,14 @@ def _build_project(
             name, spec["value"], min_val=spec["min"], max_val=spec["max"]
         )
     _check_parameter_names(parameter_set, cfg["parameters"], errors)
+    calibration = cfg["calibration"]
+    if calibration is not None and calibration["parameters"]:
+        _check_parameter_names(
+            parameter_set,
+            calibration["parameters"],
+            errors,
+            section="calibration.parameters",
+        )
     _raise_if_errors(errors, path)
     if cfg["parameters"]:
         parameter_set.set_values(cfg["parameters"])
@@ -1355,4 +1600,6 @@ def _build_project(
         output_dir=cfg["output"],
         hydro_units=hydro_units,
         catchment=catchment,
+        calibration=calibration,
+        base_dir=cfg["base_dir"],
     )

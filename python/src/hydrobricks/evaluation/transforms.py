@@ -268,6 +268,23 @@ class DischargeTransform:
             return 1.0 / q
         raise ValueError(f"Unhandled transform kind: {self.kind!r}")  # unreachable
 
+    @property
+    def label(self) -> str:
+        """A compact, stable name for this transform (e.g. ``'power(0.2)'``).
+
+        Round-trips through :meth:`from_spec` (except for custom callables,
+        labelled by their function name), so it can key result tables.
+        """
+        if self._func is not None:
+            return getattr(self._func, "__name__", "custom")
+        if self.kind == "identity":
+            return "none"
+        if self.kind == "power":
+            return f"power({self.exponent:g})"
+        if isinstance(self.epsilon, float) and self.epsilon != 0.0:
+            return f"{self.kind}({self.epsilon:g})"
+        return self.kind
+
     def __repr__(self) -> str:
         if self._func is not None:
             return f"DischargeTransform(custom {self._func!r})"

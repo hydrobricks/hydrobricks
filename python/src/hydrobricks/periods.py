@@ -330,18 +330,31 @@ def evaluate_periods(
         series of each period before computing the metrics (e.g. ``'power(0.2)'``
         or ``'log'`` to emphasize low flows). Anything accepted by
         :meth:`DischargeTransform.from_spec
-        <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`. An ``'auto'``
-        epsilon is resolved per period, from that period's observations.
-        Default: None (untransformed).
+        <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`. A
+        **list** of such specifications evaluates them all at once. An
+        ``'auto'`` epsilon is resolved per period, from that period's
+        observations. Default: None (untransformed).
 
     Returns
     -------
-    A DataFrame with one row per period and one column per metric.
+    A DataFrame with one row per period and one column per metric. When
+    ``transform`` is a list, the columns are a MultiIndex
+    ``(transform, metric)`` with the transform level labelled by
+    :attr:`~hydrobricks.evaluation.transforms.DischargeTransform.label`.
     """
     from hydrobricks.evaluation.metrics import evaluate
     from hydrobricks.evaluation.transforms import DischargeTransform
 
-    transform = DischargeTransform.from_spec(transform)
+    multi_transform = isinstance(transform, (list, tuple))
+    specs = list(transform) if multi_transform else [transform]
+    transforms = [DischargeTransform.from_spec(spec) for spec in specs]
+    labels = [t.label for t in transforms]
+    if len(set(labels)) != len(labels):
+        raise ConfigurationError(
+            f"The transforms must be distinct, got labels {labels}.",
+            item_name="transform",
+            reason="Duplicate transforms",
+        )
 
     sim = model.get_outlet_discharge()
     time = model.get_recorded_time()
@@ -382,9 +395,18 @@ def evaluate_periods(
                 data_type="observations",
                 reason="Observations do not cover the period",
             )
-        sim_slice, obs_slice = transform.transform_pair(sim_slice, obs_slice)
-        rows[name] = {
-            metric: evaluate(sim_slice, obs_slice, metric) for metric in metrics
-        }
+        row = {}
+        for label, trans in zip(labels, transforms):
+            sim_t, obs_t = trans.transform_pair(sim_slice, obs_slice)
+            for metric in metrics:
+                key = (label, metric) if multi_transform else metric
+                row[key] = evaluate(sim_t, obs_t, metric)
+        rows[name] = row
 
+    if multi_transform:
+        columns = pd.MultiIndex.from_tuples(
+            [(label, metric) for label in labels for metric in metrics],
+            names=["transform", "metric"],
+        )
+        return pd.DataFrame.from_dict(rows, orient="index").reindex(columns=columns)
     return pd.DataFrame.from_dict(rows, orient="index", columns=list(metrics))

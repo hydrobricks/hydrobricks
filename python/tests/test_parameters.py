@@ -34,6 +34,71 @@ def test_define_parameter():
     assert parameter_set.parameters.loc[0].at["value"] is None
 
 
+def test_set_monthly_values():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="forest_canopy",
+        name="capacity",
+        aliases=["ic"],
+        min_val=0,
+        max_val=10,
+    )
+    values = [1, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1, 1]
+    parameter_set.set_monthly_values("ic", values)
+    # The scalar value is set to the annual mean.
+    assert parameter_set.get("ic") == pytest.approx(sum(values) / 12.0)
+    # The monthly values are retrievable for the model to push.
+    monthly = parameter_set.get_monthly_parameters()
+    assert monthly == [("forest_canopy", "capacity", [float(v) for v in values])]
+
+
+def test_set_monthly_values_wrong_length():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="forest_canopy",
+        name="capacity",
+        aliases=["ic"],
+        min_val=0,
+        max_val=10,
+    )
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_monthly_values("ic", [1, 2, 3])
+
+
+def test_set_monthly_values_out_of_range():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="forest_canopy",
+        name="capacity",
+        aliases=["ic"],
+        min_val=0,
+        max_val=10,
+    )
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_monthly_values("ic", [1] * 11 + [50])
+
+
+def test_set_spatial():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="soil_moisture",
+        name="capacity",
+        aliases=["fc"],
+        min_val=0,
+        max_val=3000,
+    )
+    parameter_set.set_spatial("fc", "fc")
+    assert parameter_set.get_spatial_parameters() == [
+        ("soil_moisture", "capacity", "fc")
+    ]
+
+
+def test_set_spatial_unknown_parameter():
+    parameter_set = hb.ParameterSet()
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_spatial("does_not_exist", "prop")
+
+
 def test_define_parameter_min_max_mismatch():
     parameter_set = hb.ParameterSet()
     with pytest.raises(hb.ConfigurationError):

@@ -117,6 +117,21 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # PREVAH canopy interception (Menzel asymptotic filling). The interception
+    # capacity carries the 'ic' alias like the built-in canopy brick; in custom
+    # structures with several canopies, set the brick 'alias_suffix' to keep it
+    # globally unique.
+    "interception:menzel": [
+        ParamSpec(
+            name="capacity",
+            unit="mm",
+            aliases=["ic"],
+            min=0,
+            max=10,
+            default=2.0,
+            mandatory=False,
+        ),
+    ],
     # Fixed-ratio outflow split to two targets (PREVAH SLOWCOMP recharge split)
     "outflow:split": [
         ParamSpec(
@@ -887,6 +902,12 @@ class ParameterSet:
         )
         self.constraints: list[list[str]] = []
         self._allow_changing: list[str] = []
+        # Monthly-varying parameters: DataFrame index -> 12 monthly values (Jan..Dec).
+        # The scalar 'value' still holds the annual mean as a baseline.
+        self._monthly_values: dict[Hashable, list[float]] = {}
+        # Spatial (per-unit) parameters: DataFrame index -> hydro-unit property name.
+        # The scalar 'value' is kept as a fallback for units lacking the property.
+        self._spatial: dict[Hashable, str] = {}
 
     @property
     def allow_changing(self) -> list[str]:
@@ -1273,6 +1294,109 @@ class ParameterSet:
                     index, key, value, allow_adapt=allow_adapt
                 )
             self.parameters.loc[index, "value"] = value
+
+    def set_monthly_values(
+        self,
+        name: str,
+        values: list[float],
+        check_range: bool = True,
+        allow_adapt: bool = False,
+    ) -> None:
+        """
+        Set 12 monthly values for a parameter (time-varying over the calendar year).
+
+        The parameter value then follows the calendar month during the simulation
+        (e.g. a monthly canopy interception capacity). The scalar value is set to the
+        annual mean as a baseline (used before the first monthly update and by the
+        parameter-validity check).
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+        values
+            The 12 monthly values, from January to December.
+        check_range
+            Check that each monthly value falls into the allowed range.
+        allow_adapt
+            Allow the monthly values to be clipped to the allowed range.
+        """
+        if len(values) != 12:
+            raise ConfigurationError(
+                f'Monthly values for "{name}" must have 12 entries (got '
+                f"{len(values)}).",
+                item_name=name,
+                item_value=len(values),
+                reason="Expected 12 monthly values",
+            )
+
+        index = self._get_parameter_index(name)
+        checked = list(values)
+        if check_range:
+            checked = [
+                self._check_value_range(index, name, float(v), allow_adapt=allow_adapt)
+                for v in checked
+            ]
+
+        self._monthly_values[index] = checked
+        # Keep the scalar value as the annual mean so validity checks pass and any
+        # non-monthly consumer still sees a sensible value.
+        self.parameters.loc[index, "value"] = sum(checked) / 12.0
+
+    def get_monthly_parameters(self) -> list[tuple[str, str, list[float]]]:
+        """
+        Return the monthly-varying model parameters.
+
+        Returns
+        -------
+        A list of ``(component, name, values)`` tuples (one per monthly parameter),
+        used to push the monthly values to the model settings. Data parameters are
+        excluded.
+        """
+        monthly = []
+        for index, values in self._monthly_values.items():
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            monthly.append((row["component"], row["name"], values))
+        return monthly
+
+    def set_spatial(self, name: str, property_name: str) -> None:
+        """
+        Make a parameter spatial: each hydro unit uses its own value from a property.
+
+        The per-unit values are taken from the hydro-unit property ``property_name``
+        (added via ``HydroUnits.add_property``), giving each unit its own value for this
+        parameter (e.g. a per-unit field capacity from soil data). The scalar value set
+        via ``set_values`` is kept as a fallback for units lacking the property, so it
+        must still be defined.
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+        property_name
+            The name of the hydro-unit property holding the per-unit values.
+        """
+        index = self._get_parameter_index(name)
+        self._spatial[index] = property_name
+
+    def get_spatial_parameters(self) -> list[tuple[str, str, str]]:
+        """
+        Return the spatial (per-unit) model parameters.
+
+        Returns
+        -------
+        A list of ``(component, name, property)`` tuples (one per spatial parameter),
+        used to push the bindings to the model settings. Data parameters are excluded.
+        """
+        spatial = []
+        for index, property_name in self._spatial.items():
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            spatial.append((row["component"], row["name"], property_name))
+        return spatial
 
     def get_transform(self, name: str) -> ParameterTransform | None:
         """

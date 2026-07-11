@@ -214,6 +214,12 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Mark the selected brick as computed directly (explicitly, without the ODE solver).")
         .def("set_parameter_value", &SettingsModel::SetParameterValue, "Setting one of the model parameter.",
              "component"_a, "name"_a, "value"_a)
+        .def("set_parameter_monthly_values", &SettingsModel::SetParameterMonthlyValues,
+             "Setting monthly-varying values (12) for one of the model parameters.", "component"_a, "name"_a,
+             "values"_a)
+        .def("set_parameter_spatial_from_property", &SettingsModel::SetParameterSpatialFromProperty,
+             "Bind a parameter to a per-unit hydro-unit property (spatial parameter).", "component"_a, "name"_a,
+             "property"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true, "splitter_type"_a = "snow_rain:linear")
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)

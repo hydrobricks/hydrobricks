@@ -107,6 +107,15 @@ bool Brick::HasParameter(const BrickSettings& brickSettings, std::string_view na
 }
 
 const float* Brick::GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name) {
+    // Per-unit (spatial) override: when the brick's hydro unit carries a per-unit value
+    // for this parameter, read it instead of the shared settings value.
+    if (_hydroUnit != nullptr) {
+        string key = std::format("{}:{}", GetName(), name);
+        if (_hydroUnit->HasParameterOverride(key)) {
+            return _hydroUnit->GetParameterOverridePointer(key);
+        }
+    }
+
     for (auto& parameter : brickSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());

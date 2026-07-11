@@ -51,13 +51,15 @@ class Brick {
     static bool HasParameter(const BrickSettings& brickSettings, std::string_view name);
 
     /**
-     * Get the pointer to the parameter value.
+     * Get the pointer to the parameter value. If the brick's hydro unit carries a
+     * per-unit (spatial) override for this parameter, the override pointer is returned
+     * instead of the shared settings value.
      *
      * @param brickSettings settings of the brick containing the parameters.
      * @param name name of the parameter.
      * @return pointer to the parameter value.
      */
-    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name);
+    const float* GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Assign the parameters to the brick element.

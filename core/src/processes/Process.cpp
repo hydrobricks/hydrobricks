@@ -497,6 +497,13 @@ void Process::Reset() {
     }
 }
 
+void Process::SetParentContext(HydroUnit* unit, Brick* brick) {
+    _hydroUnit = unit;
+    if (brick != nullptr) {
+        _parentBrickName = brick->GetName();
+    }
+}
+
 void Process::SetHydroUnitProperties(HydroUnit*, Brick*) {
     // Nothing to do...
 }
@@ -516,6 +523,15 @@ bool Process::HasParameter(const ProcessSettings& processSettings, std::string_v
 }
 
 const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name) {
+    // Per-unit (spatial) override: when the process's hydro unit carries a per-unit value
+    // for this parameter (keyed by the owning brick), read it instead of the shared value.
+    if (_hydroUnit != nullptr && !_parentBrickName.empty()) {
+        string key = std::format("{}:{}", _parentBrickName, name);
+        if (_hydroUnit->HasParameterOverride(key)) {
+            return _hydroUnit->GetParameterOverridePointer(key);
+        }
+    }
+
     for (auto& parameter : processSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());

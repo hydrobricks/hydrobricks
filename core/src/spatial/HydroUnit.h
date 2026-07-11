@@ -79,6 +79,41 @@ class HydroUnit {
     [[nodiscard]] string GetPropertyString(std::string_view name) const;
 
     /**
+     * Check whether the hydro unit has a numeric or string property with a given name.
+     *
+     * @param name The name of the property to look for.
+     * @return true if a property with that name exists.
+     */
+    [[nodiscard]] bool HasProperty(std::string_view name) const;
+
+    /**
+     * Set a per-unit override value for a model parameter, keyed by
+     * "<brickName>:<paramName>". Used for spatial (per-unit) parameters: the brick or
+     * process reads this value instead of the shared settings value.
+     *
+     * @param key The override key ("<brickName>:<paramName>").
+     * @param value The per-unit parameter value.
+     */
+    void SetParameterOverride(const string& key, float value);
+
+    /**
+     * Check whether a per-unit parameter override exists for a given key.
+     *
+     * @param key The override key ("<brickName>:<paramName>").
+     * @return true if an override exists.
+     */
+    [[nodiscard]] bool HasParameterOverride(const string& key) const;
+
+    /**
+     * Get a stable pointer to a per-unit parameter override value (for the brick/process
+     * to read live). The key must exist (HasParameterOverride).
+     *
+     * @param key The override key ("<brickName>:<paramName>").
+     * @return Pointer to the override value.
+     */
+    [[nodiscard]] const float* GetParameterOverridePointer(const string& key) const;
+
+    /**
      * Add a brick to the hydro unit.
      *
      * @param brick The brick to add.
@@ -417,6 +452,7 @@ class HydroUnit {
     std::unordered_map<string, Splitter*> _splitterMap;      // non-owning view into _splitters
     std::vector<std::unique_ptr<Forcing>> _forcing;          // owning
     std::unordered_map<VariableType, Forcing*> _forcingMap;  // non-owning view into _forcing
+    std::unordered_map<string, float> _paramOverrides;       // per-unit spatial parameter values
 };
 
 #endif

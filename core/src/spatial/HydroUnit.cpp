@@ -157,6 +157,30 @@ string HydroUnit::GetPropertyString(std::string_view name) const {
     throw ModelConfigError(std::format("No property with the name '{}' was found.", name));
 }
 
+bool HydroUnit::HasProperty(std::string_view name) const {
+    for (const auto& property : _properties) {
+        if (property->GetName() == name) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void HydroUnit::SetParameterOverride(const string& key, float value) {
+    _paramOverrides[key] = value;
+}
+
+bool HydroUnit::HasParameterOverride(const string& key) const {
+    return _paramOverrides.find(key) != _paramOverrides.end();
+}
+
+const float* HydroUnit::GetParameterOverridePointer(const string& key) const {
+    auto it = _paramOverrides.find(key);
+    assert(it != _paramOverrides.end());
+    return &it->second;
+}
+
 void HydroUnit::AddBrick(std::unique_ptr<Brick> brick) {
     assert(brick);
     Brick* rawBrick = brick.get();

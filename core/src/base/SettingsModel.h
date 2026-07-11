@@ -3,7 +3,9 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <map>
 #include <memory>
+#include <utility>
 
 #include "Includes.h"
 #include "Parameter.h"
@@ -577,6 +579,48 @@ class SettingsModel {
     bool SetParameterValue(const string& component, const string& name, float value);
 
     /**
+     * Attach monthly-varying values to a parameter (a 12-value modifier applied per
+     * calendar month during the run). The scalar value is set to the annual mean as a
+     * baseline (used before the first month update and by consumers that ignore the
+     * modifier). Applied to every structure variant containing the component.
+     *
+     * @param component name of the component (brick or splitter); a comma-separated
+     *   list sets the same monthly values on several components.
+     * @param name name of the parameter.
+     * @param values the 12 monthly values (January to December).
+     * @return true if the parameter was found and updated, false otherwise.
+     */
+    bool SetParameterMonthlyValues(const string& component, const string& name, const vecFloat& values);
+
+    /**
+     * Collect all parameters (brick, process, splitter) across every structure variant
+     * that carry a time modifier, so they can be registered with the ParametersUpdater.
+     *
+     * @return the parameters holding a modifier (non-owning pointers into the settings).
+     */
+    vector<Parameter*> GetParametersWithModifier();
+
+    /**
+     * Bind a parameter to a per-unit (spatial) hydro-unit property: each hydro unit then
+     * uses its own property value for this parameter instead of the shared global value.
+     * The binding is (component, name) -> property; setting it again replaces the property.
+     *
+     * @param component name of the component (brick) owning the parameter.
+     * @param name name of the parameter.
+     * @param property name of the hydro-unit property holding the per-unit values.
+     */
+    void SetParameterSpatialFromProperty(const string& component, const string& name, const string& property);
+
+    /**
+     * Get the registered spatial parameter bindings.
+     *
+     * @return the bindings as ((component, name) -> property name).
+     */
+    const std::map<std::pair<string, string>, string>& GetSpatialParameterBindings() const {
+        return _spatialParameterBindings;
+    }
+
+    /**
      * Get the number of structures in the model.
      *
      * @return number of structures.
@@ -872,6 +916,14 @@ class SettingsModel {
      */
     bool SetParameterValueInSelectedStructure(const string& component, const string& name, float value);
 
+    /**
+     * Locate a parameter by component and name within the currently selected structure,
+     * searching brick parameters, then the brick's process parameters, then splitter
+     * parameters. Returns nullptr if the component or parameter is not found in this
+     * structure (no logging on miss; the caller tries every variant).
+     */
+    Parameter* FindParameterInSelectedStructure(const string& component, const string& name);
+
     bool _logAll;
     bool _recordFractions;
     vector<ModelStructure> _modelStructures;
@@ -881,6 +933,8 @@ class SettingsModel {
     BrickSettings* _selectedBrick;        // non-owning reference
     ProcessSettings* _selectedProcess;    // non-owning reference
     SplitterSettings* _selectedSplitter;  // non-owning reference
+    // Spatial parameter bindings: (component, name) -> hydro-unit property name.
+    std::map<std::pair<string, string>, string> _spatialParameterBindings;
 
     bool LogAll(const YAML::Node& settings);
 };

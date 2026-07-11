@@ -68,6 +68,10 @@ class HydroUnits:
             If land_cover_types and land_cover_names have different lengths.
         """
         self.settings = SettingsBasin()
+        # True once populate_bounded_instance has run; a property added afterwards
+        # re-populates the basin so its per-unit values reach the model (spatial
+        # parameters).
+        self._basin_populated = False
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
             land_cover_types = ["open"]
@@ -495,6 +499,13 @@ class HydroUnits:
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
+        # If the basin was already populated, refresh it so the new per-unit property
+        # reaches the model (e.g. a spatial parameter added after discretization). Skip
+        # when lateral connections exist, as re-populating clears them (they are added
+        # separately via set_connectivity); the caller must then re-populate explicitly.
+        if self._basin_populated and self.settings.get_lateral_connection_count() == 0:
+            self.populate_bounded_instance()
+
     def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
@@ -734,6 +745,8 @@ class HydroUnits:
                         reason="Fraction outside valid range",
                     )
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
+
+        self._basin_populated = True
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:
         """

@@ -67,13 +67,25 @@ class Process {
     [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, std::string_view name);
 
     /**
-     * Get the value pointer of a parameter.
+     * Get the value pointer of a parameter. If the process's hydro unit carries a
+     * per-unit (spatial) override for this parameter (keyed by the parent brick), the
+     * override pointer is returned instead of the shared settings value.
      *
      * @param processSettings settings of the process containing the parameters.
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
+    const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
+
+    /**
+     * Set the parent context (hydro unit and owning brick) of the process. Called by the
+     * model builder before SetParameters so per-unit (spatial) parameter overrides can be
+     * resolved. Non-virtual so subclass SetHydroUnitProperties overrides cannot bypass it.
+     *
+     * @param unit the related hydro unit (may be null for sub-basin processes).
+     * @param brick the brick owning this process.
+     */
+    void SetParentContext(HydroUnit* unit, Brick* brick);
 
     /**
      * Set the properties of the hydro unit.
@@ -323,6 +335,8 @@ class Process {
     string _name;
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference
+    HydroUnit* _hydroUnit{nullptr};               // non-owning back-reference (for per-unit overrides)
+    string _parentBrickName;                      // name of the brick owning this process
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
     vecDouble _changeRates;                       // reusable buffer for the change rates (avoids per-call allocation)
 

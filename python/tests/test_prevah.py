@@ -147,6 +147,47 @@ def _subdir(tmp_path: Path, name: str) -> Path:
     return d
 
 
+def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
+    """Run a single-cover ('open') PREVAH over one or more equal-elevation units.
+
+    ``areas`` gives each unit's area (m²). When ``fc_spatial`` (one value per unit) is
+    given, the soil field capacity is set per unit from an ``fc`` property (spatial
+    parameter); otherwise the global ``fc_global`` applies to every unit."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
+    hu_csv = tmp_path / "hydro_units.csv"
+    lines = ["id,elevation,area", "-,m,m^2"]
+    for i, area in enumerate(areas):
+        lines.append(f"{i + 1},1000,{area:.1f}")
+    hu_csv.write_text("\n".join(lines) + "\n")
+    hydro_units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
+    if fc_spatial is not None:
+        hydro_units.add_property(("fc", "mm"), np.array(fc_spatial, dtype=float))
+    forcing = _load_forcing(
+        hydro_units, _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
+    )
+
+    model = models.Prevah(
+        land_cover_names=["open"], land_cover_types=["open"], record_all=True
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values["fc"] = fc_global
+    parameters.set_values(values)
+    if fc_spatial is not None:
+        parameters.set_spatial("fc", "fc")
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model
+
+
 # ---------------------------------------------------------------------------
 # A — Instantiation and options
 # ---------------------------------------------------------------------------
@@ -357,8 +398,13 @@ def test_prevah_wetland_only_cover_is_rejected():
 # ---------------------------------------------------------------------------
 
 
-def _run_open_forest(tmp_path, *, ic, n_days=_N_2Y, P=5.0, PET=1.5, **model_options):
-    """Run PREVAH with an open and a forest cover (60/40); ic = canopy capacity."""
+def _run_open_forest(
+    tmp_path, *, ic, ic_monthly=None, n_days=_N_2Y, P=5.0, PET=1.5, **model_options
+):
+    """Run PREVAH with an open and a forest cover (60/40); ic = canopy capacity.
+
+    When ``ic_monthly`` (12 values) is given, the canopy capacity is set as a
+    monthly-varying parameter instead of a constant."""
     hydro_units = hb.HydroUnits(
         land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
     )
@@ -384,6 +430,8 @@ def _run_open_forest(tmp_path, *, ic, n_days=_N_2Y, P=5.0, PET=1.5, **model_opti
     values.pop("beta")
     values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": ic})
     parameters.set_values(values)
+    if ic_monthly is not None:
+        parameters.set_monthly_values("ic", ic_monthly)
 
     end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
     model.setup(
@@ -422,6 +470,83 @@ def test_prevah_menzel_intercepts_less_than_threshold(tmp_path):
         canopy_interception_process="outflow:threshold",
     )
     assert menzel.get_total_outlet_discharge() > threshold.get_total_outlet_discharge()
+
+
+def test_prevah_monthly_capacity_matches_constant(tmp_path):
+    """A 12-month-constant monthly capacity reproduces the scalar-capacity run."""
+    scalar, _ = _run_open_forest(_subdir(tmp_path, "scalar"), ic=3.0)
+    monthly, _ = _run_open_forest(
+        _subdir(tmp_path, "monthly"), ic=3.0, ic_monthly=[3.0] * 12
+    )
+    assert monthly.get_total_outlet_discharge() == pytest.approx(
+        scalar.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
+def test_prevah_monthly_capacity_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(
+        tmp_path, ic=2.0, ic_monthly=[1, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1, 1]
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_monthly_capacity_bounded_by_constants(tmp_path):
+    """A seasonally varying capacity gives a discharge distinct from the constant
+    runs and bounded by the constant runs at the monthly min and max (more canopy
+    capacity intercepts and evaporates more, leaving less discharge)."""
+    low, _ = _run_open_forest(_subdir(tmp_path, "low"), ic=1.0)
+    high, _ = _run_open_forest(_subdir(tmp_path, "high"), ic=5.0)
+    months = [1, 1, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1]  # low in winter, high in summer
+    var, _ = _run_open_forest(_subdir(tmp_path, "var"), ic=3.0, ic_monthly=months)
+    # A constant capacity at the annual mean: the monthly run must differ from it,
+    # proving the value truly varies within the year (not just the mean baseline).
+    const_mean, _ = _run_open_forest(_subdir(tmp_path, "mean"), ic=sum(months) / 12.0)
+    q_low = low.get_total_outlet_discharge()
+    q_high = high.get_total_outlet_discharge()
+    q_var = var.get_total_outlet_discharge()
+    assert q_high < q_var < q_low
+    assert q_var != pytest.approx(const_mean.get_total_outlet_discharge())
+
+
+def test_prevah_spatial_fc_uniform_matches_global(tmp_path):
+    """A uniform per-unit fc property reproduces the global-scalar run."""
+    spatial = _run_fc(_subdir(tmp_path, "sp"), areas=[1e6], fc_spatial=[200.0])
+    glob = _run_fc(_subdir(tmp_path, "gl"), areas=[1e6], fc_global=200.0)
+    assert spatial.get_total_outlet_discharge() == pytest.approx(
+        glob.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
+def test_prevah_spatial_fc_uses_own_value(tmp_path):
+    """Each unit uses its own per-unit fc: a 2-unit [50, 400] catchment equals the
+    area-weighted average of single-unit fc=50 and fc=400 runs."""
+    q50 = _run_fc(
+        _subdir(tmp_path, "u50"), areas=[1e6], fc_spatial=[50.0]
+    ).get_total_outlet_discharge()
+    q400 = _run_fc(
+        _subdir(tmp_path, "u400"), areas=[1e6], fc_spatial=[400.0]
+    ).get_total_outlet_discharge()
+    two = _run_fc(
+        _subdir(tmp_path, "two"), areas=[5e5, 5e5], fc_spatial=[50.0, 400.0]
+    ).get_total_outlet_discharge()
+    assert two == pytest.approx(0.5 * q50 + 0.5 * q400, rel=1e-6)
+    # And a spatially varying catchment differs from the uniform global run.
+    assert two != pytest.approx(
+        _run_fc(_subdir(tmp_path, "g200"), areas=[1e6]).get_total_outlet_discharge()
+    )
+
+
+def test_prevah_spatial_fc_water_balance_closes(tmp_path):
+    model = _run_fc(tmp_path, areas=[5e5, 5e5], fc_spatial=[50.0, 400.0])
+    balance = (
+        model.get_total_outlet_discharge()
+        + model.get_total_et()
+        + model.get_total_water_storage_changes()
+        + model.get_total_snow_storage_changes()
+    )
+    # The forcing is a constant 5 mm/d over the whole catchment, so the closure
+    # reference is 5 mm/d x the number of days.
+    assert balance == pytest.approx(5.0 * _N_2Y, rel=1e-4)
 
 
 # ---------------------------------------------------------------------------

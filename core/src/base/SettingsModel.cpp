@@ -1040,6 +1040,154 @@ bool SettingsModel::SetParameterValueInSelectedStructure(const string& component
     return true;
 }
 
+Parameter* SettingsModel::FindParameterInSelectedStructure(const string& component, const string& name) {
+    if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
+        for (auto& parameter : _selectedBrick->parameters) {
+            if (parameter.GetName() == name) {
+                return &parameter;
+            }
+        }
+        for (auto& process : _selectedBrick->processes) {
+            for (auto& parameter : process.parameters) {
+                if (parameter.GetName() == name) {
+                    return &parameter;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
+        for (auto& parameter : _selectedSplitter->parameters) {
+            if (parameter.GetName() == name) {
+                return &parameter;
+            }
+        }
+        return nullptr;
+    }
+
+    return nullptr;
+}
+
+bool SettingsModel::SetParameterMonthlyValues(const string& component, const string& name, const vecFloat& values) {
+    if (values.size() != 12) {
+        LogError("Monthly values for parameter '{}' must have 12 entries (got {}).", name, values.size());
+        return false;
+    }
+
+    // Apply the same monthly values to each component of a comma-separated list.
+    if (component.find(',') != string::npos) {
+        std::istringstream ss(component);
+        string tok;
+        while (std::getline(ss, tok, ',')) {
+            tok.erase(0, tok.find_first_not_of(" "));
+            tok.erase(tok.find_last_not_of(" ") + 1);
+            if (tok.empty()) {
+                continue;
+            }
+            if (!SetParameterMonthlyValues(tok, name, values)) {
+                LogError("Fail to set the monthly parameter '{}' for the component '{}'.", name, tok);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Annual mean as the scalar baseline (used before the first month update).
+    float mean = 0.0f;
+    for (float v : values) {
+        mean += v;
+    }
+    mean /= 12.0f;
+
+    ParameterModifier modifier(ParameterModifierType::Monthly);
+    if (!modifier.SetMonthlyValues(values)) {
+        return false;
+    }
+
+    // Apply to every structure variant that contains the component.
+    int previousId = _selectedStructure->id;
+    bool foundAny = false;
+    for (auto& modelStructure : _modelStructures) {
+        _selectedStructure = &modelStructure;
+        _selectedBrick = nullptr;
+        _selectedProcess = nullptr;
+        _selectedSplitter = nullptr;
+        Parameter* parameter = FindParameterInSelectedStructure(component, name);
+        if (parameter != nullptr) {
+            parameter->SetValue(mean);
+            parameter->SetModifier(modifier);
+            foundAny = true;
+        }
+    }
+    SelectStructure(previousId);
+
+    if (!foundAny) {
+        LogError("Cannot find the component '{}' for the monthly parameter '{}'.", component, name);
+    }
+
+    return foundAny;
+}
+
+void SettingsModel::SetParameterSpatialFromProperty(const string& component, const string& name,
+                                                    const string& property) {
+    // A comma-separated component list binds the same property on several components.
+    if (component.find(',') != string::npos) {
+        std::istringstream ss(component);
+        string tok;
+        while (std::getline(ss, tok, ',')) {
+            tok.erase(0, tok.find_first_not_of(" "));
+            tok.erase(tok.find_last_not_of(" ") + 1);
+            if (!tok.empty()) {
+                _spatialParameterBindings[{tok, name}] = property;
+            }
+        }
+        return;
+    }
+
+    _spatialParameterBindings[{component, name}] = property;
+}
+
+vector<Parameter*> SettingsModel::GetParametersWithModifier() {
+    vector<Parameter*> result;
+
+    auto collectBricks = [&result](vector<BrickSettings>& bricks) {
+        for (auto& brick : bricks) {
+            for (auto& parameter : brick.parameters) {
+                if (parameter.HasModifier()) {
+                    result.push_back(&parameter);
+                }
+            }
+            for (auto& process : brick.processes) {
+                for (auto& parameter : process.parameters) {
+                    if (parameter.HasModifier()) {
+                        result.push_back(&parameter);
+                    }
+                }
+            }
+        }
+    };
+
+    auto collectSplitters = [&result](vector<SplitterSettings>& splitters) {
+        for (auto& splitter : splitters) {
+            for (auto& parameter : splitter.parameters) {
+                if (parameter.HasModifier()) {
+                    result.push_back(&parameter);
+                }
+            }
+        }
+    };
+
+    for (auto& modelStructure : _modelStructures) {
+        collectBricks(modelStructure.hydroUnitBricks);
+        collectBricks(modelStructure.subBasinBricks);
+        collectSplitters(modelStructure.hydroUnitSplitters);
+        collectSplitters(modelStructure.subBasinSplitters);
+    }
+
+    return result;
+}
+
 bool SettingsModel::LogAll(const YAML::Node& settings) {
     if (settings["logger"]) {
         string target = settings["logger"].as<string>();

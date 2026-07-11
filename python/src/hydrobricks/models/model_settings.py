@@ -101,6 +101,48 @@ class ModelSettings:
         """
         return self.settings.set_parameter_value(component, name, float(value))
 
+    def set_parameter_monthly_values(
+        self, component: str, name: str, values: list[float]
+    ) -> bool:
+        """
+        Set 12 monthly values for a parameter (time-varying over the year).
+
+        Parameters
+        ----------
+        component
+            Name of the component (a comma-separated list sets several components).
+        name
+            Name of the parameter.
+        values
+            The 12 monthly values (January to December).
+
+        Returns
+        -------
+        True if the parameter was set successfully, False otherwise.
+        """
+        return self.settings.set_parameter_monthly_values(
+            component, name, [float(v) for v in values]
+        )
+
+    def set_parameter_spatial_from_property(
+        self, component: str, name: str, property_name: str
+    ) -> None:
+        """
+        Bind a parameter to a per-unit hydro-unit property (spatial parameter).
+
+        Parameters
+        ----------
+        component
+            Name of the component (brick) owning the parameter.
+        name
+            Name of the parameter.
+        property_name
+            Name of the hydro-unit property holding the per-unit values.
+        """
+        self.settings.set_parameter_spatial_from_property(
+            component, name, property_name
+        )
+
     def get_structure(self) -> list:
         """
         Export the model structure (bricks, processes, fluxes, splitters).

@@ -1341,6 +1341,18 @@ class Model(ABC):
                 param["component"], param["name"], param["value"]
             ):
                 raise ModelError("Failed setting parameter values.")
+        # Push any monthly-varying values (e.g. monthly canopy capacity) so their
+        # modifier is (re)attached before update_parameters registers it.
+        for component, name, values in parameters.get_monthly_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            if not self.settings.set_parameter_monthly_values(component, name, values):
+                raise ModelError("Failed setting monthly parameter values.")
+        # Push any spatial (per-unit) bindings so each unit reads its own value.
+        for component, name, prop in parameters.get_spatial_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            self.settings.set_parameter_spatial_from_property(component, name, prop)
         self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing: Forcing | None) -> None:

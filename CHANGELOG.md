@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adding `preprocessing.initialize_glacier_covers_split_by_elevation` to split the glacier extent into ice and firn covers at the equilibrium line altitude.
 - Adding monthly-varying parameters via `ParameterSet.set_monthly_values(name, values)` (12 values, January to December): the parameter follows the calendar month during the simulation (e.g. a monthly canopy interception capacity, as in PREVAH). Wires the previously dormant C++ `ParametersUpdater`; the scalar value keeps the annual mean as a baseline.
 - Adding spatial (per-unit) parameters via `ParameterSet.set_spatial(name, property)`: each hydro unit uses its own value for the parameter, taken from a hydro-unit property (`HydroUnits.add_property`) — e.g. a per-unit field capacity from soil data. The global scalar is kept as a fallback for units lacking the property. A property added after the hydro units are populated now refreshes the basin automatically.
+- Adding a distributed PREVAH example (`examples/advanced/prevah_ticino.py`) on the Ticino-Bellinzona catchment (570 hydrotopes, open/forest/wetland covers, per-HRU field capacity via `set_spatial`), with the data under `tests/files/catchments/ch_ticino_bellinzona/`. It reproduces the reference Fortran PREVAH discharge (NSE ~0.93).
 
 ## 0.9.0 - 2026-07-07
 

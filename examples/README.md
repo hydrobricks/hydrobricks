@@ -45,6 +45,7 @@ corrections declared as calibratable `param:` references with their ranges in
 | `compare_snow_melt_processes_socont.py` | Snowmelt methods compared on a glacierized catchment (pure Python: per-method discretizations). |
 | `snow_redistribution.py` | Lateral snow transport with unit connectivity (pure Python). |
 | `simulate_glacier_evolution_delta_h.py` / `..._simple_area_scaling.py` | Dynamic glacier geometry through actions (pure Python). |
+| `prevah_ticino.py` | The PREVAH model on a 570-HRU, multi-cover, spatially-distributed catchment (Ticino-Bellinzona). Per-HRU field capacity via `set_spatial`; reproduces Fortran PREVAH (NSE ~0.93). Pure Python (meteo-zone forcing set per unit). |
 
 ### 4. Preprocessing (`preprocessing/`)
 

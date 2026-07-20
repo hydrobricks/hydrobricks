@@ -228,7 +228,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "rain_to_snowpack"_a = false)
         .def("generate_canopy_interception", &SettingsModel::GenerateCanopyInterception,
              "Generate a canopy interception store on a cover's rain path.", "cover_name"_a, "throughfall_target"_a,
-             "throughfall_process"_a = "outflow:threshold")
+             "throughfall_process"_a = "outflow:threshold", "interception_et_process"_a = "et:open_water")
         .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
              "Add a refreezing process to the snowpacks (requires water retention).",
              "refreezing_process"_a = "refreeze:degree_day")

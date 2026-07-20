@@ -301,6 +301,39 @@ def test_apply_pet_computation_hamon(forcing: hb.Forcing):
     assert "pet" in forcing.data2D.data_name
 
 
+def _hamon_pet_total(forcing: hb.Forcing, method: str) -> float:
+    forcing.spatialize_from_station_data(
+        variable="temperature",
+        method="additive_elevation_gradient",
+        ref_elevation=1250,
+        gradient=-0.6,
+    )
+    forcing.compute_pet(method=method, use=["t", "lat"], lat=47.3)
+    forcing.apply_operations()
+    idx = forcing.data2D.data_name.index(forcing.Variable.PET)
+    return float(forcing.data2D.data[idx].sum())
+
+
+def test_apply_pet_computation_hamon_vapor_density(
+    forcing: hb.Forcing, hydro_units: hb.HydroUnits
+):
+    # The vapour-density Hamon (pyet method=2) differs from the default Hamon
+    # (pyet method=0, an exponential variant) and yields a distinct, positive PET.
+    if not hb.HAS_PYET:
+        return
+    default_total = _hamon_pet_total(forcing, "Hamon")
+    forcing_vd = hb.Forcing(hydro_units)
+    forcing_vd.load_station_data_from_csv(
+        CATCHMENT_DIR / "meteo.csv",
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"temperature": "temp(C)"},
+    )
+    vd_total = _hamon_pet_total(forcing_vd, "Hamon_vapor_density")
+    assert vd_total > 0
+    assert vd_total != pytest.approx(default_total)
+
+
 def test_apply_pet_computation_linacre(forcing: hb.Forcing):
     if not hb.HAS_PYET:
         return

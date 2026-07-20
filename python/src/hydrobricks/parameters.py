@@ -132,6 +132,45 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Open-water (potential) evaporation with the PREVAH snow-albedo reduction and a
+    # rate factor: Ea = min(et_factor * PET * (1 - albedo)/0.8, content/dt). Used for
+    # canopy ET (registered separately with the canopy bricks) and for the PREVAH
+    # wet-surface ET on a groundwater store. Process-prefixed aliases (ow_*) keep them
+    # distinct from the et:prevah soil aliases.
+    "et:open_water_prevah": [
+        ParamSpec(
+            name="albedo_land",
+            unit="-",
+            aliases=["ow_albedo_land"],
+            min=0,
+            max=0.4,
+            default=0.2,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="et_factor",
+            unit="-",
+            aliases=["ow_et_factor"],
+            min=0,
+            max=1.5,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH SLOWCOMP overflow of the fast baseflow store: the store fills
+    # asymptotically toward max_content with its own baseflow time constant, and the
+    # excess inflow overflows to the slow stores.
+    "outflow:slowcomp": [
+        ParamSpec(
+            name="max_content",
+            unit="mm",
+            aliases=["slz1max"],
+            min=0,
+            max=1000,
+            default=100.0,
+            mandatory=False,
+        ),
+    ],
     # Fixed-ratio outflow split to two targets (PREVAH SLOWCOMP recharge split)
     "outflow:split": [
         ParamSpec(
@@ -406,6 +445,9 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # PREVAH snow evaporation: at the albedo-reduced potential rate (no parameter; the
+    # albedo comes from the snowpack's age-dependent snow albedo).
+    "sublimation:prevah": [],
     # Snow/ice constant transformation (dynamic aliases per glacier snowpack)
     "transform:snow_ice_constant": [
         ParamSpec(
@@ -470,6 +512,38 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0.5,
             max=2.0,
             default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH actual evapotranspiration: the HBV limitation with the PREVAH snow-albedo
+    # reduction of the potential rate ((1 - albedo)/0.8, albedo interpolated between
+    # albedo_land and albedo_snow by the unit's snow-covered fraction).
+    "et:prevah": [
+        ParamSpec(
+            name="lp",
+            unit="-",
+            aliases=["lp"],
+            min=0.3,
+            max=1,
+            default=0.9,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="et_correction_factor",
+            unit="-",
+            aliases=["et_correction_factor", "et_corr_factor", "cevpf", "etcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="albedo_land",
+            unit="-",
+            aliases=["albedo_land"],
+            min=0,
+            max=0.4,
+            default=0.2,
             mandatory=False,
         ),
     ],
@@ -553,6 +627,46 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Seasonal degree-day refreezing (PREVAH): own seasonal factor (CRMFMIN/CRMFMAX),
+    # independent of the melt process — usable with melt:temperature_index.
+    "refreeze:degree_day_seasonal": [
+        ParamSpec(
+            name="refreezing_factor",
+            unit="-",
+            aliases=["cfr"],
+            min=0,
+            max=0.1,
+            default=0.05,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="degree_day_factor_min",
+            unit="mm/d/°C",
+            aliases=["cfr_ddf_min"],
+            min=0,
+            max=12,
+            default=2.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="degree_day_factor_max",
+            unit="mm/d/°C",
+            aliases=["cfr_ddf_max"],
+            min=0,
+            max=12,
+            default=6.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=["cfr_melt_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Snowpack liquid water holding capacity (HBV)
     "outflow:snow_holding": [
         ParamSpec(
@@ -562,6 +676,38 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0,
             max=0.2,
             default=0.1,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH snowpack liquid water release: holds cwh * SWE on cold days, but on melt
+    # days (T > melting_temperature) the retention collapses to cwh * liquid
+    # (mxp_snow.f90 ablation branch), draining ~(1 - cwh) of the store every melt day.
+    "outflow:snow_holding_prevah": [
+        ParamSpec(
+            name="water_holding_capacity",
+            unit="-",
+            aliases=["cwh", "whc"],
+            min=0,
+            max=0.2,
+            default=0.1,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=["holding_melt_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="liquid_release_exponent",
+            unit="-",
+            aliases=["cexliq"],
+            min=0,
+            max=5,
+            default=0.0,
             mandatory=False,
         ),
     ],

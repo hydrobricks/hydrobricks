@@ -251,6 +251,91 @@ def test_prevah_requires_a_soil_cover():
         models.Prevah(land_cover_names=["glacier"], land_cover_types=["glacier"])
 
 
+def test_prevah_soil_et_default_is_hbv():
+    assert models.Prevah().options["soil_et_process"] == "et:hbv"
+
+
+def test_prevah_soil_et_unknown_process_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.Prevah(soil_et_process="et:socont")
+
+
+def test_prevah_et_prevah_has_albedo_parameter():
+    parameters = models.Prevah(soil_et_process="et:prevah").generate_parameters()
+    assert parameters.has("albedo_land")
+    # The snow albedo is age-derived (no parameter).
+    assert not parameters.has("albedo_snow")
+
+
+def test_prevah_et_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True, soil_et_process="et:prevah")
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_et_prevah_suppresses_et_under_snow(tmp_path):
+    """The snow-albedo reduction lowers the soil ET (winter, snow-covered) and
+    leaves more water for discharge than the plain HBV ET."""
+    hbv, _ = _run(_subdir(tmp_path, "hbv"), record_all=True)
+    prevah, _ = _run(
+        _subdir(tmp_path, "prevah"), record_all=True, soil_et_process="et:prevah"
+    )
+    assert prevah.get_total_et() < hbv.get_total_et()
+    assert prevah.get_total_outlet_discharge() > hbv.get_total_outlet_discharge()
+
+
+def test_prevah_canopy_et_default_is_open_water():
+    assert models.Prevah().options["canopy_et_process"] == "et:open_water"
+
+
+def test_prevah_canopy_et_unknown_process_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.Prevah(canopy_et_process="et:hbv")
+
+
+def test_prevah_canopy_et_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(
+        tmp_path, ic=3.0, canopy_et_process="et:open_water_prevah"
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_canopy_et_prevah_reduces_et_under_snow(tmp_path):
+    """The albedo-reduced canopy evaporation lowers the total ET on a forested
+    catchment with a snow season."""
+    default, _ = _run_open_forest(_subdir(tmp_path, "default"), ic=3.0)
+    albedo, _ = _run_open_forest(
+        _subdir(tmp_path, "albedo"), ic=3.0, canopy_et_process="et:open_water_prevah"
+    )
+    assert albedo.get_total_et() < default.get_total_et()
+    assert albedo.get_total_outlet_discharge() > default.get_total_outlet_discharge()
+
+
+def test_prevah_sublimation_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run(
+        tmp_path, record_all=True, snow_sublimation_process="sublimation:prevah"
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_sublimation_prevah_evaporates_more_snow(tmp_path):
+    """PREVAH snow evaporation (at the albedo-reduced potential rate) removes more
+    snow than the low-factor PET sublimation, leaving less discharge."""
+    pet_subl, _ = _run(
+        _subdir(tmp_path, "pet"),
+        record_all=True,
+        params={"sublimation_pet_factor": 0.2},
+    )
+    prevah_subl, _ = _run(
+        _subdir(tmp_path, "prevah"),
+        record_all=True,
+        snow_sublimation_process="sublimation:prevah",
+    )
+    assert prevah_subl.get_total_et() > pet_subl.get_total_et()
+    assert (
+        prevah_subl.get_total_outlet_discharge() < pet_subl.get_total_outlet_discharge()
+    )
+
+
 # ---------------------------------------------------------------------------
 # B — Water balance
 # ---------------------------------------------------------------------------
@@ -687,3 +772,169 @@ def test_prevah_glacier_infinite_storage_adds_discharge(tmp_path):
         _subdir(tmp_path, "inf"), glacier_infinite_storage=True, **common
     )
     assert infinite.get_total_outlet_discharge() > finite.get_total_outlet_discharge()
+
+
+# ---------------------------------------------------------------------------
+# PREVAH faithful options: interception on any cover, wet-surface ET
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_interception_covers_on_open(tmp_path):
+    """A canopy on a non-forest cover (interception_covers) intercepts rain and
+    evaporates it at the veg_cov-scaled potential rate; the balance closes."""
+    model, forcing = _run(
+        _subdir(tmp_path, "icov"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 0.8},
+    )
+    labels = model.get_recorded_labels()
+    assert "open_canopy:interception_et:output" in labels
+    et_canopy = np.asarray(
+        model.get_recorded_hydro_unit_values("open_canopy:interception_et:output")
+    )
+    assert et_canopy.sum() > 0
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_canopy_et_factor_scales_interception_et(tmp_path):
+    """Halving the canopy et_factor (PREVAH veg_cov) reduces the interception ET."""
+    full, _ = _run(
+        _subdir(tmp_path, "full"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 1.0},
+    )
+    half, _ = _run(
+        _subdir(tmp_path, "half"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 0.5},
+    )
+    label = "open_canopy:interception_et:output"
+    et_full = np.asarray(full.get_recorded_hydro_unit_values(label)).sum()
+    et_half = np.asarray(half.get_recorded_hydro_unit_values(label)).sum()
+    assert 0 < et_half < et_full
+
+
+def test_prevah_wet_et_from_groundwater(tmp_path):
+    """The PREVAH wet-surface ET (EWET) evaporates from SLZ1 at et_pot * et_factor,
+    reducing the discharge; the balance still closes."""
+    base, _ = _run(_subdir(tmp_path, "base"), record_all=True)
+    wet, wet_forcing = _run(
+        _subdir(tmp_path, "wet"),
+        wet_et_from_groundwater=True,
+        record_all=True,
+        params={"ow_et_factor": 0.5},
+    )
+    labels = wet.get_recorded_labels()
+    assert "slz1:wet_et:output" in labels
+    et_wet = np.asarray(wet.get_recorded_hydro_unit_values("slz1:wet_et:output"))
+    assert et_wet.sum() > 0
+    assert wet.get_total_outlet_discharge() < base.get_total_outlet_discharge()
+    assert _balance(wet, wet_forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_snow_holding_prevah_drains_on_melt_days(tmp_path):
+    """PREVAH's liquid release (retention limit cwh*liquid on melt days) keeps less
+    water in the snowpack than the HBV holding (cwh*SWE), with the balance closed
+    and the same total discharge (timing shifts only)."""
+    hbv, _ = _run(_subdir(tmp_path, "hbv"), record_all=True)
+    prv, prv_forcing = _run(
+        _subdir(tmp_path, "prv"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+    )
+    assert _balance(prv, prv_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:water_content"
+    liq_hbv = np.asarray(hbv.get_recorded_hydro_unit_values(label)).mean()
+    liq_prv = np.asarray(prv.get_recorded_hydro_unit_values(label)).mean()
+    assert liq_prv < liq_hbv
+    q_hbv = hbv.get_total_outlet_discharge()
+    q_prv = prv.get_total_outlet_discharge()
+    assert q_prv == pytest.approx(q_hbv, rel=0.02)
+
+
+def test_prevah_seasonal_refreeze_with_temperature_index_melt(tmp_path):
+    """refreeze:degree_day_seasonal carries its own seasonal factor, so it works with
+    melt:temperature_index (PREVAH: Hock melt + seasonal-PDDI refreeze); refreezing
+    keeps liquid in the pack (less winter release), balance closed."""
+    n_days = _N_2Y
+    meteo = _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
+
+    def run(sub, refreezing):
+        hydro_units = hb.HydroUnits()
+        hydro_units.load_from_csv(
+            _hu_csv(sub), column_elevation="elevation", column_area="area"
+        )
+        forcing = _load_forcing(hydro_units, meteo)
+        # constant radiation forcing for the temperature-index melt
+        forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
+        forcing.data2D.data.append(np.full((n_days, 1), 5000.0))
+        model = models.Prevah(
+            snow_melt_process="melt:temperature_index",
+            snow_refreezing_process=refreezing,
+            record_all=True,
+        )
+        parameters = model.generate_parameters()
+        values = {
+            k: v
+            for k, v in _DEFAULT_PARAMS.items()
+            if k not in ("a_snow_min", "a_snow_max")
+        }
+        values.update(
+            {"melt_factor": 1.0, "r_snow": 5e-5, "cfr": 0.1}
+            if refreezing
+            else {"melt_factor": 1.0, "r_snow": 5e-5}
+        )
+        parameters.set_values(values)
+        end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+        model.setup(
+            spatial_structure=hydro_units,
+            output_path=str(sub),
+            start_date=_START.strftime("%Y-%m-%d"),
+            end_date=end_date,
+        )
+        model.run(parameters=parameters, forcing=forcing)
+        return model, forcing
+
+    no_rf, _ = run(_subdir(tmp_path, "norf"), None)
+    rf, rf_forcing = run(_subdir(tmp_path, "rf"), "refreeze:degree_day_seasonal")
+    assert _balance(rf, rf_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:refreeze:output"
+    assert label in rf.get_recorded_labels()
+    assert np.asarray(rf.get_recorded_hydro_unit_values(label)).sum() > 0
+
+
+def test_prevah_snow_holding_cexliq_releases_more_on_ripe_pack(tmp_path):
+    """The CEXLIQ graded partition (liquid_release_exponent > 0) passes a fraction of
+    the fresh melt straight through, so on a ripe (liquid-bearing) pack it releases at
+    least as much meltwater as the plain collapse, with the water balance still closing.
+    """
+    plain, _ = _run(
+        _subdir(tmp_path, "plain"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+        params={"cexliq": 0.0},
+    )
+    graded, graded_forcing = _run(
+        _subdir(tmp_path, "graded"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+        params={"cexliq": 0.5},
+    )
+    assert _balance(graded, graded_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:meltwater:output"
+    rel_plain = np.asarray(plain.get_recorded_hydro_unit_values(label))
+    rel_graded = np.asarray(graded.get_recorded_hydro_unit_values(label))
+    # CEXLIQ shifts the release timing (the exact per-step relation is checked in the
+    # C++ gtest); the total is melt-driven and nearly conserved, but the daily series
+    # differs, and on the first melt day where the pack already holds liquid the graded
+    # release is the larger one.
+    assert not np.allclose(rel_graded, rel_plain)
+    diff = rel_graded.ravel() - rel_plain.ravel()
+    first = np.flatnonzero(np.abs(diff) > 1e-6)[0]
+    assert diff[first] > 0

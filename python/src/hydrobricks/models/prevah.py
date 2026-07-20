@@ -121,8 +121,11 @@ class Prevah(Model):
         Route the rain to the snowpack liquid water storage (default: True, as
         in the PREVAH snow routine).
     snow_sublimation_process : str or None
-        Snow sublimation process (default: 'sublimation:pet', as PREVAH derives
-        the snow evaporation from the PET).
+        Snow evaporation process (default: 'sublimation:pet', a fixed
+        ``sublimation_pet_factor`` of the PET). 'sublimation:prevah' evaporates
+        snow at the albedo-reduced potential rate (PET (1 - albedo)/0.8 with the
+        snowpack's age-dependent albedo), as PREVAH does — the faithful,
+        parameter-free snow evaporation.
     snow_rain_process : str or None
         Rain/snow partitioning method (default: None, i.e. 'snow_rain:linear',
         PREVAH's linear transition over TGR ± TTRANS).
@@ -130,11 +133,36 @@ class Prevah(Model):
         Optional snow redistribution process (e.g. 'transport:snow_slide').
     forest_interception : bool
         Add a canopy interception store on each ``forest`` land cover (default:
-        True; PREVAH's interception module).
+        True). Superseded by ``interception_covers`` when that option is set.
+    interception_covers : list[str] | None
+        Names of the land covers to equip with a canopy interception store
+        (default None: the forest covers). The original PREVAH applies its
+        interception module (Menzel filling, evaporation at et_pot * veg_cov) to
+        EVERY vegetated cover — pass all vegetated cover names to reproduce that.
+        With canopy_et_process='et:open_water_prevah', each canopy gets an
+        ``et_factor`` parameter (alias ``canopy_et_factor[_<cover>]``) for the
+        monthly PREVAH veg_cov fraction (set via set_monthly_values).
     canopy_interception_process : str
         Throughfall process of the forest canopy (default: 'interception:menzel',
         PREVAH's Menzel (1997) asymptotic filling). Use 'outflow:threshold' for a
         simpler fill-then-spill store.
+    soil_et_process : str
+        Soil evapotranspiration process (default: 'et:hbv', the HBV limitation).
+        'et:prevah' additionally applies PREVAH's snow-albedo reduction of the
+        potential rate ((1 - albedo)/0.8, from the unit's snow-covered fraction),
+        which suppresses the soil ET under snow. The snow albedo is age-dependent
+        (0.4 + 0.45 exp(-0.15 age), ~0.85 fresh to 0.4 old); ``albedo_land``
+        (default 0.2) is the snow-free ground albedo (neutral).
+    canopy_et_process : str
+        Canopy evaporation process (default: 'et:open_water', the potential
+        rate). 'et:open_water_prevah' additionally applies the same age-dependent
+        snow-albedo reduction to the interception ET.
+    wet_et_from_groundwater : bool
+        Add PREVAH's wet-surface evaporation (default: False). When True, the
+        SLZ1 groundwater store evaporates at ``et_pot * et_factor`` (process
+        'et:open_water_prevah' named ``wet_et``; factor alias ``ow_et_factor``).
+        Set the factor per unit via a spatial parameter (PREVAH wet_surface:
+        0.7 on wetland, 0.9 on water, 0 elsewhere).
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True).
     glacier_module : str
@@ -179,7 +207,11 @@ class Prevah(Model):
         self.options["snow_redistribution"] = None
         self.options["snow_sublimation_process"] = "sublimation:pet"
         self.options["forest_interception"] = True
+        self.options["interception_covers"] = None
         self.options["canopy_interception_process"] = "interception:menzel"
+        self.options["soil_et_process"] = "et:hbv"
+        self.options["canopy_et_process"] = "et:open_water"
+        self.options["wet_et_from_groundwater"] = False
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "prevah"
         self.options["firn_to_groundwater"] = True
@@ -295,14 +327,34 @@ class Prevah(Model):
         )
 
         # Soil moisture storage (plant-available field capacity FC): ET limited by
-        # the CU fraction (et:hbv with lp = CU). The overflow is a numerical safety
-        # only (the infiltration vanishes at FC).
+        # the CU fraction (lp = CU). The overflow is a numerical safety only (the
+        # infiltration vanishes at FC). With soil_et_process='et:prevah' the potential
+        # rate additionally carries the PREVAH snow-albedo reduction (1 - albedo)/0.8,
+        # driven by the unit's snow-covered fraction (ET-under-snow suppression).
+        soil_et = self.options["soil_et_process"]
+        if soil_et not in ("et:hbv", "et:prevah"):
+            raise ConfigurationError(
+                f"Unknown soil ET process: '{soil_et}'. "
+                "Expected 'et:hbv' or 'et:prevah'.",
+                item_name="soil_et_process",
+                item_value=soil_et,
+                reason="Unknown process type",
+            )
+        canopy_et = self.options["canopy_et_process"]
+        if canopy_et not in ("et:open_water", "et:open_water_prevah"):
+            raise ConfigurationError(
+                f"Unknown canopy ET process: '{canopy_et}'. "
+                "Expected 'et:open_water' or 'et:open_water_prevah'.",
+                item_name="canopy_et_process",
+                item_value=canopy_et,
+                reason="Unknown process type",
+            )
         self.structure["soil_moisture"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
             "parameters": {"capacity": 250},
             "processes": {
-                "et": {"kind": "et:hbv"},
+                "et": {"kind": soil_et},
                 "overflow": {"kind": "overflow", "target": "upper_zone"},
             },
         }
@@ -326,15 +378,29 @@ class Prevah(Model):
         # SLOWCOMP groundwater (Schwarze et al., 1999): the fast store SLZ1 is
         # filled first (capacity SLZ1MAX); its overflow splits 8/9 : 1/9 into the
         # slow stores SLZ2 and SLZ3.
+        # The fast baseflow store SLZ1 uses the PREVAH SLOWCOMP fill: it fills
+        # asymptotically toward its maximum (slz1max) with the baseflow time constant
+        # and overflows the excess inflow to the slow stores (outflow:slowcomp), rather
+        # than a bucket that spills only when full. This diverts the high-percolation
+        # (snow-melt) events to the slow stores, sustaining the recession. The store
+        # therefore carries no hard capacity (the asymptotic fill bounds it).
         self.structure["slz1"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
-            "parameters": {"capacity": 30},
             "processes": {
                 "baseflow1": {"kind": "outflow:linear", "target": "outlet"},
-                "overflow": {"kind": "overflow", "target": "slz_split"},
+                "overflow": {"kind": "outflow:slowcomp", "target": "slz_split"},
             },
         }
+        # PREVAH wet-surface evaporation (EWET = wet_surface * et_pot, drawn from the
+        # SLOWCOMP stores; s_abfg6eth). Implemented on SLZ1 with the albedo-aware
+        # open-water ET; the wet fraction goes in the process' et_factor (alias
+        # ow_et_factor), typically per unit via a spatial parameter (0.7 on wetland
+        # units, 0.9 on water, 0 elsewhere).
+        if self.options["wet_et_from_groundwater"]:
+            self.structure["slz1"]["processes"]["wet_et"] = {
+                "kind": "et:open_water_prevah",
+            }
         self.structure["slz_split"] = {
             "attach_to": "hydro_unit",
             "kind": "storage",
@@ -384,7 +450,6 @@ class Prevah(Model):
             "upper_zone:response_factor_threshold": ["k0"],
             "upper_zone:threshold": ["sgrluz"],
             "upper_zone:response_factor": ["k1"],
-            "slz1:capacity": ["slz1max"],
             "slz1:response_factor": ["k_gw1"],
             "slz2:response_factor": ["k_gw2"],
             "slz3:response_factor": ["k_gw3"],
@@ -436,10 +501,15 @@ class Prevah(Model):
                     reason="Missing snow water retention process",
                 )
             melt = self.options.get("snow_melt_process")
-            if melt not in ("melt:degree_day", "melt:degree_day_seasonal"):
+            if refreezing == "refreeze:degree_day" and melt not in (
+                "melt:degree_day",
+                "melt:degree_day_seasonal",
+            ):
                 raise ConfigurationError(
                     "The refreeze:degree_day process requires a degree-day snow "
-                    "melt process (melt:degree_day or melt:degree_day_seasonal).",
+                    "melt process (melt:degree_day or melt:degree_day_seasonal). "
+                    "Use 'refreeze:degree_day_seasonal' (own seasonal factor, "
+                    "PREVAH) with other melt processes.",
                     item_name="snow_melt_process",
                     item_value=melt,
                     reason="Incompatible option",

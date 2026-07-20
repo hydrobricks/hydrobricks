@@ -30,6 +30,15 @@ class ProcessOutflowLinear : public ProcessOutflow {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * Get the response factor k [1/d] of the linear reservoir.
+     *
+     * @return the response factor, or 0 if not yet set.
+     */
+    [[nodiscard]] double GetResponseFactor() const {
+        return _responseFactor != nullptr ? static_cast<double>(*_responseFactor) : 0.0;
+    }
+
   protected:
     const float* _responseFactor;  // [1/d]
 

@@ -10,7 +10,7 @@ Files
                       per-HRU field capacity `fc` (mm) and meteo zone `mez`.
 - precipitation.csv : daily precipitation (mm/day) per meteo zone (1984-2000).
 - temperature.csv   : daily air temperature (deg C) per meteo zone (1984-2000).
-- discharge.csv     : daily reference discharge (mm/d). This is the *Fortran
+- discharge_prevah.csv : daily reference discharge (mm/d). This is the *Fortran
                       PREVAH* simulated total runoff (out.xdyc r_tot), not a
                       gauge observation; the example reproduces Fortran PREVAH.
 

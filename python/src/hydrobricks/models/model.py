@@ -1225,6 +1225,8 @@ class Model(ABC):
             canopy_interception_process=self.options.get(
                 "canopy_interception_process", "outflow:threshold"
             ),
+            canopy_et_process=self.options.get("canopy_et_process", "et:open_water"),
+            interception_covers=self.options.get("interception_covers"),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:

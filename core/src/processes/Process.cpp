@@ -13,7 +13,9 @@
 #include "ProcessETHBV.h"
 #include "ProcessETLinear.h"
 #include "ProcessETOpenWater.h"
+#include "ProcessETOpenWaterPrevah.h"
 #include "ProcessETPowerLaw.h"
+#include "ProcessETPrevah.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
@@ -32,7 +34,9 @@
 #include "ProcessOutflowLinearThreshold.h"
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
+#include "ProcessOutflowSlowcomp.h"
 #include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowSnowHoldingPrevah.h"
 #include "ProcessOutflowSplit.h"
 #include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
@@ -40,6 +44,7 @@
 #include "ProcessPercolationPrevah.h"
 #include "ProcessProductionGR4J.h"
 #include "ProcessRefreezeDegreeDay.h"
+#include "ProcessRefreezeSeasonal.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRoutingGR6J.h"
 #include "ProcessRoutingHBV.h"
@@ -47,6 +52,7 @@
 #include "ProcessRunoffSocont.h"
 #include "ProcessSublimationConstant.h"
 #include "ProcessSublimationPET.h"
+#include "ProcessSublimationPrevah.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
@@ -125,6 +131,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowRest::RegisterProcessSettings
         }},
 
+        {"outflow:slowcomp", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSlowcomp>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSlowcomp::RegisterProcessSettings
+        }},
+
         {"outflow:overflow", {
             [](Brick* b) {
                 return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer());
@@ -188,6 +201,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowSnowHolding::RegisterProcessSettings
         }},
 
+        {"outflow:snow_holding_prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSnowHoldingPrevah>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSnowHoldingPrevah::RegisterProcessSettings
+        }},
+
         {"outflow:threshold", {
             [](Brick* b) {
                 return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
@@ -214,6 +234,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessRefreezeDegreeDay>(b->GetWaterContainer());
             },
             &ProcessRefreezeDegreeDay::RegisterProcessSettings
+        }},
+
+        {"refreeze:degree_day_seasonal", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRefreezeSeasonal>(b->GetWaterContainer());
+            },
+            &ProcessRefreezeSeasonal::RegisterProcessSettings
         }},
 
         {"production:gr4j", {
@@ -244,11 +271,25 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessETHBV::RegisterProcessSettings
         }},
 
+        {"et:prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETPrevah>(b->GetWaterContainer());
+            },
+            &ProcessETPrevah::RegisterProcessSettings
+        }},
+
         {"et:open_water", {
             [](Brick* b) {
                 return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
             },
             &ProcessETOpenWater::RegisterProcessSettings
+        }},
+
+        {"et:open_water_prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETOpenWaterPrevah>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWaterPrevah::RegisterProcessSettings
         }},
 
         {"et:linear", {
@@ -362,6 +403,17 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessSublimationPET::RegisterProcessSettings
+        }},
+
+        {"sublimation:prevah", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationPrevah>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationPrevah::RegisterProcessSettings
         }},
 
         {"transformation:snow_ice_constant", {

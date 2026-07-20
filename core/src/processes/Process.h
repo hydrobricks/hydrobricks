@@ -172,6 +172,18 @@ class Process {
     }
 
     /**
+     * Check if the process takes its demand from the water container with priority when the
+     * container cannot satisfy all outgoing rates. Non-priority processes then share the
+     * remaining water proportionally. Mirrors sequential (operator-split) reference models
+     * such as PREVAH, where snow evaporation is served at the full potential rate before melt.
+     *
+     * @return true if the process has priority on the container constraints.
+     */
+    [[nodiscard]] virtual bool HasConstraintPriority() const {
+        return false;
+    }
+
+    /**
      * Get the number of connections to the process.
      *
      * @return number of connections to the process.

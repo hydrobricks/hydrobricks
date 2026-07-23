@@ -138,6 +138,14 @@ class Processor {
 
   private:
     /**
+     * Validate the flux topology of the two-phase time step: no solved brick may send
+     * water to a brick computed directly, as direct bricks are processed before the solver.
+     *
+     * @throws ModelConfigError if a solved brick feeds a brick computed directly.
+     */
+    void ValidateFluxTopology() const;
+
+    /**
      * Store the state variable changes.
      *
      * @param values the state variable changes to store.

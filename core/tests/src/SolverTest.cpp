@@ -32,6 +32,64 @@ TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
     EXPECT_THROW(Solver::Factory(settings), ModelConfigError);
 }
 
+TEST(Solver, RejectsSolvedBrickFeedingDirectBrick) {
+    SettingsModel settings;
+    settings.SetSolver("euler_explicit");
+    settings.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+
+    // A solved storage sending water to a brick computed directly is invalid:
+    // direct bricks are processed before the solver runs.
+    settings.AddHydroUnitBrick("storage", "storage");
+    settings.AddBrickForcing("precipitation");
+    settings.AddBrickProcess("outflow", "outflow:linear", "transfer");
+
+    settings.AddHydroUnitBrick("transfer", "storage");
+    settings.SetCurrentBrickComputedDirectly();
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+    settings.AddLoggingToItem("outlet");
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    auto result = model.Initialize(settings, basinSettings);
+    ASSERT_FALSE(result);
+    EXPECT_TRUE(result.error().find("computed directly") != string::npos);
+}
+
+TEST(Solver, AcceptsDirectBrickDeclaredAfterSolvedBrick) {
+    SettingsModel settings;
+    settings.SetSolver("euler_explicit");
+    settings.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+
+    // A brick computed directly declared after a solved brick is fine as long as it
+    // does not receive water from it (classification is a brick property, not a
+    // declaration-order rule).
+    settings.AddHydroUnitBrick("storage", "storage");
+    settings.AddBrickForcing("precipitation");
+    settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
+
+    settings.AddHydroUnitBrick("transfer", "storage");
+    settings.SetCurrentBrickComputedDirectly();
+    settings.AddBrickForcing("precipitation");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+    settings.AddLoggingToItem("outlet");
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(settings, basinSettings));
+}
+
 /**
  * Model: simple linear storage
  */

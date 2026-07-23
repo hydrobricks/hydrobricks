@@ -1,5 +1,6 @@
 #include "Processor.h"
 
+#include "FluxToBrick.h"
 #include "ModelHydro.h"
 #include "SubBasin.h"
 
@@ -20,8 +21,34 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver = Solver::Factory(solverSettings);
     _solver->Connect(this);
     ConnectToElementsToSolve();
+    ValidateFluxTopology();
     _solver->InitializeContainers();
     _changeRatesNoSolver = axd::Zero(_directConnectionCount);
+}
+
+void Processor::ValidateFluxTopology() const {
+    // Direct bricks are processed before the solver runs, so their inputs must not come
+    // from solver bricks: such water would only be picked up at the following time step,
+    // silently breaking the surface (direct) -> ground (solver) phase ordering.
+    for (auto brick : _iterableBricks) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                auto fluxToBrick = dynamic_cast<FluxToBrick*>(process->GetOutputFlux(j));
+                if (fluxToBrick == nullptr) {
+                    continue;  // Fluxes to the outlet or the atmosphere are fine.
+                }
+                Brick* target = fluxToBrick->GetTargetBrick();
+                if (target && !target->NeedsSolver()) {
+                    throw ModelConfigError(
+                        std::format("The brick '{}' (solved) sends water to the brick '{}' (computed directly). "
+                                    "Bricks computed directly are processed before the solver and must not receive "
+                                    "water from solved bricks.",
+                                    brick->GetName(), target->GetName()));
+                }
+            }
+        }
+    }
 }
 
 void Processor::SetModel(ModelHydro* model) {
@@ -31,18 +58,21 @@ void Processor::SetModel(ModelHydro* model) {
 void Processor::ConnectToElementsToSolve() {
     SubBasin* basin = _model->GetSubBasin();
 
+    // Two-phase time step contract: bricks computed directly (surface components, land
+    // covers) form the discrete phase, processed sequentially in declaration order before
+    // the solver; bricks needing the solver (storages) form the continuous phase,
+    // integrated together as one coupled system. The classification comes exclusively
+    // from the brick property (NeedsSolver), never from the declaration position.
+    // ValidateFluxTopology() enforces that no solver brick feeds a direct brick.
     int hydroUnitCount = basin->GetHydroUnitCount();
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
-        bool solverRequired = false;
         int brickCount = unit->GetBrickCount();
         for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
 
-            // Add the bricks that need a solver and all their children
-            if (brick->NeedsSolver() || solverRequired) {
+            if (brick->NeedsSolver()) {
                 _iterableBricks.push_back(brick);
-                solverRequired = true;
 
                 // Get state variables from bricks
                 vecDoublePt bricksValues = brick->GetDynamicContentChanges();

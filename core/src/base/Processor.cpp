@@ -93,6 +93,100 @@ int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
 }
 
+void Processor::GatherState(axd& state) const {
+    assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
+    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
+        state(i) = *value;
+    }
+}
+
+void Processor::ScatterState(const axd& state) {
+    assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
+    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
+        *value = state(i);
+    }
+}
+
+void Processor::ResetState() {
+    for (auto value : _stateVariableChanges) {
+        *value = 0;
+    }
+}
+
+void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        double sumRates = 0.0;
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+
+            // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
+            // Reference into the process's reusable buffer; consumed below before the next process is queried.
+            const vecDouble& processRates = process->GetChangeRates();
+
+            for (int j = 0; j < processRates.size(); ++j) {
+                assert(rates.size() > iRate);
+                rates(iRate) = processRates[j];
+                sumRates += processRates[j];
+
+                // Link to fluxes to enforce subsequent constraints
+                if (applyConstraints) {
+                    process->StoreInOutgoingFlux(&rates(iRate), j);
+                }
+                iRate++;
+            }
+        }
+
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        if (applyConstraints && GreaterThan(sumRates, 0, PRECISION)) {
+            brick->ApplyConstraints(timeStepInDays);
+        }
+    }
+}
+
+void Processor::ConstrainRates(axd& rates, double timeStepInDays) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetConnectionCount(); ++j) {
+                assert(rates.size() > iRate);
+                // Link to fluxes to enforce subsequent constraints
+                process->StoreInOutgoingFlux(&rates(iRate), j);
+                iRate++;
+            }
+        }
+        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
+        brick->ApplyConstraints(timeStepInDays);
+    }
+}
+
+void Processor::ApplyRates(const axd& rates, double timeStepInDays) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        if (brick->IsNull()) {
+            continue;
+        }
+        brick->UpdateContentFromInputs();
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
+                process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
+                iRate++;
+            }
+        }
+    }
+}
+
+void Processor::FinalizeTimeStep() {
+    for (auto brick : _iterableBricks) {
+        if (brick->IsNull()) {
+            continue;
+        }
+        brick->Finalize();
+    }
+}
+
 bool Processor::ProcessTimeStep(double timeStepInDays) {
     assert(_model);
 

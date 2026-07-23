@@ -50,22 +50,64 @@ class Processor {
     bool ProcessTimeStep(double timeStepInDays);
 
     /**
-     * Get the state variables as a span of pointers.
+     * Gather the current state variable values into the provided vector.
      *
-     * @return a span viewing the state variable pointers.
+     * The state variables are the dynamic content changes relative to the start of the
+     * time step (all zeros at step start, after the previous Finalize).
+     *
+     * @param state The vector to fill (sized to GetStateVariableCount()).
      */
-    std::span<double*> GetStateVariables() {
-        return _stateVariableChanges;
-    }
+    void GatherState(axd& state) const;
 
     /**
-     * Get the iterable bricks vector pointer.
+     * Scatter the provided values into the state variables.
      *
-     * @return the pointer to the iterable bricks vector.
+     * @param state The state variable values to set (sized to GetStateVariableCount()).
      */
-    vector<Brick*>* GetIterableBricksVectorPt() {
-        return &_iterableBricks;
-    }
+    void ScatterState(const axd& state);
+
+    /**
+     * Reset all state variables to zero (the start-of-step state).
+     */
+    void ResetState();
+
+    /**
+     * Evaluate the change rates of all solvable processes at the current state.
+     *
+     * Rates are per day, independent of the time step. When applyConstraints is true,
+     * the rates are linked to the outgoing fluxes and the storage constraints (e.g.,
+     * maximum capacity, no negative content) are enforced brick by brick during the sweep.
+     *
+     * @param rates The vector receiving the rates (sized to GetSolvableConnectionCount());
+     *              must outlive any subsequent constraint application, as fluxes keep
+     *              pointers into it.
+     * @param timeStepInDays The time step in days (used by the constraints).
+     * @param applyConstraints Option to apply the constraints.
+     */
+    void EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints = true);
+
+    /**
+     * Link the provided rates to the outgoing fluxes and enforce the storage constraints,
+     * evaluated at the current state.
+     *
+     * @param rates The rate values to constrain (modified in place through the flux links).
+     * @param timeStepInDays The time step in days.
+     */
+    void ConstrainRates(axd& rates, double timeStepInDays);
+
+    /**
+     * Apply the provided change rates: transfer the water between the bricks and
+     * accumulate the resulting content changes over the time step.
+     *
+     * @param rates The change rate values to apply.
+     * @param timeStepInDays The time step in days.
+     */
+    void ApplyRates(const axd& rates, double timeStepInDays);
+
+    /**
+     * Finalize the solvable bricks: commit the accumulated content changes.
+     */
+    void FinalizeTimeStep();
 
     /**
      * Get the number of solvable connections.

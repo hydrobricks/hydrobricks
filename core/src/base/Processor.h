@@ -96,6 +96,16 @@ class Processor {
     void ConstrainRates(axd& rates, double timeStepInDays);
 
     /**
+     * Sweep the brick storage constraints over the linked rates until they are stable
+     * (fixpoint iteration), so that the result does not depend on the brick iteration
+     * order. The fluxes must already be linked to the provided rates.
+     *
+     * @param rates The rate values to constrain (modified in place through the flux links).
+     * @param timeStepInDays The time step in days.
+     */
+    void EnforceConstraints(axd& rates, double timeStepInDays);
+
+    /**
      * Apply the provided change rates: transfer the water between the bricks and
      * accumulate the resulting content changes over the time step.
      *
@@ -135,6 +145,7 @@ class Processor {
     vecDoublePt _stateVariableChanges;
     vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
     axd _changeRatesNoSolver;
+    axd _ratesBeforeSweep;  // scratch buffer for the constraint fixpoint iteration
 
   private:
     /**

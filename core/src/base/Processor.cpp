@@ -146,7 +146,6 @@ void Processor::ResetState() {
 void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {
     int iRate = 0;
     for (auto brick : _iterableBricks) {
-        double sumRates = 0.0;
         for (int i = 0; i < brick->GetProcessCount(); ++i) {
             auto process = brick->GetProcess(i);
 
@@ -157,7 +156,6 @@ void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConst
             for (int j = 0; j < processRates.size(); ++j) {
                 assert(rates.size() > iRate);
                 rates(iRate) = processRates[j];
-                sumRates += processRates[j];
 
                 // Link to fluxes to enforce subsequent constraints
                 if (applyConstraints) {
@@ -166,11 +164,10 @@ void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConst
                 iRate++;
             }
         }
+    }
 
-        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        if (applyConstraints && GreaterThan(sumRates, 0, PRECISION)) {
-            brick->ApplyConstraints(timeStepInDays);
-        }
+    if (applyConstraints) {
+        EnforceConstraints(rates, timeStepInDays);
     }
 }
 
@@ -186,9 +183,29 @@ void Processor::ConstrainRates(axd& rates, double timeStepInDays) {
                 iRate++;
             }
         }
-        // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        brick->ApplyConstraints(timeStepInDays);
     }
+
+    EnforceConstraints(rates, timeStepInDays);
+}
+
+void Processor::EnforceConstraints(axd& rates, double timeStepInDays) {
+    // The brick constraints (e.g. maximum capacity or avoid negative values) mutate the
+    // rates through the linked flux pointers. A clamp on one brick changes what an
+    // already-swept brick sees (the rates are shared between the source and target
+    // bricks), so a single sweep would depend on the brick iteration order; iterate the
+    // sweep until the rates are stable instead. Convergence is typically reached after
+    // two sweeps (the second one confirming the first).
+    constexpr int maxSweeps = 10;
+    for (int sweep = 0; sweep < maxSweeps; ++sweep) {
+        _ratesBeforeSweep = rates;
+        for (auto brick : _iterableBricks) {
+            brick->ApplyConstraints(timeStepInDays);
+        }
+        if (((rates - _ratesBeforeSweep).abs() <= PRECISION).all()) {
+            return;
+        }
+    }
+    LogWarning("The storage constraints did not stabilize after {} sweeps.", maxSweeps);
 }
 
 void Processor::ApplyRates(const axd& rates, double timeStepInDays) {

@@ -31,6 +31,10 @@ class GR4J(Model):
         them directly, reproducing the exact discrete GR4J equations. False
         integrates them with the ODE solver; provided for comparison, it differs
         from the reference GR4J (continuous integration is not the exact discrete map).
+        In this mode the model defaults to the ``heun_explicit`` solver rather than
+        the global default: the sequential solvers route the whole store-routing
+        cascade within a single step and would shift the hydrograph too early. Pass
+        ``solver=`` explicitly to override.
     snow_melt_process : str or None
         Snowmelt method: None (no snow), 'melt:degree_day',
         'melt:degree_day_aspect', 'melt:temperature_index', or 'melt:cemaneige'.
@@ -55,6 +59,19 @@ class GR4J(Model):
         self.allowed_land_cover_types = ["open"]
 
         self._set_options(kwargs)
+
+        # GR4J's continuous mode (discrete=False) approximates the discrete GR4J map by
+        # integrating the production store and routing with the solver. The discrete map
+        # carries an inherent step delay through the store -> routing -> outlet cascade,
+        # which the staged explicit solvers reproduce (they route water across one brick
+        # per step) but the sequential solvers remove (they route the whole cascade
+        # within a step), shifting the hydrograph far too early. The default
+        # (crank_nicolson) is sequential, so pin the explicit Heun solver for this mode
+        # to stay faithful to the reference GR4J timing, unless the user chose a solver
+        # explicitly.
+        if not self.options["discrete"] and "solver" not in kwargs:
+            self.solver = "heun_explicit"
+            self.settings.set_solver(self.solver)
 
         try:
             self._define_structure()

@@ -8,6 +8,7 @@
 #include "SolverAnalyticLinear.h"
 #include "SolverEulerExplicit.h"
 #include "SolverHeunExplicit.h"
+#include "SolverImplicitEuler.h"
 #include "SolverRK4.h"
 
 Solver::Solver()
@@ -19,7 +20,9 @@ static string GetValidSolverNames() {
                                               "euler_explicit",
                                               "heun_explicit",
                                               "analytic_linear",
-                                              "analytic"};  // Synonyms
+                                              "analytic",  // Synonyms
+                                              "implicit_euler",
+                                              "euler_implicit"};  // Synonyms
 
     string suggestions = "Valid solver names: ";
     for (size_t i = 0; i < validNames.size(); ++i) {
@@ -40,7 +43,9 @@ std::unique_ptr<Solver> Solver::Factory(const SolverSettings& solverSettings) {
         {"euler_explicit", []() { return std::make_unique<SolverEulerExplicit>(); }},
         {"heun_explicit", []() { return std::make_unique<SolverHeunExplicit>(); }},
         {"analytic_linear", []() { return std::make_unique<SolverAnalyticLinear>(); }},
-        {"analytic", []() { return std::make_unique<SolverAnalyticLinear>(); }}};
+        {"analytic", []() { return std::make_unique<SolverAnalyticLinear>(); }},
+        {"implicit_euler", []() { return std::make_unique<SolverImplicitEuler>(); }},
+        {"euler_implicit", []() { return std::make_unique<SolverImplicitEuler>(); }}};
 
     auto it = factoryMap.find(solverSettings.name);
     if (it != factoryMap.end()) {

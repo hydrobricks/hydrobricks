@@ -2,14 +2,12 @@
 #define HYDROBRICKS_SOLVER_ANALYTIC_LINEAR_H
 
 #include "Includes.h"
-#include "Solver.h"
+#include "SolverSequential.h"
 
 /**
  * Sequential solver with exact integration of linear reservoirs.
  *
- * The bricks are processed one by one in declaration order (upstream before
- * downstream). Each brick receives its inflows as a constant rate over the time
- * step and is integrated exactly where its outflow is linear in the content
+ * Each brick is integrated exactly where its outflow is linear in the content
  * (dS/dt = I - q_frozen - k S); the rates of the other processes (e.g. ET) are
  * frozen at their start-of-step value. The resulting volumes are converted to
  * average rates over the step, so the standard constraint and flux machinery
@@ -20,22 +18,15 @@
  * a cascade within the same step (no response lag beyond the physical
  * residence time 1/k).
  */
-class SolverAnalyticLinear : public Solver {
+class SolverAnalyticLinear : public SolverSequential {
   public:
     explicit SolverAnalyticLinear();
 
+  protected:
     /**
-     * @copydoc Solver::InitializeContainers()
+     * @copydoc SolverSequential::ComputeBrickRates()
      */
-    void InitializeContainers() override;
-
-    /**
-     * @copydoc Solver::Solve()
-     */
-    bool Solve(double timeStepInDays) override;
-
-  private:
-    axd _rates;
+    void ComputeBrickRates(Brick* brick, double content, double inflow, double timeStepInDays, int iRateStart) override;
 };
 
 #endif  // HYDROBRICKS_SOLVER_ANALYTIC_LINEAR_H

@@ -29,6 +29,12 @@ TEST(Solver, FactoryBuildsSolvers) {
 
     settings.name = "analytic";
     EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "implicit_euler";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "euler_implicit";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 }
 
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
@@ -284,6 +290,90 @@ TEST_F(SolverLinearStorage, UsingAnalyticLinear) {
     double storageContent = unitContent[0](19, 0);
     EXPECT_NEAR(storageContent, storage, 0.000000001);
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.000000001);
+}
+
+TEST_F(SolverLinearStorage, UsingImplicitEuler) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("implicit_euler");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge against the closed form of the implicit step for a
+    // linear storage: S(t+h) = (S(t) + I h) / (1 + k h), outflow = k S(t+h) h.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k = 0.3f;  // Value stored as float in the parameter
+    double storage = 0.0;
+
+    ASSERT_EQ(basinOutputs[0].size(), precip.size());
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage = (storage + precip[j]) / (1.0 + k);
+        double outflow = k * newStorage;
+        EXPECT_NEAR(basinOutputs[0][j], outflow, 0.00000001);
+        storage = newStorage;
+    }
+
+    // The discharge responds within the first precipitation step (no lag).
+    EXPECT_GT(basinOutputs[0][1], 0.0);
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, storage, 0.00000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000001);
+}
+
+TEST_F(SolverLinearStorage, ImplicitEulerIsStableForFastReservoir) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    // k h = 2.5: explicit Euler diverges (stability limit k h = 2); the implicit
+    // scheme must remain stable and match its closed form.
+    _model.SetSolver("implicit_euler");
+    _model.SelectHydroUnitBrick("storage");
+    _model.SelectProcess("outflow");
+    _model.SetProcessParameterValue("response_factor", 2.5f);
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k = 2.5f;
+    double storage = 0.0;
+
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage = (storage + precip[j]) / (1.0 + k);
+        double outflow = k * newStorage;
+        // Tolerance above the round-off snapping of near-empty containers, which
+        // cuts the infinite exponential tail to exactly zero.
+        EXPECT_NEAR(basinOutputs[0][j], outflow, 0.000001);
+        EXPECT_GE(basinOutputs[0][j], 0.0);
+        storage = newStorage;
+    }
 }
 
 /**
@@ -710,6 +800,17 @@ TEST(SolverConvergence, HeunExplicitIsSecondOrder) {
     EXPECT_NEAR(errorMid / errorFine, 4.0, 0.8);
 }
 
+TEST(SolverConvergence, ImplicitEulerIsFirstOrder) {
+    double errorCoarse = ConvergenceError("implicit_euler", 24);
+    double errorMid = ConvergenceError("implicit_euler", 12);
+    double errorFine = ConvergenceError("implicit_euler", 6);
+
+    EXPECT_GT(errorCoarse, errorMid);
+    EXPECT_GT(errorMid, errorFine);
+    EXPECT_NEAR(errorCoarse / errorMid, 2.0, 0.4);
+    EXPECT_NEAR(errorMid / errorFine, 2.0, 0.4);
+}
+
 TEST(SolverConvergence, RK4IsFourthOrder) {
     double errorCoarse = ConvergenceError("rk4", 24);
     double errorMid = ConvergenceError("rk4", 12);
@@ -719,6 +820,37 @@ TEST(SolverConvergence, RK4IsFourthOrder) {
     EXPECT_GT(errorMid, errorFine);
     EXPECT_NEAR(errorCoarse / errorMid, 16.0, 4.0);
     EXPECT_NEAR(errorMid / errorFine, 16.0, 4.0);
+}
+
+TEST_F(SolverLinearStorageWithET, UsingImplicitEuler) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("implicit_euler");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Exercises the implicit path with a non-linear process (ET evaluated at the
+    // end-of-step content) and the capacity/overflow constraint.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    // The overflow fires while the storage approaches its 20 mm capacity.
+    EXPECT_GT(basinOutputs[0][3], 1.0);
+
+    // Check water balance (mass conservation is exact by construction)
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.000000001);
 }
 
 TEST_F(SolverLinearStorageWithET, UsingAnalyticLinear) {

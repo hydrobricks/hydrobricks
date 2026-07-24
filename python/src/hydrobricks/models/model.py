@@ -77,7 +77,7 @@ class Model(ABC):
 
         # Default options
         self.options: dict[str, Any] = dict()
-        self.solver: str = "heun_explicit"
+        self.solver: str = "crank_nicolson"
         self.record_all: bool = False
         self.land_cover_types: list[str] = ["open"]
         self.land_cover_names: list[str] = ["open"]

@@ -2,7 +2,7 @@
 
 A modular hydrological modelling framework.
 
-[![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21239598.svg)](https://doi.org/10.5281/zenodo.21239598)
 [![GitHub release](https://img.shields.io/github/v/release/hydrobricks/hydrobricks)](https://github.com/hydrobricks/hydrobricks/releases)
 [![PyPI](https://img.shields.io/pypi/v/hydrobricks)](https://pypi.org/project/hydrobricks/)
 ![Static Badge](https://img.shields.io/badge/python-%3E%3D3.10-blue)

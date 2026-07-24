@@ -30,6 +30,21 @@ class ProcessOutflowLinear : public ProcessOutflow {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::HasLinearResponse()
+     */
+    [[nodiscard]] bool HasLinearResponse() const override {
+        return true;
+    }
+
+    /**
+     * @copydoc Process::GetLinearResponseRate()
+     */
+    [[nodiscard]] double GetLinearResponseRate() const override {
+        assert(_responseFactor);
+        return *_responseFactor;
+    }
+
   protected:
     const float* _responseFactor;  // [1/d]
 

@@ -222,6 +222,18 @@ def test_gr6j_instantiation():
     assert models.GR6J().name == "gr6j"
 
 
+def test_gr6j_continuous_mode_pins_explicit_solver():
+    # The continuous (discrete=False) formulation must default to an explicit
+    # solver: the sequential solvers have no transit lag and shift the GR6J
+    # hydrograph too early. The default (discrete=True) mode keeps the global
+    # default, and an explicit solver choice is always respected.
+    assert models.GR6J(discrete=False).solver == "heun_explicit"
+    assert models.GR6J(discrete=True).solver == "crank_nicolson"
+    assert (
+        models.GR6J(discrete=False, solver="crank_nicolson").solver == "crank_nicolson"
+    )
+
+
 def test_gr6j_generate_parameters_contains_all_six():
     parameters = models.GR6J().generate_parameters()
     for name in ("X1", "X2", "X3", "X4", "X5", "X6"):

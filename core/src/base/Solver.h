@@ -41,77 +41,13 @@ class Solver {
     }
 
     /**
-     * Initialize the internal containers to the needed size.
+     * Allocate the internal rate and state buffers to the needed size.
+     * Must be called after Connect(), once the processor knows its connection and state counts.
      */
-    void InitializeContainers();
+    virtual void InitializeContainers() = 0;
 
   protected:
     Processor* _processor;
-    axxd _stateVariableChanges;
-    axxd _changeRates;
-    int _nIterations;
-    double _timeStepInDays;
-
-    /**
-     * Save the state variables.
-     *
-     * @param col The column of the internal storage where the state variables must be saved.
-     */
-    void SaveStateVariables(int col);
-
-    /**
-     * Compute the change rates of all processes.
-     *
-     * @param col The column of the internal storage where the change rates must be saved (= iteration).
-     * @param applyConstraints Option to apply the constraints (e.g., storage max capacity).
-     */
-    void ComputeChangeRates(int col, bool applyConstraints = true);
-
-    /**
-     * Enforce the constraints for the change rates in the provided column.
-     *
-     * @param col The column (= iteration) of the internal storage containing the change rates.
-     */
-    void ApplyConstraintsFor(int col);
-
-    /**
-     * Reset the stored state variable changes to zero.
-     */
-    void ResetStateVariableChanges();
-
-    /**
-     * Set the state variables to use to the values of the selected iteration (column).
-     * @param col The column (= iteration) of the internal storage containing the state variables to use.
-     */
-    void SetStateVariablesToIteration(int col);
-
-    /**
-     * Set the state variables to use to the average values of the selected iterations (columns).
-     * @param col1 The first column (= iteration) of the internal storage containing the state variables to use.
-     * @param col2 The second column (= iteration) of the internal storage containing the state variables to use.
-     */
-    void SetStateVariablesToAvgOf(int col1, int col2);
-
-    /**
-     * Apply the changes to the processes.
-     *
-     * @param col The column (= iteration) of the internal storage containing the change rates to use.
-     */
-    void ApplyProcesses(int col) const;
-
-    /**
-     * Apply the changes to the processes using the provided change rates.
-     *
-     * @param changeRates The change rate values to use.
-     */
-    void ApplyProcesses(const axd& changeRates) const;
-
-    /**
-     * Apply all changes.
-     */
-    void Finalize() const;
-
-  private:
 };
 
 #endif  // HYDROBRICKS_SOLVER_H

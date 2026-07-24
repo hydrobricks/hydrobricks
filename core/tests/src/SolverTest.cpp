@@ -631,6 +631,96 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
 }
 
+/**
+ * Convergence order of the solvers on a linear storage.
+ *
+ * A linear storage (k = 0.5/d) is fed by a constant 5 mm/d precipitation for 2 days,
+ * so the run ends mid-transient (k T = 1) where the discretization errors are still
+ * evolving (a longer run would end at equilibrium, where all schemes meet the same
+ * fixed point and the error ratios saturate). The dynamics are smooth and no
+ * constraint binds, so each scheme must converge at its theoretical order: halving
+ * the time step divides the error by ~2 (Euler, order 1), ~4 (Heun, order 2) or ~16
+ * (RK4, order 4). The analytic solver is exact for this setup at any time step and
+ * serves as the reference at the same discretization.
+ */
+namespace {
+
+double RunLinearStorageAtTimeStep(const string& solverName, int timeStepHours) {
+    SettingsModel settings;
+    settings.SetSolver(solverName);
+    settings.SetTimer("2020-01-01", "2020-01-03", timeStepHours, "hour");
+
+    settings.AddHydroUnitBrick("storage", "storage");
+    settings.AddBrickForcing("precipitation");
+    settings.AddBrickLogging("water_content");
+    settings.AddBrickProcess("outflow", "outflow:linear");
+    settings.SetProcessParameterValue("response_factor", 0.5f);
+    settings.AddProcessOutput("outlet");
+    settings.AddLoggingToItem("outlet");
+
+    int valueCount = 48 / timeStepHours + 1;
+    auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 3), timeStepHours,
+                                                        TimeUnit::Hour);
+    data->SetValues(vecDouble(valueCount, 5.0 * timeStepHours / 24.0));
+    auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+    tsPrecip->SetData(std::move(data));
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    EXPECT_TRUE(model.Initialize(settings, basinSettings));
+    EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
+    EXPECT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    return unitContent[0](unitContent[0].rows() - 1, 0);
+}
+
+double ConvergenceError(const string& solverName, int timeStepHours) {
+    return std::abs(RunLinearStorageAtTimeStep(solverName, timeStepHours) -
+                    RunLinearStorageAtTimeStep("analytic_linear", timeStepHours));
+}
+
+}  // namespace
+
+TEST(SolverConvergence, EulerExplicitIsFirstOrder) {
+    double errorCoarse = ConvergenceError("euler_explicit", 24);
+    double errorMid = ConvergenceError("euler_explicit", 12);
+    double errorFine = ConvergenceError("euler_explicit", 6);
+
+    EXPECT_GT(errorCoarse, errorMid);
+    EXPECT_GT(errorMid, errorFine);
+    EXPECT_NEAR(errorCoarse / errorMid, 2.0, 0.4);
+    EXPECT_NEAR(errorMid / errorFine, 2.0, 0.4);
+}
+
+TEST(SolverConvergence, HeunExplicitIsSecondOrder) {
+    double errorCoarse = ConvergenceError("heun_explicit", 24);
+    double errorMid = ConvergenceError("heun_explicit", 12);
+    double errorFine = ConvergenceError("heun_explicit", 6);
+
+    EXPECT_GT(errorCoarse, errorMid);
+    EXPECT_GT(errorMid, errorFine);
+    EXPECT_NEAR(errorCoarse / errorMid, 4.0, 0.8);
+    EXPECT_NEAR(errorMid / errorFine, 4.0, 0.8);
+}
+
+TEST(SolverConvergence, RK4IsFourthOrder) {
+    double errorCoarse = ConvergenceError("rk4", 24);
+    double errorMid = ConvergenceError("rk4", 12);
+    double errorFine = ConvergenceError("rk4", 6);
+
+    EXPECT_GT(errorCoarse, errorMid);
+    EXPECT_GT(errorMid, errorFine);
+    EXPECT_NEAR(errorCoarse / errorMid, 16.0, 4.0);
+    EXPECT_NEAR(errorMid / errorFine, 16.0, 4.0);
+}
+
 TEST_F(SolverLinearStorageWithET, UsingAnalyticLinear) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

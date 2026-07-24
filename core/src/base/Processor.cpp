@@ -1,5 +1,6 @@
 #include "Processor.h"
 
+#include "FluxToBrick.h"
 #include "ModelHydro.h"
 #include "SubBasin.h"
 
@@ -20,8 +21,34 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver = Solver::Factory(solverSettings);
     _solver->Connect(this);
     ConnectToElementsToSolve();
+    ValidateFluxTopology();
     _solver->InitializeContainers();
     _changeRatesNoSolver = axd::Zero(_directConnectionCount);
+}
+
+void Processor::ValidateFluxTopology() const {
+    // Direct bricks are processed before the solver runs, so their inputs must not come
+    // from solver bricks: such water would only be picked up at the following time step,
+    // silently breaking the surface (direct) -> ground (solver) phase ordering.
+    for (auto brick : _iterableBricks) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                auto fluxToBrick = dynamic_cast<FluxToBrick*>(process->GetOutputFlux(j));
+                if (fluxToBrick == nullptr) {
+                    continue;  // Fluxes to the outlet or the atmosphere are fine.
+                }
+                Brick* target = fluxToBrick->GetTargetBrick();
+                if (target && !target->NeedsSolver()) {
+                    throw ModelConfigError(
+                        std::format("The brick '{}' (solved) sends water to the brick '{}' (computed directly). "
+                                    "Bricks computed directly are processed before the solver and must not receive "
+                                    "water from solved bricks.",
+                                    brick->GetName(), target->GetName()));
+                }
+            }
+        }
+    }
 }
 
 void Processor::SetModel(ModelHydro* model) {
@@ -31,18 +58,21 @@ void Processor::SetModel(ModelHydro* model) {
 void Processor::ConnectToElementsToSolve() {
     SubBasin* basin = _model->GetSubBasin();
 
+    // Two-phase time step contract: bricks computed directly (surface components, land
+    // covers) form the discrete phase, processed sequentially in declaration order before
+    // the solver; bricks needing the solver (storages) form the continuous phase,
+    // integrated together as one coupled system. The classification comes exclusively
+    // from the brick property (NeedsSolver), never from the declaration position.
+    // ValidateFluxTopology() enforces that no solver brick feeds a direct brick.
     int hydroUnitCount = basin->GetHydroUnitCount();
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = basin->GetHydroUnit(iUnit);
-        bool solverRequired = false;
         int brickCount = unit->GetBrickCount();
         for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
             Brick* brick = unit->GetBrick(iBrick);
 
-            // Add the bricks that need a solver and all their children
-            if (brick->NeedsSolver() || solverRequired) {
+            if (brick->NeedsSolver()) {
                 _iterableBricks.push_back(brick);
-                solverRequired = true;
 
                 // Get state variables from bricks
                 vecDoublePt bricksValues = brick->GetDynamicContentChanges();
@@ -91,6 +121,117 @@ void Processor::StoreStateVariableChanges(std::span<double*> values) {
 
 int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
+}
+
+void Processor::GatherState(axd& state) const {
+    assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
+    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
+        state(i) = *value;
+    }
+}
+
+void Processor::ScatterState(const axd& state) {
+    assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
+    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
+        *value = state(i);
+    }
+}
+
+void Processor::ResetState() {
+    for (auto value : _stateVariableChanges) {
+        *value = 0;
+    }
+}
+
+void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+
+            // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
+            // Reference into the process's reusable buffer; consumed below before the next process is queried.
+            const vecDouble& processRates = process->GetChangeRates();
+
+            for (int j = 0; j < processRates.size(); ++j) {
+                assert(rates.size() > iRate);
+                rates(iRate) = processRates[j];
+
+                // Link to fluxes to enforce subsequent constraints
+                if (applyConstraints) {
+                    process->StoreInOutgoingFlux(&rates(iRate), j);
+                }
+                iRate++;
+            }
+        }
+    }
+
+    if (applyConstraints) {
+        EnforceConstraints(rates, timeStepInDays);
+    }
+}
+
+void Processor::ConstrainRates(axd& rates, double timeStepInDays) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetConnectionCount(); ++j) {
+                assert(rates.size() > iRate);
+                // Link to fluxes to enforce subsequent constraints
+                process->StoreInOutgoingFlux(&rates(iRate), j);
+                iRate++;
+            }
+        }
+    }
+
+    EnforceConstraints(rates, timeStepInDays);
+}
+
+void Processor::EnforceConstraints(axd& rates, double timeStepInDays) {
+    // The brick constraints (e.g. maximum capacity or avoid negative values) mutate the
+    // rates through the linked flux pointers. A clamp on one brick changes what an
+    // already-swept brick sees (the rates are shared between the source and target
+    // bricks), so a single sweep would depend on the brick iteration order; iterate the
+    // sweep until the rates are stable instead. Convergence is typically reached after
+    // two sweeps (the second one confirming the first).
+    constexpr int maxSweeps = 10;
+    for (int sweep = 0; sweep < maxSweeps; ++sweep) {
+        _ratesBeforeSweep = rates;
+        for (auto brick : _iterableBricks) {
+            brick->ApplyConstraints(timeStepInDays);
+        }
+        if (((rates - _ratesBeforeSweep).abs() <= PRECISION).all()) {
+            return;
+        }
+    }
+    LogWarning("The storage constraints did not stabilize after {} sweeps.", maxSweeps);
+}
+
+void Processor::ApplyRates(const axd& rates, double timeStepInDays) {
+    int iRate = 0;
+    for (auto brick : _iterableBricks) {
+        if (brick->IsNull()) {
+            continue;
+        }
+        brick->UpdateContentFromInputs();
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
+                process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
+                iRate++;
+            }
+        }
+    }
+}
+
+void Processor::FinalizeTimeStep() {
+    for (auto brick : _iterableBricks) {
+        if (brick->IsNull()) {
+            continue;
+        }
+        brick->Finalize();
+    }
 }
 
 bool Processor::ProcessTimeStep(double timeStepInDays) {

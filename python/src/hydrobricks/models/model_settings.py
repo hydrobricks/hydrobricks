@@ -8,13 +8,35 @@ class ModelSettings:
     """Base class for the model settings"""
 
     def __init__(
-        self, solver: str = "heun_explicit", record_all: bool = False, **kwargs: Any
+        self, solver: str = "crank_nicolson", record_all: bool = False, **kwargs: Any
     ) -> None:
         """
         Parameters
         ----------
         solver
-            Solver to use
+            Numerical solver used to integrate the reservoir ODEs. One of:
+
+            - ``"crank_nicolson"`` (alias ``"trapezoidal"``) -- default;
+              implicit trapezoidal rule, second-order and unconditionally
+              stable for any process; no transit lag.
+            - ``"heun_explicit"`` -- explicit, second-order; good
+              accuracy/cost compromise but only conditionally stable.
+            - ``"euler_explicit"`` -- explicit, first-order; fastest but
+              least accurate and only conditionally stable.
+            - ``"runge_kutta"`` (alias ``"rk4"``) -- explicit, fourth-order
+              for smooth dynamics; conditionally stable.
+            - ``"analytic_linear"`` (alias ``"analytic"``) -- exact
+              integration of linear reservoirs; unconditionally stable, no
+              transit lag.
+            - ``"implicit_euler"`` (alias ``"euler_implicit"``) -- backward
+              Euler, first-order; unconditionally stable for any process, no
+              transit lag; most robust for very stiff reservoirs.
+            - ``"exponential_euler"`` -- analytic integration of the
+              per-step linearized system; unconditionally stable, no
+              transit lag.
+
+            See the solvers documentation for details and guidance on how to
+            choose: https://hydrobricks.readthedocs.io/en/latest/doc/solvers.html
         record_all
             Record all state and flux values
         kwargs
@@ -22,6 +44,20 @@ class ModelSettings:
         """
         self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
+        self.settings.set_solver(solver)
+
+    def set_solver(self, solver: str) -> None:
+        """
+        Set the numerical solver.
+
+        Parameters
+        ----------
+        solver
+            Name (or alias) of the numerical solver used to integrate the
+            reservoir ODEs. See :meth:`__init__` for the list of choices, or
+            the solvers documentation:
+            https://hydrobricks.readthedocs.io/en/latest/doc/solvers.html
+        """
         self.settings.set_solver(solver)
 
     def set_timer(

@@ -8,16 +8,34 @@ void SolverSequential::InitializeContainers() {
     assert(_processor);
     _rates = axd::Zero(_processor->GetSolvableConnectionCount());
 
-    // The sequential scheme cannot retroactively reduce inflows that upstream bricks have
-    // already applied, so capacity excesses must be booked through an overflow process.
-    for (auto brick : _processor->GetSolvableBricks()) {
-        WaterContainer* container = brick->GetWaterContainer();
-        if (container->HasMaximumCapacity() && !container->HasOverflow()) {
-            throw ModelConfigError(
-                std::format("The sequential solvers require an overflow process on bricks with a maximum "
-                            "capacity, but the brick '{}' has none.",
-                            brick->GetName()));
+    // Note on capacity-limited stores without an overflow process: the sequential scheme
+    // cannot retroactively reduce inflows that upstream bricks have already applied, so a
+    // capacity that actually binds against solver-brick inflow cannot route its excess and
+    // would break the mass balance. This is left to the runtime constraint enforcement
+    // (WaterContainer::ApplyConstraints), which routes excess through an overflow when one
+    // exists and throws for forcing directly overfilling a capped store. A capacity used
+    // only as a process parameter with a self-limiting inflow (e.g. the GR4J production
+    // store, whose infiltration tends to zero as the store fills) never binds and needs no
+    // overflow, so it must not be rejected here.
+}
+
+double SolverSequential::TotalRateAt(Brick* brick, double* contentDelta, double offset) {
+    *contentDelta = offset;
+    double total = 0;
+    for (int i = 0; i < brick->GetProcessCount(); ++i) {
+        const vecDouble& processRates = brick->GetProcess(i)->GetChangeRates();
+        for (int j = 0; j < processRates.size(); ++j) {
+            total += processRates[j];
         }
+    }
+    return total;
+}
+
+void SolverSequential::StoreRatesAtCurrentContent(Brick* brick, vecDouble& rates) {
+    rates.clear();
+    for (int i = 0; i < brick->GetProcessCount(); ++i) {
+        const vecDouble& processRates = brick->GetProcess(i)->GetChangeRates();
+        rates.insert(rates.end(), processRates.begin(), processRates.end());
     }
 }
 

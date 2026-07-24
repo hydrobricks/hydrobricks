@@ -6,7 +6,9 @@
 
 #include "Processor.h"
 #include "SolverAnalyticLinear.h"
+#include "SolverCrankNicolson.h"
 #include "SolverEulerExplicit.h"
+#include "SolverExponentialEuler.h"
 #include "SolverHeunExplicit.h"
 #include "SolverImplicitEuler.h"
 #include "SolverRK4.h"
@@ -22,7 +24,10 @@ static string GetValidSolverNames() {
                                               "analytic_linear",
                                               "analytic",  // Synonyms
                                               "implicit_euler",
-                                              "euler_implicit"};  // Synonyms
+                                              "euler_implicit",  // Synonyms
+                                              "crank_nicolson",
+                                              "trapezoidal",  // Synonyms
+                                              "exponential_euler"};
 
     string suggestions = "Valid solver names: ";
     for (size_t i = 0; i < validNames.size(); ++i) {
@@ -45,7 +50,10 @@ std::unique_ptr<Solver> Solver::Factory(const SolverSettings& solverSettings) {
         {"analytic_linear", []() { return std::make_unique<SolverAnalyticLinear>(); }},
         {"analytic", []() { return std::make_unique<SolverAnalyticLinear>(); }},
         {"implicit_euler", []() { return std::make_unique<SolverImplicitEuler>(); }},
-        {"euler_implicit", []() { return std::make_unique<SolverImplicitEuler>(); }}};
+        {"euler_implicit", []() { return std::make_unique<SolverImplicitEuler>(); }},
+        {"crank_nicolson", []() { return std::make_unique<SolverCrankNicolson>(); }},
+        {"trapezoidal", []() { return std::make_unique<SolverCrankNicolson>(); }},
+        {"exponential_euler", []() { return std::make_unique<SolverExponentialEuler>(); }}};
 
     auto it = factoryMap.find(solverSettings.name);
     if (it != factoryMap.end()) {

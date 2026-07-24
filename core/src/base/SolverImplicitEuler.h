@@ -27,18 +27,6 @@ class SolverImplicitEuler : public SolverSequential {
      * @copydoc SolverSequential::ComputeBrickRates()
      */
     void ComputeBrickRates(Brick* brick, double content, double inflow, double timeStepInDays, int iRateStart) override;
-
-  private:
-    /**
-     * Sum the rates of all processes of the brick, evaluated at the given content.
-     * Temporarily writes the content offset into the container's dynamic change.
-     *
-     * @param brick The brick to evaluate.
-     * @param contentDelta Pointer to the container's dynamic content change.
-     * @param offset Content offset from the start-of-step content [mm].
-     * @return the total outflow rate [mm/d].
-     */
-    static double TotalRateAt(Brick* brick, double* contentDelta, double offset);
 };
 
 #endif  // HYDROBRICKS_SOLVER_IMPLICIT_EULER_H

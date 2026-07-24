@@ -8,7 +8,7 @@ class ModelSettings:
     """Base class for the model settings"""
 
     def __init__(
-        self, solver: str = "heun_explicit", record_all: bool = False, **kwargs: Any
+        self, solver: str = "crank_nicolson", record_all: bool = False, **kwargs: Any
     ) -> None:
         """
         Parameters

@@ -35,6 +35,15 @@ TEST(Solver, FactoryBuildsSolvers) {
 
     settings.name = "euler_implicit";
     EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "crank_nicolson";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "trapezoidal";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "exponential_euler";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 }
 
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
@@ -328,6 +337,93 @@ TEST_F(SolverLinearStorage, UsingImplicitEuler) {
 
     // The discharge responds within the first precipitation step (no lag).
     EXPECT_GT(basinOutputs[0][1], 0.0);
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, storage, 0.00000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000001);
+}
+
+TEST_F(SolverLinearStorage, UsingCrankNicolson) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("crank_nicolson");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge against the closed form of the trapezoidal step for a
+    // linear storage: S(t+h) = (S(t)(1 - kh/2) + I h) / (1 + kh/2),
+    // outflow = k (S(t) + S(t+h)) / 2 h.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k = 0.3f;  // Value stored as float in the parameter
+    double storage = 0.0;
+
+    ASSERT_EQ(basinOutputs[0].size(), precip.size());
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage = (storage * (1.0 - k / 2) + precip[j]) / (1.0 + k / 2);
+        double outflow = k * (storage + newStorage) / 2;
+        EXPECT_NEAR(basinOutputs[0][j], outflow, 0.00000001);
+        storage = newStorage;
+    }
+
+    // The discharge responds within the first precipitation step (no lag).
+    EXPECT_GT(basinOutputs[0][1], 0.0);
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, storage, 0.00000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000001);
+}
+
+TEST_F(SolverLinearStorage, UsingExponentialEuler) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("exponential_euler");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // For a linear storage the linearization is the reservoir itself, so the
+    // exponential Euler solver must reproduce the exact (analytic) solution.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k = 0.3f;  // Value stored as float in the parameter
+    double decay = std::exp(-k);
+    double storage = 0.0;
+
+    ASSERT_EQ(basinOutputs[0].size(), precip.size());
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage = storage * decay + precip[j] / k * (1.0 - decay);
+        double outflow = precip[j] - (newStorage - storage);
+        EXPECT_NEAR(basinOutputs[0][j], outflow, 0.00000001);
+        storage = newStorage;
+    }
 
     // Check water balance
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
@@ -811,6 +907,24 @@ TEST(SolverConvergence, ImplicitEulerIsFirstOrder) {
     EXPECT_NEAR(errorMid / errorFine, 2.0, 0.4);
 }
 
+TEST(SolverConvergence, CrankNicolsonIsSecondOrder) {
+    double errorCoarse = ConvergenceError("crank_nicolson", 24);
+    double errorMid = ConvergenceError("crank_nicolson", 12);
+    double errorFine = ConvergenceError("crank_nicolson", 6);
+
+    EXPECT_GT(errorCoarse, errorMid);
+    EXPECT_GT(errorMid, errorFine);
+    EXPECT_NEAR(errorCoarse / errorMid, 4.0, 0.8);
+    EXPECT_NEAR(errorMid / errorFine, 4.0, 0.8);
+}
+
+TEST(SolverConvergence, ExponentialEulerIsExactForLinear) {
+    // For a linear reservoir the linearization is exact, so the error against the
+    // analytic solver must vanish at any time step.
+    EXPECT_LT(ConvergenceError("exponential_euler", 24), 0.000000001);
+    EXPECT_LT(ConvergenceError("exponential_euler", 6), 0.000000001);
+}
+
 TEST(SolverConvergence, RK4IsFourthOrder) {
     double errorCoarse = ConvergenceError("rk4", 24);
     double errorMid = ConvergenceError("rk4", 12);
@@ -820,6 +934,68 @@ TEST(SolverConvergence, RK4IsFourthOrder) {
     EXPECT_GT(errorMid, errorFine);
     EXPECT_NEAR(errorCoarse / errorMid, 16.0, 4.0);
     EXPECT_NEAR(errorMid / errorFine, 16.0, 4.0);
+}
+
+TEST_F(SolverLinearStorageWithET, UsingCrankNicolson) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("crank_nicolson");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Exercises the trapezoidal path with a non-linear process (ET) and the
+    // capacity/overflow constraint.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    // The overflow fires while the storage approaches its 20 mm capacity.
+    EXPECT_GT(basinOutputs[0][3], 1.0);
+
+    // Check water balance (mass conservation is exact by construction)
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.000000001);
+}
+
+TEST_F(SolverLinearStorageWithET, UsingExponentialEuler) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("exponential_euler");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Exercises the linearized path with a non-linear process (ET) and the
+    // capacity/overflow constraint.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    // The overflow fires while the storage approaches its 20 mm capacity.
+    EXPECT_GT(basinOutputs[0][3], 1.0);
+
+    // Check water balance (mass conservation is exact by construction)
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.000000001);
 }
 
 TEST_F(SolverLinearStorageWithET, UsingImplicitEuler) {

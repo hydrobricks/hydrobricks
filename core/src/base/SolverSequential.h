@@ -43,6 +43,27 @@ class SolverSequential : public Solver {
      */
     virtual void ComputeBrickRates(Brick* brick, double content, double inflow, double timeStepInDays,
                                    int iRateStart) = 0;
+
+    /**
+     * Sum the rates of all processes of the brick, evaluated at the given content
+     * offset. Temporarily writes the offset into the container's dynamic change;
+     * the caller must restore it to zero before the constraint pass.
+     *
+     * @param brick The brick to evaluate.
+     * @param contentDelta Pointer to the container's dynamic content change.
+     * @param offset Content offset from the start-of-step content [mm].
+     * @return the total outflow rate [mm/d].
+     */
+    static double TotalRateAt(Brick* brick, double* contentDelta, double offset);
+
+    /**
+     * Store the per-connection rates of the brick's processes, evaluated at the
+     * current content, into the provided vector (resized to the connection count).
+     *
+     * @param brick The brick to evaluate.
+     * @param rates The vector receiving the rates.
+     */
+    static void StoreRatesAtCurrentContent(Brick* brick, vecDouble& rates);
 };
 
 #endif  // HYDROBRICKS_SOLVER_SEQUENTIAL_H

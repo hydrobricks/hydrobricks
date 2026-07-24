@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy import ndimage
 
-import hydrobricks as hb
+from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
+from hydrobricks._optional import HAS_PYSHEDS, HAS_SCIPY, pyshedsGrid
+
+if HAS_SCIPY:
+    from scipy import ndimage
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pysheds")
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -17,7 +23,7 @@ class CatchmentConnectivity:
     Class to handle connectivity of catchments.
     """
 
-    def __init__(self, catchment: Catchment):
+    def __init__(self, catchment: Catchment) -> None:
         """
         Initialize the Connectivity class.
 
@@ -26,18 +32,22 @@ class CatchmentConnectivity:
         catchment
             The catchment object.
         """
-        self.catchment = catchment
+        self.catchment: Catchment = catchment
 
     def calculate(
-            self,
-            mode: str = 'multiple',
-            force_connectivity: bool = True,
-            precision: int = 3
+        self,
+        mode: str = "multiple",
+        force_connectivity: bool = False,
+        precision: int = 3,
     ) -> pd.DataFrame:
         """
         Calculate the connectivity between hydro units using a flow accumulation
         partition. Connectivity between hydro units is forced to stay within the
         catchment.
+
+        Computes how water flows from each hydro unit to downstream units based on
+        flow direction and accumulation. Results in a DataFrame with connectivity
+        values representing the fraction of flow directed to each downstream unit.
 
         Parameters
         ----------
@@ -46,31 +56,46 @@ class CatchmentConnectivity:
             'single' = keep the highest connectivity only
             'multiple' = keep all connectivity values (multiple connections)
         force_connectivity
-            If True, all hydro units are forced to have a connection to another hydro unit.
-            When there is no downstream hydro unit, the connectivity is set to the neighboring
-            hydro units, proportionally to the length of the common border.
-            If False, and if a hydro unit contributes mostly to surfaces out of the catchment,
-            the connectivity will be nulled.
+            If True, all hydro units are forced to have a connection to another hydro
+            unit. When there is no downstream hydro unit, the connectivity is set to
+            the neighboring hydro units, proportionally to the length of the common
+            border.
+            If False, and if a hydro unit contributes mostly to surfaces out of the
+            catchment, the connectivity will be nulled.
+            Default is False (recommended).
         precision
             The precision of the connectivity values. Default is 3.
-            This is used to round the connectivity values to a given number of decimal places.
+            This is used to round the connectivity values to a given number of
+            decimal places.
 
         Returns
         -------
-        The hydro units connectivity.
+        pd.DataFrame
+            DataFrame with connectivity information for each hydro unit.
         """
-        if not hb.has_pysheds:
-            raise ImportError("pysheds is required to do this.")
+        if not HAS_PYSHEDS:
+            raise DependencyError(
+                "pysheds is required for connectivity calculations.",
+                package_name="pysheds",
+                operation="CatchmentConnectivity.calculate",
+                install_command="pip install pysheds",
+            )
 
         if self.catchment.dem is None:
-            raise ValueError("No DEM to calculate the connectivity.")
+            raise ConfigurationError(
+                "No DEM to calculate the connectivity.",
+                reason="Missing required DEM data",
+            )
 
         if self.catchment.map_unit_ids is None:
-            raise ValueError("No hydro units to calculate the connectivity.")
+            raise ConfigurationError(
+                "No hydro units to calculate the connectivity.",
+                reason="Catchment not discretized",
+            )
 
         # Create a pysheds instance
         dem_path = self.catchment.dem.files[0]
-        grid = hb.pyshedsGrid.from_raster(dem_path)
+        grid = pyshedsGrid.from_raster(dem_path)
         dem = grid.read_raster(dem_path)
 
         # Fill pits and depressions in DEM and resolve flats
@@ -79,31 +104,26 @@ class CatchmentConnectivity:
         inflated_dem = grid.resolve_flats(flooded_dem)
 
         # Compute flow direction and flow accumulation
-        flow_dir = grid.flowdir(
-            inflated_dem,
-            routing='d8',
-            nodata_out=np.int64(0)
-        )
+        flow_dir = grid.flowdir(inflated_dem, routing="d8", nodata_out=np.int64(0))
 
         # Check that the hydro units are defined
         if len(self.catchment.hydro_units.hydro_units) == 0:
-            raise ValueError("No hydro units defined in the catchment. "
-                             "Please define the hydro units before "
-                             "calculating the connectivity.")
+            raise ConfigurationError(
+                "No hydro units defined in the catchment. "
+                "Please define the hydro units before calculating the connectivity.",
+                reason="Hydro units not defined",
+            )
 
         # Create a dataframe with the hydro units IDs and a column of empty dictionaries
-        df = self.catchment.hydro_units.hydro_units[[('id', '-')]].copy()
-        df[('connectivity', '-')] = [{} for _ in range(len(df))]
+        df = self.catchment.hydro_units.hydro_units[[("id", "-")]].copy()
+        df[("connectivity", "-")] = [{} for _ in range(len(df))]
 
         # Loop over every hydro unit id and compute the flow accumulation
         flow_acc_tot = np.zeros_like(self.catchment.map_unit_ids)
-        for unit_id in df[('id', '-')]:
+        for unit_id in df[("id", "-")]:
             mask_unit = self.catchment.map_unit_ids == unit_id
             flow_acc = grid.accumulation(
-                flow_dir,
-                mask=mask_unit,
-                routing='d8',
-                nodata_out=np.float64(0)
+                flow_dir, mask=mask_unit, routing="d8", nodata_out=np.float64(0)
             )
             flow_acc_np = flow_acc.view(np.ndarray)
             flow_acc_tot = np.maximum(flow_acc_tot, flow_acc_np)
@@ -115,7 +135,20 @@ class CatchmentConnectivity:
         self._sum_contributing_flow_acc(df, flow_acc_tot, flow_dir)
 
         def remove_connectivity_out(row: pd.Series) -> pd.Series:
-            connectivity = row[('connectivity', '-')]
+            """
+            Remove connectivity to outside the catchment (key 0).
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with key 0 removed if present.
+            """
+            connectivity = row[("connectivity", "-")]
             if not connectivity:
                 return row
 
@@ -126,9 +159,24 @@ class CatchmentConnectivity:
             return row
 
         def connect_to_neighbours(row: pd.Series) -> pd.Series:
-            # Look for hydro units without connectivity and connect them to the neighboring hydro units
-            unit_id = row[('id', '-')]
-            connectivity = row[('connectivity', '-')]
+            """
+            Connect hydro units without downstream connectivity to neighbors.
+
+            Identifies neighboring hydro units and sets connectivity proportional
+            to the length of the common border.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with neighbor connectivity added if needed.
+            """
+            unit_id = row[("id", "-")]
+            connectivity = row[("connectivity", "-")]
             if connectivity:
                 return row
 
@@ -139,15 +187,29 @@ class CatchmentConnectivity:
             neighbor_ids = neighbor_ids[neighbor_ids != 0]
             neighbor_ids = neighbor_ids[neighbor_ids != unit_id]
 
-            # Count the number of cells for each neighbor and set this value as the connectivity
+            # Count # of cells for each neighbor and set this value as the connectivity
             for neighbor_id in neighbor_ids:
                 connectivity[int(neighbor_id)] = np.count_nonzero(
-                    self.catchment.map_unit_ids[dilated_mask] == neighbor_id)
+                    self.catchment.map_unit_ids[dilated_mask] == neighbor_id
+                )
 
-            row[('connectivity', '-')] = connectivity
+            row[("connectivity", "-")] = connectivity
             return row
 
         def _normalize_row(connect: dict) -> dict:
+            """
+            Normalize connectivity values to sum to 1.0.
+
+            Parameters
+            ----------
+            connect
+                Connectivity dictionary with values to normalize.
+
+            Returns
+            -------
+            dict
+                Normalized connectivity dictionary.
+            """
             total_flow = sum(connect.values())
             for k in connect:
                 connect[k] /= total_flow
@@ -155,28 +217,65 @@ class CatchmentConnectivity:
             return connect
 
         def _round_and_normalize_row(connect: dict, precision: int) -> dict:
+            """
+            Round connectivity values to specified precision while maintaining sum of 1.
+
+            Uses floor and redistribution algorithm to ensure normalized values
+            sum to exactly 1.0 after rounding.
+
+            Parameters
+            ----------
+            connect
+                Connectivity dictionary with values to round.
+            precision
+                Number of decimal places to round to.
+
+            Returns
+            -------
+            dict
+                Rounded and normalized connectivity dictionary.
+            """
             total = sum(connect.values())
-            scaled = {k: v * (10 ** precision) for k, v in connect.items()}
+            scaled = {k: v * (10**precision) for k, v in connect.items()}
             floored = {k: int(v) for k, v in scaled.items()}
             remainder = {k: v - floored[k] for k, v in scaled.items()}
 
             # Distribute the remaining difference to the largest remainders
-            diff = int(round(total * (10 ** precision))) - sum(floored.values())
+            diff = int(round(total * (10**precision))) - sum(floored.values())
             for k in sorted(remainder, key=remainder.get, reverse=True)[:diff]:
                 floored[k] += 1
 
             # Scale back to the original precision
-            return {k: floored[k] / (10 ** precision) for k in floored}
+            return {k: floored[k] / (10**precision) for k in floored}
 
-        def normalize_connectivity(row: pd.Series, precision:int = 3) -> pd.Series:
-            connectivity = row[('connectivity', '-')]
+        def normalize_connectivity(row: pd.Series, precision: int = 3) -> pd.Series:
+            """
+            Normalize and filter connectivity values for a hydro unit.
+
+            Removes connectivity to areas outside the catchment, normalizes values
+            to sum to 1.0, filters out values less than 1%, and rounds to specified
+            precision.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+            precision
+                Number of decimal places for rounding.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with normalized connectivity.
+            """
+            connectivity = row[("connectivity", "-")]
             if not connectivity:
                 return row
 
             # If the maximum connectivity leaves the catchment, nullify the connectivity
             max_key = max(connectivity, key=connectivity.get)
             if max_key == 0 and not force_connectivity:
-                row[('connectivity', '-')] = {}
+                row[("connectivity", "-")] = {}
                 return row
 
             # Remove the key 0 if it exists
@@ -195,48 +294,113 @@ class CatchmentConnectivity:
             # Round the connectivity values
             connectivity = _round_and_normalize_row(connectivity, precision)
 
-            row[('connectivity', '-')] = connectivity
+            row[("connectivity", "-")] = connectivity
             return row
 
         def keep_highest_connectivity(row: pd.Series) -> pd.Series:
-            connectivity = row[('connectivity', '-')]
+            """
+            Keep only the highest connectivity value for a hydro unit.
+
+            Removes connectivity to areas outside the catchment, then keeps only
+            the single downstream unit with the highest connectivity value.
+
+            Parameters
+            ----------
+            row
+                DataFrame row with connectivity dictionary.
+
+            Returns
+            -------
+            pd.Series
+                Updated row with only highest connectivity kept.
+            """
+            connectivity = row[("connectivity", "-")]
             if not connectivity:
                 return row
 
             # If the maximum connectivity leaves the catchment, nullify the connectivity
             max_key = max(connectivity, key=connectivity.get)
             if max_key == 0 and not force_connectivity:
-                row[('connectivity', '-')] = {}
+                row[("connectivity", "-")] = {}
                 return row
 
             # Keep only the highest connectivity
             connectivity = {max_key: 1.0}
-            row[('connectivity', '-')] = connectivity
+            row[("connectivity", "-")] = connectivity
             return row
 
         if force_connectivity:
+            if not HAS_SCIPY:
+                raise DependencyError(
+                    "scipy is required for connectivity calculations "
+                    "with force_connectivity=True.",
+                    package_name="scipy",
+                    operation="CatchmentConnectivity.calculate",
+                    install_command="pip install scipy",
+                )
             df = df.apply(remove_connectivity_out, axis=1)
             df = df.apply(connect_to_neighbours, axis=1)
 
-        if mode == 'multiple':
+        if mode == "multiple":
             df = df.apply(normalize_connectivity, axis=1, args=(precision,))
-        elif mode == 'single':
+        elif mode == "single":
             df = df.apply(keep_highest_connectivity, axis=1)
         else:
-            raise ValueError("Unknown mode.")
+            raise ConfigurationError(
+                "Unknown mode for connectivity calculation."
+                " Supported modes are 'single' and 'multiple'.",
+                item_name="mode",
+                item_value=mode,
+                reason="Invalid mode value",
+            )
 
         # Add the connectivity to the hydro units
-        self.catchment.hydro_units.hydro_units[('connectivity', '-')] = df[
-            ('connectivity', '-')]
+        self.catchment.hydro_units.hydro_units[("connectivity", "-")] = df[
+            ("connectivity", "-")
+        ]
 
         return df
 
     def _sum_contributing_flow_acc(
-            self,
-            df: pd.DataFrame,
-            flow_acc: np.ndarray,
-            flow_dir: np.ndarray
-    ):
+        self, df: pd.DataFrame, flow_acc: np.ndarray, flow_dir: np.ndarray
+    ) -> None:
+        """
+        Sum contributing flow accumulation to downstream hydro units.
+
+        Iterates through all cells in the DEM, traces flow direction, and accumulates
+        flow from each hydro unit to the downstream hydro unit it flows into.
+        Updates the connectivity dictionary in the DataFrame.
+
+        Parameters
+        ----------
+        df
+            DataFrame containing hydro unit IDs and connectivity dictionaries.
+        flow_acc
+            2D array of flow accumulation values.
+        flow_dir
+            2D array of flow direction codes (D8 algorithm: 1,2,4,8,16,32,64,128).
+        """
+        # Map each unit id to its (mutable) connectivity dict for O(1) lookups.
+        # The dicts are shared with the DataFrame, so mutating them updates df
+        # in place and avoids a full-DataFrame scan per cell.
+        connect_by_id = dict(
+            zip(df[("id", "-")].values, df[("connectivity", "-")].values)
+        )
+
+        # D8 flow direction codes mapped to (row, col) offsets:
+        # [N,  NE,  E, SE, S, SW, W, NW]
+        # [64, 128, 1, 2,  4, 8, 16, 32]
+        d8_offsets = {
+            1: (0, 1),
+            2: (1, 1),
+            4: (1, 0),
+            8: (1, -1),
+            16: (0, -1),
+            32: (-1, -1),
+            64: (-1, 0),
+            128: (-1, 1),
+        }
+
         # Loop over every cell in the flow accumulation grid
         for i in range(flow_acc.shape[0]):
             for j in range(flow_acc.shape[1]):
@@ -250,31 +414,22 @@ class CatchmentConnectivity:
                 if flow_dir_cell <= 0:
                     continue
 
-                # Get the unit id of the cell to which the current cell flows
-                # Flow directions:
-                # [N,  NE,  E, SE, S, SW, W, NW]
-                # [64, 128, 1, 2,  4, 8, 16, 32]
-                if flow_dir_cell == 1:
-                    i_next, j_next = i, j + 1
-                elif flow_dir_cell == 2:
-                    i_next, j_next = i + 1, j + 1
-                elif flow_dir_cell == 4:
-                    i_next, j_next = i + 1, j
-                elif flow_dir_cell == 8:
-                    i_next, j_next = i + 1, j - 1
-                elif flow_dir_cell == 16:
-                    i_next, j_next = i, j - 1
-                elif flow_dir_cell == 32:
-                    i_next, j_next = i - 1, j - 1
-                elif flow_dir_cell == 64:
-                    i_next, j_next = i - 1, j
-                elif flow_dir_cell == 128:
-                    i_next, j_next = i - 1, j + 1
-                else:
-                    raise ValueError("Unknown flow direction.")
+                # Get the cell to which the current cell flows
+                offset = d8_offsets.get(int(flow_dir_cell))
+                if offset is None:
+                    raise DataError(
+                        "Unknown flow direction.",
+                        data_type="flow direction",
+                        reason="Invalid flow direction value",
+                    )
+                i_next, j_next = i + offset[0], j + offset[1]
 
-                if (i_next < 0 or i_next >= flow_acc.shape[0] or
-                        j_next < 0 or j_next >= flow_acc.shape[1]):
+                if (
+                    i_next < 0
+                    or i_next >= flow_acc.shape[0]
+                    or j_next < 0
+                    or j_next >= flow_acc.shape[1]
+                ):
                     continue
 
                 unit_id_next = int(self.catchment.map_unit_ids[i_next, j_next])
@@ -283,9 +438,7 @@ class CatchmentConnectivity:
                     continue
 
                 # If the current cell flows to a different unit, add a connection
-                connect = df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')]
-                connect = connect.values[0]
-                if unit_id_next not in connect:
-                    connect[unit_id_next] = 0
-                connect[unit_id_next] += float(flow_acc[i, j])
-                df.loc[df[('id', '-')] == unit_id, ('connectivity', '-')] = [connect]
+                connect = connect_by_id[unit_id]
+                connect[unit_id_next] = connect.get(unit_id_next, 0) + float(
+                    flow_acc[i, j]
+                )

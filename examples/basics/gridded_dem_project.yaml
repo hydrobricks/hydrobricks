@@ -1,0 +1,71 @@
+# hydrobricks project file: SOCONT with hydro units delineated from the DEM
+# and gridded (netCDF) forcing.
+#
+# The catchment inputs (outline, DEM, discharge) point to the Sitter at
+# Appenzell test data of the repository. The gridded forcing points to the
+# MeteoSwiss daily products (RhiresD precipitation, TabsD temperature), which
+# are NOT distributed with hydrobricks: set the two 'path' entries below to
+# your local copies (any netCDF grids work — adjust var_name/crs/dims).
+#
+# Check and run it with:
+#   hydrobricks validate gridded_dem_project.yaml
+#   hydrobricks run gridded_dem_project.yaml
+
+model:
+  name: socont
+  options:
+    soil_storage_nb: 2
+  # The default surface runoff (kinematic wave) needs the hydro units'
+  # slope — computed automatically by the DEM delineation below.
+
+hydro_units:
+  # Delineated from the catchment (no prepared CSV needed). The delineation
+  # computes each band's area, elevation, slope and aspect from the DEM.
+  outline: ../../tests/files/catchments/ch_sitter_appenzell/outline.shp
+  dem: ../../tests/files/catchments/ch_sitter_appenzell/dem.tif
+  discretization:
+    method: equal_intervals   # or 'quantiles' (with 'number')
+    distance: 100             # band height [m]
+
+forcing:
+  # One netCDF source per variable; the grid cells are aggregated over each
+  # hydro unit (the unit ids raster is generated in the output directory).
+  gridded:
+    precipitation:
+      path: path/to/RhiresD_v2.0_swiss.lv95     # <-- set to your local folder
+      file_pattern: "RhiresD_ch01h.swiss.lv95_*.nc"
+      var_name: RhiresD
+      data_crs: 2056
+      dim_x: E
+      dim_y: N
+    temperature:
+      path: path/to/TabsD_v2.0_swiss.lv95       # <-- set to your local folder
+      file_pattern: "TabsD_ch01r.swiss.lv95_*.nc"
+      var_name: TabsD
+      data_crs: 2056
+      dim_x: E
+      dim_y: N
+      apply_data_gradient: true  # gradients derived from the data (needs the
+                                  # outline/dem above)
+  pet:
+    # Computed from the temperature; the latitude is derived from the
+    # catchment (add 'lat: ...' when no outline/dem is given).
+    method: Oudin
+
+observations:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/discharge.csv
+  time: {column: Date, format: "%d/%m/%Y"}
+  column: Discharge (mm/d)
+
+periods:
+  calibration: [1981-01-01, 2000-12-31]
+  validation: [2001-01-01, 2020-12-31]
+  spinup: 2y
+
+parameters:
+  A: 458
+  a_snow: 2
+  k_slow_1: 0.9
+  k_slow_2: 0.8
+  percol: 9.8
+  beta: 3000    # kinematic-wave runoff coefficient [100..30000]

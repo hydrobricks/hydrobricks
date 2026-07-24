@@ -36,20 +36,23 @@ list(APPEND src_bind ${src_core})
 # GENERATED MODULE
 
 pybind11_add_module(_hydrobricks MODULE ${src_bind})
-target_link_libraries(_hydrobricks PUBLIC wx::base netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers)
+target_compile_features(_hydrobricks PUBLIC cxx_std_23)
+target_link_libraries(_hydrobricks PUBLIC netCDF::netcdf yaml-cpp::yaml-cpp pybind11::headers Eigen3::Eigen)
+
+# Install the module into the hydrobricks package directory
+install(TARGETS _hydrobricks LIBRARY DESTINATION hydrobricks)
 
 # COPY BINARY FILES
 
 if (WIN32)
     # Find all DLL files in the vcpkg installed directory
     file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
-    set(OUTPUT_DIR_DLLS "${CMAKE_SOURCE_DIR}")
 
     foreach (DLL ${VCPKG_DLLS})
         add_custom_command(
             TARGET _hydrobricks
             POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${OUTPUT_DIR_DLLS}"
-            COMMENT "Copying ${DLL} to ${OUTPUT_DIR_DLLS}")
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+            COMMENT "Copying ${DLL} to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
     endforeach ()
 endif ()

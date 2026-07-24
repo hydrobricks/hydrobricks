@@ -1,0 +1,217 @@
+import logging
+import os.path
+import sys
+import tempfile
+import uuid
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+
+import hydrobricks as hb
+import hydrobricks.models as models
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    force=True,
+    format="%(levelname)s - %(name)s - %(message)s",
+)
+
+# Paths
+CATCHMENT_DIR = Path(
+    os.path.dirname(os.path.realpath(__file__)),
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
+    "ch_rhone_gletsch",
+)
+CATCHMENT_DIR = CATCHMENT_DIR
+CATCHMENT_BANDS = CATCHMENT_DIR / "hydro_units_elevation_radiation.csv"
+CATCHMENT_METEO = CATCHMENT_DIR / "meteo.csv"
+CATCHMENT_DISCHARGE = CATCHMENT_DIR / "discharge.csv"
+CATCHMENT_RASTER = CATCHMENT_DIR / "unit_ids_radiation.tif"
+CATCHMENT_CONNECTIVITY = CATCHMENT_DIR / "connectivity_elevation_radiation.csv"
+CATCHMENT_OUTLINE = CATCHMENT_DIR / "outline.shp"
+DEM_RASTER = CATCHMENT_DIR / "dem.tif"
+GLACIER_ICE_THICKNESS = CATCHMENT_DIR / "glaciers" / "ice_thickness.tif"
+START_DATE = "1981-01-01"
+END_DATE = "2020-12-31"
+
+for with_snow_redistribution in [True, False]:
+    working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
+    working_dir.mkdir(parents=True, exist_ok=True)
+
+    if with_snow_redistribution:
+        print("Running model with snow redistribution")
+        title = "With snow redistribution"
+    else:
+        print("Running model without snow redistribution")
+        title = "Without snow redistribution (snow towers !)"
+
+    # Model structure. The Rhône @ Gletsch catchment is heavily glacierized, so a
+    # glacier land cover is added (its per-unit fraction is initialized from the
+    # ice-thickness raster further down).
+    if with_snow_redistribution:
+        socont = models.Socont(
+            soil_storage_nb=2,
+            surface_runoff="linear_storage",
+            record_all=True,
+            snow_redistribution="transport:snow_slide",
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
+        )
+    else:
+        socont = models.Socont(
+            soil_storage_nb=2,
+            surface_runoff="linear_storage",
+            record_all=True,
+            land_cover_types=["open", "glacier"],
+            land_cover_names=["open", "glacier"],
+        )
+
+    # Parameters
+    parameters = socont.generate_parameters()
+    if with_snow_redistribution:
+        params = {
+            "A": 300,
+            "a_snow": 6,
+            "a_ice": 12,
+            "k_snow": 0.5,
+            "k_ice": 0.5,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            "snow_slide_coeff": 3178.4,
+            "snow_slide_exp": -1.998,
+            "snow_slide_min_slope": 10,
+            "snow_slide_max_slope": 75,
+            "snow_slide_min_snow_depth": 50,
+            "snow_slide_max_snow_depth": 20000,  # Not in original method. -1 = no limit
+        }
+    else:
+        params = {
+            "A": 300,
+            "a_snow": 4,
+            "a_ice": 12,
+            "k_snow": 0.5,
+            "k_ice": 0.5,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+        }
+
+    parameters.set_values(params)
+
+    # Hydro units, with a glacier land cover whose per-unit fraction is initialized
+    # from the ice-thickness raster. The bands are read from the CSV (so their unit
+    # ids keep matching the raster and the connectivity file) and the unit ids are
+    # loaded from the raster before extracting the glacier cover.
+    catchment = hb.Catchment(
+        CATCHMENT_OUTLINE,
+        land_cover_types=["open", "glacier"],
+        land_cover_names=["open", "glacier"],
+    )
+    catchment.extract_dem(DEM_RASTER)
+    catchment.hydro_units.load_from_csv(
+        CATCHMENT_BANDS,
+        column_elevation="elevation",
+        column_area="area",
+        other_columns={"slope": "slope"},
+    )
+    catchment.load_unit_ids_from_raster(str(CATCHMENT_RASTER))
+    # Start every unit as fully 'open', then take the glacier fraction from the
+    # ice-thickness raster (this leaves the ice-free units with a zero, not NaN,
+    # glacier fraction).
+    catchment.initialize_land_cover_fractions()
+    hb.preprocessing.initialize_glacier_cover_from_extent(
+        catchment, ice_thickness=str(GLACIER_ICE_THICKNESS)
+    )
+    hydro_units = catchment.hydro_units
+
+    # Load connectivity (computed as in compute_lateral_connectivity.py)
+    if with_snow_redistribution:
+        hydro_units.set_connectivity(CATCHMENT_CONNECTIVITY)
+
+    # Meteo data
+    ref_elevation = 2702  # Reference altitude for the meteo data
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        CATCHMENT_METEO,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"precipitation": "precip(mm/day)", "temperature": "temp(C)"},
+    )
+
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=ref_elevation, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=ref_elevation, gradient=0.05
+    )
+    forcing.compute_pet(method="Oudin", use=["t", "lat"], lat=46.6)
+
+    # Obs data
+    obs = hb.DischargeObservations(START_DATE, END_DATE)
+    obs.load_from_csv(
+        CATCHMENT_DISCHARGE,
+        column_time="Date",
+        time_format="%d/%m/%Y",
+        content={"discharge": "Discharge (mm/d)"},
+    )
+
+    # Model setup
+    socont.setup(
+        spatial_structure=hydro_units,
+        output_path=str(working_dir),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+
+    # Run the model
+    socont.run(parameters=parameters, forcing=forcing)
+
+    # Dump all outputs
+    socont.dump_outputs(str(working_dir))
+
+    # Load the netcdf file
+    results = hb.Results(str(working_dir) + "/results.nc")
+
+    # List the hydro units components available
+    results.list_hydro_units_components()
+
+    # Plot the SWE
+    swe = results.get_hydro_units_values(component="open_snowpack:snow_content")
+    for i in range(swe.shape[0]):
+        plt.plot(results.results.time, swe[i, :], alpha=0.6)
+    plt.title("Non glacier SWE evolution per hydro unit")
+    plt.tight_layout()
+    plt.show()
+
+    # Plot the snow water equivalent on a map
+    hb.Plotter.plot_map_hydro_unit_value(
+        results,
+        CATCHMENT_RASTER,
+        "open_snowpack:snow_content",
+        "2020-12-31",
+        dem_path=DEM_RASTER,
+        figsize=(5, 6),
+        title=title,
+    )
+    plt.close()
+
+    # Create an animated map of the snow water equivalent
+    hb.Plotter.create_animated_map_hydro_unit_value(
+        results,
+        CATCHMENT_RASTER,
+        "open_snowpack:snow_content",
+        "1990-01-01",
+        "1990-03-20",
+        save_path=str(working_dir),
+        dem_path=DEM_RASTER,
+        figsize=(5, 6),
+    )
+    plt.close()

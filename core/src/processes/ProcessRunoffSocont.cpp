@@ -12,7 +12,7 @@ ProcessRunoffSocont::ProcessRunoffSocont(WaterContainer* container)
       _areaUnit(0),
       _exponent(5.0 / 3.0) {}
 
-void ProcessRunoffSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessRunoffSocont::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("beta", 500.0f);
 }
 
@@ -22,7 +22,7 @@ void ProcessRunoffSocont::SetHydroUnitProperties(HydroUnit* unit, Brick* brick) 
         _areaFraction = landCover->GetAreaFractionPointer();
     }
     _areaUnit = unit->GetArea();
-    _slope = unit->GetPropertyDouble("slope", "m/m");
+    _slope = unit->GetPropertyFloat("slope", "m/m");
 }
 
 void ProcessRunoffSocont::SetParameters(const ProcessSettings& processSettings) {
@@ -30,7 +30,7 @@ void ProcessRunoffSocont::SetParameters(const ProcessSettings& processSettings) 
     _beta = GetParameterValuePointer(processSettings, "beta");
 }
 
-double ProcessRunoffSocont::GetArea() {
+double ProcessRunoffSocont::GetArea() const {
     if (_areaFraction) {
         return _areaUnit * *_areaFraction;
     }
@@ -38,7 +38,7 @@ double ProcessRunoffSocont::GetArea() {
     return _areaUnit;
 }
 
-vecDouble ProcessRunoffSocont::GetRates() {
+const vecDouble& ProcessRunoffSocont::GetRates() {
     // Considers the runoff on an inclined plane with a water depth of 0 at the top and of h at the bottom.
     // The water depth is assumed to be linear from the top to the bottom of the plane.
     // The storage shape is the ratio between the water depth at the bottom and the average water depth -> 2.
@@ -52,5 +52,5 @@ vecDouble ProcessRunoffSocont::GetRates() {
     double dh = qQuick * storageShape * dt;                                     // [m]
     double runoff = (dh / storageShape) * 1000;                                 // [mm]
 
-    return {wxMin(runoff, _container->GetContentWithChanges())};
+    return StoreRates({std::min(runoff, _container->GetContentWithChanges())});
 }

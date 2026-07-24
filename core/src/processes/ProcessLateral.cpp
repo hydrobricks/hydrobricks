@@ -1,5 +1,7 @@
 #include "ProcessLateral.h"
 
+#include <charconv>
+
 #include "Brick.h"
 #include "FluxToBrick.h"
 #include "HydroUnit.h"
@@ -8,25 +10,27 @@
 ProcessLateral::ProcessLateral(WaterContainer* container)
     : Process(container) {}
 
-bool ProcessLateral::IsOk() {
+bool ProcessLateral::IsValid() const {
     if (_outputs.size() == 0) {
-        wxLogError(_("Lateral processes need at least 1 connection."));
+        LogError("Lateral processes need at least 1 connection.");
         return false;
     }
 
     return true;
 }
 
-int ProcessLateral::GetConnectionsNb() {
-    return _outputs.size();
+int ProcessLateral::GetConnectionCount() const {
+    return static_cast<int>(_outputs.size());
 }
 
-double* ProcessLateral::GetValuePointer(const string& name) {
+double* ProcessLateral::GetValuePointer(std::string_view name) {
     // Parse the name to get the connection index (output_i).
     if (name.substr(0, 7) == "output_") {
-        int index = std::stoi(name.substr(7));
+        int index = 0;
+        auto tail = name.substr(7);
+        std::from_chars(tail.data(), tail.data() + tail.size(), index);
         if (index < 0 || index >= static_cast<int>(_outputs.size())) {
-            wxLogError(_("Invalid output index: %d"), index);
+            LogError("Invalid output index: {}", index);
             return nullptr;
         }
         return _outputs[index]->GetAmountPointer();
@@ -35,35 +39,35 @@ double* ProcessLateral::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-void ProcessLateral::AttachFluxOutWithWeight(Flux* flux, double weight) {
-    wxASSERT(flux);
-    _outputs.push_back(flux);
+void ProcessLateral::AttachFluxOutWithWeight(std::unique_ptr<Flux> flux, double weight) {
+    assert(flux);
+    _outputs.push_back(std::move(flux));
     _weights.push_back(weight);
 }
 
-double ProcessLateral::GetOriginLandCoverAreaFraction() {
+double ProcessLateral::GetOriginLandCoverAreaFraction() const {
     Brick* brick = _container->GetParentBrick();
-    wxASSERT(brick);
+    assert(brick);
     auto surfaceComponent = dynamic_cast<SurfaceComponent*>(brick);
-    wxASSERT(surfaceComponent);
+    assert(surfaceComponent);
 
     return surfaceComponent->GetParentAreaFraction();
 }
 
 double ProcessLateral::GetTargetLandCoverAreaFraction(Flux* flux) {
     FluxToBrick* fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
-    wxASSERT(flux);
+    assert(flux);
     Brick* targetBrick = fluxToBrick->GetTargetBrick();
-    wxASSERT(targetBrick);
+    assert(targetBrick);
     auto surfaceComponent = dynamic_cast<SurfaceComponent*>(targetBrick);
-    wxASSERT(surfaceComponent);
+    assert(surfaceComponent);
 
     return surfaceComponent->GetParentAreaFraction();
 }
 
 double ProcessLateral::ComputeFractionAreas(Flux* flux) {
     auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
-    wxASSERT(fluxToBrick);
+    assert(fluxToBrick);
 
     double destinationArea = fluxToBrick->GetTargetBrick()->GetHydroUnit()->GetArea();
     double originArea = _container->GetParentBrick()->GetHydroUnit()->GetArea();

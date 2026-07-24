@@ -5,6 +5,13 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+/**
+ * Linear reservoir outflow.
+ *
+ *   outflow = k × S
+ *
+ * k is the response factor [1/d] and S the storage content.
+ */
 class ProcessOutflowLinear : public ProcessOutflow {
   public:
     explicit ProcessOutflowLinear(WaterContainer* container);
@@ -16,7 +23,7 @@ class ProcessOutflowLinear : public ProcessOutflow {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetParameters()
@@ -24,12 +31,12 @@ class ProcessOutflowLinear : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* _responseFactor;  // [1/d]
+    const float* _responseFactor;  // [1/d]
 
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_OUTFLOW_LINEAR_H

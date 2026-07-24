@@ -16,7 +16,7 @@ HydroUnitProperty::HydroUnitProperty(string name, string valueString, string uni
       _value(NAN_D),
       _valueString(std::move(valueString)) {}
 
-double HydroUnitProperty::GetValue(const string& unit) const {
+double HydroUnitProperty::GetValue(std::string_view unit) const {
     if (_unit == unit) {
         return _value;
     }
@@ -25,13 +25,13 @@ double HydroUnitProperty::GetValue(const string& unit) const {
             return _value;
         }
         if (unit == "radians" || unit == "rad") {
-            return _value * M_PI / 180.0;
+            return _value * constants::pi / 180.0;
         }
         if (unit == "percent" || unit == "%") {
-            return 100 * tan(_value * M_PI / 180.0);
+            return 100 * tan(_value * constants::pi / 180.0);
         }
         if (unit == "m/m" || unit == "m_per_m") {
-            return tan(_value * M_PI / 180.0);
+            return tan(_value * constants::pi / 180.0);
         }
     }
     if (_unit == "m2" || _unit == "m^2") {
@@ -42,14 +42,14 @@ double HydroUnitProperty::GetValue(const string& unit) const {
             return _value / 1000000.0;
         }
     }
-    wxLogError(_("The unit '%s' is not supported for the property '%s'."), unit, _name);
+    LogError("The unit '{}' is not supported for the property '{}'.", unit, _name);
 
     return NAN_D;
 }
 
 string HydroUnitProperty::GetValueString() const {
     if (_valueString.empty()) {
-        wxLogError(_("The value (string) for the property '%s' is empty."), _name);
+        LogError("The value (string) for the property '{}' is empty.", _name);
     }
 
     return _valueString;

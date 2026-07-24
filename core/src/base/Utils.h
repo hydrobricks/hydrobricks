@@ -1,38 +1,40 @@
 #ifndef HYDROBRICKS_UTILS_H
 #define HYDROBRICKS_UTILS_H
 
+#include <chrono>
+
 #include "Includes.h"
 
 /**
- * Initialization of the user directory and the config file.
+ * Initialization of the user directory.
  */
-bool InitHydrobricks();
+[[nodiscard]] bool InitHydrobricks();
 
 /**
  * Initialization of hydrobricks for Python.
  */
-bool InitHydrobricksForPython();
+[[nodiscard]] bool InitHydrobricksForPython();
 
 /**
  * Get the user directory path.
  *
  * @return The user directory path.
  */
-wxString GetUserDirPath();
+string GetUserDirPath();
 
 /**
  * Check that the output directory exists and create it if not.
  *
  * @return True on success.
  */
-bool CheckOutputDirectory(const string& path);
+[[nodiscard]] bool CheckOutputDirectory(const string& path);
 
 /**
  * Display the processing time.
  *
- * @param sw The stop watch instance created before the computations.
+ * @param startTime The time point recorded before the computations began.
  */
-void DisplayProcessingTime(const wxStopWatch& sw);
+void DisplayProcessingTime(std::chrono::steady_clock::time_point startTime);
 
 /**
  * Create a log file at the given path.
@@ -62,10 +64,13 @@ void SetDebugLogLevel();
 void SetMessageLogLevel();
 
 /**
- * Check if the given integer value is a NaN.
+ * Check if the given integer value is a NaN (not-a-number).
+ *
+ * Uses a sentinel value (INT_NAN_SENTINEL) since int type cannot represent NaN naturally.
+ * This checks if the value equals INT_NAN_SENTINEL (std::numeric_limits<int>::max()).
  *
  * @param value The value to check.
- * @return True if the value is a NaN, false otherwise.
+ * @return True if the value equals INT_NAN_SENTINEL, false otherwise.
  */
 bool IsNaN(int value);
 
@@ -86,19 +91,22 @@ bool IsNaN(float value);
 bool IsNaN(double value);
 
 /**
- * Ge the path separator of the OS used.
+ * Get the path separator of the OS used.
  *
  * @return The path separator of the current OS.
  */
 const char* GetPathSeparator();
 
 /**
- * Compare two strings in an case insensitive way.
+ * Compare two strings in a case insensitive way.
+ *
+ * Uses locale-aware case comparison via std::toupper with the default locale.
  *
  * @param str1 First string
  * @param str2 Second string
- * @return True if strings match.
+ * @return True if strings match (case insensitive).
  * @note From https://thispointer.com/c-case-insensitive-string-comparison-using-stl-c11-boost-library/
+ * @note Properly handles signed char to unsigned char conversion for std::toupper.
  */
 bool StringsMatch(const string& str1, const string& str2);
 
@@ -148,7 +156,7 @@ int Find(const double* start, const double* end, double value, double tolerance 
  * @param showWarning option to show a warning if the value was not found in the vector (default: true).
  * @return The index of the searched value.
  */
-template <class T>
+template <std::totally_ordered T>
 int FindT(const T* start, const T* end, T value, T tolerance = 0, bool showWarning = true);
 
 /**

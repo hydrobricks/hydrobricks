@@ -7,7 +7,7 @@ ProcessOutflowLinear::ProcessOutflowLinear(WaterContainer* container)
     : ProcessOutflow(container),
       _responseFactor(nullptr) {}
 
-void ProcessOutflowLinear::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessOutflowLinear::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("response_factor", 0.2f);
 }
 
@@ -16,6 +16,6 @@ void ProcessOutflowLinear::SetParameters(const ProcessSettings& processSettings)
     _responseFactor = GetParameterValuePointer(processSettings, "response_factor");
 }
 
-vecDouble ProcessOutflowLinear::GetRates() {
-    return {(*_responseFactor) * _container->GetContentWithChanges()};
+const vecDouble& ProcessOutflowLinear::GetRates() {
+    return StoreRates({(*_responseFactor) * _container->GetContentWithChanges()});
 }

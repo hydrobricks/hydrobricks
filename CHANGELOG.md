@@ -1,8 +1,197 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog(https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning(https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## Unreleased
+
+### Breaking changes
+
+- Project-file YAML keys renamed to match the underlying Python API parameter they map to: `forcing.gridded.<var>.elevation_gradient` → `apply_data_gradient`, `forcing.gridded.<var>.crs` → `data_crs`, `hydro_units.land_cover_areas` → `columns_areas`, `forcing.pet.latitude` → `lat`.
+
+
+## 0.9.0 - 2026-07-07
+
+### Breaking changes
+
+- The default land cover is now `open` instead of `ground`. `ground` (and `generic`/`generic_land_cover`) are kept as accepted aliases for backward compatibility, but default-run output labels change from `ground:*` to `open:*`.
+- The discharge observations class `Observations` is renamed `DischargeObservations`, and the calibration argument `obs` (in `SpotpySetup`) is renamed `discharge`.
+- The observation/reference classes moved to a new `hydrobricks.evaluation` subpackage (`DischargeObservations`, `AuxiliaryObservation`, `GlacierMassBalanceObservations`, `evaluate`). They remain importable from the top level (`hb.DischargeObservations`, …); `hydrobricks.observations` is gone.
+
+### Added
+
+- Adding a file-based (yaml) project definition.
+- Adding the GR4J model structure and its processes along with the CemaNeige snow model.
+- Adding the GR6J model structure and its processes.
+- Adding the HBV-96 model structure and its processes.
+- Adding custom model structures (based on yaml files).
+- Enabling per-hydro-unit model structure variants.
+- Automate hydro unit structure assignment from land covers.
+- Adding model structure inspection and visualization (a textual `model.summary()` / `model.print_structure()`, and a Graphviz `model.plot_structure()`).
+- Introducing parameter transforms for model calibration.
+- Adding a Periods class to handle calibration and validation periods.
+- Adding dynamic forcing override mechanism (ability to dynamically override forcing values within a simulation timestep).
+- Adding a temperature threshold-based snow-rain splitter based on a single temperature threshold (`SplitterSnowRainThreshold`).
+- Adding separate snow/rain correction factors.
+- Adding rain routing to snowpack liquid water storage (parameter `rain_to_snowpack`).
+- Adding open water evaporation process (`et:open_water`). This process evaporates at the full potential rate (PET).
+- Adding forest canopy interception with dedicated storage and processes.
+- Adding linear, power-law, and exponential actual evapotranspiration.
+- Adding Frey & Holzmann (2015) lateral snow redistribution.
+- Adding snow sublimation processes.
+- Enable calibration with auxiliary observations (e.g., snow coverage or glacier mass balance).
+- Enable parallel model calibration with SPOTPY.
+- Adding land cover extraction from raster (ESA WorldCover, CORINE) and vector datasets to set hydro unit land-cover fractions.
+- Adding catchment discretization by sub-catchments.
+- Adding different example scripts.
+- Initialize glacier cover from extracted ice thickness rasters.
+- Restoring dynamic land cover and glacier state on model reset.
+- Adding per-unit total SWE extraction in results.
+- Adding in-memory accessors for recorded per–hydro-unit series (no file dump): `model.get_recorded_hydro_unit_values(label)`, `get_recorded_hydro_unit_fractions`, `get_recorded_labels`, `get_recorded_hydro_unit_ids`/`_areas` and `get_recorded_time`.
+
+### Changed
+
+- Generalizing outflow rest process for direct and solver bricks (`ProcessOutflowRest` now correctly determines the remaining water for both direct-computation and solver-driven bricks).
+- Refactoring plotting as a class.
+- Changing PET method to Oudin in examples.
+- Making the parameter aliases case-insensitive.
+- Refactoring land covers allowing pre-defined classes (e.g. forest, lake, glacier) and user-defined classes (e.g. urban, wetland).
+- Introduce pluggable glacier modules.
+- Standardize `open` as default generic land cover (instead of `ground`). `ground` (and `generic`/`generic_land_cover`) are kept as accepted aliases.
+- Optimize process rate calculations with reusable buffers.
+- Reducing logging verbosity for skipped runs during calibration when parameters are out of range or violate constraints.
+- Refactor observation handling for multi-objective calibration.
+- When a parameter set is rejected due to constraints, for example, a very bad value is given to the objective function rather than NaNs.
+
+### Fixed
+
+- Water balance is now conserved when a land cover area fraction changes (land-cover change and glacier-evolution actions). The water, snow and canopy content stored on the land that changes hands is transferred between the changed cover and the generic cover that absorbs the area difference, instead of leaving the depth (mm) unchanged over a different area, which silently created or destroyed water.
+- Snap near-zero water container content to zero (addresses floating-point precision issues).
+- Adding the missing glacier area in examples.
+
+
+## 0.8.7 - 2026-05-10
+
+### Breaking changes
+
+- The functions model.is_ok() and parameters.is_ok() have been renamed to model.is_valid() and parameters.are_valid() or parameters.is_valid() respectively.
+
+### Added
+
+- Add custom exception classes (C++ and Python).
+- Add additional IsValid() functions (C++).
+- Add BrickCategory enum (C++).
+- Add Has* methods to various classes for better state checking (C++).
+- Add TryGet methods to HydroUnit (C++).
+
+### Fixed
+
+- Handle decreasing coordinate axes in TimeSeries2D spatial selection.
+
+### Changed
+
+- Various C++ and Python code refactoring.
+- Rename count variables (e.g. GetChangesNb() becomes GetChangesCount() in C++ and get_hydro_unit_nb() becomes get_hydro_unit_count() in Python).
+- Externalize results writing from the Logger to a dedicated Results class (C++).
+- Provide more information when enums fail to parse (C++).
+- Refactor C++ exceptions.
+- Improve pointers ownership (C++).
+- Refactor Parameters in the C++ core.
+- Rename IsOk() to IsValid() in the C++ core.
+- Update logging to use the logging module instead of print statements (Python).
+- Refactor the Observations class (Python).
+- Refactor the trainer class (Python).
+- Remove wxWidgets dependency in favor of C++ standard library features.
+- Simplify area computation in `compute_area` (Python).
+- Improve raster file I/O resource management (Python).
+- Centralize object creation with registry pattern (C++).
+- Adopt C++23 standard library features (C++).
+- Enhance error handling with std::expected (C++).
+- Decouple model construction from ModelHydro class (C++).
+
+
+## 0.8.6 - 2025-12-18
+
+### Added
+
+- Adding computation of ice thickness changes (observation-based delta-h).
+- Adding a check that the action has been initialized.
+- Checking that the model is initialized before adding actions.
+- Adding helpers to the Results class.
+
+### Changed
+
+- Refactoring the parameters definition (no impact for the users).
+- Moving examples to the root folder.
+- Converting stringly-typed identifiers to enums (no impact for the users).
+
+
+## 0.8.5 - 2025-08-28
+
+### Added
+
+- Prevents lateral snow slide from causing unrealistic snow accumulation in target areas by limiting redistribution when the target snowpack already exceeds a threshold.
+
+
+## 0.8.4 - 2025-08-28
+
+### Added
+
+- Adding a snow to ice transformation process for glaciers following the SWAT model approach (Luo et al., 2013).
+- Adding a snow to ice transformation action that transforms all snow to ice at a given date (e.g., end of the melt season).
+
+### Fixed
+
+- Fixing an issue when glacier volume is increasing further than the initial volume in the glacier evolution methods.
+
+### Changed
+
+- In the connectivity calculation, the 'force_connectivity' option was changed to False by default due to potential issues in some cases (e.g., exchange back and forth).
+
+
+## 0.8.3 - 2025-08-14
+
+### Fixed
+
+- Fixing an issue with the gradient-based interpolation for temperature and precipitation when spatializing from gridded data.
+
+
+## 0.8.2 - 2025-08-12
+
+### Breaking changes
+
+- The extraction of meteorological data from netCDF files (spatialize_from_gridded_data) has changed. The function now computes elevation gradients by default for temperature and precipitation. In order to access to the DEM, the class must be initialized with the catchment object (forcing = hb.Forcing(catchment)) instead of the hydro units object. This gradient-based interpolation can be disabled with apply_data_gradient=False.
+
+### Added
+
+- Adding a gradient-based interpolation for temperature and precipitation when spatializing from gridded data.
+- Making the SnowSlide parameters accessible.
+- Adding a parameter to the SnowSlide method to control the overall maximum snow depth.
+
+### Fixed
+
+- The actions were not correctly re-initialized when resetting the model. This is now fixed.
+- Improving land cover fraction checks in actions.
+- Fixing issue related to hydro unit ids when loading from csv file. The hydro units were not retrieved from the file, but assumed increasing, which is wrong when sorted by elevation.
+- Fixing hydro unit ids in land cover extraction.
+- Fixing index issues related to Pandas iterrows() usage.
+
+### Changed
+
+- Avoid snow redistribution to too small areas.
+- Capping the snow redistribution rate to 1000 mm of SWE.
+
+
+## 0.8.1 - 2025-08-06
+
+### Fixed
+
+- Adding trainer support for failing simulations.
+- Fixing precision issue in land cover fraction check.
+- Allow for floating-point imprecision in initial glacier extent.
+
 
 ## 0.8.0 - 2025-07-16
 

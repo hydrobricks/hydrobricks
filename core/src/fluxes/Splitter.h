@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SPLITTER_H
 #define HYDROBRICKS_SPLITTER_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -8,9 +10,11 @@
 
 class HydroUnit;
 
-class Splitter : public wxObject {
+class Splitter {
   public:
     explicit Splitter();
+
+    virtual ~Splitter() = default;
 
     /**
      * Factory method to create a splitter.
@@ -18,14 +22,22 @@ class Splitter : public wxObject {
      * @param splitterSettings settings of the splitter containing the parameters.
      * @return a pointer to the splitter.
      */
-    static Splitter* Factory(const SplitterSettings& splitterSettings);
+    static std::unique_ptr<Splitter> Factory(const SplitterSettings& splitterSettings);
 
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Assign the parameters to the splitter.
@@ -41,7 +53,19 @@ class Splitter : public wxObject {
      * @param name name of the parameter.
      * @return pointer to the value of the parameter.
      */
-    float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
+    const float* GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name);
+
+    /**
+     * Get the value pointer of an optional parameter, or a unit (1.0) value if absent.
+     *
+     * Used for parameters that default to a neutral value (e.g. precipitation
+     * correction factors) so that splitter setups omitting them stay valid.
+     *
+     * @param splitterSettings settings of the splitter containing the parameters.
+     * @param name name of the parameter.
+     * @return pointer to the value of the parameter, or to a 1.0 fallback if not found.
+     */
+    const float* GetParameterValuePointerOrUnit(const SplitterSettings& splitterSettings, const string& name);
 
     /**
      * Attach forcing.
@@ -49,8 +73,16 @@ class Splitter : public wxObject {
      * @param forcing incoming forcing
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Splitter::AttachForcing - Should not be called (virtual)");
     }
+
+    /**
+     * Set HydroUnit properties (e.g. elevation) needed by spatially-aware splitters.
+     * Default is a no-op; override in subclasses that require spatial data.
+     *
+     * @param unit the HydroUnit this splitter belongs to.
+     */
+    virtual void SetHydroUnitProperties(HydroUnit* /*unit*/) {}
 
     /**
      * Attach incoming flux.
@@ -58,24 +90,25 @@ class Splitter : public wxObject {
      * @param flux incoming flux
      */
     void AttachFluxIn(Flux* flux) {
-        wxASSERT(flux);
+        assert(flux);
         _inputs.push_back(flux);
     }
 
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
-        wxASSERT(flux);
-        _outputs.push_back(flux);
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
+        assert(flux);
+        _outputs.push_back(std::move(flux));
     }
 
     /**
      * Get the pointer to an output value.
      *
      * @param name name of the output value.
+     * @return pointer to the output value.
      */
     virtual double* GetValuePointer(const string& name) = 0;
 
@@ -89,7 +122,7 @@ class Splitter : public wxObject {
      *
      * @return name of the splitter.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 
@@ -104,8 +137,9 @@ class Splitter : public wxObject {
 
   protected:
     string _name;
-    vector<Flux*> _inputs;
-    vector<Flux*> _outputs;
+    vector<Flux*> _inputs;                        // non-owning: owned by processes
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
+    const float _unitValue = 1.0f;                // fallback for absent optional parameters
 };
 
 #endif  // HYDROBRICKS_SPLITTER_H

@@ -30,32 +30,21 @@ include_directories(${inc_dirs})
 
 # DECLARE EXECUTABLE
 
-if (WIN32)
-    add_executable(hydrobricks-tests WIN32 ${src_tests})
-elseif (UNIX AND NOT APPLE)
-    add_executable(hydrobricks-tests ${src_tests})
-elseif (APPLE)
-    add_executable(hydrobricks-tests MACOSX_BUNDLE ${src_tests})
-else ()
-    add_executable(hydrobricks-tests ${src_tests})
-endif ()
+add_executable(hydrobricks-tests ${src_tests})
 
 # DEFINITIONS
 
 if (WIN32)
     set_target_properties(hydrobricks-tests PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-else ()
-    set_target_properties(hydrobricks-tests PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
-endif ()
-
-if (WIN32)
     add_definitions(-D_CRTDBG_MAP_ALLOC)
 endif (WIN32)
 
 # LINKING
 
 add_dependencies(hydrobricks-tests core)
-target_link_libraries(hydrobricks-tests core)
+target_compile_features(hydrobricks-tests PUBLIC cxx_std_23)
+target_link_libraries(hydrobricks-tests core Eigen3::Eigen)
+target_compile_definitions(hydrobricks-tests PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(hydrobricks-tests GTest::gtest)
 
 if (UNIX)

@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path
 import shutil
@@ -10,20 +11,26 @@ import pytest
 
 import hydrobricks as hb
 
+logger = logging.getLogger(__name__)
+
 FILES_DIR = Path(
     os.path.dirname(os.path.realpath(__file__)),
-    '..', '..', 'tests', 'files', 'catchments'
+    "..",
+    "..",
+    "tests",
+    "files",
+    "catchments",
 )
-SITTER_OUTLINE = FILES_DIR / 'ch_sitter_appenzell' / 'outline.shp'
-SITTER_DEM = FILES_DIR / 'ch_sitter_appenzell' / 'dem.tif'
-RHONE_OUTLINE = FILES_DIR / 'ch_rhone_gletsch' / 'outline.shp'
-RHONE_DEM = FILES_DIR / 'ch_rhone_gletsch' / 'dem.tif'
-RHONE_UIDS = FILES_DIR / 'ch_rhone_gletsch' / 'unit_ids_radiation.tif'
-RHONE_HUS = FILES_DIR / 'ch_rhone_gletsch' / 'hydro_units_elevation_radiation.csv'
+SITTER_OUTLINE = FILES_DIR / "ch_sitter_appenzell" / "outline.shp"
+SITTER_DEM = FILES_DIR / "ch_sitter_appenzell" / "dem.tif"
+RHONE_OUTLINE = FILES_DIR / "ch_rhone_gletsch" / "outline.shp"
+RHONE_DEM = FILES_DIR / "ch_rhone_gletsch" / "dem.tif"
+RHONE_UIDS = FILES_DIR / "ch_rhone_gletsch" / "unit_ids_radiation.tif"
+RHONE_HUS = FILES_DIR / "ch_rhone_gletsch" / "hydro_units_elevation_radiation.csv"
 
 
 def has_required_packages() -> bool:
-    return hb.has_rasterio and hb.has_geopandas and hb.has_shapely
+    return hb.HAS_RASTERIO and hb.HAS_GEOPANDAS and hb.HAS_SHAPELY
 
 
 def test_shapefile_parsing():
@@ -44,11 +51,8 @@ def test_elevation_bands_equal_intervalss():
         return
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.create_elevation_bands(
-        method='equal_intervals',
-        distance=50
-    )
-    area_sum = catchment.hydro_units.hydro_units['area'].sum()
+    catchment.create_elevation_bands(method="equal_intervals", distance=50)
+    area_sum = catchment.hydro_units.hydro_units["area"].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
 
 
@@ -57,11 +61,8 @@ def test_elevation_bands_quantiles():
         return
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.create_elevation_bands(
-        method='quantiles',
-        number=25
-    )
-    area_sum = catchment.hydro_units.hydro_units['area'].sum()
+    catchment.create_elevation_bands(method="quantiles", number=25)
+    area_sum = catchment.hydro_units.hydro_units["area"].sum()
     assert 74430000 < area_sum.iloc[0] < 74450000
 
 
@@ -79,13 +80,10 @@ def test_save_unit_ids_raster():
         return
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.create_elevation_bands(
-        method='equal_intervals',
-        distance=50
-    )
+    catchment.create_elevation_bands(method="equal_intervals", distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
-        assert (Path(tmp_dir) / 'unit_ids.tif').exists()
+        assert (Path(tmp_dir) / "unit_ids.tif").exists()
 
 
 def test_load_units_from_raster():
@@ -93,10 +91,7 @@ def test_load_units_from_raster():
         return
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.create_elevation_bands(
-        method='equal_intervals',
-        distance=50
-    )
+    catchment.create_elevation_bands(method="equal_intervals", distance=50)
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment.save_unit_ids_raster(Path(tmp_dir))
 
@@ -109,10 +104,7 @@ def test_load_units_from_raster():
 def test_load_units_from_raster_prepare_attributes():
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.create_elevation_bands(
-        method='equal_intervals',
-        distance=50
-    )
+    catchment.create_elevation_bands(method="equal_intervals", distance=50)
     df1 = catchment.hydro_units.hydro_units
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -123,19 +115,19 @@ def test_load_units_from_raster_prepare_attributes():
         catchment2.load_unit_ids_from_raster(Path(tmp_dir))
         df2 = catchment2.get_hydro_units_attributes().hydro_units
 
-        assert np.allclose(df1['area'], df2['area'])
-        assert np.allclose(df1['elevation_mean'], df2['elevation_mean'])
-        assert np.allclose(df1['slope'], df2['slope'])
-        assert np.allclose(df1['aspect'], df2['aspect'])
+        assert np.allclose(df1["area"], df2["area"])
+        assert np.allclose(df1["elevation_mean"], df2["elevation_mean"])
+        assert np.allclose(df1["slope"], df2["slope"])
+        assert np.allclose(df1["aspect"], df2["aspect"])
 
 
 def test_discretize_by_elevation_and_aspect():
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
     catchment.discretize_by(
-        criteria=['elevation', 'aspect'],
-        elevation_method='equal_intervals',
-        elevation_distance=100
+        criteria=["elevation", "aspect"],
+        elevation_method="equal_intervals",
+        elevation_distance=100,
     )
     assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
 
@@ -200,24 +192,24 @@ def test_solar_azimuth_aug():
 
 
 def test_radiation_calculation():
-    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
-    ref_radiation_path = FILES_DIR / '..' / 'others' / 'radiation_annual_mean.tif'
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
+    ref_radiation_path = FILES_DIR / ".." / "others" / "radiation_annual_mean.tif"
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
         catchment.extract_dem(dem_path)
 
         catchment.calculate_daily_potential_radiation(
-            str(Path(tmp_dir)),
-            with_cast_shadows=False
+            str(Path(tmp_dir)), with_cast_shadows=False
         )
 
-        assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
-        assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
+        assert (Path(tmp_dir) / "annual_potential_radiation.tif").exists()
+        assert (Path(tmp_dir) / "daily_potential_radiation.nc").exists()
 
         ref_radiation = hb.rasterio.open(ref_radiation_path).read(1)
         calc_radiation = hb.rasterio.open(
-            Path(tmp_dir) / 'annual_potential_radiation.tif').read(1)
+            Path(tmp_dir) / "annual_potential_radiation.tif"
+        ).read(1)
 
         # Shift the calculated radiation to match the reference (likely due to the
         # slope and aspect calculations)
@@ -235,24 +227,24 @@ def test_radiation_calculation():
 
 
 def test_radiation_calculation_with_cast_shadows():
-    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
-    ref_radiation_path = FILES_DIR / '..' / 'others' / 'radiation_annual_mean.tif'
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
+    ref_radiation_path = FILES_DIR / ".." / "others" / "radiation_annual_mean.tif"
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         catchment = hb.Catchment()
         catchment.extract_dem(dem_path)
 
         catchment.calculate_daily_potential_radiation(
-            str(Path(tmp_dir)),
-            with_cast_shadows=True
+            str(Path(tmp_dir)), with_cast_shadows=True
         )
 
-        assert (Path(tmp_dir) / 'annual_potential_radiation.tif').exists()
-        assert (Path(tmp_dir) / 'daily_potential_radiation.nc').exists()
+        assert (Path(tmp_dir) / "annual_potential_radiation.tif").exists()
+        assert (Path(tmp_dir) / "daily_potential_radiation.nc").exists()
 
         ref_radiation = hb.rasterio.open(ref_radiation_path).read(1)
         calc_radiation = hb.rasterio.open(
-            Path(tmp_dir) / 'annual_potential_radiation.tif').read(1)
+            Path(tmp_dir) / "annual_potential_radiation.tif"
+        ).read(1)
 
         # Shift the calculated radiation to match the reference (likely due to the
         # slope and aspect calculations)
@@ -266,11 +258,14 @@ def test_radiation_calculation_with_cast_shadows():
         diff = ref_radiation - calc_radiation
         average_diff = np.mean(diff)
 
-        assert abs(average_diff) < 0.1  # Different from the previous test
+        # The reference raster predates the correction of the Earth-Sun distance
+        # ratio (true anomaly) in _calculate_radiation_hock_equation, which shifts
+        # the annual mean by ~0.19 W/m². Tolerance relaxed accordingly.
+        assert abs(average_diff) < 0.25  # Different from the previous test
 
 
 def test_radiation_calculation_resolution():
-    dem_path = FILES_DIR / '..' / 'others' / 'dem_small_tile.tif'
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
 
     working_dir = Path(tempfile.gettempdir()) / f"tmp_{uuid.uuid4().hex}"
     working_dir.mkdir(parents=True, exist_ok=True)
@@ -279,38 +274,74 @@ def test_radiation_calculation_resolution():
     catchment.extract_dem(dem_path)
 
     catchment.calculate_daily_potential_radiation(
-        str(working_dir),
-        resolution=100,
-        with_cast_shadows=False
+        str(working_dir), resolution=100, with_cast_shadows=False
     )
 
-    assert (working_dir / 'annual_potential_radiation.tif').exists()
-    assert (working_dir / 'daily_potential_radiation.nc').exists()
+    assert (working_dir / "annual_potential_radiation.tif").exists()
+    assert (working_dir / "daily_potential_radiation.nc").exists()
 
     try:
         shutil.rmtree(working_dir)
     except Exception:
-        print("Failed to clean up.")
+        logger.debug("Failed to clean up temporary directory %s", working_dir)
+
+
+def test_radiation_cache_roundtrip(tmp_path, monkeypatch):
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
+    cache_dir = tmp_path / "cache"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+    out1.mkdir()
+    out2.mkdir()
+
+    catchment = hb.Catchment()
+    catchment.extract_dem(dem_path)
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 1
+
+    # The second run must be served from the cache without any computation.
+    catchment2 = hb.Catchment()
+    catchment2.extract_dem(dem_path)
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("cache miss: the radiation was recomputed")
+
+    monkeypatch.setattr(
+        catchment2.topography, "resample_dem_and_calculate_slope_aspect", _fail
+    )
+    catchment2.calculate_daily_potential_radiation(
+        str(out2), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+
+    assert (out2 / "annual_potential_radiation.tif").exists()
+    assert (out2 / "daily_potential_radiation.nc").exists()
+    assert catchment2.solar_radiation.mean_annual_radiation is not None
+
+    rad1 = hb.rasterio.open(out1 / "annual_potential_radiation.tif").read(1)
+    rad2 = hb.rasterio.open(out2 / "annual_potential_radiation.tif").read(1)
+    assert np.allclose(rad1, rad2, equal_nan=True)
+
+    # A different option is a different key.
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=True, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 2
 
 
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
-    catchment.discretize_by(
-        ['elevation'],
-        elevation_distance=100
-    )
+    catchment.discretize_by(["elevation"], elevation_distance=100)
 
-    df = catchment.calculate_connectivity(
-        mode='single',
-        force_connectivity=False
-    )
+    df = catchment.calculate_connectivity(mode="single", force_connectivity=False)
 
-    assert df.loc[df[('id', '-')] == 1, ('connectivity', '-')][0] == {}
+    assert df.loc[df[("id", "-")] == 1, ("connectivity", "-")][0] == {}
 
     for i in range(2, 19):
-        keys = df.loc[df[('id', '-')] == i, ('connectivity', '-')].values[0].keys()
+        keys = df.loc[df[("id", "-")] == i, ("connectivity", "-")].values[0].keys()
         key = list(keys)[0]
         assert key == i - 1
 
@@ -322,9 +353,6 @@ def test_connectivity_on_discontinuous_hydro_units():
     catchment.load_hydro_units_from_csv(RHONE_HUS)
     catchment.load_unit_ids_from_raster(RHONE_UIDS)
 
-    df = catchment.calculate_connectivity(
-        mode='multiple',
-        force_connectivity=True
-    )
+    df = catchment.calculate_connectivity(mode="multiple", force_connectivity=True)
 
     assert df.empty is False

@@ -6,8 +6,8 @@ FluxToBrick::FluxToBrick(Brick* brick)
     : Flux(),
       _toBrick(brick) {}
 
-bool FluxToBrick::IsOk() {
-    return true;
+bool FluxToBrick::IsValid() const {
+    return _toBrick != nullptr;
 }
 
 double FluxToBrick::GetAmount() {
@@ -15,7 +15,7 @@ double FluxToBrick::GetAmount() {
 }
 
 void FluxToBrick::UpdateFlux(double amount) {
-    wxASSERT(_toBrick);
+    assert(_toBrick);
     if (_fractionTotal < 1.0) {
         _amount = amount * _fractionTotal;
     } else {

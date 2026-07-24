@@ -17,7 +17,7 @@ enum {
 /**
  * Temporal units.
  */
-enum TimeUnit {
+enum class TimeUnit {
     Week,
     Day,
     Hour,
@@ -28,9 +28,11 @@ enum TimeUnit {
 /**
  * Types of forcing variables.
  */
-enum VariableType {
+enum class VariableType {
     Precipitation,
     Temperature,
+    TemperatureMin,
+    TemperatureMax,
     Radiation,
     PET,
     Custom1,
@@ -51,6 +53,28 @@ enum TimeFormat {
     DD_MM_YYYY_hh_mm,
     DD_MM_YYYY_hh_mm_ss,
     guess
+};
+
+/**
+ * Strongly-typed brick categories used by factories and type dispatch.
+ */
+enum class BrickType {
+    Storage,
+    GenericLandCover,
+    Glacier,
+    Snowpack,
+    InterceptionStorage,
+    Unknown
+};
+
+/**
+ * Content type for storages and fluxes.
+ */
+enum class ContentType {
+    Water,
+    Snow,
+    Ice,
+    Unknown
 };
 
 #endif  // HYDROBRICKS_ENUMS_H

@@ -1,23 +1,26 @@
 #ifndef HYDROBRICKS_TIME_SERIES_H
 #define HYDROBRICKS_TIME_SERIES_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "SettingsBasin.h"
 #include "TimeSeriesData.h"
 
-class TimeSeries : public wxObject {
+class TimeSeries {
   public:
     explicit TimeSeries(VariableType type);
 
-    ~TimeSeries() override = default;
+    virtual ~TimeSeries() = default;
 
     /**
      * Parse the time series netCDF file.
      *
      * @param path path to the netCDF file.
      * @param vecTimeSeries vector to store the parsed time series.
+     * @return true if the file was parsed successfully.
      */
-    static bool Parse(const string& path, vector<TimeSeries*>& vecTimeSeries);
+    [[nodiscard]] static bool Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries);
 
     /**
      * Create a time series from the provided data.
@@ -28,7 +31,7 @@ class TimeSeries : public wxObject {
      * @param data time series data.
      * @return pointer to the created time series.
      */
-    static TimeSeries* Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
+    static std::unique_ptr<TimeSeries> Create(const string& varName, const axd& time, const axi& ids, const axxd& data);
 
     /**
      * Set the internal cursor to the provided date.
@@ -36,35 +39,35 @@ class TimeSeries : public wxObject {
      * @param date date to set the cursor to.
      * @return true if the cursor was successfully set to the provided date.
      */
-    virtual bool SetCursorToDate(double date) = 0;
+    [[nodiscard]] virtual bool SetCursorToDate(double date) = 0;
 
     /**
      * Advance the internal cursor to the next time step.
      *
      * @return true if the cursor was successfully advanced to the next time step.
      */
-    virtual bool AdvanceOneTimeStep() = 0;
+    [[nodiscard]] virtual bool AdvanceOneTimeStep() = 0;
 
     /**
      * Check if the time series is distributed.
      *
      * @return true if the time series is distributed.
      */
-    virtual bool IsDistributed() = 0;
+    [[nodiscard]] virtual bool IsDistributed() const = 0;
 
     /**
      * Get the time start of the time series.
      *
      * @return the time start of the time series.
      */
-    virtual double GetStart() = 0;
+    [[nodiscard]] virtual double GetStart() const = 0;
 
     /**
      * Get the time end of the time series.
      *
      * @return the time end of the time series.
      */
-    virtual double GetEnd() = 0;
+    [[nodiscard]] virtual double GetEnd() const = 0;
 
     /**
      * Get the sum of the time series data for the provided basin settings.
@@ -72,7 +75,7 @@ class TimeSeries : public wxObject {
      * @param basinSettings settings of the basin.
      * @return the sum of the time series data.
      */
-    virtual double GetTotal(const SettingsBasin* basinSettings) = 0;
+    [[nodiscard]] virtual double GetTotal(const SettingsBasin* basinSettings) = 0;
 
     /**
      * Get the data pointer for the provided unit ID.
@@ -87,9 +90,25 @@ class TimeSeries : public wxObject {
      *
      * @return the variable type of the time series.
      */
-    VariableType GetVariableType() {
+    VariableType GetVariableType() const {
         return _type;
     }
+
+    /**
+     * Check if the time series is valid.
+     * Verifies that the time series has data and proper configuration.
+     *
+     * @return true if the time series is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate the time series.
+     * Throws an exception if the time series is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
   protected:
     VariableType _type;

@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
 #define HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "TimeSeries.h"
 
@@ -13,51 +15,61 @@ class TimeSeriesDistributed : public TimeSeries {
     /**
      * Add data to the time series.
      *
-     * @param data pointer to the time series data.
+     * @param data pointer to the time series data (ownership transferred).
      * @param unitId ID of the unit.
      */
-    void AddData(TimeSeriesData* data, int unitId);
+    void AddData(std::unique_ptr<TimeSeriesData> data, int unitId);
 
     /**
      * @copydoc TimeSeries::SetCursorToDate()
      */
-    bool SetCursorToDate(double date) override;
+    [[nodiscard]] bool SetCursorToDate(double date) override;
 
     /**
      * @copydoc TimeSeries::AdvanceOneTimeStep()
      */
-    bool AdvanceOneTimeStep() override;
+    [[nodiscard]] bool AdvanceOneTimeStep() override;
 
     /**
      * @copydoc TimeSeries::IsDistributed()
      */
-    bool IsDistributed() override {
+    bool IsDistributed() const override {
         return true;
     }
 
     /**
      * @copydoc TimeSeries::GetStart()
      */
-    double GetStart() override;
+    [[nodiscard]] double GetStart() const override;
 
     /**
      * @copydoc TimeSeries::GetEnd()
      */
-    double GetEnd() override;
+    [[nodiscard]] double GetEnd() const override;
 
     /**
      * @copydoc TimeSeries::GetTotal()
      */
-    double GetTotal(const SettingsBasin* basinSettings) override;
+    [[nodiscard]] double GetTotal(const SettingsBasin* basinSettings) override;
 
     /**
      * @copydoc TimeSeries::GetDataPointer()
      */
-    TimeSeriesData* GetDataPointer(int unitId) override;
+    [[nodiscard]] TimeSeriesData* GetDataPointer(int unitId) override;
+
+    /**
+     * @copydoc TimeSeries::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeries::Validate()
+     */
+    void Validate() const override;
 
   protected:
     vecInt _unitIds;
-    vector<TimeSeriesData*> _data;
+    std::vector<std::unique_ptr<TimeSeriesData>> _data;  // owning
 };
 
 #endif  // HYDROBRICKS_TIME_SERIES_DISTRIBUTED_H

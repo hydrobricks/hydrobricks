@@ -5,6 +5,15 @@
 #include "Includes.h"
 #include "ProcessET.h"
 
+/**
+ * Socont actual evapotranspiration.
+ *
+ * Lives on a storage brick with a maximum capacity. The actual evaporation scales
+ * with the storage filling ratio raised to a fixed exponent (0.5):
+ *   Ea = PET × (S/S_max)^0.5
+ *
+ * Requires PET forcing.
+ */
 class ProcessETSocont : public ProcessET {
   public:
     explicit ProcessETSocont(WaterContainer* container);
@@ -16,12 +25,12 @@ class ProcessETSocont : public ProcessET {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Process::AttachForcing()
@@ -29,13 +38,13 @@ class ProcessETSocont : public ProcessET {
     void AttachForcing(Forcing* forcing) override;
 
   protected:
-    Forcing* _pet;
+    Forcing* _pet;  // non-owning reference
     float _exponent;
 
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_ET_SOCONT_H

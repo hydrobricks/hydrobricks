@@ -25,8 +25,15 @@ class ActionGlacierEvolutionDeltaH : public Action {
 
     /**
      * Initialize the action.
+     *
+     * @return true if the initialization was successful.
      */
-    bool Init() override;
+    [[nodiscard]] bool Init() override;
+
+    /**
+     * Reset the action to its initial state.
+     */
+    void Reset() override;
 
     /**
      * Apply the action.
@@ -34,14 +41,14 @@ class ActionGlacierEvolutionDeltaH : public Action {
      * @param date date of the action.
      * @return true if the action was applied successfully.
      */
-    bool Apply(double date) override;
+    [[nodiscard]] bool Apply(double date) override;
 
     /**
      * Get the land cover name (glacier name) associated with the action.
      *
      * @return land cover name (glacier name).
      */
-    string GetLandCoverName() {
+    const string& GetLandCoverName() const {
         return _landCoverName;
     }
 
@@ -50,7 +57,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return vector of hydro unit IDs.
      */
-    axi GetHydroUnitIds() {
+    const axi& GetHydroUnitIds() const {
         return _hydroUnitIds;
     }
 
@@ -59,7 +66,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return The lookup table for the glacier area.
      */
-    axxd GetLookupTableArea() {
+    const axxd& GetLookupTableArea() const {
         return _tableArea;
     }
 
@@ -68,7 +75,7 @@ class ActionGlacierEvolutionDeltaH : public Action {
      *
      * @return The lookup table for the glacier volume.
      */
-    axxd GetLookupTableVolume() {
+    const axxd& GetLookupTableVolume() const {
         return _tableVolume;
     }
 

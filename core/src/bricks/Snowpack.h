@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_SNOWPACK_H
 #define HYDROBRICKS_SNOWPACK_H
 
+#include <memory>
+
 #include "Includes.h"
 #include "SnowContainer.h"
 #include "SurfaceComponent.h"
@@ -30,23 +32,16 @@ class Snowpack : public SurfaceComponent {
     void AttachFluxIn(Flux* flux) override;
 
     /**
-     * @copydoc Brick::IsOk()
+     * @copydoc Brick::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid(bool checkProcesses = true) const override;
 
     /**
      * Get the snow container.
      *
      * @return A pointer to the snow container.
      */
-    WaterContainer* GetSnowContainer();
-
-    /**
-     * @copydoc Brick::IsSnowpack()
-     */
-    bool IsSnowpack() override {
-        return true;
-    }
+    [[nodiscard]] WaterContainer* GetSnowContainer() const;
 
     /**
      * @copydoc Brick::Finalize()
@@ -56,17 +51,17 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::SetInitialState()
      */
-    void SetInitialState(double value, const string& type) override;
+    void SetInitialState(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(const string& type) override;
+    [[nodiscard]] double GetContent(ContentType type) const override;
 
     /**
      * @copydoc Brick::UpdateContent()
      */
-    void UpdateContent(double value, const string& type) override;
+    void UpdateContent(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::UpdateContentFromInputs()
@@ -86,17 +81,17 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * Check if the snowpack has snow.
      *
      * @return True if the snowpack has snow, false otherwise.
      */
-    bool HasSnow();
+    [[nodiscard]] bool HasSnow() const;
 
   protected:
-    SnowContainer* _snow;
+    std::unique_ptr<SnowContainer> _snow;  // owning
 };
 
 #endif  // HYDROBRICKS_SNOWPACK_H

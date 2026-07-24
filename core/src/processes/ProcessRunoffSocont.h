@@ -7,6 +7,16 @@
 
 class HydroUnit;
 
+/**
+ * Socont surface runoff (kinematic-wave overland flow on an inclined plane).
+ *
+ * Treats the storage as a thin water layer flowing down a plane of given slope,
+ * with a linear depth profile (zero at the top, h at the bottom; storage shape = 2).
+ * The outflow follows a Manning-type relation:
+ *   q = beta × slope^0.5 × h^(5/3) / area
+ * integrated over the timestep and capped at the available content. beta lumps the
+ * roughness and geometry; the slope is read from the hydro unit.
+ */
 class ProcessRunoffSocont : public ProcessOutflow {
   public:
     explicit ProcessRunoffSocont(WaterContainer* container);
@@ -18,7 +28,7 @@ class ProcessRunoffSocont : public ProcessOutflow {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetHydroUnitProperties()
@@ -32,22 +42,22 @@ class ProcessRunoffSocont : public ProcessOutflow {
 
   protected:
     float _slope;           // [m/m]
-    float* _beta;           // []
+    const float* _beta;     // []
     double* _areaFraction;  // []
-    double _areaUnit;       // [m^2]
+    double _areaUnit;       // [m²]
     double _exponent;
 
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 
     /**
      * Get the area of the hydro unit.
      *
-     * @return The area of the hydro unit in square meters.
+     * @return The area of the hydro unit [m²]
      */
-    double GetArea();
+    [[nodiscard]] double GetArea() const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_RUNOFF_SOCONT_H

@@ -8,23 +8,31 @@ ProcessETSocont::ProcessETSocont(WaterContainer* container)
       _pet(nullptr),
       _exponent(0.5) {}
 
-void ProcessETSocont::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessETSocont::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessForcing("pet");
 }
 
-bool ProcessETSocont::IsOk() {
-    return ProcessET::IsOk();
+bool ProcessETSocont::IsValid() const {
+    if (!ProcessET::IsValid()) {
+        return false;
+    }
+    if (_pet == nullptr) {
+        LogError("Socont ET process requires PET forcing.");
+        return false;
+    }
+
+    return true;
 }
 
 void ProcessETSocont::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == PET) {
+    if (forcing->GetType() == VariableType::PET) {
         _pet = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type PET");
+        throw ModelConfigError("Socont ET: forcing must be PET");
     }
 }
 
-vecDouble ProcessETSocont::GetRates() {
-    wxASSERT(_container->HasMaximumCapacity());
-    return {_pet->GetValue() * pow(_container->GetTargetFillingRatio(), _exponent)};
+const vecDouble& ProcessETSocont::GetRates() {
+    assert(_container->HasMaximumCapacity());
+    return StoreRates({_pet->GetValue() * pow(_container->GetTargetFillingRatio(), _exponent)});
 }

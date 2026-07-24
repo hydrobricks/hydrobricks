@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_PROCESS_H
 #define HYDROBRICKS_PROCESS_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Forcing.h"
 #include "Includes.h"
@@ -8,13 +10,14 @@
 
 class Brick;
 class HydroUnit;
+class TimeMachine;
 class WaterContainer;
 
-class Process : public wxObject {
+class Process {
   public:
     explicit Process(WaterContainer* container);
 
-    ~Process() override = default;
+    virtual ~Process() = default;
 
     /**
      * Factory method to create a process.
@@ -23,7 +26,7 @@ class Process : public wxObject {
      * @param brick the related brick.
      * @return the created process.
      */
-    static Process* Factory(const ProcessSettings& processSettings, Brick* brick);
+    static std::unique_ptr<Process> Factory(const ProcessSettings& processSettings, Brick* brick);
 
     /**
      * Register the parameters and the needed forcing for the process.
@@ -32,19 +35,27 @@ class Process : public wxObject {
      * @param processType type of process.
      * @return true if everything is correctly defined.
      */
-    static bool RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType);
+    [[nodiscard]] static bool RegisterSettings(SettingsModel* modelSettings, const string& processType);
 
     /**
      * Reset all the fluxes connected to the process.
      */
-    void Reset();
+    virtual void Reset();
 
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    virtual bool IsOk() = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Check if the process has a parameter with the provided name.
@@ -53,7 +64,7 @@ class Process : public wxObject {
      * @param name name of the parameter to check.
      * @return true if the process has a parameter with the provided name.
      */
-    static bool HasParameter(const ProcessSettings& processSettings, const string& name);
+    [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Get the value pointer of a parameter.
@@ -62,7 +73,7 @@ class Process : public wxObject {
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static float* GetParameterValuePointer(const ProcessSettings& processSettings, const string& name);
+    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
 
     /**
      * Set the properties of the hydro unit.
@@ -85,26 +96,17 @@ class Process : public wxObject {
      * @param forcing forcing to attach.
      */
     virtual void AttachForcing(Forcing*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::AttachForcing - Should not be called (virtual)");
     }
 
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      */
-    void AttachFluxOut(Flux* flux) {
-        wxASSERT(flux);
-        _outputs.push_back(flux);
-    }
-
-    /**
-     * Get the outgoing fluxes.
-     *
-     * @return vector of pointers to the outgoing fluxes.
-     */
-    vector<Flux*> GetOutputFluxes() {
-        return _outputs;
+    void AttachFluxOut(std::unique_ptr<Flux> flux) {
+        assert(flux);
+        _outputs.push_back(std::move(flux));
     }
 
     /**
@@ -112,8 +114,20 @@ class Process : public wxObject {
      *
      * @return number of outgoing fluxes.
      */
-    int GetOutputFluxesNb() {
+    int GetOutputFluxCount() const {
         return static_cast<int>(_outputs.size());
+    }
+
+    /**
+     * Get an outgoing flux by its index.
+     *
+     * @param index index of the flux.
+     * @return pointer to the flux.
+     */
+    Flux* GetOutputFlux(size_t index) const {
+        assert(_outputs.size() > index);
+        assert(_outputs[index]);
+        return _outputs[index].get();
     }
 
     /**
@@ -121,7 +135,7 @@ class Process : public wxObject {
      *
      * @return true if the process sends water to the atmosphere.
      */
-    virtual bool ToAtmosphere() {
+    [[nodiscard]] virtual bool ToAtmosphere() const {
         return false;
     }
 
@@ -130,7 +144,7 @@ class Process : public wxObject {
      *
      * @return true if the process needs to link the target brick.
      */
-    virtual bool NeedsTargetBrickLinking() {
+    [[nodiscard]] virtual bool NeedsTargetBrickLinking() const {
         return false;
     }
 
@@ -139,14 +153,17 @@ class Process : public wxObject {
      *
      * @return number of connections to the process.
      */
-    virtual int GetConnectionsNb() = 0;
+    [[nodiscard]] virtual int GetConnectionCount() const = 0;
 
     /**
      * Get the change rates of the process.
      *
+     * The returned reference points to a reusable per-process buffer that is
+     * overwritten on the next call; consume it before calling again.
+     *
      * @return vector of change rates.
      */
-    virtual vecDouble GetChangeRates();
+    [[nodiscard]] virtual const vecDouble& GetChangeRates();
 
     /**
      * Store the water corresponding to the change rates in the outgoing fluxes.
@@ -187,14 +204,14 @@ class Process : public wxObject {
      * @param name name of the element to get.
      * @return pointer to the value of the given element.
      */
-    virtual double* GetValuePointer(const string& name);
+    [[nodiscard]] virtual double* GetValuePointer(std::string_view name);
 
     /**
      * Get the name of the process.
      *
      * @return name of the process.
      */
-    string GetName() {
+    const string& GetName() const {
         return _name;
     }
 
@@ -208,11 +225,21 @@ class Process : public wxObject {
     }
 
     /**
+     * Set the time machine (non-owning reference).
+     * Required by processes that depend on the current simulation date.
+     *
+     * @param timeMachine pointer to the time machine.
+     */
+    void SetTimeMachine(TimeMachine* timeMachine) {
+        _timeMachine = timeMachine;
+    }
+
+    /**
      * Get the water container associated with the process.
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer() {
+    WaterContainer* GetWaterContainer() const {
         return _container;
     }
 
@@ -222,7 +249,27 @@ class Process : public wxObject {
      * @param brick target brick.
      */
     virtual void SetTargetBrick(Brick*) {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen("Process::SetTargetBrick - Should not be called (virtual)");
+    }
+
+    /**
+     * Check if the process links several target bricks (instead of a single one).
+     *
+     * @return true if the process links several target bricks.
+     */
+    [[nodiscard]] virtual bool LinksMultipleTargets() const {
+        return false;
+    }
+
+    /**
+     * Add a target brick together with the bricks whose area fractions weight the
+     * flux toward it (used by processes that fan out to several targets).
+     *
+     * @param target the target brick.
+     * @param weightSources the bricks (land covers) whose area fractions weight the flux.
+     */
+    virtual void AddTargetBrickWithWeights(Brick*, const std::vector<Brick*>&) {
+        throw ShouldNotHappen("Process::AddTargetBrickWithWeights - Should not be called (virtual)");
     }
 
     /**
@@ -230,28 +277,66 @@ class Process : public wxObject {
      *
      * @return true if the process is a lateral process.
      */
-    virtual bool IsLateralProcess() const {
+    [[nodiscard]] virtual bool IsLateralProcess() const noexcept {
         return false;
+    }
+
+    /**
+     * Check if the process has any output fluxes.
+     *
+     * @return true if the process has at least one output flux.
+     */
+    [[nodiscard]] bool HasOutputFluxes() const noexcept {
+        return !_outputs.empty();
+    }
+
+    /**
+     * Check if the process has a water container.
+     *
+     * @return true if the process has a water container.
+     */
+    [[nodiscard]] bool HasWaterContainer() const noexcept {
+        return _container != nullptr;
     }
 
   protected:
     string _name;
-    WaterContainer* _container;
-    vector<Flux*> _outputs;
+    WaterContainer* _container;                   // non-owning reference
+    TimeMachine* _timeMachine{nullptr};           // non-owning reference
+    std::vector<std::unique_ptr<Flux>> _outputs;  // owning
+    vecDouble _changeRates;                       // reusable buffer for the change rates (avoids per-call allocation)
+
+    /**
+     * Store change rates in the reusable buffer and return a reference to it.
+     *
+     * Reuses the buffer's capacity (no heap allocation after the first call),
+     * which matters because this is on the per-timestep solver hot path.
+     *
+     * @param rates the change rates to store.
+     * @return reference to the reusable buffer holding the rates.
+     */
+    const vecDouble& StoreRates(std::initializer_list<double> rates) {
+        _changeRates.assign(rates);
+        return _changeRates;
+    }
 
     /**
      * Get the sum of change rates from other processes.
      *
      * @return sum of change rates from other processes.
      */
-    double GetSumChangeRatesOtherProcesses();
+    [[nodiscard]] double GetSumChangeRatesOtherProcesses() const;
 
     /**
      * Get the rates of the process.
      *
-     * @return vector of rates.
+     * Implementations must store their result via StoreRates() (or directly in
+     * the _changeRates buffer) and return the reference, to avoid allocating on
+     * the hot path.
+     *
+     * @return reference to the reusable buffer holding the rates.
      */
-    virtual vecDouble GetRates() = 0;
+    [[nodiscard]] virtual const vecDouble& GetRates() = 0;
 };
 
 #endif  // HYDROBRICKS_PROCESS_H

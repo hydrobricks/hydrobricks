@@ -1,17 +1,29 @@
 #ifndef HYDROBRICKS_BRICK_H
 #define HYDROBRICKS_BRICK_H
 
+#include <memory>
+
 #include "Flux.h"
 #include "Includes.h"
 #include "Process.h"
 #include "SettingsModel.h"
 #include "WaterContainer.h"
 
-class Brick : public wxObject {
+/**
+ * Enumeration of brick categories.
+ */
+enum class BrickCategory {
+    Snowpack,          ///< Snowpack brick
+    Glacier,           ///< Glacier brick
+    GenericLandCover,  ///< Generic land cover (covers all user-defined land cover types)
+    Unknown            ///< Unknown or unspecified brick type
+};
+
+class Brick {
   public:
     explicit Brick();
 
-    ~Brick() override;
+    virtual ~Brick() = default;
 
     /**
      * Factory method to create a brick.
@@ -19,7 +31,15 @@ class Brick : public wxObject {
      * @param brickSettings settings of the brick.
      * @return the created brick.
      */
-    static Brick* Factory(const BrickSettings& brickSettings);
+    static std::unique_ptr<Brick> Factory(const BrickSettings& brickSettings);
+
+    /**
+     * Factory method to create a brick.
+     *
+     * @param type type of the brick.
+     * @return the created brick.
+     */
+    static std::unique_ptr<Brick> Factory(BrickType type);
 
     /**
      * Check if the brick has a parameter with the provided name.
@@ -28,7 +48,7 @@ class Brick : public wxObject {
      * @param name name of the parameter to check.
      * @return true if the brick has a parameter with the provided name.
      */
-    static bool HasParameter(const BrickSettings& brickSettings, const string& name);
+    static bool HasParameter(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Get the pointer to the parameter value.
@@ -37,7 +57,7 @@ class Brick : public wxObject {
      * @param name name of the parameter.
      * @return pointer to the parameter value.
      */
-    static float* GetParameterValuePointer(const BrickSettings& brickSettings, const string& name);
+    static const float* GetParameterValuePointer(const BrickSettings& brickSettings, std::string_view name);
 
     /**
      * Assign the parameters to the brick element.
@@ -47,20 +67,28 @@ class Brick : public wxObject {
     virtual void SetParameters(const BrickSettings& brickSettings);
 
     /**
-     * Attach incoming flux.
+     * Attach incoming flux (non-owning; caller retains ownership).
      *
-     * @param flux incoming flux
+     * @param flux incoming flux (non-owning reference, owned by process)
      */
     virtual void AttachFluxIn(Flux* flux);
 
     /**
+     * Attach incoming flux and take ownership of it.
+     * Used for forcing fluxes that are not owned by any process.
+     *
+     * @param flux incoming flux (ownership transferred)
+     */
+    virtual void AttachFluxIn(std::unique_ptr<Flux> flux);
+
+    /**
      * Add a process to the brick.
      *
-     * @param process process to add.
+     * @param process process to add (ownership transferred).
      */
-    void AddProcess(Process* process) {
-        wxASSERT(process);
-        _processes.push_back(process);
+    void AddProcess(std::unique_ptr<Process> process) {
+        assert(process);
+        _processes.push_back(std::move(process));
     }
 
     /**
@@ -76,17 +104,44 @@ class Brick : public wxObject {
     /**
      * Check that everything is correctly defined.
      *
-     * @return true is everything is correctly defined.
+     * @return true if everything is correctly defined.
      */
-    virtual bool IsOk();
+    [[nodiscard]] virtual bool IsValid(bool checkProcesses = true) const;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const;
 
     /**
      * Define if the brick needs to be handled by the solver.
      *
      * @return true if the brick needs to be handled by the solver.
      */
-    bool NeedsSolver() const {
+    [[nodiscard]] bool NeedsSolver() const {
         return _needsSolver;
+    }
+
+    /**
+     * Set whether the brick must be handled by the ODE solver. Set to false for
+     * bricks whose processes apply an exact explicit update each time step.
+     *
+     * @param needsSolver true if the brick needs the solver.
+     */
+    void SetNeedsSolver(bool needsSolver) {
+        _needsSolver = needsSolver;
+    }
+
+    /**
+     * Get the category of the brick.
+     *
+     * @return the category of the brick.
+     */
+    [[nodiscard]] BrickCategory GetCategory() const {
+        return _category;
     }
 
     /**
@@ -94,25 +149,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick can have an area fraction.
      */
-    virtual bool CanHaveAreaFraction() {
-        return false;
-    }
-
-    /**
-     * Check if the brick is a snowpack.
-     *
-     * @return true if the brick is a snowpack.
-     */
-    virtual bool IsSnowpack() {
-        return false;
-    }
-
-    /**
-     * Check if the brick is a glacier.
-     *
-     * @return true if the brick is a glacier.
-     */
-    virtual bool IsGlacier() {
+    [[nodiscard]] virtual bool CanHaveAreaFraction() const {
         return false;
     }
 
@@ -121,7 +158,7 @@ class Brick : public wxObject {
      *
      * @return true if the brick is a land cover.
      */
-    virtual bool IsLandCover() {
+    [[nodiscard]] virtual bool IsLandCover() const {
         return false;
     }
 
@@ -130,8 +167,26 @@ class Brick : public wxObject {
      *
      * @return true if the brick is null.
      */
-    virtual bool IsNull() {
+    [[nodiscard]] virtual bool IsNull() const {
         return false;
+    }
+
+    /**
+     * Check if the brick has any processes.
+     *
+     * @return true if the brick has at least one process.
+     */
+    [[nodiscard]] bool HasProcesses() const {
+        return !_processes.empty();
+    }
+
+    /**
+     * Check if the brick has a hydro unit associated with it.
+     *
+     * @return true if the brick has a hydro unit.
+     */
+    [[nodiscard]] bool HasHydroUnit() const {
+        return _hydroUnit != nullptr;
     }
 
     /**
@@ -143,25 +198,25 @@ class Brick : public wxObject {
      * Set the initial state of the water container.
      *
      * @param value initial state value.
-     * @param type type of the content (e.g., "water", "ice", or "snow").
+     * @param type type of the content.
      */
-    virtual void SetInitialState(double value, const string& type = "water");
+    virtual void SetInitialState(double value, ContentType type);
 
     /**
      * Get the content of the water container.
      *
-     * @param type type of the content (e.g., "water", "ice", or "snow").
-     * @return content of the water container.
+     * @param type the type of content to get.
+     * @return the content of the water container.
      */
-    virtual double GetContent(const string& type = "water");
+    [[nodiscard]] virtual double GetContent(ContentType type) const;
 
     /**
      * Update the content of the water container.
      *
      * @param value new content value.
-     * @param type type of the content (e.g., "water", "ice", or "snow").
+     * @param type type of the content
      */
-    virtual void UpdateContent(double value, const string& type = "water");
+    virtual void UpdateContent(double value, ContentType type);
 
     /**
      * Update the content of the water container from the inputs.
@@ -180,7 +235,16 @@ class Brick : public wxObject {
      *
      * @return pointer to the water container.
      */
-    WaterContainer* GetWaterContainer();
+    [[nodiscard]] WaterContainer* GetWaterContainer() const;
+
+    /**
+     * Get the number of processes in the brick.
+     *
+     * @return number of processes.
+     */
+    [[nodiscard]] size_t GetProcessCount() const noexcept {
+        return _processes.size();
+    }
 
     /**
      * Get a process by its index.
@@ -188,23 +252,14 @@ class Brick : public wxObject {
      * @param index index of the process.
      * @return pointer to the process.
      */
-    Process* GetProcess(int index);
-
-    /**
-     * Get all processes of the brick.
-     *
-     * @return vector of pointers to the processes.
-     */
-    vector<Process*>& GetProcesses() {
-        return _processes;
-    }
+    [[nodiscard]] Process* GetProcess(size_t index) const;
 
     /**
      * Get the name of the brick.
      *
      * @return name of the brick.
      */
-    string GetName() {
+    [[nodiscard]] const string& GetName() const noexcept {
         return _name;
     }
 
@@ -213,8 +268,8 @@ class Brick : public wxObject {
      *
      * @param name new name of the brick.
      */
-    void SetName(const string& name) {
-        _name = name;
+    void SetName(std::string_view name) {
+        _name = string(name);
     }
 
     /**
@@ -222,8 +277,8 @@ class Brick : public wxObject {
      *
      * @return pointer to the hydro unit.
      */
-    HydroUnit* GetHydroUnit() {
-        wxASSERT(_hydroUnit);
+    HydroUnit* GetHydroUnit() const {
+        assert(_hydroUnit);
         return _hydroUnit;
     }
 
@@ -233,7 +288,7 @@ class Brick : public wxObject {
      * @param hydroUnit pointer to the hydro unit.
      */
     void SetHydroUnit(HydroUnit* hydroUnit) {
-        wxASSERT(hydroUnit);
+        assert(hydroUnit);
         _hydroUnit = hydroUnit;
     }
 
@@ -252,32 +307,37 @@ class Brick : public wxObject {
     vecDoublePt GetStateVariableChangesFromProcesses();
 
     /**
-     * Get the number of connections of the processes.
+     * Get the number of process connections in the brick.
      *
-     * @return number of connections of the processes.
+     * @return number of process connections.
      */
-    int GetProcessesConnectionsNb();
+    int GetProcessConnectionCount() const;
 
     /**
-     * Get the pointer to the water container content.
+     * Get the pointer to the content of the brick's base water container.
      *
-     * @param name name of the container type (e.g., "water", "ice", or "snow").
+     * @param name name of the value (e.g., "water" or "water_content").
+     * @return pointer to the water container content, or nullptr if the name is not recognized.
      */
-    double* GetBaseValuePointer(const string& name);
+    double* GetBaseValuePointer(std::string_view name);
 
     /**
-     * Get the pointer to the water container content.
+     * Get the pointer to a state value specific to this brick type. The base implementation
+     * returns nullptr; land cover bricks override it to expose their own container (e.g. the
+     * snow content for a snowpack or the ice content for a glacier).
      *
-     * @param name name of the container type (e.g., "water", "ice", or "snow").
+     * @param name name of the value (e.g., "snow", "ice").
+     * @return pointer to the value, or nullptr if the name is not recognized.
      */
-    virtual double* GetValuePointer(const string& name);
+    virtual double* GetValuePointer(std::string_view name);
 
   protected:
     string _name;
     bool _needsSolver;
-    WaterContainer* _water;
-    vector<Process*> _processes;
-    HydroUnit* _hydroUnit;
+    BrickCategory _category;
+    std::unique_ptr<WaterContainer> _water;            // owning
+    std::vector<std::unique_ptr<Process>> _processes;  // owning
+    HydroUnit* _hydroUnit;                             // non-owning back-reference
 };
 
 #endif  // HYDROBRICKS_BRICK_H

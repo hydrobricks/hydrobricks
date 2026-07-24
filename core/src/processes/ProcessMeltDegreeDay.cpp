@@ -9,14 +9,14 @@ ProcessMeltDegreeDay::ProcessMeltDegreeDay(WaterContainer* container)
       _degreeDayFactor(nullptr),
       _meltingTemperature(nullptr) {}
 
-void ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltDegreeDay::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor", 3.0f);
     modelSettings->AddProcessParameter("melting_temperature", 0.0f);
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDay::IsOk() {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDay::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -39,16 +39,16 @@ void ProcessMeltDegreeDay::SetParameters(const ProcessSettings& processSettings)
 }
 
 void ProcessMeltDegreeDay::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Temperature) {
+    if (forcing->GetType() == VariableType::Temperature) {
         _temperature = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature");
+        throw ModelConfigError("Forcing must be of type Temperature");
     }
 }
 
-vecDouble ProcessMeltDegreeDay::GetRates() {
+const vecDouble& ProcessMeltDegreeDay::GetRates() {
     if (!_container->ContentAccessible()) {
-        return {0};
+        return StoreRates({0});
     }
 
     double melt = 0;
@@ -56,5 +56,5 @@ vecDouble ProcessMeltDegreeDay::GetRates() {
         melt = (_temperature->GetValue() - *_meltingTemperature) * *_degreeDayFactor;
     }
 
-    return {melt};
+    return StoreRates({melt});
 }

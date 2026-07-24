@@ -6,12 +6,12 @@
 ProcessMeltTemperatureIndex::ProcessMeltTemperatureIndex(WaterContainer* container)
     : ProcessMelt(container),
       _temperature(nullptr),
-      _potentialClearSkyDirectSolarRadiation(nullptr),
+      _solarRadiation(nullptr),
       _meltFactor(nullptr),
       _meltingTemperature(nullptr),
       _radiationCoefficient(nullptr) {}
 
-void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltTemperatureIndex::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("melt_factor", 3.0f);
     modelSettings->AddProcessParameter("melting_temperature", 0.0f);
     modelSettings->AddProcessParameter("radiation_coefficient", 0.0007f);
@@ -19,8 +19,8 @@ void ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(SettingsMo
     modelSettings->AddProcessForcing("solar_radiation");
 }
 
-bool ProcessMeltTemperatureIndex::IsOk() {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltTemperatureIndex::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -35,7 +35,7 @@ bool ProcessMeltTemperatureIndex::IsOk() {
     if (_radiationCoefficient == nullptr) {
         return false;
     }
-    if (_potentialClearSkyDirectSolarRadiation == nullptr) {
+    if (_solarRadiation == nullptr) {
         return false;
     }
 
@@ -50,25 +50,25 @@ void ProcessMeltTemperatureIndex::SetParameters(const ProcessSettings& processSe
 }
 
 void ProcessMeltTemperatureIndex::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Temperature) {
+    if (forcing->GetType() == VariableType::Temperature) {
         _temperature = forcing;
-    } else if (forcing->GetType() == Radiation) {
-        _potentialClearSkyDirectSolarRadiation = forcing;
+    } else if (forcing->GetType() == VariableType::Radiation) {
+        _solarRadiation = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature or Radiation");
+        throw ModelConfigError("Forcing must be of type Temperature or Radiation");
     }
 }
 
-vecDouble ProcessMeltTemperatureIndex::GetRates() {
+const vecDouble& ProcessMeltTemperatureIndex::GetRates() {
     if (!_container->ContentAccessible()) {
-        return {0};
+        return StoreRates({0});
     }
 
     double melt = 0;
     if (_temperature->GetValue() >= *_meltingTemperature) {
         melt = (_temperature->GetValue() - *_meltingTemperature) *
-               (*_meltFactor + *_radiationCoefficient * _potentialClearSkyDirectSolarRadiation->GetValue());
+               (*_meltFactor + *_radiationCoefficient * _solarRadiation->GetValue());
     }
 
-    return {melt};
+    return StoreRates({melt});
 }

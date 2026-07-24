@@ -2,8 +2,8 @@
 
 Snowpack::Snowpack()
     : SurfaceComponent(),
-      _snow(nullptr) {
-    _snow = new SnowContainer(this);
+      _snow(std::make_unique<SnowContainer>(this)) {
+    _category = BrickCategory::Snowpack;
 }
 
 void Snowpack::Reset() {
@@ -21,60 +21,88 @@ void Snowpack::SetParameters(const BrickSettings& brickSettings) {
 }
 
 void Snowpack::AttachFluxIn(Flux* flux) {
-    wxASSERT(flux);
-    if (flux->GetType() == "snow") {
+    assert(flux);
+    if (flux->GetType() == ContentType::Snow) {
         _snow->AttachFluxIn(flux);
-    } else if (flux->GetType() == "water") {
+    } else if (flux->GetType() == ContentType::Water) {
         _water->AttachFluxIn(flux);
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(
+            std::format("Snowpack::AttachFluxIn - Unexpected flux type: {}", static_cast<int>(flux->GetType())));
     }
 }
 
-bool Snowpack::IsOk() {
-    if (!_snow->IsOk()) {
+bool Snowpack::IsValid(bool checkProcesses) const {
+    if (!_snow->IsValid()) {
         return false;
     }
-    return Brick::IsOk();
+    if (checkProcesses) {
+        if (_processes.empty()) {
+            LogError("The brick {} has no process attached", _name);
+            return false;
+        }
+        for (const auto& process : _processes) {
+            if (!process->IsValid()) {
+                return false;
+            }
+        }
+    }
+    // We do not validate the water container here because it may not be used in all configurations.
+    return true;
 }
 
-WaterContainer* Snowpack::GetSnowContainer() {
-    return _snow;
+WaterContainer* Snowpack::GetSnowContainer() const {
+    return _snow.get();
 }
 
 void Snowpack::Finalize() {
     _snow->Finalize();
     _water->Finalize();
-}
 
-void Snowpack::SetInitialState(double value, const string& type) {
-    if (type == "water") {
-        _water->SetInitialState(value);
-    } else if (type == "snow") {
-        _snow->SetInitialState(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+    // Finalize processes that maintain explicit internal state across the time step
+    // (e.g. the dynamic snow density tracked by the Frey & Holzmann redistribution).
+    for (int i = 0; i < GetProcessCount(); ++i) {
+        GetProcess(i)->Finalize();
     }
 }
 
-double Snowpack::GetContent(const string& type) {
-    if (type == "water") {
-        return _water->GetContentWithoutChanges();
+void Snowpack::SetInitialState(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->SetInitialState(value);
+            break;
+        case ContentType::Snow:
+            _snow->SetInitialState(value);
+            break;
+        default:
+            throw ModelConfigError(
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
     }
-    if (type == "snow") {
-        return _snow->GetContentWithoutChanges();
-    }
-
-    throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
 }
 
-void Snowpack::UpdateContent(double value, const string& type) {
-    if (type == "water") {
-        _water->UpdateContent(value);
-    } else if (type == "snow") {
-        _snow->UpdateContent(value);
-    } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported for glaciers."), type));
+double Snowpack::GetContent(ContentType type) const {
+    switch (type) {
+        case ContentType::Water:
+            return _water->GetContentWithoutChanges();
+        case ContentType::Snow:
+            return _snow->GetContentWithoutChanges();
+        default:
+            throw ModelConfigError(
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
+    }
+}
+
+void Snowpack::UpdateContent(double value, ContentType type) {
+    switch (type) {
+        case ContentType::Water:
+            _water->UpdateContent(value);
+            break;
+        case ContentType::Snow:
+            _snow->UpdateContent(value);
+            break;
+        default:
+            throw ModelConfigError(
+                std::format("The content type '{}' is not supported for snowpack.", ContentTypeToString(type)));
     }
 }
 
@@ -100,7 +128,7 @@ vecDoublePt Snowpack::GetDynamicContentChanges() {
     return vars;
 }
 
-double* Snowpack::GetValuePointer(const string& name) {
+double* Snowpack::GetValuePointer(std::string_view name) {
     if (name == "snow" || name == "snow_content") {
         return _snow->GetContentPointer();
     }
@@ -108,6 +136,6 @@ double* Snowpack::GetValuePointer(const string& name) {
     return nullptr;
 }
 
-bool Snowpack::HasSnow() {
+bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
 }

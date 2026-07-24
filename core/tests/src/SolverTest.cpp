@@ -1,44 +1,35 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
 
 TEST(Solver, FactoryBuildsSolvers) {
     SolverSettings settings;
-    Solver* solver;
 
     settings.name = "rk4";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 
     settings.name = "runge_kutta";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 
     settings.name = "runge_kutta";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 
     settings.name = "euler_explicit";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 
     settings.name = "heun_explicit";
-    solver = Solver::Factory(settings);
-    EXPECT_TRUE(solver != nullptr);
-    wxDELETE(solver);
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 }
 
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
     SolverSettings settings;
 
     settings.name = "invalid_name";
-    EXPECT_THROW(Solver::Factory(settings), InvalidArgument);
+    EXPECT_THROW(Solver::Factory(settings), ModelConfigError);
 }
 
 /**
@@ -47,7 +38,7 @@ TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
 class SolverLinearStorage : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
 
     void SetUp() override {
         _model.SetSolver("euler_explicit");
@@ -64,14 +55,14 @@ class SolverLinearStorage : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, TimeUnit::Day);
         data->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(data);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(data));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
+        // RAII cleanup via unique_ptr
     }
 };
 
@@ -85,9 +76,9 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -122,9 +113,9 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -159,9 +150,9 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -192,7 +183,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
 class Solver2LinearStorages : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
 
     void SetUp() override {
         _model.SetSolver("euler_explicit");
@@ -217,14 +208,14 @@ class Solver2LinearStorages : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto data = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, TimeUnit::Day);
         data->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(data);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(data));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
+        // RAII cleanup via unique_ptr
     }
 };
 
@@ -238,9 +229,9 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -277,9 +268,9 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -316,9 +307,9 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -351,8 +342,8 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
 class SolverLinearStorageWithET : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsPET{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsPET;
 
     void SetUp() override {
         _model.SetSolver("euler_explicit");
@@ -381,21 +372,22 @@ class SolverLinearStorageWithET : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto dataPrec = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto dataPrec = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1,
+                                                                TimeUnit::Day);
         dataPrec->SetValues(
             {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(dataPrec);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(dataPrec));
 
-        auto dataPET = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, Day);
+        auto dataPET = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1,
+                                                               TimeUnit::Day);
         dataPET->SetValues(
             {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
-        _tsPET = new TimeSeriesUniform(PET);
-        _tsPET->SetData(dataPET);
+        _tsPET = std::make_unique<TimeSeriesUniform>(VariableType::PET);
+        _tsPET->SetData(std::move(dataPET));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsPET);
+        // RAII cleanup via unique_ptr
     }
 };
 
@@ -409,10 +401,10 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     _model.SetSolver("euler_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPET));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -447,10 +439,10 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     _model.SetSolver("heun_explicit");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPET));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -485,10 +477,10 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     _model.SetSolver("runge_kutta");
 
     ModelHydro model(&subBasin);
-    model.Initialize(_model, basinSettings);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsPET));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

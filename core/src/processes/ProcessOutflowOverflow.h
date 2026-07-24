@@ -5,6 +5,14 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+/**
+ * Overflow of a storage with a maximum capacity.
+ *
+ * Releases the water exceeding the storage capacity. The excess is not computed
+ * here as a rate (GetRates() returns 0); the overflowing amount is handled at a
+ * later stage by the water container once the capacity is exceeded, and routed
+ * through the linked outgoing flux.
+ */
 class ProcessOutflowOverflow : public ProcessOutflow {
   public:
     explicit ProcessOutflowOverflow(WaterContainer* container);
@@ -16,7 +24,7 @@ class ProcessOutflowOverflow : public ProcessOutflow {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetParameters()
@@ -32,7 +40,7 @@ class ProcessOutflowOverflow : public ProcessOutflow {
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_OVERFLOW_H

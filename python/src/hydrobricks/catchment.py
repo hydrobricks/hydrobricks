@@ -1,22 +1,78 @@
 from __future__ import annotations
 
+import logging
+import warnings
+from functools import wraps
 from pathlib import Path
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import pandas as pd
 
-import hydrobricks as hb
+from hydrobricks._exceptions import ConfigurationError, DataError
+from hydrobricks._optional import (
+    HAS_GEOPANDAS,
+    HAS_PYPROJ,
+    HAS_RASTERIO,
+    HAS_SHAPELY,
+    gpd,
+    pyproj,
+    rasterio,
+    shapely,
+)
+from hydrobricks._utils import compute_area
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
-from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
-from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
-from hydrobricks.preprocessing.potential_solar_radiation import PotentialSolarRadiation
 
-if hb.has_shapely:
+logger = logging.getLogger(__name__)
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="shapely.geos")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pyogri")
+
+if HAS_SHAPELY:
     from shapely.geometry import mapping
 
-if hb.has_rasterio:
+if HAS_RASTERIO:
     from rasterio.mask import mask
+
+# Type variable for lazy property decorator
+T = TypeVar("T")
+
+
+def lazy_property(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Decorator for lazy-loaded properties that are instantiated on first access.
+
+    This decorator enables on-demand loading of expensive or optional objects,
+    improving startup performance and allowing graceful handling of missing
+    optional dependencies.
+
+    Parameters
+    ----------
+    func
+        Property method that returns an instance of a preprocessing module.
+
+    Returns
+    -------
+    Callable
+        Decorated property method that caches the result after first access.
+
+    Examples
+    --------
+    >>> @lazy_property
+    ... def topography(self) -> CatchmentTopography:
+    ...     return CatchmentTopography(self)
+    """
+    cache_attr = f"_{func.__name__}"
+
+    @wraps(func)
+    def wrapper(self) -> T:
+        cached = getattr(self, cache_attr, None)
+        if cached is None:
+            cached = func(self)
+            setattr(self, cache_attr, cached)
+        return cached
+
+    return property(wrapper)
 
 
 class Catchment:
@@ -57,71 +113,180 @@ class Catchment:
     """
 
     def __init__(
-            self,
-            outline: str | Path | None = None,
-            land_cover_types: list[str] | None = None,
-            land_cover_names: list[str] | None = None,
-            hydro_units_data: pd.DataFrame | None = None):
+        self,
+        outline: str | Path | None = None,
+        land_cover_types: list[str] | None = None,
+        land_cover_names: list[str] | None = None,
+        hydro_units_data: pd.DataFrame | None = None,
+    ) -> None:
         # Check that the required packages are installed
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
-        if not hb.has_geopandas:
+        if not HAS_GEOPANDAS:
             raise ImportError("geopandas is required to do this.")
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
         # Check that the outline file exists if provided
         if outline is not None and not Path(outline).is_file():
-            raise FileNotFoundError(f"File {outline} does not exist.")
+            raise DataError(
+                f"File {outline} does not exist.",
+                data_type="catchment outline file",
+                reason="File not found",
+            )
 
-        self.area = None
-        self.crs = None
-        self.outline = None
-        self.dem = None
-        self.dem_data = None
-        self.attributes = {}
-        self.map_unit_ids = None
-        self.hydro_units = HydroUnits(
-            land_cover_types,
-            land_cover_names,
-            hydro_units_data
+        self.area: float | None = None
+        self.crs: str | None = None
+        self.outline: list | None = None
+        self.dem: rasterio.DatasetReader | None = None
+        self.dem_data: np.ndarray | None = None
+        self.attributes: dict[str, dict] = {}
+        self.map_unit_ids: np.ndarray | None = None
+        self.hydro_units: HydroUnits = HydroUnits(
+            land_cover_types, land_cover_names, hydro_units_data
         )
 
         self._extract_outline(outline)
         self._extract_area(outline)
 
-        self._topography = None
-        self._discretization = None
-        self._connectivity = None
-        self._solar_radiation = None
+    def __enter__(self):
+        """Context manager entry."""
+        return self
 
-    def __del__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - closes all resources."""
+        self.close()
+        return False
+
+    def close(self) -> None:
+        """
+        Close all open resources (DEM dataset and MemoryFiles).
+
+        Called automatically when using the catchment as a context manager,
+        or can be called manually to explicitly release resources.
+
+        Examples
+        --------
+        Using as context manager (recommended):
+
+        >>> with Catchment(outline='boundary.shp') as catchment:
+        ...     catchment.extract_dem('dem.tif')
+
+        Manual cleanup:
+
+        >>> catchment = Catchment(outline='boundary.shp')
+        >>> try:
+        ...     catchment.extract_dem('dem.tif')
+        ... finally:
+        ...     catchment.close()
+        """
+        self._close_dem()
+        self._close_attribute_memfiles()
+
+    def _close_dem(self) -> None:
+        """Close the main DEM dataset."""
         if self.dem is not None:
-            self.dem.close()
+            try:
+                self.dem.close()
+                self.dem = None
+            except (OSError, ValueError, AttributeError) as e:
+                logger.warning(f"Error closing DEM dataset: {e}", exc_info=True)
 
-    @property
-    def topography(self) -> CatchmentTopography:
-        if self._topography is None:
-            self._topography = CatchmentTopography(self)
-        return self._topography
+    def _close_attribute_memfiles(self) -> None:
+        """Close all MemoryFiles kept with attributes."""
+        if isinstance(self.attributes, dict):
+            for attr_name, entry in self.attributes.items():
+                try:
+                    if (
+                        isinstance(entry, dict)
+                        and "memfile" in entry
+                        and entry["memfile"] is not None
+                    ):
+                        entry["memfile"].close()
+                        entry["memfile"] = None
+                except (OSError, ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Error closing MemoryFile for attribute "
+                        f"'{attr_name}': {e}",
+                        exc_info=True,
+                    )
 
-    @property
-    def discretization(self) -> CatchmentDiscretization:
-        if self._discretization is None:
-            self._discretization = CatchmentDiscretization(self)
-        return self._discretization
+    def __del__(self) -> None:
+        """Fallback cleanup when object is garbage collected."""
+        try:
+            self.close()
+        except Exception as e:
+            logger.debug(f"Error during __del__ cleanup: {e}", exc_info=True)
 
-    @property
-    def connectivity(self) -> CatchmentConnectivity:
-        if self._connectivity is None:
-            self._connectivity = CatchmentConnectivity(self)
-        return self._connectivity
+    @lazy_property
+    def topography(self) -> Any:
+        """
+        Lazy-loaded topography analysis module.
 
-    @property
-    def solar_radiation(self) -> PotentialSolarRadiation:
-        if self._solar_radiation is None:
-            self._solar_radiation = PotentialSolarRadiation(self)
-        return self._solar_radiation
+        Returns
+        -------
+        CatchmentTopography
+            Topography processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentTopography
+
+        return CatchmentTopography(self)
+
+    @lazy_property
+    def discretization(self) -> Any:
+        """
+        Lazy-loaded discretization module.
+
+        Returns
+        -------
+        CatchmentDiscretization
+            Discretization processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentDiscretization
+
+        return CatchmentDiscretization(self)
+
+    @lazy_property
+    def connectivity(self) -> Any:
+        """
+        Lazy-loaded connectivity module.
+
+        Returns
+        -------
+        CatchmentConnectivity
+            Connectivity processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentConnectivity
+
+        return CatchmentConnectivity(self)
+
+    @lazy_property
+    def solar_radiation(self) -> Any:
+        """
+        Lazy-loaded solar radiation module.
+
+        Returns
+        -------
+        PotentialSolarRadiation
+            Solar radiation processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
+        return PotentialSolarRadiation(self)
+
+    @lazy_property
+    def land_cover(self) -> Any:
+        """
+        Lazy-loaded land-cover extraction module.
+
+        Returns
+        -------
+        CatchmentLandCover
+            Land-cover extraction processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentLandCover
+
+        return CatchmentLandCover(self)
 
     def extract_dem(self, raster_path: str | Path) -> bool:
         """
@@ -134,7 +299,13 @@ class Catchment:
 
         Returns
         -------
-        True if successful, False otherwise.
+        bool
+            True if extraction was successful, False otherwise.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
         """
         self.dem, self.dem_data = self._extract_raster(raster_path)
         if self.dem is None:
@@ -143,108 +314,165 @@ class Catchment:
         return True
 
     def extract_attribute_raster(
-            self,
-            raster_path: str | Path,
-            attr_name: str,
-            resample_to_dem_resolution: bool = True,
-            resampling: str = 'average',
-            replace_nans_by_zeros: bool = True
+        self,
+        raster_path: str | Path,
+        attr_name: str,
+        resample_to_dem_resolution: bool = True,
+        resampling: str = "average",
+        replace_nans_by_zeros: bool = True,
+        reproject_crs: bool = False,
     ) -> bool:
         """
         Extract spatial attributes (raster) for the catchment.
-        Does not handle change in coordinates.
 
         Parameters
         ----------
         raster_path
-            Path of the DEM file.
+            Path of the raster file containing the attribute data.
         attr_name
-            Name of the attribute.
+            Name of the attribute to store in self.attributes dictionary.
         resample_to_dem_resolution
-            If True, resample the attribute to the DEM resolution.
+            If True, resample the attribute raster to DEM resolution.
+            Default: True
         resampling
-            Resampling method to use. Default is 'average'. Options are listed under
-            https://rasterio.readthedocs.io/en/stable/api/rasterio.enums.html#rasterio.enums.Resampling
+            Resampling method to use when resample_to_dem_resolution is True.
+            Options: 'nearest', 'bilinear', 'cubic', 'cubic_spline', 'lanczos',
+            'average', 'mode', 'gauss', 'max', 'min', 'med', 'q1', 'q3', 'sum', 'rms'
+            Default: 'average'
         replace_nans_by_zeros
-            If True, replace NaN values by 0. Default is True.
+            If True, replace NaN values with zero in the output raster.
+            Default: True
+        reproject_crs
+            If True, the raster is warped onto the DEM grid even when its CRS differs
+            from the catchment CRS (the raster is not required to match the catchment
+            CRS and is not masked by the outline beforehand). Use this for datasets
+            provided in a different CRS, e.g. ESA WorldCover (EPSG:4326) against a
+            projected DEM. Implies resampling onto the DEM grid. Default: False
 
         Returns
         -------
-        True if successful, False otherwise.
+        bool
+            True if extraction was successful, False otherwise.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
+        ValueError
+            If the resampling method is not recognized.
         """
-        src, data = self._extract_raster(raster_path)
+        src, data = self._extract_raster(raster_path, reproject_crs=reproject_crs)
         if src is None:
             return False
 
         if replace_nans_by_zeros:
             data[np.isnan(data)] = 0
 
-        if resample_to_dem_resolution:
-            if resampling == 'nearest':
+        if resample_to_dem_resolution or reproject_crs:
+            memfile = None
+            if resampling == "nearest":
                 resampling_id = 0
-            elif resampling == 'bilinear':
+            elif resampling == "bilinear":
                 resampling_id = 1
-            elif resampling == 'cubic':
+            elif resampling == "cubic":
                 resampling_id = 2
-            elif resampling == 'cubic_spline':
+            elif resampling == "cubic_spline":
                 resampling_id = 3
-            elif resampling == 'lanczos':
+            elif resampling == "lanczos":
                 resampling_id = 4
-            elif resampling == 'average':
+            elif resampling == "average":
                 resampling_id = 5
-            elif resampling == 'mode':
+            elif resampling == "mode":
                 resampling_id = 6
-            elif resampling == 'gauss':
+            elif resampling == "gauss":
                 resampling_id = 7
-            elif resampling == 'max':
+            elif resampling == "max":
                 resampling_id = 8
-            elif resampling == 'min':
+            elif resampling == "min":
                 resampling_id = 9
-            elif resampling == 'med':
+            elif resampling == "med":
                 resampling_id = 10
-            elif resampling == 'q1':
+            elif resampling == "q1":
                 resampling_id = 11
-            elif resampling == 'q3':
+            elif resampling == "q3":
                 resampling_id = 12
-            elif resampling == 'sum':
+            elif resampling == "sum":
                 resampling_id = 13
-            elif resampling == 'rms':
+            elif resampling == "rms":
                 resampling_id = 14
             else:
-                raise ValueError(f"Unknown resampling method: {resampling}")
+                raise ConfigurationError(
+                    f"Unknown resampling method: {resampling}",
+                    item_name="resampling",
+                    item_value=resampling,
+                    reason="Unknown method",
+                )
 
             # Resample the attribute to the DEM resolution
-            data = hb.rasterio.warp.reproject(
-                data,
-                destination=self.dem_data,
+            # Ensure a DEM has been loaded to resample to
+            if self.dem is None or self.dem_data is None:
+                raise DataError(
+                    "DEM must be loaded before resampling an attribute raster.",
+                    data_type="DEM",
+                    reason="DEM not loaded",
+                )
+
+            # Allocate a fresh destination buffer so we don't overwrite self.dem_data
+            dest = np.empty_like(self.dem_data, dtype=data.dtype)
+            rasterio.warp.reproject(
+                source=data,
+                destination=dest,
                 src_transform=src.transform,
                 dst_transform=self.dem.transform,
                 src_crs=src.crs,
                 dst_crs=self.dem.crs,
-                resampling=resampling_id
-            )[0]
+                resampling=resampling_id,
+            )
+            data = dest
 
-            # Create a MemoryFile to store the reprojected data
-            with hb.rasterio.io.MemoryFile() as memfile:
-                with memfile.open(
-                        driver='GTiff',
-                        height=data.shape[0],
-                        width=data.shape[1],
-                        count=1,
-                        dtype=data.dtype,
-                        crs=self.dem.crs,
-                        transform=self.dem.transform
-                ) as dataset:
-                    dataset.write(data, 1)
-
-                # Open the dataset as a rasterio object
+            # Create a MemoryFile to store the reprojected data and keep it open
+            memfile = rasterio.io.MemoryFile()
+            dataset = memfile.open(
+                driver="GTiff",
+                height=data.shape[0],
+                width=data.shape[1],
+                count=1,
+                dtype=data.dtype,
+                crs=self.dem.crs,
+                transform=self.dem.transform,
+            )
+            try:
+                dataset.write(data, 1)
+                dataset.close()
+                # Open the dataset as a rasterio object for reading
                 src = memfile.open()
+            except (OSError, ValueError, rasterio.errors.RasterioIOError) as e:
+                # Clean up on error
+                try:
+                    dataset.close()
+                except (OSError, ValueError, AttributeError):
+                    logger.debug(
+                        "Could not close dataset during error cleanup", exc_info=True
+                    )
+                try:
+                    memfile.close()
+                except (OSError, ValueError, AttributeError):
+                    logger.debug(
+                        "Could not close memfile during error cleanup", exc_info=True
+                    )
+                logger.error(f"Error writing to MemoryFile: {e}", exc_info=True)
+                raise
 
-        self.attributes[attr_name] = {"src": src, "data": data}
+        # Store the MemoryFile with the attribute so it stays alive (if created)
+        entry = {"src": src, "data": data}
+        if memfile is not None:
+            entry["memfile"] = memfile
+
+        self.attributes[attr_name] = entry
 
         return True
 
-    def get_hydro_units_nb(self) -> int:
+    def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
 
@@ -253,7 +481,11 @@ class Catchment:
         The number of hydro units.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to count.")
+            raise DataError(
+                "No hydro units to count.",
+                data_type="hydro units",
+                reason="Not initialized",
+            )
 
         return len(self.hydro_units.hydro_units)
 
@@ -266,7 +498,11 @@ class Catchment:
         The elevation of the hydro units.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to count.")
+            raise DataError(
+                "No hydro units to count.",
+                data_type="hydro units",
+                reason="Not initialized",
+            )
 
         return self.hydro_units.hydro_units.elevation
 
@@ -278,17 +514,18 @@ class Catchment:
         -------
         The hydro units attributes.
         """
-        if not hb.has_pyproj:
+        if not HAS_PYPROJ:
             raise ImportError("pyproj is required to do this.")
 
         if self.topography.slope is None or self.topography.aspect is None:
             self.topography.calculate_slope_aspect()
 
-        unit_ids = np.unique(self.map_unit_ids)
-        unit_ids = unit_ids[unit_ids != 0]
-
-        if 'id' not in self.hydro_units.hydro_units.columns:
-            self.hydro_units.add_property(('id', '-'), unit_ids, set_first=True)
+        if "id" not in self.hydro_units.hydro_units.columns:
+            unit_ids = np.unique(self.map_unit_ids)
+            unit_ids = unit_ids[unit_ids != 0]
+            self.hydro_units.add_property(("id", "-"), unit_ids, set_first=True)
+        else:
+            unit_ids = self.hydro_units.hydro_units["id"].values.tolist()
 
         res_area = []
         res_elevation = []
@@ -309,14 +546,18 @@ class Catchment:
 
             # Compute the mean elevation of the unit
             res_elevation_mean.append(
-                self.topography.extract_unit_mean_elevation(mask_unit))
-            if not self.hydro_units.has('elevation'):
+                self.topography.extract_unit_mean_elevation(mask_unit)
+            )
+            if not self.hydro_units.has("elevation"):
                 res_elevation.append(
-                    self.topography.extract_unit_mean_elevation(mask_unit))
+                    self.topography.extract_unit_mean_elevation(mask_unit)
+                )
                 res_elevation_min.append(
-                    self.topography.extract_unit_min_elevation(mask_unit))
+                    self.topography.extract_unit_min_elevation(mask_unit)
+                )
                 res_elevation_max.append(
-                    self.topography.extract_unit_max_elevation(mask_unit))
+                    self.topography.extract_unit_max_elevation(mask_unit)
+                )
 
             # Compute the slope and aspect of the unit
             res_slope.append(self.topography.extract_unit_mean_slope(mask_unit))
@@ -327,32 +568,25 @@ class Catchment:
             res_lat.append(lat)
             res_lon.append(lon)
 
-        if not self.hydro_units.has('elevation'):
-            self.hydro_units.add_property(('elevation', 'm'), res_elevation)
-            self.hydro_units.add_property(('elevation_min', 'm'), res_elevation_min)
-            self.hydro_units.add_property(('elevation_max', 'm'), res_elevation_max)
+        if not self.hydro_units.has("elevation"):
+            self.hydro_units.add_property(("elevation", "m"), res_elevation)
+            self.hydro_units.add_property(("elevation_min", "m"), res_elevation_min)
+            self.hydro_units.add_property(("elevation_max", "m"), res_elevation_max)
 
-        self.hydro_units.add_property(('elevation_mean', 'm'), res_elevation_mean)
-        self.hydro_units.add_property(('area', 'm2'), res_area)
-        self.hydro_units.add_property(('slope', 'deg'), res_slope)
-        self.hydro_units.add_property(('aspect', 'deg'), res_aspect)
-        self.hydro_units.add_property(('latitude', 'deg'), res_lat)
-        self.hydro_units.add_property(('longitude', 'deg'), res_lon)
+        self.hydro_units.add_property(("elevation_mean", "m"), res_elevation_mean)
+        self.hydro_units.add_property(("area", "m2"), res_area)
+        self.hydro_units.add_property(("slope", "deg"), res_slope)
+        self.hydro_units.add_property(("aspect", "deg"), res_aspect)
+        self.hydro_units.add_property(("latitude", "deg"), res_lat)
+        self.hydro_units.add_property(("longitude", "deg"), res_lon)
 
         self.hydro_units.check_land_cover_fractions_not_empty()
 
         self.area = sum(res_area)
 
-        # Sort the hydro units by descending elevation
-        self.hydro_units.hydro_units.sort_values(
-            by=('elevation', 'm'),
-            ascending=False,
-            inplace=True
-        )
-
         return self.hydro_units
 
-    def save_hydro_units_to_csv(self, path: str | Path):
+    def save_hydro_units_to_csv(self, path: str | Path) -> None:
         """
         Save the hydro units to a csv file.
 
@@ -362,11 +596,15 @@ class Catchment:
             Path to the output file.
         """
         if self.hydro_units is None:
-            raise ValueError("No hydro units to save.")
+            raise DataError(
+                "No hydro units to save.",
+                data_type="hydro units",
+                reason="Not initialized",
+            )
 
         self.hydro_units.save_to_csv(path)
 
-    def load_hydro_units_from_csv(self, path: str | Path):
+    def load_hydro_units_from_csv(self, path: str | Path) -> None:
         """
         Load hydro units from a csv file.
 
@@ -375,16 +613,14 @@ class Catchment:
         path
             Path to the csv file.
         """
-        if not hb.has_geopandas:
+        if not HAS_GEOPANDAS:
             raise ImportError("geopandas is required to do this.")
 
         self.hydro_units.load_from_csv(path)
 
     def save_unit_ids_raster(
-            self,
-            output_path: str | Path,
-            output_filename: str = 'unit_ids.tif'
-    ):
+        self, output_path: str | Path, output_filename: str = "unit_ids.tif"
+    ) -> None:
         """
         Save the unit ids raster to a file.
 
@@ -396,27 +632,24 @@ class Catchment:
             Name of the output file. Default is 'unit_ids.tif'.
         """
         if self.map_unit_ids is None:
-            raise ValueError("No unit ids raster to save.")
+            raise DataError(
+                "No unit ids raster to save.",
+                data_type="unit ids raster",
+                reason="Not initialized",
+            )
 
         full_path = Path(output_path) / output_filename
 
         # Create the profile
         profile = self.dem.profile
-        profile.update(
-            dtype=hb.rasterio.uint16,
-            count=1,
-            compress='lzw',
-            nodata=0
-        )
+        profile.update(dtype=rasterio.uint16, count=1, compress="lzw", nodata=0)
 
-        with hb.rasterio.open(full_path, 'w', **profile) as dst:
+        with rasterio.open(full_path, "w", **profile) as dst:
             dst.write(self.map_unit_ids, 1)
 
     def load_unit_ids_from_raster(
-            self,
-            path: str,
-            filename: str = 'unit_ids.tif'
-    ):
+        self, path: str, filename: str = "unit_ids.tif"
+    ) -> None:
         """
         Load hydro units from a raster file.
 
@@ -428,7 +661,7 @@ class Catchment:
         filename
             Name of the raster file. Default is 'unit_ids.tif'.
         """
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
 
         # If path is a file, use it directly
@@ -437,7 +670,7 @@ class Catchment:
         else:
             full_path = Path(path) / filename
 
-        with hb.rasterio.open(full_path) as src:
+        with rasterio.open(full_path) as src:
             self._check_crs(src)
             if self.outline is not None:
                 geoms = [mapping(polygon) for polygon in self.outline]
@@ -449,7 +682,7 @@ class Catchment:
             if len(self.map_unit_ids.shape) == 3:
                 self.map_unit_ids = self.map_unit_ids[0]
 
-            self.map_unit_ids = self.map_unit_ids.astype(hb.rasterio.uint16)
+            self.map_unit_ids = self.map_unit_ids.astype(rasterio.uint16)
 
     def get_dem_x_resolution(self) -> float:
         """
@@ -485,7 +718,11 @@ class Catchment:
         The attribute raster x resolution.
         """
         if attr_name not in self.attributes.keys():
-            raise ValueError(f"Attribute raster {attr_name} not found.")
+            raise DataError(
+                f"Attribute raster {attr_name} not found.",
+                data_type="attribute raster",
+                reason="Not loaded",
+            )
 
         return abs(self.attributes[attr_name].src.transform[0])
 
@@ -503,7 +740,11 @@ class Catchment:
         The attribute raster y resolution.
         """
         if attr_name not in self.attributes.keys():
-            raise ValueError(f"Attribute raster {attr_name} not found.")
+            raise DataError(
+                f"Attribute raster {attr_name} not found.",
+                data_type="attribute raster",
+                reason="Not loaded",
+            )
 
         return abs(self.attributes[attr_name].src.transform[4])
 
@@ -518,6 +759,17 @@ class Catchment:
         return self.get_dem_x_resolution() * self.get_dem_y_resolution()
 
     def get_dem_mean_lat_lon(self) -> tuple[float, float]:
+        """
+        Get the mean latitude and longitude of the DEM extent.
+
+        Calculates the central coordinates of the catchment DEM and converts them
+        from the catchment CRS to latitude/longitude (EPSG:4326).
+
+        Returns
+        -------
+        tuple[float, float]
+            Tuple of (mean_latitude, mean_longitude) in degrees.
+        """
         # Central coordinates of the catchment
         mean_x = self.dem.bounds[0] + (self.dem.bounds[2] - self.dem.bounds[0]) / 2
         if self.dem.bounds[3] > self.dem.bounds[1]:
@@ -526,12 +778,12 @@ class Catchment:
             mean_y = self.dem.bounds[3] + (self.dem.bounds[1] - self.dem.bounds[3]) / 2
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        transformer = pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
 
-    def create_dem_pixel_geometry(self, i: int, j: int) -> hb.shapely.geometry.Polygon:
+    def create_dem_pixel_geometry(self, i: int, j: int) -> shapely.geometry.Polygon:
         """
         Create a shapely geometry of the DEM pixel.
 
@@ -546,7 +798,7 @@ class Catchment:
         -------
         The shapely geometry of the pixel.
         """
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
         xy = self.dem.xy(i, j)
@@ -557,15 +809,60 @@ class Catchment:
         x_max = xy[0] + x_size / 2
         y_max = xy[1] + y_size / 2
 
-        return hb.shapely.geometry.box(x_min, y_min, x_max, y_max)
+        return shapely.geometry.box(x_min, y_min, x_max, y_max)
+
+    def mask_dem(
+        self,
+        shapefile: gpd.GeoDataFrame,
+        nodata: float = -9999,
+        all_touched: bool = True,
+    ) -> np.ndarray:
+        """
+        Rasterize vector geometries onto the DEM grid.
+
+        Masks the catchment DEM with the geometries of ``shapefile`` (which must be in
+        the catchment CRS): cells covered by a geometry keep their DEM value, cells
+        outside get ``nodata``. Used to derive per-cell presence masks from polygons
+        (e.g. land cover, glacier extent, sub-catchments).
+
+        Parameters
+        ----------
+        shapefile
+            GeoDataFrame of geometries, expressed in the catchment CRS.
+        nodata
+            Value assigned to cells outside the geometries. Default: -9999.
+        all_touched
+            If True (default), every cell touched by a geometry is included; if False,
+            only cells whose centre falls within a geometry.
+
+        Returns
+        -------
+        np.ndarray
+            2D array over the DEM grid holding the DEM value where a geometry is present
+            and ``nodata`` elsewhere.
+        """
+        if not HAS_RASTERIO:
+            raise ImportError("rasterio is required to do this.")
+        if not HAS_SHAPELY:
+            raise ImportError("shapely is required to do this.")
+
+        geoms = [mapping(geo) for geo in shapefile.geometry.values]
+        dem_masked, _ = mask(self.dem, geoms, crop=False, all_touched=all_touched)
+        dem_masked[dem_masked == self.dem.nodata] = nodata
+        if len(dem_masked.shape) == 3:
+            dem_masked = dem_masked[0]
+
+        return dem_masked
 
     def initialize_area_from_land_cover_change(
-            self,
-            land_cover_name: str,
-            land_cover_change: pd.DataFrame
-    ):
+        self, land_cover_name: str, land_cover_change: pd.DataFrame
+    ) -> None:
         """
         Initialize the HydroUnits cover area from a land cover change object.
+
+        Must be called before ``Model.setup()``: it updates the land cover fractions
+        that the model reads at build time. Calling it afterwards changes the hydro
+        units' settings but does not propagate to an already-built model.
 
         Parameters
         ----------
@@ -575,26 +872,57 @@ class Catchment:
             The land cover change dataframe.
         """
         if self.map_unit_ids is None:
-            raise ValueError("No hydro units to initialize.")
+            raise DataError(
+                "No hydro units to initialize.",
+                data_type="hydro units",
+                reason="Not initialized",
+            )
 
-        if land_cover_name == 'ground':
-            raise ValueError("You should not initialize the 'ground' land cover type.")
+        if land_cover_name in ("open", "ground", "generic", "generic_land_cover"):
+            raise ConfigurationError(
+                f"You should not initialize the generic soil ('{land_cover_name}') "
+                f"land cover type; it absorbs the residual area automatically.",
+                item_name="land_cover_name",
+                item_value=land_cover_name,
+                reason="Invalid land cover type",
+            )
 
         self.hydro_units.initialize_from_land_cover_change(
-            land_cover_name,
-            land_cover_change
+            land_cover_name, land_cover_change
         )
 
-    def initialize_land_cover_fractions(self):
+    def initialize_land_cover_fractions(self) -> None:
+        """
+        Initialize land cover fractions for all hydro units.
+
+        Sets up the initial fractional areas for each land cover type within
+        each hydro unit based on the available land cover data.
+        """
         self.hydro_units.initialize_land_cover_fractions()
 
-    def discretize_by(self, *args, **kwargs):
+    def extract_land_cover_from_raster(self, *args, **kwargs) -> None:
+        """
+        Extract land-cover fractions from a categorical raster (e.g. ESA WorldCover).
+
+        Call the ``extract_from_raster`` method of the CatchmentLandCover class.
+        """
+        self.land_cover.extract_from_raster(*args, **kwargs)
+
+    def extract_land_cover_from_shapefile(self, *args, **kwargs) -> None:
+        """
+        Extract land-cover fractions from a vector dataset (e.g. swissTLMRegio).
+
+        Call the ``extract_from_shapefile`` method of the CatchmentLandCover class.
+        """
+        self.land_cover.extract_from_shapefile(*args, **kwargs)
+
+    def discretize_by(self, *args, **kwargs) -> None:
         """
         Call the discretize_by method of the Discretization class.
         """
         self.discretization.discretize_by(*args, **kwargs)
 
-    def create_elevation_bands(self, *args, **kwargs):
+    def create_elevation_bands(self, *args, **kwargs) -> None:
         """
         Call the create_elevation_bands method of the Discretization class.
         """
@@ -607,14 +935,14 @@ class Catchment:
         return self.topography.get_mean_elevation()
 
     def resample_dem_and_calculate_slope_aspect(
-            self, *args, **kwargs
+        self, *args, **kwargs
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Call the resample_dem_and_calculate_slope_aspect method of the Topography class.
         """
         return self.topography.resample_dem_and_calculate_slope_aspect(*args, **kwargs)
 
-    def calculate_slope_aspect(self):
+    def calculate_slope_aspect(self) -> None:
         """
         Call the calculate_slope_aspect method of the Topography class.
         """
@@ -632,7 +960,7 @@ class Catchment:
         """
         return self.connectivity.calculate(*args, **kwargs)
 
-    def calculate_daily_potential_radiation(self, *args, **kwargs):
+    def calculate_daily_potential_radiation(self, *args, **kwargs) -> None:
         """
         Call the calculate_daily_potential_radiation method of the
         PotentialSolarRadiation class.
@@ -644,16 +972,18 @@ class Catchment:
         """
         Call the calculate_cast_shadows method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.calculate_cast_shadows(*args, **kwargs)
 
-    def load_mean_annual_radiation_raster(self, *args, **kwargs):
+    def load_mean_annual_radiation_raster(self, *args, **kwargs) -> None:
         """
         Call the load_mean_annual_radiation_raster method of the
         PotentialSolarRadiation class.
         """
         self.solar_radiation.load_mean_annual_radiation_raster(*args, **kwargs)
 
-    def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs):
+    def upscale_and_save_mean_annual_radiation_rasters(self, *args, **kwargs) -> None:
         """
         Call the upscale_and_save_mean_annual_radiation_rasters method of the
         PotentialSolarRadiation class.
@@ -667,6 +997,8 @@ class Catchment:
         """
         Call the get_solar_declination_rad method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_declination_rad(*args, **kwargs)
 
     @staticmethod
@@ -674,6 +1006,8 @@ class Catchment:
         """
         Call the get_solar_hour_angle_limit method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_hour_angle_limit(*args, **kwargs)
 
     @staticmethod
@@ -681,6 +1015,8 @@ class Catchment:
         """
         Call the get_solar_zenith method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_zenith(*args, **kwargs)
 
     @staticmethod
@@ -688,6 +1024,8 @@ class Catchment:
         """
         Call the get_solar_azimuth_to_south method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_azimuth_to_south(*args, **kwargs)
 
     @staticmethod
@@ -695,77 +1033,140 @@ class Catchment:
         """
         Call the get_solar_azimuth_to_north method of the PotentialSolarRadiation class.
         """
+        from hydrobricks.preprocessing import PotentialSolarRadiation
+
         return PotentialSolarRadiation.get_solar_azimuth_to_north(*args, **kwargs)
 
     def extract_unit_mean_lat_lon(self, mask_unit: np.ndarray) -> tuple[float, float]:
+        """
+        Extract the mean latitude and longitude for a hydro unit.
+
+        Calculates the mean coordinates of pixels within a unit mask and converts
+        them from the catchment CRS to latitude/longitude (EPSG:4326).
+
+        Parameters
+        ----------
+        mask_unit
+            Boolean mask array identifying the cells of the hydro unit.
+
+        Returns
+        -------
+        tuple[float, float]
+            Tuple of (mean_latitude, mean_longitude) in degrees.
+        """
         # Get rows and cols of the unit
         rows, cols = np.where(mask_unit)
 
         # Get coordinates of the unit
-        xs, ys = hb.rasterio.transform.xy(self.dem.transform, list(rows), list(cols))
+        xs, ys = rasterio.transform.xy(self.dem.transform, list(rows), list(cols))
 
         # Get the mean coordinates of the unit
         mean_x = np.nanmean(xs)
         mean_y = np.nanmean(ys)
 
         # Get the mean coordinates of the unit in lat/lon
-        transformer = hb.pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
+        transformer = pyproj.Transformer.from_crs(self.crs, 4326, always_xy=True)
         mean_lon, mean_lat = transformer.transform(mean_x, mean_y)
 
         return mean_lat, mean_lon
 
-    def _extract_area(self, outline: hb.shapely.geometry.Polygon):
+    def _extract_area(self, outline: str | Path | None) -> None:
+        """
+        Extract and compute the catchment area from outline shapefile.
+
+        Parameters
+        ----------
+        outline
+            Path to shapefile containing catchment outline.
+            If None, area is not computed.
+        """
         # The outline has to be given in meters.
         if not outline:
             return
-        shapefile = hb.gpd.read_file(outline)
+        shapefile = gpd.read_file(outline)
         self._check_crs(shapefile)
-        area = hb.utils.compute_area(shapefile)
+        area = compute_area(shapefile)
         self.area = area
 
-    def _extract_outline(self, outline: hb.shapely.geometry.Polygon):
+    def _extract_outline(self, outline: str | Path | None) -> None:
+        """
+        Extract catchment outline geometry from shapefile.
+
+        Reads the shapefile, validates CRS, and stores the polygon geometries.
+
+        Parameters
+        ----------
+        outline
+            Path to shapefile containing catchment outline.
+            If None, outline is not extracted.
+        """
         if not outline:
             return
-        shapefile = hb.gpd.read_file(outline)
+        shapefile = gpd.read_file(outline)
         self._check_crs(shapefile)
         geoms = shapefile.geometry.values
         self.outline = geoms
 
     def _extract_raster(
-            self,
-            raster_path: str | Path
-    ) -> (hb.rasterio.DatasetReader, np.ndarray):
+        self, raster_path: str | Path, reproject_crs: bool = False
+    ) -> tuple[rasterio.DatasetReader, np.ndarray]:
         """
-        Extract raster data for the catchment. Does not handle change in coordinates.
+        Extract raster data for the catchment.
+
+        Reads a raster file, applies catchment outline masking if available, and
+        replaces nodata values with NaN. By default the raster CRS must match the
+        catchment CRS (no coordinate change is performed here). When ``reproject_crs``
+        is True, the CRS check and the outline masking are skipped so the caller can
+        warp the raster onto the DEM grid afterwards (the outline is expressed in the
+        catchment/DEM CRS and cannot mask a raster in a different CRS).
 
         Parameters
         ----------
         raster_path
-            Path of the DEM file.
+            Path of the raster file.
+        reproject_crs
+            If True, do not check the CRS nor mask by the outline (the caller
+            reprojects the data onto the DEM grid). Default: False
 
         Returns
         -------
-        src
-            The rasterio dataset reader object.
-        masked_data
-            The masked raster data.
+        tuple[rasterio.DatasetReader, np.ndarray]
+            Tuple containing:
+            - src: The rasterio dataset reader object
+            - masked_data: The masked raster data as numpy array
+
+        Raises
+        ------
+        FileNotFoundError
+            If the raster file does not exist.
+        ImportError
+            If rasterio or shapely is not installed.
         """
         if not Path(raster_path).is_file():
-            raise FileNotFoundError(f"File {raster_path} does not exist.")
+            raise DataError(
+                f"File {raster_path} does not exist.",
+                data_type="raster file",
+                reason="File not found",
+            )
 
-        if not hb.has_rasterio:
+        if not HAS_RASTERIO:
             raise ImportError("rasterio is required to do this.")
-        if not hb.has_shapely:
+        if not HAS_SHAPELY:
             raise ImportError("shapely is required to do this.")
 
-        src = hb.rasterio.open(raster_path)
-        self._check_crs(src)
+        src = rasterio.open(raster_path)
 
-        if self.outline is not None:
-            geoms = [mapping(polygon) for polygon in self.outline]
-            masked_data, _ = mask(src, geoms, crop=False)
+        if reproject_crs:
+            # The CRS may differ from the catchment; the caller reprojects onto the
+            # DEM grid. Read as float so nodata can be represented as NaN.
+            masked_data = src.read(1).astype(float)
         else:
-            masked_data = src.read(1)
+            self._check_crs(src)
+            if self.outline is not None:
+                geoms = [mapping(polygon) for polygon in self.outline]
+                masked_data, _ = mask(src, geoms, crop=False)
+            else:
+                masked_data = src.read(1)
 
         masked_data[masked_data == src.nodata] = np.nan
         if len(masked_data.shape) == 3:
@@ -773,38 +1174,61 @@ class Catchment:
 
         return src, masked_data
 
-    def _check_crs(self, data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
+    def _check_crs(self, data: rasterio.DatasetReader | gpd.GeoDataFrame) -> None:
+        """
+        Check and validate CRS consistency with the catchment.
+
+        Sets the catchment CRS if not already set, or verifies that the data CRS
+        matches the catchment CRS.
+
+        Parameters
+        ----------
+        data
+            Rasterio dataset or GeoDataFrame to check CRS against.
+
+        Raises
+        ------
+        ValueError
+            If data CRS doesn't match the catchment CRS.
+        """
         data_crs = self._get_crs_from_file(data)
         if self.crs is None:
             self.crs = data_crs
         else:
             if self.crs != data_crs:
-                raise ValueError("The CRS of the data does not match the CRS of the "
-                                 "catchment.")
+                raise DataError(
+                    "The CRS of the data does not match the CRS of the catchment.",
+                    data_type="CRS",
+                    reason="CRS mismatch",
+                )
 
     @staticmethod
-    def _get_crs_from_file(data: hb.rasterio.DatasetReader | hb.gpd.GeoDataFrame):
-        if isinstance(data, hb.rasterio.DatasetReader):
+    def _get_crs_from_file(data: rasterio.DatasetReader | gpd.GeoDataFrame) -> str:
+        """
+        Extract CRS from a rasterio dataset or GeoDataFrame.
+
+        Parameters
+        ----------
+        data
+            Rasterio dataset or GeoDataFrame to extract CRS from.
+
+        Returns
+        -------
+        str
+            Coordinate Reference System identifier.
+
+        Raises
+        ------
+        ValueError
+            If data format is not recognized.
+        """
+        if isinstance(data, rasterio.DatasetReader):
             return data.crs
-        elif isinstance(data, hb.gpd.GeoDataFrame):
+        elif isinstance(data, gpd.GeoDataFrame):
             return data.crs
         else:
-            raise ValueError("Unknown data format.")
-
-    # Copy the docstring from attached classes
-    discretize_by.__doc__ = CatchmentDiscretization.discretize_by.__doc__
-    create_elevation_bands.__doc__ = CatchmentDiscretization.create_elevation_bands.__doc__
-    get_mean_elevation.__doc__ = CatchmentTopography.get_mean_elevation.__doc__
-    resample_dem_and_calculate_slope_aspect.__doc__ = CatchmentTopography.resample_dem_and_calculate_slope_aspect.__doc__
-    calculate_slope_aspect.__doc__ = CatchmentTopography.calculate_slope_aspect.__doc__
-    get_hillshade.__doc__ = CatchmentTopography.get_hillshade.__doc__
-    calculate_connectivity.__doc__ = CatchmentConnectivity.calculate.__doc__
-    calculate_daily_potential_radiation.__doc__ = PotentialSolarRadiation.calculate_daily_potential_radiation.__doc__
-    calculate_cast_shadows.__doc__ = PotentialSolarRadiation.calculate_cast_shadows.__doc__
-    load_mean_annual_radiation_raster.__doc__ = PotentialSolarRadiation.load_mean_annual_radiation_raster.__doc__
-    upscale_and_save_mean_annual_radiation_rasters.__doc__ = PotentialSolarRadiation.upscale_and_save_mean_annual_radiation_rasters.__doc__
-    get_solar_declination_rad.__doc__ = PotentialSolarRadiation.get_solar_declination_rad.__doc__
-    get_solar_hour_angle_limit.__doc__ = PotentialSolarRadiation.get_solar_hour_angle_limit.__doc__
-    get_solar_zenith.__doc__ = PotentialSolarRadiation.get_solar_zenith.__doc__
-    get_solar_azimuth_to_south.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_south.__doc__
-    get_solar_azimuth_to_north.__doc__ = PotentialSolarRadiation.get_solar_azimuth_to_north.__doc__
+            raise DataError(
+                "Unknown data format.",
+                data_type="data format",
+                reason="Unsupported type",
+            )

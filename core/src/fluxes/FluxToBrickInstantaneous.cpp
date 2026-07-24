@@ -6,7 +6,7 @@
 FluxToBrickInstantaneous::FluxToBrickInstantaneous(Brick* brick)
     : FluxToBrick(brick) {}
 
-bool FluxToBrickInstantaneous::IsOk() {
+bool FluxToBrickInstantaneous::IsValid() const {
     return true;
 }
 
@@ -14,25 +14,25 @@ double FluxToBrickInstantaneous::GetAmount() {
     return 0;  // The amount has already been transferred.
 }
 
-double FluxToBrickInstantaneous::GetRealAmount() {
+double FluxToBrickInstantaneous::GetRealAmount() const {
     return _amount;
 }
 
 void FluxToBrickInstantaneous::UpdateFlux(double amount) {
-    wxASSERT(_toBrick);
+    assert(_toBrick);
     if (_fractionTotal != 1.0) {
         _amount = amount * _fractionTotal;  // Still need to keep it.
     } else {
         _amount = amount;
     }
 
-    if (_type == "water") {
+    if (_type == ContentType::Water) {
         _toBrick->GetWaterContainer()->AddAmountToStaticContentChange(_amount);
-    } else if (_type == "snow") {
+    } else if (_type == ContentType::Snow) {
         auto snowBrick = dynamic_cast<Snowpack*>(_toBrick);
-        wxASSERT(snowBrick);
+        assert(snowBrick);
         snowBrick->GetSnowContainer()->AddAmountToStaticContentChange(_amount);
     } else {
-        throw InvalidArgument(wxString::Format(_("The content type '%s' is not supported."), _type));
+        throw ModelConfigError(std::format("The content type '{}' is not supported.", ContentTypeToString(_type)));
     }
 }

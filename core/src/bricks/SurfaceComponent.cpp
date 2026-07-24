@@ -10,10 +10,11 @@ SurfaceComponent::SurfaceComponent()
 }
 
 void SurfaceComponent::SetAreaFraction(double value) {
-    wxASSERT(_parent);
+    assert(_parent);
     _areaFraction = value;
-    for (auto process : _processes) {
-        for (auto output : process->GetOutputFluxes()) {
+    for (const auto& process : _processes) {
+        for (int i = 0; i < process->GetOutputFluxCount(); ++i) {
+            Flux* output = process->GetOutputFlux(i);
             if (output->NeedsWeighting()) {
                 value *= _parent->GetAreaFraction();
                 output->SetFractionLandCover(value);
@@ -22,13 +23,13 @@ void SurfaceComponent::SetAreaFraction(double value) {
     }
 }
 
-double SurfaceComponent::GetParentAreaFraction() {
-    wxASSERT(_parent);
+double SurfaceComponent::GetParentAreaFraction() const {
+    assert(_parent);
     return _parent->GetAreaFraction();
 }
 
-bool SurfaceComponent::IsNull() {
-    if (_areaFraction <= PRECISION) {
+bool SurfaceComponent::IsNull() const {
+    if (NearlyZero(_areaFraction, PRECISION)) {
         return true;
     }
     if (_parent && _parent->IsNull()) {

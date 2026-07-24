@@ -18,7 +18,7 @@ void SettingsBasin::AddHydroUnit(int id, double area, double elevation) {
 }
 
 void SettingsBasin::AddLandCover(const string& name, const string& type, double fraction) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     LandCoverSettings element;
     element.name = name;
@@ -28,7 +28,7 @@ void SettingsBasin::AddLandCover(const string& name, const string& type, double 
 }
 
 void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value, const string& unit) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     HydroUnitPropertyDouble property;
     property.name = name;
@@ -38,7 +38,7 @@ void SettingsBasin::AddHydroUnitPropertyDouble(const string& name, double value,
 }
 
 void SettingsBasin::AddHydroUnitPropertyString(const string& name, const string& value) {
-    wxASSERT(_selectedHydroUnit);
+    assert(_selectedHydroUnit);
 
     HydroUnitPropertyString property;
     property.name = name;
@@ -63,7 +63,7 @@ void SettingsBasin::Clear() {
 }
 
 void SettingsBasin::SelectUnit(int index) {
-    wxASSERT(_hydroUnits.size() > index);
+    assert(_hydroUnits.size() > index);
     _selectedHydroUnit = &_hydroUnits[index];
 }
 
@@ -84,16 +84,16 @@ bool SettingsBasin::Parse(const string& path) {
         }
 
         // Get number of units
-        int unitsNb = file.GetDimLen("hydro_units");
+        int unitCount = file.GetDimLen("hydro_units");
 
         // Get ids
-        vecInt ids = file.GetVarInt1D("id", unitsNb);
+        vecInt ids = file.GetVarInt1D("id", unitCount);
 
         // Get areas
-        vecDouble areas = file.GetVarDouble1D("area", unitsNb);
+        vecDouble areas = file.GetVarDouble1D("area", unitCount);
 
         // Store hydro units
-        for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
+        for (int iUnit = 0; iUnit < unitCount; ++iUnit) {
             HydroUnitSettings unit;
             unit.id = ids[iUnit];
             unit.area = areas[iUnit];
@@ -102,12 +102,12 @@ bool SettingsBasin::Parse(const string& path) {
 
         // Get land cover data
         for (const auto& cover : landCovers) {
-            vecDouble fractions = file.GetVarDouble1D(cover, unitsNb);
+            vecDouble fractions = file.GetVarDouble1D(cover, unitCount);
 
             // Get the cover type
             string type = file.GetAttText("type", cover);
 
-            for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
+            for (int iUnit = 0; iUnit < unitCount; ++iUnit) {
                 LandCoverSettings element;
                 element.name = cover;
                 element.type = type;
@@ -117,10 +117,10 @@ bool SettingsBasin::Parse(const string& path) {
         }
 
         // Extract other variables
-        int varsNb = file.GetVarsNb();
+        int varCount = file.GetVariableCount();
         int dimIdHydroUnits = file.GetDimId("hydro_units");
 
-        for (int iVar = 0; iVar < varsNb; ++iVar) {
+        for (int iVar = 0; iVar < varCount; ++iVar) {
             // Get variable name
             string varName = file.GetVarName(iVar);
 
@@ -133,9 +133,9 @@ bool SettingsBasin::Parse(const string& path) {
                 continue;
             }
 
-            vecDouble values = file.GetVarDouble1D(varName, unitsNb);
+            vecDouble values = file.GetVarDouble1D(varName, unitCount);
 
-            for (int iUnit = 0; iUnit < unitsNb; ++iUnit) {
+            for (int iUnit = 0; iUnit < unitCount; ++iUnit) {
                 HydroUnitPropertyDouble prop;
                 prop.name = varName;
                 prop.value = values[iUnit];
@@ -145,7 +145,7 @@ bool SettingsBasin::Parse(const string& path) {
         }
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 

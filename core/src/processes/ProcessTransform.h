@@ -16,22 +16,22 @@ class ProcessTransform : public Process {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    [[nodiscard]] int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_TRANSFORM_H

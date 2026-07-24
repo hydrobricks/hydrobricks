@@ -3,11 +3,11 @@
 
 #include "Includes.h"
 
-class TimeSeriesData : public wxObject {
+class TimeSeriesData {
   public:
     TimeSeriesData();
 
-    ~TimeSeriesData() override = default;
+    virtual ~TimeSeriesData() = default;
 
     /**
      * Set the values of the time series data.
@@ -15,7 +15,7 @@ class TimeSeriesData : public wxObject {
      * @param values vector of values to set.
      * @return true if the values were successfully set.
      */
-    virtual bool SetValues(const vecDouble& values);
+    virtual bool SetValues(vecDouble values);
 
     /**
      * Get the value for the provided date.
@@ -23,21 +23,21 @@ class TimeSeriesData : public wxObject {
      * @param date date to get the value for.
      * @return the value for the provided date.
      */
-    virtual double GetValueFor(double date);
+    [[nodiscard]] virtual double GetValueFor(double date);
 
     /**
      * Get the current value.
      *
      * @return the current value.
      */
-    virtual double GetCurrentValue();
+    [[nodiscard]] virtual double GetCurrentValue() const;
 
     /**
      * Get the sum of the values.
      *
      * @return the sum of the values.
      */
-    virtual double GetSum();
+    [[nodiscard]] virtual double GetSum();
 
     /**
      * Set the cursor to the provided date.
@@ -59,14 +59,30 @@ class TimeSeriesData : public wxObject {
      *
      * @return the start date of the time series data.
      */
-    virtual double GetStart() = 0;
+    [[nodiscard]] virtual double GetStart() const = 0;
 
     /**
      * Get the end date of the time series data.
      *
      * @return the end date of the time series data.
      */
-    virtual double GetEnd() = 0;
+    [[nodiscard]] virtual double GetEnd() const = 0;
+
+    /**
+     * Check if the time series data is valid.
+     * Verifies that the data has values and date range is set correctly.
+     *
+     * @return true if the time series data is valid, false otherwise.
+     */
+    [[nodiscard]] virtual bool IsValid() const = 0;
+
+    /**
+     * Validate the time series data.
+     * Throws an exception if the time series data is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    virtual void Validate() const = 0;
 
   protected:
     vecDouble _values;
@@ -82,7 +98,7 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::SetValues()
      */
-    bool SetValues(const vecDouble& values) override;
+    bool SetValues(vecDouble values) override;
 
     /**
      * @copydoc TimeSeriesData::GetValueFor()
@@ -92,7 +108,7 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetCurrentValue()
      */
-    double GetCurrentValue() override;
+    double GetCurrentValue() const override;
 
     /**
      * @copydoc TimeSeriesData::GetSum()
@@ -112,12 +128,22 @@ class TimeSeriesDataRegular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetStart()
      */
-    double GetStart() override;
+    double GetStart() const override;
 
     /**
      * @copydoc TimeSeriesData::GetEnd()
      */
-    double GetEnd() override;
+    double GetEnd() const override;
+
+    /**
+     * @copydoc TimeSeriesData::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeriesData::Validate()
+     */
+    void Validate() const override;
 
   protected:
     double _start;
@@ -135,7 +161,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::SetValues()
      */
-    bool SetValues(const vecDouble& values) override;
+    bool SetValues(vecDouble values) override;
 
     /**
      * @copydoc TimeSeriesData::GetValueFor()
@@ -145,7 +171,7 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetCurrentValue()
      */
-    double GetCurrentValue() override;
+    double GetCurrentValue() const override;
 
     /**
      * @copydoc TimeSeriesData::GetSum()
@@ -165,12 +191,22 @@ class TimeSeriesDataIrregular : public TimeSeriesData {
     /**
      * @copydoc TimeSeriesData::GetStart()
      */
-    double GetStart() override;
+    double GetStart() const override;
 
     /**
      * @copydoc TimeSeriesData::GetEnd()
      */
-    double GetEnd() override;
+    double GetEnd() const override;
+
+    /**
+     * @copydoc TimeSeriesData::IsValid()
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+    /**
+     * @copydoc TimeSeriesData::Validate()
+     */
+    void Validate() const override;
 
   protected:
     vecDouble _dates;

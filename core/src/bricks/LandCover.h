@@ -12,9 +12,25 @@ class LandCover : public Brick {
     LandCover();
 
     /**
+     * @copydoc Brick::Reset()
+     *
+     * Also restores the area fraction to the initial extent (set at build time via
+     * SetInitialAreaFraction), so that land-cover changes (e.g. glacier evolution) are
+     * rolled back when the model is re-run.
+     */
+    void Reset() override;
+
+    /**
+     * @copydoc Brick::SaveAsInitialState()
+     *
+     * Also stores the current area fraction as the initial extent to restore on reset.
+     */
+    void SaveAsInitialState() override;
+
+    /**
      * @copydoc Brick::CanHaveAreaFraction()
      */
-    bool CanHaveAreaFraction() override {
+    [[nodiscard]] bool CanHaveAreaFraction() const override {
         return true;
     }
 
@@ -23,7 +39,7 @@ class LandCover : public Brick {
      *
      * @return The area fraction of the land cover.
      */
-    double GetAreaFraction() {
+    double GetAreaFraction() const {
         return _areaFraction;
     }
 
@@ -44,17 +60,36 @@ class LandCover : public Brick {
     void SetAreaFraction(double value);
 
     /**
+     * Set the initial area fraction (the extent restored on every reset). Set once at
+     * build time, when the land cover fractions are assigned.
+     *
+     * @param value The initial area fraction to store.
+     */
+    void SetInitialAreaFraction(double value) {
+        _initialAreaFraction = value;
+    }
+
+    /**
+     * Restore the area fraction to the initial extent without touching the stored
+     * content (used after the spin-up phase, where the warmed-up states are kept but
+     * the extents must match the declared initial ones).
+     */
+    void RestoreInitialAreaFraction() {
+        SetAreaFraction(_initialAreaFraction);
+    }
+
+    /**
      * @copydoc Brick::IsLandCover()
      */
-    bool IsLandCover() override {
+    [[nodiscard]] bool IsLandCover() const override {
         return true;
     }
 
     /**
      * @copydoc Brick::IsNull()
      */
-    bool IsNull() override {
-        return _areaFraction <= PRECISION;
+    [[nodiscard]] bool IsNull() const override {
+        return NearlyZero(_areaFraction, PRECISION);
     }
 
     /**
@@ -66,6 +101,7 @@ class LandCover : public Brick {
 
   protected:
     double _areaFraction;
+    double _initialAreaFraction;
 };
 
 #endif  // HYDROBRICKS_BASE_LAND_COVER_H

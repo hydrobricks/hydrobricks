@@ -12,41 +12,41 @@ class ProcessLateral : public Process {
     ~ProcessLateral() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    [[nodiscard]] int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * Attach outgoing flux.
      *
-     * @param flux outgoing flux
+     * @param flux outgoing flux (ownership transferred)
      * @param weight weight of the flux
      */
-    void AttachFluxOutWithWeight(Flux* flux, double weight = 1.0);
+    void AttachFluxOutWithWeight(std::unique_ptr<Flux> flux, double weight = 1.0);
 
     /**
      * Get the area fraction of the origin land cover.
      *
      * @return The area fraction of the origin land cover.
      */
-    double GetOriginLandCoverAreaFraction();
+    [[nodiscard]] double GetOriginLandCoverAreaFraction() const;
 
     /**
      * Get the area fraction of the target land cover.
      *
      * @return The area fraction of the target land cover.
      */
-    double GetTargetLandCoverAreaFraction(Flux* flux);
+    [[nodiscard]] double GetTargetLandCoverAreaFraction(Flux* flux);
 
     /**
      * Compute the fraction of areas for the lateral process.
@@ -61,7 +61,7 @@ class ProcessLateral : public Process {
      *
      * @return true if the process is a lateral process.
      */
-    bool IsLateralProcess() const override {
+    [[nodiscard]] bool IsLateralProcess() const noexcept override {
         return true;
     }
 

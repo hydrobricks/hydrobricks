@@ -1,0 +1,74 @@
+#include "ActionGlacierSnowToIceTransformation.h"
+
+#include "Glacier.h"
+#include "HydroUnit.h"
+#include "ModelHydro.h"
+
+ActionGlacierSnowToIceTransformation::ActionGlacierSnowToIceTransformation(int month, int day,
+                                                                           const string& landCoverName)
+    : Action() {
+    AddRecursiveDate(month, day);
+    _landCoverName = landCoverName;
+}
+
+bool ActionGlacierSnowToIceTransformation::Init() {
+    // Loop over all hydro units in the sub-basin and register those with the specified land cover.
+    _hydroUnitIds.clear();
+
+    if (_manager->GetSubBasin() == nullptr) {
+        LogError("The model is likely not initialized (setup()) as the sub-basin is not defined.");
+        return false;
+    }
+    if (!_manager->GetSubBasin()->HasHydroUnits()) {
+        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin.");
+        return false;
+    }
+
+    for (int i = 0; i < _manager->GetSubBasin()->GetHydroUnitCount(); ++i) {
+        auto unit = _manager->GetSubBasin()->GetHydroUnit(i);
+        if (unit->TryGetLandCover(_landCoverName) != nullptr) {
+            _hydroUnitIds.push_back(unit->GetId());
+        }
+    }
+
+    return true;
+}
+
+void ActionGlacierSnowToIceTransformation::Reset() {
+    // Nothing to reset.
+}
+
+bool ActionGlacierSnowToIceTransformation::Apply(double) {
+    auto subBasin = _manager->GetSubBasin();
+
+    // Transform snow to ice for each hydro unit.
+    for (int id : _hydroUnitIds) {
+        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+
+        // Get the glacier brick.
+        LandCover* glacierLandCover = unit->TryGetLandCover(_landCoverName);
+        if (glacierLandCover == nullptr || NearlyZero(glacierLandCover->GetAreaFraction(), PRECISION)) {
+            continue;
+        }
+        Glacier* glacier = dynamic_cast<Glacier*>(glacierLandCover);
+
+        // Get the associated snowpack.
+        Brick* snowpack = unit->TryGetBrick(_landCoverName + "_snowpack");
+        if (snowpack == nullptr) {
+            LogError("The brick {} was not found in hydro unit {}", (_landCoverName + "_snowpack"), id);
+            continue;
+        }
+
+        // Get snow content.
+        double snowWE = snowpack->GetContent(ContentType::Snow);
+        if (snowWE <= 0) {
+            continue;
+        }
+
+        // Transfer to the glacier ice.
+        glacier->UpdateContent(glacier->GetContent(ContentType::Ice) + snowWE, ContentType::Ice);
+        snowpack->UpdateContent(0, ContentType::Snow);
+    }
+
+    return true;
+}

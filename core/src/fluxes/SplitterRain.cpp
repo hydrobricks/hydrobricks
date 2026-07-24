@@ -2,26 +2,27 @@
 
 SplitterRain::SplitterRain()
     : Splitter(),
-      _precipitation(nullptr) {}
+      _precipitation(nullptr),
+      _rainCorrectionFactor(nullptr) {}
 
-bool SplitterRain::IsOk() {
+bool SplitterRain::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("SplitterRain should have 1 output."));
+        LogError("SplitterRain should have 1 output.");
         return false;
     }
 
     return true;
 }
 
-void SplitterRain::SetParameters(const SplitterSettings&) {
-    //
+void SplitterRain::SetParameters(const SplitterSettings& splitterSettings) {
+    _rainCorrectionFactor = GetParameterValuePointerOrUnit(splitterSettings, "rain_correction_factor");
 }
 
 void SplitterRain::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Precipitation) {
+    if (forcing->GetType() == VariableType::Precipitation) {
         _precipitation = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Precipitation");
+        throw ModelConfigError("Forcing must be of type Precipitation");
     }
 }
 
@@ -34,5 +35,5 @@ double* SplitterRain::GetValuePointer(const string& name) {
 }
 
 void SplitterRain::Compute() {
-    _outputs[0]->UpdateFlux(_precipitation->GetValue());
+    _outputs[0]->UpdateFlux(_precipitation->GetValue() * *_rainCorrectionFactor);
 }

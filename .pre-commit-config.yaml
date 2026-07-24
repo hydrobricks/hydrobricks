@@ -2,10 +2,23 @@ ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"
 
+minimum_pre_commit_version: '2.20.0'
+default_language_version:
+  python: python3
+
+# Global exclude pattern
+exclude: |
+  (?x)^(
+      docs/|
+      tests/files/|
+      tests/resources/|
+      .*/gcovr
+  )
+
 repos:
 # Standard hooks
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: check-added-large-files
     args: ['--maxkb=700']
@@ -14,42 +27,37 @@ repos:
   - id: check-symlinks
   - id: check-yaml
   - id: debug-statements
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
   - id: requirements-txt-fixer
   - id: trailing-whitespace
 
 # Sort imports in a standard form
 - repo: https://github.com/PyCQA/isort
-  rev: 6.0.1
+  rev: 9.0.0a3
   hooks:
   - id: isort
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
+    args: ['--profile', 'black']
+
+# Black code formatter
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 26.5.1
+  hooks:
+  - id: black
+    language_version: python3.14
 
 # Upgrade older Python syntax
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.20.0
+  rev: v3.21.2
   hooks:
   - id: pyupgrade
     args: ["--py38-plus"]
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
 
 # Changes tabs to spaces
 - repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.5.5
+  rev: v1.5.6
   hooks:
   - id: remove-tabs
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
 
 # Flake 8
 - repo: https://github.com/PyCQA/flake8
@@ -57,11 +65,13 @@ repos:
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
-    exclude: |
-      (?x)^(
-          ^docs|
-          .*/gcovr
-      )$
+
+# Check for common spelling mistakes
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.4.2
+  hooks:
+  - id: codespell
+    args: []
 
 # CMake formatting
 - repo: https://github.com/cheshirekow/cmake-format-precommit
@@ -78,7 +88,7 @@ repos:
 
 # Suggested for .clang-format files
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v20.1.8
+  rev: v22.1.5
   hooks:
   - id: clang-format
     types_or: [c++, c, cuda]

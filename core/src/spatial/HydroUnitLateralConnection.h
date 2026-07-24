@@ -5,11 +5,11 @@
 
 class HydroUnit;
 
-class HydroUnitLateralConnection : public wxObject {
+class HydroUnitLateralConnection {
   public:
     HydroUnitLateralConnection(HydroUnit* receiver, double fraction, string type = "");
 
-    ~HydroUnitLateralConnection() override = default;
+    virtual ~HydroUnitLateralConnection() = default;
 
     /**
      * Get the hydro unit that receives the flow from this lateral connection.
@@ -34,12 +34,12 @@ class HydroUnitLateralConnection : public wxObject {
      *
      * @return The type of the lateral connection.
      */
-    string GetType() const {
+    const string& GetType() const {
         return _type;
     }
 
   private:
-    HydroUnit* _receiver;
+    HydroUnit* _receiver;  // non-owning reference
     double _fraction;
     string _type;
 };

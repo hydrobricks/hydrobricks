@@ -10,9 +10,9 @@ class SplitterRain : public Splitter {
     explicit SplitterRain();
 
     /**
-     * @copydoc Splitter::IsOk()
+     * @copydoc Splitter::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Splitter::SetParameters()
@@ -35,7 +35,8 @@ class SplitterRain : public Splitter {
     void Compute() override;
 
   protected:
-    Forcing* _precipitation;
+    Forcing* _precipitation;             // non-owning reference
+    const float* _rainCorrectionFactor;  // [-] multiplies the rain output
 };
 
 #endif  // HYDROBRICKS_SPLITTER_RAIN_H

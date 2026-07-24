@@ -11,7 +11,7 @@ Flux::Flux()
       _fractionLandCover(1.0),
       _fractionTotal(1.0),
       _modifier(nullptr),
-      _type("water") {}
+      _type(ContentType::Water) {}
 
 void Flux::Reset() {
     _amount = 0;
@@ -22,5 +22,11 @@ void Flux::UpdateFlux(double amount) {
         _amount = amount * _fractionTotal;
     } else {
         _amount = amount;
+    }
+}
+
+void Flux::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("Flux validation failed. Check that all required properties are correctly defined.");
     }
 }

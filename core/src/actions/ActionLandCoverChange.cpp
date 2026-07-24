@@ -16,16 +16,24 @@ void ActionLandCoverChange::AddChange(double date, int hydroUnitId, const string
     _areas.insert(_areas.begin() + index, area);
 }
 
+void ActionLandCoverChange::Reset() {
+    // Nothing to roll back here: the land-cover extents are restored from the model's
+    // saved initial state on reset (LandCover::Reset). Only the cursor needs resetting,
+    // which the ActionsManager does separately.
+}
+
 bool ActionLandCoverChange::Apply(double) {
-    wxASSERT(_sporadicDates.size() > _cursor);
-    wxASSERT(_hydroUnitIds.size() > _cursor);
-    wxASSERT(_areas.size() > _cursor);
-    wxASSERT(_landCoverIds.size() > _cursor);
-    wxASSERT(_landCoverNames.size() > _landCoverIds[_cursor]);
+    assert(_sporadicDates.size() > _cursor);
+    assert(_hydroUnitIds.size() > _cursor);
+    assert(_areas.size() > _cursor);
+    assert(_landCoverIds.size() > _cursor);
+    assert(_landCoverNames.size() > _landCoverIds[_cursor]);
 
     HydroUnit* unit = _manager->GetHydroUnitById(_hydroUnitIds[_cursor]);
     string landCoverName = _landCoverNames[_landCoverIds[_cursor]];
     double areaFraction = _areas[_cursor] / unit->GetArea();
+    areaFraction = CheckLandCoverAreaFraction(landCoverName, _hydroUnitIds[_cursor], areaFraction, unit->GetArea(),
+                                              _areas[_cursor]);
 
     return unit->ChangeLandCoverAreaFraction(landCoverName, areaFraction);
 }

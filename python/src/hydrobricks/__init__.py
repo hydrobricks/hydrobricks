@@ -1,24 +1,66 @@
-import importlib.util
-import warnings
+from hydrobricks._exceptions import (
+    ConfigurationError,
+    DataError,
+    DependencyError,
+    ForcingError,
+    HydroBricksError,
+    ModelError,
+)
 
+# Import optional dependency management
+from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
+    HAS_GEOPANDAS,
+    HAS_GRAPHVIZ,
+    HAS_NETCDF,
+    HAS_PYARROW,
+    HAS_PYET,
+    HAS_PYPROJ,
+    HAS_PYSHEDS,
+    HAS_RASTERIO,
+    HAS_RIOXARRAY,
+    HAS_SCIPY,
+    HAS_SHAPELY,
+    HAS_SPOTPY,
+    HAS_XARRAY,
+    HAS_XRSPATIAL,
+    Dataset,
+    gpd,
+    graphviz,
+    pyarrow,
+    pyet,
+    pyproj,
+    pysheds,
+    pyshedsGrid,
+    rasterio,
+    rxr,
+    scipy,
+    shapely,
+    spotpy,
+    xr,
+    xrs,
+)
+from hydrobricks.catchment import Catchment
+from hydrobricks.evaluation import (
+    AuxiliaryObservation,
+    DischargeObservations,
+    DischargeTransform,
+    GlacierMassBalanceObservations,
+    SnowCoverObservations,
+    evaluate,
+)
+from hydrobricks.forcing import Forcing
+from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.models.model import Model
+from hydrobricks.parameters import ParameterSet
+from hydrobricks.periods import Period, Periods, evaluate_periods
+from hydrobricks.plotter import Plotter
+from hydrobricks.project import Project, load_project
+from hydrobricks.results import Results
+from hydrobricks.structure import StructureGraph
+from hydrobricks.study import Study, load_study
+from hydrobricks.time_series import TimeSeries
 
-class LazyImport:
-    def __init__(self, module_name):
-        self.module_name = module_name
-        self.module = None
-
-    def __getattr__(self, item):
-        if self.module is None:
-            self.module = importlib.import_module(self.module_name)
-        return getattr(self.module, item)
-
-
-def is_module_available(module_name):
-    """Check if a module is available for import."""
-    return importlib.util.find_spec(module_name) is not None
-
-
-from _hydrobricks import (
+from ._hydrobricks import (
     close_log,
     init,
     init_log,
@@ -27,70 +69,76 @@ from _hydrobricks import (
     set_message_log_level,
 )
 
-has_netcdf = is_module_available("netCDF4")
-if has_netcdf:
-    warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
-    from netCDF4 import Dataset
-    warnings.resetwarnings()
-
-has_rasterio = is_module_available("rasterio")
-if has_rasterio:
-    rasterio = LazyImport("rasterio")
-
-has_geopandas = is_module_available("geopandas")
-if has_geopandas:
-    gpd = LazyImport("geopandas")
-
-has_shapely = is_module_available("shapely")
-if has_shapely:
-    shapely = LazyImport("shapely")
-
-has_spotpy = is_module_available("spotpy")
-if has_spotpy:
-    spotpy = LazyImport("spotpy")
-
-has_pyet = is_module_available("pyet")
-if has_pyet:
-    pyet = LazyImport("pyet")
-
-has_pyproj = is_module_available("pyproj")
-if has_pyproj:
-    pyproj = LazyImport("pyproj")
-
-has_pysheds = is_module_available("pysheds")
-if has_pysheds:
-    pysheds = LazyImport("pysheds")
-    from pysheds.grid import Grid as pyshedsGrid
-
-has_xarray = is_module_available("xarray")
-if has_xarray:
-    xr = LazyImport("xarray")
-
-has_rioxarray = is_module_available("rioxarray")
-if has_rioxarray:
-    rxr = LazyImport("rioxarray")
-
-has_pyarrow = is_module_available("pyarrow")
-if has_pyarrow:
-    pyarrow = LazyImport("pyarrow")
-
-has_xrspatial = is_module_available("xrspatial")
-if has_xrspatial:
-    xrs = LazyImport("xrspatial")
-
-from .catchment import Catchment
-from .forcing import Forcing
-from .hydro_units import HydroUnits
-from .models.model import Model
-from .observations import Observations
-from .parameters import ParameterSet
-from .results import Results
-from .time_series import TimeSeries
-from .trainer import evaluate
-
 init()
-__all__ = ('ParameterSet', 'HydroUnits', 'Forcing', 'Observations', 'TimeSeries',
-           'Catchment', 'Results', 'utils', 'init', 'init_log', 'close_log',
-           'set_debug_log_level', 'set_max_log_level', 'set_message_log_level',
-           'Dataset', 'rasterio', 'gpd', 'shapely', 'spotpy', 'pyet', 'pyproj',
-           'pysheds', 'xr', 'rxr', 'xrs', 'evaluate', 'pyshedsGrid')
+__all__ = (
+    # Core classes
+    "ParameterSet",
+    "HydroUnits",
+    "Forcing",
+    "DischargeObservations",
+    "AuxiliaryObservation",
+    "GlacierMassBalanceObservations",
+    "SnowCoverObservations",
+    "TimeSeries",
+    "Catchment",
+    "Results",
+    "Model",
+    "Plotter",
+    "StructureGraph",
+    "Period",
+    "Periods",
+    "DischargeTransform",
+    "evaluate",
+    "evaluate_periods",
+    # Project file loader
+    "load_project",
+    "Project",
+    # Study file loader (multi-* comparison experiments)
+    "load_study",
+    "Study",
+    # Logging functions
+    "init",
+    "init_log",
+    "close_log",
+    "set_debug_log_level",
+    "set_max_log_level",
+    "set_message_log_level",
+    # Optional dependency flags
+    "HAS_NETCDF",
+    "HAS_RASTERIO",
+    "HAS_GEOPANDAS",
+    "HAS_SHAPELY",
+    "HAS_SPOTPY",
+    "HAS_PYET",
+    "HAS_PYPROJ",
+    "HAS_PYSHEDS",
+    "HAS_SCIPY",
+    "HAS_XARRAY",
+    "HAS_RIOXARRAY",
+    "HAS_PYARROW",
+    "HAS_XRSPATIAL",
+    "HAS_GRAPHVIZ",
+    # Lazy-loaded optional modules
+    "Dataset",
+    "rasterio",
+    "gpd",
+    "graphviz",
+    "shapely",
+    "spotpy",
+    "pyet",
+    "pyproj",
+    "pysheds",
+    "pyshedsGrid",
+    "scipy",
+    "xr",
+    "rxr",
+    "pyarrow",
+    "xrs",
+    # Core custom exceptions
+    "HydroBricksError",
+    "DataError",
+    "ConfigurationError",
+    "ModelError",
+    "ForcingError",
+    "DependencyError",
+)

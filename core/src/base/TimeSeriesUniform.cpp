@@ -4,12 +4,10 @@ TimeSeriesUniform::TimeSeriesUniform(VariableType type)
     : TimeSeries(type),
       _data(nullptr) {}
 
-TimeSeriesUniform::~TimeSeriesUniform() {
-    wxDELETE(_data);
-}
+TimeSeriesUniform::~TimeSeriesUniform() = default;  // Automatic cleanup via unique_ptr
 
 bool TimeSeriesUniform::SetCursorToDate(double date) {
-    wxASSERT(_data);
+    assert(_data);
     if (!_data->SetCursorToDate(date)) {
         return false;
     }
@@ -18,7 +16,7 @@ bool TimeSeriesUniform::SetCursorToDate(double date) {
 }
 
 bool TimeSeriesUniform::AdvanceOneTimeStep() {
-    wxASSERT(_data);
+    assert(_data);
     if (!_data->AdvanceOneTimeStep()) {
         return false;
     }
@@ -26,21 +24,43 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
-double TimeSeriesUniform::GetStart() {
-    wxASSERT(_data);
+double TimeSeriesUniform::GetStart() const {
+    assert(_data);
     return _data->GetStart();
 }
 
-double TimeSeriesUniform::GetEnd() {
-    wxASSERT(_data);
+double TimeSeriesUniform::GetEnd() const {
+    assert(_data);
     return _data->GetEnd();
 }
 
 double TimeSeriesUniform::GetTotal(const SettingsBasin*) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesUniform::GetTotal - Not yet implemented");
 }
 
 TimeSeriesData* TimeSeriesUniform::GetDataPointer(int) {
-    wxASSERT(_data);
-    return _data;
+    assert(_data);
+    return _data.get();
+}
+
+bool TimeSeriesUniform::IsValid() const {
+    // Check that data has been set
+    if (!_data) {
+        LogError("TimeSeriesUniform: No data set.");
+        return false;
+    }
+
+    // Check that the data is valid
+    if (!_data->IsValid()) {
+        LogError("TimeSeriesUniform: Data is not valid.");
+        return false;
+    }
+
+    return true;
+}
+
+void TimeSeriesUniform::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("TimeSeriesUniform validation failed. Data not properly configured.");
+    }
 }

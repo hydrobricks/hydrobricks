@@ -4,43 +4,39 @@
 #include "TimeSeriesUniform.h"
 
 TEST(TimeSeries, VariableType) {
-    TimeSeriesUniform series(Precipitation);
+    TimeSeriesUniform series(VariableType::Precipitation);
 
-    EXPECT_EQ(Precipitation, series.GetVariableType());
+    EXPECT_EQ(VariableType::Precipitation, series.GetVariableType());
 }
 
 TEST(TimeSeriesDataRegular, SetValueOK) {
-    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
     EXPECT_TRUE(tsData.SetValues({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}));
 }
 
 TEST(TimeSeriesDataRegular, SetValueTooLong) {
-    wxLogNull logNo;
-
-    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
     EXPECT_FALSE(tsData.SetValues({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0}));
 }
 
 TEST(TimeSeriesDataRegular, SetValueTooShort) {
-    wxLogNull logNo;
-
-    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
     EXPECT_FALSE(tsData.SetValues({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0}));
 }
 
 TEST(TimeSeries, ParseFile) {
-    std::vector<TimeSeries*> vecTimeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> vecTimeSeries;
     EXPECT_TRUE(TimeSeries::Parse("files/time-series-data.nc", vecTimeSeries));
 
     EXPECT_EQ(vecTimeSeries.size(), 3);
-    EXPECT_EQ(vecTimeSeries[0]->GetVariableType(), Temperature);
-    EXPECT_EQ(vecTimeSeries[1]->GetVariableType(), Precipitation);
-    EXPECT_EQ(vecTimeSeries[2]->GetVariableType(), PET);
+    EXPECT_EQ(vecTimeSeries[0]->GetVariableType(), VariableType::Temperature);
+    EXPECT_EQ(vecTimeSeries[1]->GetVariableType(), VariableType::Precipitation);
+    EXPECT_EQ(vecTimeSeries[2]->GetVariableType(), VariableType::PET);
 
     double date = GetMJD(2014, 10, 20);
-    EXPECT_FLOAT_EQ(vecTimeSeries[0]->GetDataPointer(3)->GetValueFor(date), 25.31445313f);
-    EXPECT_FLOAT_EQ(vecTimeSeries[0]->GetDataPointer(11)->GetValueFor(date), 23.58593750f);
+    EXPECT_NEAR(vecTimeSeries[0]->GetDataPointer(3)->GetValueFor(date), 25.31445313, 1e-6);
+    EXPECT_NEAR(vecTimeSeries[0]->GetDataPointer(11)->GetValueFor(date), 23.58593750, 1e-6);
 
     date = GetMJD(2014, 11, 27);
-    EXPECT_FLOAT_EQ(vecTimeSeries[1]->GetDataPointer(5)->GetValueFor(date), 8.23046875f);
+    EXPECT_NEAR(vecTimeSeries[1]->GetDataPointer(5)->GetValueFor(date), 8.23046875, 1e-6);
 }

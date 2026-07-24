@@ -1,8 +1,17 @@
 #include "Logger.h"
 
-#include <wx/filename.h>
+#include <cmath>
 
-#include "FileNetcdf.h"
+#include "ResultWriter.h"
+
+namespace {
+// Omitted (unit, label) cells are NaN (a label absent from a unit's structure
+// variant). For water-balance totals such a unit contributes nothing, so NaN is
+// treated as 0 while the full catchment area stays the denominator.
+double NanToZero(double v) {
+    return std::isnan(v) ? 0.0 : v;
+}
+}  // namespace
 
 Logger::Logger()
     : _cursor(0),
@@ -19,11 +28,14 @@ void Logger::InitContainers(int timeSize, SubBasin* subBasin, SettingsModel& mod
     _subBasinValues = vecAxd(subBasinLabels.size(), axd::Ones(timeSize) * NAN_D);
     _subBasinValuesPt.resize(subBasinLabels.size());
     _hydroUnitIds = hydroUnitIds;
+    _hydroUnitStructureIds = subBasin->GetHydroUnitStructureIds();
     _hydroUnitAreas = Eigen::Map<axd>(hydroUnitAreas.data(), hydroUnitAreas.size());
     _hydroUnitLabels = hydroUnitLabels;
     _hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     _hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     _hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
+    _subBasinEtIndices.clear();
+    _hydroUnitEtIndices.clear();
     if (_recordFractions) {
         _hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
         _hydroUnitFractions = vecAxxd(_hydroUnitFractionLabels.size(),
@@ -38,63 +50,70 @@ void Logger::Reset() {
 }
 
 void Logger::SetSubBasinValuePointer(int iLabel, double* valPt) {
-    wxASSERT(_subBasinValuesPt.size() > iLabel);
+    assert(_subBasinValuesPt.size() > iLabel);
     _subBasinValuesPt[iLabel] = valPt;
 }
 
 void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
-    wxASSERT(_hydroUnitValuesPt.size() > iLabel);
-    wxASSERT(_hydroUnitValuesPt[iLabel].size() > iUnit);
+    assert(_hydroUnitValuesPt.size() > iLabel);
+    assert(_hydroUnitValuesPt[iLabel].size() > iUnit);
     _hydroUnitValuesPt[iLabel][iUnit] = valPt;
 }
 
 void Logger::SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt) {
     if (_recordFractions) {
-        wxASSERT(_hydroUnitFractionsPt.size() > iLabel);
-        wxASSERT(_hydroUnitFractionsPt[iLabel].size() > iUnit);
+        assert(_hydroUnitFractionsPt.size() > iLabel);
+        assert(_hydroUnitFractionsPt[iLabel].size() > iUnit);
         _hydroUnitFractionsPt[iLabel][iUnit] = valPt;
     }
 }
 
 void Logger::SetDate(double date) {
-    wxASSERT(_cursor < _time.size());
+    assert(_cursor < _time.size());
     _time[_cursor] = date;
 }
 
 void Logger::SaveInitialValues() {
     for (int iSubBasin = 0; iSubBasin < _subBasinValuesPt.size(); ++iSubBasin) {
-        wxASSERT(_subBasinValuesPt[iSubBasin]);
+        assert(_subBasinValuesPt[iSubBasin]);
         _subBasinInitialValues[iSubBasin] = *_subBasinValuesPt[iSubBasin];
     }
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            wxASSERT(_hydroUnitValuesPt[iUnitVal][iUnit]);
-            _hydroUnitInitialValues[iUnitVal](iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            // A label absent from a unit's structure variant is left unconnected
+            // (NaN); skip it so the initial value stays NaN.
+            if (_hydroUnitValuesPt[iUnitVal][iUnit] != nullptr) {
+                _hydroUnitInitialValues[iUnitVal](iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            }
         }
     }
 }
 
 void Logger::Record() {
-    wxASSERT(_cursor < _time.size());
+    assert(_cursor < _time.size());
 
-    for (int iSubBasin = 0; iSubBasin < _subBasinValuesPt.size(); ++iSubBasin) {
-        wxASSERT(_subBasinValuesPt[iSubBasin]);
-        _subBasinValues[iSubBasin][_cursor] = *_subBasinValuesPt[iSubBasin];
+    for (auto [values, pt] : std::views::zip(_subBasinValues, _subBasinValuesPt)) {
+        assert(pt);
+        values[_cursor] = *pt;
     }
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
         for (int iUnit = 0; iUnit < _hydroUnitValues[iUnitVal].cols(); ++iUnit) {
-            wxASSERT(_hydroUnitValuesPt[iUnitVal][iUnit]);
-            _hydroUnitValues[iUnitVal](_cursor, iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            // Unconnected (unit, label) pairs — a label not in this unit's structure
+            // variant — stay NaN (omitted).
+            if (_hydroUnitValuesPt[iUnitVal][iUnit] != nullptr) {
+                _hydroUnitValues[iUnitVal](_cursor, iUnit) = *_hydroUnitValuesPt[iUnitVal][iUnit];
+            }
         }
     }
 
     if (_recordFractions) {
         for (int iUnitVal = 0; iUnitVal < _hydroUnitFractionsPt.size(); ++iUnitVal) {
             for (int iUnit = 0; iUnit < _hydroUnitFractions[iUnitVal].cols(); ++iUnit) {
-                wxASSERT(_hydroUnitFractionsPt[iUnitVal][iUnit]);
-                _hydroUnitFractions[iUnitVal](_cursor, iUnit) = *_hydroUnitFractionsPt[iUnitVal][iUnit];
+                if (_hydroUnitFractionsPt[iUnitVal][iUnit] != nullptr) {
+                    _hydroUnitFractions[iUnitVal](_cursor, iUnit) = *_hydroUnitFractionsPt[iUnitVal][iUnit];
+                }
             }
         }
     }
@@ -105,92 +124,24 @@ void Logger::Increment() {
 }
 
 bool Logger::DumpOutputs(const string& path) {
-    if (!wxDirExists(path)) {
-        wxLogError(_("The directory %s could not be found."), path);
-        return false;
-    }
+    // Delegate output writing to ResultWriter
+    ResultWriter writer;
 
-    wxLogMessage(_("Writing output file."));
-
-    try {
-        string filePath = path;
-        filePath.append(wxString(wxFileName::GetPathSeparator()).c_str());
-        filePath.append("/results.nc");
-
-        FileNetcdf file;
-
-        if (!file.Create(filePath)) {
-            return false;
-        }
-
-        // Create dimensions
-        int dimIdTime = file.DefDim("time", (int)_time.size());
-        int dimIdUnit = file.DefDim("hydro_units", (int)_hydroUnitIds.size());
-        int dimIdItemsAgg = file.DefDim("aggregated_values", (int)_subBasinLabels.size());
-        int dimIdItemsDist = file.DefDim("distributed_values", (int)_hydroUnitLabels.size());
-        int dimIdFractions = 0;
-        if (_recordFractions) {
-            dimIdFractions = file.DefDim("land_covers", (int)_hydroUnitFractionLabels.size());
-        }
-
-        // Create variables and put data
-        int varId = file.DefVarDouble("time", {dimIdTime});
-        file.PutVar(varId, _time);
-        file.PutAttText("long_name", "time", varId);
-        file.PutAttText("units", "days since 1858-11-17 00:00:00.0", varId);
-
-        varId = file.DefVarInt("hydro_units_ids", {dimIdUnit});
-        file.PutVar(varId, _hydroUnitIds);
-        file.PutAttText("long_name", "hydrological units ids", varId);
-
-        varId = file.DefVarDouble("hydro_units_areas", {dimIdUnit});
-        file.PutVar(varId, _hydroUnitAreas);
-        file.PutAttText("long_name", "hydrological units areas", varId);
-
-        varId = file.DefVarDouble("sub_basin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
-        file.PutVar(varId, _subBasinValues);
-        file.PutAttText("long_name", "aggregated values over the sub basin", varId);
-        file.PutAttText("units", "mm", varId);
-
-        varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);
-        file.PutVar(varId, _hydroUnitValues);
-        file.PutAttText("long_name", "values for each hydrological units", varId);
-        file.PutAttText("units", "mm", varId);
-
-        if (_recordFractions) {
-            varId = file.DefVarDouble("land_cover_fractions", {dimIdFractions, dimIdUnit, dimIdTime}, 3, true);
-            file.PutVar(varId, _hydroUnitFractions);
-            file.PutAttText("long_name", "land cover fractions for each hydrological units", varId);
-            file.PutAttText("units", "percent", varId);
-        }
-
-        // Global attributes
-        file.PutAttString("labels_aggregated", _subBasinLabels);
-        file.PutAttString("labels_distributed", _hydroUnitLabels);
-        if (_recordFractions && !_hydroUnitFractionLabels.empty()) {
-            file.PutAttString("labels_land_covers", _hydroUnitFractionLabels);
-        }
-
-    } catch (std::exception& e) {
-        wxLogError(e.what());
-        return false;
-    }
-
-    wxLogMessage(_("Output file written."));
-
-    return true;
+    return writer.WriteNetCDF(path, _time, _hydroUnitIds, _hydroUnitStructureIds, _hydroUnitAreas, _subBasinLabels,
+                              _subBasinValues, _hydroUnitLabels, _hydroUnitValues, _hydroUnitFractionLabels,
+                              _hydroUnitFractions);
 }
 
-axd Logger::GetOutletDischarge() {
-    for (int i = 0; i < _subBasinLabels.size(); i++) {
-        if (_subBasinLabels[i] == "outlet") {
-            return _subBasinValues[i];
+axd Logger::GetOutletDischarge() const {
+    for (auto [label, values] : std::views::zip(_subBasinLabels, _subBasinValues)) {
+        if (label == "outlet") {
+            return values;
         }
     }
-    throw ConceptionIssue(_("No 'outlet' component found in logger."));
+    throw ModelConfigError("No 'outlet' component found in logger.");
 }
 
-vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
+vecInt Logger::GetIndicesForSubBasinElements(const string& item) const {
     vecInt indices;
     for (int i = 0; i < _subBasinLabels.size(); ++i) {
         size_t found = _subBasinLabels[i].find(item);
@@ -202,7 +153,7 @@ vecInt Logger::GetIndicesForSubBasinElements(const string& item) {
     return indices;
 }
 
-vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
+vecInt Logger::GetIndicesForHydroUnitElements(const string& item) const {
     vecInt indices;
     for (int i = 0; i < _hydroUnitLabels.size(); ++i) {
         size_t found = _hydroUnitLabels[i].find(item);
@@ -214,7 +165,7 @@ vecInt Logger::GetIndicesForHydroUnitElements(const string& item) {
     return indices;
 }
 
-double Logger::GetTotalSubBasin(const string& item) {
+double Logger::GetTotalSubBasin(const string& item) const {
     vecInt indices = GetIndicesForSubBasinElements(item);
     double sum = 0;
     for (int index : indices) {
@@ -224,12 +175,16 @@ double Logger::GetTotalSubBasin(const string& item) {
     return sum;
 }
 
-double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
+double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) const {
     vecInt indices = GetIndicesForHydroUnitElements(item);
     double sum = 0;
     size_t found = item.find(":content");
     if (found != std::string::npos) {
         // Storage content: fraction must be accounted for.
+        // Precompute areas matrix once (assuming all values have the same number of rows)
+        axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+        double areasSum = _hydroUnitAreas.sum();
+
         for (int i : indices) {
             axxd fraction = axxd::Ones(_hydroUnitValues[i].rows(), _hydroUnitValues[i].cols());
             string componentName = _hydroUnitLabels[i];
@@ -240,21 +195,23 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
                     break;
                 }
             }
-            axxd values = fraction * _hydroUnitValues[i];
-            axxd areas = _hydroUnitAreas.transpose().replicate(values.rows(), 1);
-            sum += (values * areas).sum() / _hydroUnitAreas.sum();
+            axxd values = fraction * _hydroUnitValues[i].unaryExpr(&NanToZero);
+            sum += (values * areas).sum() / areasSum;
         }
     } else {
         // Not a storage content: fraction is already accounted for.
         if (needsAreaWeighting) {
+            // Precompute areas matrix once (assuming all values have the same number of rows)
+            axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+            double areasSum = _hydroUnitAreas.sum();
+
             for (int i : indices) {
-                axxd values = _hydroUnitValues[i];
-                axxd areas = _hydroUnitAreas.transpose().replicate(values.rows(), 1);
-                sum += (values * areas).sum() / _hydroUnitAreas.sum();
+                axxd values = _hydroUnitValues[i].unaryExpr(&NanToZero);
+                sum += (values * areas).sum() / areasSum;
             }
         } else {
             for (int i : indices) {
-                sum += _hydroUnitValues[i].sum();
+                sum += _hydroUnitValues[i].unaryExpr(&NanToZero).sum();
             }
         }
     }
@@ -262,15 +219,54 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) {
     return sum;
 }
 
-double Logger::GetTotalOutletDischarge() {
+double Logger::GetTotalOutletDischarge() const {
     return GetTotalSubBasin("outlet");
 }
 
-double Logger::GetTotalET() {
-    return GetTotalHydroUnits("et:output", true);
+double Logger::GetTotalET() const {
+    // ET fluxes are identified by the to-atmosphere tag recorded during model building,
+    // not by label matching: process names (e.g. "interception") need not contain "et".
+    double sum = 0;
+
+    // Sub-basin ET: already represents the whole basin, no area weighting.
+    for (int i : _subBasinEtIndices) {
+        sum += _subBasinValues[i].sum();
+    }
+
+    // Hydro unit ET: area-weighted basin average. ET on a full-unit brick (e.g. the soil
+    // moisture) carries no land-cover fraction; ET on a per-cover surface component (e.g. a
+    // forest canopy) must be weighted by that cover's (time-varying) fraction so it scales
+    // to the basin like the matching storage change does.
+    if (!_hydroUnitEtIndices.empty()) {
+        axxd areas = _hydroUnitAreas.transpose().replicate(_hydroUnitValues[0].rows(), 1);
+        double areasSum = _hydroUnitAreas.sum();
+        for (int i : _hydroUnitEtIndices) {
+            axxd values = _hydroUnitValues[i].unaryExpr(&NanToZero);
+            int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+            if (fractionIndex >= 0) {
+                // A cover absent from a unit has a NaN fraction there; zero it so the
+                // already-zeroed value contributes nothing (NaN * 0 would be NaN).
+                values *= _hydroUnitFractions[fractionIndex].unaryExpr(&NanToZero);
+            }
+            sum += (values * areas).sum() / areasSum;
+        }
+    }
+
+    return sum;
 }
 
-double Logger::GetSubBasinInitialStorageState(const string& tag) {
+int Logger::GetFractionIndexForComponent(const string& componentName) const {
+    for (int j = 0; j < static_cast<int>(_hydroUnitFractionLabels.size()); ++j) {
+        const string& fractionLabel = _hydroUnitFractionLabels[j];
+        if (componentName.starts_with(fractionLabel + ":") || componentName.starts_with(fractionLabel + "_snowpack:") ||
+            componentName.starts_with(fractionLabel + "_canopy:")) {
+            return j;
+        }
+    }
+    return -1;
+}
+
+double Logger::GetSubBasinInitialStorageState(const string& tag) const {
     vecInt indices = GetIndicesForSubBasinElements(tag);
     double sum = 0;
     for (int index : indices) {
@@ -280,7 +276,7 @@ double Logger::GetSubBasinInitialStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetSubBasinFinalStorageState(const string& tag) {
+double Logger::GetSubBasinFinalStorageState(const string& tag) const {
     vecInt indices = GetIndicesForSubBasinElements(tag);
     double sum = 0;
     for (int index : indices) {
@@ -290,21 +286,17 @@ double Logger::GetSubBasinFinalStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
+double Logger::GetHydroUnitsInitialStorageState(const string& tag) const {
     vecInt indices = GetIndicesForHydroUnitElements(tag);
     double sum = 0;
     for (int i : indices) {
         axd fraction = axd::Ones(_hydroUnitInitialValues[i].size());
-        string componentName = _hydroUnitLabels[i];
-        for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
-            string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
-                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](0, Eigen::all);
-                break;
-            }
+        int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+        if (fractionIndex >= 0) {
+            // A cover absent from a unit has a NaN fraction there; zero it (NaN * 0 = NaN).
+            fraction = _hydroUnitFractions[fractionIndex](0, Eigen::placeholders::all).unaryExpr(&NanToZero);
         }
-        axd values = _hydroUnitInitialValues[i];
+        axd values = _hydroUnitInitialValues[i].unaryExpr(&NanToZero);
         values *= fraction;
         sum += (values * _hydroUnitAreas).sum() / _hydroUnitAreas.sum();
     }
@@ -312,21 +304,18 @@ double Logger::GetHydroUnitsInitialStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
+double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
     vecInt indices = GetIndicesForHydroUnitElements(tag);
     double sum = 0;
     for (int i : indices) {
         axd fraction = axd::Ones(_hydroUnitValues[i].cols());
-        string componentName = _hydroUnitLabels[i];
-        for (int j = 0; j < _hydroUnitFractionLabels.size(); ++j) {
-            string fractionLabel = _hydroUnitFractionLabels[j];
-            if (wxString(componentName).StartsWith(fractionLabel + ":") ||
-                wxString(componentName).StartsWith(fractionLabel + "_snowpack:")) {
-                fraction = _hydroUnitFractions[j](Eigen::last, Eigen::all);
-                break;
-            }
+        int fractionIndex = GetFractionIndexForComponent(_hydroUnitLabels[i]);
+        if (fractionIndex >= 0) {
+            // A cover absent from a unit has a NaN fraction there; zero it (NaN * 0 = NaN).
+            fraction = _hydroUnitFractions[fractionIndex](Eigen::placeholders::last, Eigen::placeholders::all)
+                           .unaryExpr(&NanToZero);
         }
-        axd values = _hydroUnitValues[i](Eigen::last, Eigen::all);
+        axd values = _hydroUnitValues[i](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
         values *= fraction;
         sum += (values * _hydroUnitAreas).sum() / _hydroUnitAreas.sum();
     }
@@ -334,17 +323,17 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) {
     return sum;
 }
 
-double Logger::GetTotalWaterStorageChanges() {
+double Logger::GetTotalWaterStorageChanges() const {
     return GetSubBasinFinalStorageState(":water_content") - GetSubBasinInitialStorageState(":water_content") +
            GetHydroUnitsFinalStorageState(":water_content") - GetHydroUnitsInitialStorageState(":water_content");
 }
 
-double Logger::GetTotalSnowStorageChanges() {
+double Logger::GetTotalSnowStorageChanges() const {
     return GetSubBasinFinalStorageState(":snow_content") - GetSubBasinInitialStorageState(":snow_content") +
            GetHydroUnitsFinalStorageState(":snow_content") - GetHydroUnitsInitialStorageState(":snow_content");
 }
 
-double Logger::GetTotalGlacierStorageChanges() {
+double Logger::GetTotalGlacierStorageChanges() const {
     return GetSubBasinFinalStorageState(":ice_content") - GetSubBasinInitialStorageState(":ice_content") +
            GetHydroUnitsFinalStorageState(":ice_content") - GetHydroUnitsInitialStorageState(":ice_content");
 }

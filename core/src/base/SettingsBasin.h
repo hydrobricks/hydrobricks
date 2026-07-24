@@ -44,11 +44,11 @@ struct LateralConnectionSettings {
     double fraction;
 };
 
-class SettingsBasin : public wxObject {
+class SettingsBasin {
   public:
     explicit SettingsBasin();
 
-    ~SettingsBasin() override;
+    virtual ~SettingsBasin();
 
     /**
      * Add a new hydro unit.
@@ -110,6 +110,9 @@ class SettingsBasin : public wxObject {
 
     /**
      * Parse a NetCDF file to get the hydro unit settings.
+     *
+     * @param path path to the NetCDF file.
+     * @return true if the file was parsed successfully.
      */
     bool Parse(const string& path);
 
@@ -120,7 +123,7 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected hydro unit.
      */
     HydroUnitSettings GetHydroUnitSettings(int index) const {
-        wxASSERT(_hydroUnits.size() > index);
+        assert(_hydroUnits.size() > index);
         return _hydroUnits[index];
     }
 
@@ -131,8 +134,8 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected land cover.
      */
     LandCoverSettings GetLandCoverSettings(int index) const {
-        wxASSERT(_selectedHydroUnit);
-        wxASSERT(_selectedHydroUnit->landCovers.size() > index);
+        assert(_selectedHydroUnit);
+        assert(_selectedHydroUnit->landCovers.size() > index);
         return _selectedHydroUnit->landCovers[index];
     }
 
@@ -143,8 +146,8 @@ class SettingsBasin : public wxObject {
      * @return pointer to the selected surface component.
      */
     SurfaceComponentSettings GetSurfaceComponentSettings(int index) const {
-        wxASSERT(_selectedHydroUnit);
-        wxASSERT(_selectedHydroUnit->surfaceComponents.size() > index);
+        assert(_selectedHydroUnit);
+        assert(_selectedHydroUnit->surfaceComponents.size() > index);
         return _selectedHydroUnit->surfaceComponents[index];
     }
 
@@ -162,7 +165,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of hydro units.
      */
-    int GetHydroUnitsNb() const {
+    int GetHydroUnitCount() const {
         return static_cast<int>(_hydroUnits.size());
     }
 
@@ -171,8 +174,8 @@ class SettingsBasin : public wxObject {
      *
      * @return number of land covers.
      */
-    int GetLandCoversNb() const {
-        wxASSERT(_selectedHydroUnit);
+    int GetLandCoverCount() const {
+        assert(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->landCovers.size());
     }
 
@@ -181,8 +184,8 @@ class SettingsBasin : public wxObject {
      *
      * @return number of surface components.
      */
-    int GetSurfaceComponentsNb() const {
-        wxASSERT(_selectedHydroUnit);
+    int GetSurfaceComponentCount() const {
+        assert(_selectedHydroUnit);
         return static_cast<int>(_selectedHydroUnit->surfaceComponents.size());
     }
 
@@ -191,7 +194,7 @@ class SettingsBasin : public wxObject {
      *
      * @return number of lateral connections.
      */
-    int GetLateralConnectionsNb() const {
+    int GetLateralConnectionCount() const {
         return static_cast<int>(_lateralConnections.size());
     }
 
@@ -200,12 +203,12 @@ class SettingsBasin : public wxObject {
      *
      * @return total area of the sub basin.
      */
-    double GetTotalArea() const;
+    [[nodiscard]] double GetTotalArea() const;
 
   private:
     vector<HydroUnitSettings> _hydroUnits;
     vector<LateralConnectionSettings> _lateralConnections;
-    HydroUnitSettings* _selectedHydroUnit;
+    HydroUnitSettings* _selectedHydroUnit;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_SETTING_BASIN_H

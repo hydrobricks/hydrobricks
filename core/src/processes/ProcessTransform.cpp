@@ -6,24 +6,24 @@
 ProcessTransform::ProcessTransform(WaterContainer* container)
     : Process(container) {}
 
-void ProcessTransform::RegisterProcessParametersAndForcing(SettingsModel*) {
-    // Nothing to register
+void ProcessTransform::RegisterProcessSettings(SettingsModel*) {
+    // No forcing or parameters
 }
 
-bool ProcessTransform::IsOk() {
+bool ProcessTransform::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("A transform process should have a single output."));
+        LogError("A transform process should have a single output.");
         return false;
     }
 
     return true;
 }
 
-int ProcessTransform::GetConnectionsNb() {
+int ProcessTransform::GetConnectionCount() const {
     return 1;
 }
 
-double* ProcessTransform::GetValuePointer(const string& name) {
+double* ProcessTransform::GetValuePointer(std::string_view name) {
     if (name == "output") {
         return _outputs[0]->GetAmountPointer();
     }

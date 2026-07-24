@@ -1,0 +1,57 @@
+# hydrobricks project file: SOCONT on the Sitter at Appenzell (test data).
+#
+# Run it with:
+#   import hydrobricks as hb
+#   project = hb.load_project("sitter_project.yaml")
+#   discharge = project.run()
+#
+# Relative paths are resolved from this file's directory. Results are written
+# to the 'output' directory (created next to this file).
+
+model:
+  name: socont
+  options:
+    soil_storage_nb: 2
+    surface_runoff: linear_storage
+
+hydro_units:
+  # CSV of elevation bands, with two header rows (names, then units).
+  file: ../../tests/files/catchments/ch_sitter_appenzell/hydro_units_elevation.csv
+  # The elevation/area columns are named 'elevation' and 'area' by default;
+  # map them here if your file uses other names:
+  # columns: {elevation: elev_mean, area: band_area}
+
+forcing:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/meteo.csv
+  time: {column: date, format: "%d/%m/%Y"}
+  columns:
+    precipitation: precip(mm/day)
+    temperature: temp(C)
+  ref_elevation: 1253       # Station elevation [m], for the elevation gradients.
+  temperature:
+    gradient: -0.6          # Lapse rate [deg C / 100 m].
+  precipitation:
+    correction_factor: 0.75 # Undercatch correction (optional).
+    gradient: 0.05          # Multiplicative gradient [/100 m] (optional).
+  pet:
+    # Computed with pyet since forcing.columns has no 'pet' entry.
+    method: Oudin
+    lat: 47.3
+
+observations:
+  file: ../../tests/files/catchments/ch_sitter_appenzell/discharge.csv
+  time: {column: Date, format: "%d/%m/%Y"}
+  column: Discharge (mm/d)
+
+periods:
+  calibration: [1981-01-01, 2000-12-31]
+  validation: [2001-01-01, 2020-12-31]
+  spinup: 2y
+
+parameters:
+  A: 458
+  a_snow: 2
+  k_slow_1: 0.9
+  k_slow_2: 0.8
+  k_quick: 1
+  percol: 9.8

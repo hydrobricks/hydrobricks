@@ -7,7 +7,9 @@ SolverRK4::SolverRK4()
     _nIterations = 5;
 }
 
-bool SolverRK4::Solve() {
+bool SolverRK4::Solve(double timeStepInDays) {
+    _timeStepInDays = timeStepInDays;
+
     // Compute the change rates for k1 = f(tn, Sn)
     ComputeChangeRates(0);
 

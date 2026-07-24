@@ -23,7 +23,7 @@ class IceContainer : public WaterContainer {
      * present.
      */
     void SetNoMeltWhenSnowCover(const float* value) {
-        wxASSERT(value);
+        assert(value);
         _noMeltWhenSnowCover = *value > 0;
     }
 
@@ -33,7 +33,7 @@ class IceContainer : public WaterContainer {
      * @param snowpack Pointer to a Snowpack object. This is used to check if there is snow cover present.
      */
     void SetRelatedSnowpack(Snowpack* snowpack) {
-        wxASSERT(snowpack);
+        assert(snowpack);
         _relatedSnowpack = snowpack;
     }
 
@@ -44,7 +44,7 @@ class IceContainer : public WaterContainer {
 
   private:
     bool _noMeltWhenSnowCover;
-    Snowpack* _relatedSnowpack;
+    Snowpack* _relatedSnowpack;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_ICE_CONTAINER_H

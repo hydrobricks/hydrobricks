@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include <memory>
+
 #include "ActionsManager.h"
 #include "Includes.h"
 #include "Logger.h"
@@ -9,11 +11,11 @@
 #include "SubBasin.h"
 #include "TimeSeries.h"
 
-class ModelHydro : public wxObject {
+class ModelHydro {
   public:
     ModelHydro(SubBasin* subBasin = nullptr);
 
-    ~ModelHydro() override;
+    virtual ~ModelHydro();
 
     /**
      * Initialize the model along with the basin.
@@ -22,16 +24,17 @@ class ModelHydro : public wxObject {
      * @param basinSettings settings of the basin.
      * @return true if the initialization was successful.
      */
-    bool InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    ModelResult InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
     /**
      * Initialize the model.
      *
      * @param modelSettings settings of the model.
      * @param basinSettings settings of the basin.
+     * @param checkProcesses whether to check the processes during validation.
      * @return true if the initialization was successful.
      */
-    bool Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+    ModelResult Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses = true);
 
     /**
      * Update the model parameters.
@@ -41,25 +44,33 @@ class ModelHydro : public wxObject {
     void UpdateParameters(SettingsModel& modelSettings);
 
     /**
-     * Check if the model is well-defined.
+     * Check that everything is correctly defined.
      *
-     * @return true if the model is well-defined.
+     * @return true if everything is correctly defined.
      */
-    bool IsOk();
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate that everything is correctly defined.
+     * Throws an exception if validation fails.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
 
     /**
      * Check if the forcing data were loaded.
      *
      * @return true if the forcing data were loaded.
      */
-    bool ForcingLoaded();
+    [[nodiscard]] bool ForcingLoaded() const;
 
     /**
      * Run the model.
      *
      * @return true if the model run was successful.
      */
-    bool Run();
+    [[nodiscard]] ModelResult Run();
 
     /**
      * Reset the model.
@@ -82,44 +93,44 @@ class ModelHydro : public wxObject {
     /**
      * Get the outlet discharge series.
      *
-     * @return outlet discharge.
+     * @return outlet discharge series.
      */
-    axd GetOutletDischarge();
+    axd GetOutletDischarge() const;
 
     /**
      * Get the total outlet discharge.
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge();
+    [[nodiscard]] double GetTotalOutletDischarge() const;
 
     /**
      * Get the total amount of water lost by evapotranspiration.
      *
      * @return total amount of water lost by evapotranspiration.
      */
-    double GetTotalET();
+    [[nodiscard]] double GetTotalET() const;
 
     /**
      * Get the total change in water storage.
      *
      * @return total change in water storage.
      */
-    double GetTotalWaterStorageChanges();
+    [[nodiscard]] double GetTotalWaterStorageChanges() const;
 
     /**
      * Get the total change in snow storage.
      *
      * @return total change in snow storage.
      */
-    double GetTotalSnowStorageChanges();
+    [[nodiscard]] double GetTotalSnowStorageChanges() const;
 
     /*
      * Get the total change in glacier storage.
      *
      * @return total change in glacier storage.
      */
-    double GetTotalGlacierStorageChanges();
+    [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
      * Add a time series to the model.
@@ -127,7 +138,7 @@ class ModelHydro : public wxObject {
      * @param timeSeries time series to add.
      * @return true if the time series was added successfully.
      */
-    bool AddTimeSeries(TimeSeries* timeSeries);
+    bool AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries);
 
     /**
      * Add an action to the model.
@@ -142,14 +153,14 @@ class ModelHydro : public wxObject {
      *
      * @return number of actions.
      */
-    int GetActionsNb();
+    [[nodiscard]] int GetActionCount() const;
 
     /**
      * Get the number of sporadic action items in the model (i.e., actions that are not recursive).
      *
      * @return number of sporadic action items.
      */
-    int GetSporadicActionItemsNb();
+    [[nodiscard]] int GetSporadicActionItemCount() const;
 
     /**
      * Create a time series and add it to the model.
@@ -179,16 +190,17 @@ class ModelHydro : public wxObject {
      *
      * @return pointer to the sub basin.
      */
-    SubBasin* GetSubBasin() {
-        return _subBasin;
+    SubBasin* GetSubBasin() const {
+        return _subBasin;  // Return raw pointer from unique_ptr
     }
 
     /**
-     * Set the sub basin.
+     * Set the sub basin (non-owning; caller retains ownership).
      *
      * @param subBasin pointer to the sub basin.
      */
     void SetSubBasin(SubBasin* subBasin) {
+        _ownedSubBasin.reset();
         _subBasin = subBasin;
     }
 
@@ -228,53 +240,72 @@ class ModelHydro : public wxObject {
         return &_actionsManager;
     }
 
+    /**
+     * Get the recorded hydro unit value series for a given component label, read from the
+     * in-memory logger (no file dump). Requires the component to have been recorded
+     * (e.g. with record_all enabled).
+     *
+     * @param label the recorded component label (e.g. "glacier:melt:output").
+     * @return the recorded series as a 2D array (time steps x hydro units).
+     */
+    [[nodiscard]] axxd GetHydroUnitValues(const string& label) const;
+
+    /**
+     * Get the recorded land-cover fraction series for a given fraction label (land cover name),
+     * read from the in-memory logger. Fractions are recorded only when record_all is enabled.
+     *
+     * @param label the land cover name (e.g. "glacier").
+     * @return the recorded fraction series as a 2D array (time steps x hydro units).
+     */
+    [[nodiscard]] axxd GetHydroUnitFractions(const string& label) const;
+
+    /**
+     * Get the labels of the recorded hydro unit components.
+     *
+     * @return vector of recorded component labels.
+     */
+    [[nodiscard]] vecStr GetRecordedHydroUnitLabels() const;
+
+    /**
+     * Get the labels of the recorded land-cover fractions.
+     *
+     * @return vector of recorded fraction labels (land cover names).
+     */
+    [[nodiscard]] vecStr GetRecordedHydroUnitFractionLabels() const;
+
+    /**
+     * Get the ids of the hydro units in the recorded order.
+     *
+     * @return vector of hydro unit ids.
+     */
+    [[nodiscard]] vecInt GetHydroUnitIds() const;
+
+    /**
+     * Get the areas of the hydro units in the recorded order.
+     *
+     * @return array of hydro unit areas.
+     */
+    [[nodiscard]] axd GetHydroUnitAreas() const;
+
   protected:
     Processor _processor;
-    SubBasin* _subBasin;
+    std::unique_ptr<SubBasin> _ownedSubBasin;  // owning: set only when ModelHydro creates the SubBasin
+    SubBasin* _subBasin;                       // non-owning view (points to _ownedSubBasin or an external SubBasin)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
     ParametersUpdater _parametersUpdater;
-    vector<TimeSeries*> _timeSeries;
+    std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
+    int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
 
   private:
-    void BuildModelStructure(SettingsModel& modelSettings);
+    ModelResult InitializeTimeSeries();
 
-    void CreateSubBasinComponents(SettingsModel& modelSettings);
+    ModelResult UpdateForcing();
 
-    void CreateHydroUnitsComponents(SettingsModel& modelSettings);
+    ModelResult RunSpinup();
 
-    void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
-
-    void UpdateSubBasinParameters(SettingsModel& modelSettings);
-
-    void UpdateHydroUnitsParameters(SettingsModel& modelSettings);
-
-    void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
-
-    void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildForcingConnections(BrickSettings& brickSettings, HydroUnit* unit, Brick* brick);
-
-    void BuildForcingConnections(ProcessSettings& processSettings, HydroUnit* unit, Process* process);
-
-    void BuildForcingConnections(SplitterSettings& splitterSettings, HydroUnit* unit, Splitter* splitter);
-
-    void BuildSubBasinBricksFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitBricksFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void BuildSubBasinSplittersFluxes(SettingsModel& modelSettings);
-
-    void BuildHydroUnitSplittersFluxes(SettingsModel& modelSettings, HydroUnit* unit);
-
-    void ConnectLoggerToValues(SettingsModel& modelSettings);
-
-    bool InitializeTimeSeries();
-
-    bool UpdateForcing();
+    ModelResult RewindAfterSpinup();
 };
 
 #endif  // HYDROBRICKS_MODEL_HYDRO_H

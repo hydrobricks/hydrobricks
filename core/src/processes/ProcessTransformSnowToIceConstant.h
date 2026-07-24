@@ -5,6 +5,14 @@
 #include "Includes.h"
 #include "ProcessTransform.h"
 
+/**
+ * Constant-rate snow-to-ice transformation.
+ *
+ *   transformation = rate    [mm/d]
+ *
+ * Converts snow to ice at a fixed rate on a glacier brick, constrained by the
+ * available snow content via the container.
+ */
 class ProcessTransformSnowToIceConstant : public ProcessTransform {
   public:
     explicit ProcessTransformSnowToIceConstant(WaterContainer* container);
@@ -16,7 +24,7 @@ class ProcessTransformSnowToIceConstant : public ProcessTransform {
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetParameters()
@@ -24,12 +32,12 @@ class ProcessTransformSnowToIceConstant : public ProcessTransform {
     void SetParameters(const ProcessSettings& processSettings) override;
 
   protected:
-    float* _rate;  // [mm/d]
+    const float* _rate;  // [mm/d]
 
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
 };
 
 #endif  // HYDROBRICKS_PROCESS_TRANSFORM_SNOWTOICECONSTANT_H

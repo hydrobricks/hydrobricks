@@ -1,5 +1,7 @@
 #include "TimeSeriesData.h"
 
+#include <utility>
+
 /*
  * TimeSeriesData
  */
@@ -7,21 +9,21 @@
 TimeSeriesData::TimeSeriesData()
     : _cursor(0) {}
 
-bool TimeSeriesData::SetValues(const vecDouble& values) {
-    _values = values;
+bool TimeSeriesData::SetValues(vecDouble values) {
+    _values = std::move(values);
     return true;
 }
 
 double TimeSeriesData::GetValueFor(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesData::GetValueFor - Not yet implemented");
 }
 
-double TimeSeriesData::GetCurrentValue() {
-    throw NotImplemented();
+double TimeSeriesData::GetCurrentValue() const {
+    throw NotImplemented("TimeSeriesData::GetCurrentValue - Not yet implemented");
 }
 
 double TimeSeriesData::GetSum() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesData::GetSum - Not yet implemented");
 }
 
 /*
@@ -35,15 +37,15 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeS
       _timeStep(timeStep),
       _timeStepUnit(timeStepUnit) {}
 
-bool TimeSeriesDataRegular::SetValues(const vecDouble& values) {
+bool TimeSeriesDataRegular::SetValues(vecDouble values) {
     double calcEnd = IncrementDateBy(_start, _timeStep * static_cast<int>(values.size() - 1), _timeStepUnit);
     if (calcEnd != _end) {
-        wxLogError(_("The size of the time series data does not match the time properties."));
-        wxLogError(_("End of the data (%d) != end of the dates (%d)."), calcEnd, _end);
+        LogError("The size of the time series data does not match the time properties.");
+        LogError("End of the data ({}) != end of the dates ({}).", calcEnd, _end);
         return false;
     }
 
-    _values = values;
+    _values = std::move(values);
     return true;
 }
 
@@ -52,8 +54,8 @@ double TimeSeriesDataRegular::GetValueFor(double date) {
     return _values[_cursor];
 }
 
-double TimeSeriesDataRegular::GetCurrentValue() {
-    wxASSERT(_values.size() > _cursor);
+double TimeSeriesDataRegular::GetCurrentValue() const {
+    assert(_values.size() > _cursor);
     return _values[_cursor];
 }
 
@@ -66,28 +68,29 @@ double TimeSeriesDataRegular::GetSum() {
 
 bool TimeSeriesDataRegular::SetCursorToDate(double date) {
     if (date < _start) {
-        wxLogError(_("The desired date is before the data starting date."));
+        LogError("The desired date is before the data starting date.");
         return false;
     }
     if (date > _end) {
-        wxLogError(_("The desired date is after the data ending date."));
+        LogError("The desired date is after the data ending date.");
         return false;
     }
 
     double dt = date - _start;
 
     switch (_timeStepUnit) {
-        case Day:
+        case TimeUnit::Day:
             _cursor = static_cast<int>(dt);
             break;
-        case Hour:
+        case TimeUnit::Hour:
             _cursor = static_cast<int>(dt) * 24;
             break;
-        case Minute:
+        case TimeUnit::Minute:
             _cursor = static_cast<int>(dt) * 1440;
             break;
         default:
-            throw NotImplemented();
+            throw NotImplemented(std::format("TimeSeriesDataRegular::SetCursorToDate - Time unit {} not supported",
+                                             static_cast<int>(_timeStepUnit)));
     }
 
     return true;
@@ -95,7 +98,7 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 
 bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     if (_cursor >= _values.size()) {
-        wxLogError(_("The desired date is after the data ending date."));
+        LogError("The desired date is after the data ending date.");
         return false;
     }
     _cursor++;
@@ -103,12 +106,43 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     return true;
 }
 
-double TimeSeriesDataRegular::GetStart() {
+double TimeSeriesDataRegular::GetStart() const {
     return _start;
 }
 
-double TimeSeriesDataRegular::GetEnd() {
+double TimeSeriesDataRegular::GetEnd() const {
     return _end;
+}
+
+bool TimeSeriesDataRegular::IsValid() const {
+    // Check that values have been set
+    if (_values.empty()) {
+        LogError("TimeSeriesDataRegular: No values set.");
+        return false;
+    }
+
+    // Check that start is before end
+    if (_start > _end) {
+        LogError("TimeSeriesDataRegular: Start date ({}) is after end date ({}).", _start, _end);
+        return false;
+    }
+
+    // Check that time step is positive
+    if (_timeStep <= 0) {
+        LogError("TimeSeriesDataRegular: Time step must be positive.");
+        return false;
+    }
+
+    return true;
+}
+
+void TimeSeriesDataRegular::Validate() const {
+    if (!IsValid()) {
+        string msg = std::format(
+            "TimeSeriesDataRegular validation failed. Start: %f, End: %f, TimeStep: %d, ValueCount: %d", _start, _end,
+            _timeStep, static_cast<int>(_values.size()));
+        throw ModelConfigError(msg);
+    }
 }
 
 /*
@@ -119,43 +153,83 @@ TimeSeriesDataIrregular::TimeSeriesDataIrregular(vecDouble& dates)
     : TimeSeriesData(),
       _dates(dates) {}
 
-bool TimeSeriesDataIrregular::SetValues(const vecDouble& values) {
+bool TimeSeriesDataIrregular::SetValues(vecDouble values) {
     if (_dates.size() != values.size()) {
-        wxLogError(_("The size of the time series data does not match the dates array."));
+        LogError("The size of the time series data does not match the dates array.");
         return false;
     }
 
-    _values = values;
+    _values = std::move(values);
     return true;
 }
 
 double TimeSeriesDataIrregular::GetValueFor(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::GetValueFor - Not yet implemented");
 }
 
-double TimeSeriesDataIrregular::GetCurrentValue() {
-    wxASSERT(_values.size() > _cursor);
+double TimeSeriesDataIrregular::GetCurrentValue() const {
+    assert(_values.size() > _cursor);
     return _values[_cursor];
 }
 
 double TimeSeriesDataIrregular::GetSum() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::GetSum - Not yet implemented");
 }
 
 bool TimeSeriesDataIrregular::SetCursorToDate(double) {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::SetCursorToDate - Not yet implemented");
 }
 
 bool TimeSeriesDataIrregular::AdvanceOneTimeStep() {
-    throw NotImplemented();
+    throw NotImplemented("TimeSeriesDataIrregular::AdvanceOneTimeStep - Not yet implemented");
 }
 
-double TimeSeriesDataIrregular::GetStart() {
-    wxASSERT(!_dates.empty());
+double TimeSeriesDataIrregular::GetStart() const {
+    assert(!_dates.empty());
     return _dates[0];
 }
 
-double TimeSeriesDataIrregular::GetEnd() {
-    wxASSERT(!_dates.empty());
+double TimeSeriesDataIrregular::GetEnd() const {
+    assert(!_dates.empty());
     return _dates[_dates.size() - 1];
+}
+
+bool TimeSeriesDataIrregular::IsValid() const {
+    // Check that dates have been set
+    if (_dates.empty()) {
+        LogError("TimeSeriesDataIrregular: No dates set.");
+        return false;
+    }
+
+    // Check that values have been set
+    if (_values.empty()) {
+        LogError("TimeSeriesDataIrregular: No values set.");
+        return false;
+    }
+
+    // Check that dates and values match
+    if (_dates.size() != _values.size()) {
+        LogError("TimeSeriesDataIrregular: Date count ({}) does not match value count ({}).",
+                 static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        return false;
+    }
+
+    // Check that dates are sorted
+    for (size_t i = 1; i < _dates.size(); ++i) {
+        if (_dates[i] <= _dates[i - 1]) {
+            LogError("TimeSeriesDataIrregular: Dates are not sorted (date[{}]={} <= date[{}]={}).", static_cast<int>(i),
+                     _dates[i], static_cast<int>(i - 1), _dates[i - 1]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void TimeSeriesDataIrregular::Validate() const {
+    if (!IsValid()) {
+        string msg = std::format("TimeSeriesDataIrregular validation failed. DateCount: {}, ValueCount: {}",
+                                 static_cast<int>(_dates.size()), static_cast<int>(_values.size()));
+        throw ModelConfigError(msg);
+    }
 }

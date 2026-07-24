@@ -7,7 +7,9 @@ SolverEulerExplicit::SolverEulerExplicit()
     _nIterations = 1;
 }
 
-bool SolverEulerExplicit::Solve() {
+bool SolverEulerExplicit::Solve(double timeStepInDays) {
+    _timeStepInDays = timeStepInDays;
+
     // Compute the change rates
     ComputeChangeRates(0);
 

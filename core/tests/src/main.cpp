@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
-#include <wx/fileconf.h>
-#include <wx/stdpaths.h>
+
+#include <cstdio>
+#include <filesystem>
 
 #include "Includes.h"
+#include "Utils.h"
 
 int main(int argc, char** argv) {
     int resultTest = -2;
@@ -10,51 +12,30 @@ int main(int argc, char** argv) {
     try {
         ::testing::InitGoogleTest(&argc, argv);
 
-        // Initialize the library because wxApp is not called
-        wxInitialize();
+        // Initialize the library
+        if (!InitHydrobricks()) {
+            printf("Failed to initialize hydrobricks\n");
+            return 1;
+        }
 
-        // Set the local config object
-        wxFileConfig* pConfig = new wxFileConfig(
-            "HydroBricks", wxEmptyString, wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini",
-            wxStandardPaths::Get().GetTempDir() + "/HydroBricks.ini", wxCONFIG_USE_LOCAL_FILE);
-        wxFileConfig::Set(pConfig);
-
-        // Check path
-        wxString filePath = wxFileName::GetCwd();
-        wxString filePath1 = filePath;
-        filePath1.Append("/core/tests/files");
-        if (wxFileName::DirExists(filePath1)) {
-            filePath.Append("/core/tests");
-            wxSetWorkingDirectory(filePath);
+        // Locate the test files directory relative to CWD
+        auto cwd = std::filesystem::current_path();
+        if (std::filesystem::is_directory(cwd / "core/tests/files")) {
+            std::filesystem::current_path(cwd / "core/tests");
+        } else if (std::filesystem::is_directory(cwd / "../core/tests/files")) {
+            std::filesystem::current_path(cwd / "../core/tests");
+        } else if (std::filesystem::is_directory(cwd / "../../core/tests/files")) {
+            std::filesystem::current_path(cwd / "../../core/tests");
         } else {
-            wxString filePath2 = filePath;
-            filePath2.Append("/../core/tests/files");
-            if (wxFileName::DirExists(filePath2)) {
-                filePath.Append("/../core/tests");
-                wxSetWorkingDirectory(filePath);
-            } else {
-                wxString filePath3 = filePath;
-                filePath3.Append("/../../core/tests/files");
-                if (wxFileName::DirExists(filePath3)) {
-                    filePath.Append("/../../core/tests");
-                    wxSetWorkingDirectory(filePath);
-                } else {
-                    wxPrintf("Cannot find the files directory\n");
-                    wxPrintf("Original working directory: %s\n", filePath);
-                    return 0;
-                }
-            }
+            printf("Cannot find the files directory\n");
+            printf("Original working directory: %s\n", cwd.string().c_str());
+            return 0;
         }
 
         resultTest = RUN_ALL_TESTS();
 
-        // Cleanup
-        wxUninitialize();
-        delete wxFileConfig::Set((wxFileConfig*)nullptr);
-
     } catch (std::exception& e) {
-        wxString msg(e.what(), wxConvUTF8);
-        wxPrintf(_("Exception caught: %s\n"), msg);
+        printf("Exception caught: %s\n", e.what());
     }
 
     return resultTest;

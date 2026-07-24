@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
@@ -11,8 +13,8 @@
 class SnowpackModel : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -35,29 +37,30 @@ class SnowpackModel : public ::testing::Test {
         _model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+        _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
-        _model.AddSplitterOutput("outlet");            // rain
-        _model.AddSplitterOutput("snowpack", "snow");  // snow
+        _model.AddSplitterOutput("outlet");                       // rain
+        _model.AddSplitterOutput("snowpack", ContentType::Snow);  // snow
         _model.AddSplitterParameter("transition_start", 0.0f);
         _model.AddSplitterParameter("transition_end", 2.0f);
 
         _model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
+        // RAII via unique_ptr
     }
 };
 
@@ -70,10 +73,10 @@ TEST_F(SnowpackModel, DegreeDay) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -102,8 +105,6 @@ TEST_F(SnowpackModel, DegreeDay) {
 }
 
 TEST_F(SnowpackModel, ModelClosesBalance) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
 
@@ -112,10 +113,10 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -138,8 +139,8 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
 class SnowpackModelWithAspect : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -164,29 +165,30 @@ class SnowpackModelWithAspect : public ::testing::Test {
         _model.AddProcessLogging("output");
 
         // Rain/snow splitter
-        _model.AddHydroUnitSplitter("snow_rain", "snow_rain");
+        _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
         _model.AddSplitterForcing("precipitation");
         _model.AddSplitterForcing("temperature");
-        _model.AddSplitterOutput("outlet");            // rain
-        _model.AddSplitterOutput("snowpack", "snow");  // snow
+        _model.AddSplitterOutput("outlet");                       // rain
+        _model.AddSplitterOutput("snowpack", ContentType::Snow);  // snow
         _model.AddSplitterParameter("transition_start", 0.0f);
         _model.AddSplitterParameter("transition_end", 2.0f);
 
         _model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
+        // RAII via unique_ptr
     }
 };
 
@@ -212,10 +214,10 @@ TEST_F(SnowpackModelWithAspect, DegreeDayAspect) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -233,7 +235,7 @@ TEST_F(SnowpackModelWithAspect, DegreeDayAspect) {
 class GlacierModel : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsTemp{};
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -252,19 +254,18 @@ class GlacierModel : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, -1.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsTemp);
+        // RAII via unique_ptr
     }
 };
 
 TEST_F(GlacierModel, UnlimitedSupply) {
-    wxLogNull logNo;
-
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("glacier", "glacier", 1);
@@ -274,9 +275,9 @@ TEST_F(GlacierModel, UnlimitedSupply) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -303,8 +304,8 @@ TEST_F(GlacierModel, UnlimitedSupply) {
 class GlacierModelWithSnowpack : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsTemp{};
-    TimeSeriesUniform* _tsPrecip{};
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -338,25 +339,23 @@ class GlacierModelWithSnowpack : public ::testing::Test {
 
         _model.AddLoggingToItem("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, TimeUnit::Day);
         precip->SetValues({8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsTemp);
-        wxDELETE(_tsPrecip);
+        // RAII via unique_ptr
     }
 };
 
 TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
@@ -366,10 +365,10 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -399,8 +398,6 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
 }
 
 TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
@@ -410,10 +407,10 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -436,9 +433,9 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
 class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsTemp{};
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsRad{};
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsRad;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -460,22 +457,19 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
         _model.SelectHydroUnitBrick("glacier_ice");
         _model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
         _model.AddProcessLogging("output");
-        _model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        _model.AddBrickProcess("rainwater", "outflow:rest", "outlet", true);
         _model.AddBrickParameter("no_melt_when_snow_cover", true);
         _model.AddBrickParameter("infinite_storage", 1.0);
         _model.SelectHydroUnitBrick("glacier_debris");
         _model.AddBrickProcess("melt", "melt:temperature_index", "outlet");
         _model.AddProcessLogging("output");
-        _model.AddBrickProcess("meltwater", "outflow:direct", "outlet", true);
+        _model.AddBrickProcess("rainwater", "outflow:rest", "outlet", true);
         _model.AddBrickParameter("no_melt_when_snow_cover", true);
         _model.AddBrickParameter("infinite_storage", 1.0);
 
-        // Route to the outlet
+        // Route the rest (rain) to the outlet. The glaciers drain via their
+        // 'rainwater' (outflow:rest) process, so only the ground needs an outflow here.
         _model.SelectHydroUnitBrick("ground");
-        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        _model.SelectHydroUnitBrick("glacier_ice");
-        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
-        _model.SelectHydroUnitBrick("glacier_debris");
         _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
 
         _model.AddLoggingToItem("outlet");
@@ -484,31 +478,29 @@ class MultiGlaciersModelWithTemperatureIndex : public ::testing::Test {
         EXPECT_TRUE(_model.SetParameterValue("type:snowpack", "radiation_coefficient", 0.0006f));
         EXPECT_TRUE(_model.SetParameterValue("type:glacier", "radiation_coefficient", 0.001f));
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, TimeUnit::Day);
         precip->SetValues({8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
 
-        auto radiation = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1, Day);
+        auto radiation = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 8), 1,
+                                                                 TimeUnit::Day);
         radiation->SetValues({100, 110, 120, 130, 140, 150, 160, 170});
-        _tsRad = new TimeSeriesUniform(Radiation);
-        _tsRad->SetData(radiation);
+        _tsRad = std::make_unique<TimeSeriesUniform>(VariableType::Radiation);
+        _tsRad->SetData(std::move(radiation));
     }
     void TearDown() override {
-        wxDELETE(_tsRad);
-        wxDELETE(_tsTemp);
-        wxDELETE(_tsPrecip);
+        // RAII via unique_ptr
     }
 };
 
 TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
-    wxLogNull logNo;
-
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("ground", "ground", 0.2);
@@ -524,11 +516,11 @@ TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
 
     ModelHydro model(&subBasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.IsValid());
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
-    ASSERT_TRUE(model.AddTimeSeries(_tsRad));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsRad))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());

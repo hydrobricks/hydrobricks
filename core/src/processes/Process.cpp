@@ -1,147 +1,449 @@
 #include "Process.h"
 
+#include <functional>
+#include <unordered_map>
+#include <vector>
+
 #include "Brick.h"
 #include "Glacier.h"
 #include "HydroUnit.h"
+#include "ProcessCapillaryHBV.h"
+#include "ProcessETExponential.h"
+#include "ProcessETGR4J.h"
+#include "ProcessETHBV.h"
+#include "ProcessETLinear.h"
+#include "ProcessETOpenWater.h"
+#include "ProcessETPowerLaw.h"
 #include "ProcessETSocont.h"
+#include "ProcessInfiltrationGR4J.h"
+#include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
+#include "ProcessInterceptionGR4J.h"
+#include "ProcessLateralSnowRedistributionFrey.h"
 #include "ProcessLateralSnowSlide.h"
+#include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
 #include "ProcessMeltTemperatureIndex.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
 #include "ProcessOutflowOverflow.h"
-#include "ProcessOutflowPercolation.h"
-#include "ProcessOutflowRestDirect.h"
+#include "ProcessOutflowRest.h"
+#include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowThreshold.h"
+#include "ProcessPercolationConstant.h"
+#include "ProcessPercolationGR4J.h"
+#include "ProcessProductionGR4J.h"
+#include "ProcessRefreezeDegreeDay.h"
+#include "ProcessRoutingGR4J.h"
+#include "ProcessRoutingGR6J.h"
+#include "ProcessRoutingHBV.h"
+#include "ProcessRunoffHBV.h"
 #include "ProcessRunoffSocont.h"
+#include "ProcessSublimationConstant.h"
+#include "ProcessSublimationPET.h"
 #include "ProcessTransformSnowToIceConstant.h"
+#include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
 Process::Process(WaterContainer* container)
     : _container(container) {}
 
-Process* Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
-    string processType = processSettings.type;
+namespace {
 
-    if (processType == "outflow:linear") {
-        return new ProcessOutflowLinear(brick->GetWaterContainer());
-    }
-    if (processType == "outflow:percolation" || processType == "percolation") {
-        return new ProcessOutflowPercolation(brick->GetWaterContainer());
-    }
-    if (processType == "outflow:direct") {
-        return new ProcessOutflowDirect(brick->GetWaterContainer());
-    }
-    if (processType == "outflow:rest_direct") {
-        return new ProcessOutflowRestDirect(brick->GetWaterContainer());
-    }
-    if (processType == "outflow:overflow" || processType == "overflow") {
-        return new ProcessOutflowOverflow(brick->GetWaterContainer());
-    }
-    if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
-        if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessTransformSnowToIceConstant(snowBrick->GetSnowContainer());
-        }
-        throw ConceptionIssue(
-            wxString::Format(_("Trying to apply transformation processes to unsupported brick: %s"), brick->GetName()));
-    }
-    if (processType == "transport:snow_slide") {
-        if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessLateralSnowSlide(snowBrick->GetSnowContainer());
-        }
-        throw ConceptionIssue(
-            wxString::Format(_("Trying to apply transport processes to unsupported brick: %s"), brick->GetName()));
-    }
-    if (processType == "runoff:socont") {
-        return new ProcessRunoffSocont(brick->GetWaterContainer());
-    }
-    if (processType == "infiltration:socont") {
-        return new ProcessInfiltrationSocont(brick->GetWaterContainer());
-    }
-    if (processType == "et:socont") {
-        return new ProcessETSocont(brick->GetWaterContainer());
-    }
-    if (processType == "melt:degree_day") {
-        if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltDegreeDay(snowBrick->GetSnowContainer());
-        }
-        if (brick->IsGlacier()) {
-            auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltDegreeDay(glacierBrick->GetIceContainer());
-        }
-        throw ConceptionIssue(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
-    }
-    if (processType == "melt:degree_day_aspect") {
-        if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltDegreeDayAspect(snowBrick->GetSnowContainer());
-        }
-        if (brick->IsGlacier()) {
-            auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltDegreeDayAspect(glacierBrick->GetIceContainer());
-        }
-        throw ConceptionIssue(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
-    }
-    if (processType == "melt:temperature_index") {
-        if (brick->IsSnowpack()) {
-            auto snowBrick = dynamic_cast<Snowpack*>(brick);
-            return new ProcessMeltTemperatureIndex(snowBrick->GetSnowContainer());
-        }
-        if (brick->IsGlacier()) {
-            auto glacierBrick = dynamic_cast<Glacier*>(brick);
-            return new ProcessMeltTemperatureIndex(glacierBrick->GetIceContainer());
-        }
-        throw ConceptionIssue(
-            wxString::Format(_("Trying to apply melting processes to unsupported brick: %s"), brick->GetName()));
-    }
+struct ProcessEntry {
+    std::function<std::unique_ptr<Process>(Brick*)> create;
+    std::function<void(SettingsModel*)> registerFn;
+};
 
-    throw ConceptionIssue(wxString::Format(_("Process type '%s' not recognized (Factory)."), processType));
+// Maps deprecated/short aliases to their canonical process type name.
+const std::unordered_map<string, string>& GetProcessAliases() {
+    static const std::unordered_map<string, string> aliases = {
+        {"outflow:percolation", "percolation:constant"},
+        {"overflow", "outflow:overflow"},
+        {"transform:snow_ice_constant", "transformation:snow_ice_constant"},
+        {"transform:snow_ice_swat", "transformation:snow_ice_swat"},
+    };
+    return aliases;
 }
 
-bool Process::RegisterParametersAndForcing(SettingsModel* modelSettings, const string& processType) {
-    if (processType == "outflow:linear") {
-        ProcessOutflowLinear::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:percolation" || processType == "percolation") {
-        ProcessOutflowPercolation::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:direct") {
-        ProcessOutflowDirect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:rest_direct") {
-        ProcessOutflowRestDirect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "outflow:overflow" || processType == "overflow") {
-        ProcessOutflowOverflow::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transformation:snow_ice_constant" || processType == "transform:snow_ice_constant") {
-        ProcessTransformSnowToIceConstant::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "transport:snow_slide") {
-        ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "runoff:socont") {
-        ProcessRunoffSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "infiltration:socont") {
-        ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "et:socont") {
-        ProcessETSocont::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:degree_day") {
-        ProcessMeltDegreeDay::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:degree_day_aspect") {
-        ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(modelSettings);
-    } else if (processType == "melt:temperature_index") {
-        ProcessMeltTemperatureIndex::RegisterProcessParametersAndForcing(modelSettings);
-    } else {
-        throw ConceptionIssue(
-            wxString::Format(_("Process type '%s' not recognized (RegisterParametersAndForcing)."), processType));
-    }
+const string& ResolveAlias(const string& type) {
+    const auto& aliases = GetProcessAliases();
+    auto it = aliases.find(type);
+    return it != aliases.end() ? it->second : type;
+}
 
-    return true;
+// clang-format off
+const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
+    static const std::unordered_map<string, ProcessEntry> registry = {
+
+        {"outflow:linear", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowLinear>(b->GetWaterContainer());
+            },
+            &ProcessOutflowLinear::RegisterProcessSettings
+        }},
+
+        {"percolation:constant", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationConstant>(b->GetWaterContainer());
+            },
+            &ProcessPercolationConstant::RegisterProcessSettings
+        }},
+
+        {"percolation:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessPercolationGR4J::RegisterProcessSettings
+        }},
+
+        {"outflow:direct", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer());
+            },
+            &ProcessOutflowDirect::RegisterProcessSettings
+        }},
+
+        {"outflow:rest", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowRest>(b->GetWaterContainer());
+            },
+            &ProcessOutflowRest::RegisterProcessSettings
+        }},
+
+        {"outflow:overflow", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowOverflow>(b->GetWaterContainer());
+            },
+            &ProcessOutflowOverflow::RegisterProcessSettings
+        }},
+
+        {"runoff:socont", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRunoffSocont>(b->GetWaterContainer());
+            },
+            &ProcessRunoffSocont::RegisterProcessSettings
+        }},
+
+        {"infiltration:socont", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationSocont>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationSocont::RegisterProcessSettings
+        }},
+
+        {"infiltration:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationGR4J::RegisterProcessSettings
+        }},
+
+        {"infiltration:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInfiltrationHBV>(b->GetWaterContainer());
+            },
+            &ProcessInfiltrationHBV::RegisterProcessSettings
+        }},
+
+        {"runoff:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRunoffHBV>(b->GetWaterContainer());
+            },
+            &ProcessRunoffHBV::RegisterProcessSettings
+        }},
+
+        {"capillary:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessCapillaryHBV>(b->GetWaterContainer());
+            },
+            &ProcessCapillaryHBV::RegisterProcessSettings
+        }},
+
+        {"routing:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingHBV>(b->GetWaterContainer());
+            },
+            &ProcessRoutingHBV::RegisterProcessSettings
+        }},
+
+        {"outflow:snow_holding", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSnowHolding>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSnowHolding::RegisterProcessSettings
+        }},
+
+        {"outflow:threshold", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
+            },
+            &ProcessOutflowThreshold::RegisterProcessSettings
+        }},
+
+        {"refreeze:degree_day", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRefreezeDegreeDay>(b->GetWaterContainer());
+            },
+            &ProcessRefreezeDegreeDay::RegisterProcessSettings
+        }},
+
+        {"production:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessProductionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessProductionGR4J::RegisterProcessSettings
+        }},
+
+        {"et:socont", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETSocont>(b->GetWaterContainer());
+            },
+            &ProcessETSocont::RegisterProcessSettings
+        }},
+
+        {"et:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETGR4J>(b->GetWaterContainer());
+            },
+            &ProcessETGR4J::RegisterProcessSettings
+        }},
+
+        {"et:hbv", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETHBV>(b->GetWaterContainer());
+            },
+            &ProcessETHBV::RegisterProcessSettings
+        }},
+
+        {"et:open_water", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWater::RegisterProcessSettings
+        }},
+
+        {"et:linear", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETLinear>(b->GetWaterContainer());
+            },
+            &ProcessETLinear::RegisterProcessSettings
+        }},
+
+        {"et:power_law", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETPowerLaw>(b->GetWaterContainer());
+            },
+            &ProcessETPowerLaw::RegisterProcessSettings
+        }},
+
+        {"et:exponential", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETExponential>(b->GetWaterContainer());
+            },
+            &ProcessETExponential::RegisterProcessSettings
+        }},
+
+        {"melt:degree_day", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltDegreeDay>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                if (b->GetCategory() == BrickCategory::Glacier) {
+                    return std::make_unique<ProcessMeltDegreeDay>(dynamic_cast<Glacier*>(b)->GetIceContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltDegreeDay::RegisterProcessSettings
+        }},
+
+        {"melt:degree_day_aspect", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltDegreeDayAspect>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                if (b->GetCategory() == BrickCategory::Glacier) {
+                    return std::make_unique<ProcessMeltDegreeDayAspect>(dynamic_cast<Glacier*>(b)->GetIceContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltDegreeDayAspect::RegisterProcessSettings
+        }},
+
+        {"melt:temperature_index", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltTemperatureIndex>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                if (b->GetCategory() == BrickCategory::Glacier) {
+                    return std::make_unique<ProcessMeltTemperatureIndex>(dynamic_cast<Glacier*>(b)->GetIceContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltTemperatureIndex::RegisterProcessSettings
+        }},
+
+        {"melt:cemaneige", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltCemaNeige>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melt:cemaneige to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltCemaNeige::RegisterProcessSettings
+        }},
+
+        {"sublimation:constant", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationConstant>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationConstant::RegisterProcessSettings
+        }},
+
+        {"sublimation:pet", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationPET>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationPET::RegisterProcessSettings
+        }},
+
+        {"transformation:snow_ice_constant", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessTransformSnowToIceConstant>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(std::format(
+                    "Trying to apply transformation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessTransformSnowToIceConstant::RegisterProcessSettings
+        }},
+
+        {"transformation:snow_ice_swat", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessTransformSnowToIceSwat>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(std::format(
+                    "Trying to apply transformation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessTransformSnowToIceSwat::RegisterProcessSettings
+        }},
+
+        {"transport:snow_slide", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowSlide>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowSlide::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), false);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettings
+        }},
+
+        {"transport:snow_redistribution_frey_dynamic", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessLateralSnowRedistributionFrey>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer(), true);
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply transport processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessLateralSnowRedistributionFrey::RegisterProcessSettingsDynamic
+        }},
+
+        {"interception:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInterceptionGR4J>(b->GetWaterContainer());
+            },
+            &ProcessInterceptionGR4J::RegisterProcessSettings
+        }},
+
+        {"routing:gr4j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingGR4J>(b->GetWaterContainer());
+            },
+            &ProcessRoutingGR4J::RegisterProcessSettings
+        }},
+
+        {"routing:gr6j", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingGR6J>(b->GetWaterContainer());
+            },
+            &ProcessRoutingGR6J::RegisterProcessSettings
+        }},
+
+    };
+    return registry;
+}
+// clang-format on
+
+string GetValidProcessTypes() {
+    const auto& registry = GetProcessRegistry();
+    string suggestions = "Valid process types: ";
+    bool first = true;
+    for (const auto& [key, entry] : registry) {
+        if (!first) suggestions += ", ";
+        suggestions += key;
+        first = false;
+    }
+    return suggestions;
+}
+
+}  // namespace
+
+std::unique_ptr<Process> Process::Factory(const ProcessSettings& processSettings, Brick* brick) {
+    const auto& registry = GetProcessRegistry();
+    auto it = registry.find(ResolveAlias(processSettings.type));
+    if (it != registry.end()) {
+        return it->second.create(brick);
+    }
+    throw ModelConfigError(
+        std::format("Process type '{}' not recognized (Factory). {}", processSettings.type, GetValidProcessTypes()));
+}
+
+bool Process::RegisterSettings(SettingsModel* modelSettings, const string& processType) {
+    const auto& registry = GetProcessRegistry();
+    auto it = registry.find(ResolveAlias(processType));
+    if (it != registry.end()) {
+        it->second.registerFn(modelSettings);
+        return true;
+    }
+    throw ModelConfigError(
+        std::format("Process type '{}' not recognized (RegisterSettings). {}", processType, GetValidProcessTypes()));
 }
 
 void Process::Reset() {
-    for (auto flux : _outputs) {
+    for (const auto& flux : _outputs) {
         flux->Reset();
     }
 }
@@ -154,9 +456,9 @@ void Process::SetParameters(const ProcessSettings&) {
     // Nothing to do...
 }
 
-bool Process::HasParameter(const ProcessSettings& processSettings, const string& name) {
-    for (auto parameter : processSettings.parameters) {
-        if (parameter->GetName() == name) {
+bool Process::HasParameter(const ProcessSettings& processSettings, std::string_view name) {
+    for (const auto& parameter : processSettings.parameters) {
+        if (parameter.GetName() == name) {
             return true;
         }
     }
@@ -164,38 +466,40 @@ bool Process::HasParameter(const ProcessSettings& processSettings, const string&
     return false;
 }
 
-float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, const string& name) {
-    for (auto parameter : processSettings.parameters) {
-        if (parameter->GetName() == name) {
-            wxASSERT(parameter->GetValuePointer());
-            parameter->SetAsLinked();
-            return parameter->GetValuePointer();
+const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name) {
+    for (auto& parameter : processSettings.parameters) {
+        if (parameter.GetName() == name) {
+            assert(parameter.GetValuePointer());
+            return parameter.GetValuePointer();
         }
     }
 
-    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
 }
 
-vecDouble Process::GetChangeRates() {
-    if (_container->GetContentWithChanges() <= PRECISION) {
-        vecDouble res(GetConnectionsNb());
-        std::fill(res.begin(), res.end(), 0);
-        return res;
+const vecDouble& Process::GetChangeRates() {
+    if (LessThanOrEqual(_container->GetContentWithChanges(), 0, PRECISION)) {
+        _changeRates.assign(GetConnectionCount(), 0.0);
+        return _changeRates;
     }
 
     return GetRates();
 }
 
 void Process::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(_outputs.size() > index);
-    wxASSERT(rate);
+    assert(_outputs.size() > index);
+    assert(rate);
     _outputs[index]->LinkChangeRate(rate);
 }
 
 void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDays) {
-    wxASSERT(_outputs.size() > connectionIndex);
-    wxASSERT(rate >= 0);
-    if (rate > PRECISION) {
+    assert(_outputs.size() > connectionIndex);
+    assert(rate >= 0);
+    if (rate < 0) {
+        LogError("Negative rate ({}) in process {}, connection {}.", rate, GetName(), connectionIndex);
+        rate = 0;
+    }
+    if (GreaterThan(rate, 0, PRECISION)) {
         _outputs[connectionIndex]->UpdateFlux(rate * timeStepInDays);
         _container->SubtractAmountFromDynamicContentChange(rate * timeStepInDays);
     } else {
@@ -203,25 +507,31 @@ void Process::ApplyChange(int connectionIndex, double rate, double timeStepInDay
     }
 }
 
-double* Process::GetValuePointer(const string&) {
+double* Process::GetValuePointer(std::string_view) {
     return nullptr;
 }
 
-double Process::GetSumChangeRatesOtherProcesses() {
+double Process::GetSumChangeRatesOtherProcesses() const {
     double sumOtherProcesses = 0;
 
-    vector<Process*> otherProcesses = _container->GetParentBrick()->GetProcesses();
-    for (auto process : otherProcesses) {
-        wxASSERT(process);
+    for (int i = 0; i < _container->GetParentBrick()->GetProcessCount(); ++i) {
+        auto process = _container->GetParentBrick()->GetProcess(i);
+        assert(process);
         if (process == this) {
             continue;
         }
-        vector<Flux*> fluxes = process->GetOutputFluxes();
-        for (auto flux : fluxes) {
-            wxASSERT(flux);
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+            Flux* flux = process->GetOutputFlux(j);
+            assert(flux);
             sumOtherProcesses += *flux->GetAmountPointer();
         }
     }
 
     return sumOtherProcesses;
+}
+
+void Process::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("Process validation failed. Check that all required properties are correctly defined.");
+    }
 }

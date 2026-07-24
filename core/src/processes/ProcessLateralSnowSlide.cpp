@@ -3,32 +3,34 @@
 #include "Brick.h"
 #include "FluxToBrick.h"
 #include "HydroUnit.h"
-#include "SurfaceComponent.h"
+#include "Snowpack.h"
 #include "WaterContainer.h"
 
 ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
     : ProcessLateral(container),
-      _slope_deg(0),
+      _slopeDeg(0),
       _coeff(nullptr),
       _exp(nullptr),
       _minSlope(nullptr),
       _maxSlope(nullptr),
-      _minSnowHoldingDepth(nullptr) {}
+      _minSnowHoldingDepth(nullptr),
+      _maxSnowDepth(nullptr) {}
 
-bool ProcessLateralSnowSlide::IsOk() {
+bool ProcessLateralSnowSlide::IsValid() const {
     return true;
 }
 
-void ProcessLateralSnowSlide::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessLateralSnowSlide::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("coeff", 3178.4f);
     modelSettings->AddProcessParameter("exp", -1.998f);
     modelSettings->AddProcessParameter("min_slope", 10.0f);
     modelSettings->AddProcessParameter("max_slope", 75.0f);
     modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
+    modelSettings->AddProcessParameter("max_snow_depth", 20000.0f);  // 20 m of snow depth = 5 m of SWE
 }
 
 void ProcessLateralSnowSlide::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
-    _slope_deg = unit->GetPropertyDouble("slope", "degrees");
+    _slopeDeg = static_cast<float>(unit->GetPropertyDouble("slope", "degrees"));
 }
 
 void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettings) {
@@ -38,60 +40,95 @@ void ProcessLateralSnowSlide::SetParameters(const ProcessSettings& processSettin
     _minSlope = GetParameterValuePointer(processSettings, "min_slope");
     _maxSlope = GetParameterValuePointer(processSettings, "max_slope");
     _minSnowHoldingDepth = GetParameterValuePointer(processSettings, "min_snow_holding_depth");
+    _maxSnowDepth = GetParameterValuePointer(processSettings, "max_snow_depth");
 }
 
-vecDouble ProcessLateralSnowSlide::GetRates() {
+const vecDouble& ProcessLateralSnowSlide::GetRates() {
     // If no fluxes attached (no connection), return empty vector
     if (_outputs.empty()) {
-        return vecDouble();
+        return StoreRates({});
     }
 
     // Snow density conversion factor
     const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
 
     // Current SWE value
-    float swe = _container->GetContentWithChanges();  // [mm] Snow water equivalent
-    float snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth
+    double swe = _container->GetContentWithChanges();  // [mm] Snow Water Equivalent
+    double snowDepth = swe * sweToDepthFactor;         // [mm] Snow depth calculated from SWE
 
     // Snow holding threshold
-    float slope = std::max(_slope_deg, *_minSlope);                    // [degrees]
-    float snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
-    float snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
+    float slope = std::max(_slopeDeg, *_minSlope);                      // [degrees]
+    double snowHoldingThresholdMeters = *_coeff * pow(slope, *_exp);    // [m]
+    double snowHoldingThreshold = snowHoldingThresholdMeters * 1000.0;  // [mm]
 
     // Set minimum snow holding depth if slope exceeds maximum slope
-    if (_slope_deg > *_maxSlope) {
+    if (_slopeDeg > *_maxSlope) {
         snowHoldingThreshold = *_minSnowHoldingDepth;
     }
 
     // Ensure snow holding threshold is not less than the minimum defined
-    snowHoldingThreshold = std::max(snowHoldingThreshold, *_minSnowHoldingDepth);
+    snowHoldingThreshold = std::max<double>(snowHoldingThreshold, *_minSnowHoldingDepth);
+
+    // If a maximum snow depth is defined, ensure it does not exceed it
+    if (*_maxSnowDepth > 0.0f) {
+        snowHoldingThreshold = std::min<double>(snowHoldingThreshold, *_maxSnowDepth);
+    }
 
     // Calculate excess snow to be redistributed
     double excessSwe = 0.0;
     if (snowDepth > snowHoldingThreshold) {
-        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth
-        excessSwe = excessSnowDepth / sweToDepthFactor;             // Convert to SWE [mm]
+        double excessSnowDepth = snowDepth - snowHoldingThreshold;  // [mm] Excess snow depth beyond threshold
+        excessSwe = excessSnowDepth / sweToDepthFactor;             // [mm] Convert excess depth to SWE
     }
 
     // Iterate through each output and calculate the lateral rate
-    vecDouble rates(_outputs.size(), 0.0);
+    _changeRates.assign(_outputs.size(), 0.0);
 
     if (excessSwe <= 0.0) {
         // No excess snow to redistribute
-        return rates;
+        return _changeRates;
+    }
+
+    // Cap the excess SWE to a maximum of 1000 mm to prevent unrealistic redistribution rates
+    if (excessSwe > 1000.0) {
+        LogDebug("Snow redistribution: excess SWE ({} mm) is too high, capping to 1000 mm.", excessSwe);
+        excessSwe = 1000.0;
     }
 
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
-        wxASSERT(_weights.size() > i);
-        double targetFraction = GetTargetLandCoverAreaFraction(_outputs[i]);
-        rates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate.
+        assert(_weights.size() > i);
+        Flux* flux = _outputs[i].get();  // Extract raw pointer from unique_ptr
+        double targetFraction = GetTargetLandCoverAreaFraction(flux);
+        if (NearlyZero(targetFraction, PRECISION)) {
+            _changeRates[i] = 0.0;  // No redistribution if target fraction is negligible
+            continue;
+        }
+        _changeRates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
+
+        _changeRates[i] = AvoidUnrealisticAccumulation(_changeRates[i], flux);
 
         // The weight of the flux is adjusted to account for the area ratio between the source and target land cover.
         // As it can change (e.g., due to land cover changes), we compute it dynamically.
-        double fractionAreas = ComputeFractionAreas(_outputs[i]);
-        _outputs[i]->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
+        double fractionAreas = ComputeFractionAreas(flux);
+        flux->SetFractionUnitArea(fractionAreas);  // Adjust flux weight by area ratio
     }
 
-    return rates;
+    return _changeRates;
+}
+
+double ProcessLateralSnowSlide::AvoidUnrealisticAccumulation(double rate, Flux* flux) {
+    // Do not redistribute snow if the target snowpack has more than 1.5 times the overall maximum snow depth.
+    // This avoids unrealistic accumulation in the target snowpack.
+    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+    assert(fluxToBrick);
+    Brick* targetBrick = fluxToBrick->GetTargetBrick();
+    assert(targetBrick);
+    auto targetSnowpack = dynamic_cast<Snowpack*>(targetBrick);
+    double targetSwe = targetSnowpack->GetContent(ContentType::Snow);
+    const float sweToDepthFactor = constants::waterDensity / constants::snowDensity;
+    if (*_maxSnowDepth > 0.0f && targetSwe > 1.5 * (*_maxSnowDepth) / sweToDepthFactor) {
+        return 0;
+    }
+    return rate;
 }

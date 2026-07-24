@@ -17,31 +17,11 @@ include(${CMAKE_SOURCE_DIR}/core/build/cmake/hydrobricks_core_source.cmake)
 
 # Own libraries
 add_library(core STATIC ${src_core})
+target_compile_features(core PUBLIC cxx_std_23)
 
 # DECLARE EXECUTABLE
 
-if (WIN32)
-    add_executable(hydrobricks-cli WIN32 ${src_app})
-elseif (UNIX AND NOT APPLE)
-    add_executable(hydrobricks-cli ${src_app})
-elseif (APPLE)
-    add_executable(hydrobricks-cli MACOSX_BUNDLE ${src_app})
-else (WIN32)
-    add_executable(hydrobricks-cli ${src_app})
-endif (WIN32)
-
-# DEFINITIONS
-
-# Specific definitions
-set_target_properties(core PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
-
-if (MSVC)
-    set_target_properties(hydrobricks-cli PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-    # set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0; _CONSOLE")
-    set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
-else (MSVC)
-    set_target_properties(hydrobricks-cli PROPERTIES COMPILE_DEFINITIONS "wxUSE_GUI=0")
-endif (MSVC)
+add_executable(hydrobricks-cli ${src_app})
 
 if (WIN32)
     add_definitions(-D_CRTDBG_MAP_ALLOC)
@@ -50,8 +30,8 @@ endif (WIN32)
 # LINKING
 
 # Link libraries explicitly to not link Google Tests to the main app.
-target_link_libraries(core wx::base netCDF::netcdf yaml-cpp::yaml-cpp)
-target_link_libraries(hydrobricks-cli core)
+target_link_libraries(core PRIVATE netCDF::netcdf yaml-cpp::yaml-cpp Eigen3::Eigen)
+target_link_libraries(hydrobricks-cli core Eigen3::Eigen)
 
 # COPY BINARY FILES
 

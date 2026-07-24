@@ -13,6 +13,19 @@
 
 #include "ProcessLateral.h"
 
+class FluxToBrick;
+
+/**
+ * Gravitational snow redistribution (SnowSlide; Bernhardt & Schulz, 2010).
+ *
+ * Moves snow exceeding a slope-dependent holding capacity to downslope hydro
+ * units. The holding threshold (as a snow depth) decreases with the slope:
+ *   D_hold = coeff × slope^exp    (clamped to [min_snow_holding_depth, max_snow_depth])
+ *
+ * The excess SWE (depth above D_hold, converted back to SWE) is distributed over
+ * the connected outputs by their weights and target area fractions, capped at
+ * 1000 mm and skipped where the target snowpack is already over-accumulated.
+ */
 class ProcessLateralSnowSlide : public ProcessLateral {
   public:
     explicit ProcessLateralSnowSlide(WaterContainer* container);
@@ -20,16 +33,16 @@ class ProcessLateralSnowSlide : public ProcessLateral {
     ~ProcessLateralSnowSlide() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * Register the process parameters and forcing in the settings model.
      *
      * @param modelSettings The settings model to register the parameters in.
      */
-    static void RegisterProcessParametersAndForcing(SettingsModel* modelSettings);
+    static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
      * @copydoc Process::SetHydroUnitProperties()
@@ -41,18 +54,37 @@ class ProcessLateralSnowSlide : public ProcessLateral {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::IsLateralProcess()
+     */
+    [[nodiscard]] bool IsLateralProcess() const noexcept override {
+        return true;
+    }
+
   protected:
-    float _slope_deg;             // Slope of the hydro unit [°]
-    float* _coeff;                // Coefficient in the equation []
-    float* _exp;                  // Exponent  in the equation []
-    float* _minSlope;             // Minimum slope for snow holding [°]
-    float* _maxSlope;             // Maximum slope for snow holding [°]
-    float* _minSnowHoldingDepth;  // Minimum snow holding depth (when slope > maxSlope) [mm]
+    float _slopeDeg;                    // Slope of the hydro unit [°]
+    const float* _coeff;                // Coefficient in the equation []
+    const float* _exp;                  // Exponent  in the equation []
+    const float* _minSlope;             // Minimum slope for snow holding [°]
+    const float* _maxSlope;             // Maximum slope for snow holding [°]
+    const float* _minSnowHoldingDepth;  // Minimum snow holding depth (when slope > maxSlope) [mm]
+    const float* _maxSnowDepth;         // Maximum snow depth (not in the original method) [mm]
 
     /**
      * @copydoc Process::GetRates()
      */
-    vecDouble GetRates() override;
+    const vecDouble& GetRates() override;
+
+  private:
+    /**
+     * Avoid unrealistic accumulation rates by not redistributing snow if the target snowpack has more than twice the
+     * overall maximum snow depth.
+     *
+     * @param rate The rate to check.
+     * @param flux The flux to the target brick.
+     * @return the corrected rate.
+     */
+    double AvoidUnrealisticAccumulation(double rate, Flux* flux);
 };
 
 #endif  // HYDROBRICKS_PROCESS_LATERAL_SNOWSLIDE_H

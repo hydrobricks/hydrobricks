@@ -6,7 +6,7 @@
 ProcessOutflowOverflow::ProcessOutflowOverflow(WaterContainer* container)
     : ProcessOutflow(container) {}
 
-void ProcessOutflowOverflow::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessOutflowOverflow::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }
 
@@ -14,12 +14,12 @@ void ProcessOutflowOverflow::SetParameters(const ProcessSettings& processSetting
     Process::SetParameters(processSettings);
 }
 
-vecDouble ProcessOutflowOverflow::GetRates() {
-    return {0};
+const vecDouble& ProcessOutflowOverflow::GetRates() {
+    return StoreRates({0});
 }
 
 void ProcessOutflowOverflow::StoreInOutgoingFlux(double* rate, int index) {
-    wxASSERT(_outputs.size() > index);
+    assert(_outputs.size() > index);
     // Null the rate value as overflow will be handled at a later stage
     *rate = 0;
     _outputs[index]->LinkChangeRate(rate);

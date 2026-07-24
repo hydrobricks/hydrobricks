@@ -6,11 +6,11 @@
 #include "ParametersUpdater.h"
 #include "SettingsModel.h"
 
-class TimeMachine : public wxObject {
+class TimeMachine {
   public:
     TimeMachine();
 
-    ~TimeMachine() override = default;
+    virtual ~TimeMachine() = default;
 
     /**
      * Initialize the time machine (timer).
@@ -39,7 +39,7 @@ class TimeMachine : public wxObject {
      *
      * @return true if the timer is over
      */
-    bool IsOver();
+    [[nodiscard]] bool IsOver() const;
 
     /**
      * Increment the timer.
@@ -51,14 +51,14 @@ class TimeMachine : public wxObject {
      *
      * @return number of time steps
      */
-    int GetTimeStepsNb();
+    [[nodiscard]] int GetTimeStepCount() const;
 
     /**
      * Get the current date as a MJD.
      *
      * @return current date
      */
-    double GetDate() {
+    [[nodiscard]] double GetDate() const noexcept {
         return _date;
     }
 
@@ -67,7 +67,7 @@ class TimeMachine : public wxObject {
      *
      * @return start date
      */
-    double GetStart() {
+    [[nodiscard]] double GetStart() const noexcept {
         return _start;
     }
 
@@ -76,7 +76,7 @@ class TimeMachine : public wxObject {
      *
      * @return end date
      */
-    double GetEnd() {
+    [[nodiscard]] double GetEnd() const noexcept {
         return _end;
     }
 
@@ -107,6 +107,29 @@ class TimeMachine : public wxObject {
         _actionsManager = actionsManager;
     }
 
+    /**
+     * Get the current day of the year (1-366) from the current date.
+     *
+     * @return current day of the year.
+     */
+    [[nodiscard]] int GetCurrentDayOfYear() const;
+
+    /**
+     * Check if the time machine is valid.
+     * Verifies that start and end dates are properly configured.
+     *
+     * @return true if the time machine is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const;
+
+    /**
+     * Validate the time machine.
+     * Throws an exception if the time machine is invalid.
+     *
+     * @throws ModelConfigError if validation fails.
+     */
+    void Validate() const;
+
   private:
     double _date;
     double _start;
@@ -114,8 +137,8 @@ class TimeMachine : public wxObject {
     int _timeStep;
     TimeUnit _timeStepUnit;
     double _timeStepInDays;
-    ParametersUpdater* _parametersUpdater;
-    ActionsManager* _actionsManager;
+    ParametersUpdater* _parametersUpdater;  // non-owning reference
+    ActionsManager* _actionsManager;        // non-owning reference
 
     /**
      * Update the time step in days.

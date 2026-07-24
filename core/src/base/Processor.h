@@ -1,17 +1,19 @@
 #ifndef HYDROBRICKS_PROCESSOR_H
 #define HYDROBRICKS_PROCESSOR_H
 
+#include <memory>
+
 #include "Brick.h"
 #include "Includes.h"
 #include "Solver.h"
 
 class ModelHydro;
 
-class Processor : public wxObject {
+class Processor {
   public:
     explicit Processor();
 
-    ~Processor() override;
+    virtual ~Processor();
 
     /**
      * Initialize the processor with the solver settings.
@@ -37,22 +39,23 @@ class Processor : public wxObject {
      *
      * @return the number of state variables.
      */
-    int GetNbStateVariables();
+    [[nodiscard]] int GetStateVariableCount() const;
 
     /**
      * Process the time step.
      *
+     * @param timeStepInDays The time step in days.
      * @return true if the time step was processed successfully, false otherwise.
      */
-    bool ProcessTimeStep();
+    bool ProcessTimeStep(double timeStepInDays);
 
     /**
-     * Get the state variables vector pointer.
+     * Get the state variables as a span of pointers.
      *
-     * @return the pointer to the state variables vector.
+     * @return a span viewing the state variable pointers.
      */
-    vecDoublePt* GetStateVariablesVectorPt() {
-        return &_stateVariableChanges;
+    std::span<double*> GetStateVariables() {
+        return _stateVariableChanges;
     }
 
     /**
@@ -69,8 +72,8 @@ class Processor : public wxObject {
      *
      * @return the number of solvable connections.
      */
-    int GetNbSolvableConnections() const {
-        return _solvableConnectionsNb;
+    int GetSolvableConnectionCount() const {
+        return _solvableConnectionCount;
     }
 
     /**
@@ -78,17 +81,17 @@ class Processor : public wxObject {
      *
      * @return the number of direct connections.
      */
-    int GetNbDirectConnections() const {
-        return _directConnectionsNb;
+    int GetDirectConnectionCount() const {
+        return _directConnectionCount;
     }
 
   protected:
-    Solver* _solver;
-    ModelHydro* _model;
-    int _solvableConnectionsNb;
-    int _directConnectionsNb;
+    std::unique_ptr<Solver> _solver;  // owning
+    ModelHydro* _model;               // non-owning reference
+    int _solvableConnectionCount;
+    int _directConnectionCount;
     vecDoublePt _stateVariableChanges;
-    vector<Brick*> _iterableBricks;
+    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
     axd _changeRatesNoSolver;
 
   private:
@@ -97,15 +100,16 @@ class Processor : public wxObject {
      *
      * @param values the state variable changes to store.
      */
-    void StoreStateVariableChanges(vecDoublePt& values);
+    void StoreStateVariableChanges(std::span<double*> values);
 
     /**
      * Apply direct changes to the brick.
      *
      * @param brick the brick to apply changes to.
      * @param ptIndex the index of the point in the state variable vector.
+     * @param timeStepInDays the time step in days.
      */
-    void ApplyDirectChanges(Brick* brick, int& ptIndex);
+    void ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepInDays);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

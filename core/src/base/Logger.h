@@ -5,11 +5,11 @@
 #include "SettingsModel.h"
 #include "SubBasin.h"
 
-class Logger : public wxObject {
+class Logger {
   public:
     explicit Logger();
 
-    ~Logger() override = default;
+    virtual ~Logger() = default;
 
     /**
      * Initialize the logger with the size of the time vector and the sub-basin object.
@@ -86,7 +86,7 @@ class Logger : public wxObject {
      *
      * @return outlet discharge series.
      */
-    axd GetOutletDischarge();
+    [[nodiscard]] axd GetOutletDischarge() const;
 
     /**
      * Get the indices of the sub-basin elements for a given item.
@@ -94,7 +94,7 @@ class Logger : public wxObject {
      * @param item item to search for.
      * @return vector of indices.
      */
-    vecInt GetIndicesForSubBasinElements(const string& item);
+    [[nodiscard]] vecInt GetIndicesForSubBasinElements(const string& item) const;
 
     /**
      * Get the indices of the hydro unit elements for a given item.
@@ -102,7 +102,7 @@ class Logger : public wxObject {
      * @param item item to search for.
      * @return vector of indices.
      */
-    vecInt GetIndicesForHydroUnitElements(const string& item);
+    [[nodiscard]] vecInt GetIndicesForHydroUnitElements(const string& item) const;
 
     /**
      * Get the sum of a sub-basin values for a given item.
@@ -110,7 +110,7 @@ class Logger : public wxObject {
      * @param item item to search for.
      * @return total value.
      */
-    double GetTotalSubBasin(const string& item);
+    [[nodiscard]] double GetTotalSubBasin(const string& item) const;
 
     /**
      * Get the sum of hydro unit values for a given item.
@@ -119,21 +119,21 @@ class Logger : public wxObject {
      * @param needsAreaWeighting if true, area weighting is applied.
      * @return total value.
      */
-    double GetTotalHydroUnits(const string& item, bool needsAreaWeighting = false);
+    [[nodiscard]] double GetTotalHydroUnits(const string& item, bool needsAreaWeighting = false) const;
 
     /**
      * Get the total outlet discharge over time.
      *
      * @return total outlet discharge.
      */
-    double GetTotalOutletDischarge();
+    [[nodiscard]] double GetTotalOutletDischarge() const;
 
     /**
      * Get the total ET over time.
      *
      * @return total ET.
      */
-    double GetTotalET();
+    [[nodiscard]] double GetTotalET() const;
 
     /**
      * Get the initial storage state of a sub-basin for a given tag.
@@ -141,7 +141,7 @@ class Logger : public wxObject {
      * @param tag tag to search for.
      * @return initial storage state.
      */
-    double GetSubBasinInitialStorageState(const string& tag);
+    [[nodiscard]] double GetSubBasinInitialStorageState(const string& tag) const;
 
     /**
      * Get the final storage state of a sub-basin for a given tag.
@@ -149,7 +149,20 @@ class Logger : public wxObject {
      * @param tag tag to search for.
      * @return final storage state.
      */
-    double GetSubBasinFinalStorageState(const string& tag);
+    [[nodiscard]] double GetSubBasinFinalStorageState(const string& tag) const;
+
+    /**
+     * Find the land-cover fraction series that weights a logged hydro-unit component
+     * to a basin (area) average. A component is matched to its land cover by name: the
+     * land cover itself (``<cover>:``) or one of its surface components
+     * (``<cover>_snowpack:``, ``<cover>_canopy:``). Returns the index into
+     * ``_hydroUnitFractions`` or -1 if the component is not tied to a land cover (then
+     * a fraction of one applies, i.e. it spans the whole unit).
+     *
+     * @param componentName the logged component label (e.g. "forest_canopy:water_content").
+     * @return the fraction index, or -1 if none.
+     */
+    [[nodiscard]] int GetFractionIndexForComponent(const string& componentName) const;
 
     /**
      * Get the initial storage state of a hydro unit for a given tag.
@@ -157,7 +170,7 @@ class Logger : public wxObject {
      * @param tag tag to search for.
      * @return initial storage state.
      */
-    double GetHydroUnitsInitialStorageState(const string& tag);
+    [[nodiscard]] double GetHydroUnitsInitialStorageState(const string& tag) const;
 
     /**
      * Get the final storage state of a hydro unit for a given tag.
@@ -165,35 +178,35 @@ class Logger : public wxObject {
      * @param tag tag to search for.
      * @return final storage state.
      */
-    double GetHydroUnitsFinalStorageState(const string& tag);
+    [[nodiscard]] double GetHydroUnitsFinalStorageState(const string& tag) const;
 
     /**
-     * Get the total water storage changes over time.
+     * Get the total water storage changes.
      *
-     * @return total water storage changes.
+     * @return the total water storage changes.
      */
-    double GetTotalWaterStorageChanges();
+    [[nodiscard]] double GetTotalWaterStorageChanges() const;
 
     /**
-     * Get the total snow storage changes over time.
+     * Get the total snow storage changes.
      *
-     * @return total snow storage changes.
+     * @return the total snow storage changes.
      */
-    double GetTotalSnowStorageChanges();
+    [[nodiscard]] double GetTotalSnowStorageChanges() const;
 
     /**
-     * Get the total glacier storage changes over time.
+     * Get the total glacier storage changes.
      *
-     * @return total glacier storage changes.
+     * @return the total glacier storage changes.
      */
-    double GetTotalGlacierStorageChanges();
+    [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
      * Get all the sub-basin values.
      *
      * @return vector of sub-basin values.
      */
-    const vecAxd& GetSubBasinValues() {
+    const vecAxd& GetSubBasinValues() const {
         return _subBasinValues;
     }
 
@@ -202,8 +215,71 @@ class Logger : public wxObject {
      *
      * @return vector of hydro unit values.
      */
-    const vecAxxd& GetHydroUnitValues() {
+    const vecAxxd& GetHydroUnitValues() const {
         return _hydroUnitValues;
+    }
+
+    /**
+     * Get the time series.
+     *
+     * @return time series vector.
+     */
+    const axd& GetTime() const {
+        return _time;
+    }
+
+    /**
+     * Get the hydro unit IDs.
+     *
+     * @return vector of hydro unit IDs.
+     */
+    const vecInt& GetHydroUnitIds() const {
+        return _hydroUnitIds;
+    }
+
+    /**
+     * Get the hydro unit areas.
+     *
+     * @return vector of hydro unit areas.
+     */
+    const axd& GetHydroUnitAreas() const {
+        return _hydroUnitAreas;
+    }
+
+    /**
+     * Get the sub-basin labels.
+     *
+     * @return vector of sub-basin labels.
+     */
+    const vecStr& GetSubBasinLabels() const {
+        return _subBasinLabels;
+    }
+
+    /**
+     * Get the hydro unit labels.
+     *
+     * @return vector of hydro unit labels.
+     */
+    const vecStr& GetHydroUnitLabels() const {
+        return _hydroUnitLabels;
+    }
+
+    /**
+     * Get the hydro unit fraction labels.
+     *
+     * @return vector of fraction labels.
+     */
+    const vecStr& GetHydroUnitFractionLabels() const {
+        return _hydroUnitFractionLabels;
+    }
+
+    /**
+     * Get the hydro unit fractions.
+     *
+     * @return vector of fraction arrays.
+     */
+    const vecAxxd& GetHydroUnitFractions() const {
+        return _hydroUnitFractions;
     }
 
     /**
@@ -211,6 +287,24 @@ class Logger : public wxObject {
      */
     void RecordFractions() {
         _recordFractions = true;
+    }
+
+    /**
+     * Tag a sub-basin log label index as an evapotranspiration (to-atmosphere) flux.
+     *
+     * @param iLabel index of the sub-basin label.
+     */
+    void AddSubBasinEtIndex(int iLabel) {
+        _subBasinEtIndices.push_back(iLabel);
+    }
+
+    /**
+     * Tag a hydro unit log label index as an evapotranspiration (to-atmosphere) flux.
+     *
+     * @param iLabel index of the hydro unit label.
+     */
+    void AddHydroUnitEtIndex(int iLabel) {
+        _hydroUnitEtIndices.push_back(iLabel);
     }
 
   protected:
@@ -222,6 +316,7 @@ class Logger : public wxObject {
     vecAxd _subBasinValues;
     vecDoublePt _subBasinValuesPt;
     vecInt _hydroUnitIds;
+    vecInt _hydroUnitStructureIds;
     axd _hydroUnitAreas;
     vecStr _hydroUnitLabels;
     vecAxd _hydroUnitInitialValues;
@@ -230,6 +325,8 @@ class Logger : public wxObject {
     vecStr _hydroUnitFractionLabels;
     vecAxxd _hydroUnitFractions;
     vector<vecDoublePt> _hydroUnitFractionsPt;
+    vecInt _subBasinEtIndices;   // indices into _subBasinValues that are ET (to-atmosphere) fluxes
+    vecInt _hydroUnitEtIndices;  // indices into _hydroUnitValues that are ET (to-atmosphere) fluxes
 };
 
 #endif  // HYDROBRICKS_LOGGER_H

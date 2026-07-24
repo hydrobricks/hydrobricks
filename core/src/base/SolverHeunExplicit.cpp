@@ -7,7 +7,9 @@ SolverHeunExplicit::SolverHeunExplicit()
     _nIterations = 3;
 }
 
-bool SolverHeunExplicit::Solve() {
+bool SolverHeunExplicit::Solve(double timeStepInDays) {
+    _timeStepInDays = timeStepInDays;
+
     // Compute the change rates for f(tn, Sn)
     ComputeChangeRates(0);
 

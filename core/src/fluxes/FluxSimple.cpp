@@ -3,7 +3,7 @@
 FluxSimple::FluxSimple()
     : Flux() {}
 
-bool FluxSimple::IsOk() {
+bool FluxSimple::IsValid() const {
     return true;
 }
 
@@ -12,6 +12,6 @@ double FluxSimple::GetAmount() {
 }
 
 void FluxSimple::UpdateFlux(double amount) {
-    wxASSERT(_fractionTotal == 1.0);
+    assert(_fractionTotal == 1.0);
     _amount = amount;
 }

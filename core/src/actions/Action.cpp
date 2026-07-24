@@ -7,12 +7,32 @@ Action::Action()
       _cursor(0),
       _recursive(false) {}
 
-void Action::Reset() {
+bool Action::Init() {
+    return true;
+}
+
+void Action::ResetCursor() {
     _cursor = 0;
 }
 
-bool Action::Init() {
-    return true;
+void Action::AddRecursiveDate(int month, int day) {
+    // Check that the month is valid.
+    if (month < 1 || month > 12) {
+        month = 1;
+        LogError("Invalid month: {}", month);
+    }
+
+    // Check that the day is valid for the given month.
+    day = std::min(day, constants::daysInMonth[month - 1]);
+    day = std::max(day, 1);
+
+    _recursive = true;
+    _recursiveMonths.push_back(month);
+    _recursiveDays.push_back(day);
+}
+
+void Action::Reset() {
+    throw ModelConfigError("Reset action not implemented for child action class.");
 }
 
 bool Action::Apply(double) {
@@ -36,7 +56,7 @@ bool Action::ApplyIfRecursive(const Time date) {
     return true;
 }
 
-int Action::GetIndexForInsertion(double date) {
+int Action::GetIndexForInsertion(double date) const {
     int index = 0;
     for (double storedDate : _sporadicDates) {
         if (date <= storedDate) {
@@ -46,4 +66,42 @@ int Action::GetIndexForInsertion(double date) {
     }
 
     return index;
+}
+
+double Action::CheckLandCoverAreaFraction(const string& name, int id, double fraction, double unitArea, double lcArea) {
+    // If close to 0, set to 0.
+    if (NearlyZero(fraction, PRECISION)) {
+        return 0.0;
+    }
+
+    // If close to 1, set to 1.
+    if (NearlyEqual(1, fraction, PRECISION)) {
+        return 1.0;
+    }
+
+    // If the fraction is not in the range [0, 1], raise an error.
+    if ((fraction < 0) || (fraction > 1)) {
+        LogError("The given fraction ({}) for '{}' is not in the allowed range [0 .. 1]", fraction, name);
+        LogError("The unit area is {}, and the land cover area to assign is {}.", unitArea, lcArea);
+        LogError("Failed to set the '{}' area fraction for hydro unit {}.", name, id);
+        throw ModelConfigError(std::format("The fraction ({}) is not in the range [0 .. 1]", fraction));
+    }
+
+    return fraction;
+}
+
+bool Action::IsValid() const {
+    // Check that manager is assigned
+    if (!_manager) {
+        LogError("Action: Manager not assigned.");
+        return false;
+    }
+
+    return true;
+}
+
+void Action::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("Action validation failed. Action manager not properly assigned.");
+    }
 }

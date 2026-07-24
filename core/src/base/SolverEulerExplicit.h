@@ -12,7 +12,7 @@ class SolverEulerExplicit : public Solver {
     /**
      * @copydoc Solver::Solve()
      */
-    bool Solve() override;
+    bool Solve(double timeStepInDays) override;
 };
 
 #endif  // HYDROBRICKS_SOLVER_EULER_EXPLICIT_H

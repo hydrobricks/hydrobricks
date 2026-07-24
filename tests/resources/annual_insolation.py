@@ -19,7 +19,7 @@ O3 = 0.02
 alphag = 0.2
 
 # Load a DEM
-demP = rasterio.open('dem_small_tile.tif')
+demP = rasterio.open("dem_small_tile.tif")
 dlxy = demP.res[0]
 dem = demP.read(1)
 
@@ -44,8 +44,9 @@ for d in np.arange(0, 366, 1):
         sunv = insolf.sunvector(jdrng[i], latitude, longitude, timezone)
         azimuth, zenith = insolf.sunpos(sunv)
         hsh = insolf.hillshading(dem, dlxy, sunv)
-        Idir, Idiff = insolf.insolation(zenith, jdrng[i], height, visibility, RH, tempK,
-                                        O3, alphag)
+        Idir, Idiff = insolf.insolation(
+            zenith, jdrng[i], height, visibility, RH, tempK, O3, alphag
+        )
         # Global insolation in MJ/m^2
         # W2MJ = 3600e-6  # Watts/m^2 to MJ/m^2 hourly computation
         # I_tot = I_tot + W2MJ * Idir * hsh + W2MJ * Idiff
@@ -63,6 +64,6 @@ I_dir_res = np.mean(I_tot_dir_y, axis=0)
 
 # Save the insolation map to a tiff file
 profile = demP.profile
-profile.update(dtype=rasterio.float32, count=1, compress='lzw')
-with rasterio.open('radiation_annual_mean.tif', 'w', **profile) as dst:
+profile.update(dtype=rasterio.float32, count=1, compress="lzw")
+with rasterio.open("radiation_annual_mean.tif", "w", **profile) as dst:
     dst.write(I_dir_res.astype(rasterio.float32), 1)

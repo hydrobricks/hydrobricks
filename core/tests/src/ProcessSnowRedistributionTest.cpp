@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
@@ -13,8 +15,8 @@ bool printContentValues = true;
 class SnowRedistributionModel : public ::testing::Test {
   protected:
     SettingsModel _model;
-    TimeSeriesUniform* _tsPrecip{};
-    TimeSeriesUniform* _tsTemp{};
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    std::unique_ptr<TimeSeriesUniform> _tsTemp;
 
     void SetUp() override {
         _model.SetSolver("heun_explicit");
@@ -58,28 +60,29 @@ class SnowRedistributionModel : public ::testing::Test {
         _model.AddBrickProcess("outflow", "outflow:direct");
         _model.AddProcessOutput("outlet");
 
-        auto precip = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                              TimeUnit::Day);
         precip->SetValues({0.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 0.0});
-        _tsPrecip = new TimeSeriesUniform(Precipitation);
-        _tsPrecip->SetData(precip);
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(precip));
 
-        auto temperature = new TimeSeriesDataRegular(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, Day);
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1,
+                                                                   TimeUnit::Day);
         temperature->SetValues({-10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0});
-        _tsTemp = new TimeSeriesUniform(Temperature);
-        _tsTemp->SetData(temperature);
+        _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        _tsTemp->SetData(std::move(temperature));
     }
     void TearDown() override {
-        wxDELETE(_tsPrecip);
-        wxDELETE(_tsTemp);
+        // Automatic cleanup via unique_ptr - no manual deletion needed
     }
 };
 
-void logContent(const vecAxxd& unitContent, int entryId, int nbHydroUnits, const string& title) {
+void logContent(const vecAxxd& unitContent, int entryId, int hydroUnitCount, const string& title) {
     if (!printContentValues) return;
 
     std::cout << "\n" << title << "\n";
 
-    for (int hu = 0; hu < nbHydroUnits; ++hu) {
+    for (int hu = 0; hu < hydroUnitCount; ++hu) {
         axxd arr = unitContent[entryId].col(hu);
         std::cout << "SWE hydro unit " << hu << ": [";
         for (int i = 0; i < arr.size(); ++i) {
@@ -123,11 +126,10 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -138,9 +140,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 
@@ -185,13 +187,13 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    EXPECT_TRUE(subBasin.IsValid(false));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -202,9 +204,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 
@@ -250,17 +252,16 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
     basinSettings.AddLateralConnection(3, 4, 0.8);
     basinSettings.AddLateralConnection(3, 5, 0.2);
     basinSettings.AddLateralConnection(4, 5, 1.0);
-    basinSettings.AddLateralConnection(5, 4, 1.0);
 
     SubBasin subBasin;
     EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    EXPECT_TRUE(subBasin.IsValid(false));
 
     ModelHydro model(&subBasin);
-    EXPECT_TRUE(model.Initialize(_model, basinSettings));
-    EXPECT_TRUE(model.IsOk());
+    EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
-    ASSERT_TRUE(model.AddTimeSeries(_tsPrecip));
-    ASSERT_TRUE(model.AddTimeSeries(_tsTemp));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsTemp))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
 
     EXPECT_TRUE(model.Run());
@@ -271,9 +272,9 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
 
     // Items that should be zero
     for (int j = 0; j < 10; ++j) {
-        vecInt indx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
-        for (int i = 0; i < indx.size(); ++i) {
-            EXPECT_NEAR(unitContent[indx[i]](j, 0), 0.0, 0.000001);
+        vecInt idx = {0, 1, 2, 3, 4, 5, 7, 8, 9, 11, 12};
+        for (int i = 0; i < idx.size(); ++i) {
+            EXPECT_NEAR(unitContent[idx[i]](j, 0), 0.0, 0.000001);
         }
     }
 

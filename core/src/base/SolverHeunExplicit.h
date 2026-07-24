@@ -12,7 +12,7 @@ class SolverHeunExplicit : public Solver {
     /**
      * @copydoc Solver::Solve()
      */
-    bool Solve() override;
+    bool Solve(double timeStepInDays) override;
 };
 
 #endif  // HYDROBRICKS_SOLVER_HEUN_EXPLICIT_H

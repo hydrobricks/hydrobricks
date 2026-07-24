@@ -1,6 +1,8 @@
 #ifndef HYDROBRICKS_GLACIER_H
 #define HYDROBRICKS_GLACIER_H
 
+#include <memory>
+
 #include "IceContainer.h"
 #include "Includes.h"
 #include "LandCover.h"
@@ -31,23 +33,16 @@ class Glacier : public LandCover {
     void AttachFluxIn(Flux* flux) override;
 
     /**
-     * @copydoc Brick::IsOk()
+     * @copydoc Brick::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid(bool checkProcesses = true) const override;
 
     /**
      * Get the ice container of the glacier.
      *
      * @return The ice container of the glacier.
      */
-    WaterContainer* GetIceContainer();
-
-    /**
-     * @copydoc Brick::IsGlacier()
-     */
-    bool IsGlacier() override {
-        return true;
-    }
+    [[nodiscard]] WaterContainer* GetIceContainer() const;
 
     /**
      * @copydoc Brick::Finalize()
@@ -57,17 +52,17 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::SetInitialState()
      */
-    void SetInitialState(double value, const string& type) override;
+    void SetInitialState(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::GetContent()
      */
-    double GetContent(const string& type) override;
+    [[nodiscard]] double GetContent(ContentType type) const override;
 
     /**
      * @copydoc Brick::UpdateContent()
      */
-    void UpdateContent(double value, const string& type) override;
+    void UpdateContent(double value, ContentType type) override;
 
     /**
      * @copydoc Brick::UpdateContentFromInputs()
@@ -87,15 +82,22 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * @copydoc LandCover::SurfaceComponentAdded()
      */
     void SurfaceComponentAdded(SurfaceComponent* brick) override;
 
+    /**
+     * Check if the glacier has ice.
+     *
+     * @return True if the glacier has ice, false otherwise.
+     */
+    [[nodiscard]] bool HasIce() const;
+
   protected:
-    IceContainer* _ice;
+    std::unique_ptr<IceContainer> _ice;  // owning
 };
 
 #endif  // HYDROBRICKS_GLACIER_H

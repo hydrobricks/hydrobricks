@@ -10,7 +10,7 @@ ProcessMeltDegreeDayAspect::ProcessMeltDegreeDayAspect(WaterContainer* container
       _degreeDayFactor(nullptr),
       _meltingTemperature(nullptr) {}
 
-void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsModel* modelSettings) {
+void ProcessMeltDegreeDayAspect::RegisterProcessSettings(SettingsModel* modelSettings) {
     modelSettings->AddProcessParameter("degree_day_factor_n", 3);
     modelSettings->AddProcessParameter("degree_day_factor_s", 3);
     modelSettings->AddProcessParameter("degree_day_factor_ew", 3);
@@ -18,8 +18,8 @@ void ProcessMeltDegreeDayAspect::RegisterProcessParametersAndForcing(SettingsMod
     modelSettings->AddProcessForcing("temperature");
 }
 
-bool ProcessMeltDegreeDayAspect::IsOk() {
-    if (!ProcessMelt::IsOk()) {
+bool ProcessMeltDegreeDayAspect::IsValid() const {
+    if (!ProcessMelt::IsValid()) {
         return false;
     }
     if (_temperature == nullptr) {
@@ -28,11 +28,8 @@ bool ProcessMeltDegreeDayAspect::IsOk() {
     if (_degreeDayFactor == nullptr) {
         return false;
     }
-    if (_meltingTemperature == nullptr) {
-        return false;
-    }
 
-    return true;
+    return _meltingTemperature != nullptr;
 }
 
 void ProcessMeltDegreeDayAspect::SetHydroUnitProperties(HydroUnit* unit, Brick*) {
@@ -53,24 +50,24 @@ void ProcessMeltDegreeDayAspect::SetParameters(const ProcessSettings& processSet
         } else if (HasParameter(processSettings, "degree_day_factor_we")) {
             _degreeDayFactor = GetParameterValuePointer(processSettings, "degree_day_factor_we");
         } else {
-            throw InvalidArgument("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
+            throw InputError("Missing parameter 'degree_day_factor_ew' or 'degree_day_factor_we'");
         }
     } else {
-        throw InvalidArgument("Invalid aspect: " + _aspectClass);
+        throw InputError("Invalid aspect: " + _aspectClass);
     }
 }
 
 void ProcessMeltDegreeDayAspect::AttachForcing(Forcing* forcing) {
-    if (forcing->GetType() == Temperature) {
+    if (forcing->GetType() == VariableType::Temperature) {
         _temperature = forcing;
     } else {
-        throw InvalidArgument("Forcing must be of type Temperature");
+        throw ModelConfigError("Forcing must be of type Temperature");
     }
 }
 
-vecDouble ProcessMeltDegreeDayAspect::GetRates() {
+const vecDouble& ProcessMeltDegreeDayAspect::GetRates() {
     if (!_container->ContentAccessible()) {
-        return {0};
+        return StoreRates({0});
     }
 
     double melt = 0;
@@ -78,5 +75,5 @@ vecDouble ProcessMeltDegreeDayAspect::GetRates() {
         melt = (_temperature->GetValue() - *_meltingTemperature) * *_degreeDayFactor;
     }
 
-    return {melt};
+    return StoreRates({melt});
 }

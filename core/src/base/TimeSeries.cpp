@@ -7,7 +7,7 @@
 TimeSeries::TimeSeries(VariableType type)
     : _type(type) {}
 
-bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
+bool TimeSeries::Parse(const string& path, vector<std::unique_ptr<TimeSeries>>& vecTimeSeries) {
     try {
         FileNetcdf file;
 
@@ -16,7 +16,7 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         }
 
         // Get number of units
-        int unitsNb = file.GetDimLen("hydro_units");
+        int unitCount = file.GetDimLen("hydro_units");
 
         // Get time length
         int timeLength = file.GetDimLen("time");
@@ -35,14 +35,14 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
         ExtractTimeStep(timeStepData, timeStep, timeUnit);
 
         // Get ids
-        vecInt ids = file.GetVarInt1D("id", unitsNb);
+        vecInt ids = file.GetVarInt1D("id", unitCount);
 
         // Extract variables
-        int varsNb = file.GetVarsNb();
+        int varCount = file.GetVariableCount();
 
         int dimIdTime = file.GetDimId("time");
 
-        for (int iVar = 0; iVar < varsNb; ++iVar) {
+        for (int iVar = 0; iVar < varCount; ++iVar) {
             // Get variable name
             string varName = file.GetVarName(iVar);
 
@@ -54,41 +54,43 @@ bool TimeSeries::Parse(const string& path, vector<TimeSeries*>& vecTimeSeries) {
             VariableType varType = MatchVariableType(varName);
 
             // Instantiate time series
-            auto timeSeries = new TimeSeriesDistributed(varType);
+            auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
             // Retrieve values from netCDF
             vecInt dimIds = file.GetVarDimIds(iVar, 2);
 
             if (dimIds[0] == dimIdTime) {
-                axxd values = file.GetVarDouble2D(iVar, unitsNb, timeLength);
+                axxd values = file.GetVarDouble2D(iVar, unitCount, timeLength);
                 for (int i = 0; i < values.rows(); ++i) {
                     axd valuesUnit = values.row(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
                     forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             } else {
-                axxd values = file.GetVarDouble2D(iVar, timeLength, unitsNb);
+                axxd values = file.GetVarDouble2D(iVar, timeLength, unitCount);
                 for (int i = 0; i < values.cols(); ++i) {
-                    axd valuesUnit = values.col(i);
-                    auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-                    forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()));
-                    timeSeries->AddData(forcingData, ids[i]);
+                    // A column of a column-major array is contiguous, so copy it straight into the vector.
+                    const double* colStart = values.col(i).data();
+                    auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
+                    forcingData->SetValues(vecDouble(colStart, colStart + values.rows()));
+                    timeSeries->AddData(std::move(forcingData), ids[i]);
                 }
             }
 
-            vecTimeSeries.push_back(timeSeries);
+            vecTimeSeries.push_back(std::move(timeSeries));
         }
 
     } catch (std::exception& e) {
-        wxLogError(e.what());
+        LogError(e.what());
         return false;
     }
 
     return true;
 }
 
-TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi& ids, const axxd& data) {
+std::unique_ptr<TimeSeries> TimeSeries::Create(const string& varName, const axd& time, const axi& ids,
+                                               const axxd& data) {
     // Get time
     Time startSt = GetTimeStructFromMJD(time[0]);
     Time endSt = GetTimeStructFromMJD(time[time.size() - 1]);
@@ -105,22 +107,23 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
     VariableType varType = MatchVariableType(varName);
 
     // Instantiate time series
-    auto timeSeries = new TimeSeriesDistributed(varType);
+    auto timeSeries = std::make_unique<TimeSeriesDistributed>(varType);
 
     if (data.rows() != time.size() || data.cols() != ids.size()) {
-        wxLogError(_("Dimension mismatch in the forcing data."));
-        throw InvalidArgument(wxString::Format(_("Dimension mismatch in the forcing data (%d != %d and/or %d != %d)."),
-                                               static_cast<int>(data.rows()), static_cast<int>(time.size()),
-                                               static_cast<int>(data.cols()), static_cast<int>(ids.size())));
+        LogError("Dimension mismatch in the forcing data.");
+        throw InputError(std::format("Dimension mismatch in the forcing data ({} != {} and/or {} != {}).",
+                                     static_cast<int>(data.rows()), static_cast<int>(time.size()),
+                                     static_cast<int>(data.cols()), static_cast<int>(ids.size())));
     }
 
     for (int i = 0; i < data.cols(); ++i) {
-        axd valuesUnit = data.col(i);
-        auto forcingData = new TimeSeriesDataRegular(start, end, timeStep, timeUnit);
-        if (!forcingData->SetValues(vector<double>(valuesUnit.data(), valuesUnit.data() + valuesUnit.rows()))) {
-            throw InvalidArgument("Time series creation failed.");
+        // A column of a column-major array is contiguous, so copy it straight into the vector.
+        const double* colStart = data.col(i).data();
+        auto forcingData = std::make_unique<TimeSeriesDataRegular>(start, end, timeStep, timeUnit);
+        if (!forcingData->SetValues(vecDouble(colStart, colStart + data.rows()))) {
+            throw RuntimeError("Time series creation failed.");
         }
-        timeSeries->AddData(forcingData, ids[i]);
+        timeSeries->AddData(std::move(forcingData), ids[i]);
     }
 
     return timeSeries;
@@ -129,37 +132,47 @@ TimeSeries* TimeSeries::Create(const string& varName, const axd& time, const axi
 VariableType TimeSeries::MatchVariableType(const string& varName) {
     VariableType varType;
     if (StringsMatch(varName, "precipitation") || StringsMatch(varName, "p")) {
-        varType = Precipitation;
+        varType = VariableType::Precipitation;
     } else if (StringsMatch(varName, "temperature") || StringsMatch(varName, "t")) {
-        varType = Temperature;
+        varType = VariableType::Temperature;
+    } else if (StringsMatch(varName, "temperature_min") || StringsMatch(varName, "t_min")) {
+        varType = VariableType::TemperatureMin;
+    } else if (StringsMatch(varName, "temperature_max") || StringsMatch(varName, "t_max")) {
+        varType = VariableType::TemperatureMax;
     } else if (StringsMatch(varName, "solar_radiation") || StringsMatch(varName, "r_solar") ||
                StringsMatch(varName, "r")) {
-        varType = Radiation;
+        varType = VariableType::Radiation;
     } else if (StringsMatch(varName, "pet") || StringsMatch(varName, "etp")) {
-        varType = PET;
+        varType = VariableType::PET;
     } else if (StringsMatch(varName, "custom_1")) {
-        varType = Custom1;
+        varType = VariableType::Custom1;
     } else if (StringsMatch(varName, "custom_2")) {
-        varType = Custom2;
+        varType = VariableType::Custom2;
     } else if (StringsMatch(varName, "custom_3")) {
-        varType = Custom3;
+        varType = VariableType::Custom3;
     } else {
-        throw InvalidArgument(wxString::Format(_("Unrecognized variable type (%s) in the provided data."), varName));
+        throw InputError(std::format("Unrecognized variable type ({}) in the provided data.", varName));
     }
     return varType;
 }
 
 void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& timeUnit) {
     timeStep = 0;
-    timeUnit = Day;
+    timeUnit = TimeUnit::Day;
     if (timeStepData == 1.0) {
         timeStep = 1;
     } else if (timeStepData > 1.0) {
         timeStep = static_cast<int>(round(timeStepData));
     } else if (timeStepData < 1.0) {
-        timeUnit = Hour;
+        timeUnit = TimeUnit::Hour;
         timeStep = static_cast<int>(round(timeStepData * 24));
     } else {
-        throw ShouldNotHappen();
+        throw ShouldNotHappen(std::format("TimeSeries::ExtractTimeStep - Invalid time step value: {}", timeStepData));
+    }
+}
+
+void TimeSeries::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("TimeSeries validation failed. Time series is not properly configured.");
     }
 }

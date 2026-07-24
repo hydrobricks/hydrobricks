@@ -6,24 +6,24 @@
 ProcessOutflow::ProcessOutflow(WaterContainer* container)
     : Process(container) {}
 
-void ProcessOutflow::RegisterProcessParametersAndForcing(SettingsModel*) {
-    // Nothing to register
+void ProcessOutflow::RegisterProcessSettings(SettingsModel*) {
+    // No forcing or parameters
 }
 
-bool ProcessOutflow::IsOk() {
+bool ProcessOutflow::IsValid() const {
     if (_outputs.size() != 1) {
-        wxLogError(_("An outflow should have a single output."));
+        LogError("An outflow should have a single output.");
         return false;
     }
 
     return true;
 }
 
-int ProcessOutflow::GetConnectionsNb() {
-    return 1;
+int ProcessOutflow::GetConnectionCount() const {
+    return static_cast<int>(_outputs.size());
 }
 
-double* ProcessOutflow::GetValuePointer(const string& name) {
+double* ProcessOutflow::GetValuePointer(std::string_view name) {
     if (name == "output") {
         return _outputs[0]->GetAmountPointer();
     }

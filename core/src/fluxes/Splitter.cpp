@@ -1,36 +1,105 @@
 #include "Splitter.h"
 
+#include <functional>
+#include <unordered_map>
+#include <vector>
+
 #include "HydroUnit.h"
 #include "SplitterMultiFluxes.h"
 #include "SplitterRain.h"
-#include "SplitterSnowRain.h"
+#include "SplitterSnowRainCemaNeige.h"
+#include "SplitterSnowRainLinear.h"
+#include "SplitterSnowRainThreshold.h"
 
 Splitter::Splitter() {}
 
-Splitter* Splitter::Factory(const SplitterSettings& splitterSettings) {
-    if (splitterSettings.type == "snow_rain") {
-        auto splitter = new SplitterSnowRain();
-        splitter->SetParameters(splitterSettings);
-        return splitter;
-    } else if (splitterSettings.type == "rain") {
-        return new SplitterRain();
-    } else if (splitterSettings.type == "multi_fluxes") {
-        return new SplitterMultiFluxes();
-    } else {
-        wxLogError(_("Splitter type '%s' not recognized."), splitterSettings.type);
-    }
+namespace {
 
+using SplitterFactory = std::function<std::unique_ptr<Splitter>(const SplitterSettings&)>;
+
+// clang-format off
+const std::unordered_map<string, SplitterFactory>& GetSplitterRegistry() {
+    static const std::unordered_map<string, SplitterFactory> registry = {
+
+        {"snow_rain:threshold", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainThreshold>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"snow_rain:linear", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainLinear>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"snow_rain:cemaneige", [](const SplitterSettings& s) {
+            auto splitter = std::make_unique<SplitterSnowRainCemaNeige>();
+            splitter->SetParameters(s);
+            return splitter;
+        }},
+
+        {"rain", [](const SplitterSettings&) {
+            return std::make_unique<SplitterRain>();
+        }},
+
+        {"multi_fluxes", [](const SplitterSettings&) {
+            return std::make_unique<SplitterMultiFluxes>();
+        }},
+
+    };
+    return registry;
+}
+// clang-format on
+
+string GetValidSplitterTypes() {
+    const auto& registry = GetSplitterRegistry();
+    string suggestions = "Valid splitter types: ";
+    bool first = true;
+    for (const auto& [key, factory] : registry) {
+        if (!first) suggestions += ", ";
+        suggestions += key;
+        first = false;
+    }
+    return suggestions;
+}
+
+}  // namespace
+
+std::unique_ptr<Splitter> Splitter::Factory(const SplitterSettings& splitterSettings) {
+    const auto& registry = GetSplitterRegistry();
+    auto it = registry.find(splitterSettings.type);
+    if (it != registry.end()) {
+        return it->second(splitterSettings);
+    }
+    LogError("Splitter type '{}' not recognized. {}", splitterSettings.type, GetValidSplitterTypes());
     return nullptr;
 }
 
-float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
-    for (auto parameter : splitterSettings.parameters) {
-        if (parameter->GetName() == name) {
-            wxASSERT(parameter->GetValuePointer());
-            parameter->SetAsLinked();
-            return parameter->GetValuePointer();
+const float* Splitter::GetParameterValuePointer(const SplitterSettings& splitterSettings, const string& name) {
+    for (const auto& parameter : splitterSettings.parameters) {
+        if (parameter.GetName() == name) {
+            assert(parameter.GetValuePointer());
+            return parameter.GetValuePointer();
         }
     }
 
-    throw MissingParameter(wxString::Format(_("The parameter '%s' could not be found."), name));
+    throw ModelConfigError(std::format("The parameter '{}' could not be found.", name));
+}
+
+const float* Splitter::GetParameterValuePointerOrUnit(const SplitterSettings& splitterSettings, const string& name) {
+    for (const auto& parameter : splitterSettings.parameters) {
+        if (parameter.GetName() == name) {
+            assert(parameter.GetValuePointer());
+            return parameter.GetValuePointer();
+        }
+    }
+
+    return &_unitValue;
+}
+
+void Splitter::Validate() const {
+    if (!IsValid()) {
+        throw ModelConfigError("Splitter validation failed. Check that all required properties are correctly defined.");
+    }
 }

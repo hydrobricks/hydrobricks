@@ -3,11 +3,11 @@
 
 #include "Includes.h"
 
-class Modifier : public wxObject {
+class Modifier {
   public:
     explicit Modifier();
 
-    ~Modifier() override = default;
+    virtual ~Modifier() = default;
 };
 
 #endif  // HYDROBRICKS_MODIFIER_H

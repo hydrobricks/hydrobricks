@@ -21,19 +21,24 @@ class ActionLandCoverChange : public Action {
     void AddChange(double date, int hydroUnitId, const string& landCoverName, double area);
 
     /**
+     * Reset the action to its initial state.
+     */
+    void Reset() override;
+
+    /**
      * Apply the action to the model.
      *
      * @param date date of the action.
      * @return true if the action was applied successfully.
      */
-    bool Apply(double date) override;
+    [[nodiscard]] bool Apply(double date) override;
 
     /**
      * Get the number of changes in the action.
      *
      * @return the number of changes in the action.
      */
-    int GetChangesNb() const {
+    int GetChangeCount() const {
         return static_cast<int>(_sporadicDates.size());
     }
 
@@ -42,7 +47,7 @@ class ActionLandCoverChange : public Action {
      *
      * @return the number of land covers in the action.
      */
-    int GetLandCoversNb() const {
+    int GetLandCoverCount() const {
         return static_cast<int>(_landCoverNames.size());
     }
 

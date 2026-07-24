@@ -11,9 +11,9 @@ class SplitterMultiFluxes : public Splitter {
     explicit SplitterMultiFluxes();
 
     /**
-     * @copydoc Splitter::IsOk()
+     * @copydoc Splitter::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
      * @copydoc Splitter::SetParameters()

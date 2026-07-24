@@ -12,24 +12,24 @@ class ProcessET : public Process {
     ~ProcessET() override = default;
 
     /**
-     * @copydoc Process::IsOk()
+     * @copydoc Process::IsValid()
      */
-    bool IsOk() override;
+    [[nodiscard]] bool IsValid() const override;
 
     /**
-     * @copydoc Process::GetConnectionsNb()
+     * @copydoc Process::GetConnectionCount()
      */
-    int GetConnectionsNb() override;
+    [[nodiscard]] int GetConnectionCount() const override;
 
     /**
      * @copydoc Process::GetValuePointer()
      */
-    double* GetValuePointer(const string& name) override;
+    double* GetValuePointer(std::string_view name) override;
 
     /**
      * @copydoc Process::ToAtmosphere()
      */
-    bool ToAtmosphere() override {
+    [[nodiscard]] bool ToAtmosphere() const override {
         return true;
     }
 };

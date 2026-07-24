@@ -6,7 +6,7 @@
 ProcessInfiltrationSocont::ProcessInfiltrationSocont(WaterContainer* container)
     : ProcessInfiltration(container) {}
 
-void ProcessInfiltrationSocont::RegisterProcessParametersAndForcing(SettingsModel*) {
+void ProcessInfiltrationSocont::RegisterProcessSettings(SettingsModel*) {
     // Nothing to register
 }
 
@@ -14,10 +14,10 @@ void ProcessInfiltrationSocont::SetParameters(const ProcessSettings& processSett
     Process::SetParameters(processSettings);
 }
 
-vecDouble ProcessInfiltrationSocont::GetRates() {
+const vecDouble& ProcessInfiltrationSocont::GetRates() {
     if (GetTargetCapacity() <= 0) {
-        return {0};
+        return StoreRates({0});
     }
 
-    return {_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))};
+    return StoreRates({_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))});
 }

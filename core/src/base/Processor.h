@@ -129,6 +129,15 @@ class Processor {
     }
 
     /**
+     * Get the bricks handled by the solver, in processing (declaration) order.
+     *
+     * @return the solvable bricks.
+     */
+    const vector<Brick*>& GetSolvableBricks() const {
+        return _iterableBricks;
+    }
+
+    /**
      * Get the number of direct connections.
      *
      * @return the number of direct connections.

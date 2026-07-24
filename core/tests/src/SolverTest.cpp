@@ -23,6 +23,12 @@ TEST(Solver, FactoryBuildsSolvers) {
 
     settings.name = "heun_explicit";
     EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "analytic_linear";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
+
+    settings.name = "analytic";
+    EXPECT_TRUE(Solver::Factory(settings) != nullptr);
 }
 
 TEST(Solver, FactoryThrowsExceptionIfNameInvalid) {
@@ -235,6 +241,51 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.00000000000001);
 }
 
+TEST_F(SolverLinearStorage, UsingAnalyticLinear) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("analytic_linear");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge against the closed-form solution of dS/dt = I - k S
+    // with the inflow constant over each step.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k = 0.3f;  // Value stored as float in the parameter
+    double decay = std::exp(-k);
+    double storage = 0.0;
+
+    ASSERT_EQ(basinOutputs[0].size(), precip.size());
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage = storage * decay + precip[j] / k * (1.0 - decay);
+        double outflow = precip[j] - (newStorage - storage);
+        EXPECT_NEAR(basinOutputs[0][j], outflow, 0.000000001);
+        storage = newStorage;
+    }
+
+    // The discharge responds within the first precipitation step (no lag).
+    EXPECT_GT(basinOutputs[0][1], 0.0);
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(storageContent, storage, 0.000000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - storageContent, 0, 0.000000001);
+}
+
 /**
  * Model: 2 linear storages in cascade
  */
@@ -394,6 +445,61 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.00000000000001);
 }
 
+TEST_F(Solver2LinearStorages, UsingAnalyticLinear) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("analytic_linear");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Check resulting discharge against the closed-form solution: each storage is
+    // exact for a constant inflow over the step, and the second storage receives the
+    // first one's average outflow rate (sequential forward substitution).
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double k1 = 0.5f;  // Values stored as float in the parameters
+    double k2 = 0.3f;
+    double decay1 = std::exp(-k1);
+    double decay2 = std::exp(-k2);
+    double storage1 = 0.0;
+    double storage2 = 0.0;
+
+    ASSERT_EQ(basinOutputs[0].size(), precip.size());
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        double newStorage1 = storage1 * decay1 + precip[j] / k1 * (1.0 - decay1);
+        double outflow1 = precip[j] - (newStorage1 - storage1);
+        storage1 = newStorage1;
+        double newStorage2 = storage2 * decay2 + outflow1 / k2 * (1.0 - decay2);
+        double outflow2 = outflow1 - (newStorage2 - storage2);
+        storage2 = newStorage2;
+        EXPECT_NEAR(basinOutputs[0][j], outflow2, 0.000000001);
+    }
+
+    // The discharge crosses both storages within the first precipitation step (no lag;
+    // Euler needs 3 steps to produce the first nonzero discharge on this cascade).
+    EXPECT_GT(basinOutputs[0][1], 0.0);
+
+    // Check water balance
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double contentStorage1 = unitContent[0](19, 0);
+    EXPECT_NEAR(contentStorage1, storage1, 0.000000001);
+    double contentStorage2 = unitContent[2](19, 0);
+    EXPECT_NEAR(contentStorage2, storage2, 0.000000001);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - contentStorage1 - contentStorage2, 0, 0.000000001);
+}
+
 /**
  * Model: linear storage with max capacity and ET
  */
@@ -523,6 +629,37 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     double storageContent = unitContent[0](19, 0);
     EXPECT_NEAR(storageContent, 0.627417, 0.000001);
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
+}
+
+TEST_F(SolverLinearStorageWithET, UsingAnalyticLinear) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetSolver("analytic_linear");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPET))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    // Exercises the mixed path: linear outflow integrated exactly, ET frozen at its
+    // start-of-step rate, capacity excess booked through the overflow process.
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+
+    // The overflow fires while the storage approaches its 20 mm capacity.
+    EXPECT_GT(basinOutputs[0][3], 1.0);
+
+    // Check water balance (mass conservation is exact by construction)
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+    double storageContent = unitContent[0](19, 0);
+    EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.000000001);
 }
 
 TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {

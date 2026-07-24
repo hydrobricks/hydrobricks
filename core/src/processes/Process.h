@@ -282,6 +282,27 @@ class Process {
     }
 
     /**
+     * Check if the process rate is linear in the container content (rate = k × S).
+     * Processes reporting a linear response can be integrated exactly by the
+     * analytic solver.
+     *
+     * @return true if the process rate is linear in the content.
+     */
+    [[nodiscard]] virtual bool HasLinearResponse() const {
+        return false;
+    }
+
+    /**
+     * Get the linear response coefficient k of the process (rate = k × S).
+     * Only valid when HasLinearResponse() returns true.
+     *
+     * @return the linear response coefficient [1/d].
+     */
+    [[nodiscard]] virtual double GetLinearResponseRate() const {
+        throw ShouldNotHappen("Process::GetLinearResponseRate - Should not be called (virtual)");
+    }
+
+    /**
      * Check if the process has any output fluxes.
      *
      * @return true if the process has at least one output flux.

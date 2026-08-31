@@ -94,7 +94,8 @@ filterwarnings = [
     "error",  # Treat all warnings as errors
     "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
     "ignore:The distutils package is deprecated:DeprecationWarning",
-    "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning"
+    "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning",
+    "ignore:PendingDeprecationWarning:affine.*"
 ]
 testpaths = ["python/tests"]
 

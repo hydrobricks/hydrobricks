@@ -14,19 +14,16 @@ jobs:
       # Must match [tool.cibuildwheel.macos] in pyproject.toml: the core uses std::format
       # and floating-point std::to_chars, which Apple's libc++ only exposes from 13.3.
       MACOSX_DEPLOYMENT_TARGET: "13.3"
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-binary-cache
       VCPKG_BINARY_SOURCES: "clear;default,readwrite"
 
     steps:
       - uses: actions/checkout@v7
 
-      - name: Prepare vcpkg binary cache
-        run: mkdir -p ${{ github.workspace }}/vcpkg-binary-cache
-
       - name: Cache vcpkg dependencies
         uses: actions/cache@v6
         with:
-          path: ${{ github.workspace }}/vcpkg-binary-cache
+          # vcpkg's default cache location; vcpkg creates it itself.
+          path: ~/.cache/vcpkg/archives
           key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ runner.arch }}-

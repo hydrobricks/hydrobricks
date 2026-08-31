@@ -39,30 +39,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Absolute path to the vcpkg binary cache, as seen by the build. On Linux the
-          # build runs in a container that receives a *copy* of the project, so the cache
-          # is addressed through the host root that cibuildwheel bind-mounts at /host.
+          # On Linux the build runs in a container that gets a *copy* of the project, so
+          # the cache is reached through the host root cibuildwheel mounts at /host.
           - os: ubuntu-latest
-            binary_cache: /host${{ github.workspace }}/vcpkg-binary-cache
+            host_prefix: /host
           - os: windows-latest
-            binary_cache: ${{ github.workspace }}/vcpkg-binary-cache
+            host_prefix: ""
           - os: macos-latest
-            binary_cache: ${{ github.workspace }}/vcpkg-binary-cache
+            host_prefix: ""
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
-      # Read directly by vcpkg on Windows/macOS; forwarded into the container on Linux by
-      # environment-pass in pyproject.toml.
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ matrix.binary_cache }}
 
     steps:
       - uses: actions/checkout@v7
 
-      # Relative path on purpose: github.workspace is backslash-separated on Windows, which
-      # bash would read as escapes. vcpkg requires this directory to already exist.
+      # The absolute path is resolved here, not in the matrix: matrix values are expanded
+      # before a runner is assigned, when github.workspace is still empty. vcpkg requires
+      # the directory to already exist. Read directly by vcpkg on Windows/macOS, and
+      # forwarded into the container on Linux by environment-pass in pyproject.toml.
       - name: Prepare vcpkg binary cache
-        run: mkdir -p vcpkg-binary-cache
         shell: bash
+        run: |
+          mkdir -p vcpkg-binary-cache
+          echo "VCPKG_DEFAULT_BINARY_CACHE=${{ matrix.host_prefix }}${GITHUB_WORKSPACE}/vcpkg-binary-cache" >> "$GITHUB_ENV"
 
       - name: Cache vcpkg dependencies
         uses: actions/cache@v6

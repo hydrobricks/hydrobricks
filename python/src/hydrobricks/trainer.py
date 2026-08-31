@@ -569,6 +569,29 @@ class SpotpySetup:
                 data_type="extra observations",
                 reason="No observations in period",
             )
+        # An individual empty signal cannot be scored, and silently contributes the
+        # rejection penalty to *every* run (see _objective_with_extra_observations),
+        # which would look like a calibration that never finds a behavioural
+        # parameter set. Fail loudly instead, naming the offending signal: it
+        # usually means the source has no data of that kind (e.g. a glacier with
+        # only annual balances loaded as annual + winter + summer signals), or that
+        # its periods all fall in the warmup.
+        empty = [
+            f"#{i} ({type(obs).__name__})"
+            for i, (obs, length) in enumerate(
+                zip(self.extra_observations, self._extra_lengths)
+            )
+            if length == 0
+        ]
+        if empty:
+            raise DataError(
+                "These extra observations have no value in the post-warmup "
+                f"simulation period: {', '.join(empty)}. Drop them from "
+                "extra_observations, or load them from a source that covers the "
+                "period.",
+                data_type="extra observations",
+                reason="Empty signal",
+            )
 
     def _check_required_recordings(self, model: Model) -> None:
         """Verify the series needed by the auxiliary observations are recorded.

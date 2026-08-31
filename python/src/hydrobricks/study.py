@@ -596,7 +596,7 @@ def _resolve_matrix(
     ]
 
     combos = _apply_exclude(section, dimensions, combos, errors)
-    combos = _apply_include(section, dimensions, combos, errors)
+    combos = _apply_include(section, variants, dimensions, combos, errors)
     return dimensions, combos
 
 
@@ -628,7 +628,11 @@ def _apply_exclude(
 
 
 def _apply_include(
-    section: dict, dimensions: list[str], combos: list[dict], errors: list[str]
+    section: dict,
+    variants: dict,
+    dimensions: list[str],
+    combos: list[dict],
+    errors: list[str],
 ) -> list[dict]:
     include = section.get("include")
     if include is None:
@@ -642,6 +646,18 @@ def _apply_include(
             errors.append(
                 f"matrix.include: each entry must value every dimension "
                 f"({', '.join(dimensions)}), got {sorted(str(k) for k in entry)}."
+            )
+            continue
+        missing = [
+            f"{dim}: {entry[dim]!r}"
+            for dim in dimensions
+            if dim in variants
+            and (not isinstance(entry[dim], str) or entry[dim] not in variants[dim])
+        ]
+        if missing:
+            errors.append(
+                f"matrix.include: no variant patch for {', '.join(missing)}; "
+                "define them under variants."
             )
             continue
         combo = {dim: entry[dim] for dim in dimensions}

@@ -329,9 +329,13 @@ class SettingsModel {
      * @param throughfallProcess the throughfall process type ('outflow:threshold' fills
      *   the canopy to capacity before spilling; 'interception:menzel' uses the PREVAH
      *   asymptotic filling).
+     * @param interceptionEtProcess the canopy evaporation process type ('et:open_water'
+     *   evaporates at the potential rate; 'et:open_water_prevah' additionally applies
+     *   the PREVAH snow-albedo reduction of the potential rate).
      */
     void GenerateCanopyInterception(const string& coverName, const string& throughfallTarget,
-                                    const string& throughfallProcess = "outflow:threshold");
+                                    const string& throughfallProcess = "outflow:threshold",
+                                    const string& interceptionEtProcess = "et:open_water");
 
     /**
      * Add logging to a given item.

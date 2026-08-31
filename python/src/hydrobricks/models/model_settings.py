@@ -169,6 +169,8 @@ class ModelSettings:
         rain_to_snowpack: bool = False,
         forest_interception: bool = False,
         canopy_interception_process: str = "outflow:threshold",
+        canopy_et_process: str = "et:open_water",
+        interception_covers: list[str] | None = None,
     ) -> None:
         """
         Generate basic elements
@@ -215,6 +217,16 @@ class ModelSettings:
             Throughfall process of the forest canopy (default 'outflow:threshold',
             fill-then-spill). Use 'interception:menzel' for the PREVAH asymptotic
             filling (Menzel, 1997).
+        canopy_et_process
+            Evaporation process of the forest canopy (default 'et:open_water', the
+            potential rate). Use 'et:open_water_prevah' to apply PREVAH's
+            snow-albedo reduction of the potential rate.
+        interception_covers
+            Names of the land covers to equip with a canopy interception store
+            (default None: the covers of type ``forest`` when forest_interception
+            is enabled). PREVAH applies interception to every vegetated cover, not
+            only forests; list the cover names here to reproduce that. Providing a
+            list activates the interception regardless of forest_interception.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -257,17 +269,35 @@ class ModelSettings:
         # original rain target (the snowpack when the rain is routed to it, otherwise
         # the land cover). When disabled, forest covers behave like a generic soil cover
         # and interception can be accounter for through ET correction.
-        if forest_interception:
-            rain_to_snowpack_active = with_snow and rain_to_snowpack
-            for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-                if cover_type == "forest":
-                    if rain_to_snowpack_active:
-                        throughfall_target = f"{cover_name}_snowpack"
-                    else:
-                        throughfall_target = cover_name
-                    self.settings.generate_canopy_interception(
-                        cover_name, throughfall_target, canopy_interception_process
-                    )
+        if interception_covers is not None:
+            unknown = set(interception_covers) - set(land_cover_names)
+            if unknown:
+                raise ConfigurationError(
+                    f"Unknown land cover(s) in interception_covers: {sorted(unknown)}.",
+                    item_name="interception_covers",
+                    reason="Cover name not in land_cover_names",
+                )
+            covers_with_canopy = list(interception_covers)
+        elif forest_interception:
+            covers_with_canopy = [
+                cover_name
+                for cover_type, cover_name in zip(land_cover_types, land_cover_names)
+                if cover_type == "forest"
+            ]
+        else:
+            covers_with_canopy = []
+        rain_to_snowpack_active = with_snow and rain_to_snowpack
+        for cover_name in covers_with_canopy:
+            if rain_to_snowpack_active:
+                throughfall_target = f"{cover_name}_snowpack"
+            else:
+                throughfall_target = cover_name
+            self.settings.generate_canopy_interception(
+                cover_name,
+                throughfall_target,
+                canopy_interception_process,
+                canopy_et_process,
+            )
 
         # Snowpack
         if with_snow:

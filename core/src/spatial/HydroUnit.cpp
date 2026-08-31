@@ -1,9 +1,12 @@
 #include "HydroUnit.h"
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
 #include "SettingsBasin.h"
+#include "Snowpack.h"
+#include "SurfaceComponent.h"
 
 namespace {
 
@@ -179,6 +182,48 @@ const float* HydroUnit::GetParameterOverridePointer(const string& key) const {
     auto it = _paramOverrides.find(key);
     assert(it != _paramOverrides.end());
     return &it->second;
+}
+
+double HydroUnit::GetSnowCoverFraction(double sweThreshold) const {
+    double snowFraction = 0.0;
+    for (const auto& brick : _bricks) {
+        if (brick->GetCategory() != BrickCategory::Snowpack) {
+            continue;
+        }
+        if (brick->GetContent(ContentType::Snow) <= sweThreshold) {
+            continue;
+        }
+        auto* surfaceComponent = dynamic_cast<SurfaceComponent*>(brick.get());
+        if (surfaceComponent != nullptr && surfaceComponent->HasParent()) {
+            snowFraction += surfaceComponent->GetParentAreaFraction();
+        }
+    }
+
+    return std::min(snowFraction, 1.0);
+}
+
+double HydroUnit::GetSnowAlbedo(double albedoLand, double sweThreshold) const {
+    double snowFraction = 0.0;
+    double weightedSnowAlbedo = 0.0;
+    for (const auto& brick : _bricks) {
+        if (brick->GetCategory() != BrickCategory::Snowpack) {
+            continue;
+        }
+        if (brick->GetContent(ContentType::Snow) <= sweThreshold) {
+            continue;
+        }
+        auto* surfaceComponent = dynamic_cast<SurfaceComponent*>(brick.get());
+        if (surfaceComponent == nullptr || !surfaceComponent->HasParent()) {
+            continue;
+        }
+        double fraction = surfaceComponent->GetParentAreaFraction();
+        snowFraction += fraction;
+        weightedSnowAlbedo += fraction * dynamic_cast<Snowpack*>(brick.get())->GetSnowAlbedo();
+    }
+
+    snowFraction = std::min(snowFraction, 1.0);
+
+    return albedoLand * (1.0 - snowFraction) + weightedSnowAlbedo;
 }
 
 void HydroUnit::AddBrick(std::unique_ptr<Brick> brick) {

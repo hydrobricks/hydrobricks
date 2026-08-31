@@ -263,6 +263,31 @@ class HydroUnit {
     }
 
     /**
+     * Get the snow-covered area fraction of the hydro unit: the sum of the parent
+     * land-cover fractions of the snowpacks currently holding snow (used e.g. by the
+     * PREVAH snow-albedo ET reduction).
+     *
+     * @param sweThreshold snow water equivalent above which a snowpack counts as
+     *                     snow-covered [mm].
+     * @return the snow-covered fraction of the hydro unit [0, 1].
+     */
+    [[nodiscard]] double GetSnowCoverFraction(double sweThreshold = 0.1) const;
+
+    /**
+     * Get the area-weighted surface albedo of the hydro unit for the PREVAH ET
+     * reduction: the snow-covered snowpacks contribute their (age-dependent) snow
+     * albedo weighted by their parent land-cover fraction, the rest of the unit
+     * contributes the snow-free ground albedo:
+     *   albedo = albedoLand * (1 - snowfrac) + sum_c fraction_c * snowAlbedo_c
+     *
+     * @param albedoLand the snow-free ground albedo [-].
+     * @param sweThreshold snow water equivalent above which a snowpack counts as
+     *                     snow-covered [mm].
+     * @return the area-weighted albedo of the hydro unit [0, 1].
+     */
+    [[nodiscard]] double GetSnowAlbedo(double albedoLand, double sweThreshold = 0.1) const;
+
+    /**
      * Get a land cover by its name.
      *
      * @param name The name of the land cover to get.

@@ -42,6 +42,11 @@ _PET_METHOD_MAP: dict[str, str] = {
     "blaney_criddle": "blaney_criddle",
     "Hamon": "hamon",
     "hamon": "hamon",
+    # Vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH). Routes to pyet's
+    # hamon with method=2 (see _HAMON_VAPOR_DENSITY / _compute_pet). The default
+    # 'Hamon' uses pyet's method=0, a different (exponential) variant.
+    "Hamon_vapor_density": "hamon",
+    "hamon_vapor_density": "hamon",
     "Romanenko": "romanenko",
     "romanenko": "romanenko",
     "Linacre": "linacre",
@@ -65,6 +70,11 @@ _PET_METHOD_MAP: dict[str, str] = {
     "Oudin": "oudin",
     "oudin": "oudin",
 }
+
+# PET method names that select pyet's vapour-density Hamon variant (method=2).
+_HAMON_VAPOR_DENSITY: frozenset[str] = frozenset(
+    {"Hamon_vapor_density", "hamon_vapor_density"}
+)
 
 # Accepted method names for each forcing operation, validated eagerly at call time so
 # a typo raises at the call site rather than later inside apply_operations().
@@ -592,7 +602,10 @@ class Forcing:
         method
             Name of the method to use. Possible values are those provided in the table
             from the pyet documentation: https://pypi.org/project/pyet/. The method
-            name or the pyet function name can be used.
+            name or the pyet function name can be used. In addition to pyet's default
+            'Hamon' (an exponential variant), 'Hamon_vapor_density' selects the
+            vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH), computed with
+            temperature and latitude only.
         use
             List of the meteorological variables to use to compute the PET. Only the
             variables listed here will be used. The variables must be named according
@@ -1361,6 +1374,10 @@ class Forcing:
             raise ForcingError(
                 f"Unknown PET method: {method}", variable="PET", method=method
             )
+        # pyet's hamon has several variants; select the vapour-density one (method=2)
+        # for those method names (the default 'Hamon' keeps pyet's method=0).
+        if method in _HAMON_VAPOR_DENSITY:
+            pyet_args = {**pyet_args, "method": 2}
         return getattr(pyet, pyet_func_name)(**pyet_args)
 
     def _set_pyet_variables_data(

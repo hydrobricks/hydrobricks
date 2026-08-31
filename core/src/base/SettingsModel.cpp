@@ -418,7 +418,7 @@ bool SettingsModel::ChangeSplitterOutputTargetIfFound(const string& currentTarge
 }
 
 void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget,
-                                               const string& throughfallProcess) {
+                                               const string& throughfallProcess, const string& interceptionEtProcess) {
     assert(_selectedStructure);
 
     // Canopy storage as a surface component of the cover: it is therefore computed in the
@@ -432,7 +432,7 @@ void SettingsModel::GenerateCanopyInterception(const string& coverName, const st
     AddSurfaceComponentBrick(coverName + "_canopy", "interception_storage");
     SetSurfaceComponentParent(coverName);
     AddBrickProcess("throughfall", throughfallProcess, throughfallTarget);
-    AddBrickProcess("interception_et", "et:open_water");
+    AddBrickProcess("interception_et", interceptionEtProcess);
 
     // Route the cover's rain through the canopy (upstream of the snowpack).
     SelectHydroUnitSplitter("rain_splitter");
@@ -609,6 +609,17 @@ void SettingsModel::AddSnowpackSublimation(const string& sublimationProcess) {
         // snow directly to the atmosphere. As an atmosphere-bound process (like ET),
         // it needs no target: the model builder attaches a FluxToAtmosphere to it.
         AddBrickProcess("sublimation", sublimationProcess);
+
+        // PREVAH serves the snow evaporation sequentially BEFORE melt (s_SNOEVAP1 is
+        // called ahead of s_snowmelt in sxp_core.f08). Snowpacks are direct-pass bricks
+        // (no solver): their processes are evaluated and applied in declaration order,
+        // so the sublimation must be declared first to get the full potential rate on
+        // days the melt demand alone would drain the pack.
+        if (sublimationProcess == "sublimation:prevah") {
+            auto& processes = _selectedBrick->processes;
+            std::rotate(processes.begin(), processes.end() - 1, processes.end());
+            _selectedProcess = &processes[0];
+        }
     }
 }
 

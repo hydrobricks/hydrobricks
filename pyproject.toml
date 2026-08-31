@@ -95,8 +95,10 @@ filterwarnings = [
     "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
     "ignore:The distutils package is deprecated:DeprecationWarning",
     "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning",
-    "ignore:Use `@` matmul instead of `*` mul operator for matrix multiplication:PendingDeprecationWarning",
-    "ignore::PendingDeprecationWarning:affine"
+    # affine >= 3.0 deprecates `*` on Affine in favour of `@`, but rasterio and
+    # rioxarray still use the operator internally. Nothing in hydrobricks to fix.
+    # Matched as a prefix: the rest of the message contains regex metacharacters.
+    "ignore:Use `@` matmul instead of:PendingDeprecationWarning"
 ]
 testpaths = ["python/tests"]
 

@@ -202,7 +202,10 @@ class SpotpySetup:
             auxiliary RMSE share a comparable range and the weights are meaningful.
             Error metrics become ``1 - value/reference``; skill metrics (nse, kge, ...)
             and custom callables are left unchanged. Set ``False`` to combine the raw
-            oriented metrics as before. Ignored for ``'pareto'``. Default: True
+            oriented metrics as before. Applies to the auxiliary terms of
+            ``combine='pareto'`` too (each vector component is oriented the same
+            way); only the weighting itself is specific to ``'weighted'``.
+            Default: True
         periods
             The modelling :class:`~hydrobricks.periods.Periods`. When given, the
             model(s) must be set up over ``periods.calibration`` (typically with the
@@ -1588,8 +1591,11 @@ def get_results(sampler: Any, parameters: ParameterSet | None = None) -> Any:
     the *negated* skill for minimizing algorithms (SCE-UA, NSGA-II, PADDS). This
     helper flips it back so every score column is a skill where **higher is always
     better**, regardless of the algorithm — e.g. a KGE of 0.7 reads as 0.7, never
-    -0.7. (Error metrics such as ``rmse`` are negated by the skill convention, so a
-    smaller error shows as a larger, less-negative score.)
+    -0.7. An auxiliary signal scored with an error metric (``rmse``, ...) is not
+    returned as that error either: it went through
+    :func:`~hydrobricks.evaluation.metrics.to_skill` (``1 - value/reference``, with
+    ``normalize``), so its column is a benchmark skill where 1 is perfect and 0 is
+    the mean/climatology of that signal — not a value in the metric's own units.
 
     Parameters
     ----------

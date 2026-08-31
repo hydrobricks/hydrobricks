@@ -93,9 +93,10 @@ void Logger::SaveInitialValues() {
 void Logger::Record() {
     assert(_cursor < _time.size());
 
-    for (auto [values, pt] : std::views::zip(_subBasinValues, _subBasinValuesPt)) {
-        assert(pt);
-        values[_cursor] = *pt;
+    assert(_subBasinValues.size() == _subBasinValuesPt.size());
+    for (int i = 0; i < static_cast<int>(_subBasinValues.size()); ++i) {
+        assert(_subBasinValuesPt[i]);
+        _subBasinValues[i][_cursor] = *_subBasinValuesPt[i];
     }
 
     for (int iUnitVal = 0; iUnitVal < _hydroUnitValuesPt.size(); ++iUnitVal) {
@@ -133,9 +134,10 @@ bool Logger::DumpOutputs(const string& path) {
 }
 
 axd Logger::GetOutletDischarge() const {
-    for (auto [label, values] : std::views::zip(_subBasinLabels, _subBasinValues)) {
-        if (label == "outlet") {
-            return values;
+    assert(_subBasinLabels.size() == _subBasinValues.size());
+    for (int i = 0; i < static_cast<int>(_subBasinLabels.size()); ++i) {
+        if (_subBasinLabels[i] == "outlet") {
+            return _subBasinValues[i];
         }
     }
     throw ModelConfigError("No 'outlet' component found in logger.");

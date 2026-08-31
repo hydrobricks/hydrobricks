@@ -125,15 +125,15 @@ int Processor::GetStateVariableCount() const {
 
 void Processor::GatherState(axd& state) const {
     assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
-    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
-        state(i) = *value;
+    for (int i = 0; i < static_cast<int>(_stateVariableChanges.size()); ++i) {
+        state(i) = *_stateVariableChanges[i];
     }
 }
 
 void Processor::ScatterState(const axd& state) {
     assert(state.size() == static_cast<int>(_stateVariableChanges.size()));
-    for (auto [i, value] : std::views::enumerate(_stateVariableChanges)) {
-        *value = state(i);
+    for (int i = 0; i < static_cast<int>(_stateVariableChanges.size()); ++i) {
+        *_stateVariableChanges[i] = state(i);
     }
 }
 

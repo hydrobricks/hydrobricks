@@ -517,6 +517,40 @@ def test_hydro_units_require_file_or_discretization(tmp_path):
     assert "provide either 'file'" in str(excinfo.value)
 
 
+@needs_catchment_packages
+@pytest.mark.skipif(not hb.HAS_SCIPY, reason="Splitting the units needs scipy")
+def test_discretization_split_discontinuous(tmp_path):
+    """The split of spatially discontinuous units is available from the YAML."""
+    config = minimal_config(tmp_path)
+    config["hydro_units"] = {
+        "outline": "outline.shp",
+        "dem": "dem.tif",
+        "discretization": {"method": "equal_intervals", "distance": 100},
+    }
+    reference = hb.load_project(config, base_dir=SITTER_DIR)
+
+    config["hydro_units"]["discretization"].update(
+        split_discontinuous=True, min_patch_area=100000, connectivity=4
+    )
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    assert len(project.forcing.hydro_units) > len(reference.forcing.hydro_units)
+    discharge = project.run()
+    assert len(discharge) > 0
+
+
+def test_discretization_invalid_connectivity(tmp_path):
+    config = minimal_config(tmp_path)
+    config["hydro_units"] = {
+        "outline": "outline.shp",
+        "dem": "dem.tif",
+        "discretization": {"method": "equal_intervals", "connectivity": 6},
+    }
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "connectivity: expected 4 or 8" in str(excinfo.value)
+
+
 def test_discretization_unknown_method(tmp_path):
     config = minimal_config(tmp_path)
     config["hydro_units"] = {

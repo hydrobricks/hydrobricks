@@ -12,7 +12,10 @@ from hydrobricks._exceptions import (
     DependencyError,
     ModelError,
 )
-from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, gpd, rasterio
+from hydrobricks._optional import HAS_GEOPANDAS, HAS_PYPROJ, HAS_SCIPY, gpd, rasterio
+
+if HAS_SCIPY:
+    from scipy import ndimage
 
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
@@ -41,6 +44,9 @@ class CatchmentDiscretization:
         distance: int = 50,
         min_elevation: int | None = None,
         max_elevation: int | None = None,
+        split_discontinuous: bool = False,
+        min_patch_area: float | None = None,
+        connectivity: int = 8,
     ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
@@ -64,9 +70,30 @@ class CatchmentDiscretization:
             Minimum elevation of the elevation bands (to homogenize between runs).
         max_elevation
             Maximum elevation of the elevation bands (to homogenize between runs).
+        split_discontinuous
+            If True, a hydro unit made of several spatially disconnected patches is
+            split into one hydro unit per patch. Default: False (a hydro unit can
+            span spatially distant areas). Requires scipy.
+        min_patch_area
+            Minimum area (m2) for a disconnected patch to become its own hydro unit
+            when 'split_discontinuous' is True. Smaller patches are merged into the
+            largest retained patch of the same unit (no area is lost).
+            Default: None = no minimum (every patch becomes a hydro unit).
+        connectivity
+            Pixel connectivity defining a patch when 'split_discontinuous' is True:
+            8 = diagonal neighbours are connected (default), 4 = only the neighbours
+            sharing an edge are connected.
         """
         self.discretize_by(
-            "elevation", method, number, distance, min_elevation, max_elevation
+            "elevation",
+            method,
+            number,
+            distance,
+            min_elevation,
+            max_elevation,
+            split_discontinuous=split_discontinuous,
+            min_patch_area=min_patch_area,
+            connectivity=connectivity,
         )
 
     def discretize_by(
@@ -88,6 +115,9 @@ class CatchmentDiscretization:
         min_radiation: int | None = None,
         max_radiation: int | None = None,
         sub_catchments: str | Path | None = None,
+        split_discontinuous: bool = False,
+        min_patch_area: float | None = None,
+        connectivity: int = 8,
     ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
@@ -156,6 +186,22 @@ class CatchmentDiscretization:
             polygons must cover the whole catchment: if any catchment cell is left
             uncovered, a ``DataError`` is raised (rather than silently dropping that
             area from the hydro units).
+        split_discontinuous
+            If True, a hydro unit made of several spatially disconnected patches is
+            split into one hydro unit per patch. This is the geometry-driven
+            alternative to the 'sub_catchments' criterion, and needs no additional
+            data. Default: False (a hydro unit can span spatially distant areas).
+            Requires scipy.
+        min_patch_area
+            Minimum area (m2) for a disconnected patch to become its own hydro unit
+            when 'split_discontinuous' is True. Smaller patches are merged into the
+            largest retained patch of the same unit, so no area is lost. If no patch
+            of a unit reaches the threshold, the unit is left unsplit.
+            Default: None = no minimum (every patch becomes a hydro unit).
+        connectivity
+            Pixel connectivity defining a patch when 'split_discontinuous' is True:
+            8 = diagonal neighbours are connected (default), 4 = only the neighbours
+            sharing an edge are connected.
         """
         if not HAS_PYPROJ:
             raise DependencyError(
@@ -163,6 +209,30 @@ class CatchmentDiscretization:
                 package_name="pyproj",
                 operation="CatchmentDiscretization.create_hydro_units",
                 install_command="pip install pyproj",
+            )
+
+        if split_discontinuous and not HAS_SCIPY:
+            raise DependencyError(
+                "scipy is required to split discontinuous hydro units.",
+                package_name="scipy",
+                operation="CatchmentDiscretization.discretize_by",
+                install_command="pip install scipy",
+            )
+
+        if connectivity not in (4, 8):
+            raise ConfigurationError(
+                "The connectivity must be 4 or 8.",
+                item_name="connectivity",
+                item_value=connectivity,
+                reason="Invalid pixel connectivity",
+            )
+
+        if min_patch_area is not None and min_patch_area <= 0:
+            raise ConfigurationError(
+                "The minimum patch area must be positive.",
+                item_name="min_patch_area",
+                item_value=min_patch_area,
+                reason="Invalid minimum patch area",
             )
 
         if isinstance(criteria, str):
@@ -415,6 +485,40 @@ class CatchmentDiscretization:
 
             unit_id += 1
 
+        if split_discontinuous:
+            self.map_unit_ids, origins = self._split_discontinuous_units(
+                self.map_unit_ids, unit_id - 1, connectivity, min_patch_area
+            )
+
+            # The criteria values were collected per original unit: replicate them
+            # for each of the new units issued from a split.
+            def _reindex(values: list) -> list:
+                return [values[i] for i in origins] if values else values
+
+            res_elevation = _reindex(res_elevation)
+            res_elevation_min = _reindex(res_elevation_min)
+            res_elevation_max = _reindex(res_elevation_max)
+            res_slope = _reindex(res_slope)
+            res_slope_min = _reindex(res_slope_min)
+            res_slope_max = _reindex(res_slope_max)
+            res_aspect_class = _reindex(res_aspect_class)
+            res_radiation = _reindex(res_radiation)
+            res_radiation_min = _reindex(res_radiation_min)
+            res_radiation_max = _reindex(res_radiation_max)
+            res_sub_catchment = _reindex(res_sub_catchment)
+
+        # The unit ids are stored as uint16 in the raster: fail rather than wrap.
+        n_units = int(self.map_unit_ids.max())
+        max_units = int(np.iinfo(np.uint16).max)
+        if n_units > max_units:
+            raise DataError(
+                f"The discretization produced {n_units} hydro units, which exceeds "
+                f"the maximum of {max_units}. Use coarser criteria or a larger "
+                f"'min_patch_area'.",
+                data_type="hydro units",
+                reason="Too many hydro units",
+            )
+
         self.catchment.map_unit_ids = self.map_unit_ids.astype(rasterio.uint16)
 
         if res_elevation:
@@ -455,6 +559,88 @@ class CatchmentDiscretization:
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()
         self.catchment.hydro_units.populate_bounded_instance()
+
+    def _split_discontinuous_units(
+        self,
+        map_unit_ids: np.ndarray,
+        n_units: int,
+        connectivity: int = 8,
+        min_patch_area: float | None = None,
+    ) -> tuple[np.ndarray, list[int]]:
+        """Split spatially discontinuous hydro units into one unit per patch.
+
+        Hydro units are defined by combinations of criteria (elevation, aspect, ...),
+        so a single unit usually covers several spatially disjoint patches. This
+        relabels the unit id map so that each connected patch becomes its own hydro
+        unit. Patches smaller than ``min_patch_area`` are not promoted: they are
+        merged into the largest retained patch of the same original unit, so that no
+        area is ever lost. If no patch of a unit reaches the threshold, the unit is
+        left untouched (i.e. a single, discontinuous unit).
+
+        Parameters
+        ----------
+        map_unit_ids
+            The per-cell hydro unit id map (0 = outside the catchment).
+        n_units
+            The number of hydro units in ``map_unit_ids`` (ids 1..n_units).
+        connectivity
+            Pixel connectivity defining a patch: 8 (diagonals count) or 4.
+        min_patch_area
+            Minimum area (m2) for a disconnected patch to become its own hydro unit.
+            None = no minimum (every patch becomes a hydro unit).
+
+        Returns
+        -------
+        A tuple ``(new_map, origins)`` with the relabelled id map (dense ids 1..M,
+        grouped by original unit) and, for each new unit, the 0-based index of the
+        original unit it originates from.
+        """
+        structure = ndimage.generate_binary_structure(2, 2 if connectivity == 8 else 1)
+
+        min_cells = 1
+        if min_patch_area is not None:
+            px_area = self.catchment.get_dem_pixel_area()
+            min_cells = max(1, int(np.ceil(min_patch_area / px_area)))
+
+        new_map = np.zeros_like(map_unit_ids)
+        origins: list[int] = []
+        new_id = 0
+
+        for old_id in range(1, n_units + 1):
+            mask_unit = map_unit_ids == old_id
+            labels, n_patches = ndimage.label(mask_unit, structure=structure)
+
+            if n_patches <= 1:
+                new_id += 1
+                origins.append(old_id - 1)
+                new_map[mask_unit] = new_id
+                continue
+
+            # Patch sizes in cells (the first bin is the background).
+            sizes = np.bincount(labels.ravel())[1:]
+            # Patches large enough to become their own unit, largest first.
+            kept = [p for p in np.argsort(-sizes) + 1 if sizes[p - 1] >= min_cells]
+
+            if not kept:
+                # No patch is large enough: keep the unit whole, as it would be
+                # without splitting.
+                new_id += 1
+                origins.append(old_id - 1)
+                new_map[mask_unit] = new_id
+                continue
+
+            largest_new_id = new_id + 1
+            for patch in kept:
+                new_id += 1
+                origins.append(old_id - 1)
+                new_map[labels == patch] = new_id
+
+            # Merge the patches below the threshold into the largest retained patch.
+            if len(kept) < n_patches:
+                too_small = mask_unit & np.isin(labels, kept, invert=True)
+                new_map[too_small] = largest_new_id
+
+        return new_map, origins
 
     def _build_sub_catchments_map(
         self, sub_catchments: str | Path

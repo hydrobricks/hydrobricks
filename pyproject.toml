@@ -154,9 +154,8 @@ before-build = [ # Depends on Python version
 repair-wheel-command = "cp {wheel} {dest_dir}/"
 
 [tool.cibuildwheel.macos]
+environment = { VCPKG_LIBRARY_LINKAGE = "static", MACOSX_DEPLOYMENT_TARGET = "13.3" }
 before-all = [ # Independent of Python version
-    # Install system dependencies
-    "brew install hdf5",
     # Install vcpkg
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
@@ -165,7 +164,6 @@ before-all = [ # Independent of Python version
     "export PATH=$VCPKG_ROOT:$PATH",
     "cd ..",
     # Install vcpkg dependencies
-    "export VCPKG_LIBRARY_LINKAGE=static",
     "vcpkg install",
 ]
 before-build = [  # Depends on Python version

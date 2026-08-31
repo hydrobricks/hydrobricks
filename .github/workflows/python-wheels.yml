@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest] #, macos-latest ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
@@ -70,16 +70,11 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
-      - name: Download wheels artifacts
+      - name: Download wheels (all platforms)
         uses: actions/download-artifact@v8
         with:
-          name: wheels-ubuntu-latest
-          path: dist/
-
-      - name: Download windows wheels
-        uses: actions/download-artifact@v8
-        with:
-          name: wheels-windows-latest
+          pattern: wheels-*
+          merge-multiple: true
           path: dist/
 
       - name: Download sdist
@@ -87,6 +82,9 @@ jobs:
         with:
           name: sdist
           path: dist/
+
+      - name: List files to upload
+        run: ls -l dist/
 
       - uses: pypa/gh-action-pypi-publish@v1.14.1
         with:

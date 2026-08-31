@@ -13,6 +13,8 @@ A modular hydrological modelling framework.
 ## Install
 
 Wheels are available to install from PyPI (https://pypi.org/project/hydrobricks/)
+for Linux (x86_64), Windows (x86_64) and macOS (Apple Silicon, macOS 13.3 or later).
+On other platforms, pip builds from the source distribution.
 
 Install: ```pip install hydrobricks```
 

@@ -461,6 +461,107 @@ def test_pareto_objective_returns_vector(glacier_run):
     assert all(np.isfinite(v) for v in like)
 
 
+def test_split_balance_types_are_scored_separately(glacier_run):
+    """One signal per balance type gives one objective component per type."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    balance_types = ("annual", "winter", "summer")
+    signals = [
+        GlacierMassBalanceObservations.from_glamos(
+            MB_WHOLE,
+            kind="whole",
+            glacier_id="B43-03",
+            balance_types=(bt,),
+            weight=0.5 / len(balance_types),
+        )
+        for bt in balance_types
+    ]
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="pareto",
+    )
+    # Each signal keeps its own length, and contributes its own Pareto component.
+    assert len(spot_setup._extra_lengths) == len(balance_types)
+    assert all(length > 0 for length in spot_setup._extra_lengths)
+    assert len(spot_setup._worst_score()) == 1 + len(balance_types)
+
+    pars = spot_setup.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = spot_setup.objectivefunction(
+        spot_setup.simulation(x), spot_setup.evaluation(), x
+    )
+    assert len(like) == 1 + len(balance_types)
+    assert all(np.isfinite(v) for v in like)
+
+
+def test_annual_only_signal_still_works(glacier_run):
+    """A source providing the annual balance alone needs no seasonal signals."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=[mb],
+        combine="weighted",
+    )
+    assert spot_setup._extra_lengths == [len(mb)]
+    pars = spot_setup.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = spot_setup.objectivefunction(
+        spot_setup.simulation(x), spot_setup.evaluation(), x
+    )
+    assert np.isfinite(like)
+
+
+def test_empty_extra_observation_is_rejected(glacier_run):
+    """An unscorable (empty) signal fails loudly instead of rejecting every run.
+
+    A balance type the source does not report loads as an empty signal. Left in
+    place it would make ``objectivefunction`` return the rejection penalty for
+    every parameter set, which looks like a calibration that finds nothing.
+    """
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    empty = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual",),
+        start_date="1900-01-01",
+        end_date="1901-01-01",
+    )
+    assert len(empty) == 0
+    with pytest.raises(DataError, match="no value in the post-warmup"):
+        trainer.SpotpySetup(
+            model,
+            params,
+            forcing,
+            obs,
+            warmup=180,
+            obj_func="kge_2012",
+            extra_observations=[mb, empty],
+        )
+
+
 def _make_glacier_model(catchment, record_all):
     """Build and set up a 2-cover (open/glacier) Socont on the Gletsch catchment."""
     model = models.Socont(

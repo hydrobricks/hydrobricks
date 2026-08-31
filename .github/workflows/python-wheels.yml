@@ -38,13 +38,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        include:
+          # Absolute path to the vcpkg binary cache, as seen by the build. On Linux the
+          # build runs in a container that receives a *copy* of the project, so the cache
+          # is addressed through the host root that cibuildwheel bind-mounts at /host.
+          - os: ubuntu-latest
+            binary_cache: /host${{ github.workspace }}/vcpkg-binary-cache
+          - os: windows-latest
+            binary_cache: ${{ github.workspace }}/vcpkg-binary-cache
+          - os: macos-latest
+            binary_cache: ${{ github.workspace }}/vcpkg-binary-cache
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
+      # Read directly by vcpkg on Windows/macOS; forwarded into the container on Linux by
+      # environment-pass in pyproject.toml.
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ matrix.binary_cache }}
 
     steps:
       - uses: actions/checkout@v7
+
+      # Relative path on purpose: github.workspace is backslash-separated on Windows, which
+      # bash would read as escapes. vcpkg requires this directory to already exist.
+      - name: Prepare vcpkg binary cache
+        run: mkdir -p vcpkg-binary-cache
+        shell: bash
+
+      - name: Cache vcpkg dependencies
+        uses: actions/cache@v6
+        with:
+          path: vcpkg-binary-cache
+          # vcpkg keys each archive by its own per-package ABI hash, so an entry that no
+          # longer applies is ignored rather than misused; a broad restore-key is safe.
+          key: vcpkg-wheels-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-wheels-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v4.1.0

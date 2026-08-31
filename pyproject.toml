@@ -95,7 +95,7 @@ filterwarnings = [
     "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
     "ignore:The distutils package is deprecated:DeprecationWarning",
     "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning",
-    "ignore:PendingDeprecationWarning:affine"
+    "ignore::PendingDeprecationWarning:affine"
 ]
 testpaths = ["python/tests"]
 
@@ -117,6 +117,11 @@ environment = {VCPKG_LIBRARY_LINKAGE="static"}
 build-verbosity = 1
 
 [tool.cibuildwheel.linux]
+# The project is copied into the container, so a binary cache written under /project would
+# be lost; the host root is bind-mounted at /host instead, and the workflow points
+# VCPKG_DEFAULT_BINARY_CACHE there. environment-pass forwards it in -- it is a separate
+# option from `environment`, so the global VCPKG_LIBRARY_LINKAGE setting stays intact.
+environment-pass = ["VCPKG_DEFAULT_BINARY_CACHE"]
 before-all = [ # Independent of Python version
     # Install system dependencies
     "yum install -y epel-release",

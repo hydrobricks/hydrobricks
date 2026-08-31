@@ -10,11 +10,26 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+
     steps:
     - uses: actions/checkout@v7
 
     - name: Install libraries
       run: sudo apt-get install tree python3
+
+    - name: Prepare vcpkg binary cache
+      run: mkdir -p ${{ github.workspace }}/vcpkg-binary-cache
+
+    - name: Cache vcpkg dependencies
+      uses: actions/cache@v6
+      with:
+        path: ${{ github.workspace }}/vcpkg-binary-cache
+        key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -48,12 +63,25 @@ jobs:
     env:
       BUILD_TYPE: Debug
       CODECOV_TOKEN: "7e5ffe21-e668-4910-a2ed-bd6477933127"
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
 
     steps:
       - uses: actions/checkout@v7
 
       - name: Install libraries
         run: sudo apt-get install tree lcov python3
+
+      - name: Prepare vcpkg binary cache
+        run: mkdir -p ${{ github.workspace }}/vcpkg-binary-cache
+
+      - name: Cache vcpkg dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11

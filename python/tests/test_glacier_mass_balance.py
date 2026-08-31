@@ -279,6 +279,97 @@ def test_simulated_mass_balance_tracks_observations(glacier_run):
     assert corr > 0.7
 
 
+class _StubModel:
+    """Minimal model exposing what ``simulated()`` reads, with known series.
+
+    Reproduces the two area conventions of the recorded output: a brick *state*
+    (``snow_content``) is a depth over its own land-cover area, while a process
+    *output* (``melt:output``) is a flux already scaled to the whole sub-basin
+    (unit area / basin area * land-cover fraction).
+    """
+
+    land_cover_names = ["open", "glacier"]
+    land_cover_types = ["open", "glacier"]
+
+    def __init__(self, time, areas, fractions, snow, melt_over_glacier):
+        self._time = time
+        self._areas = np.asarray(areas, dtype=float)
+        self._fractions = np.asarray(fractions, dtype=float)
+        self._snow = np.asarray(snow, dtype=float)
+        # Convert the per-glacier-area melt into the basin-normalized flux the
+        # engine actually records.
+        cover_area = self._fractions * self._areas[:, None]
+        self._melt = np.asarray(melt_over_glacier, dtype=float) * (
+            cover_area / self._areas.sum()
+        )
+        ids = np.arange(1, len(self._areas) + 1)
+        self.spatial_structure = types.SimpleNamespace(
+            hydro_units=pd.DataFrame(
+                {
+                    ("id", "-"): ids,
+                    ("elevation", "m"): 2500.0 + 100.0 * np.arange(len(ids)),
+                }
+            )
+        )
+
+    def get_recorded_time(self):
+        return self._time
+
+    def get_recorded_hydro_unit_areas(self):
+        return self._areas
+
+    def get_recorded_hydro_unit_ids(self):
+        return np.arange(1, len(self._areas) + 1)
+
+    def get_recorded_hydro_unit_fractions(self, label):
+        return self._fractions
+
+    def get_recorded_hydro_unit_values(self, label):
+        if label.endswith("snow_content"):
+            return self._snow
+        if label.endswith("melt:output"):
+            return self._melt
+        raise KeyError(label)
+
+
+def test_simulated_rescales_the_basin_normalized_ice_melt():
+    """The ice-melt flux is converted back to the glacier area before subtraction.
+
+    Process outputs are recorded as depths over the whole sub-basin, snowpack
+    states as depths over their land-cover area. Subtracting them as-is silently
+    under-counts the ablation by the flux area fraction (one to two orders of
+    magnitude on a partly glacierized band), leaving a balance driven by the
+    snowpack change alone.
+    """
+    time = pd.date_range("2014-01-01", "2014-12-31", freq="D")
+    n = len(time)
+    areas = np.array([1.0e6, 3.0e6])  # 4 km2 basin
+    fractions = np.tile(np.array([[0.1], [0.5]]), (1, n))  # 1.6 km2 of glacier
+
+    # Snowpack: 1000 mm w.e. on both units, fully melted out by mid-year.
+    snow = np.tile(np.linspace(1000.0, 0.0, n), (2, 1))
+    # Ice melt: a constant 10 mm/d over the glacier area of each unit.
+    melt_over_glacier = np.full((2, n), 10.0)
+
+    model = _StubModel(time, areas, fractions, snow, melt_over_glacier)
+    obs = GlacierMassBalanceObservations()
+    obs.targets = [
+        {
+            "t0": pd.Timestamp("2014-01-01"),
+            "t1": pd.Timestamp("2014-12-31"),
+            "value": 0.0,
+            "balance_type": "annual",
+            "band_lo": None,
+            "band_hi": None,
+        }
+    ]
+
+    # B = dS - sum(ice melt) = -1000 - 10 * (n - 1), identical on both units and
+    # therefore unchanged by the area weighting.
+    expected = -1000.0 - 10.0 * (n - 1)
+    assert obs.simulated(model)[0] == pytest.approx(expected, rel=1e-9)
+
+
 def test_per_band_mass_balance_runs(glacier_run):
     model, _, _, _ = glacier_run
     obs = GlacierMassBalanceObservations.from_glamos(

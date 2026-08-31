@@ -18,7 +18,12 @@ as in GLAMOS) measures. Per glacier hydro unit *i* and period ``[t0, t1]``::
     B_i = S_i(t1) - S_i(t0) - Σ_{t0 < t <= t1} M_ice,i(t)
 
 where ``S`` is the glacier snowpack water equivalent (a stock) and ``M_ice`` the
-glacier ice-melt flux. This follows from
+glacier ice-melt flux, both in mm w.e. over the glacierized area of the unit. Note
+that the recorded series they come from use different area references — a brick
+state is a depth over its land-cover area, a process output a depth already scaled
+to the whole sub-basin — so the ice melt is rescaled to the glacier area in
+:meth:`~GlacierMassBalanceObservations.simulated` before the difference is taken.
+This follows from
 ``B = (P_snow + refreeze) - (M_snow + M_ice)`` and ``dS/dt = P_snow + refreeze -
 M_snow``, so the snowfall, snowmelt and refreezing terms collapse into ``ΔS`` and
 only the snowpack stock and the ice melt are needed.
@@ -456,19 +461,39 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
 
         time = model.get_recorded_time()  # DatetimeIndex (n_time)
 
-        # Sum the snowpack SWE and ice melt over all glacier covers (n_units, n_time).
-        snow = None
-        ice_melt = None
-        glacier_area = None  # (n_units, n_time), the time-varying glacier area
+        # Snowpack SWE and ice melt over all glacier covers (n_units, n_time), both
+        # expressed in mm w.e. over the glacierized area of the unit.
+        #
+        # The two recorded series do NOT share the same area reference: a brick
+        # *state* (``snow_content``) is a depth over its own land-cover area, whereas
+        # a process *output* is a flux already scaled by the flux area fraction
+        # (unit area / basin area * land-cover fraction, see ``Flux::SetAmount`` in
+        # the core), i.e. a depth over the whole sub-basin. The ice melt therefore has
+        # to be converted back to the glacier area before it can be subtracted from
+        # the snowpack change — without it the ablation term is under-counted by one
+        # to two orders of magnitude and the balance collapses towards ``dS`` alone.
         areas = model.get_recorded_hydro_unit_areas()  # (n_units,)
+        basin_area = float(np.sum(areas))
+        snow_weighted = None  # sum over covers of snow depth * cover area
+        melt_weighted = None  # sum over covers of ice melt * cover area
+        glacier_area = None  # (n_units, n_time), the time-varying glacier area
         for cover in glacier_covers:
             s = model.get_recorded_hydro_unit_values(f"{cover}_snowpack:snow_content")
             m = model.get_recorded_hydro_unit_values(f"{cover}:melt:output")
             frac = model.get_recorded_hydro_unit_fractions(cover)  # (n_units, n_time)
-            area = frac * areas[:, None]
-            snow = s if snow is None else np.nansum([snow, s], axis=0)
-            ice_melt = m if ice_melt is None else np.nansum([ice_melt, m], axis=0)
+            area = np.nan_to_num(frac) * areas[:, None]
+            # Depth over the cover area, weighted by that area: for the state this is
+            # ``s * area``; for the flux the conversion (* basin_area / area) and the
+            # weighting (* area) cancel, leaving ``m * basin_area``.
+            sw = np.nan_to_num(s) * area
+            mw = np.nan_to_num(m) * basin_area
+            snow_weighted = sw if snow_weighted is None else snow_weighted + sw
+            melt_weighted = mw if melt_weighted is None else melt_weighted + mw
             glacier_area = area if glacier_area is None else glacier_area + area
+
+        with np.errstate(invalid="ignore", divide="ignore"):
+            snow = np.where(glacier_area > 0, snow_weighted / glacier_area, np.nan)
+            ice_melt = np.where(glacier_area > 0, melt_weighted / glacier_area, np.nan)
 
         # Unit elevations, aligned to the recorded (descending-elevation) order.
         recorded_ids = model.get_recorded_hydro_unit_ids()

@@ -52,7 +52,7 @@ if (WIN32)
         add_custom_command(
             TARGET _hydrobricks
             POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
-            COMMENT "Copying ${DLL} to ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DLL}" $<TARGET_FILE_DIR:_hydrobricks>
+            COMMENT "Copying ${DLL} next to the _hydrobricks module")
     endforeach ()
 endif ()

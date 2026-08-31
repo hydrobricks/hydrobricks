@@ -25,13 +25,15 @@ area. See ``hydrobricks/evaluation/glacier_mass_balance.py`` for the full ration
 
 Signals, and the three ways to use the mass balance
 --------------------------------------------------
-The GLAMOS file holds three balances — annual, winter and summer — and they
-are loaded as three *separate* ``extra_observations`` signals rather than one
-pooled one. Pooling would concatenate them into a single vector scored by a single
-RMSE, and the benchmark that RMSE is measured against is the standard deviation of
-that pooled vector (~1690 mm w.e.), dominated by the winter/summer contrast (means
-of roughly +1560 and -2370 mm w.e.) rather than by the interannual variability the
-melt parameters control.
+The GLAMOS file holds three balances — annual, winter and summer — and
+``GlacierMassBalanceObservations.from_glamos_by_type`` loads them as three
+*separate* ``extra_observations`` signals rather than one pooled one, skipping any
+type the file does not report and spreading a total weight over the rest. Pooling
+would concatenate them into a single vector scored by a single RMSE, and the
+benchmark that RMSE is measured against is the standard deviation of that pooled
+vector (~1690 mm w.e.), dominated by the winter/summer contrast (means of roughly
++1560 and -2370 mm w.e.) rather than by the interannual variability the melt
+parameters control. Use plain ``from_glamos`` for a single, pooled signal.
 
 Each signal carries its own ``metric``, ``weight`` and ``mode`` (``'objective'`` or
 ``'constraint'``), and the objective terms combine via the setup-level ``combine``
@@ -40,7 +42,8 @@ argument:
 - objective + ``combine='weighted'``: a single score adding the weighted discharge
   and mass-balance skills.
 - objective + ``combine='pareto'``: a ``[discharge, annual, winter, summer]``
-  objective vector for a multi-objective sampler (SPOTPY's NSGAII).
+  objective vector for a multi-objective sampler (SPOTPY's NSGAII); its length is
+  ``SpotpySetup.n_objectives``.
 - ``mode='constraint'``: a behavioural pass/fail filter — runs whose mass balance
   is off by more than the signal's ``tolerance`` are rejected; discharge stays the
   objective. With separate signals a run must pass all three filters.
@@ -153,57 +156,30 @@ obs.load_from_csv(
 # Observed glacier mass balance (GLAMOS): whole-glacier annual, winter and summer
 # balances. The observation periods come from the per-row dates in the file.
 #
-# One signal per balance type rather than a single pooled one. Loading the three
-# types into one object would concatenate them into a single vector scored by a
-# single RMSE, and that pools observations with very different means.
+# from_glamos_by_type returns one signal per balance type instead of pooling them
+# (a pooled RMSE is benchmarked against the winter/summer contrast rather than the
+# interannual variability), skips the types the file does not report, and spreads
+# total_weight over the ones it found. weight_shares gives the annual balance twice
+# the weight of each season; only the ratios matter.
 DISCHARGE_WEIGHT = 1.0  # weight of the discharge term
-MB_WEIGHT_TOTAL = 0.5  # total weight of the mass balance against the discharge
-# Relative share of MB_WEIGHT_TOTAL per balance type. Shares are renormalized over
-# the types actually available, so removing a type reweights the rest instead of
-# quietly shrinking the mass-balance term.
-MB_WEIGHT_SHARES = {"annual": 2.0, "winter": 1.0, "summer": 1.0}
-
-
-def load_mass_balance(balance_type, **kwargs):
-    """Load one GLAMOS balance type as its own calibration signal."""
-    return hb.GlacierMassBalanceObservations.from_glamos(
-        GLACIER_MB_WHOLE,
-        kind="whole",
-        glacier_id="B43-03",
-        balance_types=(balance_type,),
-        start_date=START_DATE,
-        end_date=END_DATE,
-        **kwargs,
-    )
-
-
-BALANCE_TYPES = tuple(
-    bt for bt in ("annual", "winter", "summer") if len(load_mass_balance(bt)) > 0
+glacier_mb = hb.GlacierMassBalanceObservations.from_glamos_by_type(
+    GLACIER_MB_WHOLE,
+    kind="whole",
+    glacier_id="B43-03",
+    start_date=START_DATE,
+    end_date=END_DATE,
+    metric="rmse",
+    total_weight=0.5,  # against DISCHARGE_WEIGHT
+    weight_shares={"annual": 2.0, "winter": 1.0, "summer": 1.0},
 )
-if not BALANCE_TYPES:
-    raise SystemExit("No glacier mass-balance observations in the simulation period.")
-
-# MB_WEIGHT_TOTAL is split between the available types following MB_WEIGHT_SHARES,
-# so the mass balance keeps the same overall say against the discharge term whatever
-# the source provides. Note these weights act on the 'weighted' combination only:
-# 'constraint' signals ignore them (they filter, they do not score), and the Pareto
-# vector keeps its components unweighted by construction. They are reused below to
-# pick the representative Pareto point, so the same preference is applied when a
-# single compromise has to be named.
-_share_total = sum(MB_WEIGHT_SHARES[bt] for bt in BALANCE_TYPES)
-glacier_mb = [
-    load_mass_balance(
-        bt,
-        metric="rmse",
-        weight=MB_WEIGHT_TOTAL * MB_WEIGHT_SHARES[bt] / _share_total,
-        mode="objective",
-    )
-    for bt in BALANCE_TYPES
-]
-for bt, signal in zip(BALANCE_TYPES, glacier_mb):
+# Each signal knows its own type; the available ones drive the objective vector, the
+# reporting and the plot panels. The weights act on the 'weighted' combination only:
+# constraints filter rather than score, and the Pareto components are unweighted by
+# construction (they are reused below only to name one point on the front).
+for signal in glacier_mb:
     print(
-        f"Loaded {len(signal)} {bt} glacier mass-balance observations "
-        f"(weight {signal.weight:.3f})."
+        f"Loaded {len(signal)} {signal.balance_type} glacier mass-balance "
+        f"observations (weight {signal.weight:.3f})."
     )
 
 
@@ -297,8 +273,10 @@ def evaluate_run(param_values):
     sim_q = model.get_outlet_discharge()
     kge = hb.evaluate(sim_q[WARMUP:], obs.data[0][WARMUP:], "kge_2012")
     rmse = {
-        bt: hb.evaluate(signal.simulated(model), signal.observed(), "rmse")
-        for bt, signal in zip(BALANCE_TYPES, glacier_mb)
+        signal.balance_type: hb.evaluate(
+            signal.simulated(model), signal.observed(), "rmse"
+        )
+        for signal in glacier_mb
     }
     return kge, rmse
 
@@ -324,8 +302,7 @@ summary = {}
 
 def print_mass_balance_rmse(rmse):
     """Print the per-balance-type mass-balance RMSE of a run."""
-    for balance_type in BALANCE_TYPES:
-        value = rmse[balance_type]
+    for balance_type, value in rmse.items():
         print(f"  Glacier MB RMSE, {balance_type:<6} [mm w.e.]: {value:8.1f}")
 
 
@@ -360,18 +337,19 @@ print("\n=== constraint: reject runs with a poor mass balance ===")
 # own mean absolute observed value (~800 / 1560 / 2370 mm w.e.) instead of the
 # pooled one -- so the annual balance, the hardest to reproduce and the most
 # informative, is no longer given a tolerance inflated by the summer values.
-glacier_mb_constraint = [
-    load_mass_balance(
-        bt,
-        mode="constraint",
-        # Accept runs whose mass balance is within 50% of that type's observed mean.
-        # A tighter value (e.g. 0.3) can reject the entire random burn-in
-        # population, leaving SCE-UA with no fitness gradient to evolve from; loosen
-        # it if every run scores the rejection penalty.
-        relative_tolerance=0.5,
-    )
-    for bt in BALANCE_TYPES
-]
+glacier_mb_constraint = hb.GlacierMassBalanceObservations.from_glamos_by_type(
+    GLACIER_MB_WHOLE,
+    kind="whole",
+    glacier_id="B43-03",
+    start_date=START_DATE,
+    end_date=END_DATE,
+    mode="constraint",
+    # Accept runs whose mass balance is within 50% of that type's observed mean. A
+    # tighter value (e.g. 0.3) can reject the entire random burn-in population,
+    # leaving SCE-UA with no fitness gradient to evolve from; loosen it if every run
+    # scores the rejection penalty.
+    relative_tolerance=0.5,
+)
 spot_setup_c = trainer.SpotpySetup(
     model,
     parameters,
@@ -415,7 +393,6 @@ spot_setup_p = trainer.SpotpySetup(
     extra_observations=glacier_mb,
     combine="pareto",
 )
-N_OBJECTIVES = 1 + sum(1 for o in glacier_mb if o.mode == "objective")
 # Unlike SCE-UA, NSGAII's first sample() argument is the number of *generations*,
 # not the total number of runs: it performs generations * n_pop model evaluations.
 # Divide by n_pop so the total stays comparable to CALIBRATION_MAX_REP. A larger
@@ -437,7 +414,7 @@ sampler_p = trainer.calibrate(
     "NSGAII",
     CALIBRATION_MAX_REP // NSGAII_POP,
     dbformat="ram",
-    sample_kwargs={"n_obj": N_OBJECTIVES, "n_pop": NSGAII_POP},
+    sample_kwargs={"n_obj": spot_setup_p.n_objectives, "n_pop": NSGAII_POP},
 )
 results_p = sampler_p.getdata()
 print(f"Pareto sampler produced {len(results_p)} evaluations.")
@@ -453,7 +430,7 @@ print(f"Pareto sampler produced {len(results_p)} evaluations.")
 # same preference the 'weighted' mode expresses.
 df_p = trainer.get_results(sampler_p)
 param_names = [c for c in df_p.columns if not c.startswith("score")]
-score_cols = [f"score{i + 1}" for i in range(N_OBJECTIVES)]
+score_cols = [f"score{i + 1}" for i in range(spot_setup_p.n_objectives)]
 score_weights = [DISCHARGE_WEIGHT] + [signal.weight for signal in glacier_mb]
 idx_p = (df_p[score_cols] * score_weights).sum(axis=1).idxmax()
 pareto_params = {n: float(df_p.loc[idx_p, n]) for n in param_names}
@@ -468,14 +445,15 @@ summary["pareto*"] = {"kge": kge_p, "rmse": rmse_p, "combined": None}
 # Summary: compare the discharge KGE and glacier MB RMSE across the three modes
 # ---------------------------------------------------------------------------
 print("\n=== Summary: discharge KGE and glacier MB RMSE by mode ===")
+balance_types = [signal.balance_type for signal in glacier_mb]
 header = f"{'Mode':<12} {'Discharge KGE':>14}"
-for balance_type in BALANCE_TYPES:
+for balance_type in balance_types:
     header += f" {balance_type + ' RMSE':>14}"
 print(header + f" {'Combined':>10}")
 for mode, m in summary.items():
     combined = f"{m['combined']:.3f}" if m["combined"] is not None else "-"
     row = f"{mode:<12} {m['kge']:>14.3f}"
-    for balance_type in BALANCE_TYPES:
+    for balance_type in balance_types:
         row += f" {m['rmse'][balance_type]:>14.1f}"
     print(row + f" {combined:>10}")
 print("RMSE in mm w.e., one column per GLAMOS balance type (separate signals)")
@@ -495,14 +473,15 @@ model.run(parameters=parameters, forcing=forcing)
 # summer Apr Y to Sep Y), whereas the period start would put the summer balance one
 # year off the other two.
 fig, axes = plt.subplots(
-    len(BALANCE_TYPES),
+    len(glacier_mb),
     1,
     sharex=True,
-    figsize=(12, 3.2 * len(BALANCE_TYPES)),
+    figsize=(12, 3.2 * len(glacier_mb)),
     squeeze=False,
 )
 colors = {"annual": "tab:blue", "winter": "tab:cyan", "summer": "tab:red"}
-for ax, balance_type, signal in zip(axes[:, 0], BALANCE_TYPES, glacier_mb):
+for ax, signal in zip(axes[:, 0], glacier_mb):
+    balance_type = signal.balance_type
     sim_mb = signal.simulated(model)
     years = [t["t1"].year for t in signal.targets]
     obs_vals = [t["value"] for t in signal.targets]

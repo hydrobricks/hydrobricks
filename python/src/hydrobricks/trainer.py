@@ -577,7 +577,7 @@ class SpotpySetup:
         # only annual balances loaded as annual + winter + summer signals), or that
         # its periods all fall in the warmup.
         empty = [
-            f"#{i} ({type(obs).__name__})"
+            f"#{i} ({getattr(obs, 'name', type(obs).__name__)})"
             for i, (obs, length) in enumerate(
                 zip(self.extra_observations, self._extra_lengths)
             )
@@ -1185,6 +1185,19 @@ class SpotpySetup:
         # Return the mean of the objective function
         return np.mean(all_like)
 
+    @property
+    def n_objectives(self) -> int:
+        """Number of objective values :meth:`objectivefunction` returns.
+
+        1 for a single score, and for ``combine='pareto'`` the length of the
+        objective vector: the discharge plus one component per ``'objective'``
+        auxiliary signal. Pass it as the multi-objective sampler's ``n_obj`` (e.g.
+        SPOTPY's NSGAII) so the two always agree.
+        """
+        if self._has_extra_obs and self.combine == "pareto":
+            return 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
+        return 1
+
     def _worst_score(self) -> float | list[float]:
         """The score a rejected parameter set receives (worst for the optimizer).
 
@@ -1193,10 +1206,8 @@ class SpotpySetup:
         sampler always receives a consistent-length objective.
         """
         worst = _WORST_PENALTY if self._minimize else -_WORST_PENALTY
-        if self._has_extra_obs and self.combine == "pareto":
-            n_obj = 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
-            return [worst] * n_obj
-        return worst
+        n_obj = self.n_objectives
+        return [worst] * n_obj if n_obj > 1 else worst
 
     def _discharge_skill(self, sim: np.ndarray, obs: np.ndarray) -> float:
         """Discharge skill (higher is better), in metric-consistent space.

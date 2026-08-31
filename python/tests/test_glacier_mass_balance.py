@@ -461,6 +461,135 @@ def test_pareto_objective_returns_vector(glacier_run):
     assert all(np.isfinite(v) for v in like)
 
 
+def test_from_glamos_by_type_splits_and_distributes_weight():
+    """One signal per balance type, weights following the requested shares."""
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+        weight_shares={"annual": 2.0, "winter": 1.0, "summer": 1.0},
+    )
+    assert [sig.balance_type for sig in signals] == ["annual", "winter", "summer"]
+    assert all(len(sig) > 0 for sig in signals)
+    assert sum(sig.weight for sig in signals) == pytest.approx(0.5)
+    assert signals[0].weight == pytest.approx(2 * signals[1].weight)
+    # Each signal holds a single type, so it can label itself.
+    assert signals[1].balance_types == ("winter",)
+    assert "winter" in signals[1].name
+
+
+def test_from_glamos_by_type_renormalizes_over_available_types():
+    """Shares are renormalized so the total weight is kept whatever is available."""
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual", "winter"),
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+        weight_shares={"annual": 2.0, "winter": 1.0},
+    )
+    assert [sig.balance_type for sig in signals] == ["annual", "winter"]
+    assert sum(sig.weight for sig in signals) == pytest.approx(0.5)
+    assert signals[0].weight == pytest.approx(1 / 3)
+
+    # An annual-only source gets the whole weight rather than a third of it.
+    only = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual",),
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+    )
+    assert len(only) == 1
+    assert only[0].weight == pytest.approx(0.5)
+
+
+def test_from_glamos_by_type_skips_missing_types():
+    """A type with no usable row is skipped, not returned as an empty signal."""
+    # Only the summer 1900 balance falls fully inside this window.
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        start_date="1900-01-01",
+        end_date="1901-01-01",
+        total_weight=0.5,
+    )
+    assert [sig.balance_type for sig in signals] == ["summer"]
+    assert signals[0].weight == pytest.approx(0.5)
+
+
+def test_from_glamos_by_type_without_any_type_raises():
+    """No balance type at all is an error, not an empty list."""
+    with pytest.raises(DataError, match="None of the balance types"):
+        GlacierMassBalanceObservations.from_glamos_by_type(
+            MB_WHOLE,
+            kind="whole",
+            glacier_id="B43-03",
+            start_date="1800-01-01",
+            end_date="1801-01-01",
+        )
+
+
+def test_pooled_signal_has_no_single_balance_type():
+    """from_glamos keeps pooling; balance_type is None, balance_types lists them."""
+    pooled = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual", "winter", "summer"),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    assert pooled.balance_type is None
+    assert pooled.balance_types == ("annual", "winter", "summer")
+
+
+def test_n_objectives_matches_the_objective_vector(glacier_run):
+    """SpotpySetup.n_objectives is the length objectivefunction returns."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", total_weight=0.5
+    )
+    weighted = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="weighted",
+    )
+    assert weighted.n_objectives == 1
+
+    pareto = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="pareto",
+    )
+    assert pareto.n_objectives == 1 + len(signals)
+    assert len(pareto._worst_score()) == pareto.n_objectives
+    pars = pareto.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = pareto.objectivefunction(pareto.simulation(x), pareto.evaluation(), x)
+    assert len(like) == pareto.n_objectives
+
+
 def test_split_balance_types_are_scored_separately(glacier_run):
     """One signal per balance type gives one objective component per type."""
     pytest.importorskip("spotpy")

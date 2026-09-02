@@ -43,13 +43,23 @@ jobs:
           # the cache is reached through the host root cibuildwheel mounts at /host.
           - os: ubuntu-latest
             host_prefix: /host
+            cmake_args: ""
           - os: windows-latest
             host_prefix: ""
+            cmake_args: ""
+          # TEMPORARY (diagnostic): RelWithDebInfo keeps NDEBUG and -O2 but skips the
+          # strip -x that pybind11_add_module applies in Release. That strip removes local
+          # symbols -- which is all of them, given hidden visibility -- leaving atos unable
+          # to name a single frame in the crash report. Revert once the segfault is fixed:
+          # it makes the shipped wheel considerably larger.
           - os: macos-latest
             host_prefix: ""
+            cmake_args: "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
 
     env:
       VCPKG_LIBRARY_LINKAGE: static
+      # Appended after setup.py's own -DCMAKE_BUILD_TYPE, so it overrides it.
+      CMAKE_ARGS: ${{ matrix.cmake_args }}
 
     steps:
       - uses: actions/checkout@v7
@@ -112,7 +122,7 @@ jobs:
       - name: Symbolicate macOS crash reports
         if: failure() && runner.os == 'macOS'
         shell: bash
-        run: python3 ci/symbolicate_macos_crash.py crash-reports build
+        run: python3 ci/symbolicate_macos_crash.py crash-reports build | tee crash-reports/symbolicated.txt
 
       - name: Upload macOS crash reports
         if: failure() && runner.os == 'macOS'

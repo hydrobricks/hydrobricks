@@ -104,6 +104,16 @@ jobs:
               echo "::endgroup::"
             done
 
+      # cibuildwheel deletes its temp tree (venv and installed module included) in a
+      # finally block, so the crashed binary is already gone by now. On macOS the build
+      # happens in place, so setup.py's output under build/lib.macosx-*/ is the same code
+      # at the same offsets; the script UUID-matches it against the report before trusting
+      # it. Never fails the job -- it only ever adds information.
+      - name: Symbolicate macOS crash reports
+        if: failure() && runner.os == 'macOS'
+        shell: bash
+        run: python3 ci/symbolicate_macos_crash.py crash-reports build
+
       - name: Upload macOS crash reports
         if: failure() && runner.os == 'macOS'
         uses: actions/upload-artifact@v7

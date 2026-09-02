@@ -29,10 +29,9 @@ set(VCPKG_LIBRARY_LINKAGE "static")
 # Project name
 project(hydrobricks)
 
-# MSVC runtime library. This must be defined before yaml-cpp is fetched below: yaml-cpp picks its own default only "if
-# (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)", and that default follows YAML_BUILD_SHARED_LIBS -- OFF here, which selects
-# the static runtime (/MT) and clashes at link time with the dynamic runtime (/MD) that Python extension modules and the
-# vcpkg x64-windows packages use.
+# MSVC runtime library. Python extension modules and the vcpkg x64-windows packages both use the dynamic runtime (/MD),
+# so pin it for every target rather than leaving it to a dependency's default: a FetchContent dependency defaulting to
+# /MT breaks the link with LNK2038, which is what yaml-cpp did before it moved to vcpkg.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Set C++ standard
@@ -69,19 +68,6 @@ option(USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer in
 set(BUILD_TESTING OFF)
 mark_as_advanced(BUILD_TESTING)
 
-# Get and build yaml-cpp (master branch)
-FetchContent_Declare(
-    yaml-cpp
-    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG master)
-set(YAML_CPP_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(yaml-cpp)
-
-include_directories(${yaml-cpp_SOURCE_DIR}/include)
-link_directories(${yaml-cpp_BINARY_DIR}/lib)
-message(STATUS "yaml-cpp include dir = ${yaml-cpp_SOURCE_DIR}/include")
-message(STATUS "yaml-cpp lib dir = ${yaml-cpp_BINARY_DIR}/lib")
-
 # Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically (without control of the version)
 FetchContent_Declare(
     pybind11
@@ -91,6 +77,7 @@ FetchContent_Declare(
 # Find packages
 find_package(netCDF CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 

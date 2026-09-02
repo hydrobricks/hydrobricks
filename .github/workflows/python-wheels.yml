@@ -79,6 +79,40 @@ jobs:
         env:
           CIBW_ARCHS: auto64
 
+      # A segfault inside the test phase only leaves Python-level frames in the log. The
+      # macOS crash report names the faulting library and gives the native backtrace,
+      # which is what distinguishes our code from a clash between the statically linked
+      # netCDF/HDF5 and the copies netCDF4 brings in.
+      - name: Collect macOS crash reports
+        if: failure() && runner.os == 'macOS'
+        shell: bash
+        run: |
+          # ReportCrash writes asynchronously; give it a moment to flush.
+          sleep 15
+          mkdir -p crash-reports
+          for dir in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
+            [ -d "$dir" ] && cp -R "$dir/." crash-reports/ 2>/dev/null || true
+          done
+          found=$(find crash-reports -type f \( -name '*.ips' -o -name '*.crash' \) | wc -l)
+          echo "Collected $found crash report(s)."
+          # Echo them into the log too, so the cause is visible without downloading.
+          find crash-reports -type f \( -name '*.ips' -o -name '*.crash' \) -print0 |
+            while IFS= read -r -d '' f; do
+              echo "::group::$f"
+              head -c 20000 "$f"
+              echo
+              echo "::endgroup::"
+            done
+
+      - name: Upload macOS crash reports
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-crash-reports
+          path: crash-reports/
+          if-no-files-found: warn
+          overwrite: true
+
       - name: Verify clean directory
         run: git diff --exit-code
         shell: bash

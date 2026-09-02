@@ -11,6 +11,10 @@ endif ()
 if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif ()
+if (POLICY CMP0091)
+    # Required for CMAKE_MSVC_RUNTIME_LIBRARY (set below) to be honoured.
+    cmake_policy(SET CMP0091 NEW)
+endif ()
 
 # vcpkg
 if (NOT DEFINED ENV{VCPKG_ROOT})
@@ -24,6 +28,12 @@ set(VCPKG_LIBRARY_LINKAGE "static")
 
 # Project name
 project(hydrobricks)
+
+# MSVC runtime library. This must be defined before yaml-cpp is fetched below: yaml-cpp picks its own default only "if
+# (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)", and that default follows YAML_BUILD_SHARED_LIBS -- OFF here, which selects
+# the static runtime (/MT) and clashes at link time with the dynamic runtime (/MD) that Python extension modules and the
+# vcpkg x64-windows packages use.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 23)

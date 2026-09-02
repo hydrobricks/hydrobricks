@@ -337,10 +337,11 @@ def evaluate_periods(
 
     Returns
     -------
-    A DataFrame with one row per period and one column per metric. When
-    ``transform`` is a list, the columns are a MultiIndex
-    ``(transform, metric)`` with the transform level labelled by
-    :attr:`~hydrobricks.evaluation.transforms.DischargeTransform.label`.
+    pandas.DataFrame
+        One row per period and one column per metric. When ``transform`` is a
+        list, the columns are a MultiIndex ``(transform, metric)`` with the
+        transform level labelled by
+        :attr:`~hydrobricks.evaluation.transforms.DischargeTransform.label`.
     """
     from hydrobricks.evaluation.metrics import evaluate
     from hydrobricks.evaluation.transforms import DischargeTransform

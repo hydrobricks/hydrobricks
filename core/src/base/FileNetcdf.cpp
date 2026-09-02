@@ -169,18 +169,30 @@ axxd FileNetcdf::GetVarDouble2D(int varId, int rows, int cols) const {
 }
 
 void FileNetcdf::PutVar(int varId, const vecInt& values) {
+    if (values.size() == 0) {
+        return;  // Nothing to write; &values[0] would be undefined behaviour.
+    }
     CheckNcStatus(nc_put_var_int(_ncId, varId, &values[0]));
 }
 
 void FileNetcdf::PutVar(int varId, const vecFloat& values) {
+    if (values.size() == 0) {
+        return;  // Nothing to write; &values[0] would be undefined behaviour.
+    }
     CheckNcStatus(nc_put_var_float(_ncId, varId, &values[0]));
 }
 
 void FileNetcdf::PutVar(int varId, const vecDouble& values) {
+    if (values.size() == 0) {
+        return;  // Nothing to write; &values[0] would be undefined behaviour.
+    }
     CheckNcStatus(nc_put_var_double(_ncId, varId, &values[0]));
 }
 
 void FileNetcdf::PutVar(int varId, const axd& values) {
+    if (values.size() == 0) {
+        return;  // Nothing to write; &values[0] would be undefined behaviour.
+    }
     CheckNcStatus(nc_put_var_double(_ncId, varId, &values[0]));
 }
 
@@ -240,11 +252,19 @@ vecStr FileNetcdf::GetAttString1D(const string& attName, const string& varName) 
 
 void FileNetcdf::PutAttString(const string& attName, const vecStr& values, int varId) {
     vector<const char*> valuesChar;
+    valuesChar.reserve(values.size());
     for (const auto& label : values) {
-        const char* str = static_cast<const char*>(label.c_str());
-        valuesChar.push_back(str);
+        valuesChar.push_back(label.c_str());
     }
-    CheckNcStatus(nc_put_att_string(_ncId, varId, attName.c_str(), values.size(), &valuesChar[0]));
+
+    // An empty attribute is legitimate: a model that logs nothing per hydro unit has no
+    // distributed labels. Indexing an empty vector with &v[0] is undefined behaviour and
+    // yields a null pointer with libc++, which segfaults here on macOS. Point at a valid
+    // dummy instead - the length is zero, so netCDF reads nothing from it.
+    const char* none = nullptr;
+    const char** data = valuesChar.empty() ? &none : valuesChar.data();
+
+    CheckNcStatus(nc_put_att_string(_ncId, varId, attName.c_str(), values.size(), data));
 }
 
 string FileNetcdf::GetAttText(const string& attName, const string& varName) const {

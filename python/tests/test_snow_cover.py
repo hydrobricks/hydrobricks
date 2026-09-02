@@ -139,6 +139,31 @@ def test_from_netcdf_aggregates_per_unit(tmp_path):
     assert abs(by_key[(pd.Timestamp("2016-02-15"), 2)] - 1.0) < 1e-6
 
 
+def test_from_netcdf_with_hydro_units_object(tmp_path):
+    # The unit ids may be given as a HydroUnits object or as its DataFrame.
+    nc, tif = _write_synthetic_modis(tmp_path)
+    # Only unit 1 is listed, so unit 2 of the raster must not be aggregated.
+    units = hb.HydroUnits(
+        data=pd.DataFrame(
+            {("id", "-"): [1], ("area", "m2"): [8.0], ("elevation", "m"): [2000.0]}
+        )
+    )
+    kw = dict(var_name="scf", data_crs=2056, value_scale=0.01, nodata=255.0)
+    from_object = SnowCoverObservations.from_netcdf(nc, tif, units, **kw)
+    from_frame = SnowCoverObservations.from_netcdf(nc, tif, units.hydro_units, **kw)
+
+    assert {t["unit_id"] for t in from_object.targets} == {1}
+    assert len(from_object) == 2
+    assert np.allclose(from_object.observed(), from_frame.observed())
+
+    # The listed ids are part of the cache key: a subset must not hit the cache
+    # written for the full raster.
+    cache = tmp_path / "cache"
+    SnowCoverObservations.from_netcdf(nc, tif, cache_dir=str(cache), **kw)
+    SnowCoverObservations.from_netcdf(nc, tif, units, cache_dir=str(cache), **kw)
+    assert len(list(cache.glob("snow_cover_*.csv"))) == 2
+
+
 def test_from_netcdf_min_valid_ratio_drops_cloudy(tmp_path):
     nc, tif = _write_synthetic_modis(tmp_path)
     # Unit 1 on the first date has 7/8 = 0.875 valid pixels; require 0.9 -> dropped.

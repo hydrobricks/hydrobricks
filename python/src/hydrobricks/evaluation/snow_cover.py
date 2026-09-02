@@ -401,9 +401,9 @@ class SnowCoverObservations(AuxiliaryObservation):
         raster_hydro_units
             Path to the raster of hydro unit ids used for the spatial aggregation.
         hydro_units
-            Optional :class:`~hydrobricks.hydro_units.HydroUnits` (or any object
-            supporting ``["id"]``) giving the unit ids to aggregate. If ``None``, the
-            ids are taken from the positive unique values of the raster.
+            Optional :class:`~hydrobricks.hydro_units.HydroUnits` (or a DataFrame of
+            hydro units) giving the unit ids to aggregate. If ``None``, the ids are
+            taken from the positive unique values of the raster.
         var_name
             Name of the data variable to read. If ``None``, the sole data variable of
             the dataset is used.
@@ -519,6 +519,9 @@ class SnowCoverObservations(AuxiliaryObservation):
                 "group": group,
                 "start_date": str(start_date),
                 "end_date": str(end_date),
+                # Only added when given, so caches predating this option keep
+                # their key (an explicit list can select a subset of the raster).
+                **_unit_ids_config(hydro_units),
             },
             build_kwargs=build_kwargs,
         )
@@ -687,6 +690,8 @@ class SnowCoverObservations(AuxiliaryObservation):
                 "resampling": resampling,
                 "start_date": str(start_date),
                 "end_date": str(end_date),
+                # See the note in _from_stack.
+                **_unit_ids_config(hydro_units),
             },
             build_kwargs=build_kwargs,
         )
@@ -1109,7 +1114,7 @@ def _aggregate_stack(
     the spatial grid of ``vals``.
     """
     if hydro_units is not None:
-        ids = np.asarray(hydro_units["id"]).squeeze().astype(int).ravel().tolist()
+        ids = _unit_ids_from(hydro_units)
     else:
         ids = [
             int(u)
@@ -1216,6 +1221,22 @@ def _read_hdf_eos_grid(path: str | Path, variable: str, engine: str) -> Any:
     return da
 
 
+def _unit_ids_from(hydro_units: Any) -> list[int]:
+    """Get the hydro unit ids from a HydroUnits object or a DataFrame of units."""
+    if hasattr(hydro_units, "get_ids"):
+        ids = hydro_units.get_ids()
+    else:
+        ids = hydro_units["id"]
+    return np.asarray(ids).squeeze().astype(int).ravel().tolist()
+
+
+def _unit_ids_config(hydro_units: Any | None) -> dict:
+    """The unit-id entry of a cache key, empty when the ids come from the raster."""
+    if hydro_units is None:
+        return {}
+    return {"unit_ids": _unit_ids_from(hydro_units)}
+
+
 def _source_signature(files: list[Path]) -> list[tuple[str, int, int]]:
     """A cheap, order-independent signature of the input files (name, size, mtime).
 
@@ -1315,7 +1336,7 @@ def _aggregate_modis(
 
     # Hydro-unit ids and a per-pixel unit index, computed once.
     if hydro_units is not None:
-        ids = np.asarray(hydro_units["id"]).squeeze().astype(int).ravel().tolist()
+        ids = _unit_ids_from(hydro_units)
     else:
         ids = [
             int(u)

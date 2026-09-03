@@ -15,6 +15,12 @@ checkout; that is the same code at the same offsets. The UUID recorded in the
 report is checked against each candidate so a mismatch is reported rather than
 silently producing plausible-looking nonsense.
 
+Release wheels are stripped (pybind11_add_module runs ``strip -x``), so this
+reports bare offsets unless the module was built with
+``CMAKE_ARGS=-DCMAKE_BUILD_TYPE=RelWithDebInfo``, which skips the strip and adds
+``-g`` while keeping NDEBUG so the bug still reproduces. It says so when that is
+what happened.
+
 Usage: symbolicate_macos_crash.py <reports-dir-or-file> [search-root ...]
 
 Always exits 0: this is a diagnostic aid and must never turn a build failure
@@ -91,6 +97,12 @@ def atos(binary: Path, arch: str, offsets: list[int]) -> list[str]:
     return lines[: len(offsets)]
 
 
+def looks_unsymbolicated(lines: list[str]) -> bool:
+    """atos echoes the raw address back when the binary has no usable symbols."""
+    meaningful = [ln for ln in lines if ln.strip()]
+    return bool(meaningful) and all(ln.lstrip().startswith("0x") for ln in meaningful)
+
+
 def report_one(path: Path, roots: list[Path]) -> None:
     body = load_report(path)
     if body is None:
@@ -157,6 +169,15 @@ def report_one(path: Path, roots: list[Path]) -> None:
     for frame, sym in zip(ours, resolved):
         print(f"  +{frame['imageOffset']:<10} {sym}")
 
+    if looks_unsymbolicated(resolved):
+        print()
+        print("No names resolved: this module is stripped, which is what a")
+        print("Release build does - pybind11_add_module runs strip -x, and")
+        print("hidden visibility makes every hydrobricks symbol local. To get")
+        print("names and line numbers, rebuild the wheel with")
+        print("  CMAKE_ARGS=-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+        print("which skips the strip and keeps NDEBUG, then reproduce it.")
+
     print("\n--- full faulting thread ---")
     for i, frame in enumerate(frames):
         name = image_name(image_of(frame))
@@ -175,6 +196,9 @@ def main() -> int:
         return 0
     target = Path(args[0])
     roots = [Path(a) for a in args[1:]] or [Path("build")]
+    if not target.exists():
+        print(f"No such path: {target}")
+        return 0
     reports = sorted(target.rglob("*.ips")) if target.is_dir() else [target]
     if not reports:
         print(f"No .ips reports under {target}")

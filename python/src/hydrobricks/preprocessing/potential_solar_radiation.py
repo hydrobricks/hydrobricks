@@ -330,15 +330,20 @@ class PotentialSolarRadiation:
         # Upscale the mean annual radiation to the DEM resolution
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            with rxr.open_rasterio(temp_path).drop_vars("band")[0] as xr_dem:
+            # Bind the context manager to the opened dataset rather than to a derived
+            # slice of it: closing the slice does not reliably release the file handle.
+            # A later call rewrites this intermediate, which Windows refuses while a
+            # handle is still open (rasterio deletes before writing).
+            with rxr.open_rasterio(temp_path) as _raw:
+                xr_dem = _raw.drop_vars("band")[0]
                 xr_dem_upscaled = xr_dem.rio.reproject(
                     xr_dem.rio.crs,
                     shape=self.catchment.dem.shape,
                     resampling=Resampling.bilinear,
                 )
                 xr_dem_upscaled.rio.to_raster(res_path)
+                self.mean_annual_radiation = xr_dem_upscaled.to_numpy()
 
-        self.mean_annual_radiation = xr_dem_upscaled.to_numpy()
         xr_dem_upscaled.close()
 
     @staticmethod

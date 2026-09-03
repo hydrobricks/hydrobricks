@@ -323,8 +323,13 @@ def test_radiation_cache_roundtrip(tmp_path, monkeypatch):
     assert (out2 / "daily_potential_radiation.nc").exists()
     assert catchment2.solar_radiation.mean_annual_radiation is not None
 
-    rad1 = hb.rasterio.open(out1 / "annual_potential_radiation.tif").read(1)
-    rad2 = hb.rasterio.open(out2 / "annual_potential_radiation.tif").read(1)
+    # The call below rewrites out1/annual_potential_radiation.tif. Closing explicitly
+    # rather than relying on the temporary being refcounted away keeps that safe on
+    # Windows, where replacing a file with an open handle fails.
+    with hb.rasterio.open(out1 / "annual_potential_radiation.tif") as src:
+        rad1 = src.read(1)
+    with hb.rasterio.open(out2 / "annual_potential_radiation.tif") as src:
+        rad2 = src.read(1)
     assert np.allclose(rad1, rad2, equal_nan=True)
 
     # A different option is a different key.

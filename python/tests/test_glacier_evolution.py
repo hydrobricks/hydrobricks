@@ -63,6 +63,68 @@ def test_glacier_evolution_delta_h_lookup_table():
         assert np.allclose(ref_lookup_table, lookup_table)
 
 
+def test_glacier_lookup_table_cache_roundtrip(tmp_path, monkeypatch):
+    cache_dir = tmp_path / "cache"
+
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        HYDRO_UNITS_SYNTH, column_elevation="elevation", column_area="area"
+    )
+
+    glacier_evolution = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
+    glacier_evolution.compute_lookup_table(
+        glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+        update_width=False,
+        nb_increments=100,
+        cache_dir=cache_dir,
+    )
+    assert len(list(cache_dir.glob("glacier_lookup_*"))) == 1
+
+    # The second run must be served from the cache without running the
+    # increment loop.
+    glacier_evolution2 = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("cache miss: the lookup table was recomputed")
+
+    monkeypatch.setattr(glacier_evolution2, "_compute_delta_h", _fail)
+    glacier_evolution2.compute_lookup_table(
+        glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+        update_width=False,
+        nb_increments=100,
+        cache_dir=cache_dir,
+    )
+
+    assert np.allclose(
+        glacier_evolution.get_lookup_table_area().to_numpy(),
+        glacier_evolution2.get_lookup_table_area().to_numpy(),
+    )
+    assert np.allclose(
+        glacier_evolution.get_lookup_table_volume().to_numpy(),
+        glacier_evolution2.get_lookup_table_volume().to_numpy(),
+    )
+
+    # save_as_csv after a cache hit writes the lookup tables but not the
+    # details CSVs (the detail containers are not populated on a hit).
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    glacier_evolution2.save_as_csv(out_dir)
+    assert (out_dir / "glacier_evolution_lookup_table_area.csv").exists()
+    assert (out_dir / "glacier_evolution_lookup_table_volume.csv").exists()
+    assert not (out_dir / "details_glacier_areas_evolution.csv").exists()
+    assert not (out_dir / "details_glacier_we_evolution.csv").exists()
+
+    # A different option is a different key.
+    glacier_evolution3 = hb.preprocessing.GlacierEvolutionDeltaH(hydro_units)
+    glacier_evolution3.compute_lookup_table(
+        glacier_profile_csv=GLACIER_PROFILE_SYNTH,
+        update_width=False,
+        nb_increments=50,
+        cache_dir=cache_dir,
+    )
+    assert len(list(cache_dir.glob("glacier_lookup_*"))) == 2
+
+
 def test_glacier_initial_ice_thickness_computation():
     if not hb.HAS_RASTERIO:
         return

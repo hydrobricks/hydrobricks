@@ -3,19 +3,20 @@
 #include "Processor.h"
 
 SolverEulerExplicit::SolverEulerExplicit()
-    : Solver() {
-    _nIterations = 1;
+    : Solver() {}
+
+void SolverEulerExplicit::InitializeContainers() {
+    assert(_processor);
+    _k1 = axd::Zero(_processor->GetSolvableConnectionCount());
 }
 
 bool SolverEulerExplicit::Solve(double timeStepInDays) {
-    _timeStepInDays = timeStepInDays;
+    // k1 = f(tn, Sn), with constraints
+    _processor->EvaluateRates(_k1, timeStepInDays);
 
-    // Compute the change rates
-    ComputeChangeRates(0);
-
-    // Apply the changes
-    ApplyProcesses(0);
-    Finalize();
+    // Advance the state over the full step and commit
+    _processor->ApplyRates(_k1, timeStepInDays);
+    _processor->FinalizeTimeStep();
 
     return true;
 }

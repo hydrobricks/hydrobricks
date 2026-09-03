@@ -10,6 +10,25 @@ TEST(FileNetcdf, FileGetsOpened) {
     EXPECT_TRUE(file.OpenReadOnly("files/time-series-data.nc"));
 }
 
+TEST(FileNetcdf, PutAttStringHandlesEmptyVector) {
+    // A model that logs nothing per hydro unit has no distributed labels. Writing that
+    // empty attribute used to index an empty vector (&v[0]), which is undefined behaviour
+    // and segfaulted on macOS while silently working elsewhere.
+    FileNetcdf file;
+
+    string path = std::filesystem::temp_directory_path().string() + "/hb_empty_att.nc";
+    ASSERT_TRUE(file.Create(path));
+    file.PutAttString("labels_empty", vecStr{});
+    file.PutAttString("labels_filled", vecStr{"outlet"});
+    file.Close();
+
+    ASSERT_TRUE(file.OpenReadOnly(path));
+    EXPECT_TRUE(file.GetAttString1D("labels_empty").empty());
+    EXPECT_EQ(file.GetAttString1D("labels_filled").size(), 1);
+    file.Close();
+    std::filesystem::remove(path);
+}
+
 TEST(FileNetcdf, FileGetsCreated) {
     FileNetcdf file;
 

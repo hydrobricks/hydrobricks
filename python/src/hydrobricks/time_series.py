@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from hydrobricks import caching
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._optional import (
     HAS_NETCDF,
@@ -134,6 +135,7 @@ class TimeSeries2D(TimeSeries):
         apply_data_gradient: bool = True,
         gradient_type: str = "additive",
         dem_path: str | Path | None = None,
+        cache_dir: str | Path | None = None,
     ) -> None:
         """
         Regrid time series data from netCDF files. The spatialization is done using a
@@ -179,6 +181,10 @@ class TimeSeries2D(TimeSeries):
         dem_path
             Path to DEM raster file for spatialization (gradient computation).
             Needed if apply_data_gradient is True.
+        cache_dir
+            Directory where the regridded result is cached as a CSV file keyed
+            by a hash of the inputs and options; an identical request reloads
+            it instead of recomputing. Default: None (caching disabled).
 
         Raises
         ------
@@ -218,6 +224,53 @@ class TimeSeries2D(TimeSeries):
                 reason="Missing required data",
             )
 
+        # Resolve the input files once (used for the cache key and for reading)
+        if file_pattern is None:
+            nc_files = [Path(path)]
+        else:
+            nc_files = sorted(Path(path).glob(file_pattern))
+
+        # Cache lookup: reload a previously regridded result for an identical
+        # request (same discretization, options and input files).
+        cache_path = None
+        if cache_dir is not None:
+            # weights_block_size is excluded from the key: it only partitions
+            # the time loop and does not change the results. The runtime
+            # gradient fallback (apply_data_gradient flipped to False when the
+            # DEM gradients are too small) is deterministic in the inputs, so
+            # the key remains well-defined.
+            config = {
+                "cache_version": 1,
+                "var_name": var_name,
+                "data_crs": data_crs,
+                "dim_time": dim_time,
+                "dim_x": dim_x,
+                "dim_y": dim_y,
+                "apply_data_gradient": apply_data_gradient,
+                "gradient_type": gradient_type if apply_data_gradient else None,
+                "unit_ids": np.atleast_1d(hydro_units["id"].values.squeeze()).tolist(),
+                "unit_elevations": (
+                    np.atleast_1d(hydro_units["elevation"].values.squeeze()).tolist()
+                    if apply_data_gradient
+                    else None
+                ),
+                # The DEM only matters for the gradient computation; a stat
+                # signature is used (not full bytes) as DEMs can be large.
+                "dem_signature": (
+                    caching.source_signature([dem_path])
+                    if apply_data_gradient and dem_path is not None
+                    else None
+                ),
+            }
+            key = caching.cache_key(
+                config,
+                caching.source_signature(nc_files),
+                hash_files=[raster_hydro_units],
+            )
+            cache_path = caching.cache_file(cache_dir, "forcing_regrid", key)
+            if cache_path.exists() and self._load_regrid_cache(cache_path):
+                return
+
         # Get unit ids
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
@@ -234,9 +287,10 @@ class TimeSeries2D(TimeSeries):
         if file_pattern is None:
             nc_data = xr.open_dataset(path, chunks={})
         else:
-            files = sorted(Path(path).glob(file_pattern))
-            logger.debug(f"Found {len(files)} files matching pattern '{file_pattern}'")
-            nc_data = xr.open_mfdataset(files, chunks={})
+            logger.debug(
+                f"Found {len(nc_files)} files matching pattern '{file_pattern}'"
+            )
+            nc_data = xr.open_mfdataset(nc_files, chunks={})
 
         # Get CRS of the netcdf file
         data_crs = self._parse_crs(nc_data, data_crs)
@@ -475,6 +529,17 @@ class TimeSeries2D(TimeSeries):
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
 
+        # Save to the cache. For 'day_of_year' data this happens before the
+        # expansion to the full time series, so the cache stays independent of
+        # the simulation period.
+        if cache_path is not None:
+            self._save_regrid_cache(
+                cache_path,
+                time_method,
+                day_of_year if time_method == "day_of_year" else None,
+                unit_ids_list,
+            )
+
         # If the time method is 'day_of_year', convert to the full time series
         if time_method == "day_of_year":
             logger.info("Converting to the full time series...")
@@ -490,6 +555,97 @@ class TimeSeries2D(TimeSeries):
             f"Elapsed time: {elapsed_time:.2f} seconds "
             f"(using {num_threads} threads)"
         )
+
+    def _load_regrid_cache(self, cache_path: Path) -> bool:
+        """Load a cached regridded result and append it to the data.
+
+        The first CSV column is either 'time' (full time series) or
+        'day_of_year' (366-day climatology, expanded to the full time series
+        on load). Returns False when the cached file is unusable (it will be
+        recomputed and overwritten).
+        """
+        df = pd.read_csv(cache_path)
+        time_col = df.columns[0]
+        if time_col not in ("time", "day_of_year") or len(df.columns) < 2:
+            logger.warning(
+                f"Ignoring invalid regrid cache file {cache_path} " f"(recomputing)."
+            )
+            return False
+        values = df[df.columns[1:]].to_numpy(dtype=float)
+
+        if time_col == "day_of_year":
+            if len(self.time) == 0:
+                raise DataError(
+                    "Other forcing data with a full temporal array have "
+                    "to be loaded and spatialized before data based "
+                    "on 'day_of_year'.",
+                    data_type="time series",
+                    reason="Missing preceding forcing data",
+                )
+            day_of_year = df[time_col].to_numpy(dtype=int)
+            jd = self.time.dt.strftime("%j").to_numpy().astype(int)
+            indices = np.searchsorted(day_of_year, jd)
+            self.data.append(values[indices, :])
+        else:
+            time_csv = pd.to_datetime(df[time_col])
+            if len(self.time) == 0:
+                self.time = pd.Series(time_csv)
+            else:
+                if len(self.time) != len(time_csv):
+                    raise DataError(
+                        f"The length of the netcdf time series "
+                        f"({len(time_csv)}) does not match the hydro units "
+                        f"data ({len(self.time)}).",
+                        data_type="time series",
+                        reason="Mismatched time series length",
+                    )
+                if self.time[0] != time_csv[0]:
+                    raise DataError(
+                        f"The first time step of the netcdf time series "
+                        f"({time_csv[0]}) does not match the one from the "
+                        f"hydro units data ({self.time[0]}).",
+                        data_type="time series",
+                        reason="Mismatched start date",
+                    )
+                if self.time[len(self.time) - 1] != time_csv[len(time_csv) - 1]:
+                    raise DataError(
+                        f"The last time step of the netcdf time series "
+                        f"({time_csv[len(time_csv) - 1]}) does not match "
+                        f"the one from the hydro units data "
+                        f"({self.time[len(self.time) - 1]}).",
+                        data_type="time series",
+                        reason="Mismatched end date",
+                    )
+            self.data.append(values)
+
+        logger.info(f"Loaded cached regridded forcing from {cache_path}")
+        return True
+
+    def _save_regrid_cache(
+        self,
+        cache_path: Path,
+        time_method: str,
+        day_of_year: Any | None,
+        unit_ids_list: np.ndarray,
+    ) -> None:
+        """Save the last regridded result to the cache as a wide CSV.
+
+        Columns: 'time' (or 'day_of_year' for climatology data, saved as the
+        366-day matrix) followed by one column per hydro unit id.
+        """
+        unit_cols = [str(u) for u in np.atleast_1d(unit_ids_list)]
+        if time_method == "day_of_year":
+            doy = np.asarray(day_of_year, dtype=int)
+            df = pd.DataFrame(self.data[-1][: len(doy), :], columns=unit_cols)
+            df.insert(0, "day_of_year", doy)
+        else:
+            df = pd.DataFrame(self.data[-1], columns=unit_cols)
+            df.insert(0, "time", np.asarray(self.time))
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = cache_path.with_name(cache_path.name + ".tmp")
+        df.to_csv(tmp_path, index=False)
+        os.replace(tmp_path, cache_path)
+        logger.info(f"Saved regridded forcing cache to {cache_path}")
 
     def _extract_time_step_data_weights_with_gradient(
         self,

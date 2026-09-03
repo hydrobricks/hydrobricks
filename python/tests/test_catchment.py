@@ -10,6 +10,10 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
+from hydrobricks._exceptions import ConfigurationError
+from hydrobricks.preprocessing.catchment_discretization import (
+    CatchmentDiscretization,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +290,55 @@ def test_radiation_calculation_resolution():
         logger.debug("Failed to clean up temporary directory %s", working_dir)
 
 
+def test_radiation_cache_roundtrip(tmp_path, monkeypatch):
+    dem_path = FILES_DIR / ".." / "others" / "dem_small_tile.tif"
+    cache_dir = tmp_path / "cache"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
+    out1.mkdir()
+    out2.mkdir()
+
+    catchment = hb.Catchment()
+    catchment.extract_dem(dem_path)
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 1
+
+    # The second run must be served from the cache without any computation.
+    catchment2 = hb.Catchment()
+    catchment2.extract_dem(dem_path)
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("cache miss: the radiation was recomputed")
+
+    monkeypatch.setattr(
+        catchment2.topography, "resample_dem_and_calculate_slope_aspect", _fail
+    )
+    catchment2.calculate_daily_potential_radiation(
+        str(out2), resolution=100, with_cast_shadows=False, cache_dir=cache_dir
+    )
+
+    assert (out2 / "annual_potential_radiation.tif").exists()
+    assert (out2 / "daily_potential_radiation.nc").exists()
+    assert catchment2.solar_radiation.mean_annual_radiation is not None
+
+    # The call below rewrites out1/annual_potential_radiation.tif. Closing explicitly
+    # rather than relying on the temporary being refcounted away keeps that safe on
+    # Windows, where replacing a file with an open handle fails.
+    with hb.rasterio.open(out1 / "annual_potential_radiation.tif") as src:
+        rad1 = src.read(1)
+    with hb.rasterio.open(out2 / "annual_potential_radiation.tif") as src:
+        rad2 = src.read(1)
+    assert np.allclose(rad1, rad2, equal_nan=True)
+
+    # A different option is a different key.
+    catchment.calculate_daily_potential_radiation(
+        str(out1), resolution=100, with_cast_shadows=True, cache_dir=cache_dir
+    )
+    assert len(list(cache_dir.glob("potential_radiation_*"))) == 2
+
+
 @pytest.mark.filterwarnings("ignore:`in1d` is deprecated:DeprecationWarning")
 def test_single_connectivity_on_elevation_bands():
     catchment = hb.Catchment(SITTER_OUTLINE)
@@ -312,3 +365,213 @@ def test_connectivity_on_discontinuous_hydro_units():
     df = catchment.calculate_connectivity(mode="multiple", force_connectivity=True)
 
     assert df.empty is False
+
+
+def _discretize_sitter(**kwargs) -> "hb.Catchment":
+    """Discretize the Sitter catchment by elevation and aspect (72 units)."""
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+    catchment.discretize_by(
+        criteria=["elevation", "aspect"],
+        elevation_method="equal_intervals",
+        elevation_distance=100,
+        **kwargs,
+    )
+    return catchment
+
+
+def _count_patches(map_unit_ids, unit_id, connectivity=8) -> int:
+    """Number of spatially connected patches of a given hydro unit."""
+    from scipy import ndimage
+
+    structure = ndimage.generate_binary_structure(2, 2 if connectivity == 8 else 1)
+    _, n_patches = ndimage.label(map_unit_ids == unit_id, structure=structure)
+    return n_patches
+
+
+def _patches_per_unit(catchment, connectivity=8) -> list[int]:
+    ids = catchment.hydro_units.hydro_units["id"].values[:, 0]
+    return [_count_patches(catchment.map_unit_ids, i, connectivity) for i in ids]
+
+
+def test_discretization_units_are_discontinuous_by_default():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    catchment = _discretize_sitter()
+
+    # Hydro units are defined by criteria combinations, so they can span several
+    # spatially distant patches. This is the default behaviour and must be kept.
+    assert max(_patches_per_unit(catchment)) > 1
+
+
+def test_split_discontinuous_units():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    reference = _discretize_sitter()
+    catchment = _discretize_sitter(split_discontinuous=True)
+
+    units = catchment.hydro_units.hydro_units
+    ids = units["id"].values[:, 0]
+
+    # Every unit is now a single connected patch.
+    assert max(_patches_per_unit(catchment)) == 1
+
+    # The splitting refines the discretization and keeps the ids dense.
+    assert len(units) > len(reference.hydro_units.hydro_units)
+    assert np.array_equal(np.sort(ids), np.arange(1, len(units) + 1))
+    assert catchment.map_unit_ids.dtype == np.uint16
+
+    # No area is lost nor duplicated.
+    assert catchment.hydro_units.hydro_units["area"].sum().iloc[0] == pytest.approx(
+        reference.hydro_units.hydro_units["area"].sum().iloc[0]
+    )
+
+
+def test_split_discontinuous_preserves_criteria_columns():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    catchment = _discretize_sitter(split_discontinuous=True)
+    units = catchment.hydro_units.hydro_units
+    aspect = catchment.topography.aspect
+
+    for _, row in units.iterrows():
+        unit_id = int(row["id"].values[0])
+        mask = catchment.map_unit_ids == unit_id
+        elevations = catchment.dem_data[mask]
+
+        # The criteria values must follow the units through the split.
+        assert elevations.min() >= row["elevation_min"].values[0]
+        assert elevations.max() < row["elevation_max"].values[0]
+        assert row["elevation_min"].values[0] <= row["elevation_mean"].values[0]
+        assert row["elevation_mean"].values[0] <= row["elevation_max"].values[0]
+
+        aspects = aspect[mask]
+        aspect_class = row["aspect_class"].values[0]
+        if aspect_class == "N":
+            assert np.all((aspects >= 315) | (aspects < 45))
+        elif aspect_class == "E":
+            assert np.all((aspects >= 45) & (aspects < 135))
+        elif aspect_class == "S":
+            assert np.all((aspects >= 135) & (aspects < 225))
+        else:
+            assert np.all((aspects >= 225) & (aspects < 315))
+
+
+def test_split_discontinuous_min_patch_area():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    reference = _discretize_sitter()
+    all_patches = _discretize_sitter(split_discontinuous=True)
+    catchment = _discretize_sitter(split_discontinuous=True, min_patch_area=200000)
+
+    n_ref = len(reference.hydro_units.hydro_units)
+    n_all = len(all_patches.hydro_units.hydro_units)
+    n_units = len(catchment.hydro_units.hydro_units)
+
+    # The threshold keeps the small patches attached to the largest one.
+    assert n_ref <= n_units < n_all
+
+    # The small patches are merged back, not dropped: the area is preserved.
+    assert catchment.hydro_units.hydro_units["area"].sum().iloc[0] == pytest.approx(
+        reference.hydro_units.hydro_units["area"].sum().iloc[0]
+    )
+
+
+def test_split_discontinuous_connectivity_4_vs_8():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    units_8 = _discretize_sitter(split_discontinuous=True, connectivity=8)
+    units_4 = _discretize_sitter(split_discontinuous=True, connectivity=4)
+
+    # Diagonal neighbours are connected with 8-connectivity, so it splits less.
+    assert len(units_4.hydro_units.hydro_units) >= len(units_8.hydro_units.hydro_units)
+
+
+def test_split_discontinuous_invalid_connectivity():
+    if not has_required_packages():
+        return
+    with pytest.raises(ConfigurationError):
+        _discretize_sitter(split_discontinuous=True, connectivity=6)
+
+
+def test_split_discontinuous_invalid_min_patch_area():
+    if not has_required_packages():
+        return
+    with pytest.raises(ConfigurationError):
+        _discretize_sitter(split_discontinuous=True, min_patch_area=0)
+
+
+class _DummyCatchment:
+    """Minimal catchment stub for the unit-splitting logic (100 m2 pixels)."""
+
+    @staticmethod
+    def get_dem_pixel_area() -> float:
+        return 100.0
+
+
+def _splitter() -> CatchmentDiscretization:
+    splitter = CatchmentDiscretization.__new__(CatchmentDiscretization)
+    splitter.catchment = _DummyCatchment()
+    return splitter
+
+
+# Unit 1 is made of a 4-cell patch and an isolated 1-cell patch, unit 2 of a
+# single patch.
+DISCONTINUOUS_MAP = np.array(
+    [
+        [1, 1, 0, 1],
+        [1, 1, 0, 0],
+        [0, 0, 0, 0],
+        [2, 2, 0, 0],
+    ],
+    dtype=float,
+)
+
+
+def test_split_units_relabels_each_patch():
+    if not hb.HAS_SCIPY:
+        return
+    new_map, origins = _splitter()._split_discontinuous_units(DISCONTINUOUS_MAP, 2)
+
+    # The largest patch of a unit keeps the first of the new ids.
+    assert np.array_equal(
+        new_map,
+        [[1, 1, 0, 2], [1, 1, 0, 0], [0, 0, 0, 0], [3, 3, 0, 0]],
+    )
+    assert origins == [0, 0, 1]
+
+
+def test_split_units_merges_patches_below_the_threshold():
+    if not hb.HAS_SCIPY:
+        return
+    # 300 m2 = 3 cells: the isolated cell of unit 1 goes back to its largest patch.
+    new_map, origins = _splitter()._split_discontinuous_units(
+        DISCONTINUOUS_MAP, 2, min_patch_area=300
+    )
+    assert np.array_equal(new_map, DISCONTINUOUS_MAP)
+    assert origins == [0, 1]
+
+
+def test_split_units_keeps_the_unit_whole_if_no_patch_qualifies():
+    if not hb.HAS_SCIPY:
+        return
+    new_map, origins = _splitter()._split_discontinuous_units(
+        DISCONTINUOUS_MAP, 2, min_patch_area=1e9
+    )
+    assert np.array_equal(new_map, DISCONTINUOUS_MAP)
+    assert origins == [0, 1]
+
+
+def test_split_units_connectivity():
+    if not hb.HAS_SCIPY:
+        return
+    diagonal = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+    splitter = _splitter()
+
+    # Diagonal cells are a single patch with 8-connectivity, three with 4.
+    assert splitter._split_discontinuous_units(diagonal, 1, connectivity=8)[1] == [0]
+    assert splitter._split_discontinuous_units(diagonal, 1, connectivity=4)[1] == [
+        0,
+        0,
+        0,
+    ]

@@ -1,0 +1,58 @@
+name: Core Tests macOS
+
+on: [push]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest  # Apple Silicon
+
+    env:
+      # Must match [tool.cibuildwheel.macos] in pyproject.toml: the core uses std::format
+      # and floating-point std::to_chars, which Apple's libc++ only exposes from 13.3.
+      MACOSX_DEPLOYMENT_TARGET: "13.3"
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache vcpkg dependencies
+        uses: actions/cache@v6
+        with:
+          # vcpkg's default cache location; vcpkg creates it itself.
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+
+      - name: Get dependencies
+        run: vcpkg install
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/bin
+
+      # The pybindings are skipped on purpose: that target recompiles every core source a
+      # second time, and the wheel build already covers it. This job exists to catch
+      # AppleClang/libc++ portability breaks in minutes rather than after a full
+      # cibuildwheel run.
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/bin
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_CLI=ON -DBUILD_PYBINDINGS=OFF
+
+      - name: Build
+        working-directory: ${{github.workspace}}/bin
+        run: cmake --build . --config Release
+
+      # Run from the repository root: main() resolves the test data via ./core/tests/files.
+      # It exits 0 when that directory is not found, so assert it exists first, otherwise a
+      # misplaced run would report success without executing a single test.
+      - name: Test
+        run: |
+          test -d core/tests/files || { echo "Test data directory not found"; exit 1; }
+          ./bin/tests/hydrobricks-tests

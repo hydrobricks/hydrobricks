@@ -33,12 +33,49 @@ _ERROR_METRICS = frozenset(
 )
 
 
+# Skill metrics computed by hydrobricks itself rather than looked up in HydroErr.
+# Mapped to their computing helper by :func:`evaluate`. The non-parametric KGE
+# (Pool et al., 2018) is not provided by HydroErr, so it is routed to SPOTPY's
+# implementation (the same one used as the calibration default). Both names map to
+# the same score.
+_KGE_NP_NAMES = frozenset({"kge_np", "kge_non_parametric"})
+
+
 def is_error_metric(metric: str) -> bool:
     """Whether a HydroErr metric is an error (lower is better)."""
     return metric.lower() in _ERROR_METRICS
 
 
-def evaluate(simulation: np.ndarray, observation: np.ndarray, metric: str) -> float:
+def _kge_non_parametric(simulation: np.ndarray, observation: np.ndarray) -> float:
+    """Non-parametric Kling-Gupta Efficiency (Pool et al., 2018) via SPOTPY.
+
+    HydroErr does not provide this variant, so it is delegated to
+    ``spotpy.objectivefunctions.kge_non_parametric`` (the same function used as the
+    :class:`~hydrobricks.trainer.SpotpySetup` default objective). SPOTPY is an optional
+    dependency; a clear error is raised when it is missing.
+
+    Note the argument order: SPOTPY expects ``kge_non_parametric(evaluation,
+    simulation)``, i.e. ``(observation, simulation)`` — the reverse of the HydroErr
+    convention used elsewhere in this module.
+    """
+    from hydrobricks._optional import HAS_SPOTPY, spotpy
+
+    if not HAS_SPOTPY:
+        raise ImportError(
+            "The 'kge_np' (non-parametric KGE) metric requires the optional 'spotpy' "
+            "package. Install it with 'pip install hydrobricks[all]' or "
+            "'pip install spotpy'."
+        )
+
+    return spotpy.objectivefunctions.kge_non_parametric(observation, simulation)
+
+
+def evaluate(
+    simulation: np.ndarray,
+    observation: np.ndarray,
+    metric: str,
+    transform=None,
+) -> float:
     """
     Evaluate the simulation using the provided metric (goodness of fit).
 
@@ -52,12 +89,32 @@ def evaluate(simulation: np.ndarray, observation: np.ndarray, metric: str) -> fl
     metric
         The abbreviation of the function as defined in HydroErr
         (https://hydroerr.readthedocs.io/en/stable/list_of_metrics.html)
-        Examples: nse, kge_2012, ...
+        Examples: nse, kge_2012, ... In addition, ``'kge_np'`` (alias
+        ``'kge_non_parametric'``) selects the non-parametric KGE (Pool et al., 2018),
+        which is computed via the optional SPOTPY dependency.
+    transform
+        Optional discharge transformation applied to both series before computing
+        the metric, to shift its emphasis (e.g. towards low flows). Anything
+        accepted by :meth:`DischargeTransform.from_spec
+        <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`: a
+        :class:`~hydrobricks.evaluation.transforms.DischargeTransform`, a string
+        (``'power(0.2)'``, ``'sqrt'``, ``'log'``, ...), a dict, or a callable.
+        Default: None (no transformation).
 
     Returns
     -------
     The value of the selected metric.
     """
+    if transform is not None:
+        from hydrobricks.evaluation.transforms import DischargeTransform
+
+        simulation, observation = DischargeTransform.from_spec(
+            transform
+        ).transform_pair(simulation, observation)
+
+    if metric.lower() in _KGE_NP_NAMES:
+        return _kge_non_parametric(simulation, observation)
+
     eval_fct = getattr(importlib.import_module("HydroErr"), metric)
 
     return eval_fct(simulation, observation)

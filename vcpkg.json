@@ -1,7 +1,7 @@
 {
   "name": "hydrobricks",
   "version": "0.9.0",
-  "builtin-baseline": "67e2629463db1f39b684e21cd1eab23909c1e56c",
+  "builtin-baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
   "dependencies": [
     "vcpkg-tool-ninja",
     {
@@ -27,6 +27,10 @@
         "cpp",
         "zlib"
       ]
+    },
+    {
+      "name": "yaml-cpp",
+      "version>=": "0.9.0"
     }
   ]
 }

@@ -279,6 +279,97 @@ def test_simulated_mass_balance_tracks_observations(glacier_run):
     assert corr > 0.7
 
 
+class _StubModel:
+    """Minimal model exposing what ``simulated()`` reads, with known series.
+
+    Reproduces the two area conventions of the recorded output: a brick *state*
+    (``snow_content``) is a depth over its own land-cover area, while a process
+    *output* (``melt:output``) is a flux already scaled to the whole sub-basin
+    (unit area / basin area * land-cover fraction).
+    """
+
+    land_cover_names = ["open", "glacier"]
+    land_cover_types = ["open", "glacier"]
+
+    def __init__(self, time, areas, fractions, snow, melt_over_glacier):
+        self._time = time
+        self._areas = np.asarray(areas, dtype=float)
+        self._fractions = np.asarray(fractions, dtype=float)
+        self._snow = np.asarray(snow, dtype=float)
+        # Convert the per-glacier-area melt into the basin-normalized flux the
+        # engine actually records.
+        cover_area = self._fractions * self._areas[:, None]
+        self._melt = np.asarray(melt_over_glacier, dtype=float) * (
+            cover_area / self._areas.sum()
+        )
+        ids = np.arange(1, len(self._areas) + 1)
+        self.spatial_structure = types.SimpleNamespace(
+            hydro_units=pd.DataFrame(
+                {
+                    ("id", "-"): ids,
+                    ("elevation", "m"): 2500.0 + 100.0 * np.arange(len(ids)),
+                }
+            )
+        )
+
+    def get_recorded_time(self):
+        return self._time
+
+    def get_recorded_hydro_unit_areas(self):
+        return self._areas
+
+    def get_recorded_hydro_unit_ids(self):
+        return np.arange(1, len(self._areas) + 1)
+
+    def get_recorded_hydro_unit_fractions(self, label):
+        return self._fractions
+
+    def get_recorded_hydro_unit_values(self, label):
+        if label.endswith("snow_content"):
+            return self._snow
+        if label.endswith("melt:output"):
+            return self._melt
+        raise KeyError(label)
+
+
+def test_simulated_rescales_the_basin_normalized_ice_melt():
+    """The ice-melt flux is converted back to the glacier area before subtraction.
+
+    Process outputs are recorded as depths over the whole sub-basin, snowpack
+    states as depths over their land-cover area. Subtracting them as-is silently
+    under-counts the ablation by the flux area fraction (one to two orders of
+    magnitude on a partly glacierized band), leaving a balance driven by the
+    snowpack change alone.
+    """
+    time = pd.date_range("2014-01-01", "2014-12-31", freq="D")
+    n = len(time)
+    areas = np.array([1.0e6, 3.0e6])  # 4 km2 basin
+    fractions = np.tile(np.array([[0.1], [0.5]]), (1, n))  # 1.6 km2 of glacier
+
+    # Snowpack: 1000 mm w.e. on both units, fully melted out by mid-year.
+    snow = np.tile(np.linspace(1000.0, 0.0, n), (2, 1))
+    # Ice melt: a constant 10 mm/d over the glacier area of each unit.
+    melt_over_glacier = np.full((2, n), 10.0)
+
+    model = _StubModel(time, areas, fractions, snow, melt_over_glacier)
+    obs = GlacierMassBalanceObservations()
+    obs.targets = [
+        {
+            "t0": pd.Timestamp("2014-01-01"),
+            "t1": pd.Timestamp("2014-12-31"),
+            "value": 0.0,
+            "balance_type": "annual",
+            "band_lo": None,
+            "band_hi": None,
+        }
+    ]
+
+    # B = dS - sum(ice melt) = -1000 - 10 * (n - 1), identical on both units and
+    # therefore unchanged by the area weighting.
+    expected = -1000.0 - 10.0 * (n - 1)
+    assert obs.simulated(model)[0] == pytest.approx(expected, rel=1e-9)
+
+
 def test_per_band_mass_balance_runs(glacier_run):
     model, _, _, _ = glacier_run
     obs = GlacierMassBalanceObservations.from_glamos(
@@ -368,6 +459,236 @@ def test_pareto_objective_returns_vector(glacier_run):
     like = spot_setup.objectivefunction(sim, spot_setup.evaluation(), x)
     assert isinstance(like, list) and len(like) == 2
     assert all(np.isfinite(v) for v in like)
+
+
+def test_from_glamos_by_type_splits_and_distributes_weight():
+    """One signal per balance type, weights following the requested shares."""
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+        weight_shares={"annual": 2.0, "winter": 1.0, "summer": 1.0},
+    )
+    assert [sig.balance_type for sig in signals] == ["annual", "winter", "summer"]
+    assert all(len(sig) > 0 for sig in signals)
+    assert sum(sig.weight for sig in signals) == pytest.approx(0.5)
+    assert signals[0].weight == pytest.approx(2 * signals[1].weight)
+    # Each signal holds a single type, so it can label itself.
+    assert signals[1].balance_types == ("winter",)
+    assert "winter" in signals[1].name
+
+
+def test_from_glamos_by_type_renormalizes_over_available_types():
+    """Shares are renormalized so the total weight is kept whatever is available."""
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual", "winter"),
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+        weight_shares={"annual": 2.0, "winter": 1.0},
+    )
+    assert [sig.balance_type for sig in signals] == ["annual", "winter"]
+    assert sum(sig.weight for sig in signals) == pytest.approx(0.5)
+    assert signals[0].weight == pytest.approx(1 / 3)
+
+    # An annual-only source gets the whole weight rather than a third of it.
+    only = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual",),
+        start_date=START_DATE,
+        end_date=END_DATE,
+        total_weight=0.5,
+    )
+    assert len(only) == 1
+    assert only[0].weight == pytest.approx(0.5)
+
+
+def test_from_glamos_by_type_skips_missing_types():
+    """A type with no usable row is skipped, not returned as an empty signal."""
+    # Only the summer 1900 balance falls fully inside this window.
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        start_date="1900-01-01",
+        end_date="1901-01-01",
+        total_weight=0.5,
+    )
+    assert [sig.balance_type for sig in signals] == ["summer"]
+    assert signals[0].weight == pytest.approx(0.5)
+
+
+def test_from_glamos_by_type_without_any_type_raises():
+    """No balance type at all is an error, not an empty list."""
+    with pytest.raises(DataError, match="None of the balance types"):
+        GlacierMassBalanceObservations.from_glamos_by_type(
+            MB_WHOLE,
+            kind="whole",
+            glacier_id="B43-03",
+            start_date="1800-01-01",
+            end_date="1801-01-01",
+        )
+
+
+def test_pooled_signal_has_no_single_balance_type():
+    """from_glamos keeps pooling; balance_type is None, balance_types lists them."""
+    pooled = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual", "winter", "summer"),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    )
+    assert pooled.balance_type is None
+    assert pooled.balance_types == ("annual", "winter", "summer")
+
+
+def test_n_objectives_matches_the_objective_vector(glacier_run):
+    """SpotpySetup.n_objectives is the length objectivefunction returns."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    signals = GlacierMassBalanceObservations.from_glamos_by_type(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", total_weight=0.5
+    )
+    weighted = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="weighted",
+    )
+    assert weighted.n_objectives == 1
+
+    pareto = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="pareto",
+    )
+    assert pareto.n_objectives == 1 + len(signals)
+    assert len(pareto._worst_score()) == pareto.n_objectives
+    pars = pareto.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = pareto.objectivefunction(pareto.simulation(x), pareto.evaluation(), x)
+    assert len(like) == pareto.n_objectives
+
+
+def test_split_balance_types_are_scored_separately(glacier_run):
+    """One signal per balance type gives one objective component per type."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    balance_types = ("annual", "winter", "summer")
+    signals = [
+        GlacierMassBalanceObservations.from_glamos(
+            MB_WHOLE,
+            kind="whole",
+            glacier_id="B43-03",
+            balance_types=(bt,),
+            weight=0.5 / len(balance_types),
+        )
+        for bt in balance_types
+    ]
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=signals,
+        combine="pareto",
+    )
+    # Each signal keeps its own length, and contributes its own Pareto component.
+    assert len(spot_setup._extra_lengths) == len(balance_types)
+    assert all(length > 0 for length in spot_setup._extra_lengths)
+    assert len(spot_setup._worst_score()) == 1 + len(balance_types)
+
+    pars = spot_setup.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = spot_setup.objectivefunction(
+        spot_setup.simulation(x), spot_setup.evaluation(), x
+    )
+    assert len(like) == 1 + len(balance_types)
+    assert all(np.isfinite(v) for v in like)
+
+
+def test_annual_only_signal_still_works(glacier_run):
+    """A source providing the annual balance alone needs no seasonal signals."""
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    spot_setup = trainer.SpotpySetup(
+        model,
+        params,
+        forcing,
+        obs,
+        warmup=180,
+        obj_func="kge_2012",
+        extra_observations=[mb],
+        combine="weighted",
+    )
+    assert spot_setup._extra_lengths == [len(mb)]
+    pars = spot_setup.parameters()
+    x = types.SimpleNamespace(name=list(pars["name"]), random=list(pars["random"]))
+    like = spot_setup.objectivefunction(
+        spot_setup.simulation(x), spot_setup.evaluation(), x
+    )
+    assert np.isfinite(like)
+
+
+def test_empty_extra_observation_is_rejected(glacier_run):
+    """An unscorable (empty) signal fails loudly instead of rejecting every run.
+
+    A balance type the source does not report loads as an empty signal. Left in
+    place it would make ``objectivefunction`` return the rejection penalty for
+    every parameter set, which looks like a calibration that finds nothing.
+    """
+    pytest.importorskip("spotpy")
+    model, params, forcing, _ = glacier_run
+    obs = _load_discharge()
+    mb = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE, kind="whole", glacier_id="B43-03", balance_types=("annual",)
+    )
+    empty = GlacierMassBalanceObservations.from_glamos(
+        MB_WHOLE,
+        kind="whole",
+        glacier_id="B43-03",
+        balance_types=("annual",),
+        start_date="1900-01-01",
+        end_date="1901-01-01",
+    )
+    assert len(empty) == 0
+    with pytest.raises(DataError, match="no value in the post-warmup"):
+        trainer.SpotpySetup(
+            model,
+            params,
+            forcing,
+            obs,
+            warmup=180,
+            obj_func="kge_2012",
+            extra_observations=[mb, empty],
+        )
 
 
 def _make_glacier_model(catchment, record_all):

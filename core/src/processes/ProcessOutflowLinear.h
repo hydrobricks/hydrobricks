@@ -31,12 +31,18 @@ class ProcessOutflowLinear : public ProcessOutflow {
     void SetParameters(const ProcessSettings& processSettings) override;
 
     /**
-     * Get the response factor k [1/d] of the linear reservoir.
-     *
-     * @return the response factor, or 0 if not yet set.
+     * @copydoc Process::HasLinearResponse()
      */
-    [[nodiscard]] double GetResponseFactor() const {
-        return _responseFactor != nullptr ? static_cast<double>(*_responseFactor) : 0.0;
+    [[nodiscard]] bool HasLinearResponse() const override {
+        return true;
+    }
+
+    /**
+     * @copydoc Process::GetLinearResponseRate()
+     */
+    [[nodiscard]] double GetLinearResponseRate() const override {
+        assert(_responseFactor);
+        return *_responseFactor;
     }
 
   protected:

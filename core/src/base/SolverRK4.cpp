@@ -3,71 +3,61 @@
 #include "Processor.h"
 
 SolverRK4::SolverRK4()
-    : Solver() {
-    _nIterations = 5;
+    : Solver() {}
+
+void SolverRK4::InitializeContainers() {
+    assert(_processor);
+    int rateCount = _processor->GetSolvableConnectionCount();
+    _k1 = axd::Zero(rateCount);
+    _k2 = axd::Zero(rateCount);
+    _k3 = axd::Zero(rateCount);
+    _k4 = axd::Zero(rateCount);
+    _combinedRates = axd::Zero(rateCount);
+    _state = axd::Zero(_processor->GetStateVariableCount());
 }
 
 bool SolverRK4::Solve(double timeStepInDays) {
-    _timeStepInDays = timeStepInDays;
+    // k1 = f(tn, Sn), with constraints
+    _processor->EvaluateRates(_k1, timeStepInDays);
 
-    // Compute the change rates for k1 = f(tn, Sn)
-    ComputeChangeRates(0);
+    // Advance the state to Sn + k1 h, then halve the changes to get the state at tn + h/2
+    _processor->ApplyRates(_k1, timeStepInDays);
+    _processor->GatherState(_state);
+    _state *= 0.5;
+    _processor->ScatterState(_state);
 
-    // Apply the changes
-    ApplyProcesses(0);
+    // k2 = f(tn + h/2, Sn + k1 h/2), constrained at the start-of-step state
+    _processor->EvaluateRates(_k2, timeStepInDays, false);
+    _processor->ResetState();
+    _processor->ConstrainRates(_k2, timeStepInDays);
 
-    // Save the new state variables
-    SaveStateVariables(1);
+    // Advance the state to Sn + k2 h, then halve the changes to get the state at tn + h/2
+    _processor->ApplyRates(_k2, timeStepInDays);
+    _processor->GatherState(_state);
+    _state *= 0.5;
+    _processor->ScatterState(_state);
 
-    // Apply state variables for k1 at tn + h/2
-    SetStateVariablesToAvgOf(0, 1);
+    // k3 = f(tn + h/2, Sn + k2 h/2), constrained at the start-of-step state
+    _processor->EvaluateRates(_k3, timeStepInDays, false);
+    _processor->ResetState();
+    _processor->ConstrainRates(_k3, timeStepInDays);
 
-    // Compute the change rates for k2 = f(tn + h/2, Sn + k1 h/2)
-    ComputeChangeRates(1, false);
+    // Advance the state to Sn + k3 h (full step)
+    _processor->ApplyRates(_k3, timeStepInDays);
 
-    // Reset state variable changes to 0
-    ResetStateVariableChanges();
+    // k4 = f(tn + h, Sn + k3 h)
+    _processor->EvaluateRates(_k4, timeStepInDays, false);
 
-    // Apply the changes
-    ApplyConstraintsFor(1);
-    ApplyProcesses(1);
+    // Back to the start-of-step state
+    _processor->ResetState();
 
-    // Save the new state variables
-    SaveStateVariables(2);
+    // Combined RK4 rate, constrained at the start-of-step state
+    _combinedRates = (_k1 + 2 * _k2 + 2 * _k3 + _k4) / 6;
+    _processor->ConstrainRates(_combinedRates, timeStepInDays);
 
-    // Apply state variables for k2 at tn + h/2
-    SetStateVariablesToAvgOf(0, 2);
-
-    // Compute the change rates for k3 = f(tn + h/2, Sn + k2 h/2)
-    ComputeChangeRates(2, false);
-
-    // Reset state variable changes to 0
-    ResetStateVariableChanges();
-
-    // Apply the changes
-    ApplyConstraintsFor(2);
-    ApplyProcesses(2);
-
-    // Save the new state variables
-    SaveStateVariables(3);
-
-    // Apply state variables for k3 at tn + h
-    SetStateVariablesToIteration(3);
-
-    // Compute the change rates for k4 = f(tn + h, Sn + k3 h)
-    ComputeChangeRates(3, false);
-
-    // Reset state variable changes to 0
-    ResetStateVariableChanges();
-
-    // Final change rate
-    _changeRates.col(
-        4) = (_changeRates.col(0) + 2 * _changeRates.col(1) + 2 * _changeRates.col(2) + _changeRates.col(3)) / 6;
-
-    // Apply the final rates
-    ApplyConstraintsFor(4);
-    ApplyProcesses(_changeRates.col(4));
-    Finalize();
+    // Advance the state over the full step and commit
+    _processor->ApplyRates(_combinedRates, timeStepInDays);
+    _processor->FinalizeTimeStep();
 
     return true;
 }

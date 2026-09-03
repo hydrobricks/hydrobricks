@@ -151,6 +151,53 @@ def test_evaluate_periods_slices_by_dates():
     assert scores.loc["validation", "nse"] < 1.0
 
 
+def test_evaluate_periods_multiple_transforms():
+    periods = Periods(
+        calibration=("2020-01-01", "2020-06-30"),
+        validation=("2020-07-01", "2020-12-31"),
+        spinup=0,
+    )
+    time = pd.date_range("2020-01-01", "2020-12-31", freq="D")
+    sim = np.linspace(1.0, 2.0, len(time))
+    obs = sim.copy()
+    obs[200:] += np.random.default_rng(42).normal(0, 0.5, len(obs) - 200)
+    model = _StubModel(time, sim)
+
+    scores = hb.evaluate_periods(
+        model,
+        obs,
+        periods,
+        metrics=("nse", "kge_2012"),
+        transform=[None, "power(0.2)"],
+    )
+    assert scores.columns.names == ["transform", "metric"]
+    assert list(scores.columns) == [
+        ("none", "nse"),
+        ("none", "kge_2012"),
+        ("power(0.2)", "nse"),
+        ("power(0.2)", "kge_2012"),
+    ]
+
+    # Each (transform, metric) column equals the single-transform call.
+    for transform in (None, "power(0.2)"):
+        single = hb.evaluate_periods(
+            model, obs, periods, metrics=("nse", "kge_2012"), transform=transform
+        )
+        label = "none" if transform is None else transform
+        assert np.allclose(scores[label].to_numpy(), single.to_numpy())
+
+
+def test_evaluate_periods_duplicate_transforms_raise():
+    periods = Periods(calibration=("2020-01-01", "2020-12-31"), spinup=0)
+    time = pd.date_range("2020-01-01", "2020-12-31", freq="D")
+    sim = np.ones(len(time))
+    model = _StubModel(time, sim)
+    with pytest.raises(ConfigurationError):
+        hb.evaluate_periods(
+            model, sim, periods, metrics=("nse",), transform=[None, "identity"]
+        )
+
+
 def test_evaluate_periods_period_not_covered_raises():
     periods = Periods(calibration=("2019-01-01", "2020-12-31"), spinup=0)
     time = pd.date_range("2020-01-01", "2020-12-31", freq="D")

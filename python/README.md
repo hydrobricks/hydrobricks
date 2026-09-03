@@ -4,6 +4,7 @@ A modular hydrological modelling framework.
 
 [![DOI](https://zenodo.org/badge/301952016.svg)](https://zenodo.org/badge/latestdoi/301952016)
 [![Core Tests Linux](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-linux.yml)
+[![Core Tests macOS](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-macos.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/core-tests-macos.yml)
 [![Python Wheels](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml/badge.svg)](https://github.com/hydrobricks/hydrobricks/actions/workflows/python-wheels.yml)
 [![codecov](https://codecov.io/gh/hydrobricks/hydrobricks/branch/main/graph/badge.svg?token=G1PBSK8EG2)](https://codecov.io/gh/hydrobricks/hydrobricks)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/hydrobricks/hydrobricks/main.svg)](https://results.pre-commit.ci/latest/github/hydrobricks/hydrobricks/main)
@@ -13,6 +14,8 @@ A modular hydrological modelling framework.
 ## Install
 
 Wheels are available to install from PyPI (https://pypi.org/project/hydrobricks/)
+for Linux (x86_64), Windows (x86_64) and macOS (Apple Silicon, macOS 13.3 or later).
+On other platforms, pip builds from the source distribution.
 
 Install: ```pip install hydrobricks```
 

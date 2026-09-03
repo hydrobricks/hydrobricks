@@ -207,6 +207,18 @@ def test_gr4j_instantiation():
     assert models.GR4J().name == "gr4j"
 
 
+def test_gr4j_continuous_mode_pins_explicit_solver():
+    # The continuous (discrete=False) formulation must default to an explicit
+    # solver: the sequential solvers have no transit lag and shift the GR4J
+    # hydrograph too early. The default (discrete=True) mode keeps the global
+    # default, and an explicit solver choice is always respected.
+    assert models.GR4J(discrete=False).solver == "heun_explicit"
+    assert models.GR4J(discrete=True).solver == "crank_nicolson"
+    assert (
+        models.GR4J(discrete=False, solver="crank_nicolson").solver == "crank_nicolson"
+    )
+
+
 def test_gr4j_generate_parameters_contains_all_four():
     parameters = models.GR4J().generate_parameters()
     for name in ("X1", "X2", "X3", "X4"):

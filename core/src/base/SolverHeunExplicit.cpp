@@ -3,32 +3,36 @@
 #include "Processor.h"
 
 SolverHeunExplicit::SolverHeunExplicit()
-    : Solver() {
-    _nIterations = 3;
+    : Solver() {}
+
+void SolverHeunExplicit::InitializeContainers() {
+    assert(_processor);
+    int rateCount = _processor->GetSolvableConnectionCount();
+    _k1 = axd::Zero(rateCount);
+    _k2 = axd::Zero(rateCount);
+    _combinedRates = axd::Zero(rateCount);
 }
 
 bool SolverHeunExplicit::Solve(double timeStepInDays) {
-    _timeStepInDays = timeStepInDays;
+    // k1 = f(tn, Sn), with constraints
+    _processor->EvaluateRates(_k1, timeStepInDays);
 
-    // Compute the change rates for f(tn, Sn)
-    ComputeChangeRates(0);
+    // Advance the state to Sn + k1 h
+    _processor->ApplyRates(_k1, timeStepInDays);
 
-    // Apply the changes
-    ApplyProcesses(0);
+    // k2 = f(tn + h, Sn + k1 h)
+    _processor->EvaluateRates(_k2, timeStepInDays, false);
 
-    // Compute the change rates for f(tn + h, Sn + k1 h)
-    ComputeChangeRates(1, false);
+    // Back to the start-of-step state
+    _processor->ResetState();
 
-    // Reset state variable changes to 0
-    ResetStateVariableChanges();
+    // Combined rate, constrained at the start-of-step state
+    _combinedRates = (_k1 + _k2) / 2;
+    _processor->ConstrainRates(_combinedRates, timeStepInDays);
 
-    // Final change rates
-    _changeRates.col(2) = (_changeRates.col(0) + _changeRates.col(1)) / 2;
-
-    // Apply the changes
-    ApplyConstraintsFor(2);
-    ApplyProcesses(_changeRates.col(2));
-    Finalize();
+    // Advance the state over the full step and commit
+    _processor->ApplyRates(_combinedRates, timeStepInDays);
+    _processor->FinalizeTimeStep();
 
     return true;
 }

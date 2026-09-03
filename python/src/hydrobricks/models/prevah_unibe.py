@@ -41,11 +41,18 @@ class PrevahUniBE(Model):
     groundwater (SLZ1). See
     :class:`~hydrobricks.modules.glacier.PrevahGlacier`.
 
-    The model is integrated by the ODE solver at a daily step, whereas the
-    original PREVAH integrates the runoff cascade with 6 sub-steps per day and
-    exact-exponential reservoirs: very fast storage times (below ~24 h) are
-    therefore approximated. The response factors [1/d] relate to PREVAH's
-    storage times in hours as k = 24 / K_h (e.g. K0H = 20 h → k0 = 1.2 1/d).
+    The response factors [1/d] relate to PREVAH's storage times in hours as
+    k = 24 / K_h (e.g. K0H = 20 h → k0 = 1.2 1/d). That mapping is exact rather
+    than approximate: PREVAH's own storage coefficients are already exponential
+    decay factors (the Fortran computes k = 1 − exp(−Δt/K_h) once at
+    initialization, then applies it as a plain multiplier), and a linear
+    reservoir integrated analytically decays over a day by exactly
+    exp(−24 / K_h). This is why the model defaults to the ``analytic_linear``
+    solver, which integrates the reservoirs exactly as PREVAH does; the other
+    solvers approximate them. The remaining difference is the sub-step
+    structure: PREVAH adds the inflow at the start of each of its sub-steps
+    (6 per day; 1 h in the gridded version), where the solver spreads it over
+    the whole step.
 
     Parameters (literature names as aliases)
     ----------------------------------------
@@ -214,13 +221,19 @@ class PrevahUniBE(Model):
       sub-step.
     - No dynamic contributing-area (soil-topographic-index) surface runoff
       store; the SGRLUZ threshold carries the surface runoff response. That
-      store (SSZ/CRSZ) exists in xPREVAH but not in the published PREVAH
-      description, and is disabled there for catchments above 100 km².
+      store (SSZ/CRSZ) is present in the PREVAH code lineages (both xPREVAH and
+      the gridded FORHYCS) but in none of the published model descriptions, and
+      both codes disable it for catchments above 100 km².
     - No runoff concentration or flood routing (PREVAH's single linear storage
       and translation elements): the unit outflows aggregate directly at the
       outlet, as in the PREVAH model core.
     - The glacier melt reservoirs carry no translation (lag) element; their
       translation times are sub-daily.
+    - No karst outflow (the optional fourth upper-zone outflow Q3 = k3 · SUZ of
+      the gridded PREVAH). It is a plain linear reservoir outflow, so it can be
+      added to the upper zone through a custom structure if needed.
+    - The percolation rate is not scaled by the soil hydraulic conductivity
+      (PREVAH's KWPER factor).
     - PET is computed in preprocessing (e.g. ``forcing.compute_pet``, incl. the
       vapour-density Hamon used by PREVAH) instead of in-model.
     """

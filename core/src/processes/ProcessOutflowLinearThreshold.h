@@ -38,6 +38,31 @@ class ProcessOutflowLinearThreshold : public ProcessOutflow {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::HasLinearResponse()
+     *
+     * The response is affine (k × (S − θ)) only while the store is above the
+     * threshold; below it the process is simply off, and reporting no linear
+     * response keeps it out of the analytic solver's decay coefficient.
+     */
+    [[nodiscard]] bool HasLinearResponse() const override;
+
+    /**
+     * @copydoc Process::GetLinearResponseRate()
+     */
+    [[nodiscard]] double GetLinearResponseRate() const override {
+        assert(_responseFactor);
+        return *_responseFactor;
+    }
+
+    /**
+     * @copydoc Process::GetLinearResponseOffset()
+     */
+    [[nodiscard]] double GetLinearResponseOffset() const override {
+        assert(_responseFactor && _threshold);
+        return (*_responseFactor) * (*_threshold);
+    }
+
   protected:
     const float* _responseFactor;  // [1/d]
     const float* _threshold;       // storage threshold below which no outflow occurs [mm]

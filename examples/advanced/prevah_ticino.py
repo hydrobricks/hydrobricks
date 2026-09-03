@@ -6,8 +6,8 @@ capacity** taken from the soil data via a spatial parameter (``set_spatial``).
 
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
-cross-implementation reproduction: hydrobricks-Prevah against the original Fortran
-PREVAH (1984-2000). It reaches NSE ~= 0.93 over the validation period.
+cross-implementation reproduction: hydrobricks PREVAH-UniBE against the original Fortran
+PREVAH (1984-2000). It reaches NSE ~= 0.96 over the validation period.
 
 The data lives in ``tests/files/catchments/ch_ticino_bellinzona/`` (see its
 ``_readme.txt`` for provenance). Run from anywhere:
@@ -95,7 +95,7 @@ observations.load_from_csv(
 # ---------------------------------------------------------------------------
 # Calibrated PREVAH parameters (cal_2020pest.inp), mapped to hydrobricks aliases.
 # PREVAH storage times are in hours; hydrobricks uses response factors k = 24 / K_h.
-parameters = models.Prevah(
+parameters = models.PrevahUniBE(
     land_cover_names=COVERS, land_cover_types=COVERS
 ).generate_parameters()
 parameters.set_values(
@@ -140,7 +140,9 @@ parameters.set_values(
 # property) instead of one global value.
 parameters.set_spatial("fc", "fc")
 
-model = models.Prevah(land_cover_names=COVERS, land_cover_types=COVERS, record_all=True)
+model = models.PrevahUniBE(
+    land_cover_names=COVERS, land_cover_types=COVERS, record_all=True
+)
 model.setup(
     spatial_structure=hydro_units,
     output_path=str(OUT),
@@ -153,7 +155,7 @@ model.run(parameters=parameters, forcing=forcing)
 # 5. Evaluate against the Fortran PREVAH reference, per period
 # ---------------------------------------------------------------------------
 scores = hb.evaluate_periods(model, observations, periods, metrics=("nse", "kge_2012"))
-print("\nhydrobricks-Prevah vs Fortran PREVAH (Ticino-Bellinzona):")
+print("\nhydrobricks PREVAH-UniBE vs Fortran PREVAH (Ticino-Bellinzona):")
 print(scores.round(3))
 
 # ---------------------------------------------------------------------------
@@ -173,14 +175,14 @@ try:
     fig, ax = plt.subplots(1, 2, figsize=(14, 4))
     yr = df.loc["1998"]
     ax[0].plot(yr.index, yr["obs"], "k-", lw=1.0, label="Fortran PREVAH")
-    ax[0].plot(yr.index, yr["sim"], "C1-", lw=0.9, label="hydrobricks-Prevah")
+    ax[0].plot(yr.index, yr["sim"], "C1-", lw=0.9, label="hydrobricks PREVAH-UniBE")
     ax[0].set_title("Daily discharge — 1998")
     ax[0].set_ylabel("mm/d")
     ax[0].legend(fontsize=8)
 
     clim = df.dropna().groupby(df.dropna().index.month).mean()
     ax[1].plot(clim.index, clim["obs"], "ks-", label="Fortran PREVAH")
-    ax[1].plot(clim.index, clim["sim"], "C1o-", label="hydrobricks-Prevah")
+    ax[1].plot(clim.index, clim["sim"], "C1o-", label="hydrobricks PREVAH-UniBE")
     ax[1].set_title("Monthly mean discharge")
     ax[1].set_xlabel("month")
     ax[1].set_ylabel("mm/d")

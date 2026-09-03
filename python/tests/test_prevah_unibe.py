@@ -100,7 +100,7 @@ def _run_model(tmp_path, meteo_path, n_days, params=None, **model_options) -> tu
     )
     forcing = _load_forcing(hydro_units, meteo_path)
 
-    model = models.Prevah(**model_options)
+    model = models.PrevahUniBE(**model_options)
     parameters = model.generate_parameters()
     values = dict(_DEFAULT_PARAMS)
     if params:
@@ -167,7 +167,7 @@ def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
         hydro_units, _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
     )
 
-    model = models.Prevah(
+    model = models.PrevahUniBE(
         land_cover_names=["open"], land_cover_types=["open"], record_all=True
     )
     parameters = model.generate_parameters()
@@ -194,11 +194,11 @@ def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
 
 
 def test_prevah_instantiation():
-    assert models.Prevah().name == "prevah"
+    assert models.PrevahUniBE().name == "prevah_unibe"
 
 
 def test_prevah_generate_parameters_contains_literature_names():
-    parameters = models.Prevah().generate_parameters()
+    parameters = models.PrevahUniBE().generate_parameters()
     for name in (
         "crmfmin",  # winter degree-day factor (PREVAH CRMFMIN)
         "crmfmax",  # summer degree-day factor (PREVAH CRMFMAX)
@@ -224,11 +224,11 @@ def test_prevah_generate_parameters_contains_literature_names():
 
 def test_prevah_refreezing_requires_degree_day_melt():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(snow_melt_process="melt:temperature_index")
+        models.PrevahUniBE(snow_melt_process="melt:temperature_index")
 
 
 def test_prevah_hock_melt_without_refreezing_is_accepted():
-    model = models.Prevah(
+    model = models.PrevahUniBE(
         snow_melt_process="melt:temperature_index",
         snow_refreezing_process=None,
     )
@@ -239,29 +239,31 @@ def test_prevah_hock_melt_without_refreezing_is_accepted():
 
 def test_prevah_rain_to_snowpack_requires_water_retention():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(snow_water_retention_process=None, snow_refreezing_process=None)
+        models.PrevahUniBE(
+            snow_water_retention_process=None, snow_refreezing_process=None
+        )
 
 
 def test_prevah_default_glacier_module_is_prevah():
-    assert models.Prevah().options["glacier_module"] == "prevah"
+    assert models.PrevahUniBE().options["glacier_module"] == "prevah"
 
 
 def test_prevah_requires_a_soil_cover():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(land_cover_names=["glacier"], land_cover_types=["glacier"])
+        models.PrevahUniBE(land_cover_names=["glacier"], land_cover_types=["glacier"])
 
 
 def test_prevah_soil_et_default_is_hbv():
-    assert models.Prevah().options["soil_et_process"] == "et:hbv"
+    assert models.PrevahUniBE().options["soil_et_process"] == "et:hbv"
 
 
 def test_prevah_soil_et_unknown_process_raises():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(soil_et_process="et:socont")
+        models.PrevahUniBE(soil_et_process="et:socont")
 
 
 def test_prevah_et_prevah_has_albedo_parameter():
-    parameters = models.Prevah(soil_et_process="et:prevah").generate_parameters()
+    parameters = models.PrevahUniBE(soil_et_process="et:prevah").generate_parameters()
     assert parameters.has("albedo_land")
     # The snow albedo is age-derived (no parameter).
     assert not parameters.has("albedo_snow")
@@ -284,12 +286,12 @@ def test_prevah_et_prevah_suppresses_et_under_snow(tmp_path):
 
 
 def test_prevah_canopy_et_default_is_open_water():
-    assert models.Prevah().options["canopy_et_process"] == "et:open_water"
+    assert models.PrevahUniBE().options["canopy_et_process"] == "et:open_water"
 
 
 def test_prevah_canopy_et_unknown_process_raises():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(canopy_et_process="et:hbv")
+        models.PrevahUniBE(canopy_et_process="et:hbv")
 
 
 def test_prevah_canopy_et_prevah_water_balance_closes(tmp_path):
@@ -438,7 +440,7 @@ def _run_open_wetland(tmp_path, *, wet_fraction, P=5.0, PET=1.5, n_days=_N_2Y):
     )
     forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
 
-    model = models.Prevah(
+    model = models.PrevahUniBE(
         land_cover_names=["open", "wetland"],
         land_cover_types=["open", "wetland"],
         record_all=True,
@@ -461,7 +463,7 @@ def _run_open_wetland(tmp_path, *, wet_fraction, P=5.0, PET=1.5, n_days=_N_2Y):
 
 
 def test_prevah_wetland_exposes_wet_fraction_alias():
-    parameters = models.Prevah(
+    parameters = models.PrevahUniBE(
         land_cover_names=["open", "wetland"],
         land_cover_types=["open", "wetland"],
     ).generate_parameters()
@@ -475,7 +477,7 @@ def test_prevah_wetland_water_balance_closes(tmp_path):
 
 def test_prevah_wetland_only_cover_is_rejected():
     with pytest.raises(hb.ConfigurationError):
-        models.Prevah(land_cover_names=["wetland"], land_cover_types=["wetland"])
+        models.PrevahUniBE(land_cover_names=["wetland"], land_cover_types=["wetland"])
 
 
 # ---------------------------------------------------------------------------
@@ -504,7 +506,7 @@ def _run_open_forest(
     )
     forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
 
-    model = models.Prevah(
+    model = models.PrevahUniBE(
         land_cover_names=["open", "forest"],
         land_cover_types=["open", "forest"],
         record_all=True,
@@ -531,7 +533,8 @@ def _run_open_forest(
 
 def test_prevah_canopy_default_is_menzel():
     assert (
-        models.Prevah().options["canopy_interception_process"] == "interception:menzel"
+        models.PrevahUniBE().options["canopy_interception_process"]
+        == "interception:menzel"
     )
 
 
@@ -677,7 +680,7 @@ def _run_open_glacier(
     )
     forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
 
-    model = models.Prevah(
+    model = models.PrevahUniBE(
         land_cover_names=cover_names,
         land_cover_types=cover_types,
         record_all=True,
@@ -703,7 +706,7 @@ def _run_open_glacier(
 
 
 def test_prevah_glacier_exposes_aliases():
-    parameters = models.Prevah(
+    parameters = models.PrevahUniBE(
         land_cover_names=["open", "glacier"],
         land_cover_types=["open", "glacier"],
     ).generate_parameters()
@@ -713,7 +716,7 @@ def test_prevah_glacier_exposes_aliases():
 
 
 def test_prevah_firn_cover_exposes_firn_alias():
-    parameters = models.Prevah(
+    parameters = models.PrevahUniBE(
         land_cover_names=["open", "glacier_ice", "glacier_firn"],
         land_cover_types=["open", "glacier", "glacier"],
     ).generate_parameters()
@@ -874,7 +877,7 @@ def test_prevah_seasonal_refreeze_with_temperature_index_melt(tmp_path):
         # constant radiation forcing for the temperature-index melt
         forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
         forcing.data2D.data.append(np.full((n_days, 1), 5000.0))
-        model = models.Prevah(
+        model = models.PrevahUniBE(
             snow_melt_process="melt:temperature_index",
             snow_refreezing_process=refreezing,
             record_all=True,

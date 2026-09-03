@@ -79,6 +79,81 @@ TEST_F(LinearThresholdStorage, DrainsOnlyAboveThreshold) {
     EXPECT_NEAR(20.0 - basinOutputs[0].sum() - storageContent, 0, 0.0000000001);
 }
 
+TEST_F(LinearThresholdStorage, AnalyticSolverDecaysExponentiallyToTheThreshold) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    // PREVAH integrates its reservoirs analytically (Viviroli et al., 2007, Eq. 4.5-5):
+    // the content above the threshold decays as exp(-dt / K0).
+    _model.SetSolver("analytic_linear");
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+
+    double decay = std::exp(-0.3);  // exp(-k dt), k = 0.3 1/d, dt = 1 d
+    double threshold = 5.0;
+
+    // Days 4 to 10 receive no precipitation: pure exponential recession toward the
+    // threshold, and the outflow is the corresponding content drop.
+    for (int j = 2; j < 9; ++j) {
+        double content = unitContent[0](j, 0);
+        double nextContent = unitContent[0](j + 1, 0);
+        EXPECT_GT(content, threshold);
+        EXPECT_NEAR(nextContent - threshold, (content - threshold) * decay, 0.000001);
+        EXPECT_NEAR(basinOutputs[0][j + 1], content - nextContent, 0.000001);
+    }
+
+    // The analytic scheme drains faster over the step than explicit Euler (which holds
+    // the rate at its start-of-step value) while keeping the water balance closed.
+    EXPECT_GT(basinOutputs[0][2], 1.5);
+    EXPECT_NEAR(20.0 - basinOutputs[0].sum() - unitContent[0](9, 0), 0, 0.0000000001);
+}
+
+TEST_F(LinearThresholdStorage, AnalyticSolverZeroThresholdMatchesLinearReservoir) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    // With a zero threshold the affine response must reduce exactly to the plain
+    // linear reservoir the analytic solver already integrates.
+    _model.SetSolver("analytic_linear");
+    _model.SelectHydroUnitBrick("storage");
+    _model.SelectProcess("outflow");
+    _model.SetProcessParameterValue("threshold", 0.0f);
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+
+    double decay = std::exp(-0.3);
+    for (int j = 2; j < 9; ++j) {
+        double content = unitContent[0](j, 0);
+        EXPECT_NEAR(unitContent[0](j + 1, 0), content * decay, 0.000001);
+    }
+
+    EXPECT_NEAR(20.0 - basinOutputs[0].sum() - unitContent[0](9, 0), 0, 0.0000000001);
+}
+
 TEST_F(LinearThresholdStorage, ZeroThresholdMatchesLinearReservoir) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

@@ -59,7 +59,7 @@ const vecDouble& ProcessOutflowSlowcomp::GetRates() {
     }
 
     // K1 is the sibling baseflow time constant; k1 = 1/K1 is its response factor.
-    double k1 = _baseflow->GetResponseFactor();
+    double k1 = _baseflow->GetLinearResponseRate();
     double content = _container->GetContentWithChanges();
     double inflow = _container->SumIncomingChangeRates();
 

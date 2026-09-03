@@ -10,11 +10,13 @@ from hydrobricks.modules.glacier import GlacierModule
 logger = logging.getLogger(__name__)
 
 
-class Prevah(Model):
-    """PREVAH hydrological model (Viviroli et al., 2009; Gurtz et al., 1999).
+class PrevahUniBE(Model):
+    """PREVAH-UniBE hydrological model (Viviroli et al., 2007; Gurtz et al., 1999).
 
     PREVAH (Precipitation-Runoff-EVApotranspiration HRU model) is an HBV-type
-    conceptual model developed for mountainous (Alpine) catchments. Each hydro
+    conceptual model developed for mountainous (Alpine) catchments. This
+    implementation follows the University of Bern lineage of the model (the
+    xPREVAH code base), hence the name PREVAH-UniBE. Each hydro
     unit splits precipitation into rain and snow (linear transition); snow melts
     by a degree-day routine with a seasonally varying melt factor, liquid water
     retention and refreezing. The incoming water is split by the HBV beta
@@ -181,21 +183,53 @@ class Prevah(Model):
     the groundwater store SLZ1 directly, the rest passing through the soil
     routine.
 
+    Faithful configuration
+    ----------------------
+    The model defaults to the ``"analytic_linear"`` solver, which integrates the
+    linear reservoirs exactly as PREVAH does; pass ``solver=...`` to override it.
+    The remaining defaults favour a simple, robust model. To reproduce the
+    original as closely as possible, add::
+
+        soil_et_process='et:prevah'
+        canopy_et_process='et:open_water_prevah'
+        snow_sublimation_process='sublimation:prevah'
+        snow_water_retention_process='outflow:snow_holding_prevah'
+        snow_refreezing_process='refreeze:degree_day_seasonal'
+        interception_covers=[<every vegetated cover>]
+        wet_et_from_groundwater=True
+
+    with a vapour-density Hamon PET (``forcing.compute_pet(method=
+    "Hamon_vapor_density")``) and the monthly vegetation tables set through
+    ``ParameterSet.set_monthly_values`` (``ic`` = si_max × veg_cov,
+    ``canopy_et_factor`` = veg_cov). With ``snow_melt_process=
+    'melt:temperature_index'`` and a potential clear-sky radiation forcing, the
+    snow melt follows PREVAH's radiation-corrected (Hock) formulation.
+
     Deviations from the original PREVAH
     -----------------------------------
-    - Continuous ODE integration instead of 6 explicit sub-steps per day.
-    - The canopy interception uses the Menzel (1997) asymptotic filling (as in
-      PREVAH) but with a constant (not monthly) capacity.
-    - The snowpack liquid water in excess of CWH·SWE drains within the step
-      (no CEXLIQ release exponent).
+    - The runoff cascade is integrated over the whole time step instead of
+      PREVAH's 6 explicit sub-steps per day. The default ``"analytic_linear"``
+      solver integrates the linear reservoirs exactly, as PREVAH does, but the
+      inflow is spread over the step rather than added at the start of each
+      sub-step.
     - No dynamic contributing-area (soil-topographic-index) surface runoff
-      store; the SGRLUZ threshold carries the surface runoff response.
-    - Soil ET is not suppressed under snow.
-    - PET is computed in preprocessing (e.g. ``forcing.compute_pet``, incl.
-      Hamon as in xPREVAH) instead of in-model.
+      store; the SGRLUZ threshold carries the surface runoff response. That
+      store (SSZ/CRSZ) exists in xPREVAH but not in the published PREVAH
+      description, and is disabled there for catchments above 100 km².
+    - No runoff concentration or flood routing (PREVAH's single linear storage
+      and translation elements): the unit outflows aggregate directly at the
+      outlet, as in the PREVAH model core.
+    - The glacier melt reservoirs carry no translation (lag) element; their
+      translation times are sub-daily.
+    - PET is computed in preprocessing (e.g. ``forcing.compute_pet``, incl. the
+      vapour-density Hamon used by PREVAH) instead of in-model.
     """
 
-    def __init__(self, name: str = "prevah", **kwargs: Any) -> None:
+    def __init__(self, name: str = "prevah_unibe", **kwargs: Any) -> None:
+        # PREVAH integrates its reservoirs analytically (an exact exponential decay
+        # per sub-step), so the analytic solver is the faithful default here; any
+        # other solver can still be requested explicitly.
+        kwargs.setdefault("solver", "analytic_linear")
         super().__init__(name=name, **kwargs)
 
         # Default options
@@ -227,7 +261,9 @@ class Prevah(Model):
             self._define_parameter_transforms()
 
         except RuntimeError as err:
-            raise ModelError(f"Prevah model initialization raised an exception: {err}")
+            raise ModelError(
+                f"PREVAH-UniBE model initialization raised an exception: {err}"
+            )
 
     def _define_structure(self) -> None:
         """Define the PREVAH model structure.

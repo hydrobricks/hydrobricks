@@ -326,9 +326,9 @@ class Process {
     }
 
     /**
-     * Check if the process rate is linear in the container content (rate = k × S).
-     * Processes reporting a linear response can be integrated exactly by the
-     * analytic solver.
+     * Check if the process rate is affine in the container content
+     * (rate = k × S − offset). Processes reporting a linear response can be
+     * integrated exactly by the analytic solver.
      *
      * @return true if the process rate is linear in the content.
      */
@@ -337,13 +337,25 @@ class Process {
     }
 
     /**
-     * Get the linear response coefficient k of the process (rate = k × S).
+     * Get the linear response coefficient k of the process (rate = k × S − offset).
      * Only valid when HasLinearResponse() returns true.
      *
      * @return the linear response coefficient [1/d].
      */
     [[nodiscard]] virtual double GetLinearResponseRate() const {
         throw ShouldNotHappen("Process::GetLinearResponseRate - Should not be called (virtual)");
+    }
+
+    /**
+     * Get the constant term of the affine response (rate = k × S − offset), for the
+     * reservoirs that drain the content above a threshold θ (offset = k × θ). It is
+     * zero for a plain linear reservoir. Only valid when HasLinearResponse() returns
+     * true.
+     *
+     * @return the offset of the linear response [mm/d].
+     */
+    [[nodiscard]] virtual double GetLinearResponseOffset() const {
+        return 0;
     }
 
     /**

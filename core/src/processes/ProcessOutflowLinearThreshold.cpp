@@ -38,6 +38,14 @@ void ProcessOutflowLinearThreshold::SetParameters(const ProcessSettings& process
     _threshold = GetParameterValuePointer(processSettings, "threshold");
 }
 
+bool ProcessOutflowLinearThreshold::HasLinearResponse() const {
+    if (_responseFactor == nullptr || _threshold == nullptr) {
+        return false;
+    }
+
+    return _container->GetContentWithChanges() > *_threshold;
+}
+
 const vecDouble& ProcessOutflowLinearThreshold::GetRates() {
     double excess = _container->GetContentWithChanges() - (*_threshold);
     if (excess <= 0) {

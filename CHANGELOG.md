@@ -5,11 +5,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## 0.9.1 - 2026-09-03
 
 ### Breaking changes
 
 - Project-file YAML keys renamed to match the underlying Python API parameter they map to: `forcing.gridded.<var>.elevation_gradient` → `apply_data_gradient`, `forcing.gridded.<var>.crs` → `data_crs`, `hydro_units.land_cover_areas` → `columns_areas`, `forcing.pet.latitude` → `lat`.
+
+### Added
+
+- Providing wheels for macOS (Apple Silicon, macOS 13.3 or later) on PyPI.
+- Adding `GlacierMassBalanceObservations.from_glamos_by_type()` to load the annual, winter and summer mass balances of a GLAMOS file as separate calibration signals, with `name`, `balance_type` and `balance_types` properties to identify them.
+
+### Changed
+
+- Retrieving yaml-cpp through vcpkg instead of building the upstream master branch, so the version is pinned by the manifest.
+- Updating the vcpkg dependency baseline.
+- Setting the MSVC runtime library explicitly for every build target, so a dependency defaulting to the static runtime can no longer break the link (Windows).
+- Ensuring the C++ core compiles with Apple's libc++, which does not provide the C++23 range adaptors used in the solver and logger.
+- Reporting an explicit error when a study matrix `include` entry references a dimension value that has no matching variant patch.
+- Reporting an explicit error when an auxiliary observation used for calibration contains no data, instead of silently applying the rejection penalty to every run.
+
+### Fixed
+
+- Fixing the scaling of the simulated glacier mass balance. The ablation term was previously under-counted by one to two orders of magnitude.
+- Fixing a crash (segmentation fault) when dumping the outputs of a simulation that records no per–hydro-unit value, for example a project file without a `recordings` section.
+- Fixing the release of the raster file handle when upscaling the mean annual potential radiation, which prevented computing the radiation twice into the same output directory on Windows.
+- Accepting a DataFrame of hydro units, in addition to a `HydroUnits` object, when extracting the snow cover.
 
 
 ## 0.9.0 - 2026-07-07

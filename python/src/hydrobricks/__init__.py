@@ -43,6 +43,7 @@ from hydrobricks.catchment import Catchment
 from hydrobricks.evaluation import (
     AuxiliaryObservation,
     DischargeObservations,
+    DischargeTransform,
     GlacierMassBalanceObservations,
     SnowCoverObservations,
     evaluate,
@@ -56,6 +57,7 @@ from hydrobricks.plotter import Plotter
 from hydrobricks.project import Project, load_project
 from hydrobricks.results import Results
 from hydrobricks.structure import StructureGraph
+from hydrobricks.study import Study, load_study
 from hydrobricks.time_series import TimeSeries
 
 from ._hydrobricks import (
@@ -85,11 +87,15 @@ __all__ = (
     "StructureGraph",
     "Period",
     "Periods",
+    "DischargeTransform",
     "evaluate",
     "evaluate_periods",
     # Project file loader
     "load_project",
     "Project",
+    # Study file loader (multi-* comparison experiments)
+    "load_study",
+    "Study",
     # Logging functions
     "init",
     "init_log",

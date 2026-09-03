@@ -130,6 +130,87 @@ def test_cli_run(tmp_path, capsys):
     assert (tmp_path / "output" / "results.nc").is_file()
 
 
+def write_study_file(tmp_path):
+    study_file = tmp_path / "study.yaml"
+    study_file.write_text(
+        f"""
+name: cli-demo
+output: {(tmp_path / 'study').as_posix()}
+base:
+  model:
+    name: socont
+    options: {{soil_storage_nb: 2, surface_runoff: linear_storage}}
+  hydro_units:
+    file: {(SITTER_DIR / 'hydro_units_elevation.csv').as_posix()}
+  forcing:
+    file: {(SITTER_DIR / 'meteo.csv').as_posix()}
+    time: {{column: date, format: "%d/%m/%Y"}}
+    columns:
+      precipitation: precip(mm/day)
+      temperature: temp(C)
+      pet: pet_sim(mm/day)
+    ref_elevation: 1250
+  observations:
+    file: {(SITTER_DIR / 'discharge.csv').as_posix()}
+    time: {{column: Date, format: "%d/%m/%Y"}}
+    column: Discharge (mm/d)
+  periods:
+    calibration: [1981-01-01, 1981-12-31]
+    validation: [1982-01-01, 1982-12-31]
+    spinup: 30
+  parameters:
+    A: 200
+    a_snow: 3
+    k_slow_1: 0.01
+    k_slow_2: 0.001
+    percol: 1
+    k_quick: 0.05
+  calibration:
+    algorithm: mc
+    repetitions: 2
+    parameters: [a_snow, A]
+matrix:
+  objective: [nse, kge_2012]
+""",
+        encoding="utf-8",
+    )
+    return study_file
+
+
+def test_cli_study_list_run_assess(tmp_path, capsys):
+    study_file = write_study_file(tmp_path)
+
+    assert main(["study", "list", str(study_file)]) == 0
+    out = capsys.readouterr().out
+    assert "2 job(s), 0 done" in out
+    assert "[pending] nse" in out
+    assert "[pending] kge_2012" in out
+
+    assert main(["study", "validate", str(study_file)]) == 0
+    assert "all 2 job(s) can run" in capsys.readouterr().out
+
+    # Run one job, then the rest; a finished job is skipped.
+    assert main(["study", "run", str(study_file), "nse"]) == 0
+    assert main(["study", "run", str(study_file), "--all"]) == 0
+    out = capsys.readouterr().out
+    assert "nse (skipped; --force to recompute)" in out
+
+    assert main(["study", "list", str(study_file)]) == 0
+    assert "2 done" in capsys.readouterr().out
+
+    assert main(["study", "assess", str(study_file)]) == 0
+    out = capsys.readouterr().out
+    assert "scores.csv" in out
+    assert "validation period" in out
+    assert (tmp_path / "study" / "results" / "scores.csv").exists()
+
+
+def test_cli_study_run_requires_job_or_all(tmp_path, capsys):
+    study_file = write_study_file(tmp_path)
+    assert main(["study", "run", str(study_file)]) == 2
+    assert "either a job id or --all" in capsys.readouterr().err
+
+
 def test_cli_init_wizard(tmp_path, monkeypatch, capsys):
     """The wizard, fed scripted answers, writes a valid loadable project file."""
     target = tmp_path / "project.yaml"
@@ -246,7 +327,7 @@ def test_cli_init_wizard_gridded(tmp_path, monkeypatch, capsys):
     text = target.read_text(encoding="utf-8")
     assert "gridded:" in text
     assert "var_name: RhiresD" in text
-    assert "crs: 2056" in text
+    assert "data_crs: 2056" in text
     assert "dim_x: E" in text
     assert "simulation: [1962-01-01, 1962-01-03]" in text
 

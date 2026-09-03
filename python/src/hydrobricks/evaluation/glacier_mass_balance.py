@@ -18,7 +18,12 @@ as in GLAMOS) measures. Per glacier hydro unit *i* and period ``[t0, t1]``::
     B_i = S_i(t1) - S_i(t0) - Σ_{t0 < t <= t1} M_ice,i(t)
 
 where ``S`` is the glacier snowpack water equivalent (a stock) and ``M_ice`` the
-glacier ice-melt flux. This follows from
+glacier ice-melt flux, both in mm w.e. over the glacierized area of the unit. Note
+that the recorded series they come from use different area references — a brick
+state is a depth over its land-cover area, a process output a depth already scaled
+to the whole sub-basin — so the ice melt is rescaled to the glacier area in
+:meth:`~GlacierMassBalanceObservations.simulated` before the difference is taken.
+This follows from
 ``B = (P_snow + refreeze) - (M_snow + M_ice)`` and ``dS/dt = P_snow + refreeze -
 M_snow``, so the snowfall, snowmelt and refreezing terms collapse into ``ΔS`` and
 only the snowpack stock and the ice melt are needed.
@@ -392,9 +397,141 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
             logger.warning("No glacier mass-balance observations loaded from %s.", path)
         return obj
 
+    @classmethod
+    def from_glamos_by_type(
+        cls,
+        path: str | Path,
+        kind: str = "whole",
+        glacier_id: str | None = None,
+        balance_types: tuple[str, ...] | list[str] = BALANCE_TYPES,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
+        metric: str = "rmse",
+        total_weight: float = 1.0,
+        weight_shares: dict[str, float] | None = None,
+        mode: str = "objective",
+        tolerance: float | None = None,
+        relative_tolerance: float | None = None,
+    ) -> list[GlacierMassBalanceObservations]:
+        """Load a GLAMOS file as one **separate signal per balance type**.
+
+        This is the recommended way to calibrate on seasonal mass balances, and the
+        counterpart of :meth:`from_glamos` (which pools every requested type into a
+        single signal). Returns a list ready to be passed as ``extra_observations``.
+
+        Why separate signals
+        --------------------
+        Pooled into one signal, the annual, winter and summer balances are
+        concatenated into a single vector scored by a single metric. The benchmark
+        that metric is normalized against (see
+        :func:`~hydrobricks.evaluation.metrics.to_skill`) is then the spread of that
+        pooled vector, which is dominated by the seasonal contrast (winter and summer
+        means of opposite sign, hundreds to thousands of mm w.e. apart) rather than
+        by the interannual variability the melt parameters control. A model that only
+        reproduces the seasonal cycle already scores well, while possibly being worse
+        than the per-season climatology on each season taken alone. Split, each
+        signal is scored against its own benchmark, carries its own weight, and -- in
+        ``'constraint'`` mode -- its own tolerance, relative to its own observed mean.
+
+        Missing balance types
+        ---------------------
+        Seasonal balances are not always reported: many series (WGMS entries,
+        geodetic surveys, most non-Swiss monitoring) carry the annual balance only,
+        and GLAMOS itself leaves the winter date and the Bw/Bs columns empty for some
+        glaciers and years. A requested type with no usable row is **skipped** (with
+        a log message) rather than returned as an empty signal, since an unscorable
+        signal would make every calibration run fail its objective. ``weight_shares``
+        is renormalized over the types actually found, so the mass balance keeps the
+        same overall say against the discharge whatever the source provides.
+
+        Parameters
+        ----------
+        path, kind, glacier_id, start_date, end_date
+            As in :meth:`from_glamos`.
+        balance_types
+            The types to look for, among ``'annual'``, ``'winter'`` and
+            ``'summer'``. Types absent from the file are skipped.
+        metric, mode, tolerance, relative_tolerance
+            Calibration configuration, applied to every returned signal (see the
+            class docstring).
+        total_weight
+            Weight of the mass balance as a whole, distributed over the returned
+            signals. With the default ``weight_shares`` each gets an equal share.
+        weight_shares
+            Relative share per balance type, e.g.
+            ``{'annual': 2.0, 'winter': 1.0, 'summer': 1.0}`` to give the annual
+            balance twice the weight of each season. Only the ratios matter: the
+            shares are renormalized over the types found so they always sum to
+            ``total_weight``. Types missing from the mapping default to a share of
+            1.0. Ignored in ``'constraint'`` mode, where signals filter rather than
+            score.
+
+        Returns
+        -------
+        list[GlacierMassBalanceObservations]
+            One signal per available balance type, in the order of
+            ``balance_types``.
+
+        Raises
+        ------
+        DataError
+            If none of the requested balance types has a usable observation.
+        """
+        signals = []
+        found = []
+        missing = []
+        for balance_type in balance_types:
+            cls._check_balance_type(balance_type)
+            signal = cls.from_glamos(
+                path,
+                kind=kind,
+                glacier_id=glacier_id,
+                balance_types=(balance_type,),
+                start_date=start_date,
+                end_date=end_date,
+                metric=metric,
+                mode=mode,
+                tolerance=tolerance,
+                relative_tolerance=relative_tolerance,
+            )
+            if len(signal) == 0:
+                missing.append(balance_type)
+                continue
+            signals.append(signal)
+            found.append(balance_type)
+
+        if not signals:
+            raise DataError(
+                f"None of the balance types {tuple(balance_types)} has a usable "
+                f"observation in {path}.",
+                data_type="glacier mass balance",
+                reason="No balance type available",
+            )
+        if missing:
+            logger.info(
+                "No %s glacier mass balance in %s; keeping %s.",
+                "/".join(missing),
+                path,
+                "/".join(found),
+            )
+
+        shares = weight_shares or {}
+        share_values = [float(shares.get(bt, 1.0)) for bt in found]
+        share_total = sum(share_values)
+        for signal, share in zip(signals, share_values):
+            signal.weight = total_weight * share / share_total
+
+        return signals
+
     # ------------------------------------------------------------------ #
     # AuxiliaryObservation interface
     # ------------------------------------------------------------------ #
+    @property
+    def name(self) -> str:
+        """Label naming the balance type and granularity, for messages."""
+        balance_type = self.balance_type or "mixed"
+        return f"glacier mass balance ({balance_type}, {self.granularity or 'whole'})"
+
     def observed(self) -> np.ndarray:
         """The observed mass-balance values [mm w.e.], one per target."""
         return np.array([t["value"] for t in self.targets], dtype=float)
@@ -456,19 +593,39 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
 
         time = model.get_recorded_time()  # DatetimeIndex (n_time)
 
-        # Sum the snowpack SWE and ice melt over all glacier covers (n_units, n_time).
-        snow = None
-        ice_melt = None
-        glacier_area = None  # (n_units, n_time), the time-varying glacier area
+        # Snowpack SWE and ice melt over all glacier covers (n_units, n_time), both
+        # expressed in mm w.e. over the glacierized area of the unit.
+        #
+        # The two recorded series do NOT share the same area reference: a brick
+        # *state* (``snow_content``) is a depth over its own land-cover area, whereas
+        # a process *output* is a flux already scaled by the flux area fraction
+        # (unit area / basin area * land-cover fraction, see ``Flux::SetAmount`` in
+        # the core), i.e. a depth over the whole sub-basin. The ice melt therefore has
+        # to be converted back to the glacier area before it can be subtracted from
+        # the snowpack change — without it the ablation term is under-counted by one
+        # to two orders of magnitude and the balance collapses towards ``dS`` alone.
         areas = model.get_recorded_hydro_unit_areas()  # (n_units,)
+        basin_area = float(np.sum(areas))
+        snow_weighted = None  # sum over covers of snow depth * cover area
+        melt_weighted = None  # sum over covers of ice melt * cover area
+        glacier_area = None  # (n_units, n_time), the time-varying glacier area
         for cover in glacier_covers:
             s = model.get_recorded_hydro_unit_values(f"{cover}_snowpack:snow_content")
             m = model.get_recorded_hydro_unit_values(f"{cover}:melt:output")
             frac = model.get_recorded_hydro_unit_fractions(cover)  # (n_units, n_time)
-            area = frac * areas[:, None]
-            snow = s if snow is None else np.nansum([snow, s], axis=0)
-            ice_melt = m if ice_melt is None else np.nansum([ice_melt, m], axis=0)
+            area = np.nan_to_num(frac) * areas[:, None]
+            # Depth over the cover area, weighted by that area: for the state this is
+            # ``s * area``; for the flux the conversion (* basin_area / area) and the
+            # weighting (* area) cancel, leaving ``m * basin_area``.
+            sw = np.nan_to_num(s) * area
+            mw = np.nan_to_num(m) * basin_area
+            snow_weighted = sw if snow_weighted is None else snow_weighted + sw
+            melt_weighted = mw if melt_weighted is None else melt_weighted + mw
             glacier_area = area if glacier_area is None else glacier_area + area
+
+        with np.errstate(invalid="ignore", divide="ignore"):
+            snow = np.where(glacier_area > 0, snow_weighted / glacier_area, np.nan)
+            ice_melt = np.where(glacier_area > 0, melt_weighted / glacier_area, np.nan)
 
         # Unit elevations, aligned to the recorded (descending-elevation) order.
         recorded_ids = model.get_recorded_hydro_unit_ids()
@@ -529,6 +686,24 @@ class GlacierMassBalanceObservations(AuxiliaryObservation):
                 dropped,
             )
         self.targets = kept
+
+    @property
+    def balance_type(self) -> str | None:
+        """The balance type of this signal, or ``None`` if it holds several.
+
+        A signal built by :meth:`from_glamos_by_type` (or by :meth:`from_csv`, which
+        loads one type per call) holds a single type, which labels it in outputs and
+        plots. :meth:`from_glamos` with several ``balance_types`` pools them, and
+        this returns ``None``.
+        """
+        types = {t["balance_type"] for t in self.targets}
+        return types.pop() if len(types) == 1 else None
+
+    @property
+    def balance_types(self) -> tuple[str, ...]:
+        """The balance types present in the targets, in canonical order."""
+        present = {t["balance_type"] for t in self.targets}
+        return tuple(bt for bt in BALANCE_TYPES if bt in present)
 
     @property
     def values(self) -> np.ndarray:

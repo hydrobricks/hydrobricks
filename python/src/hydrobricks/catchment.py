@@ -919,12 +919,18 @@ class Catchment:
     def discretize_by(self, *args, **kwargs) -> None:
         """
         Call the discretize_by method of the Discretization class.
+
+        Hydro units can span spatially distant areas; pass
+        ``split_discontinuous=True`` to create one hydro unit per connected patch.
         """
         self.discretization.discretize_by(*args, **kwargs)
 
     def create_elevation_bands(self, *args, **kwargs) -> None:
         """
         Call the create_elevation_bands method of the Discretization class.
+
+        Hydro units can span spatially distant areas; pass
+        ``split_discontinuous=True`` to create one hydro unit per connected patch.
         """
         self.discretization.create_elevation_bands(*args, **kwargs)
 

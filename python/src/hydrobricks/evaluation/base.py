@@ -93,6 +93,16 @@ class AuxiliaryObservation:
     relative_tolerance: float | None = None
     requires_recording: bool = True
 
+    @property
+    def name(self) -> str:
+        """Short human-readable label, used in log and error messages.
+
+        Subclasses should override it whenever several signals of the same type can
+        coexist in one calibration (e.g. one per glacier mass-balance season), so a
+        message can point at the right one.
+        """
+        return type(self).__name__
+
     def observed(self) -> np.ndarray:
         """Return the observed values as a 1D array."""
         raise NotImplementedError

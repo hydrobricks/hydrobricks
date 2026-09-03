@@ -11,6 +11,10 @@ endif ()
 if (POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif ()
+if (POLICY CMP0091)
+    # Required for CMAKE_MSVC_RUNTIME_LIBRARY (set below) to be honoured.
+    cmake_policy(SET CMP0091 NEW)
+endif ()
 
 # vcpkg
 if (NOT DEFINED ENV{VCPKG_ROOT})
@@ -25,6 +29,11 @@ set(VCPKG_LIBRARY_LINKAGE "static")
 # Project name
 project(hydrobricks)
 
+# MSVC runtime library. Python extension modules and the vcpkg x64-windows packages both use the dynamic runtime (/MD),
+# so pin it for every target rather than leaving it to a dependency's default: a FetchContent dependency defaulting to
+# /MT breaks the link with LNK2038, which is what yaml-cpp did before it moved to vcpkg.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,8 +43,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Version number
 set(VERSION_MAJOR "0")
-set(VERSION_MINOR "8")
-set(VERSION_PATCH "6")
+set(VERSION_MINOR "9")
+set(VERSION_PATCH "0")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})
@@ -59,19 +68,6 @@ option(USE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer in
 set(BUILD_TESTING OFF)
 mark_as_advanced(BUILD_TESTING)
 
-# Get and build yaml-cpp (master branch)
-FetchContent_Declare(
-    yaml-cpp
-    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG master)
-set(YAML_CPP_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(yaml-cpp)
-
-include_directories(${yaml-cpp_SOURCE_DIR}/include)
-link_directories(${yaml-cpp_BINARY_DIR}/lib)
-message(STATUS "yaml-cpp include dir = ${yaml-cpp_SOURCE_DIR}/include")
-message(STATUS "yaml-cpp lib dir = ${yaml-cpp_BINARY_DIR}/lib")
-
 # Pybind 11 - not retrieved through vcpkg to avoid getting Python automatically (without control of the version)
 FetchContent_Declare(
     pybind11
@@ -81,6 +77,7 @@ FetchContent_Declare(
 # Find packages
 find_package(netCDF CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
+find_package(yaml-cpp CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 

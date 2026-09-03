@@ -260,7 +260,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="melt_factor",
             unit="mm/d/°C",
-            aliases=None,
+            aliases=["hock_melt_factor"],
             min=0,
             max=12,
             mandatory=True,
@@ -268,7 +268,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="radiation_coefficient",
             unit="m2/W*mm/d/°C",
-            aliases=None,
+            aliases=["hock_radiation_coefficient"],
             min=0,
             max=1,
             mandatory=True,
@@ -276,7 +276,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ParamSpec(
             name="melting_temperature",
             unit="°C",
-            aliases=None,
+            aliases=["hock_melting_temperature"],
             min=0,
             max=5,
             default=0,

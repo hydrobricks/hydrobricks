@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
+from hydrobricks import caching
 from hydrobricks._constants import ICE_WE
 from hydrobricks._exceptions import ConfigurationError, DataError, DependencyError
 from hydrobricks._optional import HAS_PYPROJ, rasterio
@@ -18,6 +20,8 @@ from hydrobricks.preprocessing.glacier_cover import (
 if TYPE_CHECKING:
     from hydrobricks.catchment import Catchment
     from hydrobricks.hydro_units import HydroUnits
+
+logger = logging.getLogger(__name__)
 
 
 class GlacierEvolutionDeltaH:
@@ -421,6 +425,7 @@ class GlacierEvolutionDeltaH:
         nb_increments: int = 200,
         update_width: bool = True,
         update_width_reference: str = "initial",
+        cache_dir: str | Path | None = None,
     ):
         """
         Prepare the glacier mass balance lookup table. The glacier mass balance is
@@ -472,6 +477,10 @@ class GlacierEvolutionDeltaH:
             - 'initial': Use the initial glacier width.
             - 'previous': Use the glacier width from the previous iteration.
             Ignored if pixel_based_approach is True.
+        cache_dir
+            Directory where the computed lookup tables are cached, keyed by a
+            hash of the glacier data and options, and automatically reloaded
+            when the same setup is reused. Default: None (caching disabled).
         """
         if self.hydro_units is None:
             raise ConfigurationError(
@@ -530,6 +539,55 @@ class GlacierEvolutionDeltaH:
         initial_we_mm = initial_we_mm * ICE_WE * 1000
         hydro_unit_ids = self.glacier_df[("hydro_unit_id", "-")].values
 
+        # Cache lookup: the key covers the exact inputs of the increment loop
+        # (the resolved glacier data and options), so the upstream extraction
+        # steps and their side effects still run as usual.
+        payload_names = [
+            "glacier_evolution_lookup_table_area.csv",
+            "glacier_evolution_lookup_table_volume.csv",
+        ]
+        payload_dir = None
+        if cache_dir is not None:
+            hash_bytes = [self.glacier_df.to_csv(index=False).encode()]
+            if self.pixel_based_approach:
+                px_parts = [
+                    np.asarray(a, dtype=float).ravel() for a in self.px_ice_we[0]
+                ]
+                lengths = np.array([len(a) for a in px_parts], dtype=np.int64)
+                hash_bytes.append(lengths.tobytes())
+                if px_parts:
+                    hash_bytes.append(np.concatenate(px_parts).tobytes())
+            config = {
+                "cache_version": 1,
+                "nb_increments": nb_increments,
+                "update_width": update_width,
+                "update_width_reference": update_width_reference,
+                "pixel_based_approach": self.pixel_based_approach,
+                "catchment_area": float(self.catchment_area),
+                "px_area": (
+                    catchment.get_dem_pixel_area()
+                    if self.pixel_based_approach
+                    else None
+                ),
+                "observed_dh": (
+                    observed_dh.to_csv(index=False) if observed_dh is not None else None
+                ),
+            }
+            key = caching.cache_key(config, hash_bytes=hash_bytes)
+            payload_dir = caching.cache_payload_dir(cache_dir, "glacier_lookup", key)
+            if caching.payload_complete(payload_dir, payload_names):
+                logger.info(f"Loading cached glacier lookup tables from {payload_dir}")
+                self.lookup_table_area = pd.read_csv(
+                    payload_dir / payload_names[0]
+                ).to_numpy(dtype=float)
+                self.lookup_table_volume = pd.read_csv(
+                    payload_dir / payload_names[1]
+                ).to_numpy(dtype=float)
+                # The detail containers (areas_pc_parts, we_parts) stay None,
+                # so save_as_csv() only writes the lookup tables.
+                self.hydro_unit_ids = hydro_unit_ids
+                return
+
         self.excess_melt_we = 0
         self.elev_bands_parts = elev_bands_parts
         self.hydro_unit_ids = hydro_unit_ids
@@ -569,6 +627,17 @@ class GlacierEvolutionDeltaH:
 
         self._compute_sub_band_parts()
         self._update_lookup_tables()
+
+        # Save the lookup tables to the cache (same format as save_as_csv).
+        if payload_dir is not None:
+            payload_dir.mkdir(parents=True, exist_ok=True)
+            self.get_lookup_table_area().to_csv(
+                payload_dir / payload_names[0], index=False
+            )
+            self.get_lookup_table_volume().to_csv(
+                payload_dir / payload_names[1], index=False
+            )
+            logger.info(f"Saved glacier lookup tables cache to {payload_dir}")
 
     def get_lookup_table_area(self) -> pd.DataFrame:
         """

@@ -35,21 +35,21 @@ forcing:
       path: path/to/RhiresD_v2.0_swiss.lv95     # <-- set to your local folder
       file_pattern: "RhiresD_ch01h.swiss.lv95_*.nc"
       var_name: RhiresD
-      crs: 2056
+      data_crs: 2056
       dim_x: E
       dim_y: N
     temperature:
       path: path/to/TabsD_v2.0_swiss.lv95       # <-- set to your local folder
       file_pattern: "TabsD_ch01r.swiss.lv95_*.nc"
       var_name: TabsD
-      crs: 2056
+      data_crs: 2056
       dim_x: E
       dim_y: N
-      elevation_gradient: true  # gradients derived from the data (needs the
-                                # outline/dem above)
+      apply_data_gradient: true  # gradients derived from the data (needs the
+                                  # outline/dem above)
   pet:
     # Computed from the temperature; the latitude is derived from the
-    # catchment (add 'latitude: ...' when no outline/dem is given).
+    # catchment (add 'lat: ...' when no outline/dem is given).
     method: Oudin
 
 observations:

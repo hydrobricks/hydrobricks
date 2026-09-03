@@ -94,7 +94,8 @@ filterwarnings = [
     "error",  # Treat all warnings as errors
     "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
     "ignore:The distutils package is deprecated:DeprecationWarning",
-    "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning"
+    "ignore:angle from rectified to skew grid parameter lost in conversion to CF:UserWarning",
+    "ignore:Use `@` matmul instead of:PendingDeprecationWarning",
 ]
 testpaths = ["python/tests"]
 
@@ -105,7 +106,7 @@ ignore-words-list = "crate, mape, ned, PADDS"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*", "cp38*", "cp39*", "cp314t*"]
+skip = ["*musllinux*",  "cp39*", "cp314t*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
@@ -116,6 +117,11 @@ environment = {VCPKG_LIBRARY_LINKAGE="static"}
 build-verbosity = 1
 
 [tool.cibuildwheel.linux]
+# The project is copied into the container, so a binary cache written under /project would
+# be lost; the host root is bind-mounted at /host instead, and the workflow points
+# VCPKG_DEFAULT_BINARY_CACHE there. environment-pass forwards it in -- it is a separate
+# option from `environment`, so the global VCPKG_LIBRARY_LINKAGE setting stays intact.
+environment-pass = ["VCPKG_DEFAULT_BINARY_CACHE"]
 before-all = [ # Independent of Python version
     # Install system dependencies
     "yum install -y epel-release",
@@ -154,9 +160,8 @@ before-build = [ # Depends on Python version
 repair-wheel-command = "cp {wheel} {dest_dir}/"
 
 [tool.cibuildwheel.macos]
+environment = { VCPKG_LIBRARY_LINKAGE = "static", MACOSX_DEPLOYMENT_TARGET = "13.3" }
 before-all = [ # Independent of Python version
-    # Install system dependencies
-    "brew install hdf5",
     # Install vcpkg
     "git clone https://github.com/microsoft/vcpkg.git",
     "cd vcpkg",
@@ -165,7 +170,6 @@ before-all = [ # Independent of Python version
     "export PATH=$VCPKG_ROOT:$PATH",
     "cd ..",
     # Install vcpkg dependencies
-    "export VCPKG_LIBRARY_LINKAGE=static",
     "vcpkg install",
 ]
 before-build = [  # Depends on Python version

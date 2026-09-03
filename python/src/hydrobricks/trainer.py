@@ -15,6 +15,7 @@ from hydrobricks.evaluation.metrics import (  # evaluate re-exported
     is_error_metric,
     to_skill,
 )
+from hydrobricks.evaluation.transforms import DischargeTransform
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ class SpotpySetup:
         discharge: DischargeObservations | list[DischargeObservations] | None = None,
         warmup: int | None = None,
         obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+        transform: DischargeTransform | str | dict | Callable | None = None,
         dump_outputs: bool = False,
         dump_forcing: bool = False,
         dump_dir: str = "",
@@ -150,7 +152,8 @@ class SpotpySetup:
             the warmup; passing both explicitly is an error).
         obj_func
             Objective function for optimization. If None, uses non-parametric
-            Kling-Gupta Efficiency. Can be a string (HydroErr function name) or
+            Kling-Gupta Efficiency. Can be a string (HydroErr function name, or
+            ``'kge_np'`` for the non-parametric KGE) or a
             callable that takes (observed, simulated) and returns a scalar. String
             metrics are oriented automatically (error metrics such as ``'rmse'`` are
             internally negated so that higher is always better); a callable is
@@ -158,6 +161,16 @@ class SpotpySetup:
             optimizer is then applied automatically from the chosen algorithm's
             direction (see :func:`calibrate`), so there is no ``invert_obj_func``
             to set. Default: None
+        transform
+            Optional discharge transformation applied to the observed and simulated
+            discharge before the objective is computed, to shift its emphasis (e.g.
+            ``'power(0.2)'`` or ``'log'`` for low flows; Thirel et al., 2024).
+            Anything accepted by :meth:`DischargeTransform.from_spec
+            <hydrobricks.evaluation.transforms.DischargeTransform.from_spec>`: a
+            :class:`~hydrobricks.evaluation.transforms.DischargeTransform`, a string, a
+            dict, or a callable. Applies to the discharge objective only — never to
+            the auxiliary ``extra_observations`` signals. A callable ``obj_func``
+            also receives the transformed series. Default: None (untransformed).
         dump_outputs
             If True, save all simulation outputs to disk. Default: False
         dump_forcing
@@ -189,7 +202,10 @@ class SpotpySetup:
             auxiliary RMSE share a comparable range and the weights are meaningful.
             Error metrics become ``1 - value/reference``; skill metrics (nse, kge, ...)
             and custom callables are left unchanged. Set ``False`` to combine the raw
-            oriented metrics as before. Ignored for ``'pareto'``. Default: True
+            oriented metrics as before. Applies to the auxiliary terms of
+            ``combine='pareto'`` too (each vector component is oriented the same
+            way); only the weighting itself is specific to ``'weighted'``.
+            Default: True
         periods
             The modelling :class:`~hydrobricks.periods.Periods`. When given, the
             model(s) must be set up over ``periods.calibration`` (typically with the
@@ -254,6 +270,11 @@ class SpotpySetup:
 
         # Validate objective function
         self._validate_and_set_objective_function(obj_func)
+
+        # Discharge transformation for the discharge objective (identity when
+        # transform is None). Coerced here so an invalid spec fails at setup time,
+        # not on the first evaluation. Picklable, so it travels to workers.
+        self.transform = DischargeTransform.from_spec(transform)
 
         # Validate and store the (optional) auxiliary-observation configuration.
         self._validate_and_set_extra_observations(
@@ -547,6 +568,29 @@ class SpotpySetup:
                 "period.",
                 data_type="extra observations",
                 reason="No observations in period",
+            )
+        # An individual empty signal cannot be scored, and silently contributes the
+        # rejection penalty to *every* run (see _objective_with_extra_observations),
+        # which would look like a calibration that never finds a behavioural
+        # parameter set. Fail loudly instead, naming the offending signal: it
+        # usually means the source has no data of that kind (e.g. a glacier with
+        # only annual balances loaded as annual + winter + summer signals), or that
+        # its periods all fall in the warmup.
+        empty = [
+            f"#{i} ({getattr(obs, 'name', type(obs).__name__)})"
+            for i, (obs, length) in enumerate(
+                zip(self.extra_observations, self._extra_lengths)
+            )
+            if length == 0
+        ]
+        if empty:
+            raise DataError(
+                "These extra observations have no value in the post-warmup "
+                f"simulation period: {', '.join(empty)}. Drop them from "
+                "extra_observations, or load them from a source that covers the "
+                "period.",
+                data_type="extra observations",
+                reason="Empty signal",
             )
 
     def _check_required_recordings(self, model: Model) -> None:
@@ -906,7 +950,8 @@ class SpotpySetup:
         obj_func
             Objective function specification. Can be:
             - None: Use default non-parametric Kling-Gupta Efficiency
-            - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012')
+            - str: Name of HydroErr metric (e.g., 'nse', 'kge_2012'), or 'kge_np'
+              for the non-parametric KGE
             - callable: User-defined function with signature
               (observed, simulated) -> float
 
@@ -1140,6 +1185,19 @@ class SpotpySetup:
         # Return the mean of the objective function
         return np.mean(all_like)
 
+    @property
+    def n_objectives(self) -> int:
+        """Number of objective values :meth:`objectivefunction` returns.
+
+        1 for a single score, and for ``combine='pareto'`` the length of the
+        objective vector: the discharge plus one component per ``'objective'``
+        auxiliary signal. Pass it as the multi-objective sampler's ``n_obj`` (e.g.
+        SPOTPY's NSGAII) so the two always agree.
+        """
+        if self._has_extra_obs and self.combine == "pareto":
+            return 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
+        return 1
+
     def _worst_score(self) -> float | list[float]:
         """The score a rejected parameter set receives (worst for the optimizer).
 
@@ -1148,10 +1206,8 @@ class SpotpySetup:
         sampler always receives a consistent-length objective.
         """
         worst = _WORST_PENALTY if self._minimize else -_WORST_PENALTY
-        if self._has_extra_obs and self.combine == "pareto":
-            n_obj = 1 + sum(1 for o in self.extra_observations if o.mode == "objective")
-            return [worst] * n_obj
-        return worst
+        n_obj = self.n_objectives
+        return [worst] * n_obj if n_obj > 1 else worst
 
     def _discharge_skill(self, sim: np.ndarray, obs: np.ndarray) -> float:
         """Discharge skill (higher is better), in metric-consistent space.
@@ -1161,7 +1217,11 @@ class SpotpySetup:
         terms, higher is always better. The optimizer-direction sign is applied
         later, once, in :meth:`objectivefunction`. A custom callable is assumed to
         already follow "higher is better".
+
+        The discharge transform (if any) is applied to both series first, so the
+        metric is computed in transformed space.
         """
+        sim, obs = self.transform.transform_pair(sim, obs)
         if not self.obj_func:
             return spotpy.objectivefunctions.kge_non_parametric(obs, sim)
         if isinstance(self.obj_func, str):
@@ -1259,8 +1319,13 @@ class SpotpySetup:
         # skill scale as the auxiliary terms when it is a (string) error metric; a
         # non-parametric KGE (obj_func None) or a custom callable is already a skill.
         if self.normalize and isinstance(self.obj_func, str):
-            q_value = evaluate(combined[:q_len], obs_combined[:q_len], self.obj_func)
-            q_term = self._oriented_term(q_value, self.obj_func, obs_combined[:q_len])
+            # Score (and benchmark) the discharge term in transformed space, like
+            # _discharge_skill does.
+            q_sim, q_obs = self.transform.transform_pair(
+                combined[:q_len], obs_combined[:q_len]
+            )
+            q_value = evaluate(q_sim, q_obs, self.obj_func)
+            q_term = self._oriented_term(q_value, self.obj_func, q_obs)
         else:
             q_term = q_skill
         combined_skill = self.discharge_weight * q_term + sum(
@@ -1408,6 +1473,7 @@ def calibrate_from_factory(
     allow_changing: list[str] | None = None,
     warmup: int | None = None,
     obj_func: str | Callable[[np.ndarray, np.ndarray], float] | None = None,
+    transform: DischargeTransform | str | dict | Callable | None = None,
     dump_outputs: bool = False,
     dump_forcing: bool = False,
     dump_dir: str = "",
@@ -1453,7 +1519,7 @@ def calibrate_from_factory(
     allow_changing
         Optional list of parameter names/aliases to calibrate. If given, it
         overrides any ``parameters.allow_changing`` set inside the factory.
-    warmup, obj_func, dump_outputs, dump_forcing, dump_dir, periods
+    warmup, obj_func, transform, dump_outputs, dump_forcing, dump_dir, periods
         Forwarded to :class:`SpotpySetup`. With ``periods``, the factory must set
         the model up over ``periods.calibration`` (typically with
         ``spinup=periods.spinup``) and ``warmup`` must be left unset.
@@ -1489,6 +1555,7 @@ def calibrate_from_factory(
         params,
         warmup=warmup,
         obj_func=obj_func,
+        transform=transform,
         dump_outputs=dump_outputs,
         dump_forcing=dump_forcing,
         dump_dir=dump_dir,
@@ -1558,8 +1625,11 @@ def get_results(sampler: Any, parameters: ParameterSet | None = None) -> Any:
     the *negated* skill for minimizing algorithms (SCE-UA, NSGA-II, PADDS). This
     helper flips it back so every score column is a skill where **higher is always
     better**, regardless of the algorithm — e.g. a KGE of 0.7 reads as 0.7, never
-    -0.7. (Error metrics such as ``rmse`` are negated by the skill convention, so a
-    smaller error shows as a larger, less-negative score.)
+    -0.7. An auxiliary signal scored with an error metric (``rmse``, ...) is not
+    returned as that error either: it went through
+    :func:`~hydrobricks.evaluation.metrics.to_skill` (``1 - value/reference``, with
+    ``normalize``), so its column is a benchmark skill where 1 is perfect and 0 is
+    the mean/climatology of that signal — not a value in the metric's own units.
 
     Parameters
     ----------

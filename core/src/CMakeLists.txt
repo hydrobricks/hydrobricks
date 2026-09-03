@@ -29,8 +29,10 @@ endif (WIN32)
 
 # LINKING
 
-# Link libraries explicitly to not link Google Tests to the main app.
-target_link_libraries(core PRIVATE netCDF::netcdf yaml-cpp::yaml-cpp Eigen3::Eigen)
+# Link libraries explicitly to not link Google Tests to the main app. yaml-cpp is PUBLIC: SettingsModel.h includes
+# <yaml-cpp/yaml.h> and exposes YAML::Node, so every consumer of core needs its include directories.
+target_link_libraries(core PUBLIC yaml-cpp::yaml-cpp)
+target_link_libraries(core PRIVATE netCDF::netcdf Eigen3::Eigen)
 target_link_libraries(hydrobricks-cli core Eigen3::Eigen)
 
 # COPY BINARY FILES

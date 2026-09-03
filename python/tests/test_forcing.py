@@ -5,6 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 import hydrobricks as hb
@@ -418,6 +420,131 @@ def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape[0] == 3
     assert forcing.data2D.data[0].shape[1] == 35
+
+
+def _spatialize_gridded_precip(hydro_units, cache_dir=None, data_crs=2056):
+    forcing = hb.Forcing(hydro_units, cache_dir=cache_dir)
+    forcing.spatialize_from_gridded_data(
+        variable="precipitation",
+        path=CATCHMENT_DIR / "gridded_precip.nc",
+        data_crs=data_crs,
+        var_name="RhiresD",
+        dim_x="E",
+        dim_y="N",
+        raster_hydro_units=CATCHMENT_DIR / "unit_ids.tif",
+        apply_data_gradient=False,
+    )
+    forcing.apply_operations()
+    return forcing
+
+
+def test_regrid_cache_disabled_by_default(hydro_units: hb.HydroUnits):
+    forcing = hb.Forcing(hydro_units)
+    assert forcing.cache_dir is None
+
+
+def test_regrid_cache_roundtrip(hydro_units: hb.HydroUnits, tmp_path, monkeypatch):
+    if not has_gridded_data_packages():
+        return
+
+    forcing = _spatialize_gridded_precip(hydro_units, cache_dir=tmp_path)
+    cache_files = list(tmp_path.glob("forcing_regrid_*.csv"))
+    assert len(cache_files) == 1
+
+    # The second run must not open the netCDF file at all.
+    import hydrobricks.time_series as ts_module
+
+    def _fail(*args, **kwargs):
+        raise AssertionError("cache miss: the netCDF file was opened")
+
+    monkeypatch.setattr(ts_module.xr, "open_dataset", _fail)
+    forcing2 = _spatialize_gridded_precip(hydro_units, cache_dir=tmp_path)
+
+    assert len(list(tmp_path.glob("forcing_regrid_*.csv"))) == 1
+    assert np.allclose(forcing2.data2D.data[0], forcing.data2D.data[0])
+    assert len(forcing2.data2D.time) == len(forcing.data2D.time)
+    assert forcing2.data2D.time[0] == forcing.data2D.time[0]
+
+
+def test_regrid_cache_miss_on_option_change(tmp_path):
+    if not has_gridded_data_packages():
+        return
+
+    catchment = hb.Catchment(CATCHMENT_DIR / "outline.shp")
+    catchment.extract_dem(CATCHMENT_DIR / "dem.tif")
+    catchment.create_elevation_bands(method="equal_intervals", distance=50)
+    catchment.save_unit_ids_raster(tmp_path)
+    cache_dir = tmp_path / "cache"
+
+    for gradient_type in ("additive", "multiplicative"):
+        forcing = hb.Forcing(catchment, cache_dir=cache_dir)
+        forcing.spatialize_from_gridded_data(
+            variable="precipitation",
+            path=CATCHMENT_DIR / "gridded_precip.nc",
+            data_crs=2056,
+            var_name="RhiresD",
+            dim_x="E",
+            dim_y="N",
+            raster_hydro_units=tmp_path / "unit_ids.tif",
+            apply_data_gradient=True,
+            gradient_type=gradient_type,
+        )
+        forcing.apply_operations()
+
+    assert len(list(cache_dir.glob("forcing_regrid_*.csv"))) == 2
+
+
+def test_regrid_cache_invalidated_by_mtime(hydro_units: hb.HydroUnits, tmp_path):
+    if not has_gridded_data_packages():
+        return
+
+    import shutil
+
+    nc_copy = tmp_path / "gridded_precip.nc"
+    shutil.copy2(CATCHMENT_DIR / "gridded_precip.nc", nc_copy)
+    cache_dir = tmp_path / "cache"
+
+    def run():
+        forcing = hb.Forcing(hydro_units, cache_dir=cache_dir)
+        forcing.spatialize_from_gridded_data(
+            variable="precipitation",
+            path=nc_copy,
+            data_crs=2056,
+            var_name="RhiresD",
+            dim_x="E",
+            dim_y="N",
+            raster_hydro_units=CATCHMENT_DIR / "unit_ids.tif",
+            apply_data_gradient=False,
+        )
+        forcing.apply_operations()
+
+    run()
+    assert len(list(cache_dir.glob("forcing_regrid_*.csv"))) == 1
+    stat = nc_copy.stat()
+    os.utime(nc_copy, (stat.st_atime, stat.st_mtime + 10))
+    run()
+    assert len(list(cache_dir.glob("forcing_regrid_*.csv"))) == 2
+
+
+def test_regrid_cache_day_of_year_roundtrip(tmp_path):
+    from hydrobricks.time_series import TimeSeries2D
+
+    doy = np.arange(1, 367)
+    matrix = np.arange(366 * 2, dtype=float).reshape(366, 2)
+
+    ts_out = TimeSeries2D()
+    ts_out.time = pd.Series(pd.date_range("2001-01-01", "2001-12-31"))
+    ts_out.data.append(matrix)
+    cache_path = tmp_path / "forcing_regrid_test.csv"
+    ts_out._save_regrid_cache(cache_path, "day_of_year", doy, np.array([1, 2]))
+    assert cache_path.exists()
+
+    ts_in = TimeSeries2D()
+    ts_in.time = pd.Series(pd.date_range("2001-01-01", "2001-12-31"))
+    assert ts_in._load_regrid_cache(cache_path)
+    # 2001 is not a leap year: days of year 1..365 map to rows 0..364.
+    assert ts_in.data[0].shape == (365, 2)
+    assert np.allclose(ts_in.data[0], matrix[:365, :])
 
 
 def test_regrid_from_netcdf_with_data_gradient():

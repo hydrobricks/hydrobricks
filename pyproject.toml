@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "cftime",
-    "numpy<2.4",
+    "numpy",
     "HydroErr",
     "pandas",
     "pyyaml",
@@ -106,7 +106,12 @@ ignore-words-list = "crate, mape, ned, PADDS"
 test-command = "pytest {project}/python/tests"
 test-extras = "test"
 archs = ["auto64"]
-skip = ["*musllinux*",  "cp39*", "cp314t*"]
+skip = ["*musllinux*",  "cp39*", "cp314t*", "cp315t*"]
+# The 3.15 wheel itself builds fine, but the test venv cannot be created: the scientific
+# stack has no cp315 wheels yet (pyproj, shapely, netCDF4, pyarrow, matplotlib, pandas,
+# cftime), so pip falls back to sdists and pyproj fails first, asking for a PROJ install.
+# Remove once those projects publish cp315 wheels.
+test-skip = ["cp315*"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"

@@ -1477,6 +1477,7 @@ class ParameterSet:
             )
 
         index = self._get_parameter_index(name)
+        self._check_not_spatial(index, name)
         checked = list(values)
         if check_range:
             checked = [
@@ -1525,6 +1526,16 @@ class ParameterSet:
             The name of the hydro-unit property holding the per-unit values.
         """
         index = self._get_parameter_index(name)
+        if index in self._monthly_values:
+            raise ConfigurationError(
+                f'The parameter "{name}" already has monthly values and cannot '
+                f"also be spatial: the per-unit value takes precedence over the "
+                f"shared one that the monthly update writes, so the monthly "
+                f"variation would be silently lost.",
+                item_name=name,
+                item_value=property_name,
+                reason="Parameter is already monthly",
+            )
         self._spatial[index] = property_name
 
     def get_spatial_parameters(self) -> list[tuple[str, str, str]]:
@@ -2612,6 +2623,39 @@ class ParameterSet:
                     item_name=alias,
                     reason="Duplicate alias",
                 )
+
+    def _check_not_spatial(self, index: Hashable, name: str) -> None:
+        """
+        Reject a monthly value on a parameter that is already spatial.
+
+        The two mechanisms are mutually exclusive by construction: a spatial
+        parameter is read from a per-unit override, which takes precedence over the
+        shared value that the monthly update writes, so the monthly variation would
+        never reach the units carrying the property.
+
+        Parameters
+        ----------
+        index
+            Index of the parameter in the parameter table.
+        name
+            The parameter name or alias, for the error message.
+
+        Raises
+        ------
+        ConfigurationError
+            If the parameter is already bound to a hydro-unit property.
+        """
+        if index in self._spatial:
+            raise ConfigurationError(
+                f'The parameter "{name}" is spatial (bound to the hydro-unit '
+                f'property "{self._spatial[index]}") and cannot also take monthly '
+                f"values: the per-unit value takes precedence over the shared one "
+                f"that the monthly update writes, so the monthly variation would be "
+                f"silently lost.",
+                item_name=name,
+                item_value=self._spatial[index],
+                reason="Parameter is already spatial",
+            )
 
     def _check_value_range(
         self, index: int, key: str, value: float, allow_adapt: bool = False

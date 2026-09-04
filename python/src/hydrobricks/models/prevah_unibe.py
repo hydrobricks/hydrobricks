@@ -140,6 +140,19 @@ class PrevahUniBE(Model):
         PREVAH's linear transition over TGR ± TTRANS).
     snow_redistribution : str or None
         Optional snow redistribution process (e.g. 'transport:snow_slide').
+    share_soil : bool
+        Share a single soil moisture store across the soil-bearing land covers
+        (default: True). A PREVAH hydrotope carries one land use and one soil, so a
+        shared store is the right model when each hydro unit is dominated by one
+        cover. Set it to False when a unit mixes covers and you want PREVAH's
+        per-land-use soil parameterization: each cover then gets its own store with
+        its own ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by
+        their area-weighted mean saturation. Note that a per-cover store is fed by
+        its land cover, whose outgoing fluxes already carry the cover area fraction,
+        so ``fc_<cover>`` is expressed over the whole hydro unit rather than over the
+        cover itself (as for the per-class soils of
+        :class:`~hydrobricks.models.hbv.HBV`): the capacities of the covers add up to
+        the unit's soil storage.
     forest_interception : bool
         Add a canopy interception store on each ``forest`` land cover (default:
         True). Superseded by ``interception_covers`` when that option is set.
@@ -253,6 +266,7 @@ class PrevahUniBE(Model):
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
         self.options["snow_sublimation_process"] = "sublimation:pet"
+        self.options["share_soil"] = True
         self.options["forest_interception"] = True
         self.options["interception_covers"] = None
         self.options["canopy_interception_process"] = "interception:menzel"
@@ -288,9 +302,12 @@ class PrevahUniBE(Model):
         slz2/slz3). PREVAH has no capillary flux, so the soil moisture store
         receives water only from the covers.
 
-        A single soil moisture store is shared by the soil covers (a PREVAH
-        hydrotope carries one soil), which also serves as the gate brick of the
-        soil-moisture-dependent percolation.
+        A single soil moisture store is shared by the soil covers by default (a
+        PREVAH hydrotope carries one land use and one soil); ``share_soil=False``
+        gives each cover its own store and its own field capacity, as PREVAH
+        parameterizes the soil per land-use class. The soil store(s) also gate the
+        soil-moisture-dependent percolation: with several, the percolation reads
+        their area-weighted mean saturation.
         """
         self._glacier_cover_names = [
             name
@@ -316,6 +333,29 @@ class PrevahUniBE(Model):
             )
         multi_cover = len(soil_cover_names) + len(self._wetland_cover_names) > 1
 
+        # Soil naming: a single shared store by default (the PREVAH hydrotope), or one
+        # soil moisture store per soil-bearing cover when share_soil is disabled. The
+        # wetland covers route their dry fraction through their own pass-through brick,
+        # which feeds the soil of that cover.
+        # Brick feeding a soil store -> the land cover that owns it. A wetland feeds
+        # its soil through its own pass-through brick, but the store (and its
+        # parameters) belong to the cover itself.
+        soil_sources = {name: name for name in soil_cover_names}
+        soil_sources.update({f"{n}_dry": n for n in self._wetland_cover_names})
+        self._shared_soil = (
+            bool(self.options.get("share_soil")) or len(soil_sources) == 1
+        )
+        if self._shared_soil:
+            self._soil_names = {src: "soil_moisture" for src in soil_sources}
+        else:
+            self._soil_names = {
+                src: f"{cover}_soil_moisture" for src, cover in soil_sources.items()
+            }
+        # Soil store -> the cover naming its parameters (fc_<cover>, lp_<cover>).
+        self._soil_covers = {
+            self._soil_names[src]: cover for src, cover in soil_sources.items()
+        }
+
         # Beta-function split of rain and snowpack outflow per soil cover. The
         # recharge (outflow:rest) is the complement of the infiltration and must be
         # declared after it.
@@ -326,7 +366,7 @@ class PrevahUniBE(Model):
                 "processes": {
                     "infiltration": {
                         "kind": "infiltration:hbv",
-                        "target": "soil_moisture",
+                        "target": self._soil_names[cover_name],
                     },
                     "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
                 },
@@ -356,7 +396,7 @@ class PrevahUniBE(Model):
                 "processes": {
                     "infiltration": {
                         "kind": "infiltration:hbv",
-                        "target": "soil_moisture",
+                        "target": self._soil_names[f"{cover_name}_dry"],
                     },
                     "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
                 },
@@ -398,15 +438,21 @@ class PrevahUniBE(Model):
                 item_value=canopy_et,
                 reason="Unknown process type",
             )
-        self.structure["soil_moisture"] = {
-            "attach_to": "hydro_unit",
-            "kind": "storage",
-            "parameters": {"capacity": 250},
-            "processes": {
-                "et": {"kind": soil_et},
-                "overflow": {"kind": "overflow", "target": "upper_zone"},
-            },
-        }
+        for soil_name, cover_name in self._soil_covers.items():
+            if soil_name in self.structure:
+                continue  # shared store already declared
+            soil = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "parameters": {"capacity": 250},
+                "processes": {
+                    "et": {"kind": soil_et},
+                    "overflow": {"kind": "overflow", "target": "upper_zone"},
+                },
+            }
+            if not self._shared_soil and multi_cover:
+                soil["alias_suffix"] = f"_{cover_name}"
+            self.structure[soil_name] = soil
 
         # Upper zone (SUZ): threshold surface runoff, interflow and the
         # soil-moisture-gated percolation to the groundwater.
@@ -419,7 +465,10 @@ class PrevahUniBE(Model):
                 "percolation": {
                     "kind": "percolation:prevah",
                     "target": "slz1",
-                    "gate": "soil_moisture",
+                    # With one soil store per cover, the percolation is gated by their
+                    # area-weighted mean saturation (the contents already carry the
+                    # cover area fractions).
+                    "gate": self._gate_bricks(),
                 },
             },
         }
@@ -472,6 +521,16 @@ class PrevahUniBE(Model):
             },
         }
 
+    def _gate_bricks(self) -> str | list[str]:
+        """The soil moisture store(s) gating the percolation.
+
+        A single name with a shared store (the usual PREVAH hydrotope), otherwise the
+        list of the per-cover stores, whose saturations the process averages.
+        """
+        names = list(dict.fromkeys(self._soil_names.values()))
+
+        return names[0] if len(names) == 1 else names
+
     def _define_structure_variants(
         self,
     ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
@@ -494,8 +553,6 @@ class PrevahUniBE(Model):
         the glacier reservoir factors come from the glacier module.
         """
         self.parameter_aliases = {
-            "soil_moisture:capacity": ["fc"],
-            "soil_moisture:lp": ["cu"],
             "upper_zone:response_factor_threshold": ["k0"],
             "upper_zone:threshold": ["sgrluz"],
             "upper_zone:response_factor": ["k1"],
@@ -503,6 +560,12 @@ class PrevahUniBE(Model):
             "slz2:response_factor": ["k_gw2"],
             "slz3:response_factor": ["k_gw3"],
         }
+        if self._shared_soil:
+            self.parameter_aliases["soil_moisture:capacity"] = ["fc"]
+            self.parameter_aliases["soil_moisture:lp"] = ["cu"]
+        else:
+            for soil_name, cover_name in self._soil_covers.items():
+                self.parameter_aliases[f"{soil_name}:capacity"] = [f"fc_{cover_name}"]
         single_wetland = len(self._wetland_cover_names) == 1
         for cover_name in self._wetland_cover_names:
             alias = "wet_fraction" if single_wetland else f"wet_fraction_{cover_name}"

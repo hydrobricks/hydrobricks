@@ -941,3 +941,144 @@ def test_prevah_snow_holding_cexliq_releases_more_on_ripe_pack(tmp_path):
     diff = rel_graded.ravel() - rel_plain.ravel()
     first = np.flatnonzero(np.abs(diff) > 1e-6)[0]
     assert diff[first] > 0
+
+
+# ---------------------------------------------------------------------------
+# Per-cover soil moisture stores (PREVAH parameterizes the soil per land use)
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_shares_the_soil_by_default():
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == ["soil_moisture"]
+    # A single store: the percolation gates on it directly.
+    percolation = model.structure["upper_zone"]["processes"]["percolation"]
+    assert percolation["gate"] == "soil_moisture"
+
+    parameters = model.generate_parameters()
+    assert parameters.has("fc")
+    assert parameters.has("cu")
+
+
+def test_prevah_per_cover_soil_stores():
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest", "wetland"],
+        land_cover_types=["open", "forest", "wetland"],
+        share_soil=False,
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == [
+        "open_soil_moisture",
+        "forest_soil_moisture",
+        "wetland_soil_moisture",
+    ]
+    # The percolation now reads them all (area-weighted mean saturation).
+    percolation = model.structure["upper_zone"]["processes"]["percolation"]
+    assert percolation["gate"] == soils
+
+    # The capacity and the ET limit are exposed per cover; the wetland store is
+    # named after the cover, not after its internal pass-through brick.
+    parameters = model.generate_parameters()
+    for cover in ("open", "forest", "wetland"):
+        assert parameters.has(f"fc_{cover}")
+        assert parameters.has(f"lp_{cover}")
+    assert not parameters.has("fc")
+    assert not parameters.has("fc_wetland_dry")
+
+
+def test_prevah_per_cover_soil_falls_back_to_a_single_store():
+    # With one soil-bearing cover there is nothing to separate.
+    model = models.PrevahUniBE(
+        land_cover_names=["open"], land_cover_types=["open"], share_soil=False
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == ["soil_moisture"]
+    assert model.generate_parameters().has("fc")
+
+
+def _run_per_cover_soil(tmp_path, *, share_soil, fc_open, fc_forest):
+    """Run PREVAH on an open/forest catchment (60/40) with the given soil setup."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, _N_2Y, 5.0, 1.5))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=share_soil,
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": 2.0})
+    if share_soil:
+        values["fc"] = fc_open
+    else:
+        values.pop("fc")
+        values.pop("cu")
+        values.update(
+            {
+                "fc_open": fc_open,
+                "fc_forest": fc_forest,
+                "lp_open": 0.7,
+                "lp_forest": 0.7,
+            }
+        )
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_per_cover_soil_water_balance_closes(tmp_path):
+    model, forcing = _run_per_cover_soil(
+        tmp_path, share_soil=False, fc_open=200.0, fc_forest=400.0
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_per_cover_soil_capacity_is_expressed_over_the_unit(tmp_path):
+    # A per-cover store is fed by its land cover, whose outgoing fluxes already carry
+    # the cover area fraction, so its content — and therefore its capacity — is
+    # expressed over the whole hydro unit, not over the cover. Giving both covers the
+    # capacity of the shared store therefore enlarges the unit's soil storage.
+    shared, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "shared"), share_soil=True, fc_open=200.0, fc_forest=200.0
+    )
+    split, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "split"), share_soil=False, fc_open=200.0, fc_forest=200.0
+    )
+    assert split.get_total_outlet_discharge() < shared.get_total_outlet_discharge()
+
+
+def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
+    # A drier forest soil (smaller capacity) fills sooner, so more water reaches the
+    # runoff generation: the discharge must differ from the equal-capacity case.
+    equal, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "equal"), share_soil=False, fc_open=200.0, fc_forest=200.0
+    )
+    contrasted, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "contrasted"), share_soil=False, fc_open=200.0, fc_forest=50.0
+    )
+    assert contrasted.get_total_outlet_discharge() > equal.get_total_outlet_discharge()

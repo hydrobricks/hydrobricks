@@ -18,6 +18,14 @@ import pytest
 
 import hydrobricks as hb
 import hydrobricks.models as models
+from hydrobricks.models.prevah_unibe import (
+    LAND_USE_ALBEDO,
+    LAND_USE_COVER_TYPES,
+    LAND_USE_LAI,
+    LAND_USE_ROOT_DEPTH,
+    LAND_USE_SI_MAX,
+    LAND_USE_VEG_COV,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1082,3 +1090,151 @@ def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
         _subdir(tmp_path, "contrasted"), share_soil=False, fc_open=200.0, fc_forest=50.0
     )
     assert contrasted.get_total_outlet_discharge() > equal.get_total_outlet_discharge()
+
+
+# ---------------------------------------------------------------------------
+# PREVAH's built-in land-use parameterization
+# ---------------------------------------------------------------------------
+
+
+_TABLES = (
+    LAND_USE_SI_MAX,
+    LAND_USE_VEG_COV,
+    LAND_USE_ROOT_DEPTH,
+    LAND_USE_ALBEDO,
+    LAND_USE_LAI,
+)
+
+
+def test_every_land_use_has_twelve_monthly_values():
+    for table in _TABLES:
+        assert sorted(table) == sorted(LAND_USE_COVER_TYPES)
+        assert all(len(values) == 12 for values in table.values())
+
+
+def test_land_uses_map_onto_the_hydrobricks_cover_types():
+    # PREVAH names 22 land uses; only six carry distinct physics and those are the
+    # hydrobricks cover types of the same name.
+    assert len(LAND_USE_COVER_TYPES) == 22
+    distinct = {
+        "water": "water",
+        "urban": "urban",
+        "glacier_firn": "glacier",
+        "glacier_ice": "glacier",
+        "rock": "rock",
+        "wetland": "wetland",
+    }
+    for land_use, cover_type in distinct.items():
+        assert LAND_USE_COVER_TYPES[land_use] == cover_type
+    # Every other land use is an ordinary soil-bearing cover.
+    others = set(LAND_USE_COVER_TYPES) - set(distinct)
+    assert {LAND_USE_COVER_TYPES[c] for c in others} == {"open", "forest"}
+
+
+def test_reference_values():
+    # Spot checks against mxp_model_parameter.f90.
+    assert LAND_USE_SI_MAX["coniferous_forest"] == [
+        2.5,
+        2.8,
+        2.8,
+        2.5,
+        3.5,
+        4.3,
+        4.5,
+        4.3,
+        4.1,
+        3.9,
+        3.0,
+        2.5,
+    ]
+    assert LAND_USE_VEG_COV["water"] == [0.0] * 12
+    assert LAND_USE_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
+    # The albedo falls back to the land use's own value when the LAI exceeds 4.
+    assert LAND_USE_LAI["coniferous_forest"][6] == 8.0
+    assert LAND_USE_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
+    # ... and is interpolated with the bare-soil albedo otherwise.
+    assert LAND_USE_LAI["pasture"][0] == 0.5
+    assert LAND_USE_ALBEDO["pasture"][0] == pytest.approx(
+        0.1 + 0.25 * (0.25 - 0.1) * 0.5
+    )
+
+
+def test_interception_capacity_is_si_max_times_veg_cov():
+    values = models.PrevahUniBE.land_use_interception_capacity("pasture")
+    expected = [
+        s * v for s, v in zip(LAND_USE_SI_MAX["pasture"], LAND_USE_VEG_COV["pasture"])
+    ]
+    assert values == pytest.approx(expected)
+
+
+def test_field_capacity():
+    values = models.PrevahUniBE.land_use_field_capacity("pasture", 1.27)
+    assert values == pytest.approx([1.27 * (0.6 + 0.05) * 10.0] * 12)
+
+
+def test_unknown_land_use_is_rejected():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE.land_use_interception_capacity("not_a_land_use")
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE.land_use_field_capacity("not_a_land_use", 1.0)
+
+
+def _model_with_land_uses(land_uses, **options):
+    return models.PrevahUniBE(
+        land_cover_names=land_uses,
+        land_cover_types=[LAND_USE_COVER_TYPES[c] for c in land_uses],
+        interception_covers=land_uses,
+        **options,
+    )
+
+
+def test_apply_land_use_sets_the_monthly_parameters():
+    land_uses = ["coniferous_forest", "pasture"]
+    model = _model_with_land_uses(land_uses, canopy_et_process="et:open_water_prevah")
+    parameters = model.generate_parameters()
+
+    for land_use in land_uses:
+        model.apply_land_use(parameters, land_use)
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("pasture_canopy", "capacity")] == pytest.approx(
+        model.land_use_interception_capacity("pasture")
+    )
+    assert monthly[("pasture_canopy", "et_factor")] == pytest.approx(
+        LAND_USE_VEG_COV["pasture"]
+    )
+    assert monthly[("coniferous_forest_canopy", "capacity")] == pytest.approx(
+        model.land_use_interception_capacity("coniferous_forest")
+    )
+
+
+def test_apply_land_use_on_a_renamed_cover():
+    model = _model_with_land_uses(["pasture"])
+    parameters = model.generate_parameters()
+    # A single canopy: the alias carries no cover suffix.
+    model.apply_land_use(parameters, "pasture", cover_name="pasture")
+
+    monthly = parameters.get_monthly_parameters()
+    assert [name for _, name, _ in monthly] == ["capacity"]
+
+
+def test_apply_land_use_without_the_prevah_canopy_et():
+    # With the default canopy ET there is no et_factor: only the capacity is set.
+    land_uses = ["coniferous_forest", "pasture"]
+    model = _model_with_land_uses(land_uses)
+    parameters = model.generate_parameters()
+    for land_use in land_uses:
+        model.apply_land_use(parameters, land_use)
+
+    monthly = parameters.get_monthly_parameters()
+    assert sorted(name for _, name, _ in monthly) == ["capacity", "capacity"]
+
+
+def test_apply_land_use_requires_a_canopy():
+    model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    with pytest.raises(hb.ConfigurationError):
+        model.apply_land_use(parameters, "pasture")

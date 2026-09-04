@@ -135,6 +135,7 @@ class TimeSeries2D(TimeSeries):
         apply_data_gradient: bool = True,
         gradient_type: str = "additive",
         dem_path: str | Path | None = None,
+        dem_signature: Any | None = None,
         cache_dir: str | Path | None = None,
     ) -> None:
         """
@@ -181,6 +182,10 @@ class TimeSeries2D(TimeSeries):
         dem_path
             Path to DEM raster file for spatialization (gradient computation).
             Needed if apply_data_gradient is True.
+        dem_signature
+            Stable identity of the DEM for the cache key, when 'dem_path' is not one
+            (e.g. a cropped DEM served from memory). Default: None = the stat
+            signature of 'dem_path'.
         cache_dir
             Directory where the regridded result is cached as a CSV file keyed
             by a hash of the inputs and options; an identical request reloads
@@ -257,7 +262,11 @@ class TimeSeries2D(TimeSeries):
                 # The DEM only matters for the gradient computation; a stat
                 # signature is used (not full bytes) as DEMs can be large.
                 "dem_signature": (
-                    caching.source_signature([dem_path])
+                    (
+                        dem_signature
+                        if dem_signature is not None
+                        else caching.source_signature([dem_path])
+                    )
                     if apply_data_gradient and dem_path is not None
                     else None
                 ),

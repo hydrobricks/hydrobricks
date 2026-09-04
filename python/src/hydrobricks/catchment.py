@@ -139,7 +139,9 @@ class Catchment:
         self.crs: str | None = None
         self.outline: list | None = None
         self.dem: rasterio.DatasetReader | None = None
+        self.dem_path: Path | None = None
         self.dem_data: np.ndarray | None = None
+        self._dem_memfile: Any = None
         self.attributes: dict[str, dict] = {}
         self.map_unit_ids: np.ndarray | None = None
         self.hydro_units: HydroUnits = HydroUnits(
@@ -184,13 +186,19 @@ class Catchment:
         self._close_attribute_memfiles()
 
     def _close_dem(self) -> None:
-        """Close the main DEM dataset."""
+        """Close the main DEM dataset (and its MemoryFile when cropped)."""
         if self.dem is not None:
             try:
                 self.dem.close()
                 self.dem = None
             except (OSError, ValueError, AttributeError) as e:
                 logger.warning(f"Error closing DEM dataset: {e}", exc_info=True)
+        if self._dem_memfile is not None:
+            try:
+                self._dem_memfile.close()
+                self._dem_memfile = None
+            except (OSError, ValueError, AttributeError) as e:
+                logger.warning(f"Error closing DEM MemoryFile: {e}", exc_info=True)
 
     def _close_attribute_memfiles(self) -> None:
         """Close all MemoryFiles kept with attributes."""
@@ -288,14 +296,39 @@ class Catchment:
 
         return CatchmentLandCover(self)
 
-    def extract_dem(self, raster_path: str | Path) -> bool:
+    def extract_dem(
+        self,
+        raster_path: str | Path,
+        crop: bool = True,
+        margin: float = 1000.0,
+        snap: float = 1000.0,
+    ) -> bool:
         """
         Extract the DEM data for the catchment. Does not handle change in coordinates.
+
+        By default only the window covering the catchment is read, so a country-wide
+        DEM can be used directly: every later step (slope/aspect, potential radiation,
+        discretization, attribute rasters resampled onto the DEM grid) then works on
+        the catchment window instead of the full raster.
 
         Parameters
         ----------
         raster_path
             Path of the DEM raster file.
+        crop
+            Restrict the DEM to the catchment outline plus a margin (see below)
+            instead of keeping the full raster extent. Ignored when the catchment
+            has no outline. Default: True.
+        margin
+            Minimum margin kept around the outline, in the units of the CRS (metres
+            for a projected CRS; converted from metres for a geographic one). The
+            margin must be large enough for the neighbourhood-based computations
+            (slope, aspect, cast shadows). Default: 1000.
+        snap
+            Round the cropped extent outwards to a multiple of this value, in the
+            units of the CRS, so the window does not depend on the exact outline
+            (0 or None disables it; always disabled for a geographic CRS).
+            Default: 1000.
 
         Returns
         -------
@@ -307,11 +340,127 @@ class Catchment:
         FileNotFoundError
             If the raster file does not exist.
         """
-        self.dem, self.dem_data = self._extract_raster(raster_path)
+        self.dem, self.dem_data = self._extract_raster(
+            raster_path, crop=crop, margin=margin, snap=snap
+        )
         if self.dem is None:
             return False
 
+        self.dem_path = Path(raster_path)
+
         return True
+
+    def _padded_outline_bounds(
+        self, src: rasterio.DatasetReader, margin: float, snap: float | None
+    ) -> tuple[float, float, float, float] | None:
+        """The outline bounding box, padded by 'margin' and snapped to 'snap'.
+
+        Returns None when there is no outline to pad around.
+        """
+        if not self.outline:
+            return None
+
+        bounds = shapely.geometry.MultiPolygon(self.outline).bounds
+        min_x, min_y, max_x, max_y = bounds
+
+        # A geographic CRS gets the margin converted from metres, and no snapping
+        # (a degree grid would be meaningless).
+        if src.crs is not None and not src.crs.is_projected:
+            margin = margin / 111320.0
+            snap = None
+        elif src.crs is not None and src.crs.linear_units not in (
+            "metre",
+            "meter",
+            "m",
+            "unknown",
+        ):
+            # An unexpected linear unit: keep the margin but do not snap, as the
+            # snapping distance is expressed in metres.
+            snap = None
+
+        min_x, min_y = min_x - margin, min_y - margin
+        max_x, max_y = max_x + margin, max_y + margin
+
+        if snap:
+            min_x = np.floor(min_x / snap) * snap
+            min_y = np.floor(min_y / snap) * snap
+            max_x = np.ceil(max_x / snap) * snap
+            max_y = np.ceil(max_y / snap) * snap
+
+        return float(min_x), float(min_y), float(max_x), float(max_y)
+
+    def _crop_raster_to_outline(
+        self, src: rasterio.DatasetReader, margin: float, snap: float | None
+    ) -> rasterio.DatasetReader:
+        """Reopen a raster restricted to the padded outline bounding box.
+
+        Reads only the corresponding window and serves it from a MemoryFile, so the
+        returned dataset behaves like the original one (transform, resolution, CRS)
+        on the catchment window only. The original dataset is closed. When the window
+        already covers the whole raster, the raster is returned untouched.
+        """
+        bounds = self._padded_outline_bounds(src, margin, snap)
+        if bounds is None:
+            return src
+
+        # Pixel indices of the padded bounding box, clamped to the raster.
+        inverse = ~src.transform
+        cols, rows = zip(
+            *(
+                inverse * (x, y)
+                for x in (bounds[0], bounds[2])
+                for y in (bounds[1], bounds[3])
+            )
+        )
+        col_off = max(0, int(np.floor(min(cols))))
+        row_off = max(0, int(np.floor(min(rows))))
+        col_end = min(src.width, int(np.ceil(max(cols))))
+        row_end = min(src.height, int(np.ceil(max(rows))))
+
+        if col_end <= col_off or row_end <= row_off:
+            raise DataError(
+                f"The catchment outline does not overlap the raster "
+                f"{src.name} (raster bounds: {tuple(src.bounds)}).",
+                data_type="raster file",
+                reason="Extent mismatch",
+            )
+        covers_all = (
+            col_off == 0
+            and row_off == 0
+            and col_end == src.width
+            and row_end == src.height
+        )
+        if covers_all:
+            return src
+
+        window = rasterio.windows.Window(
+            col_off, row_off, col_end - col_off, row_end - row_off
+        )
+        logger.debug(
+            f"Cropping the DEM from {src.width}x{src.height} to "
+            f"{int(window.width)}x{int(window.height)} cells around the catchment."
+        )
+        data = src.read(1, window=window)
+        profile = src.profile
+        profile.update(
+            count=1,
+            height=int(window.height),
+            width=int(window.width),
+            transform=src.window_transform(window),
+        )
+        # The window is written untiled: a block size inherited from a tiled
+        # source raster would be rejected (and warned about) on every later write
+        # of a raster derived from this profile.
+        profile.pop("blockxsize", None)
+        profile.pop("blockysize", None)
+        profile["tiled"] = False
+        memfile = rasterio.io.MemoryFile()
+        with memfile.open(**profile) as dataset:
+            dataset.write(data, 1)
+        src.close()
+        self._dem_memfile = memfile
+
+        return memfile.open()
 
     def extract_attribute_raster(
         self,
@@ -1114,7 +1263,12 @@ class Catchment:
         self.outline = geoms
 
     def _extract_raster(
-        self, raster_path: str | Path, reproject_crs: bool = False
+        self,
+        raster_path: str | Path,
+        reproject_crs: bool = False,
+        crop: bool = False,
+        margin: float = 1000.0,
+        snap: float | None = 1000.0,
     ) -> tuple[rasterio.DatasetReader, np.ndarray]:
         """
         Extract raster data for the catchment.
@@ -1133,6 +1287,12 @@ class Catchment:
         reproject_crs
             If True, do not check the CRS nor mask by the outline (the caller
             reprojects the data onto the DEM grid). Default: False
+        crop
+            If True, only read the window covering the outline plus a margin
+            (see :meth:`extract_dem`). Default: False
+        margin, snap
+            Margin kept around the outline and rounding of the cropped extent,
+            in the units of the CRS. Only used when ``crop`` is True.
 
         Returns
         -------
@@ -1168,6 +1328,8 @@ class Catchment:
             masked_data = src.read(1).astype(float)
         else:
             self._check_crs(src)
+            if crop and self.outline is not None:
+                src = self._crop_raster_to_outline(src, margin, snap)
             if self.outline is not None:
                 geoms = [mapping(polygon) for polygon in self.outline]
                 masked_data, _ = mask(src, geoms, crop=False)

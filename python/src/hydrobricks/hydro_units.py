@@ -42,6 +42,8 @@ class HydroUnits:
     """
 
     FRACTION_PREFIX: ClassVar[str] = "fraction-"
+    # Properties loaded from a CSV without being listed in 'other_columns'.
+    IMPLICIT_PROPERTIES: ClassVar[tuple[str, ...]] = ("slope", "latitude")
 
     def __init__(
         self,
@@ -150,7 +152,14 @@ class HydroUnits:
         # Load area data (either single area or per-land-cover areas)
         self._load_area_data(file_content, column_area, columns_areas)
 
-        # Load additional properties
+        # Load additional properties. A few are always picked up when the file has
+        # them, so that a file written by save_hydro_units_to_csv keeps them
+        # without being asked: the slope (the lateral processes, e.g. the snow
+        # redistribution, need it) and the latitude (the PET computations).
+        other_columns = dict(other_columns or {})
+        for prop in self.IMPLICIT_PROPERTIES:
+            if prop not in other_columns and prop in file_content.columns:
+                other_columns[prop] = prop
         self._load_other_columns(file_content, other_columns)
 
         # Convert area units to m2 if needed

@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from cftime import num2date
 
+from hydrobricks import caching
 from hydrobricks._constants import TO_RAD
 from hydrobricks._exceptions import (
     ConfigurationError,
@@ -1237,6 +1238,7 @@ class Forcing:
                 gradient_type = kwargs.get("gradient_type", "additive")
 
             dem_path = None
+            dem_signature = None
             if apply_data_gradient:
                 if self.catchment is None:
                     raise DataError(
@@ -1268,6 +1270,16 @@ class Forcing:
                     )
                 dem_path = dem_path[0]
 
+                # A cropped DEM (Catchment.extract_dem) is served from memory under
+                # a per-run name: the cache key must use the source file and the
+                # window instead, or it would never hit again.
+                if self.catchment.dem_path is not None:
+                    dem_signature = [
+                        caching.source_signature([self.catchment.dem_path]),
+                        tuple(self.catchment.dem.bounds),
+                        self.catchment.dem.shape,
+                    ]
+
             self.data2D.regrid_from_netcdf(
                 path,
                 file_pattern=file_pattern,
@@ -1281,6 +1293,7 @@ class Forcing:
                 apply_data_gradient=apply_data_gradient,
                 gradient_type=gradient_type,
                 dem_path=dem_path,
+                dem_signature=dem_signature,
                 cache_dir=self.cache_dir,
             )
             self.data2D.data_name.append(variable)

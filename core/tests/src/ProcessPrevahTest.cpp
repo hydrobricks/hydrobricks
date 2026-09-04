@@ -191,6 +191,112 @@ TEST_F(LinearThresholdStorage, ZeroThresholdMatchesLinearReservoir) {
  * Model: PREVAH upper zone — a linear-threshold outflow (Q0, surface runoff) and a
  * linear outflow (Q1, interflow) drawing from the same storage.
  */
+/**
+ * Model: two soil moisture stores (one per land cover) gating a single percolation.
+ * The gate must read the ratio of the summed contents to the summed capacities (the
+ * area-weighted mean saturation, the cover area fractions being already carried by
+ * the contents), not the state of any single store.
+ */
+class PrevahPercolationTwoGates : public ::testing::Test {
+  protected:
+    SettingsModel _model;
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+
+    void AddSoil(const std::string& name, float capacity) {
+        _model.AddHydroUnitBrick(name, "storage");
+        _model.AddBrickParameter("capacity", capacity);
+        _model.AddBrickForcing("precipitation");
+        _model.AddBrickLogging("water_content");
+        // Inactive outflow: every brick needs a process, and a zero response factor
+        // leaves the content driven by the precipitation alone.
+        _model.AddBrickProcess("outflow", "outflow:linear");
+        _model.SetProcessParameterValue("response_factor", 0.0f);
+        _model.AddProcessOutput("outlet");
+    }
+
+    void Build(float capacityA, float capacityB) {
+        _model.SetSolver("euler_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-10", 1, "day");
+
+        // Both soils receive the same precipitation, so unequal capacities give them
+        // unequal saturations.
+        AddSoil("soil_a", capacityA);
+        AddSoil("soil_b", capacityB);
+
+        _model.AddHydroUnitBrick("upper_zone", "storage");
+        _model.AddBrickForcing("precipitation");
+        _model.AddBrickLogging("water_content");
+        _model.AddBrickProcess("percolation", "percolation:prevah");
+        _model.SetProcessParameterValue("percolation_rate", 2.0f);
+        _model.SetProcessParameterValue("threshold_fraction", 0.7f);
+        _model.AddProcessLogging("output");
+        _model.AddProcessOutput("outlet");
+        _model.SetProcessGateBrick("soil_a");
+        _model.SetProcessGateBrick("soil_b");
+
+        _model.AddLoggingToItem("outlet");
+
+        // Accumulates to 90 mm, below either capacity, then stays constant.
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
+        data->SetValues({0.0, 30.0, 30.0, 30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(data));
+    }
+
+    vecAxd Run(SubBasin& subBasin, ModelHydro& model) {
+        EXPECT_TRUE(model.Run());
+        return model.GetLogger()->GetSubBasinValues();
+    }
+};
+
+TEST_F(PrevahPercolationTwoGates, ASingleSaturatedStoreDoesNotOpenTheGate) {
+    // soil_a fills to 90 of 100 (saturation 0.9, above the 0.7 threshold) while
+    // soil_b fills to 90 of 300. The summed saturation is 180/400 = 0.45, so the
+    // gate stays shut — gating on soil_a alone would have opened it.
+    Build(100.0f, 300.0f);
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    vecAxxd unitValues = model.GetLogger()->GetHydroUnitValues();
+    EXPECT_NEAR(unitValues[0](9, 0), 90.0, 0.0001);
+    EXPECT_NEAR(unitValues[1](9, 0), 90.0, 0.0001);
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    for (int j = 0; j < basinOutputs[0].size(); ++j) {
+        EXPECT_NEAR(basinOutputs[0][j], 0.0, 0.0001);
+    }
+}
+
+TEST_F(PrevahPercolationTwoGates, TheSummedSaturationOpensTheGate) {
+    // Equal capacities: both stores reach 90 of 100, so the summed saturation is
+    // 180/200 = 0.9 and the gate opens at (0.9 - 0.7) / 0.3 of the maximum rate.
+    Build(100.0f, 100.0f);
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    double expected = 2.0 * (0.9 - 0.7) / 0.3;
+    EXPECT_NEAR(basinOutputs[0][9], expected, 0.0001);
+}
+
 class PrevahUpperZone : public ::testing::Test {
   protected:
     SettingsModel _model;

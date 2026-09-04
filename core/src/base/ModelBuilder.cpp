@@ -344,11 +344,13 @@ void ModelBuilder::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSetting
             }
 
             if (process->NeedsGateBrickLinking()) {
-                if (processSettings.gateBrick.empty()) {
+                if (processSettings.gateBricks.empty()) {
                     throw ModelConfigError(
                         std::format("The process '{}' requires a gate brick.", processSettings.name));
                 }
-                process->SetGateBrick(_subBasin->GetBrick(processSettings.gateBrick));
+                for (const auto& gateName : processSettings.gateBricks) {
+                    process->AddGateBrick(_subBasin->GetBrick(gateName));
+                }
             }
         }
     }
@@ -390,17 +392,19 @@ void ModelBuilder::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettin
             }
 
             if (process->NeedsGateBrickLinking()) {
-                if (processSettings.gateBrick.empty()) {
+                if (processSettings.gateBricks.empty()) {
                     throw ModelConfigError(
                         std::format("The process '{}' requires a gate brick.", processSettings.name));
                 }
-                Brick* gateBrick = nullptr;
-                if (unit->HasBrick(processSettings.gateBrick)) {
-                    gateBrick = unit->GetBrick(processSettings.gateBrick);
-                } else {
-                    gateBrick = _subBasin->GetBrick(processSettings.gateBrick);
+                for (const auto& gateName : processSettings.gateBricks) {
+                    Brick* gateBrick = nullptr;
+                    if (unit->HasBrick(gateName)) {
+                        gateBrick = unit->GetBrick(gateName);
+                    } else {
+                        gateBrick = _subBasin->GetBrick(gateName);
+                    }
+                    process->AddGateBrick(gateBrick);
                 }
-                process->SetGateBrick(gateBrick);
             }
         }
     }

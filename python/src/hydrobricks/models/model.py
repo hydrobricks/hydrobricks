@@ -1318,7 +1318,13 @@ class Model(ABC):
         for extra_target in targets[1:]:
             self.settings.add_process_output(extra_target)
         if "gate" in process_data:
-            self.settings.set_process_gate_brick(process_data["gate"])
+            # A process can read the state of several bricks (e.g. one soil moisture
+            # store per land cover); each is registered in turn.
+            gates = process_data["gate"]
+            if isinstance(gates, str):
+                gates = [gates]
+            for gate in gates:
+                self.settings.set_process_gate_brick(gate)
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """

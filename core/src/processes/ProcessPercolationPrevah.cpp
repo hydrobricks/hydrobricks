@@ -7,7 +7,6 @@
 
 ProcessPercolationPrevah::ProcessPercolationPrevah(WaterContainer* container)
     : ProcessOutflow(container),
-      _gateBrick(nullptr),
       _rate(nullptr),
       _thresholdFraction(nullptr) {}
 
@@ -20,9 +19,15 @@ bool ProcessPercolationPrevah::IsValid() const {
     if (!ProcessOutflow::IsValid()) {
         return false;
     }
-    if (_gateBrick == nullptr) {
+    if (_gateBricks.empty()) {
         LogError("PREVAH percolation process: missing the gate brick (soil moisture store).");
         return false;
+    }
+    for (auto* gateBrick : _gateBricks) {
+        if (gateBrick == nullptr) {
+            LogError("PREVAH percolation process: an unresolved gate brick.");
+            return false;
+        }
     }
     if (_rate == nullptr) {
         LogError("PREVAH percolation process: missing the 'percolation_rate' parameter.");
@@ -47,12 +52,22 @@ void ProcessPercolationPrevah::SetParameters(const ProcessSettings& processSetti
 }
 
 const vecDouble& ProcessPercolationPrevah::GetRates() {
-    double capacity = _gateBrick->GetWaterContainer()->GetMaximumCapacity();
+    // Sum over the gate bricks: with one soil moisture store per land cover, the
+    // contents already carry the cover area fractions, so the ratio of the sums is
+    // the area-weighted mean saturation of the hydro unit.
+    double content = 0;
+    double capacity = 0;
+    for (auto* gateBrick : _gateBricks) {
+        WaterContainer* container = gateBrick->GetWaterContainer();
+        capacity += container->GetMaximumCapacity();
+        content += container->GetContentWithChanges();
+    }
+
     if (capacity <= 0) {
         return StoreRates({0});
     }
 
-    double fillingRatio = _gateBrick->GetWaterContainer()->GetContentWithChanges() / capacity;
+    double fillingRatio = content / capacity;
     double threshold = static_cast<double>(*_thresholdFraction);
     double gating = std::clamp((fillingRatio - threshold) / (1.0 - threshold), 0.0, 1.0);
 

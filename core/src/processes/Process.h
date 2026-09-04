@@ -288,12 +288,13 @@ class Process {
     }
 
     /**
-     * Set the gate brick for the process (read-only state access; no flux).
+     * Add a gate brick to the process (read-only state access; no flux). Called once
+     * per gate brick; a process reading several aggregates their states.
      *
      * @param brick gate brick.
      */
-    virtual void SetGateBrick(Brick*) {
-        throw ShouldNotHappen("Process::SetGateBrick - Should not be called (virtual)");
+    virtual void AddGateBrick(Brick*) {
+        throw ShouldNotHappen("Process::AddGateBrick - Should not be called (virtual)");
     }
 
     /**

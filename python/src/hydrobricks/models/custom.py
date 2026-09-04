@@ -174,8 +174,11 @@ def _validate_process(process: Any, where: str, errors: list[str]) -> None:
     for flag in ("log", "instantaneous"):
         if flag in process and not isinstance(process[flag], bool):
             errors.append(f"{where}.{flag}: expected true or false.")
-    if "gate" in process and not isinstance(process["gate"], str):
-        errors.append(f"{where}.gate: expected a brick name.")
+    if "gate" in process:
+        gate = process["gate"]
+        gates = [gate] if isinstance(gate, str) else gate
+        if not isinstance(gates, list) or not all(isinstance(g, str) for g in gates):
+            errors.append(f"{where}.gate: expected a brick name or a list of them.")
 
 
 def _validate_brick(brick: Any, where: str, errors: list[str]) -> None:

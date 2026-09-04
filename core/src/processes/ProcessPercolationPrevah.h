@@ -11,11 +11,17 @@
  *   PERC = rate × clamp((SM/FC − θ) / (1 − θ), 0, 1)
  *
  * rate is the maximum percolation rate [mm/d], SM and FC the content and capacity
- * of the gate brick (the soil moisture store) and θ the soil moisture fraction
+ * of the gate bricks (the soil moisture stores) and θ the soil moisture fraction
  * (PREVAH's CU, shared with the ET limit) below which percolation stops. The
  * percolation draws from the process's own container (the upper zone) but is
  * modulated by the soil state: full rate at saturation, linear ramp between
  * θ×FC and FC, none below θ×FC.
+ *
+ * With several gate bricks (one soil moisture store per land cover), the contents
+ * and the capacities are summed before the ratio is taken, which is the
+ * area-weighted mean saturation of the hydro unit: the stores are fed by their land
+ * cover, whose outgoing fluxes already carry its area fraction, so their contents
+ * are expressed over the whole unit.
  */
 class ProcessPercolationPrevah : public ProcessOutflow {
   public:
@@ -48,14 +54,14 @@ class ProcessPercolationPrevah : public ProcessOutflow {
     }
 
     /**
-     * @copydoc Process::SetGateBrick()
+     * @copydoc Process::AddGateBrick()
      */
-    void SetGateBrick(Brick* brick) override {
-        _gateBrick = brick;
+    void AddGateBrick(Brick* brick) override {
+        _gateBricks.push_back(brick);
     }
 
   protected:
-    Brick* _gateBrick;                // non-owning reference to the soil moisture store
+    vector<Brick*> _gateBricks;       // non-owning references to the soil moisture stores
     const float* _rate;               // maximum percolation rate [mm/d]
     const float* _thresholdFraction;  // soil moisture fraction below which percolation stops [-]
 

@@ -32,7 +32,8 @@ struct OutputSettings {
 struct ProcessSettings {
     string name;
     string type;
-    string gateBrick;  // brick whose state modulates the process rate (no flux; e.g. percolation:prevah)
+    vecStr gateBricks;  // bricks whose state modulates the process rate (no flux; e.g.
+                        // percolation:prevah). Several are aggregated by the process.
     vecStr logItems;
     vector<Parameter> parameters;
     vector<VariableType> forcing;

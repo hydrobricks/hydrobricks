@@ -15,7 +15,11 @@ from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kw
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.models.model_settings import (
+    GENERIC_COVER_ALIASES,
+    GENERIC_SOIL_COVER_TYPES,
+    ModelSettings,
+)
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
@@ -29,10 +33,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Generic (soil-bearing) land cover aliases. ``open`` is the canonical name (the HBV
-# "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
-# aliases for backward compatibility.
-GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
+# GENERIC_COVER_ALIASES and GENERIC_SOIL_COVER_TYPES are imported from model_settings.
 
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"
@@ -758,7 +759,7 @@ class Model(ABC):
         ----------
         structure_id
             The structure variant to inspect (default 1, the primary). Models with
-            glacier/lake covers define several variants.
+            glacier/water covers define several variants.
         with_forcing
             Include the meteorological forcing inputs (precipitation, temperature,
             pet) as source nodes. Set to False for a less cluttered graph.
@@ -904,12 +905,15 @@ class Model(ABC):
 
         # Check the allowed land cover types. The generic cover aliases (ground,
         # generic, ...) are accepted wherever the canonical generic cover (open) is
-        # allowed, so older 'ground'-based configurations keep working.
+        # allowed, so older 'ground'-based configurations keep working. The generic
+        # soil covers (e.g. wetland) are likewise accepted wherever a generic cover
+        # is allowed, so they are available in every model without being listed.
         allowed = set(self.allowed_land_cover_types)
         allows_generic = bool(allowed & GENERIC_COVER_ALIASES)
         for cover_type in self.land_cover_types:
             accepted = cover_type in allowed or (
-                allows_generic and cover_type in GENERIC_COVER_ALIASES
+                allows_generic
+                and cover_type in (GENERIC_COVER_ALIASES | GENERIC_SOIL_COVER_TYPES)
             )
             if not accepted:
                 raise ConfigurationError(
@@ -1044,7 +1048,7 @@ class Model(ABC):
         # a cover carries no zero-area brick for it. Most models have a single variant.
         # A variant may optionally carry a 4th element: an options override (a dict
         # merged over self.options for that variant only, e.g. {"with_snow": False} for
-        # a lake variant whose precipitation goes directly into open water).
+        # a water variant whose precipitation goes directly into open water).
         for i, variant in enumerate(self._define_structure_variants()):
             if len(variant) == 4:
                 land_cover_names, land_cover_types, structure, options_override = (
@@ -1121,7 +1125,7 @@ class Model(ABC):
         An entry may optionally be a 4-tuple
         ``(names, types, structure, options_override)`` where ``options_override`` is a
         dict merged over ``self.options`` while that variant is generated (e.g.
-        ``{"with_snow": False}`` for an HBV lake variant, whose precipitation goes
+        ``{"with_snow": False}`` for an HBV water variant, whose precipitation goes
         directly into open water with no snowpack).
         """
         return [(self.land_cover_names, self.land_cover_types, self.structure)]
@@ -1201,7 +1205,7 @@ class Model(ABC):
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
         # with_snow is on by default; an explicit option overrides it last, so it wins
-        # over the presence of a snow melt process (e.g. a lake variant sets it False
+        # over the presence of a snow melt process (e.g. a water variant sets it False
         # to send all precipitation directly into open water, with no snowpack).
         if "with_snow" in self.options:
             with_snow = self.options["with_snow"]
@@ -1218,6 +1222,11 @@ class Model(ABC):
             snow_sublimation_process=snow_sublimation_process,
             rain_to_snowpack=rain_to_snowpack,
             forest_interception=self.options.get("forest_interception", False),
+            canopy_interception_process=self.options.get(
+                "canopy_interception_process", "outflow:threshold"
+            ),
+            canopy_et_process=self.options.get("canopy_et_process", "et:open_water"),
+            interception_covers=self.options.get("interception_covers"),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:
@@ -1265,7 +1274,9 @@ class Model(ABC):
             Name/identifier for the process.
         process_data
             Process definition dictionary containing 'kind', 'target', and optional
-            'log' and 'instantaneous' keys.
+            'log', 'instantaneous' and 'gate' keys ('gate' names a brick whose state
+            modulates the process rate without receiving its flux, e.g. the soil
+            moisture store gating the PREVAH percolation).
 
         Raises
         ------
@@ -1306,6 +1317,14 @@ class Model(ABC):
         )
         for extra_target in targets[1:]:
             self.settings.add_process_output(extra_target)
+        if "gate" in process_data:
+            # A process can read the state of several bricks (e.g. one soil moisture
+            # store per land cover); each is registered in turn.
+            gates = process_data["gate"]
+            if isinstance(gates, str):
+                gates = [gates]
+            for gate in gates:
+                self.settings.set_process_gate_brick(gate)
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """
@@ -1330,6 +1349,18 @@ class Model(ABC):
                 param["component"], param["name"], param["value"]
             ):
                 raise ModelError("Failed setting parameter values.")
+        # Push any monthly-varying values (e.g. monthly canopy capacity) so their
+        # modifier is (re)attached before update_parameters registers it.
+        for component, name, values in parameters.get_monthly_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            if not self.settings.set_parameter_monthly_values(component, name, values):
+                raise ModelError("Failed setting monthly parameter values.")
+        # Push any spatial (per-unit) bindings so each unit reads its own value.
+        for component, name, prop in parameters.get_spatial_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            self.settings.set_parameter_spatial_from_property(component, name, prop)
         self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing: Forcing | None) -> None:

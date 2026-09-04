@@ -227,6 +227,7 @@ void ModelBuilder::CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit*
         Process* process = processPtr.get();
         process->SetName(processSettings.name);
         process->SetTimeMachine(_timer);
+        process->SetParentContext(unit, brick);
         process->SetHydroUnitProperties(unit, brick);
         process->SetParameters(processSettings);
         brick->AddProcess(std::move(processPtr));
@@ -273,6 +274,9 @@ void ModelBuilder::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             modelSettings.SelectHydroUnitBrick(iBrick);
             const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
             Brick* brick = unit->GetBrick(modelSettings.GetHydroUnitBrickSettings(iBrick).name);
+            // Refresh per-unit (spatial) parameter overrides before (re)linking the value
+            // pointers, so the brick/process read each unit's own value.
+            PopulateSpatialOverrides(modelSettings, unit, brickSettings.name);
             brick->SetParameters(brickSettings);
 
             for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
@@ -289,6 +293,23 @@ void ModelBuilder::UpdateHydroUnitsParameters(SettingsModel& modelSettings) {
             Splitter* splitter = unit->GetSplitter(iSplitter);
             splitter->SetParameters(splitterSettings);
         }
+    }
+}
+
+void ModelBuilder::PopulateSpatialOverrides(SettingsModel& modelSettings, HydroUnit* unit, const string& brickName) {
+    // For each spatial binding whose component is this brick, read the unit's property and
+    // store a per-unit override (keyed "<brickName>:<paramName>"). Units missing the
+    // property keep the shared global value.
+    for (const auto& [key, property] : modelSettings.GetSpatialParameterBindings()) {
+        const string& component = key.first;
+        const string& paramName = key.second;
+        if (component != brickName) {
+            continue;
+        }
+        if (!unit->HasProperty(property)) {
+            continue;
+        }
+        unit->SetParameterOverride(brickName + ":" + paramName, unit->GetPropertyFloat(property));
     }
 }
 
@@ -320,6 +341,16 @@ void ModelBuilder::LinkSubBasinProcessesTargetBricks(SettingsModel& modelSetting
                 }
                 Brick* targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
                 process->SetTargetBrick(targetBrick);
+            }
+
+            if (process->NeedsGateBrickLinking()) {
+                if (processSettings.gateBricks.empty()) {
+                    throw ModelConfigError(
+                        std::format("The process '{}' requires a gate brick.", processSettings.name));
+                }
+                for (const auto& gateName : processSettings.gateBricks) {
+                    process->AddGateBrick(_subBasin->GetBrick(gateName));
+                }
             }
         }
     }
@@ -357,6 +388,22 @@ void ModelBuilder::LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettin
                         targetBrick = _subBasin->GetBrick(processSettings.outputs[0].target);
                     }
                     process->SetTargetBrick(targetBrick);
+                }
+            }
+
+            if (process->NeedsGateBrickLinking()) {
+                if (processSettings.gateBricks.empty()) {
+                    throw ModelConfigError(
+                        std::format("The process '{}' requires a gate brick.", processSettings.name));
+                }
+                for (const auto& gateName : processSettings.gateBricks) {
+                    Brick* gateBrick = nullptr;
+                    if (unit->HasBrick(gateName)) {
+                        gateBrick = unit->GetBrick(gateName);
+                    } else {
+                        gateBrick = _subBasin->GetBrick(gateName);
+                    }
+                    process->AddGateBrick(gateBrick);
                 }
             }
         }

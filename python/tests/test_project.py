@@ -2,6 +2,7 @@ import os.path
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import hydrobricks as hb
@@ -626,3 +627,383 @@ def test_deferred_setup(tmp_path):
     with pytest.raises(hb.ConfigurationError) as excinfo:
         project.setup(period="valdiation")
     assert "Unknown period 'valdiation'" in str(excinfo.value)
+
+
+# --- Land covers ---------------------------------------------------------------
+
+GLETSCH_DIR = TEST_FILES_DIR / "ch_rhone_gletsch"
+
+
+def glacier_config(tmp_path, land_cover_types, land_cover_names, **land_covers):
+    """A Gletsch (glacierized) project delineated from the DEM."""
+    return {
+        "model": {
+            "name": "socont",
+            "options": {
+                "soil_storage_nb": 2,
+                "surface_runoff": "linear_storage",
+                "land_cover_types": land_cover_types,
+                "land_cover_names": land_cover_names,
+            },
+        },
+        "hydro_units": {
+            "outline": "outline.shp",
+            "dem": "dem.tif",
+            "discretization": {"method": "equal_intervals", "distance": 200},
+            **({"land_covers": land_covers} if land_covers else {}),
+        },
+        "forcing": {
+            "file": "meteo.csv",
+            "time": {"column": "date", "format": "%d/%m/%Y"},
+            "columns": {
+                "precipitation": "precip(mm/day)",
+                "temperature": "temp(C)",
+                "pet": "pet_sim(mm/day)",
+            },
+            "ref_elevation": 2702,
+        },
+        "periods": ["1981-01-01", "1981-12-31"],
+        "output": str(tmp_path),
+        "parameters": {**PARAMETERS, "a_ice": 6, "k_snow": 0.5, "k_ice": 0.3},
+    }
+
+
+def cover_fractions(project, cover):
+    """The land cover fractions of a project's hydro units."""
+    return project.hydro_units.hydro_units[f"fraction-{cover}"].to_numpy().squeeze()
+
+
+@needs_catchment_packages
+def test_land_covers_glacier_from_outline(tmp_path):
+    """A glacier outline initializes the glacier fractions of the hydro units."""
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier"],
+        ["ground", "glacier"],
+        glacier={"outline": "glaciers/sgi_2016.shp"},
+    )
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+
+    glacier = cover_fractions(project, "glacier")
+    ground = cover_fractions(project, "ground")
+    assert np.any(glacier > 0)  # Gletsch is glacierized
+    assert np.all(glacier <= 1)
+    assert np.allclose(glacier + ground, 1)
+    discharge = project.run()
+    assert np.all(discharge.to_numpy() >= 0)
+
+
+@needs_catchment_packages
+def test_land_covers_glacier_split_at_ela(tmp_path):
+    """Two glacier covers are split at the equilibrium line (ice below, firn above)."""
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier", "glacier"],
+        ["ground", "glacier_ice", "glacier_firn"],
+        glacier={"outline": "glaciers/sgi_2016.shp", "ela": 2900},
+    )
+    config["model"]["name"] = "prevah_unibe"
+    config["model"]["options"] = {
+        key: value
+        for key, value in config["model"]["options"].items()
+        if key.startswith("land_cover")
+    }
+    config["parameters"] = {
+        "a_snow_min": 1.5,
+        "a_snow_max": 4.5,
+        "fc": 300,
+        "beta": 2,
+        "k0": 0.5,
+        "k1": 0.2,
+        "k_gw1": 0.05,
+        "k_gw2": 0.01,
+        "k_gw3": 0.005,
+        "lp": 0.9,
+        "sgrluz": 10,
+        "cperc": 0.1,
+        "a_ice_min_glacier_ice": 2,
+        "a_ice_max_glacier_ice": 6,
+        "a_ice_min_glacier_firn": 1.5,
+        "a_ice_max_glacier_firn": 4,
+        "k_snow": 0.5,
+        "k_ice": 0.3,
+        "k_firn": 0.1,
+    }
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+
+    ice = cover_fractions(project, "glacier_ice")
+    firn = cover_fractions(project, "glacier_firn")
+    elevation = project.hydro_units.hydro_units["elevation"].to_numpy().squeeze()
+    assert np.any(ice > 0) and np.any(firn > 0)
+    # The split follows the ELA: no firn well below it, no bare ice well above.
+    assert np.all(firn[elevation < 2700] == 0)
+    assert np.all(ice[elevation > 3100] == 0)
+    assert np.allclose(ice + firn + cover_fractions(project, "ground"), 1)
+    assert np.all(project.run().to_numpy() >= 0)
+
+
+@needs_catchment_packages
+def test_land_covers_ignored_without_glacier_cover(tmp_path):
+    """A model without a glacier cover keeps the glacierized area in the soil."""
+    config = glacier_config(
+        tmp_path, ["ground"], ["ground"], glacier={"outline": "glaciers/sgi_2016.shp"}
+    )
+    config["parameters"] = dict(PARAMETERS)
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert np.allclose(cover_fractions(project, "ground"), 1)
+
+
+def test_land_covers_glacier_cover_without_source(tmp_path):
+    config = glacier_config(tmp_path, ["ground", "glacier"], ["ground", "glacier"])
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "no glacier extent" in str(excinfo.value)
+
+
+def test_land_covers_split_requires_ela(tmp_path):
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier", "glacier"],
+        ["ground", "glacier_ice", "glacier_firn"],
+        glacier={"outline": "glaciers/sgi_2016.shp"},
+    )
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "land_covers.glacier.ela: required" in str(excinfo.value)
+
+
+def test_land_covers_validation_errors(tmp_path):
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier"],
+        ["ground", "glacier"],
+        glacier={
+            "outline": "glaciers/sgi_2016.shp",
+            "ice_thickness": "glaciers/ice_thickness.tif",
+        },
+    )
+    config["hydro_units"]["land_covers"]["forest"] = {"outline": "outline.shp"}
+    config["model"]["options"]["land_cover_names"] = ["ground"]
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    message = str(excinfo.value)
+    assert "not both" in message
+    assert "unsupported land cover source 'forest'" in message
+    assert "must have the same length" in message
+
+
+def test_land_covers_require_dem(tmp_path):
+    """The cover fractions are computed on the DEM grid."""
+    config = minimal_config(tmp_path)
+    config["hydro_units"]["land_covers"] = {"glacier": {"outline": "outline.shp"}}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "land_covers: requires 'outline' and 'dem'" in str(excinfo.value)
+
+
+def test_columns_areas_must_match_the_model_covers(tmp_path):
+    """Per-cover area columns are checked against the covers the model declares."""
+    config = minimal_config(tmp_path)
+    config["model"]["options"].update(
+        land_cover_types=["ground", "glacier"], land_cover_names=["ground", "glacier"]
+    )
+    config["hydro_units"]["columns_areas"] = {"ground": "area"}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "one area column per land cover" in str(excinfo.value)
+
+
+# --- Lateral connectivity and actions -------------------------------------------
+
+
+def snow_slide_config(tmp_path, **hydro_units):
+    """A Gletsch project with the snow redistribution (needs slope + connectivity)."""
+    return {
+        "model": {
+            "name": "socont",
+            "options": {
+                "soil_storage_nb": 2,
+                "surface_runoff": "linear_storage",
+                "snow_redistribution": "transport:snow_slide",
+            },
+        },
+        "hydro_units": {
+            "file": "hydro_units_elevation_radiation.csv",
+            **hydro_units,
+        },
+        "forcing": {
+            "file": "meteo.csv",
+            "time": {"column": "date", "format": "%d/%m/%Y"},
+            "columns": {
+                "precipitation": "precip(mm/day)",
+                "temperature": "temp(C)",
+                "pet": "pet_sim(mm/day)",
+            },
+            "ref_elevation": 2702,
+        },
+        "periods": ["1981-01-01", "1981-12-31"],
+        "output": str(tmp_path),
+        "parameters": {
+            **PARAMETERS,
+            "snow_slide_coeff": 3178.4,
+            "snow_slide_exp": -1.998,
+        },
+    }
+
+
+def test_hydro_units_carry_the_slope_of_a_csv(tmp_path):
+    """The slope column is loaded without being asked for (lateral processes)."""
+    config = snow_slide_config(
+        tmp_path, connectivity="connectivity_elevation_radiation.csv"
+    )
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "slope" in project.hydro_units.hydro_units.columns
+
+
+def test_lateral_process_requires_the_connectivity(tmp_path):
+    """Without the connectivity a lateral process would silently do nothing."""
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(snow_slide_config(tmp_path), base_dir=GLETSCH_DIR)
+    message = str(excinfo.value)
+    assert "hydro_units.connectivity" in message
+    assert "transport:snow_slide" in message
+
+
+def test_connectivity_enables_the_snow_redistribution(tmp_path):
+    """A connectivity table declared in the project file reaches the model."""
+    config = snow_slide_config(
+        tmp_path, connectivity="connectivity_elevation_radiation.csv"
+    )
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+
+    assert project.hydro_units.settings.get_lateral_connection_count() > 0
+    discharge = project.run()
+    assert np.all(discharge.to_numpy() >= 0)
+
+
+def test_connectivity_file_must_exist(tmp_path):
+    """A missing connectivity table is reported like any other missing file."""
+    config = snow_slide_config(tmp_path, connectivity="no_such_connectivity.csv")
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "hydro_units.connectivity" in str(excinfo.value)
+
+
+def glacier_evolution_config(tmp_path, lookup_tables, **action):
+    """A Gletsch project replaying a precomputed glacier evolution."""
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier"],
+        ["ground", "glacier"],
+        glacier={"outline": "glaciers/sgi_2016.shp"},
+    )
+    # A glacier evolution tracks the ice volume, so the ice cannot be an
+    # infinite storage (the Socont default).
+    config["model"]["options"]["glacier_infinite_storage"] = False
+    config["actions"] = {
+        "glacier_evolution": {"lookup_tables": str(lookup_tables), **action}
+    }
+    return config
+
+
+def write_lookup_tables(directory, unit_ids, initial_areas, n_increments=101):
+    """A minimal (linearly shrinking) delta-h lookup table for the given units.
+
+    The first row must hold the glacier area the model starts from, which the
+    action checks against the initialized land cover fractions.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    shrinking = np.linspace(1.0, 0.0, n_increments)[:, None]
+    areas = shrinking * np.asarray(initial_areas, dtype=float)
+    for name, values in (
+        ("glacier_evolution_lookup_table_area.csv", areas),
+        # A 10 m thick glacier, melting with the area.
+        ("glacier_evolution_lookup_table_volume.csv", areas * 10),
+    ):
+        table = pd.DataFrame(values, columns=[str(i) for i in unit_ids])
+        table.to_csv(directory / name, index=False)
+
+
+@needs_catchment_packages
+def test_glacier_evolution_action_from_lookup_tables(tmp_path):
+    """The 'actions' section attaches a glacier evolution to the model."""
+    # The lookup tables are indexed by hydro unit id: build the units first.
+    plain = glacier_config(
+        tmp_path,
+        ["ground", "glacier"],
+        ["ground", "glacier"],
+        glacier={"outline": "glaciers/sgi_2016.shp"},
+    )
+    project = hb.load_project(plain, base_dir=GLETSCH_DIR, setup=False)
+    hydro_units = project.hydro_units.hydro_units
+    unit_ids = project.hydro_units.get_ids().to_numpy().squeeze()
+    fractions = cover_fractions(project, "glacier")
+    areas = hydro_units["area"].to_numpy().squeeze() * fractions
+    # Only the glacierized units belong to the lookup table.
+    glacierized = fractions > 0
+    write_lookup_tables(tmp_path / "glacier", unit_ids[glacierized], areas[glacierized])
+
+    project = hb.load_project(
+        glacier_evolution_config(tmp_path, tmp_path / "glacier"), base_dir=GLETSCH_DIR
+    )
+    assert project.model.get_action_count() == 1
+    discharge = project.run()
+    assert np.all(discharge.to_numpy() >= 0)
+
+
+@needs_catchment_packages
+def test_glacier_evolution_requires_a_glacier_cover(tmp_path):
+    """The action is refused on a model without a glacier land cover."""
+    write_lookup_tables(tmp_path / "glacier", [1, 2], [1e5, 2e5])
+    config = glacier_evolution_config(tmp_path, tmp_path / "glacier")
+    config["model"]["options"].update(
+        land_cover_types=["ground"], land_cover_names=["ground"]
+    )
+    del config["hydro_units"]["land_covers"]
+    config["parameters"] = dict(PARAMETERS)
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "the model declares no glacier land cover" in str(excinfo.value)
+
+
+def test_glacier_evolution_validation_errors(tmp_path):
+    """Unknown method, missing tables and a wrong month are all reported."""
+    config = glacier_config(
+        tmp_path,
+        ["ground", "glacier"],
+        ["ground", "glacier"],
+        glacier={"outline": "glaciers/sgi_2016.shp"},
+    )
+    config["actions"] = {
+        "glacier_evolution": {
+            "method": "delta_hh",
+            "lookup_tables": str(tmp_path),
+            "update_month": "Octobre",
+        }
+    }
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    message = str(excinfo.value)
+    assert "actions.glacier_evolution.method" in message
+    assert "is missing from" in message
+    assert "unknown month 'Octobre'" in message
+
+
+def test_unknown_action_is_reported(tmp_path):
+    """An unknown action name is reported with the valid ones."""
+    config = minimal_config(tmp_path)
+    config["actions"] = {"land_cover_change": {}}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "actions: unknown key 'land_cover_change'" in str(excinfo.value)
+
+
+@needs_catchment_packages
+def test_glacier_evolution_needs_a_finite_ice_storage(tmp_path):
+    """The default infinite ice storage cannot hold an evolving volume."""
+    write_lookup_tables(tmp_path / "glacier", [1, 2], [1e5, 2e5])
+    config = glacier_evolution_config(tmp_path, tmp_path / "glacier")
+    config["model"]["options"]["glacier_infinite_storage"] = True
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=GLETSCH_DIR)
+    assert "glacier_infinite_storage" in str(excinfo.value)

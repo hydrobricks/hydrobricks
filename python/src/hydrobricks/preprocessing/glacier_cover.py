@@ -161,6 +161,82 @@ def initialize_glacier_cover_from_extent(
     initialize_glacier_cover(catchment, glacier_df, land_cover)
 
 
+def initialize_glacier_covers_split_by_elevation(
+    catchment: Catchment,
+    ela: float,
+    ice_thickness: str | Path | None = None,
+    glacier_outline: str | Path | None = None,
+    ice_cover: str = "glacier_ice",
+    firn_cover: str = "glacier_firn",
+) -> None:
+    """Initialize two glacier land covers split at an elevation (the ELA).
+
+    PREVAH-style setups distinguish bare ice (below the equilibrium line
+    altitude) from firn (above it), each with its own land cover and melt
+    routing (see :class:`~hydrobricks.modules.glacier.PrevahGlacier`). This
+    helper extracts the glacier extent (from an ice-thickness raster or a
+    glacier-outline shapefile, as ``initialize_glacier_cover_from_extent``),
+    splits the glacierized DEM cells at the given elevation, and initializes
+    the two covers with their per-unit areas.
+
+    Parameters
+    ----------
+    catchment
+        The (already discretized) catchment object. Its hydro units must
+        declare both glacier covers.
+    ela
+        The equilibrium line altitude [m a.s.l.]: glacierized cells at or
+        above it count as firn, below it as ice.
+    ice_thickness
+        Path to the TIF file containing the glacier thickness in meters.
+        Either this or ``glacier_outline`` must be provided (not both).
+    glacier_outline
+        Path to the SHP file containing the glacier extents. Either this or
+        ``ice_thickness`` must be provided (not both).
+    ice_cover
+        Name of the ice land cover (default 'glacier_ice').
+    firn_cover
+        Name of the firn land cover (default 'glacier_firn').
+    """
+    if glacier_outline is None and ice_thickness is None:
+        raise DataError(
+            "Either glacier_outline or ice_thickness should be provided.",
+            data_type="glacier",
+            reason="Missing required parameter",
+        )
+    if glacier_outline is not None and ice_thickness is not None:
+        raise DataError(
+            "Either glacier_outline or ice_thickness should be provided, not both.",
+            data_type="glacier",
+            reason="Conflicting parameters",
+        )
+    if catchment.map_unit_ids is None:
+        raise ConfigurationError(
+            "Catchment has not been discretized. "
+            "Please run create_elevation_bands() first.",
+            reason="Catchment not initialized",
+        )
+
+    if ice_thickness is not None:
+        _, glaciers_mask = extract_ice_thickness_and_mask(catchment, ice_thickness)
+        glacier_cells = glaciers_mask > 0
+    else:
+        glaciers_mask = extract_glacier_mask_from_shapefile(catchment, glacier_outline)
+        glacier_cells = glaciers_mask != -9999
+
+    ice_mask = np.zeros(catchment.dem_data.shape)
+    ice_mask[glacier_cells & (catchment.dem_data < ela)] = 1
+    firn_mask = np.zeros(catchment.dem_data.shape)
+    firn_mask[glacier_cells & (catchment.dem_data >= ela)] = 1
+
+    initialize_glacier_cover(
+        catchment, _glacier_area_per_unit(catchment, ice_mask), ice_cover
+    )
+    initialize_glacier_cover(
+        catchment, _glacier_area_per_unit(catchment, firn_mask), firn_cover
+    )
+
+
 def initialize_glacier_cover(
     catchment: Catchment, glacier_df: pd.DataFrame, land_cover: str | None = None
 ) -> None:

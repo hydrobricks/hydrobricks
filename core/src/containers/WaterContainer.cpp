@@ -63,7 +63,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 
     // Get outgoing change rates
     vecDoublePt outgoingRates;
+    std::vector<bool> outgoingPriority;
     double outputs = 0;
+    double priorityOutputs = 0;
     for (int i = 0; i < _parent->GetProcessCount(); ++i) {
         auto process = _parent->GetProcess(i);
         if (process->GetWaterContainer() != this) {
@@ -86,7 +88,11 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             }
             assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
             outgoingRates.push_back(changeRate);
+            outgoingPriority.push_back(process->HasConstraintPriority());
             outputs += *changeRate;
+            if (process->HasConstraintPriority()) {
+                priorityOutputs += *changeRate;
+            }
         }
     }
 
@@ -124,21 +130,28 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     // Avoid negative content (unless the container is allowed to go negative, e.g. a bottomless
     // routing store whose level can be negative).
     if (!_allowNegativeContent && change < 0 && content + inputsStatic + change * timeStep < 0) {
-        double diff = (content + inputsStatic + change * timeStep) / timeStep;
-        // Limit the different rates proportionally
-        for (auto rate : outgoingRates) {
+        // Maximum total outgoing rate the available water can support over the timestep.
+        double availRate = std::max(0.0, (content + inputsStatic) / timeStep + inputs);
+        // Priority processes (Process::HasConstraintPriority) are served first, up to the
+        // available water; the other rates share the remainder proportionally. Without
+        // priority processes this reduces to the plain proportional scaling.
+        double priorityFactor = 1.0;
+        double normalFactor = 0.0;
+        double normalOutputs = outputs - priorityOutputs;
+        if (priorityOutputs >= availRate) {
+            priorityFactor = priorityOutputs > 0 ? availRate / priorityOutputs : 0.0;
+        } else if (normalOutputs > 0) {
+            normalFactor = (availRate - priorityOutputs) / normalOutputs;
+        }
+        for (size_t k = 0; k < outgoingRates.size(); ++k) {
+            double* rate = outgoingRates[k];
             assert(rate != nullptr);
             assert(*rate < 1000);
             assert(GreaterThanOrEqual(*rate, 0, EPSILON_D));
-            assert(*rate >= 0);
             if (NearlyZero(*rate, EPSILON_D)) {
                 continue;
             }
-            if (NearlyEqual(diff, change, PRECISION)) {
-                *rate = 0;
-                continue;
-            }
-            *rate += diff * std::abs((*rate) / outputs);
+            *rate *= outgoingPriority[k] ? priorityFactor : normalFactor;
         }
     }
 
@@ -232,6 +245,23 @@ double WaterContainer::SumIncomingFluxes() const {
     }
 
     return sum;
+}
+
+double WaterContainer::SumIncomingChangeRates() const {
+    double rate = 0;
+    for (auto& input : _inputs) {
+        // Skip the inputs that are not integrated as change rates (forcing, static and
+        // instantaneous fluxes deliver an amount, not a rate).
+        if (input->IsForcing() || input->IsStatic() || input->IsInstantaneous()) {
+            continue;
+        }
+        double* changeRate = input->GetChangeRatePointer();
+        if (changeRate != nullptr) {
+            rate += *changeRate;
+        }
+    }
+
+    return rate;
 }
 
 bool WaterContainer::ContentAccessible() const {

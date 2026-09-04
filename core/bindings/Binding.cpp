@@ -214,6 +214,12 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Mark the selected brick as computed directly (explicitly, without the ODE solver).")
         .def("set_parameter_value", &SettingsModel::SetParameterValue, "Setting one of the model parameter.",
              "component"_a, "name"_a, "value"_a)
+        .def("set_parameter_monthly_values", &SettingsModel::SetParameterMonthlyValues,
+             "Setting monthly-varying values (12) for one of the model parameters.", "component"_a, "name"_a,
+             "values"_a)
+        .def("set_parameter_spatial_from_property", &SettingsModel::SetParameterSpatialFromProperty,
+             "Bind a parameter to a per-unit hydro-unit property (spatial parameter).", "component"_a, "name"_a,
+             "property"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true, "splitter_type"_a = "snow_rain:linear")
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)
@@ -221,7 +227,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Generate the snowpack with liquid water retention.", "snow_melt_process"_a, "outflow_process"_a,
              "rain_to_snowpack"_a = false)
         .def("generate_canopy_interception", &SettingsModel::GenerateCanopyInterception,
-             "Generate a canopy interception store on a cover's rain path.", "cover_name"_a, "throughfall_target"_a)
+             "Generate a canopy interception store on a cover's rain path.", "cover_name"_a, "throughfall_target"_a,
+             "throughfall_process"_a = "outflow:threshold", "interception_et_process"_a = "et:open_water")
         .def("add_snowpack_refreezing", &SettingsModel::AddSnowpackRefreezing,
              "Add a refreezing process to the snowpacks (requires water retention).",
              "refreezing_process"_a = "refreeze:degree_day")
@@ -231,6 +238,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Add the snow-ice transformation process.", "transformation_process"_a = "transform:snow_ice_swat")
         .def("add_snow_redistribution", &SettingsModel::AddSnowRedistribution, "Add the snow redistribution process.",
              "redistribution_process"_a = "transport:snow_slide", "skip_glaciers"_a = false)
+        .def("set_process_gate_brick", &SettingsModel::SetProcessGateBrick,
+             "Set the gate brick of the selected process (read-only state access; no flux).", "name"_a)
         .def("set_process_outputs_as_instantaneous", &SettingsModel::SetProcessOutputsAsInstantaneous,
              "Set the process outputs as instantaneous.")
         .def("set_process_outputs_as_static", &SettingsModel::SetProcessOutputsAsStatic,

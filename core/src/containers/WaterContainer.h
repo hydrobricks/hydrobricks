@@ -278,6 +278,18 @@ class WaterContainer {
     virtual double SumIncomingFluxes() const;
 
     /**
+     * Sums the change rates [mm/d] of the dynamic incoming fluxes (skipping the
+     * forcing, static and instantaneous inputs). Valid during the change-rate
+     * computation phase once the upstream (earlier-declared) bricks have been
+     * processed, so their rates are linked to the fluxes. Mirrors the input handling
+     * of ApplyConstraints and is used by inflow-dependent outflow processes (the
+     * PREVAH SLOWCOMP overflow).
+     *
+     * @return the summed incoming change rate [mm/d].
+     */
+    double SumIncomingChangeRates() const;
+
+    /**
      * Check if the water content is accessible.
      *
      * @return true if the content (including pending changes) is greater than zero.

@@ -1,0 +1,1240 @@
+"""PREVAH model tests — instantiation, options, water balance and behaviour.
+
+The PREVAH structure (Viviroli et al., 2009) is integrated by the ODE solver,
+so these tests verify the structure wiring (seasonal degree-day snow routine
+with liquid water retention and refreezing, beta-function soil moisture
+routine, threshold upper zone, soil-moisture-gated percolation and the
+SLOWCOMP three-store groundwater) and the water balance closure rather than
+the discrete Fortran reference.
+"""
+
+from __future__ import annotations
+
+from datetime import date, timedelta
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+import hydrobricks as hb
+import hydrobricks.models as models
+from hydrobricks.models.prevah_unibe import (
+    LAND_USE_ALBEDO,
+    LAND_USE_COVER_TYPES,
+    LAND_USE_LAI,
+    LAND_USE_ROOT_DEPTH,
+    LAND_USE_SI_MAX,
+    LAND_USE_VEG_COV,
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_START = date(1981, 1, 1)
+_N_2Y = 730  # 1981 + 1982 — neither is a leap year
+
+_DEFAULT_PARAMS = {
+    "a_snow_min": 2.0,
+    "a_snow_max": 6.0,
+    "melt_t_snow": 0.0,
+    "fc": 200.0,
+    "cu": 0.7,
+    "beta": 2.0,
+    "k0": 0.5,
+    "sgrluz": 20.0,
+    "k1": 0.2,
+    "cperc": 2.0,
+    "slz1max": 20.0,
+    "k_gw1": 0.05,
+    "k_gw2": 0.01,
+    "k_gw3": 0.005,
+}
+
+
+def _hu_csv(tmp_path: Path) -> Path:
+    """Write a single-HU CSV (elevation 1000 m, area 1 km²)."""
+    p = tmp_path / "hydro_units.csv"
+    p.write_text("id,elevation,area\n-,m,m^2\n1,1000,1000000\n")
+    return p
+
+
+def _meteo_csv_series(tmp_path: Path, precip, pet, temp) -> Path:
+    """Write a meteo CSV from per-day precipitation, PET and temperature series."""
+    lines = ["date,precip(mm/day),pet(mm/day),temp(C)"]
+    for i, (p, e, t) in enumerate(zip(precip, pet, temp)):
+        d = _START + timedelta(days=i)
+        lines.append(f"{d.strftime('%d/%m/%Y')},{p:.6f},{e:.6f},{t:.6f}")
+    path = tmp_path / "meteo.csv"
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _meteo_csv_seasonal(tmp_path: Path, n_days: int, P: float, PET: float) -> Path:
+    """Write a meteo CSV with constant P and PET and a seasonal temperature cycle
+    (snow accumulation in winter, melt in summer)."""
+    days = np.arange(n_days)
+    temp = 5.0 - 12.0 * np.cos(2.0 * np.pi * days / 365.25)
+    return _meteo_csv_series(tmp_path, [P] * n_days, [PET] * n_days, temp)
+
+
+def _load_forcing(hydro_units, meteo_path: Path) -> hb.Forcing:
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        meteo_path,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "pet": "pet(mm/day)",
+            "temperature": "temp(C)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=1000, gradient=0.0
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=1000, gradient=0.0
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    return forcing
+
+
+def _run_model(tmp_path, meteo_path, n_days, params=None, **model_options) -> tuple:
+    """Build and run a PREVAH model on a given meteo file; return (model, forcing)."""
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        _hu_csv(tmp_path), column_elevation="elevation", column_area="area"
+    )
+    forcing = _load_forcing(hydro_units, meteo_path)
+
+    model = models.PrevahUniBE(**model_options)
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    if params:
+        values.update(params)
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def _run(
+    tmp_path: Path,
+    *,
+    P=5.0,
+    PET=1.5,
+    n_days=_N_2Y,
+    params=None,
+    **model_options,
+) -> tuple:
+    """Run PREVAH with seasonal temperature forcing; return (model, forcing)."""
+    meteo = _meteo_csv_seasonal(tmp_path, n_days, P, PET)
+    return _run_model(tmp_path, meteo, n_days, params=params, **model_options)
+
+
+def _balance(model, forcing) -> float:
+    precip = forcing.get_total_precipitation()
+    discharge = model.get_total_outlet_discharge()
+    et = model.get_total_et()
+    storage_change = model.get_total_water_storage_changes()
+    snow_change = model.get_total_snow_storage_changes()
+    return discharge + et + storage_change + snow_change - precip
+
+
+def _subdir(tmp_path: Path, name: str) -> Path:
+    d = tmp_path / name
+    d.mkdir()
+    return d
+
+
+def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
+    """Run a single-cover ('open') PREVAH over one or more equal-elevation units.
+
+    ``areas`` gives each unit's area (m²). When ``fc_spatial`` (one value per unit) is
+    given, the soil field capacity is set per unit from an ``fc`` property (spatial
+    parameter); otherwise the global ``fc_global`` applies to every unit."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
+    hu_csv = tmp_path / "hydro_units.csv"
+    lines = ["id,elevation,area", "-,m,m^2"]
+    for i, area in enumerate(areas):
+        lines.append(f"{i + 1},1000,{area:.1f}")
+    hu_csv.write_text("\n".join(lines) + "\n")
+    hydro_units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
+    if fc_spatial is not None:
+        hydro_units.add_property(("fc", "mm"), np.array(fc_spatial, dtype=float))
+    forcing = _load_forcing(
+        hydro_units, _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
+    )
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open"], land_cover_types=["open"], record_all=True
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values["fc"] = fc_global
+    parameters.set_values(values)
+    if fc_spatial is not None:
+        parameters.set_spatial("fc", "fc")
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model
+
+
+# ---------------------------------------------------------------------------
+# A — Instantiation and options
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_instantiation():
+    assert models.PrevahUniBE().name == "prevah_unibe"
+
+
+def test_prevah_generate_parameters_contains_literature_names():
+    parameters = models.PrevahUniBE().generate_parameters()
+    for name in (
+        "crmfmin",  # winter degree-day factor (PREVAH CRMFMIN)
+        "crmfmax",  # summer degree-day factor (PREVAH CRMFMAX)
+        "melt_t_snow",
+        "cwh",
+        "cfr",
+        "fc",
+        "cu",  # ET limit (PREVAH CU, = HBV lp)
+        "beta",
+        "k0",
+        "sgrluz",
+        "k1",
+        "cperc",
+        "cu_perc",
+        "slz1max",
+        "k_gw1",
+        "k_gw2",
+        "k_gw3",
+        "sublimation_pet_factor",
+    ):
+        assert parameters.has(name), f"parameter {name!r} not found"
+
+
+def test_prevah_refreezing_requires_degree_day_melt():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(snow_melt_process="melt:temperature_index")
+
+
+def test_prevah_hock_melt_without_refreezing_is_accepted():
+    model = models.PrevahUniBE(
+        snow_melt_process="melt:temperature_index",
+        snow_refreezing_process=None,
+    )
+    parameters = model.generate_parameters()
+    assert parameters.has("r_snow")
+    assert not parameters.has("cfr")
+
+
+def test_prevah_rain_to_snowpack_requires_water_retention():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(
+            snow_water_retention_process=None, snow_refreezing_process=None
+        )
+
+
+def test_prevah_default_glacier_module_is_prevah():
+    assert models.PrevahUniBE().options["glacier_module"] == "prevah"
+
+
+def test_prevah_requires_a_soil_cover():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(land_cover_names=["glacier"], land_cover_types=["glacier"])
+
+
+def test_prevah_soil_et_default_is_hbv():
+    assert models.PrevahUniBE().options["soil_et_process"] == "et:hbv"
+
+
+def test_prevah_soil_et_unknown_process_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(soil_et_process="et:socont")
+
+
+def test_prevah_et_prevah_has_albedo_parameter():
+    parameters = models.PrevahUniBE(soil_et_process="et:prevah").generate_parameters()
+    assert parameters.has("albedo_land")
+    # The snow albedo is age-derived (no parameter).
+    assert not parameters.has("albedo_snow")
+
+
+def test_prevah_et_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True, soil_et_process="et:prevah")
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_et_prevah_suppresses_et_under_snow(tmp_path):
+    """The snow-albedo reduction lowers the soil ET (winter, snow-covered) and
+    leaves more water for discharge than the plain HBV ET."""
+    hbv, _ = _run(_subdir(tmp_path, "hbv"), record_all=True)
+    prevah, _ = _run(
+        _subdir(tmp_path, "prevah"), record_all=True, soil_et_process="et:prevah"
+    )
+    assert prevah.get_total_et() < hbv.get_total_et()
+    assert prevah.get_total_outlet_discharge() > hbv.get_total_outlet_discharge()
+
+
+def test_prevah_canopy_et_default_is_open_water():
+    assert models.PrevahUniBE().options["canopy_et_process"] == "et:open_water"
+
+
+def test_prevah_canopy_et_unknown_process_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(canopy_et_process="et:hbv")
+
+
+def test_prevah_canopy_et_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(
+        tmp_path, ic=3.0, canopy_et_process="et:open_water_prevah"
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_canopy_et_prevah_reduces_et_under_snow(tmp_path):
+    """The albedo-reduced canopy evaporation lowers the total ET on a forested
+    catchment with a snow season."""
+    default, _ = _run_open_forest(_subdir(tmp_path, "default"), ic=3.0)
+    albedo, _ = _run_open_forest(
+        _subdir(tmp_path, "albedo"), ic=3.0, canopy_et_process="et:open_water_prevah"
+    )
+    assert albedo.get_total_et() < default.get_total_et()
+    assert albedo.get_total_outlet_discharge() > default.get_total_outlet_discharge()
+
+
+def test_prevah_sublimation_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run(
+        tmp_path, record_all=True, snow_sublimation_process="sublimation:prevah"
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_sublimation_prevah_evaporates_more_snow(tmp_path):
+    """PREVAH snow evaporation (at the albedo-reduced potential rate) removes more
+    snow than the low-factor PET sublimation, leaving less discharge."""
+    pet_subl, _ = _run(
+        _subdir(tmp_path, "pet"),
+        record_all=True,
+        params={"sublimation_pet_factor": 0.2},
+    )
+    prevah_subl, _ = _run(
+        _subdir(tmp_path, "prevah"),
+        record_all=True,
+        snow_sublimation_process="sublimation:prevah",
+    )
+    assert prevah_subl.get_total_et() > pet_subl.get_total_et()
+    assert (
+        prevah_subl.get_total_outlet_discharge() < pet_subl.get_total_outlet_discharge()
+    )
+
+
+# ---------------------------------------------------------------------------
+# B — Water balance
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_water_balance_closes(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_water_balance_closes_without_sublimation(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True, snow_sublimation_process=None)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_water_balance_closes_without_rain_to_snowpack(tmp_path):
+    model, forcing = _run(tmp_path, record_all=True, rain_to_snowpack=False)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# C — Behaviour and limit conditions
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_discharge_non_negative_no_nan(tmp_path):
+    model, _ = _run(tmp_path)
+    q = model.get_outlet_discharge()
+    assert np.all(q >= 0.0)
+    assert not np.any(np.isnan(q))
+
+
+def test_prevah_zero_precipitation_produces_no_discharge(tmp_path):
+    model, _ = _run(tmp_path, P=0.0)
+    q = model.get_outlet_discharge()
+    assert np.sum(q) == pytest.approx(0, abs=1e-8)
+
+
+def test_prevah_sgrluz_threshold_lowers_the_storm_peak(tmp_path):
+    """A larger surface-runoff threshold (SGRLUZ) suppresses the fast Q0 response,
+    lowering the storm peak (the volume drains later through interflow and
+    percolation)."""
+
+    def _q_storm(sgrluz: float) -> np.ndarray:
+        n_days = 60
+        precip = [0.0] * n_days
+        precip[10:13] = [50.0, 50.0, 50.0]
+        meteo = _meteo_csv_series(
+            _subdir(tmp_path, f"s{sgrluz:.0f}"), precip, [1.0] * n_days, [10.0] * n_days
+        )
+        model, _ = _run_model(
+            tmp_path.joinpath(f"s{sgrluz:.0f}"),
+            meteo,
+            n_days,
+            params={"sgrluz": sgrluz},
+        )
+        return model.get_outlet_discharge()
+
+    q_low = _q_storm(0.0)
+    q_high = _q_storm(60.0)
+    assert np.max(q_high) < np.max(q_low)
+
+
+def test_prevah_percolation_shuts_off_below_cu_fraction(tmp_path):
+    """With the soil moisture kept below cu_perc x FC (dry conditions), the gated
+    percolation stays off and the groundwater contribution is negligible: the
+    (default) run with a wetter soil yields more baseflow-driven discharge late in
+    a dry spell than a run whose percolation threshold sits above the soil state."""
+    # Storm followed by a long recession; a high cu_perc (0.89) blocks percolation
+    # while a low one (0.05) lets the groundwater fill and sustain the recession.
+    n_days = 120
+    precip = [0.0] * n_days
+    precip[10:16] = [30.0] * 6
+
+    def _recession_q(cu_perc: float) -> float:
+        sub = _subdir(tmp_path, f"p{cu_perc:.2f}")
+        meteo = _meteo_csv_series(sub, precip, [1.0] * n_days, [10.0] * n_days)
+        model, _ = _run_model(
+            sub, meteo, n_days, params={"cu_perc": cu_perc, "fc": 200.0}
+        )
+        q = model.get_outlet_discharge()
+        return float(np.sum(q[60:]))  # late recession = groundwater-driven
+
+    assert _recession_q(0.05) > _recession_q(0.89)
+
+
+def _run_open_wetland(tmp_path, *, wet_fraction, P=5.0, PET=1.5, n_days=_N_2Y):
+    """Run PREVAH with an open and a wetland cover (60/40)."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "wetland"], land_cover_names=["open", "wetland"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_wetland\n-,m,m^2,m^2\n1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "wetland": "area_wetland"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "wetland"],
+        land_cover_types=["open", "wetland"],
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_wetland": 2.0, "wet_fraction": wet_fraction})
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_wetland_exposes_wet_fraction_alias():
+    parameters = models.PrevahUniBE(
+        land_cover_names=["open", "wetland"],
+        land_cover_types=["open", "wetland"],
+    ).generate_parameters()
+    assert parameters.has("wet_fraction")
+
+
+def test_prevah_wetland_water_balance_closes(tmp_path):
+    model, forcing = _run_open_wetland(tmp_path, wet_fraction=0.7)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_wetland_only_cover_is_rejected():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE(land_cover_names=["wetland"], land_cover_types=["wetland"])
+
+
+# ---------------------------------------------------------------------------
+# C2 — Forest canopy interception (WP4: Menzel exactness option)
+# ---------------------------------------------------------------------------
+
+
+def _run_open_forest(
+    tmp_path, *, ic, ic_monthly=None, n_days=_N_2Y, P=5.0, PET=1.5, **model_options
+):
+    """Run PREVAH with an open and a forest cover (60/40); ic = canopy capacity.
+
+    When ``ic_monthly`` (12 values) is given, the canopy capacity is set as a
+    monthly-varying parameter instead of a constant."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        record_all=True,
+        **model_options,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": ic})
+    parameters.set_values(values)
+    if ic_monthly is not None:
+        parameters.set_monthly_values("ic", ic_monthly)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_canopy_default_is_menzel():
+    assert (
+        models.PrevahUniBE().options["canopy_interception_process"]
+        == "interception:menzel"
+    )
+
+
+def test_prevah_menzel_canopy_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(tmp_path, ic=3.0)
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_menzel_intercepts_less_than_threshold(tmp_path):
+    """For the same capacity, Menzel filling retains a diminishing fraction of the rain
+    (partial throughfall before the canopy is full), so it evaporates less from the
+    canopy and yields more discharge than the fill-then-spill threshold store."""
+    menzel, _ = _run_open_forest(
+        _subdir(tmp_path, "menzel"),
+        ic=3.0,
+        canopy_interception_process="interception:menzel",
+    )
+    threshold, _ = _run_open_forest(
+        _subdir(tmp_path, "threshold"),
+        ic=3.0,
+        canopy_interception_process="outflow:threshold",
+    )
+    assert menzel.get_total_outlet_discharge() > threshold.get_total_outlet_discharge()
+
+
+def test_prevah_monthly_capacity_matches_constant(tmp_path):
+    """A 12-month-constant monthly capacity reproduces the scalar-capacity run."""
+    scalar, _ = _run_open_forest(_subdir(tmp_path, "scalar"), ic=3.0)
+    monthly, _ = _run_open_forest(
+        _subdir(tmp_path, "monthly"), ic=3.0, ic_monthly=[3.0] * 12
+    )
+    assert monthly.get_total_outlet_discharge() == pytest.approx(
+        scalar.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
+def test_prevah_monthly_capacity_water_balance_closes(tmp_path):
+    model, forcing = _run_open_forest(
+        tmp_path, ic=2.0, ic_monthly=[1, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1, 1]
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_monthly_capacity_bounded_by_constants(tmp_path):
+    """A seasonally varying capacity gives a discharge distinct from the constant
+    runs and bounded by the constant runs at the monthly min and max (more canopy
+    capacity intercepts and evaporates more, leaving less discharge)."""
+    low, _ = _run_open_forest(_subdir(tmp_path, "low"), ic=1.0)
+    high, _ = _run_open_forest(_subdir(tmp_path, "high"), ic=5.0)
+    months = [1, 1, 1, 1, 1, 5, 5, 5, 5, 1, 1, 1]  # low in winter, high in summer
+    var, _ = _run_open_forest(_subdir(tmp_path, "var"), ic=3.0, ic_monthly=months)
+    # A constant capacity at the annual mean: the monthly run must differ from it,
+    # proving the value truly varies within the year (not just the mean baseline).
+    const_mean, _ = _run_open_forest(_subdir(tmp_path, "mean"), ic=sum(months) / 12.0)
+    q_low = low.get_total_outlet_discharge()
+    q_high = high.get_total_outlet_discharge()
+    q_var = var.get_total_outlet_discharge()
+    assert q_high < q_var < q_low
+    assert q_var != pytest.approx(const_mean.get_total_outlet_discharge())
+
+
+def test_prevah_spatial_fc_uniform_matches_global(tmp_path):
+    """A uniform per-unit fc property reproduces the global-scalar run."""
+    spatial = _run_fc(_subdir(tmp_path, "sp"), areas=[1e6], fc_spatial=[200.0])
+    glob = _run_fc(_subdir(tmp_path, "gl"), areas=[1e6], fc_global=200.0)
+    assert spatial.get_total_outlet_discharge() == pytest.approx(
+        glob.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
+def test_prevah_spatial_fc_uses_own_value(tmp_path):
+    """Each unit uses its own per-unit fc: a 2-unit [50, 400] catchment equals the
+    area-weighted average of single-unit fc=50 and fc=400 runs."""
+    q50 = _run_fc(
+        _subdir(tmp_path, "u50"), areas=[1e6], fc_spatial=[50.0]
+    ).get_total_outlet_discharge()
+    q400 = _run_fc(
+        _subdir(tmp_path, "u400"), areas=[1e6], fc_spatial=[400.0]
+    ).get_total_outlet_discharge()
+    two = _run_fc(
+        _subdir(tmp_path, "two"), areas=[5e5, 5e5], fc_spatial=[50.0, 400.0]
+    ).get_total_outlet_discharge()
+    assert two == pytest.approx(0.5 * q50 + 0.5 * q400, rel=1e-6)
+    # And a spatially varying catchment differs from the uniform global run.
+    assert two != pytest.approx(
+        _run_fc(_subdir(tmp_path, "g200"), areas=[1e6]).get_total_outlet_discharge()
+    )
+
+
+def test_prevah_spatial_fc_water_balance_closes(tmp_path):
+    model = _run_fc(tmp_path, areas=[5e5, 5e5], fc_spatial=[50.0, 400.0])
+    balance = (
+        model.get_total_outlet_discharge()
+        + model.get_total_et()
+        + model.get_total_water_storage_changes()
+        + model.get_total_snow_storage_changes()
+    )
+    # The forcing is a constant 5 mm/d over the whole catchment, so the closure
+    # reference is 5 mm/d x the number of days.
+    assert balance == pytest.approx(5.0 * _N_2Y, rel=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# D — Glacier (PREVAH module, ice + firn)
+# ---------------------------------------------------------------------------
+
+_PARAMS_GLACIER = {
+    "a_ice_min": 3.0,
+    "a_ice_max": 8.0,
+    "k_snow": 0.3,
+    "k_ice": 0.4,
+}
+
+
+def _run_open_glacier(
+    tmp_path,
+    *,
+    cover_names,
+    cover_types,
+    areas,
+    params,
+    P=5.0,
+    PET=1.5,
+    n_days=_N_2Y,
+    **model_options,
+) -> tuple:
+    """Run PREVAH on a 2-unit catchment: an all-open unit and a glacierized unit."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=cover_types, land_cover_names=cover_names
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    header = ",".join(f"area_{name}" for name in cover_names)
+    hu_csv.write_text(
+        f"id,elevation,{header}\n"
+        f"-,m,{','.join(['m^2'] * len(cover_names))}\n"
+        f"1,1000,{areas[0]}\n"
+        f"2,2500,{areas[1]}\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={name: f"area_{name}" for name in cover_names},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, n_days, P, PET))
+
+    model = models.PrevahUniBE(
+        land_cover_names=cover_names,
+        land_cover_types=cover_types,
+        record_all=True,
+        glacier_infinite_storage=model_options.pop("glacier_infinite_storage", False),
+        **model_options,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.update(params)
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+    out = tmp_path / "out"
+    out.mkdir()
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_glacier_exposes_aliases():
+    parameters = models.PrevahUniBE(
+        land_cover_names=["open", "glacier"],
+        land_cover_types=["open", "glacier"],
+    ).generate_parameters()
+    for name in ("a_ice_min", "a_ice_max", "k_snow", "k_ice"):
+        assert parameters.has(name), f"glacier alias {name!r} not found"
+    assert not parameters.has("k_firn")  # no firn cover declared
+
+
+def test_prevah_firn_cover_exposes_firn_alias():
+    parameters = models.PrevahUniBE(
+        land_cover_names=["open", "glacier_ice", "glacier_firn"],
+        land_cover_types=["open", "glacier", "glacier"],
+    ).generate_parameters()
+    for name in ("k_snow", "k_ice", "k_firn"):
+        assert parameters.has(name), f"glacier alias {name!r} not found"
+
+
+def test_prevah_glacier_water_balance_closes(tmp_path):
+    """With a finite ice store (no unaccounted melt source) the balance closes."""
+    model, forcing = _run_open_glacier(
+        tmp_path,
+        cover_names=["open", "glacier"],
+        cover_types=["open", "glacier"],
+        areas=["1000000,0", "300000,700000"],
+        params=_PARAMS_GLACIER,
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_firn_to_groundwater_water_balance_closes(tmp_path):
+    """The firn melt drains through the firn reservoir into the groundwater store
+    (slz1); the catchment balance must still close."""
+    params = dict(_PARAMS_GLACIER)
+    params.update(
+        {
+            "a_ice_min_glacier_ice": 3.0,
+            "a_ice_max_glacier_ice": 8.0,
+            "a_ice_min_glacier_firn": 2.5,
+            "a_ice_max_glacier_firn": 7.0,
+            "k_firn": 0.02,
+        }
+    )
+    for key in ("a_ice_min", "a_ice_max"):
+        params.pop(key)
+    model, forcing = _run_open_glacier(
+        tmp_path,
+        cover_names=["open", "glacier_ice", "glacier_firn"],
+        cover_types=["open", "glacier", "glacier"],
+        areas=["1000000,0,0", "300000,400000,300000"],
+        params=params,
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_glacier_infinite_storage_adds_discharge(tmp_path):
+    """An infinite ice store lets the glacier melt ice on top of the precipitation
+    it receives, so it yields more discharge than a finite (depletable) store."""
+    common = dict(
+        cover_names=["open", "glacier"],
+        cover_types=["open", "glacier"],
+        areas=["1000000,0", "300000,700000"],
+        params=_PARAMS_GLACIER,
+    )
+    finite, _ = _run_open_glacier(_subdir(tmp_path, "fin"), **common)
+    infinite, _ = _run_open_glacier(
+        _subdir(tmp_path, "inf"), glacier_infinite_storage=True, **common
+    )
+    assert infinite.get_total_outlet_discharge() > finite.get_total_outlet_discharge()
+
+
+# ---------------------------------------------------------------------------
+# PREVAH faithful options: interception on any cover, wet-surface ET
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_interception_covers_on_open(tmp_path):
+    """A canopy on a non-forest cover (interception_covers) intercepts rain and
+    evaporates it at the veg_cov-scaled potential rate; the balance closes."""
+    model, forcing = _run(
+        _subdir(tmp_path, "icov"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 0.8},
+    )
+    labels = model.get_recorded_labels()
+    assert "open_canopy:interception_et:output" in labels
+    et_canopy = np.asarray(
+        model.get_recorded_hydro_unit_values("open_canopy:interception_et:output")
+    )
+    assert et_canopy.sum() > 0
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_canopy_et_factor_scales_interception_et(tmp_path):
+    """Halving the canopy et_factor (PREVAH veg_cov) reduces the interception ET."""
+    full, _ = _run(
+        _subdir(tmp_path, "full"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 1.0},
+    )
+    half, _ = _run(
+        _subdir(tmp_path, "half"),
+        interception_covers=["open"],
+        canopy_et_process="et:open_water_prevah",
+        record_all=True,
+        params={"ic": 2.0, "canopy_et_factor": 0.5},
+    )
+    label = "open_canopy:interception_et:output"
+    et_full = np.asarray(full.get_recorded_hydro_unit_values(label)).sum()
+    et_half = np.asarray(half.get_recorded_hydro_unit_values(label)).sum()
+    assert 0 < et_half < et_full
+
+
+def test_prevah_wet_et_from_groundwater(tmp_path):
+    """The PREVAH wet-surface ET (EWET) evaporates from SLZ1 at et_pot * et_factor,
+    reducing the discharge; the balance still closes."""
+    base, _ = _run(_subdir(tmp_path, "base"), record_all=True)
+    wet, wet_forcing = _run(
+        _subdir(tmp_path, "wet"),
+        wet_et_from_groundwater=True,
+        record_all=True,
+        params={"ow_et_factor": 0.5},
+    )
+    labels = wet.get_recorded_labels()
+    assert "slz1:wet_et:output" in labels
+    et_wet = np.asarray(wet.get_recorded_hydro_unit_values("slz1:wet_et:output"))
+    assert et_wet.sum() > 0
+    assert wet.get_total_outlet_discharge() < base.get_total_outlet_discharge()
+    assert _balance(wet, wet_forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_snow_holding_prevah_drains_on_melt_days(tmp_path):
+    """PREVAH's liquid release (retention limit cwh*liquid on melt days) keeps less
+    water in the snowpack than the HBV holding (cwh*SWE), with the balance closed
+    and the same total discharge (timing shifts only)."""
+    hbv, _ = _run(_subdir(tmp_path, "hbv"), record_all=True)
+    prv, prv_forcing = _run(
+        _subdir(tmp_path, "prv"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+    )
+    assert _balance(prv, prv_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:water_content"
+    liq_hbv = np.asarray(hbv.get_recorded_hydro_unit_values(label)).mean()
+    liq_prv = np.asarray(prv.get_recorded_hydro_unit_values(label)).mean()
+    assert liq_prv < liq_hbv
+    q_hbv = hbv.get_total_outlet_discharge()
+    q_prv = prv.get_total_outlet_discharge()
+    assert q_prv == pytest.approx(q_hbv, rel=0.02)
+
+
+def test_prevah_seasonal_refreeze_with_temperature_index_melt(tmp_path):
+    """refreeze:degree_day_seasonal carries its own seasonal factor, so it works with
+    melt:temperature_index (PREVAH: Hock melt + seasonal-PDDI refreeze); refreezing
+    keeps liquid in the pack (less winter release), balance closed."""
+    n_days = _N_2Y
+    meteo = _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
+
+    def run(sub, refreezing):
+        hydro_units = hb.HydroUnits()
+        hydro_units.load_from_csv(
+            _hu_csv(sub), column_elevation="elevation", column_area="area"
+        )
+        forcing = _load_forcing(hydro_units, meteo)
+        # constant radiation forcing for the temperature-index melt
+        forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
+        forcing.data2D.data.append(np.full((n_days, 1), 5000.0))
+        model = models.PrevahUniBE(
+            snow_melt_process="melt:temperature_index",
+            snow_refreezing_process=refreezing,
+            record_all=True,
+        )
+        parameters = model.generate_parameters()
+        values = {
+            k: v
+            for k, v in _DEFAULT_PARAMS.items()
+            if k not in ("a_snow_min", "a_snow_max")
+        }
+        values.update(
+            {"melt_factor": 1.0, "r_snow": 5e-5, "cfr": 0.1}
+            if refreezing
+            else {"melt_factor": 1.0, "r_snow": 5e-5}
+        )
+        parameters.set_values(values)
+        end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
+        model.setup(
+            spatial_structure=hydro_units,
+            output_path=str(sub),
+            start_date=_START.strftime("%Y-%m-%d"),
+            end_date=end_date,
+        )
+        model.run(parameters=parameters, forcing=forcing)
+        return model, forcing
+
+    no_rf, _ = run(_subdir(tmp_path, "norf"), None)
+    rf, rf_forcing = run(_subdir(tmp_path, "rf"), "refreeze:degree_day_seasonal")
+    assert _balance(rf, rf_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:refreeze:output"
+    assert label in rf.get_recorded_labels()
+    assert np.asarray(rf.get_recorded_hydro_unit_values(label)).sum() > 0
+
+
+def test_prevah_snow_holding_cexliq_releases_more_on_ripe_pack(tmp_path):
+    """The CEXLIQ graded partition (liquid_release_exponent > 0) passes a fraction of
+    the fresh melt straight through, so on a ripe (liquid-bearing) pack it releases at
+    least as much meltwater as the plain collapse, with the water balance still closing.
+    """
+    plain, _ = _run(
+        _subdir(tmp_path, "plain"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+        params={"cexliq": 0.0},
+    )
+    graded, graded_forcing = _run(
+        _subdir(tmp_path, "graded"),
+        snow_water_retention_process="outflow:snow_holding_prevah",
+        record_all=True,
+        params={"cexliq": 0.5},
+    )
+    assert _balance(graded, graded_forcing) == pytest.approx(0, abs=1e-6)
+    label = "open_snowpack:meltwater:output"
+    rel_plain = np.asarray(plain.get_recorded_hydro_unit_values(label))
+    rel_graded = np.asarray(graded.get_recorded_hydro_unit_values(label))
+    # CEXLIQ shifts the release timing (the exact per-step relation is checked in the
+    # C++ gtest); the total is melt-driven and nearly conserved, but the daily series
+    # differs, and on the first melt day where the pack already holds liquid the graded
+    # release is the larger one.
+    assert not np.allclose(rel_graded, rel_plain)
+    diff = rel_graded.ravel() - rel_plain.ravel()
+    first = np.flatnonzero(np.abs(diff) > 1e-6)[0]
+    assert diff[first] > 0
+
+
+# ---------------------------------------------------------------------------
+# Per-cover soil moisture stores (PREVAH parameterizes the soil per land use)
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_shares_the_soil_by_default():
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == ["soil_moisture"]
+    # A single store: the percolation gates on it directly.
+    percolation = model.structure["upper_zone"]["processes"]["percolation"]
+    assert percolation["gate"] == "soil_moisture"
+
+    parameters = model.generate_parameters()
+    assert parameters.has("fc")
+    assert parameters.has("cu")
+
+
+def test_prevah_per_cover_soil_stores():
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest", "wetland"],
+        land_cover_types=["open", "forest", "wetland"],
+        share_soil=False,
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == [
+        "open_soil_moisture",
+        "forest_soil_moisture",
+        "wetland_soil_moisture",
+    ]
+    # The percolation now reads them all (area-weighted mean saturation).
+    percolation = model.structure["upper_zone"]["processes"]["percolation"]
+    assert percolation["gate"] == soils
+
+    # The capacity and the ET limit are exposed per cover; the wetland store is
+    # named after the cover, not after its internal pass-through brick.
+    parameters = model.generate_parameters()
+    for cover in ("open", "forest", "wetland"):
+        assert parameters.has(f"fc_{cover}")
+        assert parameters.has(f"lp_{cover}")
+    assert not parameters.has("fc")
+    assert not parameters.has("fc_wetland_dry")
+
+
+def test_prevah_per_cover_soil_falls_back_to_a_single_store():
+    # With one soil-bearing cover there is nothing to separate.
+    model = models.PrevahUniBE(
+        land_cover_names=["open"], land_cover_types=["open"], share_soil=False
+    )
+    soils = [name for name in model.structure if "soil_moisture" in name]
+    assert soils == ["soil_moisture"]
+    assert model.generate_parameters().has("fc")
+
+
+def _run_per_cover_soil(tmp_path, *, share_soil, fc_open, fc_forest):
+    """Run PREVAH on an open/forest catchment (60/40) with the given soil setup."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n1,1000,600000,400000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, _N_2Y, 5.0, 1.5))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=share_soil,
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": 2.0})
+    if share_soil:
+        values["fc"] = fc_open
+    else:
+        values.pop("fc")
+        values.pop("cu")
+        values.update(
+            {
+                "fc_open": fc_open,
+                "fc_forest": fc_forest,
+                "lp_open": 0.7,
+                "lp_forest": 0.7,
+            }
+        )
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_per_cover_soil_water_balance_closes(tmp_path):
+    model, forcing = _run_per_cover_soil(
+        tmp_path, share_soil=False, fc_open=200.0, fc_forest=400.0
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_prevah_per_cover_soil_capacity_is_expressed_over_the_unit(tmp_path):
+    # A per-cover store is fed by its land cover, whose outgoing fluxes already carry
+    # the cover area fraction, so its content — and therefore its capacity — is
+    # expressed over the whole hydro unit, not over the cover. Giving both covers the
+    # capacity of the shared store therefore enlarges the unit's soil storage.
+    shared, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "shared"), share_soil=True, fc_open=200.0, fc_forest=200.0
+    )
+    split, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "split"), share_soil=False, fc_open=200.0, fc_forest=200.0
+    )
+    assert split.get_total_outlet_discharge() < shared.get_total_outlet_discharge()
+
+
+def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
+    # A drier forest soil (smaller capacity) fills sooner, so more water reaches the
+    # runoff generation: the discharge must differ from the equal-capacity case.
+    equal, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "equal"), share_soil=False, fc_open=200.0, fc_forest=200.0
+    )
+    contrasted, _ = _run_per_cover_soil(
+        _subdir(tmp_path, "contrasted"), share_soil=False, fc_open=200.0, fc_forest=50.0
+    )
+    assert contrasted.get_total_outlet_discharge() > equal.get_total_outlet_discharge()
+
+
+# ---------------------------------------------------------------------------
+# PREVAH's built-in land-use parameterization
+# ---------------------------------------------------------------------------
+
+
+_TABLES = (
+    LAND_USE_SI_MAX,
+    LAND_USE_VEG_COV,
+    LAND_USE_ROOT_DEPTH,
+    LAND_USE_ALBEDO,
+    LAND_USE_LAI,
+)
+
+
+def test_every_land_use_has_twelve_monthly_values():
+    for table in _TABLES:
+        assert sorted(table) == sorted(LAND_USE_COVER_TYPES)
+        assert all(len(values) == 12 for values in table.values())
+
+
+def test_land_uses_map_onto_the_hydrobricks_cover_types():
+    # PREVAH names 22 land uses; only six carry distinct physics and those are the
+    # hydrobricks cover types of the same name.
+    assert len(LAND_USE_COVER_TYPES) == 22
+    distinct = {
+        "water": "water",
+        "urban": "urban",
+        "glacier_firn": "glacier",
+        "glacier_ice": "glacier",
+        "rock": "rock",
+        "wetland": "wetland",
+    }
+    for land_use, cover_type in distinct.items():
+        assert LAND_USE_COVER_TYPES[land_use] == cover_type
+    # Every other land use is an ordinary soil-bearing cover.
+    others = set(LAND_USE_COVER_TYPES) - set(distinct)
+    assert {LAND_USE_COVER_TYPES[c] for c in others} == {"open", "forest"}
+
+
+def test_reference_values():
+    # Spot checks against mxp_model_parameter.f90.
+    assert LAND_USE_SI_MAX["coniferous_forest"] == [
+        2.5,
+        2.8,
+        2.8,
+        2.5,
+        3.5,
+        4.3,
+        4.5,
+        4.3,
+        4.1,
+        3.9,
+        3.0,
+        2.5,
+    ]
+    assert LAND_USE_VEG_COV["water"] == [0.0] * 12
+    assert LAND_USE_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
+    # The albedo falls back to the land use's own value when the LAI exceeds 4.
+    assert LAND_USE_LAI["coniferous_forest"][6] == 8.0
+    assert LAND_USE_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
+    # ... and is interpolated with the bare-soil albedo otherwise.
+    assert LAND_USE_LAI["pasture"][0] == 0.5
+    assert LAND_USE_ALBEDO["pasture"][0] == pytest.approx(
+        0.1 + 0.25 * (0.25 - 0.1) * 0.5
+    )
+
+
+def test_interception_capacity_is_si_max_times_veg_cov():
+    values = models.PrevahUniBE.land_use_interception_capacity("pasture")
+    expected = [
+        s * v for s, v in zip(LAND_USE_SI_MAX["pasture"], LAND_USE_VEG_COV["pasture"])
+    ]
+    assert values == pytest.approx(expected)
+
+
+def test_field_capacity():
+    values = models.PrevahUniBE.land_use_field_capacity("pasture", 1.27)
+    assert values == pytest.approx([1.27 * (0.6 + 0.05) * 10.0] * 12)
+
+
+def test_unknown_land_use_is_rejected():
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE.land_use_interception_capacity("not_a_land_use")
+    with pytest.raises(hb.ConfigurationError):
+        models.PrevahUniBE.land_use_field_capacity("not_a_land_use", 1.0)
+
+
+def _model_with_land_uses(land_uses, **options):
+    return models.PrevahUniBE(
+        land_cover_names=land_uses,
+        land_cover_types=[LAND_USE_COVER_TYPES[c] for c in land_uses],
+        interception_covers=land_uses,
+        **options,
+    )
+
+
+def test_apply_land_use_sets_the_monthly_parameters():
+    land_uses = ["coniferous_forest", "pasture"]
+    model = _model_with_land_uses(land_uses, canopy_et_process="et:open_water_prevah")
+    parameters = model.generate_parameters()
+
+    for land_use in land_uses:
+        model.apply_land_use(parameters, land_use)
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("pasture_canopy", "capacity")] == pytest.approx(
+        model.land_use_interception_capacity("pasture")
+    )
+    assert monthly[("pasture_canopy", "et_factor")] == pytest.approx(
+        LAND_USE_VEG_COV["pasture"]
+    )
+    assert monthly[("coniferous_forest_canopy", "capacity")] == pytest.approx(
+        model.land_use_interception_capacity("coniferous_forest")
+    )
+
+
+def test_apply_land_use_on_a_renamed_cover():
+    model = _model_with_land_uses(["pasture"])
+    parameters = model.generate_parameters()
+    # A single canopy: the alias carries no cover suffix.
+    model.apply_land_use(parameters, "pasture", cover_name="pasture")
+
+    monthly = parameters.get_monthly_parameters()
+    assert [name for _, name, _ in monthly] == ["capacity"]
+
+
+def test_apply_land_use_without_the_prevah_canopy_et():
+    # With the default canopy ET there is no et_factor: only the capacity is set.
+    land_uses = ["coniferous_forest", "pasture"]
+    model = _model_with_land_uses(land_uses)
+    parameters = model.generate_parameters()
+    for land_use in land_uses:
+        model.apply_land_use(parameters, land_use)
+
+    monthly = parameters.get_monthly_parameters()
+    assert sorted(name for _, name, _ in monthly) == ["capacity", "capacity"]
+
+
+def test_apply_land_use_requires_a_canopy():
+    model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    with pytest.raises(hb.ConfigurationError):
+        model.apply_land_use(parameters, "pasture")

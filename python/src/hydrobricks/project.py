@@ -73,12 +73,59 @@ a ``unit_ids_raster`` to aggregate the grid cells, and optionally an
           dim_x: E
           dim_y: N
 
+Land covers beyond the single default soil cover are declared on the model
+(the ``land_cover_types`` / ``land_cover_names`` options); the data they are
+initialized from goes in ``hydro_units.land_covers``. A glacier extent (an
+outline shapefile or an ice-thickness raster) sets the glacier fraction of every
+hydro unit, optionally split at the equilibrium line altitude into ice (below)
+and firn (above), the PREVAH-style two-cover setup::
+
+    model:
+      name: socont
+      options:
+        land_cover_types: [ground, glacier]
+        land_cover_names: [ground, glacier]
+
+    hydro_units:
+      discretization: {method: equal_intervals, distance: 100}
+      outline: catchment.shp
+      dem: dem.tif
+      land_covers:
+        glacier: {outline: glaciers.shp}    # or ice_thickness: thickness.tif
+
+A model that declares no glacier cover ignores the glacier source (the
+glacierized area stays in the soil cover), so one catchment section serves every
+model of a comparison.
+
+The lateral processes (e.g. the snow redistribution) need to know how the hydro
+units drain into each other, and the per-unit slope. Both come from the
+preprocessing: the connectivity table produced by
+``Catchment.calculate_connectivity`` is declared as
+``hydro_units.connectivity``, and the slope is always part of the hydro units
+(computed at discretization, and read back from a hydro units CSV)::
+
+    hydro_units:
+      file: hydro_units.csv
+      unit_ids_raster: unit_ids.tif
+      connectivity: connectivity.csv
+
+A glacier evolution can be replayed during the simulation from a precomputed
+lookup table (``GlacierEvolutionDeltaH`` / ``GlacierEvolutionAreaScaling``, see
+the preprocessing examples), through the optional ``actions`` section::
+
+    actions:
+      glacier_evolution:
+        method: delta_h            # or 'area_scaling'
+        lookup_tables: glacier/    # the directory holding the two lookup CSVs
+        land_cover: glacier        # default: 'glacier'
+        update_month: October      # default: 'October'
+
 The model can also be a custom structure declared as data (see
 :class:`~hydrobricks.models.custom.CustomModel`): use
 ``model: {structure: my_structure.yaml}`` instead of a pre-built ``name``.
 
 Relative paths are resolved against the project file location. For anything
-beyond these canonical cases (glacier evolution, custom calibration logic)
+beyond these canonical cases (custom calibration logic, land cover changes)
 use the Python API, starting from the objects returned by
 :func:`load_project`.
 """
@@ -86,6 +133,7 @@ use the Python API, starting from the objects returned by
 from __future__ import annotations
 
 import difflib
+import logging
 import numbers
 import re
 from dataclasses import dataclass, field
@@ -107,6 +155,8 @@ from hydrobricks.models.model import Model
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, Periods
 
+logger = logging.getLogger(__name__)
+
 _TOP_LEVEL_KEYS = {
     "model",
     "hydro_units",
@@ -115,6 +165,7 @@ _TOP_LEVEL_KEYS = {
     "periods",
     "parameters",
     "data_parameters",
+    "actions",
     "calibration",
     "output",
     "cache",
@@ -192,6 +243,7 @@ class Project:
     catchment: Any | None = None
     calibration: dict | None = field(default=None, repr=False)
     base_dir: Path | None = None
+    actions: list = field(default_factory=list, repr=False)
 
     def setup(self, period: Period | tuple | str | None = None) -> None:
         """Set the model up, over the full simulation span or a given period.
@@ -236,6 +288,9 @@ class Project:
             end_date=end_date,
             spinup=spinup,
         )
+        # The actions can only be registered on a model that is set up.
+        for action in self.actions:
+            self.model.add_action(action)
 
     def run(self) -> pd.Series:
         """Run the model over the simulation span and return the discharge.
@@ -685,7 +740,47 @@ def _validate_model(config: dict, base: Path, errors: list[str]) -> dict:
         errors.append("model.options: expected a mapping of model options.")
         options = {}
     out["options"] = options
+    out["land_cover_types"], out["land_cover_names"] = _validate_land_cover_options(
+        options, errors
+    )
     return out
+
+
+def _validate_land_cover_options(
+    options: dict, errors: list[str]
+) -> tuple[list[str], list[str]]:
+    """The land covers declared in the model options (a single soil cover by default).
+
+    Only used for the cross-checks against the hydro units; the options themselves
+    are passed to the model class, which validates the cover types it allows.
+    """
+    declared: dict[str, list[str]] = {}
+    for key in ("land_cover_types", "land_cover_names"):
+        value = options.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            errors.append(f"model.options.{key}: expected a list of names.")
+            continue
+        declared[key] = list(value)
+
+    types = declared.get("land_cover_types")
+    names = declared.get("land_cover_names")
+    if types is None and names is None:
+        return ["open"], ["open"]
+    if types is None or names is None:
+        errors.append(
+            "model.options: 'land_cover_types' and 'land_cover_names' must be "
+            "declared together (one type and one name per land cover)."
+        )
+        return ["open"], ["open"]
+    if len(types) != len(names):
+        errors.append(
+            "model.options: 'land_cover_types' and 'land_cover_names' must have "
+            f"the same length (got {len(types)} and {len(names)})."
+        )
+        return ["open"], ["open"]
+    return types, names
 
 
 def _resolve_optional_path(
@@ -753,6 +848,54 @@ def _validate_discretization(section: dict, errors: list[str]) -> dict | None:
     return out
 
 
+def _validate_land_covers(section: dict, base: Path, errors: list[str]) -> dict:
+    """Validate the data sources the land cover fractions are initialized from.
+
+    Only the glacier cover can be derived from data (a glacier outline or an
+    ice-thickness raster); the other covers are given as area columns of the hydro
+    units CSV ('columns_areas').
+    """
+    covers = section.get("land_covers")
+    if covers is None:
+        return {}
+    if not isinstance(covers, dict) or not covers:
+        errors.append(
+            "hydro_units.land_covers: expected a mapping of land cover type to "
+            "its data source, e.g. {glacier: {outline: glaciers.shp}}."
+        )
+        return {}
+
+    out: dict[str, dict] = {}
+    for cover_type, spec in covers.items():
+        where = f"hydro_units.land_covers.{cover_type}"
+        if cover_type != "glacier":
+            errors.append(
+                f"{where}: unsupported land cover source '{cover_type}'; only "
+                "'glacier' can be initialized from data (give the other covers "
+                "as area columns of the hydro units CSV, see 'columns_areas')."
+            )
+            continue
+        if not isinstance(spec, dict):
+            errors.append(
+                f"{where}: expected a mapping (outline or ice_thickness, ela)."
+            )
+            continue
+        _check_keys(spec, {"outline", "ice_thickness", "ela"}, where, errors)
+        if ("outline" in spec) == ("ice_thickness" in spec):
+            errors.append(
+                f"{where}: provide either 'outline' (a glacier outline "
+                "shapefile) or 'ice_thickness' (a thickness raster), not both."
+            )
+        out[cover_type] = {
+            "outline": _resolve_optional_path(spec, "outline", base, where, errors),
+            "ice_thickness": _resolve_optional_path(
+                spec, "ice_thickness", base, where, errors
+            ),
+            "ela": _get_number(spec, "ela", where, errors),
+        }
+    return out
+
+
 def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
     out: dict[str, Any] = {}
     section = _get_mapping(config, "hydro_units", errors, required=True)
@@ -763,13 +906,16 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
         "columns",
         "columns_areas",
         "unit_ids_raster",
+        "connectivity",
         "outline",
         "dem",
         "discretization",
+        "land_covers",
     }
     _check_keys(section, valid, "hydro_units", errors)
 
     out["discretization"] = _validate_discretization(section, errors)
+    out["land_covers"] = _validate_land_covers(section, base, errors)
 
     file = None
     if "file" in section:
@@ -808,6 +954,9 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
     out["unit_ids_raster"] = _resolve_optional_path(
         section, "unit_ids_raster", base, "hydro_units", errors
     )
+    out["connectivity"] = _resolve_optional_path(
+        section, "connectivity", base, "hydro_units", errors
+    )
     out["outline"] = _resolve_optional_path(
         section, "outline", base, "hydro_units", errors
     )
@@ -817,6 +966,20 @@ def _validate_hydro_units(config: dict, base: Path, errors: list[str]) -> dict:
             "hydro_units: 'outline' and 'dem' must be provided together (they "
             "define the catchment used to derive elevation gradients)."
         )
+
+    if out["land_covers"]:
+        # The fractions are computed on the DEM grid, per hydro unit.
+        if out["outline"] is None or out["dem"] is None:
+            errors.append(
+                "hydro_units.land_covers: requires 'outline' and 'dem' (the "
+                "cover fractions are rasterized on the catchment DEM)."
+            )
+        if out["discretization"] is None and out["unit_ids_raster"] is None:
+            errors.append(
+                "hydro_units.land_covers: requires 'discretization' or "
+                "'unit_ids_raster' (the hydro unit of every DEM cell must be "
+                "known to compute the cover fractions)."
+            )
 
     columns = section.get("columns", {}) or {}
     if not isinstance(columns, dict):
@@ -1240,10 +1403,37 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     return out
 
 
+def _check_lateral_processes(cfg: dict, errors: list[str]) -> None:
+    """A lateral process needs to know how the hydro units are connected.
+
+    Without the connectivity table the process has no target unit and silently
+    redistributes nothing, which is worse than an error: the run looks fine and
+    the process is simply absent.
+    """
+    options = (cfg.get("model") or {}).get("options") or {}
+    lateral = sorted(
+        str(value)
+        for value in options.values()
+        if isinstance(value, str) and value.startswith("transport:")
+    )
+    if not lateral:
+        return
+    if (cfg.get("hydro_units") or {}).get("connectivity") is None:
+        errors.append(
+            f"hydro_units.connectivity: required by the lateral process(es) "
+            f"{', '.join(lateral)}, which move water between hydro units. "
+            "Compute the table once with Catchment.calculate_connectivity and "
+            "declare it here (without it the process has no target unit and "
+            "does nothing)."
+        )
+
+
 def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
     """Checks spanning several sections (gridded forcing vs hydro units, PET)."""
     hu = cfg["hydro_units"]
     fc = cfg["forcing"]
+    _check_land_covers(cfg, errors)
+    _check_lateral_processes(cfg, errors)
     gridded = fc.get("gridded") or {}
     has_catchment = hu.get("outline") is not None and hu.get("dem") is not None
 
@@ -1293,6 +1483,177 @@ def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
             )
 
 
+def _check_land_covers(cfg: dict, errors: list[str]) -> None:
+    """Check the land covers the model declares against the hydro units data.
+
+    The covers are declared on the model (its ``land_cover_types`` /
+    ``land_cover_names`` options) and their areas come either from the hydro units
+    CSV ('columns_areas') or from a data source ('land_covers').
+    """
+    hu = cfg["hydro_units"]
+    names = cfg["model"].get("land_cover_names") or []
+    types = cfg["model"].get("land_cover_types") or []
+    glacier_names = [name for name, kind in zip(names, types) if kind == "glacier"]
+    glacier = (hu.get("land_covers") or {}).get("glacier")
+    columns_areas = hu.get("columns_areas")
+
+    if glacier is not None:
+        if len(glacier_names) > 2:
+            errors.append(
+                "hydro_units.land_covers.glacier: a glacier extent initializes "
+                "one glacier cover, or two split at the equilibrium line (ice "
+                f"and firn); the model declares {len(glacier_names)}."
+            )
+        elif len(glacier_names) == 2 and glacier["ela"] is None:
+            errors.append(
+                "hydro_units.land_covers.glacier.ela: required to split the "
+                "glacier extent between the two declared glacier covers "
+                f"('{glacier_names[0]}' below the equilibrium line altitude, "
+                f"'{glacier_names[1]}' above it)."
+            )
+    elif glacier_names and columns_areas is None:
+        errors.append(
+            "hydro_units.land_covers.glacier: the model declares the glacier "
+            f"cover(s) {', '.join(glacier_names)}, but no glacier extent "
+            "('outline' or 'ice_thickness') and no 'columns_areas' give their "
+            "area."
+        )
+
+    if columns_areas is not None and names:
+        unknown = [cover for cover in columns_areas if cover not in names]
+        missing = [cover for cover in names if cover not in columns_areas]
+        if unknown or missing:
+            errors.append(
+                "hydro_units.columns_areas: one area column per land cover of "
+                f"the model is required ({', '.join(names)}); "
+                + (f"unknown: {', '.join(unknown)}. " if unknown else "")
+                + (f"missing: {', '.join(missing)}." if missing else "")
+            )
+
+
+_GLACIER_EVOLUTION_METHODS = {
+    "delta_h": "ActionGlacierEvolutionDeltaH",
+    "area_scaling": "ActionGlacierEvolutionAreaScaling",
+}
+_MONTH_NAMES = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+
+
+def _validate_actions(config: dict, base: Path, errors: list[str]) -> dict:
+    """Validate the optional 'actions' section (dynamic changes during the run)."""
+    section = config.get("actions")
+    if section is None:
+        return {}
+    if not isinstance(section, dict):
+        errors.append(
+            "actions: expected a mapping of action name to its settings, e.g. "
+            "{glacier_evolution: {method: delta_h, lookup_tables: <dir>}}."
+        )
+        return {}
+    _check_keys(section, {"glacier_evolution"}, "actions", errors)
+
+    out: dict[str, Any] = {}
+    glacier_evolution = section.get("glacier_evolution")
+    if glacier_evolution is not None:
+        out["glacier_evolution"] = _validate_glacier_evolution(
+            glacier_evolution, base, errors
+        )
+    return out
+
+
+def _validate_glacier_evolution(spec: Any, base: Path, errors: list[str]) -> dict:
+    """Validate 'actions.glacier_evolution' (a precomputed lookup table)."""
+    where = "actions.glacier_evolution"
+    out: dict[str, Any] = {
+        "method": "delta_h",
+        "lookup_tables": None,
+        "land_cover": "glacier",
+        "update_month": "October",
+        "filename_area": "glacier_evolution_lookup_table_area.csv",
+        "filename_volume": "glacier_evolution_lookup_table_volume.csv",
+    }
+    if not isinstance(spec, dict):
+        errors.append(
+            f"{where}: expected a mapping (method, lookup_tables, land_cover, "
+            "update_month)."
+        )
+        return out
+    _check_keys(spec, set(out), where, errors)
+
+    method = _get_str(spec, "method", where, errors) or out["method"]
+    if method not in _GLACIER_EVOLUTION_METHODS:
+        errors.append(
+            f"{where}.method: expected one of "
+            f"{', '.join(sorted(_GLACIER_EVOLUTION_METHODS))}, got '{method}'."
+        )
+    out["method"] = method
+
+    for key in ("filename_area", "filename_volume"):
+        name = _get_str(spec, key, where, errors)
+        if name is not None:
+            out[key] = name
+
+    if "lookup_tables" not in spec:
+        errors.append(
+            f"{where}.lookup_tables: the directory holding the precomputed "
+            "lookup tables is required (produced by GlacierEvolutionDeltaH / "
+            "GlacierEvolutionAreaScaling, see the preprocessing examples)."
+        )
+    else:
+        tables = _resolve_optional_path(spec, "lookup_tables", base, where, errors)
+        if tables is not None:
+            if not tables.is_dir():
+                errors.append(
+                    f"{where}.lookup_tables: '{tables}' is not a directory (it "
+                    "must hold the area and volume lookup table CSVs)."
+                )
+            else:
+                for key in ("filename_area", "filename_volume"):
+                    if not (tables / out[key]).is_file():
+                        errors.append(
+                            f"{where}.lookup_tables: '{out[key]}' is missing from "
+                            f"'{tables}'."
+                        )
+            out["lookup_tables"] = tables
+
+    land_cover = _get_str(spec, "land_cover", where, errors)
+    if land_cover is not None:
+        out["land_cover"] = land_cover
+
+    month = spec.get("update_month")
+    if month is not None:
+        if isinstance(month, bool) or not isinstance(month, (str, int)):
+            errors.append(
+                f"{where}.update_month: expected a month name or number (1-12), "
+                f"got {month!r}."
+            )
+        elif isinstance(month, int) and not 1 <= month <= 12:
+            errors.append(
+                f"{where}.update_month: expected a number in 1-12, got {month}."
+            )
+        elif isinstance(month, str) and month.capitalize() not in _MONTH_NAMES:
+            errors.append(
+                f"{where}.update_month: unknown month '{month}'; expected an "
+                "English month name or a number in 1-12."
+            )
+        else:
+            out["update_month"] = month
+
+    return out
+
+
 def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
     _check_keys(config, _TOP_LEVEL_KEYS, "project", errors)
     for key in _REQUIRED_TOP_LEVEL_KEYS:
@@ -1307,6 +1668,7 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
         "periods": _validate_periods(config, errors),
         "parameters": _validate_parameters(config, errors),
         "data_parameters": _validate_data_parameters(config, errors),
+        "actions": _validate_actions(config, base, errors),
         "calibration": _validate_calibration(config, errors),
     }
     _validate_cross_checks(cfg, errors)
@@ -1419,6 +1781,57 @@ def _check_gridded_dependencies() -> None:
         )
 
 
+def _initialize_land_covers(catchment: Any, land_covers: dict, model: Model) -> None:
+    """Set the land cover fractions of the hydro units from their data sources.
+
+    A glacier extent (an outline or an ice-thickness raster) initializes the glacier
+    cover of every hydro unit, split at the equilibrium line altitude when the model
+    declares two glacier covers (ice below, firn above). A model without a glacier
+    cover ignores the source: its glacierized area stays in the soil cover, so the
+    same catchment description serves every model of a comparison.
+    """
+    glacier = (land_covers or {}).get("glacier")
+    if glacier is None:
+        return
+
+    glacier_covers = [
+        name
+        for name, kind in zip(model.land_cover_names, model.land_cover_types)
+        if kind == "glacier"
+    ]
+    if not glacier_covers:
+        logger.warning(
+            "The model declares no glacier land cover: the glacier extent of "
+            "hydro_units.land_covers is ignored (the glacierized area stays in "
+            "the soil cover)."
+        )
+        return
+
+    from hydrobricks.preprocessing import (
+        initialize_glacier_cover_from_extent,
+        initialize_glacier_covers_split_by_elevation,
+    )
+
+    if glacier["outline"] is not None:
+        source: dict[str, Any] = {"glacier_outline": glacier["outline"]}
+    else:
+        source = {"ice_thickness": glacier["ice_thickness"]}
+
+    if len(glacier_covers) == 1:
+        initialize_glacier_cover_from_extent(
+            catchment, land_cover=glacier_covers[0], **source
+        )
+    else:
+        # The validation guarantees the ELA and at most two glacier covers here.
+        initialize_glacier_covers_split_by_elevation(
+            catchment,
+            ela=glacier["ela"],
+            ice_cover=glacier_covers[0],
+            firn_cover=glacier_covers[1],
+            **source,
+        )
+
+
 def _build_project(
     cfg: dict, config: dict, path: Path | None, errors: list[str], setup: bool
 ) -> Project:
@@ -1426,6 +1839,22 @@ def _build_project(
     start_date, end_date = periods.full_span.bounds
 
     cfg["output"].mkdir(parents=True, exist_ok=True)
+
+    # Model: a pre-built model by name, or a custom structure. It is built first
+    # because its land covers are the ones the hydro units carry.
+    try:
+        if "structure" in cfg["model"]:
+            from hydrobricks.models.custom import CustomModel
+
+            model = CustomModel(cfg["model"]["structure"], **cfg["model"]["options"])
+        else:
+            model = cfg["model"]["class"](**cfg["model"]["options"])
+    except (TypeError, RuntimeError, HydroBricksError) as err:
+        # The message is args[0]; str(err) would render the whole args tuple.
+        message = err.args[0] if getattr(err, "args", None) else str(err)
+        errors.append(f"model: {message}")
+        _raise_if_errors(errors, path)
+        raise AssertionError("unreachable")  # pragma: no cover
 
     # Hydro units: loaded from a CSV or delineated from the DEM, optionally
     # within a Catchment (needed for the delineation and to derive elevation
@@ -1436,7 +1865,11 @@ def _build_project(
         _check_catchment_dependencies()
         from hydrobricks.catchment import Catchment
 
-        catchment = Catchment(hu_cfg["outline"])
+        catchment = Catchment(
+            hu_cfg["outline"],
+            land_cover_types=list(model.land_cover_types),
+            land_cover_names=list(model.land_cover_names),
+        )
         catchment.extract_dem(hu_cfg["dem"])
 
     unit_ids_raster = hu_cfg["unit_ids_raster"]
@@ -1455,13 +1888,21 @@ def _build_project(
             if discretization[key] is not None:
                 kwargs[key] = discretization[key]
         catchment.create_elevation_bands(**kwargs)
+        _initialize_land_covers(catchment, hu_cfg["land_covers"], model)
         hydro_units = catchment.hydro_units
         if cfg["forcing"]["gridded"]:
             # The gridded aggregation needs the unit ids as a raster.
             catchment.save_unit_ids_raster(cfg["output"])
             unit_ids_raster = cfg["output"] / "unit_ids.tif"
     else:
-        hydro_units = catchment.hydro_units if catchment else HydroUnits()
+        hydro_units = (
+            catchment.hydro_units
+            if catchment
+            else HydroUnits(
+                land_cover_types=list(model.land_cover_types),
+                land_cover_names=list(model.land_cover_names),
+            )
+        )
         if hu_cfg["columns_areas"] is not None:
             hydro_units.load_from_csv(
                 hu_cfg["file"],
@@ -1478,6 +1919,13 @@ def _build_project(
             )
         if catchment is not None and unit_ids_raster is not None:
             catchment.load_unit_ids_from_raster(str(unit_ids_raster))
+            _initialize_land_covers(catchment, hu_cfg["land_covers"], model)
+
+    # Lateral connectivity between the hydro units (needed by the lateral
+    # processes, e.g. the snow redistribution). Set last: re-populating the basin
+    # settings clears the connections.
+    if hu_cfg["connectivity"] is not None:
+        hydro_units.set_connectivity(hu_cfg["connectivity"])
 
     # Forcing: station CSV and/or gridded netCDF sources. Expensive gridded
     # spatializations are cached under <output>/cache (created on first write)
@@ -1565,24 +2013,13 @@ def _build_project(
             )
 
     if "pet" not in fc["variables"]:
-        forcing.compute_pet(
-            method=fc["pet_method"], use=["t", "lat"], lat=fc["pet_lat"]
-        )
-
-    # Model and parameters: a pre-built model by name, or a custom structure.
-    try:
-        if "structure" in cfg["model"]:
-            from hydrobricks.models.custom import CustomModel
-
-            model = CustomModel(cfg["model"]["structure"], **cfg["model"]["options"])
-        else:
-            model = cfg["model"]["class"](**cfg["model"]["options"])
-    except (TypeError, RuntimeError, HydroBricksError) as err:
-        # The message is args[0]; str(err) would render the whole args tuple.
-        message = err.args[0] if getattr(err, "args", None) else str(err)
-        errors.append(f"model: {message}")
-        _raise_if_errors(errors, path)
-        raise AssertionError("unreachable")  # pragma: no cover
+        pet_lat = fc["pet_lat"]
+        if pet_lat is None and not hydro_units.has("latitude"):
+            # The PET needs a latitude: the per-unit one when the hydro units
+            # carry it (delineation, or a CSV holding the column), the catchment
+            # mean otherwise. The validation guarantees a catchment here.
+            pet_lat = float(catchment.extract_unit_mean_lat_lon(catchment.dem_data)[0])
+        forcing.compute_pet(method=fc["pet_method"], use=["t", "lat"], lat=pet_lat)
 
     parameter_set = model.generate_parameters()
     for name, spec in cfg["data_parameters"].items():
@@ -1623,6 +2060,12 @@ def _build_project(
             content={"discharge": obs_cfg["column"]},
         )
 
+    actions = _build_actions(cfg["actions"], model, errors)
+    _raise_if_errors(errors, path)
+    if setup:
+        for action in actions:
+            model.add_action(action)
+
     return Project(
         model=model,
         forcing=forcing,
@@ -1636,4 +2079,56 @@ def _build_project(
         catchment=catchment,
         calibration=calibration,
         base_dir=cfg["base_dir"],
+        actions=actions,
     )
+
+
+def _build_actions(cfg_actions: dict, model: Model, errors: list[str]) -> list:
+    """Build the action objects declared in the 'actions' section.
+
+    The actions are only registered on a model that is set up, so they are
+    returned here and attached by :meth:`Project.setup` (and by
+    :func:`load_project` when it sets the model up itself).
+    """
+    actions: list = []
+    glacier_evolution = (cfg_actions or {}).get("glacier_evolution")
+    if glacier_evolution is None:
+        return actions
+
+    if not any(kind == "glacier" for kind in model.land_cover_types):
+        errors.append(
+            "actions.glacier_evolution: the model declares no glacier land "
+            "cover; add one (model.options.land_cover_types) or drop the action."
+        )
+        return actions
+    if model.options.get("glacier_infinite_storage"):
+        errors.append(
+            "actions.glacier_evolution: the glacier evolution tracks the ice "
+            "volume, which an infinite ice storage cannot hold; set "
+            "model.options.glacier_infinite_storage to false."
+        )
+        return actions
+    if glacier_evolution["land_cover"] not in model.land_cover_names:
+        errors.append(
+            f"actions.glacier_evolution.land_cover: unknown land cover "
+            f"'{glacier_evolution['land_cover']}'; the model declares "
+            f"{', '.join(model.land_cover_names)}."
+        )
+        return actions
+
+    import hydrobricks.actions as hb_actions
+
+    action_class = getattr(
+        hb_actions, _GLACIER_EVOLUTION_METHODS[glacier_evolution["method"]]
+    )
+    action = action_class()
+    action.load_from_csv(
+        glacier_evolution["lookup_tables"],
+        land_cover=glacier_evolution["land_cover"],
+        filename_area=glacier_evolution["filename_area"],
+        filename_volume=glacier_evolution["filename_volume"],
+        update_month=glacier_evolution["update_month"],
+    )
+    actions.append(action)
+
+    return actions

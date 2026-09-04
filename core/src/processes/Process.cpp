@@ -13,28 +13,38 @@
 #include "ProcessETHBV.h"
 #include "ProcessETLinear.h"
 #include "ProcessETOpenWater.h"
+#include "ProcessETOpenWaterPrevah.h"
 #include "ProcessETPowerLaw.h"
+#include "ProcessETPrevah.h"
 #include "ProcessETSocont.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
 #include "ProcessInterceptionGR4J.h"
+#include "ProcessInterceptionMenzel.h"
 #include "ProcessLateralSnowRedistributionFrey.h"
 #include "ProcessLateralSnowSlide.h"
 #include "ProcessMeltCemaNeige.h"
 #include "ProcessMeltDegreeDay.h"
 #include "ProcessMeltDegreeDayAspect.h"
+#include "ProcessMeltDegreeDaySeasonal.h"
 #include "ProcessMeltTemperatureIndex.h"
 #include "ProcessOutflowDirect.h"
 #include "ProcessOutflowLinear.h"
+#include "ProcessOutflowLinearThreshold.h"
 #include "ProcessOutflowOverflow.h"
 #include "ProcessOutflowRest.h"
+#include "ProcessOutflowSlowcomp.h"
 #include "ProcessOutflowSnowHolding.h"
+#include "ProcessOutflowSnowHoldingPrevah.h"
+#include "ProcessOutflowSplit.h"
 #include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
+#include "ProcessPercolationPrevah.h"
 #include "ProcessProductionGR4J.h"
 #include "ProcessRefreezeDegreeDay.h"
+#include "ProcessRefreezeSeasonal.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRoutingGR6J.h"
 #include "ProcessRoutingHBV.h"
@@ -42,6 +52,7 @@
 #include "ProcessRunoffSocont.h"
 #include "ProcessSublimationConstant.h"
 #include "ProcessSublimationPET.h"
+#include "ProcessSublimationPrevah.h"
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
@@ -99,6 +110,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessPercolationGR4J::RegisterProcessSettings
         }},
 
+        {"percolation:prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationPrevah>(b->GetWaterContainer());
+            },
+            &ProcessPercolationPrevah::RegisterProcessSettings
+        }},
+
         {"outflow:direct", {
             [](Brick* b) {
                 return std::make_unique<ProcessOutflowDirect>(b->GetWaterContainer());
@@ -111,6 +129,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessOutflowRest>(b->GetWaterContainer());
             },
             &ProcessOutflowRest::RegisterProcessSettings
+        }},
+
+        {"outflow:slowcomp", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSlowcomp>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSlowcomp::RegisterProcessSettings
         }},
 
         {"outflow:overflow", {
@@ -176,6 +201,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowSnowHolding::RegisterProcessSettings
         }},
 
+        {"outflow:snow_holding_prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSnowHoldingPrevah>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSnowHoldingPrevah::RegisterProcessSettings
+        }},
+
         {"outflow:threshold", {
             [](Brick* b) {
                 return std::make_unique<ProcessOutflowThreshold>(b->GetWaterContainer());
@@ -183,11 +215,32 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessOutflowThreshold::RegisterProcessSettings
         }},
 
+        {"outflow:linear_threshold", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowLinearThreshold>(b->GetWaterContainer());
+            },
+            &ProcessOutflowLinearThreshold::RegisterProcessSettings
+        }},
+
+        {"outflow:split", {
+            [](Brick* b) {
+                return std::make_unique<ProcessOutflowSplit>(b->GetWaterContainer());
+            },
+            &ProcessOutflowSplit::RegisterProcessSettings
+        }},
+
         {"refreeze:degree_day", {
             [](Brick* b) {
                 return std::make_unique<ProcessRefreezeDegreeDay>(b->GetWaterContainer());
             },
             &ProcessRefreezeDegreeDay::RegisterProcessSettings
+        }},
+
+        {"refreeze:degree_day_seasonal", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRefreezeSeasonal>(b->GetWaterContainer());
+            },
+            &ProcessRefreezeSeasonal::RegisterProcessSettings
         }},
 
         {"production:gr4j", {
@@ -218,11 +271,25 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessETHBV::RegisterProcessSettings
         }},
 
+        {"et:prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETPrevah>(b->GetWaterContainer());
+            },
+            &ProcessETPrevah::RegisterProcessSettings
+        }},
+
         {"et:open_water", {
             [](Brick* b) {
                 return std::make_unique<ProcessETOpenWater>(b->GetWaterContainer());
             },
             &ProcessETOpenWater::RegisterProcessSettings
+        }},
+
+        {"et:open_water_prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETOpenWaterPrevah>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWaterPrevah::RegisterProcessSettings
         }},
 
         {"et:linear", {
@@ -274,6 +341,22 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessMeltDegreeDayAspect::RegisterProcessSettings
         }},
 
+        {"melt:degree_day_seasonal", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessMeltDegreeDaySeasonal>(
+                        dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                if (b->GetCategory() == BrickCategory::Glacier) {
+                    return std::make_unique<ProcessMeltDegreeDaySeasonal>(
+                        dynamic_cast<Glacier*>(b)->GetIceContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply melting processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessMeltDegreeDaySeasonal::RegisterProcessSettings
+        }},
+
         {"melt:temperature_index", {
             [](Brick* b) -> std::unique_ptr<Process> {
                 if (b->GetCategory() == BrickCategory::Snowpack) {
@@ -320,6 +403,17 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                     std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
             },
             &ProcessSublimationPET::RegisterProcessSettings
+        }},
+
+        {"sublimation:prevah", {
+            [](Brick* b) -> std::unique_ptr<Process> {
+                if (b->GetCategory() == BrickCategory::Snowpack) {
+                    return std::make_unique<ProcessSublimationPrevah>(dynamic_cast<Snowpack*>(b)->GetSnowContainer());
+                }
+                throw ModelConfigError(
+                    std::format("Trying to apply sublimation processes to unsupported brick: {}", b->GetName()));
+            },
+            &ProcessSublimationPrevah::RegisterProcessSettings
         }},
 
         {"transformation:snow_ice_constant", {
@@ -388,6 +482,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
             &ProcessInterceptionGR4J::RegisterProcessSettings
         }},
 
+        {"interception:menzel", {
+            [](Brick* b) {
+                return std::make_unique<ProcessInterceptionMenzel>(b->GetWaterContainer());
+            },
+            &ProcessInterceptionMenzel::RegisterProcessSettings
+        }},
+
         {"routing:gr4j", {
             [](Brick* b) {
                 return std::make_unique<ProcessRoutingGR4J>(b->GetWaterContainer());
@@ -448,6 +549,13 @@ void Process::Reset() {
     }
 }
 
+void Process::SetParentContext(HydroUnit* unit, Brick* brick) {
+    _hydroUnit = unit;
+    if (brick != nullptr) {
+        _parentBrickName = brick->GetName();
+    }
+}
+
 void Process::SetHydroUnitProperties(HydroUnit*, Brick*) {
     // Nothing to do...
 }
@@ -467,6 +575,15 @@ bool Process::HasParameter(const ProcessSettings& processSettings, std::string_v
 }
 
 const float* Process::GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name) {
+    // Per-unit (spatial) override: when the process's hydro unit carries a per-unit value
+    // for this parameter (keyed by the owning brick), read it instead of the shared value.
+    if (_hydroUnit != nullptr && !_parentBrickName.empty()) {
+        string key = std::format("{}:{}", _parentBrickName, name);
+        if (_hydroUnit->HasParameterOverride(key)) {
+            return _hydroUnit->GetParameterOverridePointer(key);
+        }
+    }
+
     for (auto& parameter : processSettings.parameters) {
         if (parameter.GetName() == name) {
             assert(parameter.GetValuePointer());

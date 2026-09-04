@@ -17,7 +17,8 @@ HydroUnitProperty::HydroUnitProperty(string name, string valueString, string uni
       _valueString(std::move(valueString)) {}
 
 double HydroUnitProperty::GetValue(std::string_view unit) const {
-    if (_unit == unit) {
+    // An empty requested unit means "native units": return the stored value as-is.
+    if (unit.empty() || _unit == unit) {
         return _value;
     }
     if (_unit == "degrees" || _unit == "degree" || _unit == "deg" || _unit == "°") {

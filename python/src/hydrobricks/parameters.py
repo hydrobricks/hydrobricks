@@ -73,6 +73,116 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Linear reservoir outflow above a storage threshold (PREVAH surface runoff:
+    # Q0 = K0 * (SUZ - SGRLUZ)). The response factor carries a distinct name so the
+    # process can share a brick with an 'outflow:linear'.
+    "outflow:linear_threshold": [
+        ParamSpec(
+            name="response_factor_threshold",
+            unit="1/d",
+            aliases=[],
+            min=0.0001,
+            max=1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="threshold",
+            unit="mm",
+            aliases=[],
+            min=0,
+            max=100,
+            default=0.0,
+            mandatory=True,
+        ),
+    ],
+    # PREVAH percolation: constant maximum rate gated by the soil moisture state
+    # (full rate at saturation, linear ramp between cu*FC and FC, none below cu*FC)
+    "percolation:prevah": [
+        ParamSpec(
+            name="percolation_rate",
+            unit="mm/d",
+            aliases=["cperc"],
+            min=0,
+            max=10,
+            default=0.1,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="threshold_fraction",
+            unit="-",
+            aliases=["cu_perc"],
+            min=0,
+            max=0.9,
+            default=0.7,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH canopy interception (Menzel asymptotic filling). The interception
+    # capacity carries the 'ic' alias like the built-in canopy brick; in custom
+    # structures with several canopies, set the brick 'alias_suffix' to keep it
+    # globally unique.
+    "interception:menzel": [
+        ParamSpec(
+            name="capacity",
+            unit="mm",
+            aliases=["ic"],
+            min=0,
+            max=10,
+            default=2.0,
+            mandatory=False,
+        ),
+    ],
+    # Open-water (potential) evaporation with the PREVAH snow-albedo reduction and a
+    # rate factor: Ea = min(et_factor * PET * (1 - albedo)/0.8, content/dt). Used for
+    # canopy ET (registered separately with the canopy bricks) and for the PREVAH
+    # wet-surface ET on a groundwater store. Process-prefixed aliases (ow_*) keep them
+    # distinct from the et:prevah soil aliases.
+    "et:open_water_prevah": [
+        ParamSpec(
+            name="albedo_land",
+            unit="-",
+            aliases=["ow_albedo_land"],
+            min=0,
+            max=0.4,
+            default=0.2,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="et_factor",
+            unit="-",
+            aliases=["ow_et_factor"],
+            min=0,
+            max=1.5,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH SLOWCOMP overflow of the fast baseflow store: the store fills
+    # asymptotically toward max_content with its own baseflow time constant, and the
+    # excess inflow overflows to the slow stores.
+    "outflow:slowcomp": [
+        ParamSpec(
+            name="max_content",
+            unit="mm",
+            aliases=["slz1max"],
+            min=0,
+            max=1000,
+            default=100.0,
+            mandatory=False,
+        ),
+    ],
+    # Fixed-ratio outflow split to two targets (PREVAH SLOWCOMP recharge split)
+    "outflow:split": [
+        ParamSpec(
+            name="split_fraction",
+            unit="-",
+            aliases=[],
+            min=0,
+            max=1,
+            default=0.8889,
+            mandatory=False,
+        ),
+    ],
     # Socont quick flow
     "runoff:socont": [
         ParamSpec(
@@ -255,6 +365,34 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         ),
     ],
+    # Degree-day melt with a seasonal sine melt factor (PREVAH CRMFMIN/CRMFMAX)
+    "melt:degree_day_seasonal": [
+        ParamSpec(
+            name="degree_day_factor_min",
+            unit="mm/d/°C",
+            aliases=["crmfmin"],
+            min=0.5,
+            max=6,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="degree_day_factor_max",
+            unit="mm/d/°C",
+            aliases=["crmfmax"],
+            min=1.5,
+            max=12,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=None,
+            min=-3,  # PREVAH calibrates a negative snowmelt threshold (T0)
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Temperature-index melt (Hock, 1999)
     "melt:temperature_index": [
         ParamSpec(
@@ -307,6 +445,9 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # PREVAH snow evaporation: at the albedo-reduced potential rate (no parameter; the
+    # albedo comes from the snowpack's age-dependent snow albedo).
+    "sublimation:prevah": [],
     # Snow/ice constant transformation (dynamic aliases per glacier snowpack)
     "transform:snow_ice_constant": [
         ParamSpec(
@@ -340,13 +481,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
-    # HBV soil moisture recharge split (beta function)
+    # HBV/PREVAH soil moisture recharge split (beta function). PREVAH calibrates
+    # values below 1 (CBETA), so the lower bound admits them.
     "infiltration:hbv": [
         ParamSpec(
             name="beta",
             unit="-",
             aliases=["beta"],
-            min=1,
+            min=0.3,
             max=6,
             default=2.0,
             mandatory=True,
@@ -370,6 +512,38 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0.5,
             max=2.0,
             default=1.0,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH actual evapotranspiration: the HBV limitation with the PREVAH snow-albedo
+    # reduction of the potential rate ((1 - albedo)/0.8, albedo interpolated between
+    # albedo_land and albedo_snow by the unit's snow-covered fraction).
+    "et:prevah": [
+        ParamSpec(
+            name="lp",
+            unit="-",
+            aliases=["lp"],
+            min=0.3,
+            max=1,
+            default=0.9,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="et_correction_factor",
+            unit="-",
+            aliases=["et_correction_factor", "et_corr_factor", "cevpf", "etcf"],
+            min=0.5,
+            max=2.0,
+            default=1.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="albedo_land",
+            unit="-",
+            aliases=["albedo_land"],
+            min=0,
+            max=0.4,
+            default=0.2,
             mandatory=False,
         ),
     ],
@@ -453,6 +627,46 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    # Seasonal degree-day refreezing (PREVAH): own seasonal factor (CRMFMIN/CRMFMAX),
+    # independent of the melt process — usable with melt:temperature_index.
+    "refreeze:degree_day_seasonal": [
+        ParamSpec(
+            name="refreezing_factor",
+            unit="-",
+            aliases=["cfr"],
+            min=0,
+            max=0.1,
+            default=0.05,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="degree_day_factor_min",
+            unit="mm/d/°C",
+            aliases=["cfr_ddf_min"],
+            min=0,
+            max=12,
+            default=2.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="degree_day_factor_max",
+            unit="mm/d/°C",
+            aliases=["cfr_ddf_max"],
+            min=0,
+            max=12,
+            default=6.0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=["cfr_melt_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+    ],
     # Snowpack liquid water holding capacity (HBV)
     "outflow:snow_holding": [
         ParamSpec(
@@ -462,6 +676,38 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0,
             max=0.2,
             default=0.1,
+            mandatory=False,
+        ),
+    ],
+    # PREVAH snowpack liquid water release: holds cwh * SWE on cold days, but on melt
+    # days (T > melting_temperature) the retention collapses to cwh * liquid
+    # (mxp_snow.f90 ablation branch), draining ~(1 - cwh) of the store every melt day.
+    "outflow:snow_holding_prevah": [
+        ParamSpec(
+            name="water_holding_capacity",
+            unit="-",
+            aliases=["cwh", "whc"],
+            min=0,
+            max=0.2,
+            default=0.1,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="melting_temperature",
+            unit="°C",
+            aliases=["holding_melt_t"],
+            min=-5,
+            max=5,
+            default=0,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="liquid_release_exponent",
+            unit="-",
+            aliases=["cexliq"],
+            min=0,
+            max=5,
+            default=0.0,
             mandatory=False,
         ),
     ],
@@ -802,6 +1048,12 @@ class ParameterSet:
         )
         self.constraints: list[list[str]] = []
         self._allow_changing: list[str] = []
+        # Monthly-varying parameters: DataFrame index -> 12 monthly values (Jan..Dec).
+        # The scalar 'value' still holds the annual mean as a baseline.
+        self._monthly_values: dict[Hashable, list[float]] = {}
+        # Spatial (per-unit) parameters: DataFrame index -> hydro-unit property name.
+        # The scalar 'value' is kept as a fallback for units lacking the property.
+        self._spatial: dict[Hashable, str] = {}
 
     @property
     def allow_changing(self) -> list[str]:
@@ -1189,6 +1441,120 @@ class ParameterSet:
                 )
             self.parameters.loc[index, "value"] = value
 
+    def set_monthly_values(
+        self,
+        name: str,
+        values: list[float],
+        check_range: bool = True,
+        allow_adapt: bool = False,
+    ) -> None:
+        """
+        Set 12 monthly values for a parameter (time-varying over the calendar year).
+
+        The parameter value then follows the calendar month during the simulation
+        (e.g. a monthly canopy interception capacity). The scalar value is set to the
+        annual mean as a baseline (used before the first monthly update and by the
+        parameter-validity check).
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+        values
+            The 12 monthly values, from January to December.
+        check_range
+            Check that each monthly value falls into the allowed range.
+        allow_adapt
+            Allow the monthly values to be clipped to the allowed range.
+        """
+        if len(values) != 12:
+            raise ConfigurationError(
+                f'Monthly values for "{name}" must have 12 entries (got '
+                f"{len(values)}).",
+                item_name=name,
+                item_value=len(values),
+                reason="Expected 12 monthly values",
+            )
+
+        index = self._get_parameter_index(name)
+        self._check_not_spatial(index, name)
+        checked = list(values)
+        if check_range:
+            checked = [
+                self._check_value_range(index, name, float(v), allow_adapt=allow_adapt)
+                for v in checked
+            ]
+
+        self._monthly_values[index] = checked
+        # Keep the scalar value as the annual mean so validity checks pass and any
+        # non-monthly consumer still sees a sensible value.
+        self.parameters.loc[index, "value"] = sum(checked) / 12.0
+
+    def get_monthly_parameters(self) -> list[tuple[str, str, list[float]]]:
+        """
+        Return the monthly-varying model parameters.
+
+        Returns
+        -------
+        A list of ``(component, name, values)`` tuples (one per monthly parameter),
+        used to push the monthly values to the model settings. Data parameters are
+        excluded.
+        """
+        monthly = []
+        for index, values in self._monthly_values.items():
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            monthly.append((row["component"], row["name"], values))
+        return monthly
+
+    def set_spatial(self, name: str, property_name: str) -> None:
+        """
+        Make a parameter spatial: each hydro unit uses its own value from a property.
+
+        The per-unit values are taken from the hydro-unit property ``property_name``
+        (added via ``HydroUnits.add_property``), giving each unit its own value for this
+        parameter (e.g. a per-unit field capacity from soil data). The scalar value set
+        via ``set_values`` is kept as a fallback for units lacking the property, so it
+        must still be defined.
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+        property_name
+            The name of the hydro-unit property holding the per-unit values.
+        """
+        index = self._get_parameter_index(name)
+        if index in self._monthly_values:
+            raise ConfigurationError(
+                f'The parameter "{name}" already has monthly values and cannot '
+                f"also be spatial: the per-unit value takes precedence over the "
+                f"shared one that the monthly update writes, so the monthly "
+                f"variation would be silently lost.",
+                item_name=name,
+                item_value=property_name,
+                reason="Parameter is already monthly",
+            )
+        self._spatial[index] = property_name
+
+    def get_spatial_parameters(self) -> list[tuple[str, str, str]]:
+        """
+        Return the spatial (per-unit) model parameters.
+
+        Returns
+        -------
+        A list of ``(component, name, property)`` tuples (one per spatial parameter),
+        used to push the bindings to the model settings. Data parameters are excluded.
+        """
+        spatial = []
+        for index, property_name in self._spatial.items():
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            spatial.append((row["component"], row["name"], property_name))
+        return spatial
+
     def get_transform(self, name: str) -> ParameterTransform | None:
         """
         Return the transform attached to a parameter, or None.
@@ -1558,10 +1924,14 @@ class ParameterSet:
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
 
-        # Parameters for the forest canopies (interception capacity), only when the
+        # Parameters for the canopies (interception capacity), only when the
         # canopy interception is enabled (the canopy bricks are then generated).
-        if options.get("forest_interception", False):
-            self._generate_canopy_parameters(land_cover_types, land_cover_names)
+        if options.get("forest_interception", False) or options.get(
+            "interception_covers"
+        ):
+            self._generate_canopy_parameters(
+                land_cover_types, land_cover_names, options
+            )
 
         # Parameters for the different bricks
         for key, brick in structure.items():
@@ -1601,14 +1971,22 @@ class ParameterSet:
         self.define_parameter(component=component, **kwargs)
 
     def _generate_canopy_parameters(
-        self, land_cover_types: list, land_cover_names: list
+        self,
+        land_cover_types: list,
+        land_cover_names: list,
+        options: dict | None = None,
     ) -> None:
-        """Register the interception capacity of each forest canopy.
+        """Register the interception capacity of each canopy.
 
         The canopy bricks (``<cover>_canopy``) are created in the C++ base structure
         (like the snowpacks), so their capacity is registered here rather than from
         the model structure dict. The literature alias is ``ic`` (interception
-        capacity), suffixed per cover (``ic_<cover>``) when several forests coexist.
+        capacity), suffixed per cover (``ic_<cover>``) when several canopies coexist.
+        By default the covers of type ``forest`` get a canopy; the model option
+        ``interception_covers`` (cover names) overrides that (PREVAH intercepts on
+        every vegetated cover). With the ``et:open_water_prevah`` canopy ET, the
+        process' ``et_factor`` (PREVAH's vegetation-cover fraction, monthly-settable)
+        is registered too, alias ``canopy_et_factor[_<cover>]``.
 
         Parameters
         ----------
@@ -1616,14 +1994,20 @@ class ParameterSet:
             The land cover types.
         land_cover_names
             The land cover names.
+        options
+            The model options (``interception_covers``, ``canopy_et_process``).
         """
-        forest_covers = [
-            name
-            for cover_type, name in zip(land_cover_types, land_cover_names)
-            if cover_type == "forest"
-        ]
-        multi = len(forest_covers) > 1
-        for cover_name in forest_covers:
+        options = options or {}
+        canopy_covers = options.get("interception_covers")
+        if canopy_covers is None:
+            canopy_covers = [
+                name
+                for cover_type, name in zip(land_cover_types, land_cover_names)
+                if cover_type == "forest"
+            ]
+        multi = len(canopy_covers) > 1
+        prevah_canopy_et = options.get("canopy_et_process") == "et:open_water_prevah"
+        for cover_name in canopy_covers:
             self._register(
                 component=f"{cover_name}_canopy",
                 spec=BRICK_PARAM_SPECS["capacity"],
@@ -1634,6 +2018,20 @@ class ParameterSet:
                 default=2.0,
                 mandatory=False,
             )
+            if prevah_canopy_et:
+                self._register(
+                    component=f"{cover_name}_canopy",
+                    spec=ParamSpec(
+                        name="et_factor",
+                        unit="-",
+                        aliases=["canopy_et_factor"],
+                        min=0,
+                        max=1.5,
+                        default=1.0,
+                        mandatory=False,
+                    ),
+                    alias_suffix=f"_{cover_name}" if multi else "",
+                )
 
     def _generate_process_parameters(self, key: str, brick: dict) -> None:
         """
@@ -1668,6 +2066,7 @@ class ParameterSet:
             # Defined elsewhere (glacier/snow generation logic)
             "melt:degree_day",
             "melt:degree_day_aspect",
+            "melt:degree_day_seasonal",
             "melt:temperature_index",
             "melt:cemaneige",
         }
@@ -1801,6 +2200,24 @@ class ParameterSet:
                     "degree_day_factor_ew": a_ew_aliases,
                     "melting_temperature": t_aliases,
                 }
+            elif melt_method == "melt:degree_day_seasonal":
+                if len(glacier_names) == 1:
+                    a_min_aliases = ["a_ice_min"]
+                    a_max_aliases = ["a_ice_max"]
+                else:
+                    a_min_aliases = [
+                        f'a_ice_min_{cover_name.replace("-", "_")}',
+                        f"a_ice_min_{i}",
+                    ]
+                    a_max_aliases = [
+                        f'a_ice_max_{cover_name.replace("-", "_")}',
+                        f"a_ice_max_{i}",
+                    ]
+                alias_map = {
+                    "degree_day_factor_min": a_min_aliases,
+                    "degree_day_factor_max": a_max_aliases,
+                    "melting_temperature": t_aliases,
+                }
             elif melt_method == "melt:temperature_index":
                 if len(glacier_names) == 1:
                     r_aliases = ["r_ice"]
@@ -1859,6 +2276,20 @@ class ParameterSet:
                 )
                 self.define_constraint(
                     "a_snow_ew", "<", alias_map["degree_day_factor_ew"][0]
+                )
+            elif melt_method == "melt:degree_day_seasonal":
+                if with_glacier_debris:
+                    self.define_constraint(
+                        "a_ice_min_glacier_debris", "<", "a_ice_min_glacier_ice"
+                    )
+                    self.define_constraint(
+                        "a_ice_max_glacier_debris", "<", "a_ice_max_glacier_ice"
+                    )
+                self.define_constraint(
+                    "a_snow_min", "<", alias_map["degree_day_factor_min"][0]
+                )
+                self.define_constraint(
+                    "a_snow_max", "<", alias_map["degree_day_factor_max"][0]
                 )
             elif melt_method == "melt:temperature_index":
                 if with_glacier_debris:
@@ -1954,6 +2385,12 @@ class ParameterSet:
                             "degree_day_factor_ew": ["a_snow_ew"],
                             "melting_temperature": ["melt_t_snow"],
                         }
+                    elif smp == "melt:degree_day_seasonal":
+                        snow_alias_map = {
+                            "degree_day_factor_min": ["a_snow_min", "crmfmin"],
+                            "degree_day_factor_max": ["a_snow_max", "crmfmax"],
+                            "melting_temperature": ["melt_t_snow"],
+                        }
                     elif smp == "melt:temperature_index":
                         snow_alias_map = {
                             "melt_factor": ["melt_factor", "mf"],
@@ -1977,6 +2414,8 @@ class ParameterSet:
                             spec=spec,
                             aliases=snow_alias_map.get(spec.name, []),
                         )
+                    if smp == "melt:degree_day_seasonal":
+                        self.define_constraint("a_snow_min", "<", "a_snow_max")
                 else:
                     raise ConfigurationError(
                         f"The snow melt process option {smp} is not recognised.",
@@ -2184,6 +2623,39 @@ class ParameterSet:
                     item_name=alias,
                     reason="Duplicate alias",
                 )
+
+    def _check_not_spatial(self, index: Hashable, name: str) -> None:
+        """
+        Reject a monthly value on a parameter that is already spatial.
+
+        The two mechanisms are mutually exclusive by construction: a spatial
+        parameter is read from a per-unit override, which takes precedence over the
+        shared value that the monthly update writes, so the monthly variation would
+        never reach the units carrying the property.
+
+        Parameters
+        ----------
+        index
+            Index of the parameter in the parameter table.
+        name
+            The parameter name or alias, for the error message.
+
+        Raises
+        ------
+        ConfigurationError
+            If the parameter is already bound to a hydro-unit property.
+        """
+        if index in self._spatial:
+            raise ConfigurationError(
+                f'The parameter "{name}" is spatial (bound to the hydro-unit '
+                f'property "{self._spatial[index]}") and cannot also take monthly '
+                f"values: the per-unit value takes precedence over the shared one "
+                f"that the monthly update writes, so the monthly variation would be "
+                f"silently lost.",
+                item_name=name,
+                item_value=self._spatial[index],
+                reason="Parameter is already spatial",
+            )
 
     def _check_value_range(
         self, index: int, key: str, value: float, allow_adapt: bool = False

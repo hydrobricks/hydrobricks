@@ -19,6 +19,14 @@ class ParametersUpdater {
     void AddParameter(Parameter* parameter);
 
     /**
+     * Clear the registered parameters and reset the previous date. Called before
+     * (re)registering parameters on each run (e.g. during calibration) so the same
+     * parameter is not registered several times and the start-date values are
+     * re-applied from a clean state.
+     */
+    void Reset();
+
+    /**
      * Update the parameters based on the current date.
      *
      * @param date current date in MJD format.

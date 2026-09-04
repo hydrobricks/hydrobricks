@@ -261,7 +261,9 @@ def test_study_run_all_and_assess(tmp_path):
         "eval_metric",
         "score",
         "calibration_score",
+        "calibration_seconds",
     }
+    assert (scores["calibration_seconds"] > 0).all()
     assert set(scores["catchment"]) == {"appenzell", "stgallen"}
     assert set(scores["eval_transform"]) == {"none", "power(0.2)"}
     assert np.isfinite(scores["score"]).all()
@@ -272,6 +274,7 @@ def test_study_run_all_and_assess(tmp_path):
         "job_id",
         "values",
         "calibration_score",
+        "calibration_seconds",
         "best_parameters",
         "scores",
     }

@@ -1,5 +1,7 @@
 #include "Snowpack.h"
 
+#include <cmath>
+
 Snowpack::Snowpack()
     : SurfaceComponent(),
       _snow(std::make_unique<SnowContainer>(this)) {
@@ -9,6 +11,8 @@ Snowpack::Snowpack()
 void Snowpack::Reset() {
     _water->Reset();
     _snow->Reset();
+    _snowAge = 0;
+    _snowfallInput = 0;
 }
 
 void Snowpack::SaveAsInitialState() {
@@ -107,7 +111,21 @@ void Snowpack::UpdateContent(double value, ContentType type) {
 }
 
 void Snowpack::UpdateContentFromInputs() {
-    _snow->AddAmountToStaticContentChange(_snow->SumIncomingFluxes());
+    // Update the snow-surface age at the start of the step, before any process reads the
+    // albedo, so all consumers (the snow evaporation and the albedo-reduced ET) see a
+    // consistent age (PREVAH sxp_core.f08 / mxp_snow.f90): reset to 0 on a fresh
+    // snowfall, otherwise increment by one step while the snow persists (reset when the
+    // snowpack is empty). The content here is still the previous step's committed value.
+    _snowfallInput = _snow->SumIncomingFluxes();
+    if (_snowfallInput >= 0.01) {
+        _snowAge = 0;
+    } else if (_snow->GetContentWithoutChanges() > 0.01) {
+        _snowAge += 1;
+    } else {
+        _snowAge = 0;
+    }
+
+    _snow->AddAmountToStaticContentChange(_snowfallInput);
     _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
 }
 
@@ -138,4 +156,8 @@ double* Snowpack::GetValuePointer(std::string_view name) {
 
 bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
+}
+
+double Snowpack::GetSnowAlbedo() const {
+    return 0.4 + 0.45 * std::exp(-0.15 * _snowAge);
 }

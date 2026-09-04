@@ -122,6 +122,9 @@ class PotentialSolarRadiation:
                 "dem_crs": str(self.catchment.dem.crs),
                 "dem_shape": self.catchment.dem.shape,
                 "dem_res": self.catchment.dem.res,
+                # The DEM may be a window of the source raster (see
+                # Catchment.extract_dem): the extent is part of the identity.
+                "dem_bounds": tuple(self.catchment.dem.bounds),
                 # The masked area (catchment outline) affects the results; its
                 # mean elevation and latitude fingerprint it cheaply.
                 "mean_elevation": float(self.catchment.topography.get_mean_elevation()),
@@ -130,9 +133,13 @@ class PotentialSolarRadiation:
                 ),
             }
             # The DEM gets a stat signature (not full bytes) as it can be large.
-            dem_files = [
-                f for f in self.catchment.dem.files if not f.endswith(".aux.xml")
-            ]
+            # A cropped DEM is served from memory, so its source file is used.
+            if self.catchment.dem_path is not None:
+                dem_files = [str(self.catchment.dem_path)]
+            else:
+                dem_files = [
+                    f for f in self.catchment.dem.files if not f.endswith(".aux.xml")
+                ]
             key = caching.cache_key(config, caching.source_signature(dem_files))
             payload_dir = caching.cache_payload_dir(
                 cache_dir, "potential_radiation", key

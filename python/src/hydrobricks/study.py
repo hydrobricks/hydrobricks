@@ -75,6 +75,7 @@ import copy
 import itertools
 import json
 import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -94,6 +95,7 @@ _RESERVED_DIMENSIONS = {
     "eval_metric",
     "score",
     "calibration_score",
+    "calibration_seconds",
 }
 _SHORTHANDS = {
     "objective": "calibration.objective",
@@ -223,9 +225,9 @@ class Study:
 
         A job with an existing result record is loaded from disk instead of
         recomputed, unless ``force`` is given. Returns the result record:
-        the matrix ``values``, the ``calibration_score`` and
-        ``best_parameters``, and the long-format ``scores`` list
-        (period x transform x metric).
+        the matrix ``values``, the ``calibration_score``, the
+        ``calibration_seconds`` it took, the ``best_parameters``, and the
+        long-format ``scores`` list (period x transform x metric).
         """
         from hydrobricks.project import load_project
 
@@ -235,7 +237,9 @@ class Study:
             return json.loads(result_file.read_text(encoding="utf-8"))
 
         project = load_project(copy.deepcopy(job.config), base_dir=self.base_dir)
+        started = time.perf_counter()
         best = project.calibrate()
+        calibration_seconds = time.perf_counter() - started
         project.run()
 
         calibration = project.calibration or {}
@@ -269,6 +273,9 @@ class Study:
             "values": dict(job.values),
             "algorithm": best["algorithm"],
             "repetitions": best["repetitions"],
+            # Wall-clock time of the calibration only (model build and
+            # assessment excluded), to compare the cost of the algorithms.
+            "calibration_seconds": round(calibration_seconds, 3),
             "calibration_score": float(best["score"]),
             "best_parameters": {
                 name: float(value) for name, value in best["parameters"].items()
@@ -291,8 +298,9 @@ class Study:
         """Aggregate the finished jobs into a tidy scores table.
 
         Returns a long-format DataFrame with one column per matrix dimension
-        plus ``job_id``, ``period``, ``transform``, ``metric``, ``score`` and
-        ``calibration_score``, and writes it to ``results/scores.csv``.
+        plus ``job_id``, ``period``, ``transform``, ``metric``, ``score``,
+        ``calibration_score`` and ``calibration_seconds`` (the wall-clock time
+        of the calibration), and writes it to ``results/scores.csv``.
         """
         records = []
         for file in sorted(self.results_dir.glob("*.json")):
@@ -318,6 +326,7 @@ class Study:
                         "eval_metric": score["metric"],
                         "score": score["score"],
                         "calibration_score": record["calibration_score"],
+                        "calibration_seconds": record.get("calibration_seconds"),
                     }
                 )
         table = pd.DataFrame(rows)

@@ -1,13 +1,19 @@
 """PREVAH on the Ticino-Bellinzona catchment (570 HRUs, distributed).
 
 A real, spatially-distributed PREVAH setup: 570 hydrotopes (HRUs) with three land
-covers (open / forest / wetland), meteo-zone forcing, and a **per-HRU field
-capacity** taken from the soil data via a spatial parameter (``set_spatial``).
+covers (open / forest / wetland), meteo-zone forcing, a **per-HRU field capacity**
+taken from the soil data via a spatial parameter (``set_spatial``), and PREVAH's
+**monthly vegetation tables** applied per cover (``apply_land_use``).
 
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
 cross-implementation reproduction: hydrobricks PREVAH-UniBE against the original Fortran
 PREVAH (1984-2000). It reaches NSE ~= 0.96 over the validation period.
+
+Note that the PET is the default (pyet) Hamon, which runs markedly hotter than the
+vapour-density Hamon of PREVAH; the parameters below were calibrated against the
+original model, so the two offset each other. Switching to
+``method="Hamon_vapor_density"`` is more faithful but needs a recalibration.
 
 The data lives in ``tests/files/catchments/ch_ticino_bellinzona/`` (see its
 ``_readme.txt`` for provenance). Run from anywhere:
@@ -35,6 +41,22 @@ OUT.mkdir(exist_ok=True)
 
 COVERS = ["open", "forest", "wetland"]
 LATITUDE = 46.4  # catchment latitude, for the Hamon PET
+
+# PREVAH parameterizes its vegetation through monthly tables, one per land use.
+# Each cover of this dataset aggregates several of them (area shares of the source
+# hydrotope table), so each is given the land use that represents it best:
+#   forest  = 60 % coniferous, 29 % deciduous, 9 % mixed  -> the dominant one
+#   wetland = 97 % wetland                                -> the dominant one
+#   open    = 39 % rough pasture, 30 % rock, 18 % bare soil, 7 % pasture, 5 % urban.
+#             No land use dominates this catch-all, so it takes the one closest to
+#             the mixture's vegetation cover (0.43 in winter, 0.49 in summer):
+#             alpine meadow, at 0.5 / 0.6. Rough pasture, the largest single class,
+#             would be far too lush at 0.7 / 0.8.
+LAND_USES = {
+    "open": "alpine_meadow",
+    "forest": "coniferous_forest",
+    "wetland": "wetland",
+}
 
 # ---------------------------------------------------------------------------
 # 1. Hydro units (570 HRUs): elevation, per-cover area, per-HRU field capacity
@@ -95,9 +117,16 @@ observations.load_from_csv(
 # ---------------------------------------------------------------------------
 # Calibrated PREVAH parameters (cal_2020pest.inp), mapped to hydrobricks aliases.
 # PREVAH storage times are in hours; hydrobricks uses response factors k = 24 / K_h.
-parameters = models.PrevahUniBE(
-    land_cover_names=COVERS, land_cover_types=COVERS
-).generate_parameters()
+model = models.PrevahUniBE(
+    land_cover_names=COVERS,
+    land_cover_types=COVERS,
+    # PREVAH intercepts on every vegetated cover and evaporates the canopy at
+    # et_pot * veg_cov, so the covers all carry a canopy with the PREVAH canopy ET.
+    interception_covers=COVERS,
+    canopy_et_process="et:open_water_prevah",
+    record_all=True,
+)
+parameters = model.generate_parameters()
 parameters.set_values(
     {
         # precipitation / snow correction factors
@@ -140,9 +169,11 @@ parameters.set_values(
 # property) instead of one global value.
 parameters.set_spatial("fc", "fc")
 
-model = models.PrevahUniBE(
-    land_cover_names=COVERS, land_cover_types=COVERS, record_all=True
-)
+# PREVAH's monthly vegetation tables: the canopy interception capacity of each cover
+# (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.
+for cover, land_use in LAND_USES.items():
+    model.apply_land_use(parameters, land_use, cover_name=cover)
+
 model.setup(
     spatial_structure=hydro_units,
     output_path=str(OUT),

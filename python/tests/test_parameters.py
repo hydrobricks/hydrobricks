@@ -99,6 +99,53 @@ def test_set_spatial_unknown_parameter():
         parameter_set.set_spatial("does_not_exist", "prop")
 
 
+def _monthly_and_spatial_parameter_set():
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="soil_moisture",
+        name="capacity",
+        aliases=["fc"],
+        min_val=0,
+        max_val=3000,
+    )
+    return parameter_set
+
+
+def test_set_spatial_rejects_a_monthly_parameter():
+    # The per-unit value takes precedence over the shared one the monthly update
+    # writes, so the combination would silently drop the monthly variation.
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_monthly_values("fc", [100] * 12)
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_spatial("fc", "fc")
+
+
+def test_set_monthly_values_rejects_a_spatial_parameter():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial("fc", "fc")
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_monthly_values("fc", [100] * 12)
+
+
+def test_monthly_and_spatial_on_different_parameters():
+    # The restriction is per parameter: two different ones can each use a mechanism.
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.define_parameter(
+        component="forest_canopy",
+        name="capacity",
+        aliases=["ic"],
+        min_val=0,
+        max_val=10,
+    )
+    parameter_set.set_spatial("fc", "fc")
+    parameter_set.set_monthly_values("ic", [1] * 12)
+
+    assert parameter_set.get_spatial_parameters() == [
+        ("soil_moisture", "capacity", "fc")
+    ]
+    assert len(parameter_set.get_monthly_parameters()) == 1
+
+
 def test_define_parameter_min_max_mismatch():
     parameter_set = hb.ParameterSet()
     with pytest.raises(hb.ConfigurationError):

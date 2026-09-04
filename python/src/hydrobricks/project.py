@@ -1403,11 +1403,37 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     return out
 
 
+def _check_lateral_processes(cfg: dict, errors: list[str]) -> None:
+    """A lateral process needs to know how the hydro units are connected.
+
+    Without the connectivity table the process has no target unit and silently
+    redistributes nothing, which is worse than an error: the run looks fine and
+    the process is simply absent.
+    """
+    options = (cfg.get("model") or {}).get("options") or {}
+    lateral = sorted(
+        str(value)
+        for value in options.values()
+        if isinstance(value, str) and value.startswith("transport:")
+    )
+    if not lateral:
+        return
+    if (cfg.get("hydro_units") or {}).get("connectivity") is None:
+        errors.append(
+            f"hydro_units.connectivity: required by the lateral process(es) "
+            f"{', '.join(lateral)}, which move water between hydro units. "
+            "Compute the table once with Catchment.calculate_connectivity and "
+            "declare it here (without it the process has no target unit and "
+            "does nothing)."
+        )
+
+
 def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
     """Checks spanning several sections (gridded forcing vs hydro units, PET)."""
     hu = cfg["hydro_units"]
     fc = cfg["forcing"]
     _check_land_covers(cfg, errors)
+    _check_lateral_processes(cfg, errors)
     gridded = fc.get("gridded") or {}
     has_catchment = hu.get("outline") is not None and hu.get("dem") is not None
 

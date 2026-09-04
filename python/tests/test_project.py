@@ -853,8 +853,20 @@ def snow_slide_config(tmp_path, **hydro_units):
 
 def test_hydro_units_carry_the_slope_of_a_csv(tmp_path):
     """The slope column is loaded without being asked for (lateral processes)."""
-    project = hb.load_project(snow_slide_config(tmp_path), base_dir=GLETSCH_DIR)
+    config = snow_slide_config(
+        tmp_path, connectivity="connectivity_elevation_radiation.csv"
+    )
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
     assert "slope" in project.hydro_units.hydro_units.columns
+
+
+def test_lateral_process_requires_the_connectivity(tmp_path):
+    """Without the connectivity a lateral process would silently do nothing."""
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(snow_slide_config(tmp_path), base_dir=GLETSCH_DIR)
+    message = str(excinfo.value)
+    assert "hydro_units.connectivity" in message
+    assert "transport:snow_slide" in message
 
 
 def test_connectivity_enables_the_snow_redistribution(tmp_path):

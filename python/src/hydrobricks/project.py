@@ -1941,19 +1941,27 @@ def _build_project(
     )
 
     if station is not None:
+        # The forcing is trimmed to the modelling period: the steps outside it
+        # would be loaded, spatialized and carried to the model for nothing (the
+        # spin-up replays the beginning of the period, so nothing earlier is used).
         forcing.load_station_data_from_csv(
             station["file"],
             column_time=station["time_column"],
             time_format=station["time_format"],
             content=dict(station["columns"]),
+            start_date=start_date,
+            end_date=end_date,
         )
 
         # The station data must cover the simulation span (gridded sources are
         # read lazily, so they are checked at run time).
         time = pd.DatetimeIndex(forcing.data1D.time)
-        if len(time) > 0 and (
-            periods.full_span.start < time[0] or periods.full_span.end > time[-1]
-        ):
+        if len(time) == 0:
+            errors.append(
+                f"periods: the forcing data holds no time step within the "
+                f"simulation span ({start_date}..{end_date})."
+            )
+        elif periods.full_span.start < time[0] or periods.full_span.end > time[-1]:
             errors.append(
                 f"periods: the simulation span ({start_date}..{end_date}) is "
                 f"not covered by the forcing data ({time[0].date()}.."
@@ -2010,6 +2018,8 @@ def _build_project(
                 raster_hydro_units=unit_ids_raster,
                 apply_data_gradient=spec["apply_data_gradient"],
                 gradient_type=spec["gradient_type"],
+                start_date=start_date,
+                end_date=end_date,
             )
 
     if "pet" not in fc["variables"]:

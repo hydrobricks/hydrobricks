@@ -319,6 +319,8 @@ class Forcing:
         column_time: str,
         time_format: str,
         content: dict[str, str] | None = None,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
     ) -> None:
         """
         Read 1D time series data from CSV file for a single station.
@@ -335,6 +337,9 @@ class Forcing:
             Dictionary mapping variable names/aliases to CSV column names.
             Example: {'precipitation': 'Precipitation (mm)', 'temperature': 'Temp (C)'}
             Default: None
+        start_date, end_date
+            Modelling period the data is restricted to; either bound can be given
+            on its own. Default: None = the whole file is kept.
 
         Raises
         ------
@@ -357,7 +362,14 @@ class Forcing:
             enum_val = self.get_variable_enum(key)
             content[enum_val] = content.pop(key)
 
-        self.data1D.load_from_csv(path, column_time, time_format, content)
+        self.data1D.load_from_csv(
+            path,
+            column_time,
+            time_format,
+            content,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def correct_station_data(
         self,
@@ -516,6 +528,8 @@ class Forcing:
         raster_hydro_units: str | Path | None = None,
         apply_data_gradient: bool | None = None,
         gradient_type: str | None = None,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
     ) -> None:
         """
         Define a spatialization operation from gridded data to all hydro units.
@@ -555,6 +569,10 @@ class Forcing:
             single DEM.
         gradient_type
             'additive' or 'multiplicative'. If None, a per-variable default is used.
+        start_date, end_date
+            Modelling period the data is restricted to: the steps outside it are
+            dropped before the regridding, so they are neither computed nor kept in
+            memory. The data must cover the period. Default: None = no trimming.
 
         Raises
         ------
@@ -588,6 +606,8 @@ class Forcing:
             ("raster_hydro_units", raster_hydro_units),
             ("apply_data_gradient", apply_data_gradient),
             ("gradient_type", gradient_type),
+            ("start_date", start_date),
+            ("end_date", end_date),
         ):
             if value is not None:
                 operation[key] = value
@@ -1204,6 +1224,7 @@ class Forcing:
             - raster_hydro_units: Path to hydro unit IDs raster
             - apply_data_gradient: Whether to apply elevation gradients
             - gradient_type: 'additive' or 'multiplicative'
+            - start_date, end_date: Modelling period the data is trimmed to
 
         Raises
         ------
@@ -1225,6 +1246,8 @@ class Forcing:
             dim_x = kwargs.get("dim_x", "x")
             dim_y = kwargs.get("dim_y", "y")
             raster_hydro_units = kwargs.get("raster_hydro_units", "")
+            start_date = kwargs.get("start_date", None)
+            end_date = kwargs.get("end_date", None)
             if variable in {self.Variable.P, self.Variable.T}:
                 apply_data_gradient = kwargs.get("apply_data_gradient", True)
                 if variable == self.Variable.P:
@@ -1294,6 +1317,8 @@ class Forcing:
                 gradient_type=gradient_type,
                 dem_path=dem_path,
                 dem_signature=dem_signature,
+                start_date=start_date,
+                end_date=end_date,
                 cache_dir=self.cache_dir,
             )
             self.data2D.data_name.append(variable)

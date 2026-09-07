@@ -407,7 +407,10 @@ class Catchment:
         inverse = ~src.transform
         cols, rows = zip(
             *(
-                inverse * (x, y)
+                (
+                    inverse.a * x + inverse.b * y + inverse.c,
+                    inverse.d * x + inverse.e * y + inverse.f,
+                )
                 for x in (bounds[0], bounds[2])
                 for y in (bounds[1], bounds[3])
             )

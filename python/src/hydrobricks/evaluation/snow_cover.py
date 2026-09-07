@@ -1013,6 +1013,13 @@ class SnowCoverObservations(AuxiliaryObservation):
 
         # Open the data and select the variable as a (time, y, x) DataArray.
         open_kwargs: dict[str, Any] = {"chunks": {}}
+        # The combine options of open_mfdataset are pinned to the current xarray
+        # defaults: they are about to change (and warn until they are set).
+        combine_kwargs: dict[str, Any] = {
+            "data_vars": "all",
+            "coords": "different",
+            "compat": "no_conflicts",
+        }
         if engine is not None:
             open_kwargs["engine"] = engine
         if group is not None:
@@ -1027,7 +1034,7 @@ class SnowCoverObservations(AuxiliaryObservation):
                     data_type="snow cover stack",
                     reason="No input files",
                 )
-            ds = xr.open_mfdataset(files, **open_kwargs)
+            ds = xr.open_mfdataset(files, **open_kwargs, **combine_kwargs)
         if var_name is not None:
             da = ds[var_name]
         else:

@@ -290,3 +290,51 @@ def test_study_run_all_and_assess(tmp_path):
     pivot = study.pivot(period="validation", metric="nse")
     assert pivot.index.names == ["catchment", "objective"]
     assert pivot.shape == (4, 2)
+
+
+def test_study_run_all_in_parallel(tmp_path):
+    """Jobs run in worker processes, with the shared forcing warmed up first."""
+    study = hb.load_study(demo_study(tmp_path), base_dir=TEST_FILES_DIR)
+
+    warmed = []
+    study.warm_up(workers=2, on_done=lambda job_id, error: warmed.append(error))
+    # One warm-up per distinct forcing setup, i.e. per catchment here.
+    assert len(warmed) == 2
+    assert all(error is None for error in warmed)
+
+    done = []
+    scores = study.run_all(
+        workers=2,
+        warmup=False,
+        on_done=lambda job_id, record, error: done.append((job_id, record, error)),
+    )
+
+    assert len(done) == 4
+    assert all(error is None for _, _, error in done)
+    assert all(record["calibration_seconds"] > 0 for _, record, _ in done)
+    assert {job_id for job_id, _, _ in done} == {job.id for job in study.jobs}
+    assert len(scores) == 24
+
+    # A second call finds everything done and runs nothing.
+    again = []
+    study.run_all(workers=2, on_done=lambda *a: again.append(a))
+    assert again == []
+
+
+def test_study_run_all_reports_a_failing_job(tmp_path):
+    """A failing job is reported, and does not take the others down."""
+    config = demo_study(tmp_path)
+    config["variants"]["catchment"]["stgallen"]["observations"] = {
+        "file": "ch_sitter_stgallen/discharge.csv",
+        "column": "no such column",
+    }
+    study = hb.load_study(config, base_dir=TEST_FILES_DIR)
+
+    done = []
+    study.run_all(
+        workers=2, on_done=lambda job_id, record, error: done.append((job_id, error))
+    )
+
+    failed = [job_id for job_id, error in done if error is not None]
+    assert len(failed) == 2  # the two stgallen jobs
+    assert all("no such column" in error for _, error in done if error)

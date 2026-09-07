@@ -74,8 +74,10 @@ from __future__ import annotations
 import copy
 import itertools
 import json
+import os
 import re
 import time
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -169,6 +171,7 @@ class Study:
         base_dir: Path,
         evaluation: dict | None = None,
         name: str | None = None,
+        source: str | Path | dict | None = None,
     ) -> None:
         self.jobs = jobs
         self.dimensions = dimensions
@@ -176,6 +179,9 @@ class Study:
         self.base_dir = Path(base_dir)
         self.evaluation = evaluation or {}
         self.name = name
+        # What load_study was given, so that a worker process can rebuild the
+        # study instead of receiving it pickled.
+        self.source = source
 
     @property
     def results_dir(self) -> Path:
@@ -288,11 +294,137 @@ class Study:
         )
         return record
 
-    def run_all(self, force: bool = False) -> pd.DataFrame:
-        """Run every job sequentially (skipping finished ones), then assess."""
-        for job in self.jobs:
-            self.run(job.id, force=force)
+    def forcing_signature(self, job: StudyJob) -> str:
+        """What the shared forcing cache of a job depends on.
+
+        The regridded forcing is keyed by the hydro units and the forcing
+        sources, so every job with the same signature reuses the same cache
+        entries — whatever the model or the calibration settings.
+        """
+        return json.dumps(
+            [job.config.get("hydro_units"), job.config.get("forcing")],
+            sort_keys=True,
+            default=str,
+        )
+
+    def warm_up(
+        self,
+        jobs: list[StudyJob] | None = None,
+        workers: int = 1,
+        on_done: Callable[[str, str | None], None] | None = None,
+    ) -> None:
+        """Compute the shared forcing of each distinct setup once, up front.
+
+        Jobs sharing a catchment share the study cache, and the expensive step
+        (regridding gridded forcing onto the hydro units) depends only on that
+        catchment. Running the jobs cold would have every job of a catchment
+        recompute it at the same time, none of them able to reuse the others'
+        result; this does it once per distinct :meth:`forcing_signature`.
+
+        Parameters
+        ----------
+        jobs
+            The jobs to cover. Default: every job of the study.
+        workers
+            How many setups to compute at once, in separate processes.
+        on_done
+            Called with ``(job id, error message or None)`` as each setup
+            finishes, for progress reporting.
+        """
+        representatives: dict[str, StudyJob] = {}
+        for job in self.jobs if jobs is None else jobs:
+            representatives.setdefault(self.forcing_signature(job), job)
+
+        job_ids = [job.id for job in representatives.values()]
+        for job_id, error in self._map_over_jobs(_warm_up_job, job_ids, workers):
+            if on_done is not None:
+                on_done(job_id, error)
+
+    def run_all(
+        self,
+        force: bool = False,
+        workers: int = 1,
+        warmup: bool = False,
+        on_done: Callable[[str, dict | None, str | None], None] | None = None,
+    ) -> pd.DataFrame:
+        """Run every job (skipping finished ones), then assess.
+
+        Parameters
+        ----------
+        force
+            Recompute the jobs that already have a result.
+        workers
+            How many jobs to run at once, each in its own process (1, the
+            default, runs them sequentially in this process). The jobs are
+            independent, so this is the way to use a multi-core machine; the
+            model itself is single-threaded.
+        warmup
+            Compute the shared forcing of each distinct setup before running
+            the jobs (see :meth:`warm_up`). Worth it when several jobs share a
+            catchment, which is the usual case for a comparison matrix.
+        on_done
+            Called with ``(job id, result record or None, error message or
+            None)`` as each job finishes, for progress reporting.
+        """
+        pending = [job.id for job in self.jobs if force or not self.is_done(job.id)]
+
+        if warmup and pending:
+            by_id = {job.id: job for job in self.jobs}
+            self.warm_up([by_id[job_id] for job_id in pending], workers=workers)
+
+        if workers <= 1:
+            for job_id in pending:
+                record, error = None, None
+                try:
+                    record = self.run(job_id, force=force)
+                except Exception as err:  # noqa: BLE001 - reported per job
+                    error = _error_message(err)
+                if on_done is not None:
+                    on_done(job_id, record, error)
+        else:
+            for job_id, record, error in self._map_over_jobs(
+                _run_job, pending, workers, force=force
+            ):
+                if on_done is not None:
+                    on_done(job_id, record, error)
+
         return self.assess()
+
+    def _map_over_jobs(
+        self, function: Callable, job_ids: list[str], workers: int, **kwargs: Any
+    ) -> Iterator[tuple]:
+        """Apply a worker function to the jobs, in this process or in a pool.
+
+        The workers rebuild the study from :attr:`source` rather than receiving
+        it pickled, and each is pinned to a single BLAS thread: the model is
+        single-threaded, so a thread per core in every worker would only thrash.
+        """
+        if not job_ids:
+            return
+        if workers <= 1 or len(job_ids) == 1:
+            for job_id in job_ids:
+                yield function(self.source, self.base_dir, job_id, **kwargs)
+            return
+
+        if self.source is None:
+            raise ConfigurationError(
+                "This study was not built by load_study, so its jobs cannot be "
+                "rebuilt in a worker process; run it with workers=1.",
+                item_name="workers",
+                reason="No study source to rebuild from",
+            )
+
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+
+        with ProcessPoolExecutor(
+            max_workers=min(workers, len(job_ids)), initializer=_init_worker
+        ) as pool:
+            futures = [
+                pool.submit(function, self.source, self.base_dir, job_id, **kwargs)
+                for job_id in job_ids
+            ]
+            for future in as_completed(futures):
+                yield future.result()
 
     def assess(self) -> pd.DataFrame:
         """Aggregate the finished jobs into a tidy scores table.
@@ -355,6 +487,59 @@ class Study:
         return table.pivot_table(
             index=index, columns=["eval_transform", "eval_metric"], values="score"
         )
+
+
+# --- Worker processes ----------------------------------------------------------
+# The functions a parallel run dispatches. They live at module level so they can
+# be pickled to a worker, and rebuild the study from its source rather than
+# receiving it: a Study holds resolved configurations, not a picklable handle to
+# its files.
+
+# Every library that would otherwise spawn a thread per core in each worker.
+_SINGLE_THREADED_ENV = (
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+)
+
+
+def _init_worker() -> None:
+    """Pin a worker process to a single thread per numerical library."""
+    for name in _SINGLE_THREADED_ENV:
+        os.environ.setdefault(name, "1")
+
+
+def _error_message(err: BaseException) -> str:
+    """The message of an exception (args[0] for the hydrobricks ones)."""
+    message = err.args[0] if getattr(err, "args", None) else str(err)
+    return f"{type(err).__name__}: {message}"
+
+
+def _run_job(
+    source: Any, base_dir: Path, job_id: str, force: bool = False
+) -> tuple[str, dict | None, str | None]:
+    """Run one job, returning its record or the error it failed with."""
+    try:
+        study = load_study(source, base_dir=base_dir)
+        return job_id, study.run(job_id, force=force), None
+    except Exception as err:  # noqa: BLE001 - reported per job, never fatal
+        return job_id, None, _error_message(err)
+
+
+def _warm_up_job(source: Any, base_dir: Path, job_id: str) -> tuple[str, str | None]:
+    """Compute the forcing of one job, to fill the shared cache."""
+    from hydrobricks.project import load_project
+
+    try:
+        study = load_study(source, base_dir=base_dir)
+        project = load_project(study.job(job_id).config, base_dir=base_dir, setup=False)
+        # The parameter set carries the values of the data parameters that the
+        # forcing corrections may reference ('param:' options).
+        project.forcing.apply_operations(project.parameters)
+        return job_id, None
+    except Exception as err:  # noqa: BLE001 - reported per setup, never fatal
+        return job_id, _error_message(err)
 
 
 # --- Loading and matrix resolution --------------------------------------------
@@ -451,6 +636,7 @@ def load_study(
         base_dir=base,
         evaluation=evaluation,
         name=str(name) if name is not None else None,
+        source=path if path is not None else config,
     )
 
 

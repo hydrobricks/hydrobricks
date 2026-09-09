@@ -372,6 +372,29 @@ class WaterContainer {
     }
 
   private:
+    /**
+     * Classify the attached fluxes into the lists used by ApplyConstraints.
+     *
+     * The model structure (bricks, processes, fluxes) is fixed once the model is built, so
+     * the classification is done once on the first constraint application and reused for
+     * the whole simulation. ApplyConstraints sits on the innermost solver loop (once per
+     * brick, per constraint sweep, per solver stage, per time step), so rebuilding these
+     * lists there cost a heap allocation per call for nothing.
+     */
+    void BuildConstraintCache();
+
+    struct OutgoingLink {
+        Flux* flux;
+        Process* process;  // non-owning; kept for error reporting
+        bool priority;
+    };
+
+    bool _constraintCacheBuilt;                                     // the flux classification below is filled in
+    std::vector<OutgoingLink> _outgoingFluxes;                      // outgoing fluxes of this container's processes
+    std::vector<Flux*> _incomingRateFluxes;                         // incoming fluxes carrying a change rate
+    std::vector<Flux*> _incomingAmountFluxes;                       // incoming forcing / static fluxes (amounts)
+    std::vector<FluxToBrickInstantaneous*> _incomingInstantFluxes;  // incoming instantaneous fluxes
+
     double _content;               // [mm]
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]

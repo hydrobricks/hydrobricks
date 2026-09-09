@@ -12,6 +12,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _infiniteStorage(false),
       _allowNegativeContent(false),
       _inputsBooked(false),
+      _constraintCacheBuilt(false),
       _parent(brick),
       _overflow(nullptr) {}
 
@@ -53,8 +54,39 @@ void WaterContainer::AddAmountToStaticContentChange(double change) {
     _contentChangeStatic += change;
 }
 
+void WaterContainer::BuildConstraintCache() {
+    _constraintCacheBuilt = true;
+
+    for (int i = 0; i < _parent->GetProcessCount(); ++i) {
+        auto process = _parent->GetProcess(i);
+        if (process->GetWaterContainer() != this) {
+            continue;
+        }
+        const bool priority = process->HasConstraintPriority();
+        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+            _outgoingFluxes.push_back({process->GetOutputFlux(j), process, priority});
+        }
+    }
+
+    for (auto& input : _inputs) {
+        if (input->IsInstantaneous()) {
+            _incomingInstantFluxes.push_back(dynamic_cast<FluxToBrickInstantaneous*>(input));
+            continue;
+        }
+        if (input->IsForcing() || input->IsStatic()) {
+            _incomingAmountFluxes.push_back(input);
+            continue;
+        }
+        _incomingRateFluxes.push_back(input);
+    }
+}
+
 void WaterContainer::ApplyConstraints(double timeStep) {
     if (_infiniteStorage) return;
+
+    if (!_constraintCacheBuilt) {
+        BuildConstraintCache();
+    }
 
     // Change rates are quantities per unit time: the content update integrates them over the
     // timestep as content + rate * timeStep (see below). Processes that need to move an absolute
@@ -63,37 +95,25 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     // bounds (no negative content, and below the maximum capacity) over the timestep.
 
     // Get outgoing change rates
-    vecDoublePt outgoingRates;
-    std::vector<bool> outgoingPriority;
     double outputs = 0;
     double priorityOutputs = 0;
-    for (int i = 0; i < _parent->GetProcessCount(); ++i) {
-        auto process = _parent->GetProcess(i);
-        if (process->GetWaterContainer() != this) {
+    for (const auto& link : _outgoingFluxes) {
+        double* changeRate = link.flux->GetChangeRatePointer();
+        if (changeRate == nullptr) {
+            // For example when the originating brick has an area = 0.
             continue;
         }
-        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
-            Flux* flux = process->GetOutputFlux(j);
-            double* changeRate = flux->GetChangeRatePointer();
-            if (changeRate == nullptr) {
-                // For example when the originating brick has an area = 0.
-                continue;
-            }
-            assert(changeRate);
-            assert(*changeRate < 10000);
-            if (*changeRate < 0) {
-                *changeRate = 0;
-            } else if (*changeRate > 10000) {
-                throw RuntimeError(
-                    std::format("Change rate {} in process {} is too high.", *changeRate, process->GetName()));
-            }
-            assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
-            outgoingRates.push_back(changeRate);
-            outgoingPriority.push_back(process->HasConstraintPriority());
-            outputs += *changeRate;
-            if (process->HasConstraintPriority()) {
-                priorityOutputs += *changeRate;
-            }
+        assert(*changeRate < 10000);
+        if (*changeRate < 0) {
+            *changeRate = 0;
+        } else if (*changeRate > 10000) {
+            throw RuntimeError(
+                std::format("Change rate {} in process {} is too high.", *changeRate, link.process->GetName()));
+        }
+        assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
+        outputs += *changeRate;
+        if (link.priority) {
+            priorityOutputs += *changeRate;
         }
     }
 
@@ -103,34 +123,27 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     // direct pass the brick books its inputs before the constraints are enforced, so the
     // content read below already carries them and counting the amounts again would let the
     // outgoing rates draw on water that is not there (negative content at Finalize).
-    vecDoublePt incomingRates;
     double inputs = 0;
     double inputsStatic = 0;
-    for (auto& input : _inputs) {
-        if (input->IsInstantaneous()) {
-            if (!_inputsBooked) {
-                inputsStatic += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
-            }
-            continue;
+    if (!_inputsBooked) {
+        for (auto flux : _incomingInstantFluxes) {
+            inputsStatic += flux->GetRealAmount();
         }
-        if (input->IsForcing() || input->IsStatic()) {
-            if (!_inputsBooked) {
-                inputsStatic += input->GetAmount();
-            }
-            continue;
+        for (auto flux : _incomingAmountFluxes) {
+            inputsStatic += flux->GetAmount();
         }
-        double* changeRate = input->GetChangeRatePointer();
+    }
+    for (auto flux : _incomingRateFluxes) {
+        double* changeRate = flux->GetChangeRatePointer();
         if (changeRate == nullptr) {
             // For example when the originating brick has an area = 0.
             continue;
         }
-        assert(changeRate);
         assert(*changeRate < 1000);
         if (*changeRate < 0) {
             *changeRate = 0;
         }
         assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
-        incomingRates.push_back(changeRate);
         inputs += *changeRate;
     }
 
@@ -155,15 +168,17 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         } else if (normalOutputs > 0) {
             normalFactor = (availRate - priorityOutputs) / normalOutputs;
         }
-        for (size_t k = 0; k < outgoingRates.size(); ++k) {
-            double* rate = outgoingRates[k];
-            assert(rate != nullptr);
+        for (const auto& link : _outgoingFluxes) {
+            double* rate = link.flux->GetChangeRatePointer();
+            if (rate == nullptr) {
+                continue;
+            }
             assert(*rate < 1000);
             assert(GreaterThanOrEqual(*rate, 0, EPSILON_D));
             if (NearlyZero(*rate, EPSILON_D)) {
                 continue;
             }
-            *rate *= outgoingPriority[k] ? priorityFactor : normalFactor;
+            *rate *= link.priority ? priorityFactor : normalFactor;
         }
     }
 
@@ -186,8 +201,11 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                     "Forcing is coming directly into a brick with limited capacity and no overflow.");
             }
             // Limit the different rates proportionally
-            for (auto rate : incomingRates) {
-                assert(rate != nullptr);
+            for (auto flux : _incomingRateFluxes) {
+                double* rate = flux->GetChangeRatePointer();
+                if (rate == nullptr) {
+                    continue;
+                }
                 assert(*rate < 1000);
                 assert(GreaterThanOrEqual(*rate, 0, EPSILON_D));
                 if (NearlyZero(*rate, EPSILON_D)) {

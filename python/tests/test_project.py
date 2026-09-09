@@ -866,6 +866,58 @@ def test_columns_areas_must_match_the_model_covers(tmp_path):
     assert "one area column per land cover" in str(excinfo.value)
 
 
+@needs_catchment_packages
+def test_day_of_year_forcing_is_not_trimmed(tmp_path):
+    """A climatology is indexed by the day of the year, not by dates.
+
+    Restricting the gridded sources to the modelling period must skip it, even
+    when its dimension is declared as the time one.
+    """
+    config = {
+        "model": {
+            "name": "socont",
+            "options": {
+                "soil_storage_nb": 2,
+                "surface_runoff": "linear_storage",
+                "snow_melt_process": "melt:temperature_index",
+            },
+        },
+        "hydro_units": {
+            "file": "hydro_units_elevation_radiation.csv",
+            "unit_ids_raster": "unit_ids_radiation.tif",
+        },
+        "forcing": {
+            "file": "meteo.csv",
+            "time": {"column": "date", "format": "%d/%m/%Y"},
+            "columns": {
+                "precipitation": "precip(mm/day)",
+                "temperature": "temp(C)",
+                "pet": "pet_sim(mm/day)",
+            },
+            "ref_elevation": 2702,
+            "gridded": {
+                "solar_radiation": {
+                    "path": "daily_potential_radiation.nc",
+                    "var_name": "radiation",
+                    "dim_time": "day_of_year",
+                    "data_crs": 2056,
+                    "dim_x": "x",
+                    "dim_y": "y",
+                }
+            },
+        },
+        "periods": {"simulation": ["1981-01-01", "1981-12-31"], "spinup": 0},
+        "output": str(tmp_path),
+        "parameters": {**PARAMETERS, "melt_factor": 4, "r_snow": 0.01},
+    }
+    del config["parameters"]["a_snow"]  # replaced by the Hock melt factors
+
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+    discharge = project.run()
+    assert len(discharge) == 365
+    assert np.all(discharge.to_numpy() >= 0)
+
+
 # --- Lateral connectivity and actions -------------------------------------------
 
 

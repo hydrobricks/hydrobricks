@@ -317,9 +317,13 @@ class TimeSeries2D(TimeSeries):
             )
 
         # Restrict the data to the modelling period: the steps outside it would be
-        # regridded and carried around for nothing. A 'day_of_year' climatology has
-        # no time dimension to trim.
-        trim = start_date is not None or end_date is not None
+        # regridded and carried around for nothing. A 'day_of_year' climatology is
+        # indexed by the day of the year, not by dates: there is nothing to trim,
+        # and slicing that axis with timestamps would raise. It is detected on the
+        # dimensions of the file, not on the declared 'dim_time', which the caller
+        # may well have named after it.
+        is_climatology = "day_of_year" in nc_data.dims
+        trim = (start_date is not None or end_date is not None) and not is_climatology
         if trim and dim_time in nc_data.dims:
             period = slice(
                 pd.Timestamp(start_date) if start_date is not None else None,
@@ -446,8 +450,12 @@ class TimeSeries2D(TimeSeries):
             unit_id_mask = xr.where(unit_ids == unit_id, 1, 0)
             unit_id_masks.append(unit_id_mask)
 
-        # Initialize data array
-        data = np.zeros((len(self.time), unit_id_count))
+        # Initialize data array. A 'day_of_year' climatology is regridded on its
+        # own 366-day axis and expanded to the simulation period further down, so
+        # it is that axis the array must hold — the simulation period can be
+        # shorter (or much longer) than a year.
+        n_steps = 366 if time_method == "day_of_year" else len(self.time)
+        data = np.zeros((n_steps, unit_id_count))
         self.data.append(data)
 
         # Drop other variables

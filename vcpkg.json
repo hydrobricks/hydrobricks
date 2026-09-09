@@ -3,7 +3,10 @@
   "version": "0.9.0",
   "builtin-baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
   "dependencies": [
-    "vcpkg-tool-ninja",
+    {
+      "name": "vcpkg-tool-ninja",
+      "host": true
+    },
     {
       "name": "eigen3",
       "version>=": "5.0.1"

@@ -52,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accepting a gridded forcing source that covers a longer period than the variables already loaded: the extra time steps are trimmed to the common period instead of raising (gridded products are updated at their own cadence, e.g. a PET stack holding the current year while the meteorological one stops at the end of the previous one). A shorter or shifted series still raises.
 - Trimming the forcing to the modelling period when it comes from a project file: the gridded sources are restricted before the regridding (`start_date`/`end_date` of `Forcing.spatialize_from_gridded_data` and of `TimeSeries2D.regrid_from_netcdf`) and the station CSV is read over that period only, instead of loading, spatializing and carrying the whole record. A source that does not cover the period now fails with an explicit message rather than in the C++ core. The period is part of the regrid cache key, so existing cached forcing is recomputed once (and the recomputation covers the period only).
 
+### Fixed
+
+- Building the Python extension against a vcpkg target triplet other than the host one (e.g. `x64-windows-static-md`, the usual triplet for a Python extension on Windows): `vcpkg-tool-ninja` is a host tool and only supports the native triplet, so the manifest now declares it as a host dependency instead of a target one. `pip install -e .` failed with "vcpkg-tool-ninja is only supported on 'native'" before.
+
 ## 0.9.1 - 2026-09-03
 
 ### Breaking changes

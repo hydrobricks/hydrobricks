@@ -276,6 +276,12 @@ void SettingsModel::AddProcessOutput(const string& target, ContentType fluxType)
     _selectedProcess->outputs.push_back(outputSettings);
 }
 
+void SettingsModel::SetProcessGateBrick(const string& name) {
+    assert(_selectedProcess);
+
+    _selectedProcess->gateBricks.push_back(name);
+}
+
 void SettingsModel::SetProcessOutputsAsInstantaneous() {
     assert(_selectedProcess);
 
@@ -411,7 +417,8 @@ bool SettingsModel::ChangeSplitterOutputTargetIfFound(const string& currentTarge
     return false;
 }
 
-void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget) {
+void SettingsModel::GenerateCanopyInterception(const string& coverName, const string& throughfallTarget,
+                                               const string& throughfallProcess, const string& interceptionEtProcess) {
     assert(_selectedStructure);
 
     // Canopy storage as a surface component of the cover: it is therefore computed in the
@@ -419,11 +426,13 @@ void SettingsModel::GenerateCanopyInterception(const string& coverName, const st
     // storage/ET by the cover fraction (by name). The throughfall (the water above the
     // interception capacity) is released first, then the retained water evaporates at the
     // potential rate. The capacity is enforced by the throughfall process (no maximum capacity
-    // on the container), which is robust on the direct computation path.
+    // on the container), which is robust on the direct computation path. The throughfall
+    // process is 'outflow:threshold' (fill-then-spill) by default or 'interception:menzel'
+    // (PREVAH asymptotic filling); both carry the same 'capacity' parameter.
     AddSurfaceComponentBrick(coverName + "_canopy", "interception_storage");
     SetSurfaceComponentParent(coverName);
-    AddBrickProcess("throughfall", "outflow:threshold", throughfallTarget);
-    AddBrickProcess("interception_et", "et:open_water");
+    AddBrickProcess("throughfall", throughfallProcess, throughfallTarget);
+    AddBrickProcess("interception_et", interceptionEtProcess);
 
     // Route the cover's rain through the canopy (upstream of the snowpack).
     SelectHydroUnitSplitter("rain_splitter");
@@ -600,6 +609,17 @@ void SettingsModel::AddSnowpackSublimation(const string& sublimationProcess) {
         // snow directly to the atmosphere. As an atmosphere-bound process (like ET),
         // it needs no target: the model builder attaches a FluxToAtmosphere to it.
         AddBrickProcess("sublimation", sublimationProcess);
+
+        // PREVAH serves the snow evaporation sequentially BEFORE melt (s_SNOEVAP1 is
+        // called ahead of s_snowmelt in sxp_core.f08). Snowpacks are direct-pass bricks
+        // (no solver): their processes are evaluated and applied in declaration order,
+        // so the sublimation must be declared first to get the full potential rate on
+        // days the melt demand alone would drain the pack.
+        if (sublimationProcess == "sublimation:prevah") {
+            auto& processes = _selectedBrick->processes;
+            std::rotate(processes.begin(), processes.end() - 1, processes.end());
+            _selectedProcess = &processes[0];
+        }
     }
 }
 
@@ -1029,6 +1049,154 @@ bool SettingsModel::SetParameterValueInSelectedStructure(const string& component
     }
 
     return true;
+}
+
+Parameter* SettingsModel::FindParameterInSelectedStructure(const string& component, const string& name) {
+    if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
+        for (auto& parameter : _selectedBrick->parameters) {
+            if (parameter.GetName() == name) {
+                return &parameter;
+            }
+        }
+        for (auto& process : _selectedBrick->processes) {
+            for (auto& parameter : process.parameters) {
+                if (parameter.GetName() == name) {
+                    return &parameter;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
+        for (auto& parameter : _selectedSplitter->parameters) {
+            if (parameter.GetName() == name) {
+                return &parameter;
+            }
+        }
+        return nullptr;
+    }
+
+    return nullptr;
+}
+
+bool SettingsModel::SetParameterMonthlyValues(const string& component, const string& name, const vecFloat& values) {
+    if (values.size() != 12) {
+        LogError("Monthly values for parameter '{}' must have 12 entries (got {}).", name, values.size());
+        return false;
+    }
+
+    // Apply the same monthly values to each component of a comma-separated list.
+    if (component.find(',') != string::npos) {
+        std::istringstream ss(component);
+        string tok;
+        while (std::getline(ss, tok, ',')) {
+            tok.erase(0, tok.find_first_not_of(" "));
+            tok.erase(tok.find_last_not_of(" ") + 1);
+            if (tok.empty()) {
+                continue;
+            }
+            if (!SetParameterMonthlyValues(tok, name, values)) {
+                LogError("Fail to set the monthly parameter '{}' for the component '{}'.", name, tok);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Annual mean as the scalar baseline (used before the first month update).
+    float mean = 0.0f;
+    for (float v : values) {
+        mean += v;
+    }
+    mean /= 12.0f;
+
+    ParameterModifier modifier(ParameterModifierType::Monthly);
+    if (!modifier.SetMonthlyValues(values)) {
+        return false;
+    }
+
+    // Apply to every structure variant that contains the component.
+    int previousId = _selectedStructure->id;
+    bool foundAny = false;
+    for (auto& modelStructure : _modelStructures) {
+        _selectedStructure = &modelStructure;
+        _selectedBrick = nullptr;
+        _selectedProcess = nullptr;
+        _selectedSplitter = nullptr;
+        Parameter* parameter = FindParameterInSelectedStructure(component, name);
+        if (parameter != nullptr) {
+            parameter->SetValue(mean);
+            parameter->SetModifier(modifier);
+            foundAny = true;
+        }
+    }
+    SelectStructure(previousId);
+
+    if (!foundAny) {
+        LogError("Cannot find the component '{}' for the monthly parameter '{}'.", component, name);
+    }
+
+    return foundAny;
+}
+
+void SettingsModel::SetParameterSpatialFromProperty(const string& component, const string& name,
+                                                    const string& property) {
+    // A comma-separated component list binds the same property on several components.
+    if (component.find(',') != string::npos) {
+        std::istringstream ss(component);
+        string tok;
+        while (std::getline(ss, tok, ',')) {
+            tok.erase(0, tok.find_first_not_of(" "));
+            tok.erase(tok.find_last_not_of(" ") + 1);
+            if (!tok.empty()) {
+                _spatialParameterBindings[{tok, name}] = property;
+            }
+        }
+        return;
+    }
+
+    _spatialParameterBindings[{component, name}] = property;
+}
+
+vector<Parameter*> SettingsModel::GetParametersWithModifier() {
+    vector<Parameter*> result;
+
+    auto collectBricks = [&result](vector<BrickSettings>& bricks) {
+        for (auto& brick : bricks) {
+            for (auto& parameter : brick.parameters) {
+                if (parameter.HasModifier()) {
+                    result.push_back(&parameter);
+                }
+            }
+            for (auto& process : brick.processes) {
+                for (auto& parameter : process.parameters) {
+                    if (parameter.HasModifier()) {
+                        result.push_back(&parameter);
+                    }
+                }
+            }
+        }
+    };
+
+    auto collectSplitters = [&result](vector<SplitterSettings>& splitters) {
+        for (auto& splitter : splitters) {
+            for (auto& parameter : splitter.parameters) {
+                if (parameter.HasModifier()) {
+                    result.push_back(&parameter);
+                }
+            }
+        }
+    };
+
+    for (auto& modelStructure : _modelStructures) {
+        collectBricks(modelStructure.hydroUnitBricks);
+        collectBricks(modelStructure.subBasinBricks);
+        collectSplitters(modelStructure.hydroUnitSplitters);
+        collectSplitters(modelStructure.subBasinSplitters);
+    }
+
+    return result;
 }
 
 bool SettingsModel::LogAll(const YAML::Node& settings) {

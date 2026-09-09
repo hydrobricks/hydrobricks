@@ -142,3 +142,119 @@ class GSM(GlacierModule):
             f"{self.RAIN_SNOWMELT_STORAGE}:response_factor": ["k_snow"],
             f"{self.ICEMELT_STORAGE}:response_factor": ["k_ice"],
         }
+
+
+@GlacierModule.register("prevah")
+class PrevahGlacier(GlacierModule):
+    """PREVAH glacier formulation (Gurtz et al., 2003; Zappa et al., 2003).
+
+    As in PREVAH, the glacierized area distinguishes bare ice (below the
+    equilibrium line) from firn (above it), each melting only when snow-free
+    (``no_melt_when_snow_cover``) and draining through its own linear reservoir:
+
+    - **ice** covers: rain + snowmelt feed a catchment-level snowmelt reservoir
+      (PREVAH's KICSH) and the ice melt a catchment-level ice melt reservoir
+      (KICEH), both draining to the outlet;
+    - **firn** covers (any glacier cover whose name contains ``'firn'``): their
+      melt drains through a per-unit firn reservoir (KICFH) into the groundwater
+      (the ``slz1`` store, as PREVAH routes the firn melt to the baseflow module);
+      set the ``firn_to_groundwater`` option to False to route it to the outlet
+      instead. Their rain + snowmelt joins the snowmelt reservoir.
+
+    The split of the glacier area into ice and firn covers (at the ELA) is a
+    preprocessing step; without a firn cover the module behaves like the GSM
+    module with PREVAH reservoir semantics. The ice is treated as an infinite
+    storage by default (``glacier_infinite_storage``). The reservoir response
+    factors [1/d] relate to PREVAH's storage times in hours as k = 24 / K_h.
+    """
+
+    RAIN_SNOWMELT_STORAGE = "glacier_area_rain_snowmelt_storage"
+    ICEMELT_STORAGE = "glacier_area_icemelt_storage"
+    FIRNMELT_STORAGE = "glacier_area_firnmelt_storage"
+
+    @staticmethod
+    def _is_firn(cover_name: str) -> bool:
+        return "firn" in cover_name.lower()
+
+    def add_bricks(
+        self,
+        structure: dict[str, Any],
+        glacier_names: list[str],
+        *,
+        melt_process: str,
+        options: dict[str, Any],
+    ) -> None:
+        if not glacier_names:
+            return
+
+        infinite_storage = options.get("glacier_infinite_storage", True)
+        firn_to_groundwater = options.get("firn_to_groundwater", True)
+        firn_names = [name for name in glacier_names if self._is_firn(name)]
+        ice_names = [name for name in glacier_names if not self._is_firn(name)]
+
+        for cover_name in glacier_names:
+            is_firn = self._is_firn(cover_name)
+            melt_target = self.FIRNMELT_STORAGE if is_firn else self.ICEMELT_STORAGE
+            structure[cover_name] = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "parameters": {
+                    "no_melt_when_snow_cover": True,
+                    "infinite_storage": infinite_storage,
+                },
+                "processes": {
+                    "outflow_rain_snowmelt": {
+                        "kind": "outflow:direct",
+                        "target": self.RAIN_SNOWMELT_STORAGE,
+                        "instantaneous": True,
+                    },
+                    "melt": {
+                        "kind": melt_process,
+                        "target": melt_target,
+                        "instantaneous": True,
+                    },
+                },
+            }
+
+        # Per-unit firn reservoir: declared before the groundwater stores (the model
+        # adds them later), so its outflow into slz1 flows toward a later brick.
+        if firn_names:
+            firn_target = "slz1" if firn_to_groundwater else "outlet"
+            structure[self.FIRNMELT_STORAGE] = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "processes": {
+                    "outflow": {"kind": "outflow:linear", "target": firn_target}
+                },
+            }
+
+        # Catchment-level reservoirs for the glacierized-area contributions.
+        structure[self.RAIN_SNOWMELT_STORAGE] = {
+            "attach_to": "sub_basin",
+            "kind": "storage",
+            "processes": {"outflow": {"kind": "outflow:linear", "target": "outlet"}},
+        }
+        if ice_names:
+            structure[self.ICEMELT_STORAGE] = {
+                "attach_to": "sub_basin",
+                "kind": "storage",
+                "processes": {
+                    "outflow": {"kind": "outflow:linear", "target": "outlet"}
+                },
+            }
+
+    def land_cover_keys(self, glacier_names: list[str]) -> set[str]:
+        # The reservoirs are intentionally not listed: they stay in the glacier-free
+        # base (inert for glacier-free units), so the sub-basin owns the shared ones
+        # and the per-unit firn reservoir keeps a consistent brick order.
+        return set(glacier_names)
+
+    def parameter_aliases(self, glacier_names: list[str]) -> dict[str, list[str]]:
+        if not glacier_names:
+            return {}
+        aliases = {f"{self.RAIN_SNOWMELT_STORAGE}:response_factor": ["k_snow"]}
+        if any(not self._is_firn(name) for name in glacier_names):
+            aliases[f"{self.ICEMELT_STORAGE}:response_factor"] = ["k_ice"]
+        if any(self._is_firn(name) for name in glacier_names):
+            aliases[f"{self.FIRNMELT_STORAGE}:response_factor"] = ["k_firn"]
+        return aliases

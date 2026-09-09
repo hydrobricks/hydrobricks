@@ -81,6 +81,14 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
     ModelBuilder builder(_subBasin, &_timer, &_logger);
     builder.UpdateSubBasinParameters(modelSettings);
     builder.UpdateHydroUnitsParameters(modelSettings);
+
+    // (Re)register the parameters carrying a time modifier (e.g. monthly canopy
+    // capacity) with the updater so their values follow the calendar during the run.
+    // Cleared first so a re-run (calibration) does not register them several times.
+    _parametersUpdater.Reset();
+    for (Parameter* parameter : modelSettings.GetParametersWithModifier()) {
+        _parametersUpdater.AddParameter(parameter);
+    }
 }
 
 bool ModelHydro::IsValid() const {
@@ -109,6 +117,11 @@ ModelResult ModelHydro::Run() {
     }
 
     _logger.SaveInitialValues();
+
+    // Apply time-modified parameters (e.g. monthly canopy capacity) for the start date
+    // before the first step: the updater otherwise only fires on IncrementTime, which
+    // runs after a step, so the first step would keep the scalar baseline.
+    _parametersUpdater.DateUpdate(_timer.GetDate());
 
     // Per-run lifecycle messages are debug-level: at Message level they would
     // flood the output during calibration (thousands of runs).

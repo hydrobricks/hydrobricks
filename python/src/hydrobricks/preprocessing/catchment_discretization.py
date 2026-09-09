@@ -530,8 +530,11 @@ class CatchmentDiscretization:
                 ("elevation_max", "m"), res_elevation_max
             )
 
+        # Only the band bounds are stored here: the mean slope of every unit is
+        # always computed from the DEM by get_hydro_units_attributes (the lateral
+        # processes, e.g. the snow redistribution, need it whether or not the
+        # discretization used the slope).
         if res_slope:
-            self.catchment.hydro_units.add_property(("slope", "deg"), res_slope)
             self.catchment.hydro_units.add_property(("slope_min", "deg"), res_slope_min)
             self.catchment.hydro_units.add_property(("slope_max", "deg"), res_slope_max)
 

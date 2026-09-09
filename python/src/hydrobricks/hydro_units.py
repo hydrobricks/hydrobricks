@@ -42,6 +42,8 @@ class HydroUnits:
     """
 
     FRACTION_PREFIX: ClassVar[str] = "fraction-"
+    # Properties loaded from a CSV without being listed in 'other_columns'.
+    IMPLICIT_PROPERTIES: ClassVar[tuple[str, ...]] = ("slope", "latitude")
 
     def __init__(
         self,
@@ -68,6 +70,10 @@ class HydroUnits:
             If land_cover_types and land_cover_names have different lengths.
         """
         self.settings = SettingsBasin()
+        # True once populate_bounded_instance has run; a property added afterwards
+        # re-populates the basin so its per-unit values reach the model (spatial
+        # parameters).
+        self._basin_populated = False
         self._check_land_cover_definitions(land_cover_types, land_cover_names)
         if not land_cover_types:
             land_cover_types = ["open"]
@@ -146,7 +152,14 @@ class HydroUnits:
         # Load area data (either single area or per-land-cover areas)
         self._load_area_data(file_content, column_area, columns_areas)
 
-        # Load additional properties
+        # Load additional properties. A few are always picked up when the file has
+        # them, so that a file written by save_hydro_units_to_csv keeps them
+        # without being asked: the slope (the lateral processes, e.g. the snow
+        # redistribution, need it) and the latitude (the PET computations).
+        other_columns = dict(other_columns or {})
+        for prop in self.IMPLICIT_PROPERTIES:
+            if prop not in other_columns and prop in file_content.columns:
+                other_columns[prop] = prop
         self._load_other_columns(file_content, other_columns)
 
         # Convert area units to m2 if needed
@@ -495,6 +508,13 @@ class HydroUnits:
             else:
                 self.hydro_units = pd.concat([self.hydro_units, df], axis=1)
 
+        # If the basin was already populated, refresh it so the new per-unit property
+        # reaches the model (e.g. a spatial parameter added after discretization). Skip
+        # when lateral connections exist, as re-populating clears them (they are added
+        # separately via set_connectivity); the caller must then re-populate explicitly.
+        if self._basin_populated and self.settings.get_lateral_connection_count() == 0:
+            self.populate_bounded_instance()
+
     def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
@@ -734,6 +754,8 @@ class HydroUnits:
                         reason="Fraction outside valid range",
                     )
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
+
+        self._basin_populated = True
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:
         """

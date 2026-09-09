@@ -45,8 +45,20 @@ install(TARGETS _hydrobricks LIBRARY DESTINATION hydrobricks)
 # COPY BINARY FILES
 
 if (WIN32)
-    # Find all DLL files in the vcpkg installed directory
-    file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll")
+    # Find all DLL files in the vcpkg installed directory. vcpkg installs the manifest next to the directory it runs
+    # from, which is the build directory for a plain CMake build but the source directory when pip drives the build (its
+    # build directory is a temporary one): both are searched, or the module would be built without the runtime DLLs it
+    # needs and fail to import with "DLL load failed".
+    file(GLOB VCPKG_DLLS "${CMAKE_BINARY_DIR}/vcpkg_installed/*/bin/*.dll"
+         "${CMAKE_SOURCE_DIR}/vcpkg_installed/*/bin/*.dll")
+
+    if (NOT VCPKG_DLLS)
+        message(
+            WARNING "No vcpkg DLL found next to '${CMAKE_BINARY_DIR}' nor '${CMAKE_SOURCE_DIR}'. "
+                    "The _hydrobricks module will not import unless the netCDF/HDF5 runtime "
+                    "DLLs are on the DLL search path. Run 'vcpkg install' from one of these "
+                    "directories, or copy the DLLs next to the built module.")
+    endif ()
 
     foreach (DLL ${VCPKG_DLLS})
         add_custom_command(

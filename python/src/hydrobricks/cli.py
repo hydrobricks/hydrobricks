@@ -10,7 +10,7 @@ all::
 
     hydrobricks study list study.yaml       # the comparison matrix's jobs
     hydrobricks study run study.yaml <job>  # one job (parallelize per process)
-    hydrobricks study run study.yaml --all
+    hydrobricks study run study.yaml --all --workers 70
     hydrobricks study assess study.yaml     # aggregate + comparison pivot
 
 ``init`` asks a short series of questions (proposing answers sniffed from the
@@ -115,10 +115,28 @@ def main(argv: list[str] | None = None) -> int:
     study_run.add_argument("study", help="Path to the study file.")
     study_run.add_argument("job_id", nargs="?", help="Job to run (see 'study list').")
     study_run.add_argument(
-        "--all", action="store_true", help="Run every pending job sequentially."
+        "--all",
+        action="store_true",
+        help="Run every pending job (sequentially, or --workers at a time).",
     )
     study_run.add_argument(
         "--force", action="store_true", help="Recompute even if a result exists."
+    )
+    study_run.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help="With --all, run N jobs at once, each in its own process "
+        "(default: 1). The jobs are independent and the model is "
+        "single-threaded, so this is how to use a multi-core machine.",
+    )
+    study_run.add_argument(
+        "--no-warmup",
+        action="store_true",
+        help="With --all, skip computing the shared forcing of each catchment "
+        "before running the jobs (it is computed once per catchment by "
+        "default, instead of by every job of that catchment at once).",
     )
 
     study_assess = study_subparsers.add_parser(
@@ -230,18 +248,20 @@ def _cmd_study(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 2
-        job_ids = [j.id for j in study.jobs] if args.all else [args.job_id]
-        for job_id in job_ids:
+        if not args.all:
+            job_id = args.job_id
             if study.is_done(job_id) and not args.force:
                 print(f"[done   ] {job_id} (skipped; --force to recompute)")
-                continue
+                return 0
             print(f"[running] {job_id}...")
             record = study.run(job_id, force=args.force)
             print(
                 f"[done   ] {job_id}: calibration score "
                 f"{record['calibration_score']:.3f}"
             )
-        return 0
+            return 0
+
+        return _run_all_jobs(study, args)
 
     # assess
     scores = study.assess()
@@ -250,6 +270,64 @@ def _cmd_study(args: argparse.Namespace) -> int:
     print(f"\nComparison on the {args.period} period:")
     pivot = study.pivot(period=args.period)
     print(pivot.to_string(float_format=lambda x: f"{x:.3f}"))
+    return 0
+
+
+def _run_all_jobs(study, args) -> int:
+    """Run every pending job of a study, optionally several at a time."""
+    import time
+
+    pending = [j.id for j in study.jobs if args.force or not study.is_done(j.id)]
+    done = len(study.jobs) - len(pending)
+    workers = max(1, min(args.workers, len(pending) or 1))
+    print(
+        f"Study '{study.name}': {len(study.jobs)} job(s), {done} done, "
+        f"{len(pending)} to run on {workers} worker(s)."
+    )
+    for job_id in (j.id for j in study.jobs if j.id not in set(pending)):
+        print(f"[done   ] {job_id} (skipped; --force to recompute)")
+    if not pending:
+        return 0
+
+    if not args.no_warmup:
+        print("[warmup ] computing the shared forcing of each setup...")
+        study.warm_up(
+            [j for j in study.jobs if j.id in set(pending)],
+            workers=workers,
+            on_done=lambda job_id, error: print(
+                f"[warmup ] {job_id}" + (f": FAILED {error}" if error else ": done")
+            ),
+        )
+
+    started = time.perf_counter()
+    counter = {"n": 0}
+    failures: list[str] = []
+
+    def report(job_id: str, record: dict | None, error: str | None) -> None:
+        counter["n"] += 1
+        elapsed = time.perf_counter() - started
+        if error is not None:
+            failures.append(job_id)
+            print(f"[{counter['n']}/{len(pending)}] FAILED  {job_id}: {error}")
+            return
+        print(
+            f"[{counter['n']}/{len(pending)}] done    {job_id}: calibration score "
+            f"{record['calibration_score']:.3f} "
+            f"({record['calibration_seconds']:.0f} s, {elapsed:.0f} s elapsed)"
+        )
+
+    study.run_all(
+        force=args.force,
+        workers=workers,
+        warmup=False,  # already done above, with its own reporting
+        on_done=report,
+    )
+
+    if failures:
+        print(f"\n{len(failures)} job(s) failed:")
+        for job_id in failures:
+            print(f"  {job_id}")
+        return 1
     return 0
 
 

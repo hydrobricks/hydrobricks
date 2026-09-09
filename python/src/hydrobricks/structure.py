@@ -130,7 +130,7 @@ class StructureGraph:
             The list of structure-variant dicts returned by ``get_structure()``.
         structure_id
             Which structure variant to build (default 1, the primary). Models with
-            glacier/lake covers have several variants.
+            glacier/water covers have several variants.
         model_name, solver
             Optional metadata shown in the summary.
         with_forcing

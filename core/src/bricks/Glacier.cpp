@@ -114,8 +114,13 @@ void Glacier::UpdateContent(double value, ContentType type) {
 }
 
 void Glacier::UpdateContentFromInputs() {
-    _ice->AddAmountToDynamicContentChange(_ice->SumIncomingFluxes());
-    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
+    _ice->BookIncomingFluxes();
+    _water->BookIncomingFluxes();
+}
+
+void Glacier::ResetInputBooking() {
+    _ice->ResetInputBooking();
+    _water->ResetInputBooking();
 }
 
 void Glacier::ApplyConstraints(double timeStep) {

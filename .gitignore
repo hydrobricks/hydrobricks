@@ -64,10 +64,12 @@ vcpkg-binary-cache/
 *.whl
 **/forcing.nc
 **/daily_potential_radiation.nc
+**/snow_cover_cache/
 .claude/
 bin-test/
 tmp/
 
 # Example run outputs
 examples/**/output/
-examples/hydromip/
+examples/hydromip
+docs/design/

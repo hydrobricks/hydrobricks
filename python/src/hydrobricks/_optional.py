@@ -40,6 +40,7 @@ Available flags:
     - HAS_RIOXARRAY: rioxarray library
     - HAS_PYARROW: PyArrow library
     - HAS_XRSPATIAL: xrspatial library
+    - HAS_MATPLOTLIB: Matplotlib library (all plotting)
 """
 
 import importlib.util
@@ -98,6 +99,9 @@ rxr = None
 pyarrow = None
 xrs = None
 graphviz = None
+plt = None
+mpl_animation = None
+mpl_colors = None
 
 # Check availability and setup lazy imports
 HAS_NETCDF = is_module_available("netCDF4")
@@ -163,6 +167,14 @@ HAS_GRAPHVIZ = is_module_available("graphviz")
 if HAS_GRAPHVIZ:
     graphviz = LazyImport("graphviz")
 
+# Matplotlib backs every plotting helper, but the core modelling API does not need
+# it, so it stays optional and is only imported when a plot is actually drawn.
+HAS_MATPLOTLIB = is_module_available("matplotlib")
+if HAS_MATPLOTLIB:
+    plt = LazyImport("matplotlib.pyplot")
+    mpl_animation = LazyImport("matplotlib.animation")
+    mpl_colors = LazyImport("matplotlib.colors")
+
 __all__ = [
     # Utility functions
     "is_module_available",
@@ -186,6 +198,7 @@ __all__ = [
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
     "HAS_GRAPHVIZ",
+    "HAS_MATPLOTLIB",
     # Lazy-loaded modules
     "Dataset",
     "rasterio",
@@ -202,4 +215,7 @@ __all__ = [
     "pyarrow",
     "xrs",
     "graphviz",
+    "plt",
+    "mpl_animation",
+    "mpl_colors",
 ]

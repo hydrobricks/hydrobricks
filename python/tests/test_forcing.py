@@ -303,6 +303,39 @@ def test_apply_pet_computation_hamon(forcing: hb.Forcing):
     assert "pet" in forcing.data2D.data_name
 
 
+def _hamon_pet_total(forcing: hb.Forcing, method: str) -> float:
+    forcing.spatialize_from_station_data(
+        variable="temperature",
+        method="additive_elevation_gradient",
+        ref_elevation=1250,
+        gradient=-0.6,
+    )
+    forcing.compute_pet(method=method, use=["t", "lat"], lat=47.3)
+    forcing.apply_operations()
+    idx = forcing.data2D.data_name.index(forcing.Variable.PET)
+    return float(forcing.data2D.data[idx].sum())
+
+
+def test_apply_pet_computation_hamon_vapor_density(
+    forcing: hb.Forcing, hydro_units: hb.HydroUnits
+):
+    # The vapour-density Hamon (pyet method=2) differs from the default Hamon
+    # (pyet method=0, an exponential variant) and yields a distinct, positive PET.
+    if not hb.HAS_PYET:
+        return
+    default_total = _hamon_pet_total(forcing, "Hamon")
+    forcing_vd = hb.Forcing(hydro_units)
+    forcing_vd.load_station_data_from_csv(
+        CATCHMENT_DIR / "meteo.csv",
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"temperature": "temp(C)"},
+    )
+    vd_total = _hamon_pet_total(forcing_vd, "Hamon_vapor_density")
+    assert vd_total > 0
+    assert vd_total != pytest.approx(default_total)
+
+
 def test_apply_pet_computation_linacre(forcing: hb.Forcing):
     if not hb.HAS_PYET:
         return
@@ -420,6 +453,119 @@ def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
     assert len(forcing.data2D.data) == 1
     assert forcing.data2D.data[0].shape[0] == 3
     assert forcing.data2D.data[0].shape[1] == 35
+
+
+def test_regrid_from_netcdf_trims_a_source_covering_a_longer_period(
+    hydro_units: hb.HydroUnits, tmp_path
+):
+    if not has_gridded_data_packages():
+        return
+
+    import xarray as xr
+
+    # A second source covering two days more than the first one, as an operational
+    # product updated at its own cadence does.
+    with xr.open_dataset(CATCHMENT_DIR / "gridded_precip.nc") as nc_data:
+        time = nc_data["time"].values
+        extra_time = time[-1] + np.array([1, 2], dtype="timedelta64[D]").astype(
+            "timedelta64[ns]"
+        )
+        longer = nc_data.reindex(
+            time=np.concatenate([time, extra_time]), method="ffill"
+        )
+        longer.to_netcdf(tmp_path / "gridded_longer.nc")
+
+    forcing = hb.Forcing(hydro_units)
+    for variable, path in (
+        ("precipitation", CATCHMENT_DIR / "gridded_precip.nc"),
+        ("temperature", tmp_path / "gridded_longer.nc"),
+    ):
+        forcing.spatialize_from_gridded_data(
+            variable=variable,
+            path=path,
+            data_crs=2056,
+            var_name="RhiresD",
+            dim_x="E",
+            dim_y="N",
+            raster_hydro_units=CATCHMENT_DIR / "unit_ids.tif",
+            apply_data_gradient=False,
+        )
+    forcing.apply_operations()
+
+    # The extra steps are dropped, and the kept ones are the right ones.
+    assert len(forcing.data2D.time) == 3
+    assert forcing.data2D.data[1].shape == (3, 35)
+    assert np.allclose(forcing.data2D.data[1], forcing.data2D.data[0])
+
+
+def _spatialize_gridded_period(hydro_units, start_date, end_date, cache_dir=None):
+    forcing = hb.Forcing(hydro_units, cache_dir=cache_dir)
+    forcing.spatialize_from_gridded_data(
+        variable="precipitation",
+        path=CATCHMENT_DIR / "gridded_precip.nc",
+        data_crs=2056,
+        var_name="RhiresD",
+        dim_x="E",
+        dim_y="N",
+        raster_hydro_units=CATCHMENT_DIR / "unit_ids.tif",
+        apply_data_gradient=False,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return forcing
+
+
+def test_load_station_data_trims_to_the_modelling_period(hydro_units: hb.HydroUnits):
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        CATCHMENT_DIR / "meteo.csv",
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"precipitation": "precip(mm/day)"},
+        start_date="1981-10-01",
+        end_date="1982-09-30",
+    )
+
+    time = pd.DatetimeIndex(forcing.data1D.time)
+    assert len(time) == 365
+    assert time[0] == pd.Timestamp("1981-10-01")
+    assert time[-1] == pd.Timestamp("1982-09-30")
+    assert len(forcing.data1D.data[0]) == 365
+
+
+def test_regrid_from_netcdf_trims_to_the_modelling_period(hydro_units: hb.HydroUnits):
+    if not has_gridded_data_packages():
+        return
+
+    forcing = _spatialize_gridded_period(hydro_units, "1962-01-02", "1962-01-03")
+    forcing.apply_operations()
+
+    assert forcing.data2D.data[0].shape == (2, 35)
+    assert pd.Timestamp(forcing.data2D.time[0]) == pd.Timestamp("1962-01-02")
+    assert pd.Timestamp(forcing.data2D.time[1]) == pd.Timestamp("1962-01-03")
+
+
+def test_regrid_from_netcdf_needs_the_period_to_be_covered(hydro_units: hb.HydroUnits):
+    if not has_gridded_data_packages():
+        return
+
+    # The data stops on 1962-01-03: the missing steps cannot be invented.
+    forcing = _spatialize_gridded_period(hydro_units, "1962-01-01", "1962-01-10")
+    with pytest.raises(hb.DataError):
+        forcing.apply_operations()
+
+
+def test_regrid_cache_miss_on_period_change(hydro_units: hb.HydroUnits, tmp_path):
+    if not has_gridded_data_packages():
+        return
+
+    for start_date in ("1962-01-01", "1962-01-02"):
+        forcing = _spatialize_gridded_period(
+            hydro_units, start_date, "1962-01-03", cache_dir=tmp_path
+        )
+        forcing.apply_operations()
+
+    assert len(list(tmp_path.glob("forcing_regrid_*.csv"))) == 2
 
 
 def _spatialize_gridded_precip(hydro_units, cache_dir=None, data_crs=2056):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -14,7 +14,6 @@ from hydrobricks._optional import (
     HAS_SHAPELY,
     HAS_XRSPATIAL,
     rasterio,
-    rxr,
     xrs,
 )
 
@@ -46,6 +45,31 @@ class CatchmentTopography:
         self.catchment: Catchment = catchment
         self.slope: np.ndarray | None = None
         self.aspect: np.ndarray | None = None
+
+    def _dem_dataarray(self) -> Any:
+        """The DEM as an xarray DataArray with its map coordinates.
+
+        Built from the open DEM dataset rather than from its file, so it also works
+        on a cropped (in-memory) DEM. The nodata cells are set to NaN so they do not
+        contaminate the neighbourhood-based computations (slope, aspect).
+        """
+        import rioxarray  # noqa: F401  (registers the .rio accessor)
+        import xarray as xr
+
+        dem = self.catchment.dem
+        data = dem.read(1).astype(float)
+        if dem.nodata is not None:
+            data[data == dem.nodata] = np.nan
+
+        transform = dem.transform
+        xs = transform.c + (np.arange(dem.width) + 0.5) * transform.a
+        ys = transform.f + (np.arange(dem.height) + 0.5) * transform.e
+
+        array = xr.DataArray(data, coords={"y": ys, "x": xs}, dims=("y", "x"))
+        if dem.crs is not None:
+            array = array.rio.write_crs(dem.crs)
+
+        return array
 
     def get_mean_elevation(self) -> float:
         """
@@ -119,9 +143,7 @@ class CatchmentTopography:
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            dem_file = self.catchment.dem.files[0]
-            with rxr.open_rasterio(dem_file) as _raw:
-                xr_dem = _raw.drop_vars("band")[0].load()
+            xr_dem = self._dem_dataarray()
 
         x_downscale_factor = self.catchment.get_dem_x_resolution() / resolution
         y_downscale_factor = self.catchment.get_dem_y_resolution() / resolution
@@ -191,11 +213,9 @@ class CatchmentTopography:
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
-            dem_file = self.catchment.dem.files[0]
-            with rxr.open_rasterio(dem_file) as _raw:
-                xr_dem = _raw.drop_vars("band")[0]
-                self.slope = xrs.slope(xr_dem, name="slope").to_numpy()
-                self.aspect = xrs.aspect(xr_dem, name="aspect").to_numpy()
+            xr_dem = self._dem_dataarray()
+            self.slope = xrs.slope(xr_dem, name="slope").to_numpy()
+            self.aspect = xrs.aspect(xr_dem, name="aspect").to_numpy()
 
     def get_hillshade(
         self, azimuth: float = 315, altitude: float = 45, z_factor: float = 1

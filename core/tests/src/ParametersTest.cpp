@@ -1,8 +1,11 @@
 #include <gtest/gtest.h>
 
+#include "HydroUnit.h"
+#include "HydroUnitProperty.h"
 #include "Parameter.h"
 #include "ParameterModifier.h"
 #include "ParametersUpdater.h"
+#include "SettingsModel.h"
 
 std::vector<double> GenerateDailyDatesVector() {
     std::vector<double> dates;
@@ -161,4 +164,96 @@ TEST(ParametersUpdater, DateUpdateYear) {
     updater.DateUpdate(GetMJD(2015, 3, 13));
 
     EXPECT_EQ(parameter.GetValue(), 5);
+}
+
+TEST(ParametersUpdater, ResetClearsRegistration) {
+    Parameter parameter("dummy_parameter");
+    ParameterModifier modifier(ParameterModifierType::Monthly);
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    modifier.SetMonthlyValues(values);
+    parameter.SetModifier(modifier);
+    parameter.SetValue(-1);
+
+    ParametersUpdater updater;
+    updater.AddParameter(&parameter);
+    updater.Reset();
+
+    // After Reset the updater is inactive: DateUpdate no longer touches the parameter.
+    updater.DateUpdate(GetMJD(2010, 3, 1));
+    EXPECT_EQ(parameter.GetValue(), -1);
+}
+
+TEST(SettingsModelMonthly, SetParameterMonthlyValuesAttachesModifier) {
+    SettingsModel settings;
+    settings.AddHydroUnitBrick("canopy", "storage");
+    settings.AddBrickParameter("capacity", 2.0f);
+
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    EXPECT_TRUE(settings.SetParameterMonthlyValues("canopy", "capacity", values));
+
+    auto modified = settings.GetParametersWithModifier();
+    ASSERT_EQ(modified.size(), 1);
+    EXPECT_TRUE(modified[0]->HasModifier());
+    // The scalar value is set to the annual mean baseline (6.5).
+    EXPECT_FLOAT_EQ(modified[0]->GetValue(), 6.5f);
+
+    // The modifier drives the value to the March entry when updated.
+    modified[0]->UpdateFromModifier(GetMJD(2010, 3, 15));
+    EXPECT_FLOAT_EQ(modified[0]->GetValue(), 3.0f);
+}
+
+TEST(SettingsModelMonthly, SetParameterMonthlyValuesWrongSize) {
+    SettingsModel settings;
+    settings.AddHydroUnitBrick("canopy", "storage");
+    settings.AddBrickParameter("capacity", 2.0f);
+
+    std::vector<float> values{1, 2, 3};
+    EXPECT_FALSE(settings.SetParameterMonthlyValues("canopy", "capacity", values));
+    EXPECT_TRUE(settings.GetParametersWithModifier().empty());
+}
+
+TEST(SettingsModelMonthly, SetParameterMonthlyValuesUnknownComponent) {
+    SettingsModel settings;
+    settings.AddHydroUnitBrick("canopy", "storage");
+    settings.AddBrickParameter("capacity", 2.0f);
+
+    std::vector<float> values{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    EXPECT_FALSE(settings.SetParameterMonthlyValues("missing", "capacity", values));
+    EXPECT_TRUE(settings.GetParametersWithModifier().empty());
+}
+
+TEST(HydroUnitProperty, EmptyUnitReturnsStoredValue) {
+    // A property stored in "mm" must return its value when queried with no unit (the
+    // spatial-parameter population path reads properties in their native unit).
+    HydroUnitProperty property("fc", 250.0, "mm");
+    EXPECT_DOUBLE_EQ(property.GetValue(), 250.0);
+    EXPECT_DOUBLE_EQ(property.GetValue("mm"), 250.0);
+}
+
+TEST(HydroUnitSpatial, ParameterOverrideStore) {
+    HydroUnit unit;
+    EXPECT_FALSE(unit.HasParameterOverride("soil:capacity"));
+
+    unit.SetParameterOverride("soil:capacity", 123.0f);
+    ASSERT_TRUE(unit.HasParameterOverride("soil:capacity"));
+    EXPECT_FLOAT_EQ(*unit.GetParameterOverridePointer("soil:capacity"), 123.0f);
+
+    // The pointer is stable and reflects updates in place (used live by the solver).
+    const float* ptr = unit.GetParameterOverridePointer("soil:capacity");
+    unit.SetParameterOverride("soil:capacity", 456.0f);
+    EXPECT_FLOAT_EQ(*ptr, 456.0f);
+}
+
+TEST(SettingsModelSpatial, SpatialBindingRegistered) {
+    SettingsModel settings;
+    settings.SetParameterSpatialFromProperty("soil_moisture", "capacity", "fc");
+
+    const auto& bindings = settings.GetSpatialParameterBindings();
+    ASSERT_EQ(bindings.size(), 1);
+    EXPECT_EQ(bindings.at({"soil_moisture", "capacity"}), "fc");
+
+    // A comma-separated component list binds several components to the same property.
+    settings.SetParameterSpatialFromProperty("a, b", "capacity", "cap");
+    EXPECT_EQ(settings.GetSpatialParameterBindings().at({"a", "capacity"}), "cap");
+    EXPECT_EQ(settings.GetSpatialParameterBindings().at({"b", "capacity"}), "cap");
 }

@@ -72,6 +72,7 @@ class ModelBuilder {
     void CreateSubBasinComponents(SettingsModel& modelSettings);
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);
     void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
+    void PopulateSpatialOverrides(SettingsModel& modelSettings, HydroUnit* unit, const string& brickName);
     void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
     void LinkSubBasinProcessesTargetBricks(SettingsModel& modelSettings);
     void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);

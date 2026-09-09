@@ -1,17 +1,38 @@
+from __future__ import annotations
+
 import logging
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.animation import FuncAnimation
-from matplotlib.colors import LightSource, ListedColormap
 
 from hydrobricks._exceptions import DependencyError
-from hydrobricks._optional import HAS_RIOXARRAY, rxr
+from hydrobricks._optional import (
+    HAS_MATPLOTLIB,
+    HAS_RIOXARRAY,
+    mpl_animation,
+    mpl_colors,
+    plt,
+    rxr,
+)
 from hydrobricks.results import Results
 
+if TYPE_CHECKING:
+    from matplotlib.colors import ListedColormap
+
 logger = logging.getLogger(__name__)
+
+
+def _check_matplotlib(operation: str) -> None:
+    """Raise a DependencyError if matplotlib is not installed."""
+    if not HAS_MATPLOTLIB:
+        raise DependencyError(
+            "matplotlib is required for plotting operations.",
+            package_name="matplotlib",
+            operation=operation,
+            install_command="pip install matplotlib",
+        )
 
 
 class Plotter:
@@ -44,6 +65,8 @@ class Plotter:
         year
             The year to plot. If None, plots the entire time series. Default: None
         """
+        _check_matplotlib("Plotter.plot_hydrograph")
+
         plt.figure()
         if year is not None:
             dates = time[time.dt.year == year]
@@ -98,6 +121,8 @@ class Plotter:
         title
             Title for the plot. If None, uses the date. Default: None
         """
+        _check_matplotlib("Plotter.plot_map_hydro_unit_value")
+
         data = results.get_hydro_units_values(component, date)
         hydro_units_ids = results.hydro_units_ids
         unit_ids_raster = Plotter._load_units_ids_raster(unit_ids_raster_path)
@@ -114,7 +139,7 @@ class Plotter:
         shaded_dem = None
         if dem_path is not None:
             dem = Plotter._load_dem(dem_path)
-            ls = LightSource(azdeg=315, altdeg=45)
+            ls = mpl_colors.LightSource(azdeg=315, altdeg=45)
             shaded_dem = ls.hillshade(dem.to_numpy(), vert_exag=0.1)
 
         # Plot
@@ -178,6 +203,8 @@ class Plotter:
         figsize
             Figure size in inches (width, height). Default: (6.4, 4.8)
         """
+        _check_matplotlib("Plotter.create_animated_map_hydro_unit_value")
+
         # Get the data
         data = results.get_hydro_units_values(component, start_date, end_date)
         dates = results.get_time_array(start_date, end_date)
@@ -202,7 +229,7 @@ class Plotter:
         shaded_dem = None
         if dem_path is not None:
             dem = Plotter._load_dem(dem_path)
-            ls = LightSource(azdeg=315, altdeg=45)
+            ls = mpl_colors.LightSource(azdeg=315, altdeg=45)
             shaded_dem = ls.hillshade(dem.to_numpy(), vert_exag=0.1)
 
         # Create the animation
@@ -246,7 +273,9 @@ class Plotter:
             return [im, title]
 
         # Create the animation
-        ani = FuncAnimation(fig, update, frames=range(len_time), blit=False)
+        ani = mpl_animation.FuncAnimation(
+            fig, update, frames=range(len_time), blit=False
+        )
 
         # Add colorbar
         cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -277,7 +306,7 @@ class Plotter:
         # Create a new colormap from the existing one
         new_colors = cmap(np.linspace(0, 1, 256))
         new_colors[0, :] = np.array([1, 1, 1, 1])  # Set the color for 0 values to white
-        new_cmap = ListedColormap(new_colors)
+        new_cmap = mpl_colors.ListedColormap(new_colors)
 
         return new_cmap
 

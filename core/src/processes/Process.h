@@ -67,13 +67,25 @@ class Process {
     [[nodiscard]] static bool HasParameter(const ProcessSettings& processSettings, std::string_view name);
 
     /**
-     * Get the value pointer of a parameter.
+     * Get the value pointer of a parameter. If the process's hydro unit carries a
+     * per-unit (spatial) override for this parameter (keyed by the parent brick), the
+     * override pointer is returned instead of the shared settings value.
      *
      * @param processSettings settings of the process containing the parameters.
      * @param name name of the parameter to get.
      * @return pointer to the value of the parameter.
      */
-    static const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
+    const float* GetParameterValuePointer(const ProcessSettings& processSettings, std::string_view name);
+
+    /**
+     * Set the parent context (hydro unit and owning brick) of the process. Called by the
+     * model builder before SetParameters so per-unit (spatial) parameter overrides can be
+     * resolved. Non-virtual so subclass SetHydroUnitProperties overrides cannot bypass it.
+     *
+     * @param unit the related hydro unit (may be null for sub-basin processes).
+     * @param brick the brick owning this process.
+     */
+    void SetParentContext(HydroUnit* unit, Brick* brick);
 
     /**
      * Set the properties of the hydro unit.
@@ -145,6 +157,29 @@ class Process {
      * @return true if the process needs to link the target brick.
      */
     [[nodiscard]] virtual bool NeedsTargetBrickLinking() const {
+        return false;
+    }
+
+    /**
+     * Check if the process needs to link a gate brick (a brick whose state
+     * modulates the process rate without receiving its flux, e.g. the soil
+     * moisture store gating the PREVAH percolation).
+     *
+     * @return true if the process needs to link a gate brick.
+     */
+    [[nodiscard]] virtual bool NeedsGateBrickLinking() const {
+        return false;
+    }
+
+    /**
+     * Check if the process takes its demand from the water container with priority when the
+     * container cannot satisfy all outgoing rates. Non-priority processes then share the
+     * remaining water proportionally. Mirrors sequential (operator-split) reference models
+     * such as PREVAH, where snow evaporation is served at the full potential rate before melt.
+     *
+     * @return true if the process has priority on the container constraints.
+     */
+    [[nodiscard]] virtual bool HasConstraintPriority() const {
         return false;
     }
 
@@ -253,6 +288,16 @@ class Process {
     }
 
     /**
+     * Add a gate brick to the process (read-only state access; no flux). Called once
+     * per gate brick; a process reading several aggregates their states.
+     *
+     * @param brick gate brick.
+     */
+    virtual void AddGateBrick(Brick*) {
+        throw ShouldNotHappen("Process::AddGateBrick - Should not be called (virtual)");
+    }
+
+    /**
      * Check if the process links several target bricks (instead of a single one).
      *
      * @return true if the process links several target bricks.
@@ -282,9 +327,9 @@ class Process {
     }
 
     /**
-     * Check if the process rate is linear in the container content (rate = k × S).
-     * Processes reporting a linear response can be integrated exactly by the
-     * analytic solver.
+     * Check if the process rate is affine in the container content
+     * (rate = k × S − offset). Processes reporting a linear response can be
+     * integrated exactly by the analytic solver.
      *
      * @return true if the process rate is linear in the content.
      */
@@ -293,13 +338,25 @@ class Process {
     }
 
     /**
-     * Get the linear response coefficient k of the process (rate = k × S).
+     * Get the linear response coefficient k of the process (rate = k × S − offset).
      * Only valid when HasLinearResponse() returns true.
      *
      * @return the linear response coefficient [1/d].
      */
     [[nodiscard]] virtual double GetLinearResponseRate() const {
         throw ShouldNotHappen("Process::GetLinearResponseRate - Should not be called (virtual)");
+    }
+
+    /**
+     * Get the constant term of the affine response (rate = k × S − offset), for the
+     * reservoirs that drain the content above a threshold θ (offset = k × θ). It is
+     * zero for a plain linear reservoir. Only valid when HasLinearResponse() returns
+     * true.
+     *
+     * @return the offset of the linear response [mm/d].
+     */
+    [[nodiscard]] virtual double GetLinearResponseOffset() const {
+        return 0;
     }
 
     /**
@@ -324,6 +381,8 @@ class Process {
     string _name;
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference
+    HydroUnit* _hydroUnit{nullptr};               // non-owning back-reference (for per-unit overrides)
+    string _parentBrickName;                      // name of the brick owning this process
     std::vector<std::unique_ptr<Flux>> _outputs;  // owning
     vecDouble _changeRates;                       // reusable buffer for the change rates (avoids per-call allocation)
 

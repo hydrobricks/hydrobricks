@@ -30,6 +30,14 @@ void ParametersUpdater::AddParameter(Parameter* parameter) {
     }
 }
 
+void ParametersUpdater::Reset() {
+    _parametersYearly.clear();
+    _parametersMonthly.clear();
+    _parametersDates.clear();
+    _active = false;
+    _previousDate = 0;
+}
+
 void ParametersUpdater::DateUpdate(double date) {
     if (!_active) {
         return;

@@ -5,6 +5,7 @@
 #include "Process.h"
 
 class Brick;
+class FluxToBrickInstantaneous;
 
 class WaterContainer {
   public:

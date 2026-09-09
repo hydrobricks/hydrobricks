@@ -146,6 +146,24 @@ class Processor {
         return _directConnectionCount;
     }
 
+    /**
+     * Flat view of one solvable process: its rate slice in the global rates vector.
+     */
+    struct SolvableProcess {
+        Process* process;     // non-owning
+        int connectionCount;  // number of rates this process contributes
+        int rateOffset;       // index of its first rate in the global rates vector
+    };
+
+    /**
+     * Flat view of one solvable brick: the range of processes it owns.
+     */
+    struct SolvableBrickEntry {
+        Brick* brick;      // non-owning
+        int processStart;  // first index in _solvableProcesses
+        int processEnd;    // one past the last index in _solvableProcesses
+    };
+
   protected:
     std::unique_ptr<Solver> _solver;  // owning
     ModelHydro* _model;               // non-owning reference
@@ -153,6 +171,12 @@ class Processor {
     int _directConnectionCount;
     vecDoublePt _stateVariableChanges;
     vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
+    // Flattened traversal of the solvable bricks and processes, built once at
+    // initialization: the model structure is fixed after the build, so the
+    // brick -> process -> connection hierarchy needs no virtual walk on every solver
+    // stage of every time step.
+    vector<SolvableProcess> _solvableProcesses;
+    vector<SolvableBrickEntry> _solvableBrickEntries;
     axd _changeRatesNoSolver;
     axd _ratesBeforeSweep;  // scratch buffer for the constraint fixpoint iteration
 
@@ -171,6 +195,12 @@ class Processor {
      * @param values the state variable changes to store.
      */
     void StoreStateVariableChanges(std::span<double*> values);
+
+    /**
+     * Flatten the solvable bricks and their processes into the traversal tables used by
+     * the per-time-step routines (EvaluateRates, ConstrainRates, ApplyRates).
+     */
+    void BuildTraversalTables();
 
     /**
      * Apply direct changes to the brick.

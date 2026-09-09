@@ -22,6 +22,7 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver->Connect(this);
     ConnectToElementsToSolve();
     ValidateFluxTopology();
+    BuildTraversalTables();
     _solver->InitializeContainers();
     _changeRatesNoSolver = axd::Zero(_directConnectionCount);
 }
@@ -119,6 +120,26 @@ void Processor::StoreStateVariableChanges(std::span<double*> values) {
     }
 }
 
+void Processor::BuildTraversalTables() {
+    _solvableProcesses.clear();
+    _solvableBrickEntries.clear();
+    _solvableBrickEntries.reserve(_iterableBricks.size());
+
+    int rateOffset = 0;
+    for (auto brick : _iterableBricks) {
+        int processStart = static_cast<int>(_solvableProcesses.size());
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            Process* process = brick->GetProcess(i);
+            int connectionCount = process->GetConnectionCount();
+            _solvableProcesses.push_back({process, connectionCount, rateOffset});
+            rateOffset += connectionCount;
+        }
+        _solvableBrickEntries.push_back({brick, processStart, static_cast<int>(_solvableProcesses.size())});
+    }
+
+    assert(rateOffset == _solvableConnectionCount);
+}
+
 int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
 }
@@ -151,25 +172,22 @@ void Processor::ResetState() {
 }
 
 void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
+    for (const auto& entry : _solvableProcesses) {
+        // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
+        // Reference into the process's reusable buffer; consumed below before the next process is queried.
+        const vecDouble& processRates = entry.process->GetChangeRates();
+        assert(static_cast<int>(processRates.size()) == entry.connectionCount);
 
-            // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
-            // Reference into the process's reusable buffer; consumed below before the next process is queried.
-            const vecDouble& processRates = process->GetChangeRates();
+        int iRate = entry.rateOffset;
+        for (int j = 0; j < static_cast<int>(processRates.size()); ++j) {
+            assert(rates.size() > iRate);
+            rates(iRate) = processRates[j];
 
-            for (int j = 0; j < processRates.size(); ++j) {
-                assert(rates.size() > iRate);
-                rates(iRate) = processRates[j];
-
-                // Link to fluxes to enforce subsequent constraints
-                if (applyConstraints) {
-                    process->StoreInOutgoingFlux(&rates(iRate), j);
-                }
-                iRate++;
+            // Link to fluxes to enforce subsequent constraints
+            if (applyConstraints) {
+                entry.process->StoreInOutgoingFlux(&rates(iRate), j);
             }
+            iRate++;
         }
     }
 
@@ -179,16 +197,13 @@ void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConst
 }
 
 void Processor::ConstrainRates(axd& rates, double timeStepInDays) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int j = 0; j < process->GetConnectionCount(); ++j) {
-                assert(rates.size() > iRate);
-                // Link to fluxes to enforce subsequent constraints
-                process->StoreInOutgoingFlux(&rates(iRate), j);
-                iRate++;
-            }
+    for (const auto& entry : _solvableProcesses) {
+        int iRate = entry.rateOffset;
+        for (int j = 0; j < entry.connectionCount; ++j) {
+            assert(rates.size() > iRate);
+            // Link to fluxes to enforce subsequent constraints
+            entry.process->StoreInOutgoingFlux(&rates(iRate), j);
+            iRate++;
         }
     }
 
@@ -216,16 +231,16 @@ void Processor::EnforceConstraints(axd& rates, double timeStepInDays) {
 }
 
 void Processor::ApplyRates(const axd& rates, double timeStepInDays) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        if (brick->IsNull()) {
+    for (const auto& brickEntry : _solvableBrickEntries) {
+        if (brickEntry.brick->IsNull()) {
             continue;
         }
-        brick->UpdateContentFromInputs();
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
-                process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
+        brickEntry.brick->UpdateContentFromInputs();
+        for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+            const auto& entry = _solvableProcesses[i];
+            int iRate = entry.rateOffset;
+            for (int iConnect = 0; iConnect < entry.connectionCount; ++iConnect) {
+                entry.process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
                 iRate++;
             }
         }

@@ -12,7 +12,7 @@
  *   S(t+h) = S(t) + h (I - (Q(S(t)) + Q(S(t+h))) / 2)
  *
  * where Q(S) is the total outflow rate of the brick's processes. The scalar
- * equation is solved by bisection, which is robust because Q is non-decreasing
+ * equation is solved by a bracketed Illinois iteration, which is robust because Q is non-decreasing
  * in S. The applied rates are the average of the start- and end-of-step process
  * rates, making the scheme second-order accurate and unconditionally stable
  * (A-stable). For very stiff reservoirs (k h >> 1) it can produce a decaying

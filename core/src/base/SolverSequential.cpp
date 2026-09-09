@@ -31,12 +31,18 @@ double SolverSequential::TotalRateAt(Brick* brick, double* contentDelta, double 
     return total;
 }
 
-void SolverSequential::StoreRatesAtCurrentContent(Brick* brick, vecDouble& rates) {
+double SolverSequential::StoreRatesAndTotalAt(Brick* brick, double* contentDelta, double offset, vecDouble& rates) {
+    *contentDelta = offset;
     rates.clear();
+    double total = 0;
     for (int i = 0; i < brick->GetProcessCount(); ++i) {
         const vecDouble& processRates = brick->GetProcess(i)->GetChangeRates();
+        for (double rate : processRates) {
+            total += rate;
+        }
         rates.insert(rates.end(), processRates.begin(), processRates.end());
     }
+    return total;
 }
 
 bool SolverSequential::Solve(double timeStepInDays) {

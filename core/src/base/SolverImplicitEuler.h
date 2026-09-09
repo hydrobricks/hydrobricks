@@ -12,8 +12,8 @@
  *   S(t+h) = S(t) + h (I - Q(S(t+h)))
  *
  * where Q(S) is the total outflow rate of the brick's processes evaluated at
- * the end-of-step content. The scalar equation is solved by bisection, which is
- * robust because Q is non-decreasing in S. All processes (including non-linear
+ * the end-of-step content. The scalar equation is solved by a bracketed Illinois
+ * iteration, which is robust because Q is non-decreasing in S. All processes (including non-linear
  * ones such as ET) are evaluated at the end-of-step state, making the scheme
  * unconditionally stable: fast-reacting or strongly non-linear reservoirs
  * cannot destabilize it, at first-order accuracy.
@@ -27,6 +27,9 @@ class SolverImplicitEuler : public SolverSequential {
      * @copydoc SolverSequential::ComputeBrickRates()
      */
     void ComputeBrickRates(Brick* brick, double content, double inflow, double timeStepInDays, int iRateStart) override;
+
+  private:
+    vecDouble _endRates;  // reusable buffer for the end-of-step process rates
 };
 
 #endif  // HYDROBRICKS_SOLVER_IMPLICIT_EULER_H

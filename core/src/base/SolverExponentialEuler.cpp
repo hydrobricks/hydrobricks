@@ -16,8 +16,7 @@ void SolverExponentialEuler::ComputeBrickRates(Brick* brick, double content, dou
     assert(*contentDelta == 0);
 
     // Rates at the start-of-step content.
-    double startTotal = TotalRateAt(brick, contentDelta, 0);
-    StoreRatesAtCurrentContent(brick, _startRates);
+    double startTotal = StoreRatesAndTotalAt(brick, contentDelta, 0, _startRates);
 
     // Linearize the total outflow around the start-of-step content by forward finite
     // difference: Q(S) ~ Q(S0) + k (S - S0).
@@ -46,8 +45,7 @@ void SolverExponentialEuler::ComputeBrickRates(Brick* brick, double content, dou
     double totalRate = std::max(inflow - (endContent - content) / h, 0.0);
 
     // Distribute over the connections proportionally to their trapezoidal-average rates.
-    TotalRateAt(brick, contentDelta, endContent - content);
-    StoreRatesAtCurrentContent(brick, _endRates);
+    StoreRatesAndTotalAt(brick, contentDelta, endContent - content, _endRates);
     assert(_startRates.size() == _endRates.size());
     double sumWeights = 0;
     for (int i = 0; i < _startRates.size(); ++i) {

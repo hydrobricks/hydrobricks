@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Building the Python extension against a vcpkg target triplet other than the host one (e.g. `x64-windows-static-md`, the usual triplet for a Python extension on Windows): `vcpkg-tool-ninja` is a host tool and only supports the native triplet, so the manifest now declares it as a host dependency instead of a target one. `pip install -e .` failed with "vcpkg-tool-ninja is only supported on 'native'" before.
+- Building the Python extension with pip's build isolation (`pip install -e .`, `pip install .`) on a machine where vcpkg has no CMake of its own yet: pip puts a CMake console-script shim first on the PATH, vcpkg selects it as the system CMake and then scrubs `PYTHONPATH` when it runs it, so the shim failed with "No module named 'cmake'" during the compiler detection. `setup.py` now adds `PYTHONPATH` to `VCPKG_KEEP_ENV_VARS`.
 
 ## 0.9.1 - 2026-09-03
 

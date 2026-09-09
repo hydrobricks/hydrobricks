@@ -42,6 +42,17 @@ class CMakeBuild(build_ext):
 
         # Ensure VCPKG is set up
         os.environ["VCPKG_LIBRARY_LINKAGE"] = "static"
+
+        # pip's build isolation installs CMake as a console-script shim that needs its
+        # own package on PYTHONPATH, and puts it first on the PATH. vcpkg picks it up as
+        # the system CMake but scrubs the environment when it spawns build tools, so the
+        # shim then fails with "No module named 'cmake'" (compiler detection, and every
+        # port build after it). Let PYTHONPATH through to keep that shim usable.
+        kept = [v for v in os.environ.get("VCPKG_KEEP_ENV_VARS", "").split(";") if v]
+        if "PYTHONPATH" not in kept:
+            kept.append("PYTHONPATH")
+        os.environ["VCPKG_KEEP_ENV_VARS"] = ";".join(kept)
+
         if "VCPKG_ROOT" not in os.environ:
             print("-- VCPKG_ROOT not found. Setting up vcpkg...")
             if not os.path.exists("vcpkg"):

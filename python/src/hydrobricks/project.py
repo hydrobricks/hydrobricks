@@ -49,10 +49,22 @@ Example project file::
       objective: kge_2012
       transform: power(0.2)
       parameters: [a_snow, A]
+      database: csv          # optional: keep every sampled set (see below)
 
 The optional ``calibration`` section declares how to optimize the parameters
 (see :meth:`Project.calibrate`); ``observations`` and a calibration period are
-then required.
+then required. Only the best set is kept by default; ``database`` writes every
+sampled set and its objective value to ``<output>/calibration.<format>``
+(``csv``, ``sql`` or ``hdf5``), which is what a convergence analysis needs::
+
+    calibration:
+      database:
+        format: csv
+        path: sampled/runs         # default: <output>/calibration
+        save_simulations: false    # default: the series are NOT kept
+
+``save_simulations`` stores the whole simulated series of every iteration —
+one column per time step, per repetition — so it is off unless asked for.
 
 The forcing can also come from gridded netCDF data — per variable, mixable
 with the station CSV — using a ``gridded`` section (the hydro units then need
@@ -331,7 +343,8 @@ class Project:
         transform: Any = None,
         parameters: list[str] | None = None,
         dbname: str | None = None,
-        dbformat: str = "ram",
+        dbformat: str | None = None,
+        save_sim: bool | None = None,
         parallel: str = "seq",
         **calibrate_kwargs: Any,
     ) -> dict:
@@ -366,7 +379,15 @@ class Project:
         parameters
             Names of the parameters to calibrate (model parameters or
             data_parameters). Required here or in the file.
-        dbname, dbformat, parallel, **calibrate_kwargs
+        dbname, dbformat, save_sim
+            Where and how SPOTPY stores every sampled parameter set, its
+            objective value and (with ``save_sim``) its simulated series.
+            Default: the file's ``calibration.database`` section, or — without
+            one — an in-memory database holding no simulation, which is all
+            :func:`~hydrobricks.trainer.get_best` needs. Keeping the
+            simulations is expensive: one series per iteration, held for the
+            whole calibration (e.g. ~1 GB for 10 000 repetitions over 40 years).
+        parallel, **calibrate_kwargs
             Forwarded to :func:`hydrobricks.trainer.calibrate`.
 
         Returns
@@ -434,12 +455,31 @@ class Project:
             transform=transform,
             periods=calib.periods,
         )
+        database = defaults.get("database")
+        if dbformat is None:
+            # Without a declared database, the sampled sets are kept in memory
+            # only: get_best reads them from there and nothing is written.
+            dbformat = database["format"] if database else "ram"
+        if dbname is None and database:
+            path = database["path"] or "calibration"
+            path = Path(path)
+            if not path.is_absolute():
+                path = (self.output_dir or Path()) / path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            dbname = str(path)
+        if save_sim is None:
+            # The simulated series of *every* iteration, kept for the whole
+            # calibration: hundreds of megabytes for a long period, for data
+            # nothing here reads. Opt in through the project file instead.
+            save_sim = bool(database["save_simulations"]) if database else False
+
         sampler = trainer.calibrate(
             spot_setup,
             algorithm,
             repetitions,
             dbname=dbname,
             dbformat=dbformat,
+            save_sim=save_sim,
             parallel=parallel,
             **calibrate_kwargs,
         )
@@ -1345,6 +1385,57 @@ def _validate_data_parameters(config: dict, errors: list[str]) -> dict:
     return out
 
 
+_DATABASE_FORMATS = ("csv", "sql", "hdf5")
+
+
+def _validate_calibration_database(section: dict, errors: list[str]) -> dict | None:
+    """Validate 'calibration.database' (keeping every sampled parameter set)."""
+    spec = section.get("database")
+    if spec is None:
+        return None
+    where = "calibration.database"
+    if isinstance(spec, str):
+        spec = {"format": spec}
+    if not isinstance(spec, dict):
+        errors.append(
+            f"{where}: expected a format name ('csv') or a mapping "
+            "(format, path, save_simulations)."
+        )
+        return None
+    _check_keys(spec, {"format", "path", "save_simulations"}, where, errors)
+
+    out: dict[str, Any] = {
+        "format": "csv",
+        "path": None,
+        "save_simulations": False,
+    }
+    fmt = _get_str(spec, "format", where, errors)
+    if fmt is not None:
+        if fmt not in _DATABASE_FORMATS:
+            errors.append(
+                f"{where}.format: expected one of "
+                f"{', '.join(_DATABASE_FORMATS)}, got '{fmt}'."
+            )
+        else:
+            out["format"] = fmt
+
+    path = _get_str(spec, "path", where, errors)
+    if path is not None:
+        out["path"] = path
+
+    save_simulations = spec.get("save_simulations")
+    if save_simulations is not None:
+        if not isinstance(save_simulations, bool):
+            errors.append(
+                f"{where}.save_simulations: expected true or false, got "
+                f"{save_simulations!r}."
+            )
+        else:
+            out["save_simulations"] = save_simulations
+
+    return out
+
+
 def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     """Validate the calibration section (how to calibrate the parameters)."""
     section = config.get("calibration")
@@ -1356,7 +1447,14 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
             "objective, transform, parameters)."
         )
         return None
-    valid = {"algorithm", "repetitions", "objective", "transform", "parameters"}
+    valid = {
+        "algorithm",
+        "repetitions",
+        "objective",
+        "transform",
+        "parameters",
+        "database",
+    }
     _check_keys(section, valid, "calibration", errors)
 
     out = {
@@ -1365,6 +1463,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "objective": section.get("objective"),
         "transform": section.get("transform"),
         "parameters": section.get("parameters"),
+        "database": _validate_calibration_database(section, errors),
     }
     if not isinstance(out["algorithm"], str):
         errors.append(

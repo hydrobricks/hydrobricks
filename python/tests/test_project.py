@@ -234,6 +234,59 @@ def test_calibration_section_validation(tmp_path):
     assert "calibration.transform:" in message
 
 
+def test_calibration_keeps_no_simulation_by_default(tmp_path):
+    """The sampled sets are kept, their simulated series are not."""
+    project = hb.load_project(calibration_config(tmp_path), base_dir=SITTER_DIR)
+    best = project.calibrate()
+
+    # One objective + the two calibrated parameters + the chain id, and no
+    # simulated series (which would add one column per time step).
+    rows = best["sampler"].datawriter.ram
+    assert len(rows) == 3
+    assert len(rows[0]) == 4
+    assert not (tmp_path / "calibration.csv").exists()
+
+
+def test_calibration_database_is_written(tmp_path):
+    """A declared database persists every sampled set to disk."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["database"] = "csv"
+    hb.load_project(config, base_dir=SITTER_DIR).calibrate()
+
+    database = tmp_path / "calibration.csv"
+    assert database.exists()
+    lines = database.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "like1,para_snow,parA,chain"
+    assert len(lines) == 4  # header + one row per repetition
+
+
+def test_calibration_database_can_keep_the_simulations(tmp_path):
+    """The simulated series are stored only when explicitly asked for."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["database"] = {
+        "format": "csv",
+        "path": "sampled/runs",
+        "save_simulations": True,
+    }
+    hb.load_project(config, base_dir=SITTER_DIR).calibrate()
+
+    database = tmp_path / "sampled" / "runs.csv"
+    assert database.exists()
+    header = database.read_text(encoding="utf-8").splitlines()[0].split(",")
+    # 365 simulated days on top of the objective, parameters and chain.
+    assert len(header) == 4 + 365
+
+
+def test_calibration_database_validation(tmp_path):
+    config = calibration_config(tmp_path)
+    config["calibration"]["database"] = {"format": "parquet", "keep": True}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "calibration.database.format: expected one of csv, sql, hdf5" in message
+    assert "calibration.database: unknown key 'keep'" in message
+
+
 def test_calibration_requires_observations_and_period(tmp_path):
     config = calibration_config(tmp_path)
     del config["observations"]

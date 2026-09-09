@@ -61,6 +61,26 @@ class WaterContainer {
     void SetOutgoingRatesToZero();
 
     /**
+     * Book the amounts of the incoming fluxes into the content changes and flag them as
+     * booked, so that ApplyConstraints accounts for them through the content instead of
+     * adding them a second time as pending inputs. The flag is cleared by Finalize.
+     *
+     * @param asStatic true to book the amounts as a static change (the incoming amount is
+     * then not part of the dynamic state integrated by the solvers), false for a dynamic one.
+     * @return the summed amount of the incoming fluxes [mm]
+     */
+    double BookIncomingFluxes(bool asStatic = false);
+
+    /**
+     * Flag the incoming amounts as no longer booked into the content changes. Needed by the
+     * multi-stage solvers: they book the inputs at the intermediate stages and then drop the
+     * dynamic changes again (Processor::ResetState) before constraining the combined rates.
+     */
+    void ResetInputBooking() {
+        _inputsBooked = false;
+    }
+
+    /**
      * Finalize the water container computation.
      */
     void Finalize();
@@ -358,6 +378,7 @@ class WaterContainer {
     const float* _capacity;        // non-owning reference
     bool _infiniteStorage;
     bool _allowNegativeContent;
+    bool _inputsBooked;                                    // incoming amounts already in the content changes
     Brick* _parent;                                        // non-owning reference
     Process* _overflow;                                    // non-owning reference
     vector<Flux*> _inputs;                                 // non-owning references

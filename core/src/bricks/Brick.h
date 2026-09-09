@@ -226,6 +226,12 @@ class Brick {
     virtual void UpdateContentFromInputs();
 
     /**
+     * Flag the incoming amounts as no longer booked into the content changes (see
+     * WaterContainer::ResetInputBooking).
+     */
+    virtual void ResetInputBooking();
+
+    /**
      * Apply the constraints to the water container.
      *
      * @param timeStep time step for the simulation.

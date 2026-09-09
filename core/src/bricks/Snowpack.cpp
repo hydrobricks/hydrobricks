@@ -116,7 +116,7 @@ void Snowpack::UpdateContentFromInputs() {
     // consistent age (PREVAH sxp_core.f08 / mxp_snow.f90): reset to 0 on a fresh
     // snowfall, otherwise increment by one step while the snow persists (reset when the
     // snowpack is empty). The content here is still the previous step's committed value.
-    _snowfallInput = _snow->SumIncomingFluxes();
+    _snowfallInput = _snow->BookIncomingFluxes(true);
     if (_snowfallInput >= 0.01) {
         _snowAge = 0;
     } else if (_snow->GetContentWithoutChanges() > 0.01) {
@@ -125,8 +125,12 @@ void Snowpack::UpdateContentFromInputs() {
         _snowAge = 0;
     }
 
-    _snow->AddAmountToStaticContentChange(_snowfallInput);
-    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
+    _water->BookIncomingFluxes();
+}
+
+void Snowpack::ResetInputBooking() {
+    _snow->ResetInputBooking();
+    _water->ResetInputBooking();
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {

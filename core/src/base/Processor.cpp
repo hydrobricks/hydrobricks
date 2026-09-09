@@ -141,6 +141,13 @@ void Processor::ResetState() {
     for (auto value : _stateVariableChanges) {
         *value = 0;
     }
+
+    // Zeroing the dynamic content changes also drops the input amounts that ApplyRates
+    // booked at the intermediate stages, so the constraint enforcement has to account for
+    // them as pending inputs again.
+    for (auto brick : _iterableBricks) {
+        brick->ResetInputBooking();
+    }
 }
 
 void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {

@@ -248,6 +248,22 @@ def test_hbv96_water_balance_closes_without_rain_to_snowpack(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
+def test_hbv96_water_balance_closes_with_rain_on_a_refreezing_snowpack(tmp_path):
+    """Rain reaches the snowpack liquid store while refreezing is active.
+
+    With tt at the top of the rain/snow transition band (0-2 C by default), the days
+    that produce rain are also the days that refreeze it. Refreezing takes a
+    content-independent amount, so the liquid store gets overdrawn unless the constraint
+    enforcement sees the true content (the rain must not be counted twice).
+    """
+    model, forcing = _run(
+        tmp_path,
+        record_all=True,
+        params={"tt": 2.0, "cfmax": 10.0, "cfr": 0.1},
+    )
+    assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
 # ---------------------------------------------------------------------------
 # C — Behaviour and limit conditions
 # ---------------------------------------------------------------------------

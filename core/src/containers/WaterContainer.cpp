@@ -11,6 +11,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _capacity(nullptr),
       _infiniteStorage(false),
       _allowNegativeContent(false),
+      _inputsBooked(false),
       _parent(brick),
       _overflow(nullptr) {}
 
@@ -96,17 +97,26 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         }
     }
 
-    // Get incoming change rates
+    // Get incoming change rates. The amount-carrying inputs (forcing, static and
+    // instantaneous fluxes) are added separately as inputsStatic, but only when the parent
+    // brick has not booked them into the content changes yet (BookIncomingFluxes). In the
+    // direct pass the brick books its inputs before the constraints are enforced, so the
+    // content read below already carries them and counting the amounts again would let the
+    // outgoing rates draw on water that is not there (negative content at Finalize).
     vecDoublePt incomingRates;
     double inputs = 0;
     double inputsStatic = 0;
     for (auto& input : _inputs) {
         if (input->IsInstantaneous()) {
-            inputsStatic += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
+            if (!_inputsBooked) {
+                inputsStatic += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
+            }
             continue;
         }
         if (input->IsForcing() || input->IsStatic()) {
-            inputsStatic += input->GetAmount();
+            if (!_inputsBooked) {
+                inputsStatic += input->GetAmount();
+            }
             continue;
         }
         double* changeRate = input->GetChangeRatePointer();
@@ -125,7 +135,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
     }
 
     double change = inputs - outputs;
-    double content = GetContentWithDynamicChanges();
+    // Once the inputs are booked, the static changes are part of the content; otherwise they
+    // are still to come and are accounted for through inputsStatic.
+    double content = _inputsBooked ? GetContentWithChanges() : GetContentWithDynamicChanges();
 
     // Avoid negative content (unless the container is allowed to go negative, e.g. a bottomless
     // routing store whose level can be negative).
@@ -207,6 +219,7 @@ void WaterContainer::SetOutgoingRatesToZero() {
 }
 
 void WaterContainer::Finalize() {
+    _inputsBooked = false;
     if (_infiniteStorage) return;
     _content += _contentChangeDynamic + _contentChangeStatic;
     _contentChangeDynamic = 0;
@@ -232,6 +245,20 @@ void WaterContainer::Reset() {
     _content = _initialState;
     _contentChangeDynamic = 0;
     _contentChangeStatic = 0;
+    _inputsBooked = false;
+}
+
+double WaterContainer::BookIncomingFluxes(bool asStatic) {
+    double amount = SumIncomingFluxes();
+    if (asStatic) {
+        AddAmountToStaticContentChange(amount);
+    } else {
+        AddAmountToDynamicContentChange(amount);
+    }
+    // Flag the amounts as booked so that ApplyConstraints does not count them twice.
+    _inputsBooked = true;
+
+    return amount;
 }
 
 void WaterContainer::SaveAsInitialState() {

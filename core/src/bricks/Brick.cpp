@@ -173,7 +173,11 @@ void Brick::UpdateContent(double value, ContentType type) {
 }
 
 void Brick::UpdateContentFromInputs() {
-    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
+    _water->BookIncomingFluxes();
+}
+
+void Brick::ResetInputBooking() {
+    _water->ResetInputBooking();
 }
 
 void Brick::ApplyConstraints(double timeStep) {

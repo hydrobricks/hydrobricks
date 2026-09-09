@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixing a double counting of the incoming water in the storage constraints, which let a store be drawn below zero (logged as `Water container <name> has negative content`) and silently created water when the content was clamped back to zero. Bricks computed directly (land covers, snowpacks) book their incoming amounts before the constraints are enforced, and the constraint enforcement was adding those same amounts a second time. Mostly visible on the snowpack liquid store of HBV and PREVAH-UniBE, where the rain is routed to the snowpack and the refreezing takes a content-independent amount: the overdraw appeared when the melting temperature sat inside the rain/snow transition band.
 - Fixing the scaling of the simulated glacier mass balance. The ablation term was previously under-counted by one to two orders of magnitude.
 - Fixing a crash (segmentation fault) when dumping the outputs of a simulation that records no per–hydro-unit value, for example a project file without a `recordings` section.
 - Fixing the release of the raster file handle when upscaling the mean annual potential radiation, which prevented computing the radiation twice into the same output directory on Windows.

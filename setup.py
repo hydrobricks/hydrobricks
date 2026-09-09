@@ -31,9 +31,28 @@ class CMakeBuild(build_ext):
         # Flag to build in debug mode
         # self.debug = True
 
-        # Define the build directory
+        # Check if the debug mode is enabled
+        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
+        cfg = "Debug" if debug else "Release"
+        print(f"-- Building in {cfg} mode")
+
+        # Define the build directory. For an editable install, setuptools points
+        # build_temp at a throw-away directory that it deletes as soon as the build is
+        # over; on Windows the MSBuild processes outlive the build and keep a handle on
+        # their output directory, so that deletion fails ("[WinError 32] The process
+        # cannot access the file because it is being used by another process") and takes
+        # the whole install down after the extension has been built. Build in a stable
+        # directory under build/ instead (the one a non-editable build already uses):
+        # the temporary directory is then empty when setuptools removes it, and the
+        # CMake cache survives from one build to the next.
         ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        build_temp = os.path.join(self.build_temp, ext.name)
+        build_root = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "build",
+            f"temp.{self.plat_name}-{sys.implementation.cache_tag}",
+            cfg,
+        )
+        build_temp = os.path.join(build_root, ext.name)
         os.makedirs(build_temp, exist_ok=True)
 
         # Required for auto-detection & inclusion of auxiliary "native" libs
@@ -81,11 +100,6 @@ class CMakeBuild(build_ext):
         print(f"-- Path build_temp: {build_temp}")
         print(f"-- Path ext_dir: {ext_dir}")
         print(f"-- Python executable: {sys.executable}")
-
-        # Check if the debug mode is enabled
-        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
-        cfg = "Debug" if debug else "Release"
-        print(f"-- Building in {cfg} mode")
 
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={ext_dir}",

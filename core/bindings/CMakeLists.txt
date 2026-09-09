@@ -44,7 +44,9 @@ install(TARGETS _hydrobricks LIBRARY DESTINATION hydrobricks)
 
 # COPY BINARY FILES
 
-if (WIN32)
+# A static triplet (e.g. x64-windows-static-md, the usual one for a Python extension) links the dependencies into the
+# module: there is no runtime DLL to copy, and nothing to warn about.
+if (WIN32 AND NOT VCPKG_TARGET_TRIPLET MATCHES "static")
     # Find all DLL files in the vcpkg installed directory. vcpkg installs the manifest next to the directory it runs
     # from, which is the build directory for a plain CMake build but the source directory when pip drives the build (its
     # build directory is a temporary one): both are searched, or the module would be built without the runtime DLLs it

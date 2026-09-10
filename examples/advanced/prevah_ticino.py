@@ -8,12 +8,19 @@ taken from the soil data via a spatial parameter (``set_spatial``), and PREVAH's
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
 cross-implementation reproduction: hydrobricks PREVAH-UniBE against the original Fortran
-PREVAH (1984-2000). It reaches NSE ~= 0.96 over the validation period.
+PREVAH (1984-2000). It reaches NSE ~= 0.98 over the validation period.
 
-Note that the PET is the default (pyet) Hamon, which runs markedly hotter than the
-vapour-density Hamon of PREVAH; the parameters below were calibrated against the
-original model, so the two offset each other. Switching to
-``method="Hamon_vapor_density"`` is more faithful but needs a recalibration.
+Every parameter below is the original PREVAH one (``cal_2020pest.inp``) and every
+option follows the method switches of that control file; **nothing is calibrated
+here**. The processes are the faithful ones throughout: the vapour-density Hamon PET,
+the albedo-reduced soil, canopy and snow evaporation, the PREVAH snow water release
+(CEXLIQ) and the wet-surface evaporation from the groundwater.
+
+The one component of the reference still missing is the snowmelt: the control file
+selects the radiation-corrected (Hock) melt, which needs the potential clear-sky
+radiation of each hydrotope. That is computed from the latitude, slope and aspect of
+the hydrotope, and this dataset does not carry the slope and aspect columns yet, so
+the example falls back on the seasonal degree-day melt.
 
 The data lives in ``tests/files/catchments/ch_ticino_bellinzona/`` (see its
 ``_readme.txt`` for provenance). Run from anywhere:
@@ -74,9 +81,16 @@ units_df = pd.read_csv(DATA / "hydro_units.csv", header=0, skiprows=[1])
 hydro_units.add_property(("fc", "mm"), units_df["fc"].to_numpy())
 mez = units_df["mez"].to_numpy()
 
+# PREVAH's wet surfaces evaporate from the groundwater at et_pot * wet_surface
+# (0.7 on wetlands, 0.9 on open water, 0 elsewhere). Each hydrotope of this dataset
+# carries a single cover, so the fraction follows the wetland area.
+wet = np.where(units_df["area_wetland"].to_numpy() > 0, 0.7, 0.0)
+hydro_units.add_property(("wet", "-"), wet)
+
 # ---------------------------------------------------------------------------
 # 2. Forcing: each HRU reads its meteo-zone precipitation and temperature series;
-#    PET is computed with the Hamon method (pyet).
+#    PET is the vapour-density Hamon used by PREVAH (the default 'Hamon' of pyet is
+#    an exponential variant that runs markedly hotter).
 # ---------------------------------------------------------------------------
 precip = pd.read_csv(DATA / "precipitation.csv", parse_dates=["date"])
 temp = pd.read_csv(DATA / "temperature.csv", parse_dates=["date"])
@@ -91,7 +105,7 @@ forcing = hb.Forcing(hydro_units)
 forcing.data2D.time = precip["date"]
 forcing.data2D.data_name = [forcing.Variable.P, forcing.Variable.T]
 forcing.data2D.data = [p_zone[:, col], t_zone[:, col]]  # (n_time, n_units)
-forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=LATITUDE)
+forcing.compute_pet(method="Hamon_vapor_density", use=["t", "lat"], lat=LATITUDE)
 forcing.apply_operations()
 
 # ---------------------------------------------------------------------------
@@ -124,6 +138,14 @@ model = models.PrevahUniBE(
     # et_pot * veg_cov, so the covers all carry a canopy with the PREVAH canopy ET.
     interception_covers=COVERS,
     canopy_et_process="et:open_water_prevah",
+    # PREVAH reduces the potential rate by the surface albedo, (1 - albedo)/0.8, on
+    # the soil, the canopy and the snow alike; the snow albedo ages between snowfalls.
+    soil_et_process="et:prevah",
+    snow_sublimation_process="sublimation:prevah",
+    # Snow water release of the ablation branch, with the CEXLIQ graded partition.
+    snow_water_retention_process="outflow:snow_holding_prevah",
+    # Wet-surface evaporation drawn from the groundwater store (PREVAH's EWET).
+    wet_et_from_groundwater=True,
     record_all=True,
 )
 parameters = model.generate_parameters()
@@ -141,15 +163,15 @@ parameters.set_values(
         "melt_t_snow": -1.0,
         "cwh": 0.1,
         "cfr": 0.1,
-        # pyet-Hamon runs hotter than PREVAH's Hamon; a modest snow-evaporation factor
-        # avoids doubling the snow ablation loss.
-        "sublimation_pet_factor": 0.3,
+        # snow water release: the retention collapses above the melt threshold, and
+        # CEXLIQ grades how much of the fresh melt passes straight through.
+        "holding_melt_t": -1.0,
+        "cexliq": 0.5,
         # soil moisture / ET (per-cover beta, all at the calibrated CBETA)
         "fc": 13.7,  # global fallback; the per-HRU fc property overrides this
         "beta_open": 0.5,
         "beta_forest": 0.5,
         "beta_wetland": 0.5,
-        "cu": 0.7,
         "wet_fraction": 0.7,  # PREVAH wetland wet-surface fraction
         # upper zone (surface runoff Q0 threshold, interflow Q1)
         "k0": 24.0 / 29.146,
@@ -165,9 +187,16 @@ parameters.set_values(
         "k_gw3": 24.0 / 9000.0,
     }
 )
+# The control file selects the Hamon evapotranspiration method, whose branch in
+# PREVAH evaporates the soil at the potential rate with no soil-moisture limitation.
+# Setting the CU limit to ~0 reproduces that (the range has to be opened first).
+parameters.change_range("cu", 0.0, 1.0)
+parameters.set_values({"cu": 1e-6})
+
 # The headline: each HRU uses its own field capacity from the soil data (the `fc`
-# property) instead of one global value.
+# property) instead of one global value; likewise the wet-surface fraction.
 parameters.set_spatial("fc", "fc")
+parameters.set_spatial("ow_et_factor", "wet")
 
 # PREVAH's monthly vegetation tables: the canopy interception capacity of each cover
 # (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.

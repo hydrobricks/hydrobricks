@@ -16,11 +16,14 @@ here**. The processes are the faithful ones throughout: the vapour-density Hamon
 the albedo-reduced soil, canopy and snow evaporation, the PREVAH snow water release
 (CEXLIQ) and the wet-surface evaporation from the groundwater.
 
-The one component of the reference still missing is the snowmelt: the control file
-selects the radiation-corrected (Hock) melt, which needs the potential clear-sky
-radiation of each hydrotope. That is computed from the latitude, slope and aspect of
-the hydrotope, and this dataset does not carry the slope and aspect columns yet, so
-the example falls back on the seasonal degree-day melt.
+The snowmelt is the radiation-corrected (Hock) one selected by the control file. It
+is driven by ``potential_radiation.csv``, the potential clear-sky radiation of each
+hydrotope for every day of the year, which PREVAH derives from the latitude, slope and
+aspect of the hydrotope with no terrain shading. That table comes with the dataset
+because the calibrated radiation melt factor of the control file multiplies exactly
+that quantity: a radiation computed from a DEM is a different measure (it carries the
+atmospheric attenuation and another daily-integration convention) and would need its
+own coefficient.
 
 The data lives in ``tests/files/catchments/ch_ticino_bellinzona/`` (see its
 ``_readme.txt`` for provenance). Run from anywhere:
@@ -88,7 +91,8 @@ wet = np.where(units_df["area_wetland"].to_numpy() > 0, 0.7, 0.0)
 hydro_units.add_property(("wet", "-"), wet)
 
 # ---------------------------------------------------------------------------
-# 2. Forcing: each HRU reads its meteo-zone precipitation and temperature series;
+# 2. Forcing: each HRU reads its meteo-zone precipitation and temperature series,
+#    plus the potential radiation of its own slope and aspect (day of the year).
 #    PET is the vapour-density Hamon used by PREVAH (the default 'Hamon' of pyet is
 #    an exponential variant that runs markedly hotter).
 # ---------------------------------------------------------------------------
@@ -106,6 +110,14 @@ forcing.data2D.time = precip["date"]
 forcing.data2D.data_name = [forcing.Variable.P, forcing.Variable.T]
 forcing.data2D.data = [p_zone[:, col], t_zone[:, col]]  # (n_time, n_units)
 forcing.compute_pet(method="Hamon_vapor_density", use=["t", "lat"], lat=LATITUDE)
+
+# Potential radiation: one row per day of the year, one column per hydro unit.
+rad = pd.read_csv(DATA / "potential_radiation.csv")
+rad_by_doy = rad.drop(columns="day_of_year").to_numpy()
+doys = pd.DatetimeIndex(precip["date"]).dayofyear.to_numpy()
+forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
+forcing.data2D.data.append(rad_by_doy[doys - 1, :])  # (n_time, n_units)
+
 forcing.apply_operations()
 
 # ---------------------------------------------------------------------------
@@ -126,6 +138,16 @@ observations.load_from_csv(
     content={"discharge": "discharge (mm/d)"},
 )
 
+# The gauged discharge of the Ticino at Bellinzona, for reference: the point of this
+# example is the agreement with the Fortran, but both models face the same reality.
+measured = hb.DischargeObservations(periods.simulation.start, periods.simulation.end)
+measured.load_from_csv(
+    DATA / "discharge.csv",
+    column_time="date",
+    time_format="%d/%m/%Y",
+    content={"discharge": "discharge_spec(mm/d)"},
+)
+
 # ---------------------------------------------------------------------------
 # 4. The PREVAH model with the calibrated parameters
 # ---------------------------------------------------------------------------
@@ -138,6 +160,10 @@ model = models.PrevahUniBE(
     # et_pot * veg_cov, so the covers all carry a canopy with the PREVAH canopy ET.
     interception_covers=COVERS,
     canopy_et_process="et:open_water_prevah",
+    # Radiation-corrected melt: (CSNOMF + CASNO * R_pot) * (T - T0). The refreezing
+    # then needs its own seasonal factor, the melt process no longer carrying one.
+    snow_melt_process="melt:temperature_index",
+    snow_refreezing_process="refreeze:degree_day_seasonal",
     # PREVAH reduces the potential rate by the surface albedo, (1 - albedo)/0.8, on
     # the soil, the canopy and the snow alike; the snow albedo ages between snowfalls.
     soil_et_process="et:prevah",
@@ -149,6 +175,8 @@ model = models.PrevahUniBE(
     record_all=True,
 )
 parameters = model.generate_parameters()
+# PREVAH melts from -1 degC; the default range of the melt threshold starts at 0.
+parameters.change_range("melt_t_snow", -3.0, 5.0)
 parameters.set_values(
     {
         # precipitation / snow correction factors
@@ -157,12 +185,16 @@ parameters.set_values(
         # snow/rain linear transition (all snow below t_start, all rain above t_end)
         "prec_t_start": -0.75,
         "prec_t_end": 0.75,
-        # seasonal degree-day snow melt
-        "a_snow_min": 1.0,
-        "a_snow_max": 2.0,
+        # radiation-corrected snow melt (CSNOMF, CASNO)
+        "melt_factor": 1.0038092221,
+        "r_snow": 5.5527817e-5,
         "melt_t_snow": -1.0,
+        # refreezing: CRFR times the seasonal factor between TMFMIN and TMFMAX
         "cwh": 0.1,
         "cfr": 0.1,
+        "cfr_ddf_min": 1.0,
+        "cfr_ddf_max": 2.0,
+        "cfr_melt_t": -1.0,
         # snow water release: the retention collapses above the melt threshold, and
         # CEXLIQ grades how much of the fresh melt passes straight through.
         "holding_melt_t": -1.0,
@@ -218,6 +250,12 @@ scores = hb.evaluate_periods(model, observations, periods, metrics=("nse", "kge_
 print("\nhydrobricks PREVAH-UniBE vs Fortran PREVAH (Ticino-Bellinzona):")
 print(scores.round(3))
 
+measured_scores = hb.evaluate_periods(
+    model, measured, periods, metrics=("nse", "kge_2012")
+)
+print("\nhydrobricks PREVAH-UniBE vs the gauged discharge:")
+print(measured_scores.round(3))
+
 # ---------------------------------------------------------------------------
 # 6. Plot the daily hydrograph (a sample year) and the monthly climatology
 # ---------------------------------------------------------------------------
@@ -230,10 +268,12 @@ try:
     time = pd.to_datetime(model.get_recorded_time())
     sim = np.asarray(model.get_outlet_discharge())
     obs = np.asarray(observations.data[0])
-    df = pd.DataFrame({"sim": sim, "obs": obs}, index=time)
+    gauge = np.asarray(measured.data[0])
+    df = pd.DataFrame({"sim": sim, "obs": obs, "gauge": gauge}, index=time)
 
     fig, ax = plt.subplots(1, 2, figsize=(14, 4))
     yr = df.loc["1998"]
+    ax[0].plot(yr.index, yr["gauge"], color="0.65", lw=1.0, label="measured")
     ax[0].plot(yr.index, yr["obs"], "k-", lw=1.0, label="Fortran PREVAH")
     ax[0].plot(yr.index, yr["sim"], "C1-", lw=0.9, label="hydrobricks PREVAH-UniBE")
     ax[0].set_title("Daily discharge — 1998")
@@ -241,6 +281,7 @@ try:
     ax[0].legend(fontsize=8)
 
     clim = df.dropna().groupby(df.dropna().index.month).mean()
+    ax[1].plot(clim.index, clim["gauge"], "^-", color="0.65", label="measured")
     ax[1].plot(clim.index, clim["obs"], "ks-", label="Fortran PREVAH")
     ax[1].plot(clim.index, clim["sim"], "C1o-", label="hydrobricks PREVAH-UniBE")
     ax[1].set_title("Monthly mean discharge")

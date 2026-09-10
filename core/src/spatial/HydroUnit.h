@@ -114,6 +114,26 @@ class HydroUnit {
     [[nodiscard]] const float* GetParameterOverridePointer(const string& key) const;
 
     /**
+     * Set the 12 monthly values of a per-unit parameter override, keyed by
+     * "<brickName>:<paramName>". Used for parameters that are both spatial and monthly
+     * (e.g. a field capacity built from a per-unit soil map and a monthly rooting
+     * depth). The value the brick reads is seeded with the annual mean and is then
+     * rewritten at every month change by the ParametersUpdater.
+     *
+     * @param key The override key ("<brickName>:<paramName>").
+     * @param values The 12 monthly values (January to December).
+     */
+    void SetParameterOverrideMonthly(const string& key, const vecFloat& values);
+
+    /**
+     * Get the per-unit monthly parameter overrides, as pairs of the value to write and
+     * the 12 monthly values to pick from. Registered with the ParametersUpdater.
+     *
+     * @return The monthly overrides (pointers into this unit's override storage).
+     */
+    [[nodiscard]] vector<std::pair<float*, const vecFloat*>> GetMonthlyParameterOverrides();
+
+    /**
      * Add a brick to the hydro unit.
      *
      * @param brick The brick to add.
@@ -472,12 +492,13 @@ class HydroUnit {
     std::vector<std::unique_ptr<Brick>> _bricks;                                   // owning
     std::unordered_map<string, Brick*> _brickMap;                                  // non-owning view into _bricks
     std::vector<LandCover*> _landCoverBricks;                                      // non-owning view into _bricks
-    std::unordered_map<string, LandCover*> _landCoverMap;    // non-owning view into _landCoverBricks
-    std::vector<std::unique_ptr<Splitter>> _splitters;       // owning
-    std::unordered_map<string, Splitter*> _splitterMap;      // non-owning view into _splitters
-    std::vector<std::unique_ptr<Forcing>> _forcing;          // owning
-    std::unordered_map<VariableType, Forcing*> _forcingMap;  // non-owning view into _forcing
-    std::unordered_map<string, float> _paramOverrides;       // per-unit spatial parameter values
+    std::unordered_map<string, LandCover*> _landCoverMap;         // non-owning view into _landCoverBricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;            // owning
+    std::unordered_map<string, Splitter*> _splitterMap;           // non-owning view into _splitters
+    std::vector<std::unique_ptr<Forcing>> _forcing;               // owning
+    std::unordered_map<VariableType, Forcing*> _forcingMap;       // non-owning view into _forcing
+    std::unordered_map<string, float> _paramOverrides;            // per-unit spatial parameter values
+    std::unordered_map<string, vecFloat> _paramOverridesMonthly;  // per-unit monthly values (Jan..Dec)
 };
 
 #endif

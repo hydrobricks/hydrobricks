@@ -179,6 +179,28 @@ class ModelSettings:
             component, name, property_name
         )
 
+    def set_parameter_spatial_monthly_from_properties(
+        self, component: str, name: str, property_names: list[str]
+    ) -> None:
+        """
+        Bind a parameter to 12 per-unit hydro-unit properties, one per calendar month.
+
+        Each hydro unit then follows its own monthly series for this parameter.
+
+        Parameters
+        ----------
+        component
+            Name of the component (brick) owning the parameter.
+        name
+            Name of the parameter.
+        property_names
+            Names of the 12 hydro-unit properties holding the per-unit values, from
+            January to December.
+        """
+        self.settings.set_parameter_spatial_monthly_from_properties(
+            component, name, [str(p) for p in property_names]
+        )
+
     def get_structure(self) -> list:
         """
         Export the model structure (bricks, processes, fluxes, splitters).

@@ -1159,6 +1159,30 @@ void SettingsModel::SetParameterSpatialFromProperty(const string& component, con
     _spatialParameterBindings[{component, name}] = property;
 }
 
+void SettingsModel::SetParameterSpatialMonthlyFromProperties(const string& component, const string& name,
+                                                             const vecStr& properties) {
+    if (properties.size() != 12) {
+        throw ModelConfigError(
+            std::format("The parameter '{}' needs 12 monthly properties (got {}).", name, properties.size()));
+    }
+
+    // A comma-separated component list binds the same properties on several components.
+    if (component.find(',') != string::npos) {
+        std::istringstream ss(component);
+        string tok;
+        while (std::getline(ss, tok, ',')) {
+            tok.erase(0, tok.find_first_not_of(" "));
+            tok.erase(tok.find_last_not_of(" ") + 1);
+            if (!tok.empty()) {
+                _spatialMonthlyParameterBindings[{tok, name}] = properties;
+            }
+        }
+        return;
+    }
+
+    _spatialMonthlyParameterBindings[{component, name}] = properties;
+}
+
 vector<Parameter*> SettingsModel::GetParametersWithModifier() {
     vector<Parameter*> result;
 

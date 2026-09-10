@@ -89,6 +89,14 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
     for (Parameter* parameter : modelSettings.GetParametersWithModifier()) {
         _parametersUpdater.AddParameter(parameter);
     }
+
+    // Register the per-unit monthly overrides too (a parameter that is both spatial and
+    // monthly): the updater writes each unit's own value for the month.
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        for (auto& [target, values] : _subBasin->GetHydroUnit(iUnit)->GetMonthlyParameterOverrides()) {
+            _parametersUpdater.AddUnitMonthlyOverride(target, values);
+        }
+    }
 }
 
 bool ModelHydro::IsValid() const {

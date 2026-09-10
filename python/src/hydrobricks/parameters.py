@@ -1054,6 +1054,9 @@ class ParameterSet:
         # Spatial (per-unit) parameters: DataFrame index -> hydro-unit property name.
         # The scalar 'value' is kept as a fallback for units lacking the property.
         self._spatial: dict[Hashable, str] = {}
+        # Spatial and monthly parameters: DataFrame index -> the 12 hydro-unit property
+        # names (Jan..Dec). Each unit follows its own monthly series.
+        self._spatial_monthly: dict[Hashable, list[str]] = {}
 
     @property
     def allow_changing(self) -> list[str]:
@@ -1531,12 +1534,63 @@ class ParameterSet:
                 f'The parameter "{name}" already has monthly values and cannot '
                 f"also be spatial: the per-unit value takes precedence over the "
                 f"shared one that the monthly update writes, so the monthly "
-                f"variation would be silently lost.",
+                f"variation would be silently lost. Use set_spatial_monthly() to "
+                f"give each unit its own monthly series.",
                 item_name=name,
                 item_value=property_name,
                 reason="Parameter is already monthly",
             )
+        self._spatial.pop(index, None)
+        self._spatial_monthly.pop(index, None)
         self._spatial[index] = property_name
+
+    def set_spatial_monthly(self, name: str, property_names: list[str]) -> None:
+        """
+        Make a parameter spatial and monthly: each unit gets its own monthly series.
+
+        Each hydro unit uses its own value for every calendar month, taken from 12
+        hydro-unit properties (added via ``HydroUnits.add_property``), January first.
+        This is the combination of ``set_spatial`` and ``set_monthly_values``, for a
+        parameter that varies both in space and through the year — PREVAH's soil
+        moisture capacity, for instance, which combines a per-unit soil map with a
+        rooting depth that depends on the land use and the month.
+
+        The per-unit values are given as 12 properties rather than as a per-unit
+        value times a monthly shape, because the two are not always separable: PREVAH
+        caps the monthly rooting depth with the unit's own soil depth, so the shape of
+        the year differs from unit to unit.
+
+        The scalar value set via ``set_values`` is kept as a fallback for the units
+        lacking the properties, so it must still be defined. A unit missing any of the
+        12 properties falls back on it entirely.
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+        property_names
+            The 12 hydro-unit property names holding the per-unit values, from January
+            to December.
+        """
+        if len(property_names) != 12:
+            raise ConfigurationError(
+                f'The spatial monthly properties for "{name}" must have 12 entries '
+                f"(got {len(property_names)}).",
+                item_name=name,
+                item_value=len(property_names),
+                reason="Expected 12 monthly properties",
+            )
+
+        index = self._get_parameter_index(name)
+        if index in self._monthly_values:
+            raise ConfigurationError(
+                f'The parameter "{name}" already has shared monthly values and cannot '
+                f"also take per-unit monthly values.",
+                item_name=name,
+                reason="Parameter is already monthly",
+            )
+        self._spatial.pop(index, None)
+        self._spatial_monthly[index] = list(property_names)
 
     def get_spatial_parameters(self) -> list[tuple[str, str, str]]:
         """
@@ -1554,6 +1608,23 @@ class ParameterSet:
                 continue
             spatial.append((row["component"], row["name"], property_name))
         return spatial
+
+    def get_spatial_monthly_parameters(self) -> list[tuple[str, str, list[str]]]:
+        """
+        Return the spatial and monthly (per-unit, per-month) model parameters.
+
+        Returns
+        -------
+        A list of ``(component, name, properties)`` tuples (one per parameter), used to
+        push the bindings to the model settings. Data parameters are excluded.
+        """
+        spatial_monthly = []
+        for index, property_names in self._spatial_monthly.items():
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            spatial_monthly.append((row["component"], row["name"], property_names))
+        return spatial_monthly
 
     def get_transform(self, name: str) -> ParameterTransform | None:
         """
@@ -2626,12 +2697,13 @@ class ParameterSet:
 
     def _check_not_spatial(self, index: Hashable, name: str) -> None:
         """
-        Reject a monthly value on a parameter that is already spatial.
+        Reject shared monthly values on a parameter that is already spatial.
 
-        The two mechanisms are mutually exclusive by construction: a spatial
-        parameter is read from a per-unit override, which takes precedence over the
-        shared value that the monthly update writes, so the monthly variation would
-        never reach the units carrying the property.
+        The two mechanisms cannot be combined this way: a spatial parameter is read
+        from a per-unit override, which takes precedence over the shared value that
+        the monthly update writes, so the monthly variation would never reach the
+        units carrying the property. Use ``set_spatial_monthly`` instead, which gives
+        each unit its own monthly series.
 
         Parameters
         ----------
@@ -2643,18 +2715,28 @@ class ParameterSet:
         Raises
         ------
         ConfigurationError
-            If the parameter is already bound to a hydro-unit property.
+            If the parameter is already bound to hydro-unit properties.
         """
         if index in self._spatial:
             raise ConfigurationError(
                 f'The parameter "{name}" is spatial (bound to the hydro-unit '
-                f'property "{self._spatial[index]}") and cannot also take monthly '
-                f"values: the per-unit value takes precedence over the shared one "
-                f"that the monthly update writes, so the monthly variation would be "
-                f"silently lost.",
+                f'property "{self._spatial[index]}") and cannot also take shared '
+                f"monthly values: the per-unit value takes precedence over the shared "
+                f"one that the monthly update writes, so the monthly variation would "
+                f"be silently lost. Use set_spatial_monthly() to give each unit its "
+                f"own monthly series.",
                 item_name=name,
                 item_value=self._spatial[index],
                 reason="Parameter is already spatial",
+            )
+
+        if index in self._spatial_monthly:
+            raise ConfigurationError(
+                f'The parameter "{name}" already has per-unit monthly values (bound '
+                f"to 12 hydro-unit properties) and cannot also take shared monthly "
+                f"values.",
+                item_name=name,
+                reason="Parameter is already spatial and monthly",
             )
 
     def _check_value_range(

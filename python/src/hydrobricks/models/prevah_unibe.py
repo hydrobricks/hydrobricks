@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import numpy as np
+
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.models.model import Model
 from hydrobricks.modules.glacier import GlacierModule
@@ -137,6 +139,24 @@ LAND_USE_ROOT_DEPTH: dict[str, list[float]] = {
     "corn": [0.6] * 12,
     "grapes": [0.8] * 12,
 }
+
+#: Soil moisture capacity [mm] PREVAH forces on the land covers that carry no real
+#: soil, whatever the soil map says (see :meth:`PrevahUniBE.land_use_field_capacity`).
+LAND_USE_FIELD_CAPACITY_FIXED: dict[str, float] = {
+    "urban": 5.0,
+    "rock": 3.0,
+    "glacier": 0.1,
+}
+
+#: Minimum soil moisture capacity [mm] per land cover, applied to the capacity derived
+#: from the soil map. Open water holds a deep store; the vegetated covers use the
+#: default below.
+LAND_USE_FIELD_CAPACITY_MIN: dict[str, float] = {
+    "water": 2500.0,
+}
+
+#: Minimum soil moisture capacity [mm] of the vegetated land covers.
+LAND_USE_FIELD_CAPACITY_MIN_DEF: float = 10.0
 
 #: Surface albedo [-], per land use and month. PREVAH derives it from the leaf
 #: area index: ``albedo_bare(month) + 0.25 (albedo_veg - albedo_bare(month)) LAI``
@@ -437,7 +457,8 @@ class PrevahUniBE(Model):
     PREVAH's tables (:data:`LAND_USE_SI_MAX`, :data:`LAND_USE_VEG_COV`,
     :data:`LAND_USE_ROOT_DEPTH`, :data:`LAND_USE_ALBEDO`, :data:`LAND_USE_LAI`);
     :meth:`land_use_field_capacity` gives the soil moisture capacity PREVAH derives
-    from a soil map.
+    from a soil map, and :meth:`apply_land_use_field_capacity` sets it per hydro unit
+    and per month in one call.
 
     Faithful configuration
     ----------------------
@@ -783,7 +804,9 @@ class PrevahUniBE(Model):
 
     @staticmethod
     def land_use_field_capacity(
-        land_use: str, available_water_content: float
+        land_use: str,
+        available_water_content: float,
+        soil_depth: float | None = None,
     ) -> list[float]:
         """
         Monthly soil moisture storage capacity of a PREVAH land use.
@@ -791,12 +814,22 @@ class PrevahUniBE(Model):
         PREVAH derives the plant-available storage from the soil's available water
         content and the monthly rooting depth of the land use::
 
-            fc(month) = awc * (root_depth(month) + 0.05) * 10
+            fc(month) = awc * min(root_depth(month) + 0.05, soil_depth) * 10
 
-        with the available water content in [Vol-%] and the rooting depth in [m],
-        giving a capacity in [mm]. The 0.05 m added to the rooting depth accounts for
-        the capillary rise below the roots. Alpine soils are thin, so the resulting
+        with the available water content in [Vol-%] and the depths in [m], giving a
+        capacity in [mm]. The 0.05 m added to the rooting depth accounts for the
+        capillary rise below the roots, and the soil depth caps the whole thing: the
+        roots cannot draw from below the soil. Alpine soils are thin, so the resulting
         capacities are typically small (a few mm to a few tens of mm).
+
+        The land cover then overrides the result, as in the original: a fixed capacity
+        on the covers carrying no real soil (5 mm built-up, 3 mm rock, 0.1 mm glacier)
+        and a minimum elsewhere (2500 mm open water, 10 mm on the vegetated covers).
+
+        The capping is the clean reading of the original rather than a transcription:
+        xPREVAH tests the rooting depth it has scaled by the soil class and the
+        altitude, but then assigns the capacity from the unscaled table depth, so its
+        capacity can exceed the soil column. That inconsistency is not reproduced.
 
         Parameters
         ----------
@@ -805,6 +838,9 @@ class PrevahUniBE(Model):
         available_water_content
             Available water content of the soil [Vol-%], from a soil map (the ``NFC``
             column of a PREVAH hydrotope table).
+        soil_depth
+            Depth of the soil [m], capping the rooting depth. Without it the rooting
+            depth is not capped.
 
         Returns
         -------
@@ -812,10 +848,136 @@ class PrevahUniBE(Model):
         """
         PrevahUniBE._check_land_use(land_use)
 
-        return [
-            available_water_content * (depth + 0.05) * 10.0
-            for depth in LAND_USE_ROOT_DEPTH[land_use]
-        ]
+        cover = LAND_USE_COVER_TYPES[land_use]
+        if cover in LAND_USE_FIELD_CAPACITY_FIXED:
+            return [LAND_USE_FIELD_CAPACITY_FIXED[cover]] * 12
+
+        minimum = LAND_USE_FIELD_CAPACITY_MIN.get(
+            cover, LAND_USE_FIELD_CAPACITY_MIN_DEF
+        )
+        values = []
+        for depth in LAND_USE_ROOT_DEPTH[land_use]:
+            thickness = depth + 0.05
+            if soil_depth is not None:
+                thickness = min(thickness, soil_depth)
+            values.append(max(available_water_content * thickness * 10.0, minimum))
+
+        return values
+
+    def apply_land_use_field_capacity(
+        self,
+        parameters: Any,
+        hydro_units: Any,
+        land_use: Any,
+        available_water_content: Any,
+        soil_depth: Any = None,
+        cover_name: str | None = None,
+    ) -> list[str]:
+        """
+        Set the soil moisture capacity per hydro unit *and* per month, as PREVAH does.
+
+        PREVAH's capacity varies in space (through the soil map) and through the year
+        (through the rooting depth of the land use), and the two do not separate into
+        a per-unit value times a shared monthly shape, because each unit's own soil
+        depth caps its rooting depth. This method builds the full per-unit monthly
+        table with :meth:`land_use_field_capacity`, stores it as 12 hydro-unit
+        properties and binds the parameter to them with
+        ``ParameterSet.set_spatial_monthly``.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        hydro_units
+            The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
+        land_use
+            Name of the land use (e.g. ``'pasture'``); see
+            :data:`LAND_USE_COVER_TYPES`. A PREVAH hydrotope carries a single land
+            use, so a sequence of names is accepted too, one per hydro unit.
+        available_water_content
+            Available water content of the soil [Vol-%], one value per hydro unit.
+        soil_depth
+            Depth of the soil [m], one value per hydro unit. Without it the rooting
+            depth is not capped.
+        cover_name
+            Name of the land cover to parameterize. Defaults to the land-use name, and
+            is required when the land uses are given per unit. Only meaningful with
+            ``share_soil=False``, a shared soil store carrying a single capacity for
+            the whole unit.
+
+        Returns
+        -------
+        The names of the 12 hydro-unit properties that were added.
+        """
+        awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
+
+        per_unit = not isinstance(land_use, str)
+        if per_unit:
+            land_uses = [str(name) for name in land_use]
+            if len(land_uses) != len(awc):
+                raise ConfigurationError(
+                    f"The land use has {len(land_uses)} values and the available "
+                    f"water content {len(awc)}; they must match (one per hydro unit).",
+                    item_name="land_use",
+                    item_value=len(land_uses),
+                    reason="Length mismatch",
+                )
+        else:
+            land_uses = [land_use] * len(awc)
+            if cover_name is None:
+                cover_name = land_use
+        for name in set(land_uses):
+            self._check_land_use(name)
+
+        # A model with a shared soil store exposes the alias without a cover suffix,
+        # and then needs no cover name: the single store holds the whole unit's soil.
+        if cover_name is None:
+            if not parameters.has("fc"):
+                raise ConfigurationError(
+                    "The land uses are given per hydro unit and the soil stores are "
+                    "per cover, so the one to parameterize cannot be inferred: pass "
+                    "cover_name.",
+                    item_name="cover_name",
+                    reason="Missing cover name",
+                )
+            suffix = ""
+        else:
+            suffix = f"_{cover_name}" if parameters.has(f"fc_{cover_name}") else ""
+        if not parameters.has(f"fc{suffix}"):
+            raise ConfigurationError(
+                f'No soil moisture capacity "fc{suffix}" in the parameter set.',
+                item_name=f"fc{suffix}",
+                item_value=cover_name,
+                reason="Missing soil parameter",
+            )
+
+        if soil_depth is None:
+            depths: Any = [None] * len(awc)
+        else:
+            depths = np.atleast_1d(np.asarray(soil_depth, dtype=float))
+            if len(depths) != len(awc):
+                raise ConfigurationError(
+                    f"The soil depth has {len(depths)} values and the available water "
+                    f"content {len(awc)}; they must match (one per hydro unit).",
+                    item_name="soil_depth",
+                    item_value=len(depths),
+                    reason="Length mismatch",
+                )
+
+        # (n_units, 12), each unit's own series.
+        table = np.array(
+            [
+                self.land_use_field_capacity(unit_land_use, unit_awc, unit_depth)
+                for unit_land_use, unit_awc, unit_depth in zip(land_uses, awc, depths)
+            ]
+        )
+
+        names = [f"fc{suffix}_{month:02d}" for month in range(1, 13)]
+        for month, name in enumerate(names):
+            hydro_units.add_property((name, "mm"), table[:, month])
+        parameters.set_spatial_monthly(f"fc{suffix}", names)
+
+        return names
 
     def apply_land_use(
         self,

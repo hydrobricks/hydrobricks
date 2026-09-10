@@ -127,6 +127,55 @@ def test_set_monthly_values_rejects_a_spatial_parameter():
         parameter_set.set_monthly_values("fc", [100] * 12)
 
 
+def test_set_spatial_monthly():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    props = [f"fc_{month:02d}" for month in range(1, 13)]
+    parameter_set.set_spatial_monthly("fc", props)
+    assert parameter_set.get_spatial_monthly_parameters() == [
+        ("soil_moisture", "capacity", props)
+    ]
+    # It is the spatial-and-monthly mechanism, not the plain spatial one.
+    assert parameter_set.get_spatial_parameters() == []
+    assert parameter_set.get_monthly_parameters() == []
+
+
+def test_set_spatial_monthly_needs_twelve_properties():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_spatial_monthly("fc", ["fc_01", "fc_02"])
+
+
+def test_set_spatial_monthly_replaces_a_spatial_parameter():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial("fc", "fc")
+    parameter_set.set_spatial_monthly("fc", [f"fc_{m:02d}" for m in range(1, 13)])
+    assert parameter_set.get_spatial_parameters() == []
+    assert len(parameter_set.get_spatial_monthly_parameters()) == 1
+
+
+def test_set_spatial_replaces_a_spatial_monthly_parameter():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial_monthly("fc", [f"fc_{m:02d}" for m in range(1, 13)])
+    parameter_set.set_spatial("fc", "fc")
+    assert parameter_set.get_spatial_monthly_parameters() == []
+    assert len(parameter_set.get_spatial_parameters()) == 1
+
+
+def test_set_spatial_monthly_rejects_shared_monthly_values():
+    # The shared monthly value would never reach a unit carrying its own series.
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_monthly_values("fc", [100] * 12)
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_spatial_monthly("fc", [f"fc_{m:02d}" for m in range(1, 13)])
+
+
+def test_set_monthly_values_rejects_a_spatial_monthly_parameter():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial_monthly("fc", [f"fc_{m:02d}" for m in range(1, 13)])
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.set_monthly_values("fc", [100] * 12)
+
+
 def test_monthly_and_spatial_on_different_parameters():
     # The restriction is per parameter: two different ones can each use a mechanism.
     parameter_set = _monthly_and_spatial_parameter_set()

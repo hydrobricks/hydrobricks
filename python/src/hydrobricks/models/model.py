@@ -1361,6 +1361,14 @@ class Model(ABC):
             if isinstance(component, (list, tuple)):
                 component = ",".join(component)
             self.settings.set_parameter_spatial_from_property(component, name, prop)
+        # Push the bindings of the parameters that are both spatial and monthly: each
+        # unit then follows its own monthly series.
+        for component, name, props in parameters.get_spatial_monthly_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            self.settings.set_parameter_spatial_monthly_from_properties(
+                component, name, props
+            )
         self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing: Forcing | None) -> None:

@@ -311,6 +311,28 @@ void ModelBuilder::PopulateSpatialOverrides(SettingsModel& modelSettings, HydroU
         }
         unit->SetParameterOverride(brickName + ":" + paramName, unit->GetPropertyFloat(property));
     }
+
+    // Same for the parameters that are both spatial and monthly: the unit's 12 values are
+    // read from 12 properties. A unit missing any of them keeps the shared global value.
+    for (const auto& [key, properties] : modelSettings.GetSpatialMonthlyParameterBindings()) {
+        const string& component = key.first;
+        const string& paramName = key.second;
+        if (component != brickName) {
+            continue;
+        }
+        vecFloat values;
+        values.reserve(properties.size());
+        for (const auto& property : properties) {
+            if (!unit->HasProperty(property)) {
+                break;
+            }
+            values.push_back(unit->GetPropertyFloat(property));
+        }
+        if (values.size() != properties.size()) {
+            continue;
+        }
+        unit->SetParameterOverrideMonthly(brickName + ":" + paramName, values);
+    }
 }
 
 void ModelBuilder::LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit) {

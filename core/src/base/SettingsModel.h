@@ -626,6 +626,28 @@ class SettingsModel {
     }
 
     /**
+     * Bind a parameter to 12 per-unit (spatial) hydro-unit properties, one per calendar
+     * month: each hydro unit then uses its own monthly series for this parameter. The
+     * binding is (component, name) -> the 12 property names; setting it again replaces
+     * them.
+     *
+     * @param component name of the component (brick) owning the parameter.
+     * @param name name of the parameter.
+     * @param properties the 12 hydro-unit property names (January to December).
+     */
+    void SetParameterSpatialMonthlyFromProperties(const string& component, const string& name,
+                                                  const vecStr& properties);
+
+    /**
+     * Get the registered spatial monthly parameter bindings.
+     *
+     * @return the bindings as ((component, name) -> the 12 property names).
+     */
+    const std::map<std::pair<string, string>, vecStr>& GetSpatialMonthlyParameterBindings() const {
+        return _spatialMonthlyParameterBindings;
+    }
+
+    /**
      * Get the number of structures in the model.
      *
      * @return number of structures.
@@ -940,6 +962,7 @@ class SettingsModel {
     SplitterSettings* _selectedSplitter;  // non-owning reference
     // Spatial parameter bindings: (component, name) -> hydro-unit property name.
     std::map<std::pair<string, string>, string> _spatialParameterBindings;
+    std::map<std::pair<string, string>, vecStr> _spatialMonthlyParameterBindings;
 
     bool LogAll(const YAML::Node& settings);
 };

@@ -7,7 +7,11 @@ WSL xprevah PREVAH `test/2020` case to hydrobricks-style files.
 Files
 -----
 - hydro_units.csv   : per-HRU elevation, land-cover area (open/forest/wetland),
-                      per-HRU field capacity `fc` (mm) and meteo zone `mez`.
+                      the hydrotope's PREVAH land use `land_use`, the soil's
+                      available water content `awc` (Vol-%) and depth
+                      `soil_depth` (m), and the meteo zone `mez`. The soil
+                      moisture capacity is derived from the last three, per unit
+                      and per month, rather than shipped ready-made.
 - precipitation.csv : daily precipitation (mm/day) per meteo zone (1984-2000).
 - temperature.csv   : daily air temperature (deg C) per meteo zone (1984-2000).
 - potential_radiation.csv : potential clear-sky direct solar radiation of each
@@ -41,6 +45,16 @@ year by about a third -- so it would need its own melt coefficient.
 
 The values are rounded to the nearest integer; at the calibrated CASNO that is
 worth about 3e-5 mm/d/degC of melt.
+
+About the soil moisture capacity
+--------------------------------
+PREVAH derives it as `awc * min(root_depth(land use, month) + 0.05, soil_depth) *
+10`, then overrides it on the covers with no real soil (5 mm built-up, 3 mm rock,
+0.1 mm glacier) and holds a minimum elsewhere (2500 mm open water, 10 mm on the
+vegetated covers). The three inputs are shipped instead of the result so the
+example can rebuild it, and because the rooting depth makes it vary through the
+year. None of the thirteen land uses present in this catchment has a seasonal
+rooting depth, so here the capacity is in fact constant through the year.
 
 Provenance / licensing
 ----------------------

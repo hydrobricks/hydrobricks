@@ -149,18 +149,31 @@ def _balance(model, forcing) -> float:
     return discharge + et + storage_change + snow_change - precip
 
 
+_FC_MONTHLY_PROPS = [f"fc_{month:02d}" for month in range(1, 13)]
+
+
 def _subdir(tmp_path: Path, name: str) -> Path:
     d = tmp_path / name
     d.mkdir()
     return d
 
 
-def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
+def _run_fc(
+    tmp_path,
+    *,
+    areas,
+    fc_global=200.0,
+    fc_spatial=None,
+    fc_spatial_monthly=None,
+    n_days=_N_2Y,
+):
     """Run a single-cover ('open') PREVAH over one or more equal-elevation units.
 
     ``areas`` gives each unit's area (m²). When ``fc_spatial`` (one value per unit) is
     given, the soil field capacity is set per unit from an ``fc`` property (spatial
-    parameter); otherwise the global ``fc_global`` applies to every unit."""
+    parameter); when ``fc_spatial_monthly`` (12 values per unit) is given, it is set
+    per unit and per calendar month from 12 properties; otherwise the global
+    ``fc_global`` applies to every unit."""
     tmp_path.mkdir(parents=True, exist_ok=True)
     hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
     hu_csv = tmp_path / "hydro_units.csv"
@@ -171,6 +184,12 @@ def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
     hydro_units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
     if fc_spatial is not None:
         hydro_units.add_property(("fc", "mm"), np.array(fc_spatial, dtype=float))
+    if fc_spatial_monthly is not None:
+        monthly = np.array(fc_spatial_monthly, dtype=float)  # (n_units, 12)
+        for month in range(12):
+            hydro_units.add_property(
+                (_FC_MONTHLY_PROPS[month], "mm"), monthly[:, month]
+            )
     forcing = _load_forcing(
         hydro_units, _meteo_csv_seasonal(tmp_path, n_days, 5.0, 1.5)
     )
@@ -184,6 +203,8 @@ def _run_fc(tmp_path, *, areas, fc_global=200.0, fc_spatial=None, n_days=_N_2Y):
     parameters.set_values(values)
     if fc_spatial is not None:
         parameters.set_spatial("fc", "fc")
+    if fc_spatial_monthly is not None:
+        parameters.set_spatial_monthly("fc", _FC_MONTHLY_PROPS)
 
     end_date = (_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d")
     model.setup(
@@ -630,6 +651,65 @@ def test_prevah_spatial_fc_uses_own_value(tmp_path):
     assert two != pytest.approx(
         _run_fc(_subdir(tmp_path, "g200"), areas=[1e6]).get_total_outlet_discharge()
     )
+
+
+def test_prevah_spatial_monthly_fc_constant_matches_spatial(tmp_path):
+    """A per-unit monthly fc that does not vary through the year reproduces the plain
+    per-unit run."""
+    monthly = _run_fc(
+        _subdir(tmp_path, "mo"), areas=[1e6], fc_spatial_monthly=[[200.0] * 12]
+    )
+    spatial = _run_fc(_subdir(tmp_path, "sp"), areas=[1e6], fc_spatial=[200.0])
+    assert monthly.get_total_outlet_discharge() == pytest.approx(
+        spatial.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
+def test_prevah_spatial_monthly_fc_varies_through_the_year(tmp_path):
+    """A seasonal per-unit fc differs from its own annual mean held constant."""
+    seasonal = [50.0] * 3 + [400.0] * 6 + [50.0] * 3  # shallow roots in winter
+    mean = sum(seasonal) / 12
+    varying = _run_fc(
+        _subdir(tmp_path, "var"), areas=[1e6], fc_spatial_monthly=[seasonal]
+    ).get_total_outlet_discharge()
+    flat = _run_fc(
+        _subdir(tmp_path, "flat"), areas=[1e6], fc_spatial_monthly=[[mean] * 12]
+    ).get_total_outlet_discharge()
+    assert varying != pytest.approx(flat, rel=1e-3)
+
+
+def test_prevah_spatial_monthly_fc_uses_own_series_per_unit(tmp_path):
+    """Each unit follows its own monthly series: a 2-unit catchment equals the
+    area-weighted average of the two single-unit runs."""
+    a = [50.0] * 6 + [400.0] * 6
+    b = [400.0] * 6 + [50.0] * 6
+    qa = _run_fc(
+        _subdir(tmp_path, "ua"), areas=[1e6], fc_spatial_monthly=[a]
+    ).get_total_outlet_discharge()
+    qb = _run_fc(
+        _subdir(tmp_path, "ub"), areas=[1e6], fc_spatial_monthly=[b]
+    ).get_total_outlet_discharge()
+    two = _run_fc(
+        _subdir(tmp_path, "two"), areas=[5e5, 5e5], fc_spatial_monthly=[a, b]
+    ).get_total_outlet_discharge()
+    assert two == pytest.approx(0.5 * qa + 0.5 * qb, rel=1e-6)
+    # The two series are mirror images, so a unit-invariant fc cannot reproduce this.
+    assert qa != pytest.approx(qb, rel=1e-3)
+
+
+def test_prevah_spatial_monthly_fc_water_balance_closes(tmp_path):
+    model = _run_fc(
+        tmp_path,
+        areas=[5e5, 5e5],
+        fc_spatial_monthly=[[50.0] * 6 + [400.0] * 6, [400.0] * 6 + [50.0] * 6],
+    )
+    balance = (
+        model.get_total_outlet_discharge()
+        + model.get_total_et()
+        + model.get_total_water_storage_changes()
+        + model.get_total_snow_storage_changes()
+    )
+    assert balance == pytest.approx(5.0 * _N_2Y, rel=1e-4)
 
 
 def test_prevah_spatial_fc_water_balance_closes(tmp_path):
@@ -1168,8 +1248,41 @@ def test_interception_capacity_is_si_max_times_veg_cov():
 
 
 def test_field_capacity():
+    # awc high enough that the 10 mm floor of the vegetated covers does not bite.
+    values = models.PrevahUniBE.land_use_field_capacity("pasture", 20.0)
+    assert values == pytest.approx([20.0 * (0.6 + 0.05) * 10.0] * 12)
+
+
+def test_field_capacity_applies_the_vegetated_minimum():
+    # A thin alpine soil would give 8.3 mm; PREVAH holds the vegetated covers at 10.
     values = models.PrevahUniBE.land_use_field_capacity("pasture", 1.27)
-    assert values == pytest.approx([1.27 * (0.6 + 0.05) * 10.0] * 12)
+    assert values == pytest.approx([10.0] * 12)
+
+
+def test_field_capacity_is_capped_by_the_soil_depth():
+    # The roots reach 1.55 m but the soil is 0.4 m deep.
+    values = models.PrevahUniBE.land_use_field_capacity(
+        "coniferous_forest", 20.0, soil_depth=0.4
+    )
+    assert values == pytest.approx([20.0 * 0.4 * 10.0] * 12)
+    # Without the cap the full rooting depth applies.
+    uncapped = models.PrevahUniBE.land_use_field_capacity("coniferous_forest", 20.0)
+    assert uncapped == pytest.approx([20.0 * (1.5 + 0.05) * 10.0] * 12)
+
+
+def test_field_capacity_follows_a_seasonal_rooting_depth():
+    values = models.PrevahUniBE.land_use_field_capacity("cereals", 20.0)
+    # Deep roots from July to September, shallow the rest of the year.
+    assert values[0] == pytest.approx(20.0 * (0.2 + 0.05) * 10.0)
+    assert values[7] == pytest.approx(20.0 * (0.8 + 0.05) * 10.0)
+
+
+def test_field_capacity_of_the_soilless_covers_is_fixed():
+    assert models.PrevahUniBE.land_use_field_capacity("urban", 20.0) == [5.0] * 12
+    assert models.PrevahUniBE.land_use_field_capacity("rock", 20.0) == [3.0] * 12
+    assert models.PrevahUniBE.land_use_field_capacity("glacier_ice", 20.0) == [0.1] * 12
+    # Open water instead carries a deep store.
+    assert models.PrevahUniBE.land_use_field_capacity("water", 20.0) == [2500.0] * 12
 
 
 def test_unknown_land_use_is_rejected():
@@ -1231,6 +1344,126 @@ def test_apply_land_use_without_the_prevah_canopy_et():
 
     monthly = parameters.get_monthly_parameters()
     assert sorted(name for _, name, _ in monthly) == ["capacity", "capacity"]
+
+
+def _two_unit_hydro_units(tmp_path, land_use, cover_type):
+    """Two equal-area units carrying a single land cover."""
+    hydro_units = hb.HydroUnits(
+        land_cover_types=[cover_type], land_cover_names=[land_use]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text("id,elevation,area\n-,m,m^2\n1,1000,500000\n2,2000,500000\n")
+    hydro_units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
+    return hydro_units
+
+
+def test_apply_land_use_field_capacity_builds_a_per_unit_monthly_table(tmp_path):
+    model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
+
+    names = model.apply_land_use_field_capacity(
+        parameters, hydro_units, "pasture", available_water_content=[20.0, 30.0]
+    )
+
+    assert names == [f"fc_{month:02d}" for month in range(1, 13)]
+    assert parameters.get_spatial_monthly_parameters() == [
+        ("soil_moisture", "capacity", names)
+    ]
+    # Each unit carries its own value: awc * (0.6 + 0.05) * 10.
+    january = hydro_units.hydro_units["fc_01"].to_numpy().flatten()
+    assert january == pytest.approx([20.0 * 0.65 * 10.0, 30.0 * 0.65 * 10.0])
+
+
+def test_apply_land_use_field_capacity_caps_with_the_soil_depth(tmp_path):
+    model = models.PrevahUniBE(
+        land_cover_names=["coniferous_forest"], land_cover_types=["forest"]
+    )
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "coniferous_forest", "forest")
+
+    model.apply_land_use_field_capacity(
+        parameters,
+        hydro_units,
+        "coniferous_forest",
+        available_water_content=[20.0, 20.0],
+        soil_depth=[0.4, 2.0],  # a thin soil and a deep one
+    )
+
+    january = hydro_units.hydro_units["fc_01"].to_numpy().flatten()
+    # The thin unit is capped by its soil depth, the deep one by the rooting depth.
+    assert january == pytest.approx([20.0 * 0.4 * 10.0, 20.0 * 1.55 * 10.0])
+
+
+def test_apply_land_use_field_capacity_per_unit_land_use(tmp_path):
+    """A PREVAH hydrotope carries one land use, so each unit can have its own."""
+    model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "open", "open")
+
+    model.apply_land_use_field_capacity(
+        parameters,
+        hydro_units,
+        ["pasture", "coniferous_forest"],
+        available_water_content=[20.0, 20.0],
+    )
+
+    january = hydro_units.hydro_units["fc_01"].to_numpy().flatten()
+    assert january == pytest.approx([20.0 * 0.65 * 10.0, 20.0 * 1.55 * 10.0])
+
+
+def test_apply_land_use_field_capacity_per_unit_seasonal(tmp_path):
+    """A unit whose land use has a seasonal rooting depth follows it."""
+    model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "open", "open")
+
+    model.apply_land_use_field_capacity(
+        parameters,
+        hydro_units,
+        ["cereals", "pasture"],
+        available_water_content=[20.0, 20.0],
+    )
+
+    january = hydro_units.hydro_units["fc_01"].to_numpy().flatten()
+    august = hydro_units.hydro_units["fc_08"].to_numpy().flatten()
+    # The cereals root deeper in August; the pasture does not move.
+    assert january[0] == pytest.approx(20.0 * 0.25 * 10.0)
+    assert august[0] == pytest.approx(20.0 * 0.85 * 10.0)
+    assert january[1] == pytest.approx(august[1])
+
+
+def test_apply_land_use_field_capacity_per_unit_needs_a_cover_with_split_soils(
+    tmp_path,
+):
+    model = models.PrevahUniBE(
+        land_cover_names=["pasture", "coniferous_forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=False,
+    )
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
+    with pytest.raises(hb.ConfigurationError):
+        model.apply_land_use_field_capacity(
+            parameters,
+            hydro_units,
+            ["pasture", "pasture"],
+            available_water_content=[20.0, 20.0],
+        )
+
+
+def test_apply_land_use_field_capacity_rejects_a_length_mismatch(tmp_path):
+    model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
+    with pytest.raises(hb.ConfigurationError):
+        model.apply_land_use_field_capacity(
+            parameters,
+            hydro_units,
+            "pasture",
+            available_water_content=[20.0, 30.0],
+            soil_depth=[0.4],
+        )
 
 
 def test_apply_land_use_requires_a_canopy():

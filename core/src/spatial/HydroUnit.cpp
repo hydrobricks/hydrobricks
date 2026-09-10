@@ -184,6 +184,33 @@ const float* HydroUnit::GetParameterOverridePointer(const string& key) const {
     return &it->second;
 }
 
+void HydroUnit::SetParameterOverrideMonthly(const string& key, const vecFloat& values) {
+    if (values.size() != 12) {
+        throw ModelConfigError(
+            std::format("The monthly values of the parameter '{}' must have 12 entries (got {}).", key, values.size()));
+    }
+    _paramOverridesMonthly[key] = values;
+
+    // Seed the value the brick reads with the annual mean: it is what applies before the
+    // first monthly update and what any non-monthly consumer sees.
+    float sum = 0;
+    for (float value : values) {
+        sum += value;
+    }
+    _paramOverrides[key] = sum / 12;
+}
+
+vector<std::pair<float*, const vecFloat*>> HydroUnit::GetMonthlyParameterOverrides() {
+    vector<std::pair<float*, const vecFloat*>> overrides;
+    overrides.reserve(_paramOverridesMonthly.size());
+    for (const auto& [key, values] : _paramOverridesMonthly) {
+        // Both maps are node-based, so the pointers stay valid as the maps grow.
+        overrides.emplace_back(&_paramOverrides[key], &values);
+    }
+
+    return overrides;
+}
+
 double HydroUnit::GetSnowCoverFraction(double sweThreshold) const {
     double snowFraction = 0.0;
     for (const auto& brick : _bricks) {

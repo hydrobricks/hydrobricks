@@ -3,7 +3,9 @@
 A real, spatially-distributed PREVAH setup: 570 hydrotopes (HRUs) with three land
 covers (open / forest / wetland), meteo-zone forcing, a **per-HRU field capacity**
 taken from the soil data via a spatial parameter (``set_spatial``), and PREVAH's
-**monthly vegetation tables** applied per cover (``apply_land_use``).
+**monthly vegetation tables** applied per cover (``apply_land_use``) and a soil
+moisture capacity that varies per hydrotope *and* per month
+(``apply_land_use_field_capacity``).
 
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
@@ -69,7 +71,7 @@ LAND_USES = {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Hydro units (570 HRUs): elevation, per-cover area, per-HRU field capacity
+# 1. Hydro units (570 HRUs): elevation, per-cover area, per-HRU soil
 # ---------------------------------------------------------------------------
 hydro_units = hb.HydroUnits(land_cover_types=COVERS, land_cover_names=COVERS)
 hydro_units.load_from_csv(
@@ -78,10 +80,10 @@ hydro_units.load_from_csv(
     columns_areas={c: f"area_{c}" for c in COVERS},
 )
 
-# The fc (field capacity) and mez (meteo zone) columns are read alongside: fc as a
-# per-unit spatial parameter, mez to map each HRU to its meteo-zone forcing series.
+# The remaining columns are read alongside: the soil data (available water content,
+# soil depth) and the land use of each hydrotope, which together give the soil
+# moisture capacity further down, and mez to map each HRU to its forcing series.
 units_df = pd.read_csv(DATA / "hydro_units.csv", header=0, skiprows=[1])
-hydro_units.add_property(("fc", "mm"), units_df["fc"].to_numpy())
 mez = units_df["mez"].to_numpy()
 
 # PREVAH's wet surfaces evaporate from the groundwater at et_pot * wet_surface
@@ -200,7 +202,7 @@ parameters.set_values(
         "holding_melt_t": -1.0,
         "cexliq": 0.5,
         # soil moisture / ET (per-cover beta, all at the calibrated CBETA)
-        "fc": 13.7,  # global fallback; the per-HRU fc property overrides this
+        "fc": 13.7,  # global fallback; the per-HRU monthly capacity overrides it
         "beta_open": 0.5,
         "beta_forest": 0.5,
         "beta_wetland": 0.5,
@@ -225,9 +227,19 @@ parameters.set_values(
 parameters.change_range("cu", 0.0, 1.0)
 parameters.set_values({"cu": 1e-6})
 
-# The headline: each HRU uses its own field capacity from the soil data (the `fc`
-# property) instead of one global value; likewise the wet-surface fraction.
-parameters.set_spatial("fc", "fc")
+# The headline: each HRU uses its own field capacity instead of one global value.
+# PREVAH builds it from the soil (available water content and depth) and from the
+# rooting depth of the hydrotope's land use, which varies by month, so the capacity
+# varies in space and through the year at once. The soil depth caps the rooting
+# depth per unit, which is why the two cannot be separated into a per-unit value
+# times a shared monthly shape.
+model.apply_land_use_field_capacity(
+    parameters,
+    hydro_units,
+    units_df["land_use"].to_numpy(),  # one land use per hydrotope
+    available_water_content=units_df["awc"].to_numpy(),
+    soil_depth=units_df["soil_depth"].to_numpy(),
+)
 parameters.set_spatial("ow_et_factor", "wet")
 
 # PREVAH's monthly vegetation tables: the canopy interception capacity of each cover

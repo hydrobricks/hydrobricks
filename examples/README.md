@@ -45,7 +45,7 @@ corrections declared as calibratable `param:` references with their ranges in
 | `compare_snow_melt_processes_socont.py` | Snowmelt methods compared on a glacierized catchment (pure Python: per-method discretizations). |
 | `snow_redistribution.py` | Lateral snow transport with unit connectivity (pure Python). |
 | `simulate_glacier_evolution_delta_h.py` / `..._simple_area_scaling.py` | Dynamic glacier geometry through actions (pure Python). |
-| `prevah_ticino.py` | The PREVAH-UniBE model on a 570-HRU, multi-cover, spatially-distributed catchment (Ticino-Bellinzona). The faithful configuration (vapour-density Hamon PET, albedo-reduced ET, PREVAH snow water release, wet-surface ET), with per-HRU field capacity via `set_spatial` and the monthly vegetation tables via `apply_land_use`; reproduces Fortran PREVAH with its own parameters (NSE ~0.98). Pure Python (meteo-zone forcing set per unit). |
+| `prevah_ticino.py` | The PREVAH-UniBE model on a 570-HRU, multi-cover, spatially-distributed catchment (Ticino-Bellinzona). The faithful configuration (vapour-density Hamon PET, albedo-reduced ET, PREVAH snow water release, wet-surface ET and the radiation-corrected Hock melt), with per-HRU field capacity via `set_spatial` and the monthly vegetation tables via `apply_land_use`; reproduces Fortran PREVAH with its own parameters (NSE ~0.985), and is scored against the gauged discharge alongside it. Pure Python (meteo-zone forcing set per unit). |
 
 ### 4. Preprocessing (`preprocessing/`)
 

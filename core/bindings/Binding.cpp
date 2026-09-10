@@ -220,6 +220,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("set_parameter_spatial_from_property", &SettingsModel::SetParameterSpatialFromProperty,
              "Bind a parameter to a per-unit hydro-unit property (spatial parameter).", "component"_a, "name"_a,
              "property"_a)
+        .def("set_parameter_spatial_monthly_from_properties", &SettingsModel::SetParameterSpatialMonthlyFromProperties,
+             "Bind a parameter to 12 per-unit hydro-unit properties, one per calendar month.", "component"_a, "name"_a,
+             "properties"_a)
         .def("generate_precipitation_splitters", &SettingsModel::GeneratePrecipitationSplitters,
              "Generate the precipitation splitters.", "with_snow"_a = true, "splitter_type"_a = "snow_rain:linear")
         .def("generate_snowpacks", &SettingsModel::GenerateSnowpacks, "Generate the snowpack.", "snow_melt_process"_a)

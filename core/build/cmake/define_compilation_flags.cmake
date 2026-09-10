@@ -63,6 +63,66 @@ if (USE_LTO)
     endif ()
 endif ()
 
+# Profile-guided optimization. Built in two passes: configure with USE_PGO=generate, build, run a representative
+# simulation (ci/pgo_training.py) to collect the profile, then configure with USE_PGO=use and build again. The second
+# pass only relinks, because the instrumentation and the final code generation both happen at link time with the
+# link-time optimization the option requires. The profile teaches the compiler which branches the simulation actually
+# takes -- which processes a structure holds, whether a store is empty, whether a constraint binds -- none of which is
+# visible from the sources alone.
+set(USE_PGO
+    "off"
+    CACHE STRING "Profile-guided optimization: off, generate (instrument), use (apply the collected profile)")
+set_property(CACHE USE_PGO PROPERTY STRINGS off generate use)
+set(PGO_DATA_DIR
+    "${CMAKE_BINARY_DIR}/pgo"
+    CACHE PATH "Directory holding the profile-guided optimization data")
+
+if (NOT USE_PGO STREQUAL "off")
+    if (NOT USE_LTO OR NOT LTO_SUPPORTED)
+        message(FATAL_ERROR "USE_PGO requires USE_LTO: the profile is applied during the link-time code generation.")
+    endif ()
+    file(MAKE_DIRECTORY "${PGO_DATA_DIR}")
+    if (USE_PGO STREQUAL "use"
+        AND MSVC
+        AND NOT EXISTS "${PGO_DATA_DIR}/hydrobricks.pgd")
+        message(
+            FATAL_ERROR
+                "USE_PGO=use but no profile was found in ${PGO_DATA_DIR}. Configure with USE_PGO=generate, build, run "
+                "ci/pgo_training.py against the instrumented module, merge the collected .pgc files into the .pgd with "
+                "'pgomgr /merge', then configure again with USE_PGO=use.")
+    endif ()
+
+    # The Python extension is a MODULE library, which takes its flags from CMAKE_MODULE_LINKER_FLAGS rather than from
+    # the shared-library one: set all three, or the option would silently do nothing for the very target that matters
+    # most here.
+    if (MSVC)
+        if (USE_PGO STREQUAL "generate")
+            set(PGO_LINK_FLAG " /GENPROFILE:PGD=\"${PGO_DATA_DIR}/hydrobricks.pgd\"")
+        else ()
+            set(PGO_LINK_FLAG " /USEPROFILE:PGD=\"${PGO_DATA_DIR}/hydrobricks.pgd\"")
+        endif ()
+        string(APPEND CMAKE_EXE_LINKER_FLAGS "${PGO_LINK_FLAG}")
+        string(APPEND CMAKE_SHARED_LINKER_FLAGS "${PGO_LINK_FLAG}")
+        string(APPEND CMAKE_MODULE_LINKER_FLAGS "${PGO_LINK_FLAG}")
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if (USE_PGO STREQUAL "generate")
+            string(APPEND CMAKE_CXX_FLAGS " -fprofile-generate -fprofile-dir=${PGO_DATA_DIR}")
+            string(APPEND CMAKE_EXE_LINKER_FLAGS " -fprofile-generate")
+            string(APPEND CMAKE_SHARED_LINKER_FLAGS " -fprofile-generate")
+            string(APPEND CMAKE_MODULE_LINKER_FLAGS " -fprofile-generate")
+        else ()
+            # The profile is collected from one representative run, so it legitimately leaves rarely taken code paths
+            # unmeasured: do not let that turn into a wall of warnings.
+            string(APPEND CMAKE_CXX_FLAGS
+                   " -fprofile-use -fprofile-correction -fprofile-dir=${PGO_DATA_DIR} -Wno-missing-profile")
+        endif ()
+    else ()
+        message(FATAL_ERROR "USE_PGO is only wired up for MSVC and GCC, not for ${CMAKE_CXX_COMPILER_ID}.")
+    endif ()
+
+    message(STATUS "Profile-guided optimization: ${USE_PGO} (profile in ${PGO_DATA_DIR})")
+endif ()
+
 if (WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif (WIN32)

@@ -45,24 +45,43 @@ double SolverSequential::StoreRatesAndTotalAt(Brick* brick, double* contentDelta
     return total;
 }
 
+bool SolverSequential::SumAffineResponse(Brick* brick, double& rate, double& offset) {
+    rate = 0;
+    offset = 0;
+    int processCount = static_cast<int>(brick->GetProcessCount());
+    if (processCount == 0) {
+        return false;
+    }
+
+    for (int i = 0; i < processCount; ++i) {
+        Process* process = brick->GetProcess(i);
+        if (!process->HasLinearResponse() || process->GetConnectionCount() != 1) {
+            return false;
+        }
+        rate += process->GetLinearResponseRate();
+        offset += process->GetLinearResponseOffset();
+    }
+
+    return true;
+}
+
 bool SolverSequential::Solve(double timeStepInDays) {
     // Sequential forward substitution: each brick is solved with its upstream inflows of
     // the current step already booked in its incoming flux amounts.
-    int iRate = 0;
-    for (auto brick : _processor->GetSolvableBricks()) {
+    const vector<Processor::SolvableProcess>& processes = _processor->GetSolvableProcesses();
+    for (const auto& brickEntry : _processor->GetSolvableBrickEntries()) {
         // Link the brick's connections to its slice of the rates vector.
-        int iRateStart = iRate;
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int j = 0; j < process->GetConnectionCount(); ++j) {
-                assert(_rates.size() > iRate);
-                _rates(iRate) = 0;
-                process->StoreInOutgoingFlux(&_rates(iRate), j);
-                iRate++;
+        for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+            const Processor::SolvableProcess& entry = processes[i];
+            for (int j = 0; j < entry.connectionCount; ++j) {
+                assert(_rates.size() > entry.rateOffset + j);
+                _rates(entry.rateOffset + j) = 0;
+                entry.process->StoreInOutgoingFlux(&_rates(entry.rateOffset + j), j);
             }
         }
 
-        if (brick->IsNull()) {
+        Brick* brick = brickEntry.brick;
+        if (brick->IsNull() || brickEntry.processStart == brickEntry.processEnd) {
             continue;
         }
 
@@ -72,18 +91,16 @@ bool SolverSequential::Solve(double timeStepInDays) {
         // Inflows (upstream outflows, forcing, static handoffs) as a constant rate [mm/d].
         double inflow = container->SumIncomingFluxes() / timeStepInDays;
 
-        ComputeBrickRates(brick, content, inflow, timeStepInDays, iRateStart);
+        ComputeBrickRates(brick, content, inflow, timeStepInDays, processes[brickEntry.processStart].rateOffset);
 
         // Standard constraint enforcement on the average rates (non-negative content,
         // capacity via the overflow process), then application.
         brick->ApplyConstraints(timeStepInDays);
         brick->UpdateContentFromInputs();
-        int iRateApply = iRateStart;
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int j = 0; j < process->GetConnectionCount(); ++j) {
-                process->ApplyChange(j, _rates(iRateApply), timeStepInDays);
-                iRateApply++;
+        for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+            const Processor::SolvableProcess& entry = processes[i];
+            for (int j = 0; j < entry.connectionCount; ++j) {
+                entry.process->ApplyChange(j, _rates(entry.rateOffset + j), timeStepInDays);
             }
         }
     }

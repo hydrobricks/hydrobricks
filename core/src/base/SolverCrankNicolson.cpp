@@ -19,70 +19,91 @@ void SolverCrankNicolson::ComputeBrickRates(Brick* brick, double content, double
     double startTotal = StoreRatesAndTotalAt(brick, contentDelta, 0, _startRates);
 
     // Solve g(S) = S - S0 - h (I - (Q0 + Q(S)) / 2) = 0 for the end-of-step content S.
-    // Q is non-decreasing in S, so g is increasing and the root is bracketed by the
-    // no-outflow bound above and the max-outflow bound below.
+    // Q is non-decreasing in S, so g is increasing, and dg/dS = 1 + h/2 dQ/dS >= 1, which
+    // bounds the distance to the root by the residual: |S - root| <= |g(S)|. Any content
+    // whose residual is within the tolerance is therefore an acceptable answer, however it
+    // was obtained. Every evaluation below stores the per-connection rates in _endRates, so
+    // the accepted content leaves behind the rates the trapezoidal average needs.
     double h = timeStepInDays;
-    double hi = content + h * std::max(inflow, 0.0);
-    double maxOutflow = TotalRateAt(brick, contentDelta, hi - content);
-    double lo = content + h * (inflow - (startTotal + maxOutflow) / 2);
-    if (!container->AllowsNegativeContent()) {
-        lo = std::max(lo, 0.0);
-    }
-
-    // dg/dS = 1 + h/2 dQ/dS >= 1, so |S - root| <= |g(S)|: converging on |g| gives the
-    // same accuracy guarantee as shrinking the bracket, and the Illinois iteration
-    // (regula falsi with the stalled endpoint halved) reaches it in a handful of rate
-    // evaluations where plain bisection needed about fifty of them per brick per step.
     constexpr double tolerance = 1e-12;
-    auto evaluateG = [&](double s) {
-        double total = TotalRateAt(brick, contentDelta, s - content);
+    auto residualAt = [&](double s) {
+        double total = StoreRatesAndTotalAt(brick, contentDelta, s - content, _endRates);
         return s - content - h * (inflow - (startTotal + total) / 2);
     };
 
-    double endContent;
-    if (hi <= lo) {
-        endContent = lo;
-    } else {
-        double gLo = evaluateG(lo);
-        double gHi = hi - content - h * (inflow - (startTotal + maxOutflow) / 2);
-        if (gLo >= 0) {
-            endContent = lo;
-        } else if (gHi <= 0) {
-            endContent = hi;
-        } else {
-            endContent = (lo + hi) / 2;
-            int retainedSide = 0;
-            for (int iter = 0; iter < 100; ++iter) {
-                double s = (lo * gHi - hi * gLo) / (gHi - gLo);
-                if (!(s > lo && s < hi)) {
-                    s = (lo + hi) / 2;
-                }
-                double gS = evaluateG(s);
-                endContent = s;
-                if (std::abs(gS) <= tolerance || hi - lo <= tolerance) {
-                    break;
-                }
-                if (gS > 0) {
-                    hi = s;
-                    gHi = gS;
-                    if (retainedSide == 1) {
-                        gLo /= 2;
-                    }
-                    retainedSide = 1;
-                } else {
-                    lo = s;
-                    gLo = gS;
-                    if (retainedSide == -1) {
-                        gHi /= 2;
-                    }
-                    retainedSide = -1;
-                }
-            }
+    bool solved = false;
+
+    // Affine shortcut. When every process responds affinely to the content (Q = k S - offset),
+    // g is affine as well and its root is available in closed form, which spares the whole
+    // bracketing search. The coefficients only describe the processes over the range where
+    // they stay affine (a threshold outflow switches off below its threshold, an empty store
+    // produces no outflow at all), so the closed-form content is only a candidate: it is
+    // accepted once its residual, computed from the real process rates, passes the same test
+    // as the iteration below, and discarded otherwise.
+    double linearCoefficient = 0;
+    double linearOffset = 0;
+    if (SumAffineResponse(brick, linearCoefficient, linearOffset) && linearCoefficient > 0) {
+        double candidate = (content + h * (inflow - startTotal / 2 + linearOffset / 2)) /
+                           (1 + h * linearCoefficient / 2);
+        if (candidate > 0 || container->AllowsNegativeContent()) {
+            solved = std::abs(residualAt(candidate)) <= tolerance;
         }
     }
 
+    if (!solved) {
+        // The root is bracketed by the no-outflow bound above and the max-outflow bound below.
+        double hi = content + h * std::max(inflow, 0.0);
+        double maxOutflow = StoreRatesAndTotalAt(brick, contentDelta, hi - content, _endRates);
+        double lo = content + h * (inflow - (startTotal + maxOutflow) / 2);
+        if (!container->AllowsNegativeContent()) {
+            lo = std::max(lo, 0.0);
+        }
+        double gHi = hi - content - h * (inflow - (startTotal + maxOutflow) / 2);
+
+        if (hi <= lo) {
+            // Empty bracket: the low bound is the answer.
+            StoreRatesAndTotalAt(brick, contentDelta, lo - content, _endRates);
+        } else if (gHi > 0) {
+            double gLo = residualAt(lo);
+            if (gLo < 0) {
+                // Illinois iteration: regula falsi with the stalled endpoint halved. It keeps
+                // the bracket and converges in a handful of evaluations, where plain bisection
+                // needed about fifty of them per brick per step.
+                int retainedSide = 0;
+                for (int iter = 0; iter < 100; ++iter) {
+                    double s = (lo * gHi - hi * gLo) / (gHi - gLo);
+                    if (!(s > lo && s < hi)) {
+                        s = (lo + hi) / 2;
+                    }
+                    double gS = residualAt(s);
+                    if (std::abs(gS) <= tolerance || hi - lo <= tolerance) {
+                        break;
+                    }
+                    if (gS > 0) {
+                        hi = s;
+                        gHi = gS;
+                        if (retainedSide == 1) {
+                            gLo /= 2;
+                        }
+                        retainedSide = 1;
+                    } else {
+                        lo = s;
+                        gLo = gS;
+                        if (retainedSide == -1) {
+                            gHi /= 2;
+                        }
+                        retainedSide = -1;
+                    }
+                }
+            }
+            // gLo >= 0: the low bound is the root, and _endRates holds the rates it was
+            // evaluated with.
+        }
+        // gHi <= 0: the high bound is the root, and _endRates holds the rates of the
+        // max-outflow evaluation, which was made at that very content.
+    }
+
     // Applied rates: trapezoidal average of the start- and end-of-step process rates.
-    StoreRatesAndTotalAt(brick, contentDelta, endContent - content, _endRates);
     assert(_startRates.size() == _endRates.size());
     for (int i = 0; i < _startRates.size(); ++i) {
         _rates(iRateStart + i) = (_startRates[i] + _endRates[i]) / 2;

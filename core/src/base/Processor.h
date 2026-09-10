@@ -197,6 +197,25 @@ class Processor {
         int brickEnd;       // one past the last index in _directBricks
     };
 
+    /**
+     * Get the flattened solvable processes, in processing order, with their rate slices.
+     *
+     * @return the solvable processes.
+     */
+    const vector<SolvableProcess>& GetSolvableProcesses() const {
+        return _solvableProcesses;
+    }
+
+    /**
+     * Get the flattened solvable bricks, in processing order, each with the range of
+     * processes it owns in GetSolvableProcesses().
+     *
+     * @return the solvable brick entries.
+     */
+    const vector<SolvableBrickEntry>& GetSolvableBrickEntries() const {
+        return _solvableBrickEntries;
+    }
+
   protected:
     std::unique_ptr<Solver> _solver;  // owning
     ModelHydro* _model;               // non-owning reference

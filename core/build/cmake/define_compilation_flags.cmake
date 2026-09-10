@@ -47,6 +47,22 @@ elseif (WIN32)
     endif ()
 endif ()
 
+# Link-time (interprocedural) optimization for the optimized configurations. The simulation hot loops are spread over
+# many translation units and reach the processes through virtual calls, so the cross-module inlining and
+# devirtualization LTO enables are worth the longer link time.
+option(USE_LTO "Do you want link-time optimization in the optimized builds ?" ON)
+if (USE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT LTO_NOT_SUPPORTED_REASON)
+    if (LTO_SUPPORTED)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
+        message(STATUS "Link-time optimization enabled for the optimized builds.")
+    else ()
+        message(STATUS "Link-time optimization unavailable: ${LTO_NOT_SUPPORTED_REASON}")
+    endif ()
+endif ()
+
 if (WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif (WIN32)

@@ -67,7 +67,7 @@ class Glacier : public LandCover {
     /**
      * @copydoc Brick::UpdateContentFromInputs()
      */
-    void UpdateContentFromInputs() override;
+    void UpdateContentFromInputs(double timeStepInDays = 1.0) override;
 
     /**
      * @copydoc Brick::ResetInputBooking()

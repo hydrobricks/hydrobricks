@@ -53,5 +53,5 @@ const vecDouble& ProcessSublimationPrevah::GetRates() {
     // Snow evaporates at the albedo-reduced potential rate (albedo of the snow surface).
     double albedoFactor = (1.0 - _snowpack->GetSnowAlbedo()) / 0.8;
 
-    return StoreRates({_pet->GetValue() * albedoFactor});
+    return StoreRates({GetForcingRate(_pet) * albedoFactor});
 }

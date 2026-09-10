@@ -172,7 +172,7 @@ void Brick::UpdateContent(double value, ContentType type) {
     }
 }
 
-void Brick::UpdateContentFromInputs() {
+void Brick::UpdateContentFromInputs(double) {
     _water->BookIncomingFluxes();
 }
 

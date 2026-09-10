@@ -223,7 +223,7 @@ class Brick {
     /**
      * Update the content of the water container from the inputs.
      */
-    virtual void UpdateContentFromInputs();
+    virtual void UpdateContentFromInputs(double timeStepInDays = 1.0);
 
     /**
      * Flag the incoming amounts as no longer booked into the content changes (see

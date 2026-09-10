@@ -46,5 +46,5 @@ const vecDouble& ProcessSublimationPET::GetRates() {
         return StoreRates({0});
     }
 
-    return StoreRates({_pet->GetValue() * *_petFactor});
+    return StoreRates({GetForcingRate(_pet) * *_petFactor});
 }

@@ -6,6 +6,8 @@ TimeMachine::TimeMachine()
       _end(0),
       _timeStep(0),
       _timeStepUnit(TimeUnit::Day),
+      _stepIndex(0),
+      _timeStepInMinutes(0),
       _timeStepInDays(0),
       _parametersUpdater(nullptr),
       _actionsManager(nullptr) {}
@@ -14,6 +16,7 @@ void TimeMachine::Initialize(double start, double end, int timeStep, TimeUnit ti
     _date = start;
     _start = start;
     _end = end;
+    _stepIndex = 0;
     _timeStep = timeStep;
     _timeStepUnit = timeStepUnit;
     UpdateTimeStepInDays();
@@ -23,6 +26,7 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
     _start = ParseDate(settings.start, guess);
     _end = ParseDate(settings.end, guess);
     _date = _start;
+    _stepIndex = 0;
     _timeStep = settings.timeStep;
 
     if (settings.timeStepUnit == "day") {
@@ -39,6 +43,7 @@ void TimeMachine::Initialize(const TimerSettings& settings) {
 }
 
 void TimeMachine::Reset() {
+    _stepIndex = 0;
     _date = _start;
 }
 
@@ -48,7 +53,8 @@ bool TimeMachine::IsOver() const {
 
 void TimeMachine::IncrementTime() {
     assert(_timeStepInDays > 0);
-    _date += _timeStepInDays;
+    _stepIndex++;
+    _date = DateAtStepIndex();
 
     if (_parametersUpdater) {
         _parametersUpdater->DateUpdate(_date);
@@ -60,7 +66,14 @@ void TimeMachine::IncrementTime() {
 
 int TimeMachine::GetTimeStepCount() const {
     assert(_timeStepInDays > 0);
-    return static_cast<int>(1 + (_end - _start) / _timeStepInDays);
+    // Round rather than truncate: the span in steps is an integer, but computing it in
+    // fractional days can land just below it (e.g. 17496.999999999996 for a year of
+    // hourly steps), and truncating would then drop the last step.
+    return 1 + static_cast<int>(std::llround((_end - _start) / _timeStepInDays));
+}
+
+double TimeMachine::DateAtStepIndex() const {
+    return _start + static_cast<double>(_stepIndex * _timeStepInMinutes) / 1440.0;
 }
 
 void TimeMachine::UpdateTimeStepInDays() {
@@ -68,20 +81,25 @@ void TimeMachine::UpdateTimeStepInDays() {
         case TimeUnit::Variable:
             throw NotImplemented("TimeMachine::UpdateTimeStepInDays - Variable time step unit not yet supported");
         case TimeUnit::Week:
-            _timeStepInDays = _timeStep * 7;
+            _timeStepInMinutes = _timeStep * 7 * 1440;
             break;
         case TimeUnit::Day:
-            _timeStepInDays = _timeStep;
+            _timeStepInMinutes = _timeStep * 1440;
             break;
         case TimeUnit::Hour:
-            _timeStepInDays = _timeStep / 24.0;
+            _timeStepInMinutes = _timeStep * 60;
             break;
         case TimeUnit::Minute:
-            _timeStepInDays = _timeStep / 1440.0;
+            _timeStepInMinutes = _timeStep;
             break;
         default:
             LogError("The provided time step unit is not allowed.");
+            return;
     }
+
+    // Every allowed unit is an exact number of minutes, so this ratio carries no
+    // rounding beyond the single division.
+    _timeStepInDays = static_cast<double>(_timeStepInMinutes) / 1440.0;
 }
 
 int TimeMachine::GetCurrentDayOfYear() const {

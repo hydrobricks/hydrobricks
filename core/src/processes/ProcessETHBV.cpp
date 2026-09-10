@@ -52,7 +52,7 @@ void ProcessETHBV::AttachForcing(Forcing* forcing) {
 
 const vecDouble& ProcessETHBV::GetRates() {
     assert(_container->HasMaximumCapacity());
-    double pet = static_cast<double>(*_etCorrectionFactor) * _pet->GetValue();
+    double pet = static_cast<double>(*_etCorrectionFactor) * GetForcingRate(_pet);
     double threshold = static_cast<double>(*_lp) * _container->GetMaximumCapacity();
     if (threshold <= 0) {
         return StoreRates({pet});

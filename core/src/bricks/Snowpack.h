@@ -66,7 +66,7 @@ class Snowpack : public SurfaceComponent {
     /**
      * @copydoc Brick::UpdateContentFromInputs()
      */
-    void UpdateContentFromInputs() override;
+    void UpdateContentFromInputs(double timeStepInDays = 1.0) override;
 
     /**
      * @copydoc Brick::ResetInputBooking()
@@ -108,7 +108,7 @@ class Snowpack : public SurfaceComponent {
 
   protected:
     std::unique_ptr<SnowContainer> _snow;  // owning
-    double _snowAge = 0;                   // age of the snow surface [time steps] since the last snowfall
+    double _snowAge = 0;                   // age of the snow surface [d] since the last snowfall
     double _snowfallInput = 0;             // snow inflow of the current time step [mm] (for the age reset)
 };
 

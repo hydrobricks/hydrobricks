@@ -39,7 +39,7 @@ const vecDouble& ProcessETOpenWater::GetRates() {
     // outflows, but in the explicit/direct computation path the static inflows are folded
     // into the content before the cap is evaluated, so the cap alone can let a small store
     // overshoot; capping here makes the process robust on both paths.)
-    double rate = _pet->GetValue();
+    double rate = GetForcingRate(_pet);
     if (_timeMachine != nullptr) {
         double timeStepInDays = *_timeMachine->GetTimeStepPointer();
         if (timeStepInDays > 0) {

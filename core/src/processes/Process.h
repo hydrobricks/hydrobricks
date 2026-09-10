@@ -378,6 +378,22 @@ class Process {
     }
 
   protected:
+    /**
+     * Read a forcing as the daily rate the processes work with.
+     *
+     * A cumulative forcing (precipitation, PET) is given as the amount that falls or is
+     * demanded during one time step, so it is divided by the step length; the two
+     * coincide at a daily step, which is why this only matters for sub-daily runs. A
+     * non-cumulative one (temperature, radiation) is returned untouched: dividing it
+     * would be meaningless, and the forcing's own type decides here so that a caller
+     * cannot get it wrong.
+     *
+     * @param forcing the forcing to read.
+     * @return the value as a rate [unit/d] for a cumulative forcing, the value itself
+     * otherwise.
+     */
+    [[nodiscard]] double GetForcingRate(Forcing* forcing) const;
+
     string _name;
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference

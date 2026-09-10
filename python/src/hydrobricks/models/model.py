@@ -124,6 +124,8 @@ class Model(ABC):
         end_date: str | None = None,
         period: Period | tuple | None = None,
         spinup: int | str = 0,
+        time_step: int = 1,
+        time_step_unit: str = "day",
     ) -> None:
         """
         Setup and initialize the model for simulation.
@@ -150,6 +152,12 @@ class Model(ABC):
             restarts at the period start with the warmed-up states. Either a number
             of days (int) or a string like ``'4y'`` (calendar years). A spin-up
             longer than the period is clamped to it. Default: 0 (no spin-up)
+        time_step
+            Length of the computation time step, in ``time_step_unit``. Default: 1
+        time_step_unit
+            Unit of the computation time step: ``'day'``, ``'hour'`` or
+            ``'minute'``. The forcing must be provided at the same resolution.
+            Default: ``'day'``
 
         Raises
         ------
@@ -166,6 +174,8 @@ class Model(ABC):
         >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
         >>> model.setup(hydro_units, './output', period=periods.calibration,
         ...             spinup='4y')
+        >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31',
+        ...             time_step=1, time_step_unit='hour')
         """
         if self._is_initialized:
             raise ModelError(
@@ -207,7 +217,7 @@ class Model(ABC):
             init_log(str(output_path))
 
             # Modelling period
-            self.settings.set_timer(start_date, end_date, 1, "day")
+            self.settings.set_timer(start_date, end_date, time_step, time_step_unit)
 
             # Spin-up (replays the first days of the period, unlogged, on every run)
             self.spinup_days = spinup_to_days(spinup, start_date)

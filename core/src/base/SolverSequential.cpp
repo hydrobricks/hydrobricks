@@ -96,7 +96,7 @@ bool SolverSequential::Solve(double timeStepInDays) {
         // Standard constraint enforcement on the average rates (non-negative content,
         // capacity via the overflow process), then application.
         brick->ApplyConstraints(timeStepInDays);
-        brick->UpdateContentFromInputs();
+        brick->UpdateContentFromInputs(timeStepInDays);
         for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
             const Processor::SolvableProcess& entry = processes[i];
             for (int j = 0; j < entry.connectionCount; ++j) {

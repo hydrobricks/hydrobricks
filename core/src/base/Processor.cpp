@@ -280,7 +280,7 @@ void Processor::ApplyRates(const axd& rates, double timeStepInDays) {
         if (brickEntry.brick->IsNull()) {
             continue;
         }
-        brickEntry.brick->UpdateContentFromInputs();
+        brickEntry.brick->UpdateContentFromInputs(timeStepInDays);
         for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
             const auto& entry = _solvableProcesses[i];
             int iRate = entry.rateOffset;
@@ -335,7 +335,7 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
 
 void Processor::ApplyDirectChanges(const DirectBrickEntry& brickEntry, double timeStepInDays) {
     Brick* brick = brickEntry.brick;
-    brick->UpdateContentFromInputs();
+    brick->UpdateContentFromInputs(timeStepInDays);
 
     // Initialize the change rates to 0 and link to fluxes. All the processes of the brick
     // are linked before any rate is computed, because a process rate may read the fluxes

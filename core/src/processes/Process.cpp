@@ -56,6 +56,7 @@
 #include "ProcessTransformSnowToIceConstant.h"
 #include "ProcessTransformSnowToIceSwat.h"
 #include "Snowpack.h"
+#include "TimeMachine.h"
 #include "WaterContainer.h"
 
 Process::Process(WaterContainer* container)
@@ -651,4 +652,26 @@ void Process::Validate() const {
     if (!IsValid()) {
         throw ModelConfigError("Process validation failed. Check that all required properties are correctly defined.");
     }
+}
+
+double Process::GetForcingRate(Forcing* forcing) const {
+    assert(forcing);
+    double value = forcing->GetValue();
+
+    // Only an amount accumulated over the step can be turned into a rate.
+    if (!forcing->IsCumulative()) {
+        return value;
+    }
+
+    // No timer (a process built outside a model, as in the unit tests): fall back on the
+    // daily step, where the amount and the rate are the same number.
+    if (_timeMachine == nullptr) {
+        return value;
+    }
+    double timeStepInDays = *_timeMachine->GetTimeStepPointer();
+    if (timeStepInDays <= 0) {
+        return value;
+    }
+
+    return value / timeStepInDays;
 }

@@ -113,7 +113,7 @@ void Glacier::UpdateContent(double value, ContentType type) {
     }
 }
 
-void Glacier::UpdateContentFromInputs() {
+void Glacier::UpdateContentFromInputs(double) {
     _ice->BookIncomingFluxes();
     _water->BookIncomingFluxes();
 }

@@ -152,6 +152,19 @@ class Process {
     }
 
     /**
+     * Check whether the process is a discrete daily formulation, which a shorter time
+     * step would not refine but simply misread. The GR4J and GR6J routines are such
+     * cases: they work on the water volume of a step and advance their unit hydrograph
+     * by one slot per step, so their parameters mean days only. A model holding one of
+     * these is rejected at initialization unless the time step is a day.
+     *
+     * @return true if the process only makes sense on a daily time step.
+     */
+    [[nodiscard]] virtual bool RequiresDailyTimeStep() const {
+        return false;
+    }
+
+    /**
      * Check if the process needs to link the target brick.
      *
      * @return true if the process needs to link the target brick.

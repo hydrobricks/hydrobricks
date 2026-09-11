@@ -40,6 +40,13 @@ class ProcessRoutingGR6J : public ProcessOutflow {
     static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
+     * @copydoc Process::RequiresDailyTimeStep()
+     */
+    [[nodiscard]] bool RequiresDailyTimeStep() const override {
+        return true;
+    }
+
+    /**
      * @copydoc Process::SetParameters()
      */
     void SetParameters(const ProcessSettings& processSettings) override;

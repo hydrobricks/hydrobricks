@@ -46,6 +46,10 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
             return std::unexpected("Timer initialization failed validation.");
         }
 
+        if (auto r = CheckTimeStepCompatibility(); !r) {
+            return r;
+        }
+
         // Convert the spin-up duration into time steps; a spin-up longer than the
         // modelling period degrades to replaying the whole period once.
         double timeStepInDays = *_timer.GetTimeStepPointer();
@@ -97,6 +101,55 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
             _parametersUpdater.AddUnitMonthlyOverride(target, values);
         }
     }
+}
+
+ModelResult ModelHydro::CheckTimeStepCompatibility() {
+    double timeStepInDays = *_timer.GetTimeStepPointer();
+    if (timeStepInDays == 1.0) {
+        return {};
+    }
+
+    // A discrete daily formulation (GR4J, GR6J) is not a continuous model sampled at a
+    // time step: it works on the water volume of a step and advances its unit hydrograph
+    // by one slot per step, so a shorter step silently reinterprets its parameters. Say
+    // so at initialization rather than let it run and produce plausible nonsense.
+    auto firstDailyOnly = [](const Brick* brick) -> const Process* {
+        for (size_t i = 0; i < brick->GetProcessCount(); ++i) {
+            const Process* process = brick->GetProcess(i);
+            if (process != nullptr && process->RequiresDailyTimeStep()) {
+                return process;
+            }
+        }
+        return nullptr;
+    };
+
+    auto reject = [timeStepInDays](const Brick* brick, const Process* process) {
+        return std::unexpected(
+            std::format("The process '{}' of '{}' is a discrete daily formulation and only works on a "
+                        "daily time step (the current one is {:g} day). Such a process works on the "
+                        "water volume of a time step, so a shorter step reinterprets its parameters "
+                        "rather than refining it. Use a daily time step, or a model whose processes "
+                        "are continuous in time.",
+                        process->GetName(), brick->GetName(), timeStepInDays));
+    };
+
+    for (int iBrick = 0; iBrick < _subBasin->GetBrickCount(); ++iBrick) {
+        const Brick* brick = _subBasin->GetBrick(iBrick);
+        if (const Process* process = firstDailyOnly(brick)) {
+            return reject(brick, process);
+        }
+    }
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
+            const Brick* brick = unit->GetBrick(iBrick);
+            if (const Process* process = firstDailyOnly(brick)) {
+                return reject(brick, process);
+            }
+        }
+    }
+
+    return {};
 }
 
 bool ModelHydro::IsValid() const {

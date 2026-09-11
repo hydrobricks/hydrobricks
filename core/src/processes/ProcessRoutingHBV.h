@@ -9,12 +9,15 @@
  *
  * The routing brick accumulates the runoff components (e.g. upper and lower
  * zone outflows) each timestep. The total is convolved with a triangular
- * weighting function of base maxbas [d]:
+ * weighting function of base maxbas [d], expressed on the grid of time steps as
+ * m = maxbas / timestep:
  *   - cumulative weights C(t) = 2(t/m)^2 for t <= m/2
  *   -                    C(t) = 1 - 2(1 - t/m)^2 for m/2 < t <= m
  *   - ordinates w_j = C(j) - C(j-1), j = 1..ceil(m)
  *
- * With maxbas <= 1 the inflow is passed through within the timestep.
+ * maxbas is therefore a duration whatever the time step: the same value routes the
+ * same shape on a daily and on an hourly step, only resolved more finely. With a
+ * maxbas shorter than one time step the inflow is passed through within the step.
  *
  * The process maintains a delivery schedule (_stuh): each slot holds the water
  * due to leave that many timesteps from now. GetRates() is read-only (the
@@ -83,6 +86,10 @@ class ProcessRoutingHBV : public ProcessOutflow {
     vecDouble _stuh;
     vecDouble _uhOrd;
     double _lastMaxbas;
+    // Time step the ordinates were built for. The structure is built before the timer is
+    // initialized, so the first computation falls back on a daily step; the ordinates are
+    // rebuilt as soon as the real step is known.
+    double _lastTimeStep;
 
     // End-of-step container content of the previous timestep (to measure the committed inflow)
     double _previousContent;
@@ -107,6 +114,12 @@ class ProcessRoutingHBV : public ProcessOutflow {
      * Cumulative triangular weighting function.
      */
     static double _cumulativeWeight(double t, double maxbas);
+
+    /**
+     * The current time step in days, falling back on a daily step while the timer is
+     * not yet initialized.
+     */
+    [[nodiscard]] double _currentTimeStepInDays() const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_ROUTING_HBV_H

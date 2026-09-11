@@ -517,3 +517,39 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNegExchange) {
         EXPECT_NEAR(q[i], expected[i], 0.0000007) << "at time step " << i;
     }
 }
+
+TEST_F(ModelGR4JBasic, RejectsASubDailyTimeStep) {
+    // GR4J is a discrete daily formulation: its production store works on the water
+    // volume of a step and its unit hydrograph advances one slot per step, so a shorter
+    // step reinterprets its parameters instead of refining it. Initialization says so
+    // rather than letting the run produce plausible nonsense.
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetTimer("2020-01-01", "2020-01-15", 1, "hour");
+    GenerateStructureGR4J(_model);
+    ModelHydro model(&subBasin);
+
+    auto result = model.Initialize(_model, basinSettings);
+    ASSERT_FALSE(result);
+    EXPECT_NE(result.error().find("daily time step"), string::npos);
+}
+
+TEST_F(ModelGR4JBasic, AcceptsADailyStepSpelledInHours) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    basinSettings.AddLandCover("ground", "", 1.0);
+
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+    _model.SetTimer("2020-01-01", "2020-01-15", 24, "hour");
+    GenerateStructureGR4J(_model);
+    ModelHydro model(&subBasin);
+
+    EXPECT_TRUE(model.Initialize(_model, basinSettings));
+}

@@ -299,6 +299,14 @@ class ModelHydro {
     int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
 
   private:
+    /**
+     * Reject a time step that a discrete daily process cannot honour.
+     *
+     * @return an error naming the process when the model holds one and the step is not
+     * a day, nothing otherwise.
+     */
+    [[nodiscard]] ModelResult CheckTimeStepCompatibility();
+
     ModelResult InitializeTimeSeries();
 
     ModelResult UpdateForcing();

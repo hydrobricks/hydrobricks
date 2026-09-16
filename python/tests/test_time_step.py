@@ -453,3 +453,114 @@ def test_the_continuous_models_accept_a_sub_daily_step(tmp_path):
             time_step=1,
             time_step_unit="hour",
         )
+
+
+# ---------------------------------------------------------------------------
+# The forcing resolution must be the computation time step
+# ---------------------------------------------------------------------------
+
+
+def _forcing_at(tmp_path: Path, units, freq: str, n: int):
+    stamps = pd.date_range(pd.Timestamp(_START), periods=n, freq=freq)
+    lines = ["date,precip,pet,temp"]
+    for stamp in stamps:
+        lines.append(f"{stamp.strftime('%Y-%m-%d %H:%M')},1.0,0.5,8.0")
+    meteo = tmp_path / f"meteo_{freq}.csv"
+    meteo.write_text("\n".join(lines) + "\n")
+
+    forcing = hb.Forcing(units)
+    forcing.load_station_data_from_csv(
+        meteo,
+        column_time="date",
+        time_format="%Y-%m-%d %H:%M",
+        content={"precipitation": "precip", "pet": "pet", "temperature": "temp"},
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=1000, gradient=0.0
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=1000, gradient=0.0
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    return forcing
+
+
+def _model_at(tmp_path: Path, units, time_step: int, unit: str):
+    model = models.PrevahUniBE()
+    parameters = model.generate_parameters()
+    parameters.set_values(dict(_PARAMS))
+    model.setup(
+        spatial_structure=units,
+        output_path=str(tmp_path),
+        start_date="1981-01-01",
+        end_date="1981-03-01",
+        time_step=time_step,
+        time_step_unit=unit,
+    )
+    return model, parameters
+
+
+def test_hourly_forcing_on_a_daily_model_is_refused(tmp_path):
+    """The dangerous one: it used to run and keep one value in twenty-four."""
+    sub, units = _daily_only_units(tmp_path)
+    forcing = _forcing_at(sub, units, "h", 100 * 24)
+    model, parameters = _model_at(sub, units, 1, "day")
+    with pytest.raises(hb.ConfigurationError, match="have to match"):
+        model.run(parameters=parameters, forcing=forcing)
+
+
+def test_daily_forcing_on_an_hourly_model_is_refused(tmp_path):
+    sub, units = _daily_only_units(tmp_path)
+    forcing = _forcing_at(sub, units, "D", 100)
+    model, parameters = _model_at(sub, units, 1, "hour")
+    with pytest.raises(hb.ConfigurationError, match="have to match"):
+        model.run(parameters=parameters, forcing=forcing)
+
+
+def test_matching_forcing_and_step_is_accepted(tmp_path):
+    for freq, n, step, unit in (("D", 100, 1, "day"), ("h", 100 * 24, 1, "hour")):
+        sub, units = _daily_only_units(tmp_path / freq)
+        forcing = _forcing_at(sub, units, freq, n)
+        model, parameters = _model_at(sub, units, step, unit)
+        model.run(parameters=parameters, forcing=forcing)
+        assert model.get_total_outlet_discharge() > 0
+
+
+def test_computed_pet_is_an_amount_per_step(tmp_path):
+    """The pyet methods give a daily demand; the model wants the demand of a step.
+
+    The daily and the hourly forcing must therefore carry the same PET per day, which
+    is what lets a calibrated model keep its evaporation when the step is refined.
+    """
+    sub, units = _daily_only_units(tmp_path)
+    units.add_property(("latitude", "degree"), np.array([46.4]))
+
+    totals = {}
+    for freq, n in (("D", 60), ("h", 60 * 24)):
+        stamps = pd.date_range(pd.Timestamp(_START), periods=n, freq=freq)
+        lines = ["date,precip,temp"]
+        for stamp in stamps:
+            share = 1.0 if freq == "D" else 1.0 / 24.0
+            lines.append(f"{stamp.strftime('%Y-%m-%d %H:%M')},{share:.8f},8.0")
+        meteo = sub / f"pet_{freq}.csv"
+        meteo.write_text("\n".join(lines) + "\n")
+
+        forcing = hb.Forcing(units)
+        forcing.load_station_data_from_csv(
+            meteo,
+            column_time="date",
+            time_format="%Y-%m-%d %H:%M",
+            content={"precipitation": "precip", "temperature": "temp"},
+        )
+        forcing.spatialize_from_station_data(
+            variable="precipitation", ref_elevation=1000, gradient=0.0
+        )
+        forcing.spatialize_from_station_data(
+            variable="temperature", ref_elevation=1000, gradient=0.0
+        )
+        forcing.compute_pet(method="Hamon", use=["t", "lat"], lat=46.4)
+        forcing.apply_operations()
+        idx = forcing.data2D.data_name.index(forcing.Variable.PET)
+        totals[freq] = float(np.sum(forcing.data2D.data[idx]))
+
+    assert totals["h"] == pytest.approx(totals["D"], rel=1e-6)

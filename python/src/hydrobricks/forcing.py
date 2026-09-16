@@ -651,6 +651,13 @@ class Forcing:
             Additional function-specific options passed through to the pyet function
             (see the pyet documentation).
 
+        Notes
+        -----
+        The pyet methods are daily formulations, and the model reads the PET as the
+        amount demanded during one time step. The computed daily demand is therefore
+        shared between the steps of its day when the forcing is sub-daily; on a daily
+        forcing nothing is scaled.
+
         Raises
         ------
         DependencyError
@@ -1385,6 +1392,12 @@ class Forcing:
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 
+        # The pyet methods are daily formulations: each timestamp gets the evaporative
+        # demand of a whole day. The model reads the PET as the amount demanded during
+        # one time step, so a sub-daily series is shared between the steps of its day.
+        # The factor is 1 on a daily series, which leaves those untouched.
+        pet = pet * self._forcing_step_in_days()
+
         # Store outputs
         if self.Variable.PET not in self.data2D.data_name:
             self.data2D.data.append(pet)
@@ -1392,6 +1405,23 @@ class Forcing:
         else:
             idx = self.data2D.data_name.index(self.Variable.PET)
             self.data2D.data[idx] = pet
+
+    def _forcing_step_in_days(self) -> float:
+        """
+        Spacing of the forcing records, in days.
+
+        Returns
+        -------
+        The spacing in days, or 1 when the series is too short to tell.
+        """
+        time = getattr(self.data2D, "time", None)
+        if time is None or len(time) < 2:
+            return 1.0
+
+        spacing = pd.Timestamp(time[1]) - pd.Timestamp(time[0])
+        step = spacing.total_seconds() / 86400.0
+
+        return step if step > 0 else 1.0
 
     @staticmethod
     def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:

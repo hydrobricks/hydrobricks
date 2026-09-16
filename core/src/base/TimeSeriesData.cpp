@@ -114,6 +114,21 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     return true;
 }
 
+double TimeSeriesDataRegular::GetTimeStepInDays() const {
+    switch (_timeStepUnit) {
+        case TimeUnit::Week:
+            return _timeStep * 7.0;
+        case TimeUnit::Day:
+            return _timeStep;
+        case TimeUnit::Hour:
+            return _timeStep / 24.0;
+        case TimeUnit::Minute:
+            return _timeStep / 1440.0;
+        default:
+            return 0;
+    }
+}
+
 double TimeSeriesDataRegular::GetStart() const {
     return _start;
 }

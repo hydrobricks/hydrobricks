@@ -4,6 +4,7 @@
 #include "FluxToBrick.h"
 #include "HydroUnit.h"
 #include "Snowpack.h"
+#include "TimeMachine.h"
 #include "WaterContainer.h"
 
 ProcessLateralSnowSlide::ProcessLateralSnowSlide(WaterContainer* container)
@@ -95,6 +96,14 @@ const vecDouble& ProcessLateralSnowSlide::GetRates() {
         excessSwe = 1000.0;
     }
 
+    // Sliding is fast compared with any computation step, so the whole excess leaves
+    // within the step it appears in. The change rates are per day, so the amount is
+    // turned into the rate that empties it over one step; on a daily step the two are
+    // the same number, and a shorter step then slides the same excess at once instead
+    // of draining it over about a day.
+    double timeStepInDays = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double excessRate = (timeStepInDays > 0) ? excessSwe / timeStepInDays : excessSwe;  // [mm/d]
+
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.
         assert(_weights.size() > i);
@@ -104,7 +113,7 @@ const vecDouble& ProcessLateralSnowSlide::GetRates() {
             _changeRates[i] = 0.0;  // No redistribution if target fraction is negligible
             continue;
         }
-        _changeRates[i] = excessSwe * _weights[i] * targetFraction;  // [mm] Redistribution rate to target unit
+        _changeRates[i] = excessRate * _weights[i] * targetFraction;  // [mm/d] rate to the target unit
 
         _changeRates[i] = AvoidUnrealisticAccumulation(_changeRates[i], flux);
 

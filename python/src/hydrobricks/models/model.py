@@ -67,6 +67,8 @@ class Model(ABC):
         self.end_date: str | None = None
         self.period: Period | None = None
         self.spinup_days: int = 0
+        self.time_step: int = 1
+        self.time_step_unit: str = "day"
         self.output_path: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
@@ -217,6 +219,8 @@ class Model(ABC):
             init_log(str(output_path))
 
             # Modelling period
+            self.time_step = int(time_step)
+            self.time_step_unit = time_step_unit
             self.settings.set_timer(start_date, end_date, time_step, time_step_unit)
 
             # Spin-up (replays the first days of the period, unlogged, on every run)
@@ -378,6 +382,7 @@ class Model(ABC):
                 is_initialized=False,
             )
         self.model.clear_time_series()
+        self._check_forcing_resolution(forcing)
         time = forcing.data2D.time.to_numpy()
         time = date_as_mjd(time)
         ids = self.spatial_structure.get_ids().to_numpy().flatten()
@@ -393,6 +398,55 @@ class Model(ABC):
 
         if not self.model.attach_time_series_to_hydro_units():
             raise ModelError("Attaching time series failed.")
+
+    @property
+    def time_step_in_days(self) -> float:
+        """The computation time step, in days."""
+        per_day = {"day": 1.0, "hour": 24.0, "minute": 1440.0}
+        divisor = per_day.get(str(self.time_step_unit).lower())
+        if divisor is None:
+            return float(self.time_step)
+
+        return float(self.time_step) / divisor
+
+    def _check_forcing_resolution(self, forcing: Forcing) -> None:
+        """
+        Check that the forcing spacing is the computation time step.
+
+        The forcing is advanced one record per time step, so the two must agree: a daily
+        series on an hourly model runs out of records after a day, and an hourly series
+        on a daily model reads one value in twenty-four and drops the rest of the water
+        without saying anything.
+
+        Parameters
+        ----------
+        forcing
+            The forcing data about to be attached.
+
+        Raises
+        ------
+        ConfigurationError
+            If the forcing spacing differs from the computation time step.
+        """
+        time = getattr(forcing.data2D, "time", None)
+        if time is None or len(time) < 2:
+            return
+
+        spacing = pd.Timestamp(time[1]) - pd.Timestamp(time[0])
+        data_step = spacing.total_seconds() / 86400.0
+        model_step = self.time_step_in_days
+        if data_step <= 0 or abs(data_step - model_step) < 1e-9:
+            return
+
+        raise ConfigurationError(
+            f"The forcing is provided every {data_step:g} day(s) but the model runs on "
+            f"a time step of {model_step:g} day(s); they have to match. Provide the "
+            f"forcing at the resolution of the computation time step, or set the time "
+            f"step of the model to the resolution of the forcing.",
+            item_name="forcing",
+            item_value=data_step,
+            reason="Forcing resolution differs from the time step",
+        )
 
     def add_action(self, action: Action) -> bool:
         """

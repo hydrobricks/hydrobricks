@@ -350,6 +350,21 @@ bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
         }
     }
 
+    // The forcing is advanced one record per time step, so its spacing has to be the
+    // computation step: daily data on an hourly model runs out of records a day in, and
+    // hourly data on a daily model silently reads one value in twenty-four and drops the
+    // rest of the water.
+    double dataStep = timeSeries->GetTimeStepInDays();
+    double modelStep = *_timer.GetTimeStepPointer();
+    if (dataStep > 0 && std::abs(dataStep - modelStep) > 1e-9) {
+        LogError(
+            "The forcing is provided every {:g} day(s) but the model runs on a time step of "
+            "{:g} day(s); they have to match. Provide the forcing at the resolution of the "
+            "computation time step.",
+            dataStep, modelStep);
+        return false;
+    }
+
     if (timeSeries->GetStart() > _timer.GetStart()) {
         LogError("The data starts after the beginning of the modelling period.");
         return false;

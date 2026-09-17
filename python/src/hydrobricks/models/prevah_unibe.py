@@ -284,18 +284,25 @@ class PrevahUniBE(Model):
         Rain/snow transition bounds [°C] (PREVAH: TGR − TTRANS and TGR + TTRANS).
     rfcf, sfcf : float
         Rain and snow correction factors [-] (PREVAH cf_rain/cf_snow).
+    melt_factor, r_snow : float
+        Melt factor [mm/d/°C] and radiation coefficient of the radiation-corrected
+        (Hock) snow melt, (melt_factor + r_snow · R_pot) · (T − T0) (PREVAH CSNOMF
+        and CASNO; with the default 'melt:temperature_index').
     a_snow_min (crmfmin), a_snow_max (crmfmax) : float
         Winter minimum and summer maximum of the seasonal snow melt degree-day
-        factor [mm/d/°C] (with the default 'melt:degree_day_seasonal').
+        factor [mm/d/°C] (with 'melt:degree_day_seasonal' instead).
     melt_t_snow : float
         Snow melting temperature [°C] (PREVAH T0).
     cwh : float
         Snowpack liquid water holding capacity, fraction of the SWE [-].
+    holding_melt_t, cexliq : float
+        Temperature above which the liquid retention collapses, and the exponent of
+        the graded release of the fresh melt (PREVAH CEXLIQ).
     cfr : float
         Refreezing coefficient [-] (PREVAH CRFR).
-    sublimation_pet_factor : float
-        Fraction of the PET applied as snow sublimation [-] (PREVAH computes the
-        snow evaporation from the PET).
+    cfr_ddf_min, cfr_ddf_max, cfr_melt_t : float
+        Seasonal degree-day factor and melting temperature of the refreezing (PREVAH
+        TMFMIN, TMFMAX, T0).
     fc : float
         Soil moisture storage capacity (plant-available field capacity) [mm].
     beta : float
@@ -338,27 +345,33 @@ class PrevahUniBE(Model):
     Options
     -------
     snow_melt_process : str
-        Snowmelt method (default: 'melt:degree_day_seasonal', PREVAH's seasonal
-        sine between CRMFMIN and CRMFMAX). 'melt:temperature_index' gives
-        PREVAH's Hock radiation-corrected melt (requires the potential clear-sky
-        radiation forcing); it is incompatible with the degree-day refreezing
-        (set snow_refreezing_process=None).
+        Snowmelt method (default: 'melt:temperature_index', PREVAH's
+        radiation-corrected (Hock) melt). It requires a potential clear-sky
+        radiation forcing ('solar_radiation'), e.g. computed from a DEM with
+        ``catchment.calculate_daily_potential_radiation()``; running without one
+        raises an error. The melt factor is calibrated against the radiation it
+        multiplies, so a radiation computed differently needs its own coefficient.
+        'melt:degree_day_seasonal' gives PREVAH's seasonal sine between CRMFMIN and
+        CRMFMAX, with no radiation needed.
     snow_water_retention_process : str or None
         Outflow process of the snowpack liquid water storage (default:
-        'outflow:snow_holding', the CWH holding capacity).
+        'outflow:snow_holding_prevah', the CWH holding capacity collapsing on melt
+        days, with the CEXLIQ graded release). 'outflow:snow_holding' keeps the plain
+        CWH holding capacity.
     snow_refreezing_process : str or None
         Refreezing process of the retained liquid water (default:
-        'refreeze:degree_day', the CRFR coefficient; uses the current, seasonal
-        degree-day factor). Requires a degree-day snow melt process.
+        'refreeze:degree_day_seasonal', the CRFR coefficient with its own seasonal
+        degree-day factor, so it works with any melt process). 'refreeze:degree_day'
+        reads the factor of the melt process and requires a degree-day melt.
     rain_to_snowpack : bool
         Route the rain to the snowpack liquid water storage (default: True, as
         in the PREVAH snow routine).
     snow_sublimation_process : str or None
-        Snow evaporation process (default: 'sublimation:pet', a fixed
-        ``sublimation_pet_factor`` of the PET). 'sublimation:prevah' evaporates
-        snow at the albedo-reduced potential rate (PET (1 - albedo)/0.8 with the
-        snowpack's age-dependent albedo), as PREVAH does — the faithful,
-        parameter-free snow evaporation.
+        Snow evaporation process (default: 'sublimation:prevah', which evaporates
+        snow at the albedo-reduced potential rate, PET (1 - albedo)/0.8 with the
+        snowpack's age-dependent albedo, as PREVAH does). It has no parameter, so it
+        relies on a PET of the right magnitude (PREVAH's vapour-density Hamon).
+        'sublimation:pet' applies a fixed ``sublimation_pet_factor`` of the PET.
     snow_rain_process : str or None
         Rain/snow partitioning method (default: None, i.e. 'snow_rain:linear',
         PREVAH's linear transition over TGR ± TTRANS).
@@ -382,37 +395,42 @@ class PrevahUniBE(Model):
         which would hold the gate shut. Keep the shared store for a discretization
         that gives each unit a single land use (a PREVAH hydrotope).
     forest_interception : bool
-        Add a canopy interception store on each ``forest`` land cover (default:
-        True). Superseded by ``interception_covers`` when that option is set.
+        Enable the canopy interception (default: True). ``False`` disables it
+        unless ``interception_covers`` names covers explicitly.
     interception_covers : list[str] | None
         Names of the land covers to equip with a canopy interception store
-        (default None: the forest covers). The original PREVAH applies its
-        interception module (Menzel filling, evaporation at et_pot * veg_cov) to
-        EVERY vegetated cover — pass all vegetated cover names to reproduce that.
-        With canopy_et_process='et:open_water_prevah', each canopy gets an
-        ``et_factor`` parameter (alias ``canopy_et_factor[_<cover>]``) for the
-        monthly PREVAH veg_cov fraction (set via set_monthly_values).
+        (default None: every cover but the glaciers, as PREVAH runs its
+        interception module, Menzel filling with evaporation at et_pot * veg_cov,
+        on every hydrotope). With canopy_et_process='et:open_water_prevah', each
+        canopy gets an ``et_factor`` parameter (alias
+        ``canopy_et_factor[_<cover>]``) for the monthly PREVAH veg_cov fraction.
+        A cover named after a PREVAH land use (e.g. ``pasture``) gets its monthly
+        tables from :meth:`generate_parameters`; for a generic name (``open``,
+        ``forest``), call :meth:`apply_land_use` with the land use it stands for,
+        or the capacity and the factor stay constant.
     canopy_interception_process : str
         Throughfall process of the forest canopy (default: 'interception:menzel',
         PREVAH's Menzel (1997) asymptotic filling). Use 'outflow:threshold' for a
         simpler fill-then-spill store.
     soil_et_process : str
-        Soil evapotranspiration process (default: 'et:hbv', the HBV limitation).
-        'et:prevah' additionally applies PREVAH's snow-albedo reduction of the
-        potential rate ((1 - albedo)/0.8, from the unit's snow-covered fraction),
-        which suppresses the soil ET under snow. The snow albedo is age-dependent
-        (0.4 + 0.45 exp(-0.15 age), ~0.85 fresh to 0.4 old); ``albedo_land``
-        (default 0.2) is the snow-free ground albedo (neutral).
+        Soil evapotranspiration process (default: 'et:prevah', the HBV limitation
+        with PREVAH's snow-albedo reduction of the potential rate, (1 - albedo)/0.8
+        from the unit's snow-covered fraction, which suppresses the soil ET under
+        snow). The snow albedo is age-dependent (0.4 + 0.45 exp(-0.15 age), ~0.85
+        fresh to 0.4 old); ``albedo_land`` (default 0.2) is the snow-free ground
+        albedo (neutral). 'et:hbv' is the plain HBV limitation.
     canopy_et_process : str
-        Canopy evaporation process (default: 'et:open_water', the potential
-        rate). 'et:open_water_prevah' additionally applies the same age-dependent
-        snow-albedo reduction to the interception ET.
+        Canopy evaporation process (default: 'et:open_water_prevah', the potential
+        rate with the same age-dependent snow-albedo reduction). 'et:open_water'
+        evaporates at the plain potential rate.
     wet_et_from_groundwater : bool
-        Add PREVAH's wet-surface evaporation (default: False). When True, the
-        SLZ1 groundwater store evaporates at ``et_pot * et_factor`` (process
-        'et:open_water_prevah' named ``wet_et``; factor alias ``ow_et_factor``).
-        Set the factor per unit via a spatial parameter (PREVAH wet_surface:
-        0.7 on wetland, 0.9 on water, 0 elsewhere).
+        Add PREVAH's wet-surface evaporation (default: True). The SLZ1 groundwater
+        store evaporates at et_pot times the wet share of the unit, which is the sum
+        over its ``wetland`` covers of their area fraction times their
+        ``wet_fraction`` (process 'et:wet_surface_prevah' named ``wet_et``; optional
+        overall scaling alias ``wet_et_factor``). The same share routes the wetland
+        input to SLZ1, as PREVAH's wet_surface does for both. Without a wetland cover
+        no such process is added.
     glacier_infinite_storage : bool
         Treat the glacier ice as an infinite storage (default: True).
     glacier_module : str
@@ -460,27 +478,25 @@ class PrevahUniBE(Model):
     from a soil map, and :meth:`apply_land_use_field_capacity` sets it per hydro unit
     and per month in one call.
 
-    Faithful configuration
-    ----------------------
-    The model defaults to the ``"analytic_linear"`` solver, which integrates the
-    linear reservoirs exactly as PREVAH does; pass ``solver=...`` to override it.
-    The remaining defaults favour a simple, robust model. To reproduce the
-    original as closely as possible, add::
+    PREVAH processes by default
+    ---------------------------
+    The defaults are PREVAH's own processes: the ``"analytic_linear"`` solver,
+    which integrates the linear reservoirs exactly as PREVAH does, the
+    radiation-corrected (Hock) snow melt with the seasonal refreezing, the PREVAH
+    snow water release, the albedo-reduced soil, canopy and snow evaporation, a
+    canopy on every non-glacier cover and the wet-surface evaporation. They expect
+    the inputs PREVAH works with:
 
-        soil_et_process='et:prevah'
-        canopy_et_process='et:open_water_prevah'
-        snow_sublimation_process='sublimation:prevah'
-        snow_water_retention_process='outflow:snow_holding_prevah'
-        snow_refreezing_process='refreeze:degree_day_seasonal'
-        interception_covers=[<every vegetated cover>]
-        wet_et_from_groundwater=True
+    - a potential clear-sky radiation forcing ('solar_radiation') for the melt;
+    - a vapour-density Hamon PET (``forcing.compute_pet(method=
+      "Hamon_vapor_density")``): the snow evaporation has no parameter to absorb a
+      PET of another magnitude (pyet's default Hamon runs ~1.5 times hotter);
+    - the monthly vegetation tables of the land uses (``apply_land_use``, applied
+      automatically to the covers named after a PREVAH land use).
 
-    with a vapour-density Hamon PET (``forcing.compute_pet(method=
-    "Hamon_vapor_density")``) and the monthly vegetation tables set through
-    ``ParameterSet.set_monthly_values`` (``ic`` = si_max × veg_cov,
-    ``canopy_et_factor`` = veg_cov). With ``snow_melt_process=
-    'melt:temperature_index'`` and a potential clear-sky radiation forcing, the
-    snow melt follows PREVAH's radiation-corrected (Hock) formulation.
+    Any of them can be swapped for a simpler process through the options above
+    (e.g. ``snow_melt_process='melt:degree_day_seasonal'`` without a radiation
+    forcing).
 
     Deviations from the original PREVAH
     -----------------------------------
@@ -516,26 +532,27 @@ class PrevahUniBE(Model):
         super().__init__(name=name, **kwargs)
 
         # Default options
-        self.options["snow_melt_process"] = "melt:degree_day_seasonal"
-        self.options["snow_water_retention_process"] = "outflow:snow_holding"
-        self.options["snow_refreezing_process"] = "refreeze:degree_day"
+        self.options["snow_melt_process"] = "melt:temperature_index"
+        self.options["snow_water_retention_process"] = "outflow:snow_holding_prevah"
+        self.options["snow_refreezing_process"] = "refreeze:degree_day_seasonal"
         self.options["rain_to_snowpack"] = True
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
-        self.options["snow_sublimation_process"] = "sublimation:pet"
+        self.options["snow_sublimation_process"] = "sublimation:prevah"
         self.options["share_soil"] = True
         self.options["forest_interception"] = True
         self.options["interception_covers"] = None
         self.options["canopy_interception_process"] = "interception:menzel"
-        self.options["soil_et_process"] = "et:hbv"
-        self.options["canopy_et_process"] = "et:open_water"
-        self.options["wet_et_from_groundwater"] = False
+        self.options["soil_et_process"] = "et:prevah"
+        self.options["canopy_et_process"] = "et:open_water_prevah"
+        self.options["wet_et_from_groundwater"] = True
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "prevah"
         self.options["firn_to_groundwater"] = True
         self.allowed_land_cover_types = ["open", "forest", "wetland", "glacier"]
 
         self._set_options(kwargs)
+        self._resolve_interception_covers()
 
         try:
             self._define_structure()
@@ -748,13 +765,14 @@ class PrevahUniBE(Model):
             },
         }
         # PREVAH wet-surface evaporation (EWET = wet_surface * et_pot, drawn from the
-        # SLOWCOMP stores; s_abfg6eth). Implemented on SLZ1 with the albedo-aware
-        # open-water ET; the wet fraction goes in the process' et_factor (alias
-        # ow_et_factor), typically per unit via a spatial parameter (0.7 on wetland
-        # units, 0.9 on water, 0 elsewhere).
-        if self.options["wet_et_from_groundwater"]:
+        # SLOWCOMP stores). Implemented on SLZ1 with the albedo-aware open-water ET,
+        # the wet share of the unit being read from its wetland covers (the gates):
+        # their live area fraction times their wet fraction, the same share that
+        # routes their input to SLZ1. Without a wetland cover there is no wet surface.
+        if self.options["wet_et_from_groundwater"] and self._wetland_cover_names:
             self.structure["slz1"]["processes"]["wet_et"] = {
-                "kind": "et:open_water_prevah",
+                "kind": "et:wet_surface_prevah",
+                "gate": list(self._wetland_cover_names),
             }
         self.structure["slz_split"] = {
             "attach_to": "hydro_unit",
@@ -1044,6 +1062,101 @@ class PrevahUniBE(Model):
                 reason="Unknown land use",
             )
 
+    def _resolve_interception_covers(self) -> None:
+        """Give every non-glacier cover a canopy by default, as PREVAH does.
+
+        PREVAH runs its interception module on every hydrotope. When
+        ``interception_covers`` is not given, all covers except the glaciers get a
+        canopy; ``forest_interception=False`` disables the interception altogether.
+        """
+        if self.options.get("interception_covers") is not None:
+            return
+        if not self.options.get("forest_interception"):
+            return
+        self.options["interception_covers"] = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "glacier"
+        ]
+
+    def generate_parameters(self) -> Any:
+        """
+        Generate the parameter set, with PREVAH's vegetation tables where known.
+
+        Every canopy whose land cover is named after a PREVAH land use (e.g.
+        ``pasture``, ``coniferous_forest``; see :data:`LAND_USE_COVER_TYPES`) gets
+        the monthly interception capacity and canopy evaporation factor of that land
+        use (see :meth:`apply_land_use`). Covers with a generic name (``open``,
+        ``forest``) keep the constant defaults: call :meth:`apply_land_use` with the
+        land use they stand for.
+
+        Returns
+        -------
+        ParameterSet
+            The parameter set of the model.
+        """
+        parameters = super().generate_parameters()
+
+        canopy_covers = self.options.get("interception_covers") or []
+        generic = []
+        for cover_name in canopy_covers:
+            if cover_name in LAND_USE_SI_MAX:
+                self.apply_land_use(parameters, cover_name, cover_name=cover_name)
+            else:
+                generic.append(cover_name)
+        if generic:
+            logger.info(
+                f"The canopy of the land cover(s) {generic} is not named after a "
+                f"PREVAH land use, so it keeps constant interception parameters. "
+                f"Call apply_land_use(parameters, <land use>, cover_name=<cover>) to "
+                f"use the monthly vegetation tables."
+            )
+
+        return parameters
+
+    def set_forcing(self, forcing: Any) -> None:
+        """
+        Set the forcing data, checking the radiation needed by the Hock melt.
+
+        Parameters
+        ----------
+        forcing
+            The forcing data.
+
+        Raises
+        ------
+        ConfigurationError
+            If the snow melt is the radiation-corrected 'melt:temperature_index'
+            (the default) and the forcing has no solar radiation.
+        """
+        if self.options.get(
+            "snow_melt_process"
+        ) == "melt:temperature_index" and not self._has_radiation(forcing):
+            raise ConfigurationError(
+                "The PREVAH-UniBE snow melt ('melt:temperature_index', the "
+                "radiation-corrected Hock melt) needs a potential solar radiation "
+                "forcing, which was not provided. Compute it from a DEM with "
+                "catchment.calculate_daily_potential_radiation() and add it to the "
+                "forcing with forcing.spatialize_from_gridded_data("
+                "variable='solar_radiation', ...), or load a per-unit table with "
+                "forcing.load_spatialized_data_from_csv(); otherwise select "
+                "another melt process (e.g. "
+                "snow_melt_process='melt:degree_day_seasonal').",
+                item_name="snow_melt_process",
+                item_value="melt:temperature_index",
+                reason="Missing solar radiation forcing",
+            )
+        super().set_forcing(forcing)
+
+    @staticmethod
+    def _has_radiation(forcing: Any) -> bool:
+        names = getattr(forcing.data2D, "data_name", None) or []
+        solar = forcing.Variable.R_SOLAR
+        return any(
+            name == solar or str(name) in (str(solar), "solar_radiation")
+            for name in names
+        )
+
     def _gate_bricks(self) -> str | list[str]:
         """The soil moisture store(s) gating the percolation.
 
@@ -1071,9 +1184,9 @@ class PrevahUniBE(Model):
         """Define PREVAH parameter aliases (literature names).
 
         The process parameter specs already provide beta (CBETA), lp (the CU
-        ET limit), cwh, cfr, cperc, cu_perc, the seasonal melt factors
-        (a_snow_min/crmfmin, a_snow_max/crmfmax) and the sublimation factor;
-        the glacier reservoir factors come from the glacier module.
+        ET limit), cwh, cexliq, cfr, cperc, cu_perc and the melt factors
+        (melt_factor/r_snow, or a_snow_min/crmfmin and a_snow_max/crmfmax with the
+        seasonal melt); the glacier reservoir factors come from the glacier module.
         """
         self.parameter_aliases = {
             "upper_zone:response_factor_threshold": ["k0"],

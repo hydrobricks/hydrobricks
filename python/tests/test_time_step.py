@@ -22,8 +22,8 @@ _START = date(1981, 1, 1)
 _N_DAYS = 200
 
 _PARAMS = {
-    "a_snow_min": 2.0,
-    "a_snow_max": 6.0,
+    "melt_factor": 2.0,
+    "r_snow": 5e-5,
     "melt_t_snow": 0.0,
     "fc": 200.0,
     "cu": 0.7,
@@ -37,6 +37,15 @@ _PARAMS = {
     "k_gw2": 0.01,
     "k_gw3": 0.005,
 }
+
+
+def _add_radiation(forcing: hb.Forcing, value: float = 5000.0) -> None:
+    """Add a constant potential radiation (the PREVAH Hock melt needs it)."""
+    # The spatialization is deferred to the run, so size it from the station data.
+    shape = (len(forcing.data1D.time), len(forcing.hydro_units))
+    forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
+    forcing.data2D.data.append(np.full(shape, value))
+
 
 _PRECIP_PER_DAY = 5.0
 _PET_PER_DAY = 1.5
@@ -88,6 +97,7 @@ def _run(tmp_path: Path, hours_per_step: int, n_days: int = _N_DAYS):
         variable="temperature", ref_elevation=1000, gradient=0.0
     )
     forcing.spatialize_from_station_data(variable="pet")
+    _add_radiation(forcing)
 
     model = models.PrevahUniBE(record_all=True)
     parameters = model.generate_parameters()
@@ -142,6 +152,7 @@ def _run_daily(tmp_path: Path, n_days: int = _N_DAYS):
         variable="temperature", ref_elevation=1000, gradient=0.0
     )
     forcing.spatialize_from_station_data(variable="pet")
+    _add_radiation(forcing)
 
     model = models.PrevahUniBE(record_all=True)
     parameters = model.generate_parameters()
@@ -482,6 +493,7 @@ def _forcing_at(tmp_path: Path, units, freq: str, n: int):
         variable="temperature", ref_elevation=1000, gradient=0.0
     )
     forcing.spatialize_from_station_data(variable="pet")
+    _add_radiation(forcing)
     return forcing
 
 

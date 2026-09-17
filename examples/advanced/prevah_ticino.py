@@ -94,12 +94,8 @@ def unit_column(name):
     return hydro_units.hydro_units[name].to_numpy().flatten()
 
 
-# PREVAH's wet surfaces evaporate from the groundwater at et_pot * wet_surface
-# (0.7 on wetlands, 0.9 on open water, 0 elsewhere). Each hydrotope carries a single
-# land use, and the open water of this catchment is folded into the open cover, so
-# only the wetlands contribute here.
+# Each hydrotope carries a single land use (used for its soil moisture capacity).
 land_use = unit_column("land_use")
-hydro_units.add_property(("wet", "-"), np.where(land_use == "wetland", 0.7, 0.0))
 
 # ---------------------------------------------------------------------------
 # 2. Forcing: the precipitation and the temperature are given per meteo zone -- an
@@ -164,25 +160,18 @@ measured.load_from_csv(
 # ---------------------------------------------------------------------------
 # Calibrated PREVAH parameters (cal_2020pest.inp), mapped to hydrobricks aliases.
 # PREVAH storage times are in hours; hydrobricks uses response factors k = 24 / K_h.
+# The defaults of PrevahUniBE are PREVAH's own processes, so no option is needed:
+# - the radiation-corrected melt, (CSNOMF + CASNO * R_pot) * (T - T0), with a
+#   refreezing carrying its own seasonal factor;
+# - the snow water release of the ablation branch, with the CEXLIQ graded partition;
+# - the surface-albedo reduction (1 - albedo)/0.8 of the potential rate on the soil,
+#   the canopy and the snow alike, the snow albedo ageing between snowfalls;
+# - a canopy on every cover, evaporating at et_pot * veg_cov;
+# - the wet-surface evaporation drawn from the groundwater store (PREVAH's EWET), at
+#   et_pot times the wetland area times its wet fraction.
 model = models.PrevahUniBE(
     land_cover_names=COVERS,
     land_cover_types=COVERS,
-    # PREVAH intercepts on every vegetated cover and evaporates the canopy at
-    # et_pot * veg_cov, so the covers all carry a canopy with the PREVAH canopy ET.
-    interception_covers=COVERS,
-    canopy_et_process="et:open_water_prevah",
-    # Radiation-corrected melt: (CSNOMF + CASNO * R_pot) * (T - T0). The refreezing
-    # then needs its own seasonal factor, the melt process no longer carrying one.
-    snow_melt_process="melt:temperature_index",
-    snow_refreezing_process="refreeze:degree_day_seasonal",
-    # PREVAH reduces the potential rate by the surface albedo, (1 - albedo)/0.8, on
-    # the soil, the canopy and the snow alike; the snow albedo ages between snowfalls.
-    soil_et_process="et:prevah",
-    snow_sublimation_process="sublimation:prevah",
-    # Snow water release of the ablation branch, with the CEXLIQ graded partition.
-    snow_water_retention_process="outflow:snow_holding_prevah",
-    # Wet-surface evaporation drawn from the groundwater store (PREVAH's EWET).
-    wet_et_from_groundwater=True,
     record_all=True,
 )
 parameters = model.generate_parameters()
@@ -249,7 +238,6 @@ model.apply_land_use_field_capacity(
     available_water_content=unit_column("awc"),
     soil_depth=unit_column("soil_depth"),
 )
-parameters.set_spatial("ow_et_factor", "wet")
 
 # PREVAH's monthly vegetation tables: the canopy interception capacity of each cover
 # (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.

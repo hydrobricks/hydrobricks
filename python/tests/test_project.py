@@ -761,6 +761,8 @@ def test_land_covers_glacier_split_at_ela(tmp_path):
         for key, value in config["model"]["options"].items()
         if key.startswith("land_cover")
     }
+    # The default Hock melt needs a radiation forcing this project does not carry.
+    config["model"]["options"]["snow_melt_process"] = "melt:degree_day_seasonal"
     config["parameters"] = {
         "a_snow_min": 1.5,
         "a_snow_max": 4.5,
@@ -1112,3 +1114,123 @@ def test_glacier_evolution_needs_a_finite_ice_storage(tmp_path):
     with pytest.raises(hb.ConfigurationError) as excinfo:
         hb.load_project(config, base_dir=GLETSCH_DIR)
     assert "glacier_infinite_storage" in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# forcing.spatialized: series already resolved in space
+# ---------------------------------------------------------------------------
+
+
+def spatialized_config(tmp_path, **forcing_overrides):
+    """A project whose forcing is given per elevation band instead of per station."""
+    units = tmp_path / "hydro_units.csv"
+    units.write_text(
+        "id,elevation,area,band\n"
+        "-,m,m2,-\n"
+        "1,1000,1000000,10\n"
+        "2,1100,1000000,10\n"
+        "3,2000,1000000,20\n"
+        "4,2100,1000000,20\n"
+    )
+
+    dates = pd.date_range("1981-01-01", "1981-12-31", freq="D")
+    header = "date,10,20"
+    precip = [f"{d:%Y-%m-%d},4,6" for d in dates]
+    temp = [f"{d:%Y-%m-%d},8,3" for d in dates]
+    pet = [f"{d:%Y-%m-%d},1.5,1.0" for d in dates]
+    (tmp_path / "precip.csv").write_text("\n".join([header] + precip) + "\n")
+    (tmp_path / "temp.csv").write_text("\n".join([header] + temp) + "\n")
+    (tmp_path / "pet.csv").write_text("\n".join([header] + pet) + "\n")
+
+    forcing = {
+        "spatialized": {
+            "precipitation": {
+                "file": "precip.csv",
+                "time": {"column": "date", "format": "%Y-%m-%d"},
+                "columns_are": "band",
+            },
+            "temperature": {
+                "file": "temp.csv",
+                "time": {"column": "date", "format": "%Y-%m-%d"},
+                "columns_are": "band",
+            },
+            "pet": {
+                "file": "pet.csv",
+                "time": {"column": "date", "format": "%Y-%m-%d"},
+                "columns_are": "band",
+            },
+        }
+    }
+    forcing.update(forcing_overrides)
+
+    return {
+        "model": {
+            "name": "socont",
+            "options": {"soil_storage_nb": 2, "surface_runoff": "linear_storage"},
+        },
+        "hydro_units": {
+            "file": "hydro_units.csv",
+            "columns": {"elevation": "elevation", "area": "area", "band": "band"},
+        },
+        "forcing": forcing,
+        "periods": ["1981-01-01", "1981-12-31"],
+        "output": str(tmp_path),
+        "parameters": dict(PARAMETERS),
+    }
+
+
+def test_spatialized_forcing_runs(tmp_path):
+    """Grouped columns reach the units: the two bands get their own values."""
+    project = hb.load_project(spatialized_config(tmp_path), base_dir=tmp_path)
+    project.run()
+
+    forcing = project.forcing
+    idx = forcing.data2D.data_name.index(forcing.Variable.P)
+    first_step = np.asarray(forcing.data2D.data[idx])[0]
+    assert first_step == pytest.approx([4, 4, 6, 6])
+
+
+def test_spatialized_forcing_accepts_a_climatology(tmp_path):
+    """A day-of-year table is expanded onto the dates of the dated variables."""
+    rows = ["day_of_year,10,20"] + [f"{doy},{doy},{doy}" for doy in range(1, 367)]
+    (tmp_path / "rad.csv").write_text("\n".join(rows) + "\n")
+
+    config = spatialized_config(tmp_path)
+    config["forcing"]["spatialized"]["solar_radiation"] = {
+        "file": "rad.csv",
+        "day_of_year": "day_of_year",
+        "columns_are": "band",
+    }
+    project = hb.load_project(config, base_dir=tmp_path)
+
+    forcing = project.forcing
+    idx = forcing.data2D.data_name.index(forcing.Variable.R_SOLAR)
+    got = np.asarray(forcing.data2D.data[idx])[:3, 0]
+    assert got == pytest.approx([1, 2, 3])
+
+
+def test_spatialized_forcing_needs_one_time_specification(tmp_path):
+    config = spatialized_config(tmp_path)
+    config["forcing"]["spatialized"]["precipitation"].pop("time")
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=tmp_path)
+    assert "either 'time'" in str(excinfo.value)
+
+
+def test_spatialized_forcing_rejects_a_duplicated_variable(tmp_path):
+    """The same variable cannot come from a station and from a spatialized file."""
+    config = spatialized_config(tmp_path)
+    config["forcing"]["file"] = "precip.csv"
+    config["forcing"]["time"] = {"column": "date", "format": "%Y-%m-%d"}
+    config["forcing"]["columns"] = {"precipitation": "10"}
+    config["forcing"]["ref_elevation"] = 1000
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=tmp_path)
+    assert "both in 'columns' (station) and in 'spatialized'" in str(excinfo.value)
+
+
+def test_spatialized_forcing_reports_a_missing_column(tmp_path):
+    config = spatialized_config(tmp_path)
+    config["forcing"]["spatialized"]["precipitation"]["columns_are"] = "id"
+    with pytest.raises(hb.ForcingError, match="No column"):
+        hb.load_project(config, base_dir=tmp_path)

@@ -379,6 +379,8 @@ class Forcing:
         time_format: str = "%Y-%m-%d",
         column_day_of_year: str | None = None,
         columns_are: str = "id",
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> None:
         """
         Load forcing that is already spatialized, one column per unit or per group.
@@ -415,6 +417,10 @@ class Forcing:
         columns_are
             What the column headers mean: ``'id'`` for hydro unit ids, or the name of
             a hydro-unit property whose value selects the column.
+        start_date
+            Keep only the records from this date on (dated series only).
+        end_date
+            Keep only the records up to this date (dated series only).
 
         Raises
         ------
@@ -450,6 +456,15 @@ class Forcing:
                 f'The column "{time_column}" was not found in {Path(path).name}.',
                 variable=variable,
             )
+
+        if column_time is not None and (start_date is not None or end_date is not None):
+            dates = pd.to_datetime(content[time_column], format=time_format)
+            keep = pd.Series(True, index=content.index)
+            if start_date is not None:
+                keep &= dates >= pd.Timestamp(start_date)
+            if end_date is not None:
+                keep &= dates <= pd.Timestamp(end_date)
+            content = content[keep.to_numpy()].reset_index(drop=True)
 
         values = content.drop(columns=[time_column])
         columns = {str(name).strip(): i for i, name in enumerate(values.columns)}

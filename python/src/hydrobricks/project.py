@@ -1216,10 +1216,71 @@ def _validate_gridded_forcing(gridded: Any, base: Path, errors: list[str]) -> di
     return out
 
 
+def _validate_spatialized_forcing(
+    spatialized: Any, base: Path, errors: list[str]
+) -> dict:
+    """
+    Validate the 'spatialized' forcing sources: CSVs already resolved in space.
+
+    Parameters
+    ----------
+    spatialized
+        The 'forcing.spatialized' section, a mapping of variable to CSV source.
+    base
+        Directory the relative paths are resolved from.
+    errors
+        Collected validation errors, appended to.
+
+    Returns
+    -------
+    The validated sources, as a mapping of variable name to its settings.
+    """
+    if spatialized is None:
+        return {}
+    if not isinstance(spatialized, dict) or not spatialized:
+        errors.append(
+            "forcing.spatialized: expected a mapping of variable to CSV source, "
+            "e.g. {precipitation: {file: precip.csv, time: {column: date}}}."
+        )
+        return {}
+
+    valid = {"file", "time", "day_of_year", "columns_are"}
+    out: dict[str, dict] = {}
+    for variable, spec in spatialized.items():
+        where = f"forcing.spatialized.{variable}"
+        if not isinstance(spec, dict):
+            errors.append(f"{where}: expected a mapping (file, time, ...).")
+            continue
+        _check_keys(spec, valid, where, errors)
+        cfg: dict[str, Any] = {"file": _resolve_file(spec, base, where, errors)}
+
+        day_of_year = _get_str(spec, "day_of_year", where, errors)
+        has_time = "time" in spec
+        if has_time == (day_of_year is not None):
+            errors.append(
+                f"{where}: provide either 'time' (a dated series) or "
+                f"'day_of_year' (a climatology repeating every year), not both "
+                f"and not neither."
+            )
+        cfg["day_of_year"] = day_of_year
+        if has_time:
+            cfg["time_column"], cfg["time_format"] = _validate_time_section(
+                spec, where, errors
+            )
+        else:
+            cfg["time_column"], cfg["time_format"] = None, None
+
+        cfg["columns_are"] = _get_str(spec, "columns_are", where, errors) or "id"
+        out[str(variable)] = cfg
+
+    return out
+
+
 def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     out: dict[str, Any] = {
         "station": None,
         "gridded": {},
+        "spatialized": {},
         "pet_method": "Oudin",
         "pet_lat": None,
         "variables": set(),
@@ -1236,6 +1297,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "precipitation",
         "pet",
         "gridded",
+        "spatialized",
     }
     _check_keys(section, valid, "forcing", errors)
 
@@ -1243,11 +1305,15 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     if has_station:
         out["station"] = _validate_station_forcing(section, base, errors)
     out["gridded"] = _validate_gridded_forcing(section.get("gridded"), base, errors)
+    out["spatialized"] = _validate_spatialized_forcing(
+        section.get("spatialized"), base, errors
+    )
 
-    if not has_station and not out["gridded"]:
+    if not has_station and not out["gridded"] and not out["spatialized"]:
         errors.append(
-            "forcing: provide a station CSV ('file' and 'columns') and/or a "
-            "'gridded' section with netCDF sources."
+            "forcing: provide a station CSV ('file' and 'columns'), a 'gridded' "
+            "section with netCDF sources, and/or a 'spatialized' section with "
+            "per-unit CSV sources."
         )
 
     pet = section.get("pet", {}) or {}
@@ -1258,19 +1324,32 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     out["pet_method"] = _get_str(pet, "method", "forcing.pet", errors) or "Oudin"
     out["pet_lat"] = _get_number(pet, "lat", "forcing.pet", errors)
 
-    station_vars = set((out["station"] or {}).get("columns", {}))
-    gridded_vars = set(out["gridded"])
-    for variable in sorted(station_vars & gridded_vars):
-        errors.append(
-            f"forcing: '{variable}' is defined both in 'columns' (station) and "
-            "in 'gridded'; pick one source per variable."
-        )
-    out["variables"] = station_vars | gridded_vars
+    sources = {
+        "columns": set((out["station"] or {}).get("columns", {})),
+        "gridded": set(out["gridded"]),
+        "spatialized": set(out["spatialized"]),
+    }
+    labels = {
+        "columns": "'columns' (station)",
+        "gridded": "'gridded'",
+        "spatialized": "'spatialized'",
+    }
+    for first, second in (
+        ("columns", "gridded"),
+        ("columns", "spatialized"),
+        ("gridded", "spatialized"),
+    ):
+        for variable in sorted(sources[first] & sources[second]):
+            errors.append(
+                f"forcing: '{variable}' is defined both in {labels[first]} and "
+                f"in {labels[second]}; pick one source per variable."
+            )
+    out["variables"] = set().union(*sources.values())
 
     if out["variables"] and "precipitation" not in out["variables"]:
         errors.append(
-            "forcing: a 'precipitation' source is required (in 'columns' or "
-            "'gridded')."
+            "forcing: a 'precipitation' source is required (in 'columns', "
+            "'gridded' or 'spatialized')."
         )
     if out["variables"] and "pet" not in out["variables"]:
         if "temperature" not in out["variables"]:
@@ -2101,6 +2180,38 @@ def _build_project(
                 forcing.spatialize_from_station_data(
                     variable=variable, method="constant"
                 )
+
+    if fc["spatialized"]:
+        # Dated series first: a climatology carries no dates of its own and is
+        # expanded onto the ones already loaded.
+        ordered = sorted(
+            fc["spatialized"].items(),
+            key=lambda item: item[1]["day_of_year"] is not None,
+        )
+        for variable, spec in ordered:
+            forcing.load_spatialized_data_from_csv(
+                spec["file"],
+                variable=variable,
+                column_time=spec["time_column"],
+                time_format=spec["time_format"] or "%Y-%m-%d",
+                column_day_of_year=spec["day_of_year"],
+                columns_are=spec["columns_are"],
+                start_date=start_date if spec["day_of_year"] is None else None,
+                end_date=end_date if spec["day_of_year"] is None else None,
+            )
+
+        time = pd.DatetimeIndex(forcing.data2D.time)
+        if len(time) == 0:
+            errors.append(
+                f"periods: the forcing data holds no time step within the "
+                f"simulation span ({start_date}..{end_date})."
+            )
+        elif periods.full_span.start < time[0] or periods.full_span.end > time[-1]:
+            errors.append(
+                f"periods: the simulation span ({start_date}..{end_date}) is "
+                f"not covered by the forcing data ({time[0].date()}.."
+                f"{time[-1].date()})."
+            )
 
     if fc["gridded"]:
         _check_gridded_dependencies()

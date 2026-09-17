@@ -37,7 +37,7 @@ const vecDouble& ProcessOutflowThreshold::GetRates() {
     // Return a rate (amount per unit time): dividing the excess by the time step drains exactly
     // the excess over one step (as in ProcessOutflowSnowHolding). The 1.0 fallback covers the
     // case where no time machine is wired up (e.g. unit tests).
-    double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double timeStep = GetTimeStepInDays();
 
     return StoreRates({excess / timeStep});
 }

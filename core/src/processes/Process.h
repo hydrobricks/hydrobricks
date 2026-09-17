@@ -407,6 +407,17 @@ class Process {
      */
     [[nodiscard]] double GetForcingRate(Forcing* forcing) const;
 
+    /**
+     * Get the current time step in days.
+     *
+     * Falls back on the daily step when no timer is attached (a process built outside a
+     * model, as in the unit tests) or when the timer is not initialized yet (it is set up
+     * after the structure is built).
+     *
+     * @return the time step length [d].
+     */
+    [[nodiscard]] double GetTimeStepInDays() const;
+
     string _name;
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference

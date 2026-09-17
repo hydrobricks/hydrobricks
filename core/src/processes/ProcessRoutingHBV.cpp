@@ -67,7 +67,7 @@ const vecDouble& ProcessRoutingHBV::GetRates() {
     // Recompute the UH ordinates if maxbas changed (calibration loop) or if the time
     // step is not the one they were built for (the structure is built before the timer
     // is initialized, so the first computation assumes a daily step).
-    if (*_maxbas != _lastMaxbas || _currentTimeStepInDays() != _lastTimeStep) {
+    if (*_maxbas != _lastMaxbas || GetTimeStepInDays() != _lastTimeStep) {
         _recomputeUH();
     }
 
@@ -117,7 +117,7 @@ void ProcessRoutingHBV::_recomputeUH() {
     // The schedule is a grid of time steps while maxbas is a duration in days, so the
     // base of the triangle is converted to a number of steps: a 3-day maxbas spans 3
     // slots on a daily step and 72 on an hourly one, and the routed shape is the same.
-    double timeStepInDays = _currentTimeStepInDays();
+    double timeStepInDays = GetTimeStepInDays();
     _lastTimeStep = timeStepInDays;
     double maxbasInSteps = static_cast<double>(*_maxbas) / timeStepInDays;
     if (maxbasInSteps < 1.0) {
@@ -144,16 +144,4 @@ double ProcessRoutingHBV::_cumulativeWeight(double t, double maxbas) {
         return 2.0 * ratio * ratio;
     }
     return 1.0 - 2.0 * (1.0 - ratio) * (1.0 - ratio);
-}
-
-double ProcessRoutingHBV::_currentTimeStepInDays() const {
-    if (_timeMachine == nullptr) {
-        return 1.0;
-    }
-    double timeStepInDays = *_timeMachine->GetTimeStepPointer();
-
-    // The timer is initialized after the structure is built, so it can still be unset
-    // here; the daily step is then the assumption, and the ordinates are rebuilt on the
-    // first call that sees the real one.
-    return timeStepInDays > 0 ? timeStepInDays : 1.0;
 }

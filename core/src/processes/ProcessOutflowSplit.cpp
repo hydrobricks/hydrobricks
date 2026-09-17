@@ -63,7 +63,7 @@ const vecDouble& ProcessOutflowSplit::GetRates() {
     // GetRates() must return rates (amount per unit time): dividing the content by the time step
     // drains exactly the content over one step (as in ProcessOutflowSnowHolding). The 1.0 fallback
     // covers the case where no time machine is wired up (e.g. unit tests).
-    double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double timeStep = GetTimeStepInDays();
 
     double fraction = static_cast<double>(*_splitFraction);
 

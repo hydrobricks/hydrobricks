@@ -663,15 +663,16 @@ double Process::GetForcingRate(Forcing* forcing) const {
         return value;
     }
 
-    // No timer (a process built outside a model, as in the unit tests): fall back on the
-    // daily step, where the amount and the rate are the same number.
+    // Without a usable timer, the daily step is assumed, where the amount and the rate are
+    // the same number.
+    return value / GetTimeStepInDays();
+}
+
+double Process::GetTimeStepInDays() const {
     if (_timeMachine == nullptr) {
-        return value;
+        return 1.0;
     }
     double timeStepInDays = *_timeMachine->GetTimeStepPointer();
-    if (timeStepInDays <= 0) {
-        return value;
-    }
 
-    return value / timeStepInDays;
+    return timeStepInDays > 0 ? timeStepInDays : 1.0;
 }

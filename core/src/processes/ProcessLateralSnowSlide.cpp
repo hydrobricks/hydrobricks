@@ -101,8 +101,8 @@ const vecDouble& ProcessLateralSnowSlide::GetRates() {
     // turned into the rate that empties it over one step; on a daily step the two are
     // the same number, and a shorter step then slides the same excess at once instead
     // of draining it over about a day.
-    double timeStepInDays = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
-    double excessRate = (timeStepInDays > 0) ? excessSwe / timeStepInDays : excessSwe;  // [mm/d]
+    double timeStepInDays = GetTimeStepInDays();
+    double excessRate = excessSwe / timeStepInDays;  // [mm/d]
 
     for (size_t i = 0; i < _outputs.size(); ++i) {
         // The weight of the process rate is adjusted so that when subtracted, the correct amount of SWE leaves.

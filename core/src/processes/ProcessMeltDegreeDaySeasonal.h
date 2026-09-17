@@ -17,8 +17,7 @@
  * The phase matches the PREVAH formulation: zero crossing at the spring equinox
  * (doy 80), maximum at the summer solstice, minimum at the winter solstice.
  * (PREVAH shifts the phase by one day in leap years; this is neglected here.)
- * Requires temperature forcing; without a time machine (unit tests) the mean
- * factor is used.
+ * Requires temperature forcing.
  *
  * Subclasses ProcessMeltDegreeDay so companion processes reading the current
  * degree-day factor (e.g. refreeze:degree_day) transparently get the seasonal

@@ -59,11 +59,8 @@ const vecDouble& ProcessETOpenWaterPrevah::GetRates() {
     double rate = *_etFactor * (1.0 - albedo) / 0.8 * GetForcingRate(_pet);
 
     if (_timeMachine != nullptr) {
-        double timeStepInDays = *_timeMachine->GetTimeStepPointer();
-        if (timeStepInDays > 0) {
-            double maxRate = _container->GetContentWithChanges() / timeStepInDays;
-            rate = std::min(rate, std::max(0.0, maxRate));
-        }
+        double maxRate = _container->GetContentWithChanges() / GetTimeStepInDays();
+        rate = std::min(rate, std::max(0.0, maxRate));
     }
 
     return StoreRates({rate});

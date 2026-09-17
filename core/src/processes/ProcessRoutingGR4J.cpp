@@ -120,7 +120,7 @@ const vecDouble& ProcessRoutingGR4J::GetRates() {
         double exchangeToDirect = _qd - uh2_out;           // F applied to the direct branch (clamped)
         double netExchange = exchangeToStore + exchangeToDirect;
         if (netExchange != 0.0) {
-            _container->AddAmountToStaticContentChange(netExchange * (*_timeMachine->GetTimeStepPointer()));
+            _container->AddAmountToStaticContentChange(netExchange * GetTimeStepInDays());
         }
     }
 

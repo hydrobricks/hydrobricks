@@ -78,8 +78,8 @@ const vecDouble& ProcessMeltCemaNeige::GetRates() {
     // CTG is the memory retained over one day, so on a shorter step it is raised to the
     // step length: the state then decays at the same pace in time rather than being
     // smoothed once per step, and twenty-four hourly steps retain exactly CTG.
-    double timeStepInDays = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
-    double ctgStep = (timeStepInDays > 0 && timeStepInDays != 1.0 && CTG > 0) ? std::pow(CTG, timeStepInDays) : CTG;
+    double timeStepInDays = GetTimeStepInDays();
+    double ctgStep = (timeStepInDays != 1.0 && CTG > 0) ? std::pow(CTG, timeStepInDays) : CTG;
     _coldContent = std::min(0.0, ctgStep * _coldContent + (1.0 - ctgStep) * (T - Tmelt));
 
     if (_coldContent < 0.0 || T <= Tmelt) {

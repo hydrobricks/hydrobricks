@@ -130,7 +130,7 @@ const vecDouble& ProcessOutflowSnowHoldingPrevah::GetRates() {
     }
 
     // Absolute amount over the step -> rate (see ProcessOutflowSnowHolding::GetRates).
-    double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double timeStep = GetTimeStepInDays();
 
     return StoreRates({excess / timeStep});
 }

@@ -114,12 +114,6 @@ class ProcessRoutingHBV : public ProcessOutflow {
      * Cumulative triangular weighting function.
      */
     static double _cumulativeWeight(double t, double maxbas);
-
-    /**
-     * The current time step in days, falling back on a daily step while the timer is
-     * not yet initialized.
-     */
-    [[nodiscard]] double _currentTimeStepInDays() const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_ROUTING_HBV_H

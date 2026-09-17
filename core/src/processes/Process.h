@@ -418,6 +418,16 @@ class Process {
      */
     [[nodiscard]] double GetTimeStepInDays() const;
 
+    /**
+     * Get the day of the year (1-366) of the current simulation date.
+     *
+     * Requires a timer: a process that must also run without one (unit tests) checks
+     * _timeMachine itself and applies its own fallback.
+     *
+     * @return current day of the year.
+     */
+    [[nodiscard]] int GetCurrentDayOfYear() const;
+
     string _name;
     WaterContainer* _container;                   // non-owning reference
     TimeMachine* _timeMachine{nullptr};           // non-owning reference

@@ -65,7 +65,7 @@ const vecDouble& ProcessRefreezeSeasonal::GetRates() {
     double amplitude = ((*_degreeDayFactorMax) - (*_degreeDayFactorMin)) / 2.0;
     double seasonalFactor = 0;
     if (_timeMachine != nullptr) {
-        int doy = _timeMachine->GetCurrentDayOfYear();
+        int doy = GetCurrentDayOfYear();
         seasonalFactor = std::sin(2.0 * std::numbers::pi * (doy - 80) / 366.0);
     }
     double ddf = mean + amplitude * seasonalFactor;

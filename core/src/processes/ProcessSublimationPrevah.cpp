@@ -1,9 +1,9 @@
 #include "ProcessSublimationPrevah.h"
 
 #include "HydroUnit.h"
-#include "PrevahSnowAlbedo.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
+#include "helpers/PrevahSnowAlbedo.h"
 
 ProcessSublimationPrevah::ProcessSublimationPrevah(WaterContainer* container)
     : ProcessSublimation(container),

@@ -55,6 +55,15 @@ class ProcessOutflowSplit : public ProcessOutflow {
         return GetRates();
     }
 
+    /**
+     * Get the fraction of the outflow sent to the first target.
+     *
+     * @return the split fraction [-].
+     */
+    [[nodiscard]] double GetSplitFraction() const {
+        return _splitFraction != nullptr ? static_cast<double>(*_splitFraction) : 0.0;
+    }
+
   protected:
     const float* _splitFraction;  // fraction of the outflow sent to the first target [-]
 

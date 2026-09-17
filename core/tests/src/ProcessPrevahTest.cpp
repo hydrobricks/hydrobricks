@@ -1293,3 +1293,105 @@ TEST_F(MenzelCanopy, CanopyContentFollowsMenzelFilling) {
     EXPECT_LT(unitContent[0](5, 0), SI_MAX);
     EXPECT_GT(unitContent[0](5, 0), 4.9);
 }
+
+/**
+ * Model: a ground and a wetland land cover over a groundwater store (SLZ1) carrying the
+ * PREVAH wet-surface evaporation. The wetland splits its input between SLZ1 (the wet
+ * fraction) and the outlet; the wet-surface ET reads the wetland's area fraction and
+ * wet fraction through its gate.
+ */
+class WetSurfacePrevah : public ::testing::Test {
+  protected:
+    SettingsModel _model;
+
+    void SetUpModel(float wetFraction) {
+        _model.SetSolver("euler_explicit");
+        _model.SetTimer("2020-01-01", "2020-01-05", 1, "day");
+
+        _model.GeneratePrecipitationSplitters(false);
+        _model.AddLandCoverBrick("ground", "generic_land_cover");
+        _model.AddLandCoverBrick("wetland", "generic_land_cover");
+
+        _model.SelectHydroUnitBrick("ground");
+        _model.AddBrickProcess("outflow", "outflow:direct", "outlet");
+
+        _model.SelectHydroUnitBrick("wetland");
+        _model.AddBrickProcess("split", "outflow:split");
+        _model.SetProcessParameterValue("split_fraction", wetFraction);
+        _model.AddProcessOutput("slz1");
+        _model.AddProcessOutput("outlet");
+
+        _model.AddHydroUnitBrick("slz1", "storage");
+        _model.AddBrickProcess("wet_et", "et:wet_surface_prevah");
+        _model.SetProcessGateBrick("wetland");
+        _model.AddProcessLogging("output");
+        _model.AddBrickProcess("outflow", "outflow:linear", "outlet");
+        _model.SetProcessParameterValue("response_factor", 0.0001f);
+
+        _model.AddLoggingToItem("outlet");
+    }
+
+    // Run with the given wetland fraction; return the wet-surface ET series.
+    axd RunAndGetWetEt(double wetlandFraction) {
+        SettingsBasin basinSettings;
+        basinSettings.AddHydroUnit(1, 100);
+        basinSettings.AddLandCover("ground", "generic_land_cover", 1.0 - wetlandFraction);
+        basinSettings.AddLandCover("wetland", "generic_land_cover", wetlandFraction);
+
+        SubBasin subBasin;
+        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+        ModelHydro model(&subBasin);
+        EXPECT_TRUE(model.Initialize(_model, basinSettings));
+
+        // Day 1: 20 mm of warm rain fills SLZ1 through the wetland. Days 3-5: PET = 2.
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
+        precip->SetValues({20.0, 0.0, 0.0, 0.0, 0.0});
+        auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        tsPrecip->SetData(std::move(precip));
+
+        auto pet = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
+        pet->SetValues({0.0, 0.0, 2.0, 2.0, 2.0});
+        auto tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
+        tsPet->SetData(std::move(pet));
+
+        EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
+        EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPet))));
+        EXPECT_TRUE(model.AttachTimeSeriesToHydroUnits());
+
+        EXPECT_TRUE(model.Run());
+
+        // The only logged hydro-unit series is the wet-surface ET output.
+        vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+        return unitContent[0].col(0);
+    }
+};
+
+TEST_F(WetSurfacePrevah, EvaporatesAtPetTimesTheWetShare) {
+    SetUpModel(0.7f);
+    axd et = RunAndGetWetEt(0.4);
+
+    // No snow: the albedo factor is 1, so ET = PET * wetland fraction * wet fraction.
+    EXPECT_NEAR(et(0), 0.0, 1e-9);
+    for (int j = 2; j <= 4; ++j) {
+        EXPECT_NEAR(et(j), 2.0 * 0.4 * 0.7, 1e-6);
+    }
+}
+
+TEST_F(WetSurfacePrevah, FollowsTheWetFraction) {
+    SetUpModel(0.35f);
+    axd et = RunAndGetWetEt(0.4);
+
+    for (int j = 2; j <= 4; ++j) {
+        EXPECT_NEAR(et(j), 2.0 * 0.4 * 0.35, 1e-6);
+    }
+}
+
+TEST_F(WetSurfacePrevah, NoWetlandAreaNoEvaporation) {
+    SetUpModel(0.7f);
+    axd et = RunAndGetWetEt(0.0);
+
+    for (int j = 0; j <= 4; ++j) {
+        EXPECT_NEAR(et(j), 0.0, 1e-9);
+    }
+}

@@ -17,6 +17,7 @@
 #include "ProcessETPowerLaw.h"
 #include "ProcessETPrevah.h"
 #include "ProcessETSocont.h"
+#include "ProcessETWetSurfacePrevah.h"
 #include "ProcessInfiltrationGR4J.h"
 #include "ProcessInfiltrationHBV.h"
 #include "ProcessInfiltrationSocont.h"
@@ -289,6 +290,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
         {"et:open_water_prevah", {
             [](Brick* b) {
                 return std::make_unique<ProcessETOpenWaterPrevah>(b->GetWaterContainer());
+            },
+            &ProcessETOpenWaterPrevah::RegisterProcessSettings
+        }},
+
+        {"et:wet_surface_prevah", {
+            [](Brick* b) {
+                return std::make_unique<ProcessETWetSurfacePrevah>(b->GetWaterContainer());
             },
             &ProcessETOpenWaterPrevah::RegisterProcessSettings
         }},

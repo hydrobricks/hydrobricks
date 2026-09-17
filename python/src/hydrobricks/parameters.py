@@ -157,6 +157,26 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=False,
         ),
     ],
+    "et:wet_surface_prevah": [
+        ParamSpec(
+            name="albedo_land",
+            unit="-",
+            aliases=["wet_albedo_land"],
+            min=0,
+            max=0.4,
+            default=0.2,
+            mandatory=False,
+        ),
+        ParamSpec(
+            name="et_factor",
+            unit="-",
+            aliases=["wet_et_factor"],
+            min=0,
+            max=1.5,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
     # PREVAH SLOWCOMP overflow of the fast baseflow store: the store fills
     # asymptotically toward max_content with its own baseflow time constant, and the
     # excess inflow overflows to the slow stores.

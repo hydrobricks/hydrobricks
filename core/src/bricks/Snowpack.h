@@ -96,19 +96,24 @@ class Snowpack : public SurfaceComponent {
     [[nodiscard]] bool HasSnow() const;
 
     /**
-     * Get the snow surface albedo, following PREVAH's snow-age relation:
-     * albedo = 0.4 + 0.45 * exp(-0.15 * snow_age), i.e. ~0.85 for
-     * fresh snow decaying toward 0.4 for old snow. The age (in time steps) is reset on
-     * snowfall and incremented each step the snow persists. Meaningful only when the
-     * snowpack holds snow (callers weight it by the snow-covered fraction).
+     * Get the age of the snow surface since the last snowfall. The age (in days) is reset
+     * on snowfall and when the snowpack is empty, and incremented by the time step length
+     * each step the snow persists. Used by age-dependent albedo parameterizations (e.g.
+     * PrevahSnowAlbedo).
      *
-     * @return the snow albedo [0.4, 0.85].
+     * @return the snow surface age [d].
      */
-    [[nodiscard]] double GetSnowAlbedo() const;
+    [[nodiscard]] double GetSnowAge() const;
 
   protected:
+    // Snowfall rate [mm/d] from which the surface counts as fresh snow (age reset).
+    static constexpr double kFreshSnowfallRate = 0.01;
+    // Snow content [mm] below which the snowpack counts as empty (age reset).
+    static constexpr double kEmptySnowContent = 0.01;
+
     std::unique_ptr<SnowContainer> _snow;  // owning
     double _snowAge = 0;                   // age of the snow surface [d] since the last snowfall
+    double _initialSnowAge = 0;            // snow surface age saved with the initial state [d]
     double _snowfallInput = 0;             // snow inflow of the current time step [mm] (for the age reset)
 };
 

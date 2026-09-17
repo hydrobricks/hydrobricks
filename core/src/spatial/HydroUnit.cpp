@@ -4,10 +4,10 @@
 #include <cmath>
 #include <utility>
 
-#include "PrevahSnowAlbedo.h"
 #include "SettingsBasin.h"
 #include "Snowpack.h"
 #include "SurfaceComponent.h"
+#include "helpers/PrevahSnowAlbedo.h"
 
 namespace {
 

@@ -676,3 +676,9 @@ double Process::GetTimeStepInDays() const {
 
     return timeStepInDays > 0 ? timeStepInDays : 1.0;
 }
+
+int Process::GetCurrentDayOfYear() const {
+    assert(_timeMachine);
+
+    return _timeMachine->GetCurrentDayOfYear();
+}

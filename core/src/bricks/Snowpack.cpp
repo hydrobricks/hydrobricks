@@ -1,7 +1,5 @@
 #include "Snowpack.h"
 
-#include <cmath>
-
 Snowpack::Snowpack()
     : SurfaceComponent(),
       _snow(std::make_unique<SnowContainer>(this)) {
@@ -9,15 +7,18 @@ Snowpack::Snowpack()
 }
 
 void Snowpack::Reset() {
-    _water->Reset();
+    // Brick::Reset restores the water container and the processes' internal state
+    // (e.g. the CemaNeige cold content or the Frey & Holzmann snow density).
+    Brick::Reset();
     _snow->Reset();
-    _snowAge = 0;
+    _snowAge = _initialSnowAge;
     _snowfallInput = 0;
 }
 
 void Snowpack::SaveAsInitialState() {
     _water->SaveAsInitialState();
     _snow->SaveAsInitialState();
+    _initialSnowAge = _snowAge;
 }
 
 void Snowpack::SetParameters(const BrickSettings& brickSettings) {
@@ -118,9 +119,9 @@ void Snowpack::UpdateContentFromInputs(double timeStepInDays) {
     // previous step's committed value. The age is counted in days.
     _snowfallInput = _snow->BookIncomingFluxes(true);
     double snowfallRate = timeStepInDays > 0 ? _snowfallInput / timeStepInDays : _snowfallInput;
-    if (snowfallRate >= 0.01) {
+    if (snowfallRate >= kFreshSnowfallRate) {
         _snowAge = 0;
-    } else if (_snow->GetContentWithoutChanges() > 0.01) {
+    } else if (_snow->GetContentWithoutChanges() > kEmptySnowContent) {
         _snowAge += timeStepInDays;
     } else {
         _snowAge = 0;
@@ -155,6 +156,9 @@ double* Snowpack::GetValuePointer(std::string_view name) {
     if (name == "snow" || name == "snow_content") {
         return _snow->GetContentPointer();
     }
+    if (name == "snow_age") {
+        return &_snowAge;
+    }
 
     return nullptr;
 }
@@ -163,6 +167,6 @@ bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
 }
 
-double Snowpack::GetSnowAlbedo() const {
-    return 0.4 + 0.45 * std::exp(-0.15 * _snowAge);
+double Snowpack::GetSnowAge() const {
+    return _snowAge;
 }

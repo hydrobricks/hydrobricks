@@ -371,6 +371,149 @@ class Forcing:
             end_date=end_date,
         )
 
+    def load_spatialized_data_from_csv(
+        self,
+        path: str | Path,
+        variable: str,
+        column_time: str | None = None,
+        time_format: str = "%Y-%m-%d",
+        column_day_of_year: str | None = None,
+        columns_are: str = "id",
+    ) -> None:
+        """
+        Load forcing that is already spatialized, one column per unit or per group.
+
+        Use this when the data do not come from a station to be interpolated but are
+        already resolved in space: a distributed product, or a series computed per
+        elevation band. No gradient or correction is applied, the values are taken as
+        they are, so this replaces the
+        ``load_station_data_from_csv`` / ``spatialize_from_station_data`` pair rather
+        than feeding it.
+
+        The file holds one time column and one data column per hydro unit
+        (``columns_are='id'``) or per group of units (``columns_are`` naming a
+        hydro-unit property, e.g. an elevation-band or meteorological-zone number).
+        Grouped columns are shared: every unit whose property matches a header reads
+        that column.
+
+        Parameters
+        ----------
+        path
+            Path to the CSV file.
+        variable
+            Name of the variable the file holds (e.g. ``'precipitation'``); see
+            :meth:`get_variable_enum` for the accepted aliases.
+        column_time
+            Name of the column holding the dates. Mutually exclusive with
+            ``column_day_of_year``.
+        time_format
+            Format of the dates, when ``column_time`` is used.
+        column_day_of_year
+            Name of the column holding the day of the year (1-366), for a climatology
+            that repeats every year. The values are expanded onto the dates already
+            loaded, so load a dated variable first.
+        columns_are
+            What the column headers mean: ``'id'`` for hydro unit ids, or the name of
+            a hydro-unit property whose value selects the column.
+
+        Raises
+        ------
+        ForcingError
+            If the time specification is ambiguous, if a hydro unit has no matching
+            column, or if a climatology is loaded before any dated variable.
+
+        Examples
+        --------
+        >>> # One column per hydro unit
+        >>> forcing.load_spatialized_data_from_csv(
+        ...     'precipitation.csv', variable='precipitation',
+        ...     column_time='date', time_format='%Y-%m-%d',
+        ... )
+        >>> # One column per elevation band, units assigned by their 'mez' property
+        >>> forcing.load_spatialized_data_from_csv(
+        ...     'temperature.csv', variable='temperature',
+        ...     column_time='date', time_format='%Y-%m-%d', columns_are='mez',
+        ... )
+        """
+        if (column_time is None) == (column_day_of_year is None):
+            raise ForcingError(
+                "Provide either column_time (a dated series) or column_day_of_year "
+                "(a climatology repeating every year), not both and not neither.",
+                variable=variable,
+            )
+
+        var = self.get_variable_enum(variable)
+        time_column = column_time if column_time is not None else column_day_of_year
+        content = pd.read_csv(path)
+        if time_column not in content.columns:
+            raise ForcingError(
+                f'The column "{time_column}" was not found in {Path(path).name}.',
+                variable=variable,
+            )
+
+        values = content.drop(columns=[time_column])
+        columns = {str(name).strip(): i for i, name in enumerate(values.columns)}
+        data = values.to_numpy(dtype=float)
+
+        # Map every hydro unit to the column it reads.
+        keys = self._spatialized_column_keys(columns_are, variable)
+        try:
+            indices = np.array([columns[key] for key in keys])
+        except KeyError as exc:
+            raise ForcingError(
+                f"No column {exc} in {Path(path).name} for the hydro units. The "
+                f"columns available are: {', '.join(sorted(columns))}.",
+                variable=variable,
+            ) from exc
+
+        if column_day_of_year is not None:
+            if self.data2D.time is None or len(self.data2D.time) == 0:
+                raise ForcingError(
+                    "A climatology is expanded onto the dates of the other forcing, "
+                    "so load a dated variable before this one.",
+                    variable=variable,
+                )
+            days = pd.DatetimeIndex(self.data2D.time).dayofyear.to_numpy()
+            unit_values = data[days - 1, :][:, indices]
+        else:
+            time = pd.to_datetime(content[time_column], format=time_format)
+            unit_values = data[:, indices]
+            if self.data2D.time is None or len(self.data2D.time) == 0:
+                self.data2D.time = pd.DatetimeIndex(time)
+
+        if var in self.data2D.data_name:
+            self.data2D.data[self.data2D.data_name.index(var)] = unit_values
+        else:
+            self.data2D.data_name.append(var)
+            self.data2D.data.append(unit_values)
+
+    def _spatialized_column_keys(self, columns_are: str, variable: str) -> list[str]:
+        """
+        The column header each hydro unit reads, in hydro-unit order.
+
+        Parameters
+        ----------
+        columns_are
+            ``'id'`` for hydro unit ids, or the name of a hydro-unit property.
+        variable
+            Variable being loaded, for the error message.
+
+        Returns
+        -------
+        One header per hydro unit.
+        """
+        if columns_are not in self.hydro_units.columns.get_level_values(0):
+            raise ForcingError(
+                f'The hydro units carry no "{columns_are}" column to match the file '
+                f"columns against.",
+                variable=variable,
+            )
+
+        keys = self.hydro_units[columns_are].to_numpy().flatten()
+
+        # Headers are text; an integer-valued property must not become "28.0".
+        return [str(int(key)) if float(key).is_integer() else str(key) for key in keys]
+
     def correct_station_data(
         self,
         variable: str,

@@ -1,11 +1,10 @@
 """PREVAH on the Ticino-Bellinzona catchment (570 HRUs, distributed).
 
 A real, spatially-distributed PREVAH setup: 570 hydrotopes (HRUs) with three land
-covers (open / forest / wetland), meteo-zone forcing, a **per-HRU field capacity**
-taken from the soil data via a spatial parameter (``set_spatial``), and PREVAH's
-**monthly vegetation tables** applied per cover (``apply_land_use``) and a soil
-moisture capacity that varies per hydrotope *and* per month
-(``apply_land_use_field_capacity``).
+covers (open / forest / wetland), forcing given per meteo zone and read per HRU
+(``load_spatialized_data_from_csv``), PREVAH's **monthly vegetation tables** applied
+per cover (``apply_land_use``), and a soil moisture capacity that varies per hydrotope
+*and* per month (``apply_land_use_field_capacity``).
 
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
@@ -71,55 +70,65 @@ LAND_USES = {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Hydro units (570 HRUs): elevation, per-cover area, per-HRU soil
+# 1. Hydro units (570 HRUs): elevation and per-cover area, plus the per-HRU columns
+#    used further down: the soil (available water content and depth) and the land use
+#    that give the soil moisture capacity, and the meteo zone each HRU reads its
+#    forcing from.
 # ---------------------------------------------------------------------------
 hydro_units = hb.HydroUnits(land_cover_types=COVERS, land_cover_names=COVERS)
 hydro_units.load_from_csv(
     DATA / "hydro_units.csv",
     column_elevation="elevation",
     columns_areas={c: f"area_{c}" for c in COVERS},
+    other_columns={
+        "land_use": "land_use",
+        "awc": "awc",
+        "soil_depth": "soil_depth",
+        "mez": "mez",
+    },
 )
 
-# The remaining columns are read alongside: the soil data (available water content,
-# soil depth) and the land use of each hydrotope, which together give the soil
-# moisture capacity further down, and mez to map each HRU to its forcing series.
-units_df = pd.read_csv(DATA / "hydro_units.csv", header=0, skiprows=[1])
-mez = units_df["mez"].to_numpy()
+
+def unit_column(name):
+    """One value per hydro unit, from a column loaded with other_columns."""
+    return hydro_units.hydro_units[name].to_numpy().flatten()
+
 
 # PREVAH's wet surfaces evaporate from the groundwater at et_pot * wet_surface
-# (0.7 on wetlands, 0.9 on open water, 0 elsewhere). Each hydrotope of this dataset
-# carries a single cover, so the fraction follows the wetland area.
-wet = np.where(units_df["area_wetland"].to_numpy() > 0, 0.7, 0.0)
-hydro_units.add_property(("wet", "-"), wet)
+# (0.7 on wetlands, 0.9 on open water, 0 elsewhere). Each hydrotope carries a single
+# land use, and the open water of this catchment is folded into the open cover, so
+# only the wetlands contribute here.
+land_use = unit_column("land_use")
+hydro_units.add_property(("wet", "-"), np.where(land_use == "wetland", 0.7, 0.0))
 
 # ---------------------------------------------------------------------------
-# 2. Forcing: each HRU reads its meteo-zone precipitation and temperature series,
-#    plus the potential radiation of its own slope and aspect (day of the year).
+# 2. Forcing: the precipitation and the temperature are given per meteo zone -- an
+#    elevation band of this catchment -- so each HRU reads the series of the zone its
+#    'mez' column points at. The potential radiation is a climatology instead: one row
+#    per day of the year, one column per HRU, repeating every year.
 #    PET is the vapour-density Hamon used by PREVAH (the default 'Hamon' of pyet is
 #    an exponential variant that runs markedly hotter).
 # ---------------------------------------------------------------------------
-precip = pd.read_csv(DATA / "precipitation.csv", parse_dates=["date"])
-temp = pd.read_csv(DATA / "temperature.csv", parse_dates=["date"])
-zone_cols = [c for c in precip.columns if c != "date"]  # zone id -> column
-zone_index = {int(z): i for i, z in enumerate(zone_cols)}
-col = np.array([zone_index[z] for z in mez])  # HRU -> zone column index
-
-p_zone = precip[zone_cols].to_numpy()
-t_zone = temp[zone_cols].to_numpy()
-
 forcing = hb.Forcing(hydro_units)
-forcing.data2D.time = precip["date"]
-forcing.data2D.data_name = [forcing.Variable.P, forcing.Variable.T]
-forcing.data2D.data = [p_zone[:, col], t_zone[:, col]]  # (n_time, n_units)
+forcing.load_spatialized_data_from_csv(
+    DATA / "precipitation.csv",
+    variable="precipitation",
+    column_time="date",
+    columns_are="mez",
+)
+forcing.load_spatialized_data_from_csv(
+    DATA / "temperature.csv",
+    variable="temperature",
+    column_time="date",
+    columns_are="mez",
+)
+forcing.load_spatialized_data_from_csv(
+    DATA / "potential_radiation.csv",
+    variable="solar_radiation",
+    column_day_of_year="day_of_year",
+    columns_are="id",
+)
 forcing.compute_pet(method="Hamon_vapor_density", use=["t", "lat"], lat=LATITUDE)
-
-# Potential radiation: one row per day of the year, one column per hydro unit.
-rad = pd.read_csv(DATA / "potential_radiation.csv")
-rad_by_doy = rad.drop(columns="day_of_year").to_numpy()
-doys = pd.DatetimeIndex(precip["date"]).dayofyear.to_numpy()
-forcing.data2D.data_name.append(forcing.Variable.R_SOLAR)
-forcing.data2D.data.append(rad_by_doy[doys - 1, :])  # (n_time, n_units)
-
 forcing.apply_operations()
 
 # ---------------------------------------------------------------------------
@@ -236,9 +245,9 @@ parameters.set_values({"cu": 1e-6})
 model.apply_land_use_field_capacity(
     parameters,
     hydro_units,
-    units_df["land_use"].to_numpy(),  # one land use per hydrotope
-    available_water_content=units_df["awc"].to_numpy(),
-    soil_depth=units_df["soil_depth"].to_numpy(),
+    land_use,  # one land use per hydrotope
+    available_water_content=unit_column("awc"),
+    soil_depth=unit_column("soil_depth"),
 )
 parameters.set_spatial("ow_et_factor", "wet")
 

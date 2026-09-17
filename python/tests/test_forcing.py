@@ -721,3 +721,138 @@ def test_regrid_from_netcdf_with_data_gradient():
         assert len(forcing.data2D.data) == 1
         assert forcing.data2D.data[0].shape[0] == 3
         assert forcing.data2D.data[0].shape[1] == 36
+
+
+# ---------------------------------------------------------------------------
+# Forcing that is already spatialized, one column per unit or per group
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def banded_units(tmp_path):
+    """Four units in two elevation bands, so grouped columns are actually shared."""
+    path = tmp_path / "hydro_units.csv"
+    path.write_text(
+        "id,elevation,area,band\n"
+        "-,m,m2,-\n"
+        "1,1000,1000000,10\n"
+        "2,1100,1000000,10\n"
+        "3,2000,1000000,20\n"
+        "4,2100,1000000,20\n"
+    )
+    units = hb.HydroUnits()
+    units.load_from_csv(
+        path,
+        column_elevation="elevation",
+        column_area="area",
+        other_columns={"band": "band"},
+    )
+    return units
+
+
+def _write_series(path, header, rows):
+    lines = [header] + rows
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def test_spatialized_columns_per_unit(tmp_path, banded_units):
+    path = _write_series(
+        tmp_path / "precip.csv",
+        "date,1,2,3,4",
+        ["2020-01-01,1,2,3,4", "2020-01-02,5,6,7,8"],
+    )
+    forcing = hb.Forcing(banded_units)
+    forcing.load_spatialized_data_from_csv(
+        path, variable="precipitation", column_time="date"
+    )
+
+    idx = forcing.data2D.data_name.index(forcing.Variable.P)
+    assert np.asarray(forcing.data2D.data[idx]) == pytest.approx(
+        np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    )
+    assert len(forcing.data2D.time) == 2
+
+
+def test_spatialized_columns_per_group_are_shared(tmp_path, banded_units):
+    """Two columns, four units: each unit reads the column of its band."""
+    path = _write_series(
+        tmp_path / "temp.csv", "date,10,20", ["2020-01-01,3,-2", "2020-01-02,4,-1"]
+    )
+    forcing = hb.Forcing(banded_units)
+    forcing.load_spatialized_data_from_csv(
+        path, variable="temperature", column_time="date", columns_are="band"
+    )
+
+    idx = forcing.data2D.data_name.index(forcing.Variable.T)
+    assert np.asarray(forcing.data2D.data[idx]) == pytest.approx(
+        np.array([[3, 3, -2, -2], [4, 4, -1, -1]])
+    )
+
+
+def test_spatialized_climatology_repeats_every_year(tmp_path, banded_units):
+    """A day-of-year table is expanded onto the dates already loaded."""
+    dates = pd.date_range("2020-12-30", periods=4, freq="D")  # crosses the new year
+    rows = [f"{d.strftime('%Y-%m-%d')},1,1,1,1" for d in dates]
+    forcing = hb.Forcing(banded_units)
+    forcing.load_spatialized_data_from_csv(
+        _write_series(tmp_path / "p.csv", "date,1,2,3,4", rows),
+        variable="precipitation",
+        column_time="date",
+    )
+
+    # One row per day of the year, the value being the day of the year itself.
+    rad_rows = [f"{doy}," + ",".join([str(doy)] * 4) for doy in range(1, 367)]
+    forcing.load_spatialized_data_from_csv(
+        _write_series(tmp_path / "rad.csv", "day_of_year,1,2,3,4", rad_rows),
+        variable="solar_radiation",
+        column_day_of_year="day_of_year",
+    )
+
+    idx = forcing.data2D.data_name.index(forcing.Variable.R_SOLAR)
+    got = np.asarray(forcing.data2D.data[idx])[:, 0]
+    # 2020 is a leap year: 30 and 31 December are days 365 and 366, then 1 and 2.
+    assert got == pytest.approx([365, 366, 1, 2])
+
+
+def test_spatialized_needs_exactly_one_time_specification(tmp_path, banded_units):
+    path = _write_series(tmp_path / "p.csv", "date,1,2,3,4", ["2020-01-01,1,1,1,1"])
+    forcing = hb.Forcing(banded_units)
+    with pytest.raises(hb.ForcingError):
+        forcing.load_spatialized_data_from_csv(path, variable="precipitation")
+    with pytest.raises(hb.ForcingError):
+        forcing.load_spatialized_data_from_csv(
+            path,
+            variable="precipitation",
+            column_time="date",
+            column_day_of_year="day_of_year",
+        )
+
+
+def test_spatialized_rejects_a_unit_without_a_column(tmp_path, banded_units):
+    """A missing column is an error, not a silently dropped unit."""
+    path = _write_series(tmp_path / "p.csv", "date,1,2,3", ["2020-01-01,1,1,1"])
+    forcing = hb.Forcing(banded_units)
+    with pytest.raises(hb.ForcingError, match="No column"):
+        forcing.load_spatialized_data_from_csv(
+            path, variable="precipitation", column_time="date"
+        )
+
+
+def test_spatialized_rejects_an_unknown_grouping_property(tmp_path, banded_units):
+    path = _write_series(tmp_path / "p.csv", "date,10,20", ["2020-01-01,1,1"])
+    forcing = hb.Forcing(banded_units)
+    with pytest.raises(hb.ForcingError, match='no "zone" column'):
+        forcing.load_spatialized_data_from_csv(
+            path, variable="precipitation", column_time="date", columns_are="zone"
+        )
+
+
+def test_spatialized_climatology_needs_dates_first(tmp_path, banded_units):
+    rad_rows = [f"{doy},1,1,1,1" for doy in range(1, 367)]
+    path = _write_series(tmp_path / "rad.csv", "day_of_year,1,2,3,4", rad_rows)
+    forcing = hb.Forcing(banded_units)
+    with pytest.raises(hb.ForcingError, match="dated variable"):
+        forcing.load_spatialized_data_from_csv(
+            path, variable="solar_radiation", column_day_of_year="day_of_year"
+        )

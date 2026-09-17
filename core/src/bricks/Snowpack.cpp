@@ -113,12 +113,9 @@ void Snowpack::UpdateContent(double value, ContentType type) {
 void Snowpack::UpdateContentFromInputs(double timeStepInDays) {
     // Update the snow-surface age at the start of the step, before any process reads the
     // albedo, so all consumers (the snow evaporation and the albedo-reduced ET) see a
-    // consistent age (PREVAH sxp_core.f08 / mxp_snow.f90): reset to 0 on a fresh
-    // snowfall, otherwise age while the snow persists (reset when the snowpack is
-    // empty). The content here is still the previous step's committed value. The age is
-    // counted in days, and the fresh-snowfall test compares a rate, so that a sub-daily
-    // run ages the surface at the same pace as a daily one (the albedo decay of PREVAH
-    // is expressed per day).
+    // consistent age: reset to 0 on a fresh snowfall, otherwise age while the snow
+    // persists (reset when the snowpack is empty). The content here is still the
+    // previous step's committed value. The age is counted in days.
     _snowfallInput = _snow->BookIncomingFluxes(true);
     double snowfallRate = timeStepInDays > 0 ? _snowfallInput / timeStepInDays : _snowfallInput;
     if (snowfallRate >= 0.01) {

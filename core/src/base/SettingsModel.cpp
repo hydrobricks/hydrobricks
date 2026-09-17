@@ -610,11 +610,11 @@ void SettingsModel::AddSnowpackSublimation(const string& sublimationProcess) {
         // it needs no target: the model builder attaches a FluxToAtmosphere to it.
         AddBrickProcess("sublimation", sublimationProcess);
 
-        // PREVAH serves the snow evaporation sequentially BEFORE melt (s_SNOEVAP1 is
-        // called ahead of s_snowmelt in sxp_core.f08). Snowpacks are direct-pass bricks
-        // (no solver): their processes are evaluated and applied in declaration order,
-        // so the sublimation must be declared first to get the full potential rate on
-        // days the melt demand alone would drain the pack.
+        // PREVAH serves the snow evaporation sequentially BEFORE melt. Snowpacks
+        // are direct-pass bricks (no solver): their processes are evaluated and
+        // applied in declaration order, so the sublimation must be declared first
+        // to get the full potential rate on days the melt demand alone would
+        // drain the pack.
         if (sublimationProcess == "sublimation:prevah") {
             auto& processes = _selectedBrick->processes;
             std::rotate(processes.begin(), processes.end() - 1, processes.end());

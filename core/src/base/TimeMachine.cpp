@@ -67,8 +67,7 @@ void TimeMachine::IncrementTime() {
 int TimeMachine::GetTimeStepCount() const {
     assert(_timeStepInDays > 0);
     // Round rather than truncate: the span in steps is an integer, but computing it in
-    // fractional days can land just below it (e.g. 17496.999999999996 for a year of
-    // hourly steps), and truncating would then drop the last step.
+    // fractional days can land just below it and truncating would then drop the last step.
     return 1 + static_cast<int>(std::llround((_end - _start) / _timeStepInDays));
 }
 

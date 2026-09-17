@@ -95,9 +95,8 @@ const vecDouble& ProcessOutflowSnowHoldingPrevah::GetRates() {
     double content = _container->GetContentWithChanges();  // C = L + M on a melt day
     double holding;
     if (_temperature->GetValue() > *_meltingTemperature) {
-        // PREVAH ablation branch (mxp_snow.f90 lines 342-361). Base behaviour: the
-        // retention limit is CWH * snow_liquid, so the store drains to whc x liquid,
-        // releasing ~(1 - whc) of the liquid every melt day.
+        // PREVAH ablation branch. Base behaviour: the retention limit is CWH * snow_liquid,
+        // so the store drains to whc x liquid, releasing ~(1 - whc) of the liquid every melt day.
         holding = (*_waterHoldingCapacity) * content;
 
         // CEXLIQ graded partition of the fresh melt M: a fraction atsliq passes straight

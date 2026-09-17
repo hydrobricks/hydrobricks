@@ -7,8 +7,7 @@
 class ProcessOutflowLinear;
 
 /**
- * PREVAH SLOWCOMP overflow of the fast baseflow store (Schwarze et al., 1999;
- * mxp_runoff.f90 lines 814-832).
+ * PREVAH SLOWCOMP overflow of the fast baseflow store (Schwarze et al., 1999).
  *
  * The fast baseflow store (SLZ1) does not fill like a bucket: it fills
  * asymptotically toward its maximum content with the time constant K1 of its own

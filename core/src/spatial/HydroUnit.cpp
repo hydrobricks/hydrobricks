@@ -4,6 +4,7 @@
 #include <cmath>
 #include <utility>
 
+#include "PrevahSnowAlbedo.h"
 #include "SettingsBasin.h"
 #include "Snowpack.h"
 #include "SurfaceComponent.h"
@@ -245,7 +246,7 @@ double HydroUnit::GetSnowAlbedo(double albedoLand, double sweThreshold) const {
         }
         double fraction = surfaceComponent->GetParentAreaFraction();
         snowFraction += fraction;
-        weightedSnowAlbedo += fraction * dynamic_cast<Snowpack*>(brick.get())->GetSnowAlbedo();
+        weightedSnowAlbedo += fraction * PrevahSnowAlbedo(dynamic_cast<Snowpack*>(brick.get())->GetSnowAge());
     }
 
     snowFraction = std::min(snowFraction, 1.0);

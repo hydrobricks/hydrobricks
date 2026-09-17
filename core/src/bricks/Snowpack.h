@@ -96,8 +96,8 @@ class Snowpack : public SurfaceComponent {
     [[nodiscard]] bool HasSnow() const;
 
     /**
-     * Get the snow surface albedo, following PREVAH's snow-age relation
-     * (sxp_core.f08): albedo = 0.4 + 0.45 * exp(-0.15 * snow_age), i.e. ~0.85 for
+     * Get the snow surface albedo, following PREVAH's snow-age relation:
+     * albedo = 0.4 + 0.45 * exp(-0.15 * snow_age), i.e. ~0.85 for
      * fresh snow decaying toward 0.4 for old snow. The age (in time steps) is reset on
      * snowfall and incremented each step the snow persists. Meaningful only when the
      * snowpack holds snow (callers weight it by the snow-covered fraction).

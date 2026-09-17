@@ -1,6 +1,7 @@
 #include "ProcessSublimationPrevah.h"
 
 #include "HydroUnit.h"
+#include "PrevahSnowAlbedo.h"
 #include "Snowpack.h"
 #include "WaterContainer.h"
 
@@ -51,7 +52,7 @@ const vecDouble& ProcessSublimationPrevah::GetRates() {
     }
 
     // Snow evaporates at the albedo-reduced potential rate (albedo of the snow surface).
-    double albedoFactor = (1.0 - _snowpack->GetSnowAlbedo()) / 0.8;
+    double albedoFactor = (1.0 - PrevahSnowAlbedo(_snowpack->GetSnowAge())) / 0.8;
 
     return StoreRates({GetForcingRate(_pet) * albedoFactor});
 }

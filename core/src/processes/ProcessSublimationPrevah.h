@@ -14,7 +14,7 @@ class Snowpack;
  * present (s_snoevap1.f90, default: et_snow = et_pot):
  *   S = PET * (1 - albedo)/0.8
  * where the albedo is the snowpack's own age-dependent snow albedo
- * (Snowpack::GetSnowAlbedo, 0.4-0.85). Old (spring) snow has a low albedo, so it
+ * (PrevahSnowAlbedo of Snowpack::GetSnowAge, 0.4-0.85). Old (spring) snow has a low albedo, so it
  * evaporates strongly - the dominant snow-evaporation sink. Requires PET forcing and a
  * hydro-unit snowpack context; no evaporation when the snow container is empty.
  */
@@ -44,9 +44,9 @@ class ProcessSublimationPrevah : public ProcessSublimation {
     /**
      * @copydoc Process::HasConstraintPriority()
      *
-     * PREVAH serves snow evaporation sequentially BEFORE melt (s_SNOEVAP1 is called ahead
-     * of s_snowmelt in sxp_core.f08), so it gets the full potential rate even on days the
-     * pack drains completely; melt only takes what remains.
+     * PREVAH serves snow evaporation sequentially BEFORE melt, so it gets the
+     * full potential rate even on days the pack drains completely;
+     * melt only takes what remains.
      */
     [[nodiscard]] bool HasConstraintPriority() const override {
         return true;

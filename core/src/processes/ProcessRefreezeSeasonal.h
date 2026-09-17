@@ -10,7 +10,7 @@
  * As 'refreeze:degree_day', but with its own seasonal degree-day factor instead of
  * reading it from a melt:degree_day sibling — PREVAH refreezes with the seasonal PDDI
  * factor (CRMFMIN/CRMFMAX) on cold days even when the melt itself uses the Hock
- * radiation equation (mxp_snow.f90: wstar = f_melting_eq(2, season_mf) * CRFR):
+ * radiation equation (wstar = f_melting_eq(2, season_mf) * CRFR):
  *   RF = cfr x (mean + amp x sin(2 pi (doy - 80)/366)) x (T0 - T)   for T < T0
  *
  * The seasonal sine is identical to PREVAH's f_season_fact. Use it whenever the melt

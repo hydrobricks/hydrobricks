@@ -78,9 +78,7 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 
     double dt = date - _start;
 
-    // Offset from the series start, in the series' own unit. Rounded, not truncated: the
-    // dates are fractions of a day, so an exact boundary can land a hair below itself and
-    // truncation would then read the previous value.
+    // Offset from the series start, in the series' own unit. Rounded, not truncated.
     double stepsPerDay;
     switch (_timeStepUnit) {
         case TimeUnit::Day:

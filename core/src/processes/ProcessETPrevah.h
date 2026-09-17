@@ -8,12 +8,12 @@
  * PREVAH actual evapotranspiration: the HBV soil-moisture limitation with the
  * PREVAH snow-albedo reduction of the potential rate.
  *
- * PREVAH's Hamon PET carries a (1 - albedo)/0.8 term (mxp_evapotranspiration.f08):
- * over snow (albedo ~0.7-0.8) the potential evaporation drops to ~0.25-0.4x, which
- * also acts as the ET-under-snow suppression. Here the albedo is derived at runtime
- * from the hydro unit's snowpacks: the snow-covered fraction is the sum of the
- * parent land-cover fractions of the snowpacks currently holding snow, and the
- * albedo interpolates between the snow-free and snow albedo accordingly:
+ * PREVAH's PET carries a (1 - albedo)/0.8 term: over snow (albedo ~0.7-0.8) the
+ * potential evaporation drops to ~0.25-0.4x, which also acts as the ET-under-snow
+ * suppression. Here the albedo is derived at runtime rom the hydro unit's snowpacks:
+ * the snow-covered fraction is the sum of the parent land-cover fractions of the
+ * snowpacks currently holding snow, and the albedo interpolates between the
+ * snow-free and snow albedo accordingly:
  *   snowfrac = sum_c fraction_c * (SWE_c > 0)
  *   albedo   = albedo_land + snowfrac * (albedo_snow - albedo_land)
  *   Ea       = cevpf * PET * (1 - albedo)/0.8 * min(SM / (LP * FC), 1)

@@ -50,6 +50,7 @@ vcpkg_installed/
 
 # Others
 *~$*
+*~
 **/__pycache__/*
 **.egg-info/
 **/examples/**/*.csv

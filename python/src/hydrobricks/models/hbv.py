@@ -5,8 +5,8 @@ from abc import abstractmethod
 from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
+from hydrobricks.land_covers import WATER_COVER_TYPE
 from hydrobricks.models.model import Model
-from hydrobricks.models.model_settings import WATER_COVER_TYPE
 from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)

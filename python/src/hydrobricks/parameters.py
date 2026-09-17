@@ -680,8 +680,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         ),
     ],
     # PREVAH snowpack liquid water release: holds cwh * SWE on cold days, but on melt
-    # days (T > melting_temperature) the retention collapses to cwh * liquid
-    # (mxp_snow.f90 ablation branch), draining ~(1 - cwh) of the store every melt day.
+    # days (T > melting_temperature) the retention collapses to cwh * liquid,
+    # draining ~(1 - cwh) of the store every melt day.
     "outflow:snow_holding_prevah": [
         ParamSpec(
             name="water_holding_capacity",

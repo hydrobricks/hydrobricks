@@ -15,11 +15,8 @@ from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kw
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.models.model_settings import (
-    GENERIC_COVER_ALIASES,
-    GENERIC_SOIL_COVER_TYPES,
-    ModelSettings,
-)
+from hydrobricks.land_covers import GENERIC_COVER_ALIASES, GENERIC_SOIL_COVER_TYPES
+from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
@@ -32,8 +29,6 @@ if TYPE_CHECKING:
     from hydrobricks.results import Results
 
 logger = logging.getLogger(__name__)
-
-# GENERIC_COVER_ALIASES and GENERIC_SOIL_COVER_TYPES are imported from model_settings.
 
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # parameters. PREVAH's class numbers are not kept: the land uses are named, following
 # the hydrobricks conventions where a matching concept exists.
 #
-# Transcribed from the reference implementation (mxp_model_parameter.f90).
+# Transcribed from the reference XPREVAH implementation.
 # ---------------------------------------------------------------------------
 
 # fmt: off

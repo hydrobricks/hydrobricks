@@ -16,6 +16,7 @@ from hydrobricks._units import (
     get_unit_enum,
     get_unit_from_df_column,
 )
+from hydrobricks.land_covers import GENERIC_COVER_ALIASES
 
 
 class HydroUnits:
@@ -570,7 +571,7 @@ class HydroUnits:
     #: Generic (soil-bearing) land cover aliases. 'open' is the canonical name; the
     #: others are accepted for backward compatibility. The generic cover absorbs the
     #: residual area when other land cover fractions change.
-    GENERIC_COVER_ALIASES = ("open", "ground", "generic", "generic_land_cover")
+    GENERIC_COVER_ALIASES = GENERIC_COVER_ALIASES
 
     def get_generic_cover_name(self) -> str:
         """Return the generic soil land cover name (the one that absorbs residual area).

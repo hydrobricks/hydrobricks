@@ -108,6 +108,9 @@ class Catchment:
         The aspect map of the catchment.
     map_unit_ids : np.ndarray
         The unit ids as a numpy array matching the DEM extent.
+    map_subbasin_ids : np.ndarray
+        The subbasin ids as a numpy array matching the DEM extent (after
+        :meth:`delineate_subbasins`).
     hydro_units : HydroUnits
         The hydro units of the catchment.
     """
@@ -144,6 +147,7 @@ class Catchment:
         self._dem_memfile: Any = None
         self.attributes: dict[str, dict] = {}
         self.map_unit_ids: np.ndarray | None = None
+        self.map_subbasin_ids: np.ndarray | None = None
         self.hydro_units: HydroUnits = HydroUnits(
             land_cover_types, land_cover_names, hydro_units_data
         )
@@ -267,6 +271,20 @@ class Catchment:
         from hydrobricks.preprocessing import CatchmentConnectivity
 
         return CatchmentConnectivity(self)
+
+    @lazy_property
+    def network(self) -> Any:
+        """
+        Lazy-loaded river network delineation module.
+
+        Returns
+        -------
+        CatchmentNetwork
+            Subbasin delineation processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentNetwork
+
+        return CatchmentNetwork(self)
 
     @lazy_property
     def solar_radiation(self) -> Any:
@@ -1117,6 +1135,25 @@ class Catchment:
         Call the calculate_connectivity method of the Connectivity class.
         """
         return self.connectivity.calculate(*args, **kwargs)
+
+    def delineate_subbasins(self, *args, **kwargs) -> pd.DataFrame:
+        """
+        Delineate the subbasins of a river network from outlet points (gauges).
+
+        See :meth:`CatchmentNetwork.delineate
+        <hydrobricks.preprocessing.CatchmentNetwork.delineate>` for the parameters.
+        The subbasin table is set on the hydro units (with their ``subbasin``
+        column) and returned.
+        """
+        return self.network.delineate(*args, **kwargs)
+
+    def save_subbasin_ids_raster(self, *args, **kwargs) -> None:
+        """
+        Save the subbasin ids raster (see
+        :meth:`CatchmentNetwork.save_subbasin_ids_raster
+        <hydrobricks.preprocessing.CatchmentNetwork.save_subbasin_ids_raster>`).
+        """
+        self.network.save_subbasin_ids_raster(*args, **kwargs)
 
     def calculate_daily_potential_radiation(self, *args, **kwargs) -> None:
         """
